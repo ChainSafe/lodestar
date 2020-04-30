@@ -7,23 +7,22 @@ import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
   Goodbye,
+  Metadata,
+  Ping,
   RequestBody,
   ResponseBody,
   SignedBeaconBlock,
   Status,
-  Metadata,
-  Ping,
 } from "@chainsafe/lodestar-types";
 import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {RpcError} from "./error";
 import {MetadataController} from "./metadata";
+import {IResponseChunk} from "./encoders/interface";
 
 
-export type ResponseCallbackFn = ((responseIter: AsyncIterable<ResponseChunk>) => void);
-
-export type ResponseChunk = {err?: RpcError; output?: ResponseBody};
+export type ResponseCallbackFn = ((responseIter: AsyncIterable<IResponseChunk>) => void);
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;
@@ -37,10 +36,8 @@ export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
 export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 
 export interface IReqResp extends ReqEventEmitter {
-  // sendRequest<T extends ResponseBody>(peerInfo: PeerInfo, method: Method, body: RequestBody): Promise<T>;
-  sendResponse(id: RequestId, err: Error|null, result: ResponseBody[]): void;
   sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void;
-
+  sendResponse(id: RequestId, err: RpcError, response?: ResponseBody): void;
   status(peerInfo: PeerInfo, request: Status): Promise<Status>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
   ping(peerInfo: PeerInfo, request: Ping): Promise<Ping>;

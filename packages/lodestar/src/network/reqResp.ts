@@ -16,17 +16,17 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcErrorCode, TTFB_TIMEOUT} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {createResponseEvent, createRpcProtocol, randomRequestId, isRequestOnly, isRequestSingleChunk} from "./util";
-import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn, ResponseChunk} from "./interface";
+import {createResponseEvent, createRpcProtocol, isRequestOnly, isRequestSingleChunk, randomRequestId} from "./util";
+import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
 import PeerInfo from "peer-info";
-// eslint-disable-next-line import/no-extraneous-dependencies
-import BufferList from "bl";
-import {ReqRespEncoder} from "./encoder";
 import {RpcError} from "./error";
+import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
+import {eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
+import {IResponseChunk} from "./encoders/interface";
 
 interface IReqEventEmitterClass {
   new(): ReqEventEmitter;
@@ -49,8 +49,8 @@ class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
 
     return setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
-      const errorGenerator: AsyncGenerator<ResponseChunk> = async function* () {
-        yield {err: new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)};
+      const errorGenerator: AsyncGenerator<IResponseChunk> = async function* () {
+        yield {status: RpcResponseStatus.ERR_RESP_TIMEOUT};
       }();
       responseListener(errorGenerator);
     }, RESP_TIMEOUT);
@@ -61,7 +61,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
-  private encoder: ReqRespEncoder;
   private responseListener: ResponseEventListener;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger}: IReqRespModules) {
@@ -69,85 +68,87 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.config = config;
     this.libp2p = libp2p;
     this.logger = logger;
-    this.encoder = new ReqRespEncoder(config, ReqRespEncoding.SSZ_SNAPPY);
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
     Object.values(Method).forEach((method) => {
-      this.libp2p.handle(
-        createRpcProtocol(method, this.encoder.encoding),
-        async ({connection, stream}) => {
-          const peerId = connection.remotePeer;
-          pipe(
-            stream.source,
-            this.handleRpcRequests(peerId, method),
-            this.encoder.encodeResponse(method),
-            stream.sink
-          );
-        }
-      );
+      Object.values(ReqRespEncoding).forEach((encoding) => {
+        this.libp2p.handle(
+          createRpcProtocol(method, encoding),
+          async ({connection, stream}) => {
+            const peerId = connection.remotePeer;
+            pipe(
+              stream.source,
+              eth2RequestDecode(this.config, this.logger, method, encoding),
+              this.handleRpcRequest(peerId, method),
+              eth2ResponseEncode(this.config, this.logger, method, encoding),
+              stream.sink
+            );
+          }
+        );
+      });
     });
   }
 
   public async stop(): Promise<void> {
     Object.values(Method).forEach((method) => {
-      this.libp2p.unhandle(createRpcProtocol(method, this.encoder.encoding));
+      Object.values(ReqRespEncoding).forEach((encoding) => {
+        this.libp2p.unhandle(createRpcProtocol(method, encoding));
+      });
     });
   }
-
-  public sendResponse(id: RequestId, err: RpcError, chunks: ResponseBody[]): void {
-    if(err) {
-      this.responseListener.emit(createResponseEvent(id), async function* () {
-        yield {err};
-      }());
-    } else {
-      const asyncIter = async function* () {
-        for (const chunk of chunks) {
-          yield {output: chunk};
-        }
-      }();
-      this.responseListener.emit(createResponseEvent(id), asyncIter);
-      this.logger.verbose("Sent response for request " + id);
-    }
+  
+  public sendResponse(id: RequestId, err: RpcError|null, response?: ResponseBody): void {
+    return this.sendResponseStream(id, err, async function *() {
+      if(response !== null && response !== undefined) {
+        yield response;
+      }
+    }());
   }
 
-  public sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void {
+  public sendResponseStream(id: RequestId, err: RpcError|null, chunkIter: AsyncIterable<ResponseBody>): void {
     if(err) {
       this.responseListener.emit(createResponseEvent(id), async function* () {
-        yield {err: err};
+        yield {status: err.status};
       }());
+      this.logger.verbose("Sent response with error for request " + id);
     } else {
-      const asyncIter = async function* () {
+      this.responseListener.emit(createResponseEvent(id), async function* () {
         for await (const chunk of chunkIter) {
-          yield {output: chunk};
+          yield {status: RpcResponseStatus.SUCCESS, body: chunk};
         }
-      }();
-      this.responseListener.emit(createResponseEvent(id), asyncIter);
+      }());
+      this.logger.verbose("Sent response for request " + id);
     }
   }
 
   public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
+  
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     try {
       await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request);
     } catch (e) {
-      this.logger.warn("Failed to send goodbye request");
+      this.logger.warn("Failed to send goodbye request. Error: " + e.message);
     }
   }
+  
   public async ping(peerInfo: PeerInfo, request: Ping): Promise<Ping> {
     return await this.sendRequest<Ping>(peerInfo, Method.Ping, request);
   }
+  
   public async metadata(peerInfo: PeerInfo): Promise<Metadata> {
     return await this.sendRequest<Metadata>(peerInfo, Method.Metadata);
   }
+  
   public async beaconBlocksByRange(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[]> {
     return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRange, request);
   }
+  
   public async beaconBlocksByRoot(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRootRequest
@@ -155,32 +156,28 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
-  private handleRpcRequests(
+  private handleRpcRequest(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<ResponseChunk>) {
+  ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
-    return (source: AsyncIterable<Buffer|BufferList>) => {
+    return (source) => {
       return (async function * () {
-        let data: Buffer;
-        // source is an array of 1 item or empty array
-        for await (const val of source) {
-          data = Buffer.isBuffer(val) ? val : val.slice();
-          yield* getResponse(peerId, method, data);
+        for await (const request of source) {
+          yield* getResponse(peerId, method, request);
           return;
         }
-        yield* getResponse(peerId, method, data);
+        yield* getResponse(peerId, method);
       })();
     };
   }
 
-  private getResponse = (peerId: PeerId, method: Method, data: Buffer): AsyncIterable<ResponseChunk> => {
-    const request = this.encoder.decodeRequest(method, data);
+  private getResponse = (peerId: PeerId, method: Method, request?: RequestBody): AsyncIterable<IResponseChunk> => {
     const requestId = randomRequestId();
     this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
     // eslint-disable-next-line
     let responseTimer: NodeJS.Timeout;
-    const promise = new Promise<AsyncIterable<ResponseChunk>>((resolve) => {
-      const responseListenerFn: ResponseCallbackFn = async (responseIter: AsyncIterable<ResponseChunk>) => {
+    const sourcePromise = new Promise<AsyncIterable<IResponseChunk>>((resolve) => {
+      const responseListenerFn: ResponseCallbackFn = async (responseIter) => {
         clearTimeout(responseTimer);
         resolve(responseIter);
       };
@@ -189,8 +186,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     });
 
     return (async function * () {
-      const responseIter = await promise;
-      yield* responseIter;
+      yield* await sourcePromise;
     })();
   };
 
@@ -202,10 +198,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const requestOnly = isRequestOnly(method);
     const requestSingleChunk = isRequestSingleChunk(method);
     return await new Promise((resolve, reject) => {
-      let responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
+      let responseTimer = setTimeout(() => reject(new RpcError(RpcResponseStatus.ERR_RESP_TIMEOUT)), TTFB_TIMEOUT);
       const renewTimer = (): void => {
         clearTimeout(responseTimer);
-        responseTimer = setTimeout(() => reject(new RpcError(RpcErrorCode.ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
+        responseTimer = setTimeout(() => reject(new RpcError(RpcResponseStatus.ERR_RESP_TIMEOUT)), RESP_TIMEOUT);
       };
       const cancelTimer = (): void => {
         clearTimeout(responseTimer);
@@ -236,28 +232,24 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     });
   }
 
-  private sendRequestStream<T extends ResponseBody|ResponseBody[]>(
+  private sendRequestStream<T extends ResponseBody>(
     peerInfo: PeerInfo,
     method: Method,
     body?: RequestBody,
+    encoding = ReqRespEncoding.SSZ_SNAPPY
   ): AsyncIterable<T> {
-    const {encoder, libp2p, logger} = this;
+    const {libp2p, config, logger} = this;
 
     return (async function * () {
-      const protocol = createRpcProtocol(method, encoder.encoding);
+      const protocol = createRpcProtocol(method, encoding);
       const {stream} = await libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
-      const promise = new Promise<AsyncIterable<T>>((resolve) => {
-        logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
-        pipe(
-          body === undefined ? [] : [encoder.encodeRequest(method, body)],
-          stream,
-          encoder.decodeResponse(method),
-          (source: AsyncIterable<T>) => {
-            resolve(source);
-          }
-        );
-      });
-      yield* await promise;
+      logger.verbose(`send ${method} request to ${peerInfo.id.toB58String()}`);
+      yield* pipe(
+        (body !== null && body !== undefined) ? [body] : [],
+        eth2RequestEncode(config, logger, method, encoding),
+        stream,
+        eth2ResponseDecode(config, logger, method, encoding)
+      );
     })();
   }
 }
