@@ -2,6 +2,7 @@ import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {
+    BadBlockRepository,
     BlockRepository,
     ChainRepository,
     DepositDataRepository,
@@ -23,6 +24,7 @@ import {Root} from "@chainsafe/lodestar-types";
 
 describe("block process stream", function () {
 
+    let badBlockDbStub: SinonStubbedInstance<BadBlockRepository>;
     let blockDbStub: SinonStubbedInstance<BlockRepository>;
     let stateDbStub: SinonStubbedInstance<StateRepository>;
     let chainDbStub: SinonStubbedInstance<ChainRepository>;
@@ -38,11 +40,13 @@ describe("block process stream", function () {
 
     beforeEach(function () {
         dbStub = sinon.createStubInstance(BeaconDb);
+        badBlockDbStub = sinon.createStubInstance(BadBlockRepository);
         blockDbStub = sinon.createStubInstance(BlockRepository);
         stateDbStub = sinon.createStubInstance(StateRepository);
         chainDbStub = sinon.createStubInstance(ChainRepository);
         depositDataRootListDbStub = sinon.createStubInstance(DepositDataRootListRepository);
         depositDataDbStub = sinon.createStubInstance(DepositDataRepository);
+        dbStub.badBlock = badBlockDbStub as unknown as BadBlockRepository;
         dbStub.block = blockDbStub as unknown as BlockRepository;
         dbStub.state = stateDbStub as unknown as StateRepository;
         dbStub.chain = chainDbStub as unknown as ChainRepository;
@@ -104,7 +108,7 @@ describe("block process stream", function () {
             collect
         );
         expect(result).to.have.length(0);
-        expect(blockDbStub.storeBadBlock.calledOnce).to.be.true;
+        expect(badBlockDbStub.put.calledOnce).to.be.true;
     });
 
     it("successful block process - not new chain head", async function () {
@@ -124,9 +128,9 @@ describe("block process stream", function () {
             collect
         );
         expect(result).to.have.length(1);
-        expect(blockDbStub.storeBadBlock.notCalled).to.be.true;
-        expect(blockDbStub.set.calledOnce).to.be.true;
-        expect(stateDbStub.set.calledOnce).to.be.true;
+        expect(badBlockDbStub.put.notCalled).to.be.true;
+        expect(blockDbStub.put.calledOnce).to.be.true;
+        expect(stateDbStub.put.calledOnce).to.be.true;
         expect(dbStub.updateChainHead.notCalled).to.be.true;
         expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;
     });
@@ -142,7 +146,7 @@ describe("block process stream", function () {
         stateTransitionStub.resolves(generateState());
         chainDbStub.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
         forkChoiceStub.head.returns(Buffer.alloc(32, 2));
-        depositDataDbStub.getAllBetween.resolves([]);
+        depositDataDbStub.values.resolves([]);
         depositDataRootListDbStub.get.resolves(config.types.DepositDataRootList.defaultValue().valueOf() as TreeBacked<List<Root>>);
         blockDbStub.get.resolves(receivedJob.signedBlock);
         const result = await pipe(
@@ -151,11 +155,11 @@ describe("block process stream", function () {
             collect
         );
         expect(result).to.have.length(1);
-        expect(blockDbStub.storeBadBlock.notCalled).to.be.true;
-        expect(blockDbStub.set.calledOnce).to.be.true;
-        expect(stateDbStub.set.calledOnce).to.be.true;
+        expect(badBlockDbStub.put.notCalled).to.be.true;
+        expect(blockDbStub.put.calledOnce).to.be.true;
+        expect(stateDbStub.put.calledOnce).to.be.true;
         expect(dbStub.updateChainHead.calledOnce).to.be.true;
-        expect(depositDataRootListDbStub.set.calledOnce).to.be.true;
+        expect(depositDataRootListDbStub.put.calledOnce).to.be.true;
         expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;
     });
 });

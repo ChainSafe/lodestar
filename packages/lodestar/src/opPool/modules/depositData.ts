@@ -11,11 +11,11 @@ export class DepositDataOperations {
   }
 
   public receive = async (index: number, value: DepositData): Promise<void> => {
-    await this.db.set(index, value);
+    await this.db.put(index, value);
   };
 
   public async getAll(): Promise<DepositData[]> {
-    return await this.db.getAll();
+    return await this.db.values();
   }
 
 
@@ -25,7 +25,7 @@ export class DepositDataOperations {
    * @param upperLimit
    */
   public async getAllBetween(lowerLimit: number|null, upperLimit: number|null): Promise<DepositData[]> {
-    return await this.db.getAllBetween(lowerLimit, upperLimit);
+    return await this.db.values({gt: lowerLimit, lt: upperLimit});
   }
 
   /**

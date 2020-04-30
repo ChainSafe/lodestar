@@ -6,21 +6,21 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 // Buckets are separate database namespaces
 export enum Bucket {
   // beacon chain
-  state, // hash -> BeaconState
-  attestation, // hash -> Attestation
-  aggregateAndProof, // hash -> AggregateAndProof
-  block, // hash -> BeaconBlock
-  blockArchive, // hash -> BeaconBlock
-  blockSlotRefs,
-  blockRootRefs,
-  invalidBlock, // bad block
-  mainChain, // slot -> blockHash
+  state, // Root -> BeaconState
+  block, // Root -> SignedBeaconBlock
+  blockArchive, // Slot -> SignedBeaconBlock
+  blockSlotRefs, // Slot -> Root
+  invalidBlock, // Root -> boolean
+  mainChain, // Slot -> Root<BeaconBlock>
   chainInfo, // Key -> Number64 | stateHash | blockHash
-  depositData, // index -> DepositData
-  exit, // hash -> VoluntaryExit
-  proposerSlashing, // hash -> ProposerSlashing
-  attesterSlashing, // hash -> AttesterSlashing
   depositDataRootList, // depositIndex -> DepositDataRootList
+  // operations
+  attestation, // Root -> Attestation
+  aggregateAndProof, // Root -> AggregateAndProof
+  depositData, // index -> DepositData
+  exit, // ValidatorIndex -> VoluntaryExit
+  proposerSlashing, // ValidatorIndex -> ProposerSlashing
+  attesterSlashing, // Root -> AttesterSlashing
   // validator
   lastProposedBlock,
   proposedAttestations,
@@ -43,8 +43,7 @@ export enum Key {
 export function encodeKey(
   bucket: Bucket,
   key: Uint8Array | string | number | bigint,
-  useBuffer = true
-): Buffer | string {
+): Buffer {
   let buf;
   if (typeof key === "string") {
     buf = Buffer.alloc(key.length + 1);
@@ -57,5 +56,5 @@ export function encodeKey(
     buf.set(key, 1);
   }
   buf.writeUInt8(bucket, 0);
-  return useBuffer ? buf : buf.toString("hex");
+  return buf;
 }

@@ -5,7 +5,6 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Method} from "../../../src/constants";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
-import {BeaconDb} from "../../../src/db";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -24,6 +23,7 @@ import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
+import { StubbedBeaconDb } from "../../utils/stub";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -82,25 +82,18 @@ describe("[sync] rpc", function () {
     ]);
     repsA = new ReputationStore();
 
-    // @ts-ignore
     const db = {
       state: sandbox.createStubInstance(StateRepository),
       chain: sandbox.createStubInstance(ChainRepository),
       block: sandbox.createStubInstance(BlockRepository),
       blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
-    } as BeaconDb;
-    // @ts-ignore
+    } as StubbedBeaconDb;
     db.state.get.resolves(state);
-    // @ts-ignore
     db.chain.getChainHeadSlot.resolves(0);
-    // @ts-ignore
-    db.block.getChainHead.resolves(block);
-    // @ts-ignore
+    //db.block.getChainHead.resolves(block);
     db.block.get.resolves(block);
-    // @ts-ignore
     db.blockArchive.get.resolves(block);
-    // @ts-ignore
-    db.blockArchive.getAllBetweenStream.returns(async function * () {
+    db.blockArchive.valuesStream.returns(async function * () {
       yield block;
       yield block2;
     }());

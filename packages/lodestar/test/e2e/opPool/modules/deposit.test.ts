@@ -48,10 +48,10 @@ describe("opPool - deposits", function () {
 
   it("should fetch deposit from range - upper and lower limit",async function () {
     await Promise.all([
-      db.depositData.set(0, generateDepositData()),
-      db.depositData.set(2, generateDepositData()),
-      db.depositData.set(4, generateDepositData()),
-      db.depositData.set(6, generateDepositData())
+      db.depositData.put(0, generateDepositData()),
+      db.depositData.put(2, generateDepositData()),
+      db.depositData.put(4, generateDepositData()),
+      db.depositData.put(6, generateDepositData())
     ]);
     const result = await opPool.depositData.getAllBetween(1, 7);
     expect(result.length).to.be.equal(3);
@@ -59,9 +59,9 @@ describe("opPool - deposits", function () {
 
   it("should fetch deposit from range - upper limit only",async function () {
     await Promise.all([
-      db.depositData.set(2, generateDepositData()),
-      db.depositData.set(4, generateDepositData()),
-      db.depositData.set(6, generateDepositData())
+      db.depositData.put(2, generateDepositData()),
+      db.depositData.put(4, generateDepositData()),
+      db.depositData.put(6, generateDepositData())
     ]);
     const result = await opPool.depositData.getAllBetween(null, 4);
     expect(result.length).to.be.equal(1);
@@ -69,9 +69,9 @@ describe("opPool - deposits", function () {
 
   it("should fetch deposit from range - lower limit only",async function () {
     await Promise.all([
-      db.depositData.set(2, generateDepositData()),
-      db.depositData.set(4, generateDepositData()),
-      db.depositData.set(6, generateDepositData())
+      db.depositData.put(2, generateDepositData()),
+      db.depositData.put(4, generateDepositData()),
+      db.depositData.put(6, generateDepositData())
     ]);
     const result = await opPool.depositData.getAllBetween(0, null);
     expect(result.length).to.be.equal(3);

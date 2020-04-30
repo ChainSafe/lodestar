@@ -19,9 +19,10 @@ import {
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository,
-  AggregateAndProofRepository
+  AggregateAndProofRepository,
+  BlockArchiveRepository,
+  BadBlockRepository
 } from "./repositories";
-import {BlockArchiveRepository} from "./repositories/blockArchive";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -33,6 +34,8 @@ export interface IBeaconDb {
   chain: ChainRepository;
 
   state: StateRepository;
+
+  badBlock: BadBlockRepository;
 
   block: BlockRepository;
 

@@ -14,11 +14,12 @@ import {
 } from "../../../src/db/api/beacon/repositories";
 import {generateState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
+import { StubbedBeaconDb } from "../../utils/stub";
 
 describe("operation pool", function () {
   const sandbox = sinon.createSandbox();
   let opPool: OpPool;
-  let eth1Stub: any, dbStub: any;
+  let eth1Stub: any, dbStub: StubbedBeaconDb;
 
   beforeEach(()=>{
     dbStub = {
@@ -29,7 +30,7 @@ describe("operation pool", function () {
       attestation: sandbox.createStubInstance(AttestationRepository),
       aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
       state: sandbox.createStubInstance(StateRepository)
-    };
+    } as StubbedBeaconDb;
 
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
 
@@ -60,16 +61,16 @@ describe("operation pool", function () {
   it("should do cleanup after block processing", async function () {
     const block  = generateEmptySignedBlock();
     dbStub.depositData.deleteOld.resolves();
-    dbStub.voluntaryExit.deleteManyByValue.resolves();
-    dbStub.proposerSlashing.deleteManyByValue.resolves();
-    dbStub.attesterSlashing.deleteManyByValue.resolves();
-    dbStub.aggregateAndProof.deleteManyByValue.resolves();
-    dbStub.aggregateAndProof.getAll.resolves([]);
+    dbStub.voluntaryExit.batchRemove.resolves();
+    dbStub.proposerSlashing.batchRemove.resolves();
+    dbStub.attesterSlashing.batchRemove.resolves();
+    dbStub.aggregateAndProof.batchRemove.resolves();
+    dbStub.aggregateAndProof.values.resolves([]);
     await opPool.processBlockOperations(block);
     expect(dbStub.depositData.deleteOld.calledOnce).to.be.true;
-    expect(dbStub.voluntaryExit.deleteManyByValue.calledOnce).to.be.true;
-    expect(dbStub.proposerSlashing.deleteManyByValue.calledOnce).to.be.true;
-    expect(dbStub.attesterSlashing.deleteManyByValue.calledOnce).to.be.true;
+    expect(dbStub.voluntaryExit.batchRemove.calledOnce).to.be.true;
+    expect(dbStub.proposerSlashing.batchRemove.calledOnce).to.be.true;
+    expect(dbStub.attesterSlashing.batchRemove.calledOnce).to.be.true;
   });
 
 

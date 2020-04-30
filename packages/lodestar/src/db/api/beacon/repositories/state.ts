@@ -1,19 +1,20 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {Repository} from "../repository";
 import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../../schema";
+import {Bucket} from "../../schema";
+import {Repository} from "./abstract";
 import {ChainRepository} from "./chain";
 
-export class StateRepository extends Repository<BeaconState> {
+export class StateRepository extends Repository<Uint8Array, BeaconState> {
 
   private chain: ChainRepository;
 
   public constructor(
     config: IBeaconConfig,
-    db: IDatabaseController,
-    chain: ChainRepository) {
+    db: IDatabaseController<Buffer, Buffer>,
+    chain: ChainRepository,
+  ) {
     super(config, db, Bucket.state, config.types.BeaconState);
     this.chain = chain;
   }

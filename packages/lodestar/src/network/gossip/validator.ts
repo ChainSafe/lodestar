@@ -77,7 +77,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     
-    const existingBLock = await this.db.block.getBlockBySlot(signedBlock.message.slot);
+    const existingBLock = await this.db.block.getBySlot(signedBlock.message.slot);
     if (existingBLock && existingBLock.message.proposerIndex === signedBlock.message.proposerIndex) {
       // same proposer submitted twice
       return false;
@@ -85,7 +85,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
     const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
     // skip block if its a known bad block
-    if (await this.db.block.isBadBlock(root)) {
+    if (await this.db.badBlock.has(root)) {
       this.logger.warn(`Received bad block, block root : ${root} `);
       return false;
     }
@@ -122,7 +122,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
+    if (!await this.db.block.has(blockRoot) || await this.db.badBlock.has(blockRoot)) {
       return false;
     }
     const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
@@ -177,7 +177,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!await this.db.block.has(blockRoot) || await this.db.block.isBadBlock(blockRoot)) {
+    if (!await this.db.block.has(blockRoot) || await this.db.badBlock.has(blockRoot)) {
       return false;
     }
 

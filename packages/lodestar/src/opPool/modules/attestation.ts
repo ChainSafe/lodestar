@@ -1,13 +1,13 @@
 import {Attestation, BeaconState, CommitteeIndex, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {OperationsModule} from "./abstract";
 import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
-import {BulkRepository} from "../../db/api/beacon/repository";
+import {Repository} from "../../db/api/beacon/repositories";
+import {OperationsModule} from "./abstract";
 
 export class AttestationOperations extends OperationsModule<Attestation> {
   private readonly config: IBeaconConfig;
 
-  public constructor(db: BulkRepository<Attestation>, {config}: {config: IBeaconConfig}) {
+  public constructor(db: Repository<Uint8Array, Attestation>, {config}: {config: IBeaconConfig}) {
     super(db);
     this.config = config;
   }

@@ -37,7 +37,6 @@ describe("Network Gossip", function() {
     };
     const peerIdB = await createPeerId();
     const enr = ENR.createFromPeerId(peerIdB);
-    metadata = new MetadataController({enr}, {config});
     const libp2p = sandbox.createStubInstance(NodejsNode);
     const logger = new WinstonLogger();
     const validator = sandbox.createStubInstance(GossipMessageValidator);
@@ -48,6 +47,7 @@ describe("Network Gossip", function() {
       state: generateState(),
       config
     });
+    metadata = new MetadataController({enr}, {config,  chain});
     pubsub = new MockGossipSub();
     gossip = new Gossip(networkOpts, metadata, {config, libp2p, logger, validator, chain, pubsub});
     await gossip.start();

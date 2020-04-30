@@ -12,12 +12,14 @@ import { StatefulDagLMDGHOST } from "../../../../../../lodestar/src/chain/forkCh
 import { BeaconChain } from "../../../../../src/chain";
 import { generateEmptyBlock, generateEmptySignedBlock } from "../../../../utils/block";
 import { BlockRepository, DepositDataRootListRepository, StateRepository } from "../../../../../src/db/api/beacon/repositories";
+import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
+import { IBeaconDb } from "../../../../../src/db";
 
 describe("block assembly", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any, chainStub: any, forkChoiceStub: any, stateTransitionStub: any, opPool: any, beaconDB: any, eth1: any;
+  let assembleBodyStub: any, chainStub: StubbedChain, forkChoiceStub: any, stateTransitionStub: any, opPool: any, beaconDB: StubbedBeaconDb, eth1: any;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
@@ -25,7 +27,7 @@ describe("block assembly", function () {
 
 
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
     chainStub.forkChoice = forkChoiceStub;
 
     opPool = sandbox.createStubInstance(OpPool);
@@ -33,7 +35,7 @@ describe("block assembly", function () {
       block: sandbox.createStubInstance(BlockRepository),
       state: sandbox.createStubInstance(StateRepository),
       depositDataRootList: sandbox.createStubInstance(DepositDataRootListRepository)
-    };
+    } as StubbedBeaconDb;
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
   });
 
@@ -43,13 +45,13 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     const head = chainStub.forkChoice.head();
-    beaconDB.block.get.withArgs(head).returns(generateEmptySignedBlock());
-    beaconDB.state.get.resolves(generateState({ slot: 1 }));
-    beaconDB.depositDataRootList.getSerialized.resolves(config.types.DepositDataRootList.tree.defaultValue().serialize());
+    beaconDB.block.get.withArgs(head).resolves(generateEmptySignedBlock());
+    beaconDB.state.get.resolves(generateState({slot: 1}));
+    beaconDB.depositDataRootList.get.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
     try {
-      const result = await assembleBlock(config, chainStub, beaconDB, opPool, eth1, 1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, chainStub, beaconDB as unknown as IBeaconDb, opPool, eth1, 1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

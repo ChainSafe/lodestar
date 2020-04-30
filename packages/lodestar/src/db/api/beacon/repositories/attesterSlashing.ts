@@ -1,16 +1,15 @@
 import {AttesterSlashing} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {BulkRepository} from "../repository";
 import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../../schema";
+import {Bucket} from "../../schema";
+import {Repository} from "./abstract";
 
-export class AttesterSlashingRepository extends BulkRepository<AttesterSlashing> {
-
+export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterSlashing> {
   public constructor(
     config: IBeaconConfig,
-    db: IDatabaseController) {
+    db: IDatabaseController<Buffer, Buffer>,
+  ) {
     super(config, db, Bucket.attesterSlashing, config.types.AttesterSlashing);
   }
-
 }

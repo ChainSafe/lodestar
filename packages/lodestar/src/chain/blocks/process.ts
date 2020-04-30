@@ -32,8 +32,8 @@ export function processBlock(
         }
         // On successful transition, update system state
         await Promise.all([
-          db.state.set(job.signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
-          db.block.set(blockRoot, job.signedBlock),
+          db.state.put(job.signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
+          db.block.put(blockRoot, job.signedBlock),
         ]);
         const newChainHeadRoot = await updateForkChoice(config, db, forkChoice, job.signedBlock, newState);
         if(newChainHeadRoot) {
@@ -107,13 +107,13 @@ export async function updateDepositMerkleTree(
     newState.eth1Data.depositCount - newState.eth1DepositIndex
   );
   const [depositDatas, depositDataRootList] = await Promise.all([
-    db.depositData.getAllBetween(newState.eth1DepositIndex, upperIndex),
+    db.depositData.values({gt: newState.eth1DepositIndex, lt: upperIndex}),
     db.depositDataRootList.get(newState.eth1DepositIndex),
   ]);
 
   depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
   //TODO: remove deposits with index <= newState.depositIndex
-  await db.depositDataRootList.set(newState.eth1DepositIndex, depositDataRootList);
+  await db.depositDataRootList.put(newState.eth1DepositIndex, depositDataRootList);
 }
 
 export async function runStateTransition(
@@ -126,7 +126,7 @@ export async function runStateTransition(
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate
-    await db.block.storeBadBlock(blockRoot);
+    await db.badBlock.put(blockRoot);
     logger.warn(`Found bad block, block root: ${toHexString(blockRoot)} ` + e.message);
     return null;
   }

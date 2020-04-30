@@ -34,7 +34,6 @@ import {
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 
 describe("produce block", function () {
@@ -78,15 +77,15 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    dbStub.block.getChainHead.resolves(parentBlock);
+    //dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.depositDataRootList.get.resolves(depositDataRootList);
-    dbStub.proposerSlashing.getAll.resolves([]);
-    dbStub.aggregateAndProof.getAll.resolves([]);
-    dbStub.attesterSlashing.getAll.resolves([]);
-    dbStub.voluntaryExit.getAll.resolves([]);
-    dbStub.depositData.getAllBetween.resolves([]);
+    dbStub.proposerSlashing.values.resolves([]);
+    dbStub.aggregateAndProof.values.resolves([]);
+    dbStub.attesterSlashing.values.resolves([]);
+    dbStub.voluntaryExit.values.resolves([]);
+    dbStub.depositData.values.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root);
     eth1Stub.getEth1Vote.resolves({depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)});

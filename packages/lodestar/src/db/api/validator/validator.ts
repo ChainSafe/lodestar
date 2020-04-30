@@ -9,7 +9,7 @@ import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
 
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
-import {Bucket, encodeKey} from "../../schema";
+import {Bucket, encodeKey} from "../schema";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public constructor(opts: IDatabaseApiOptions) {
@@ -29,7 +29,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public async setBlock(pubKey: BLSPubkey, signedBlock: SignedBeaconBlock): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.lastProposedBlock, toHexString(pubKey)),
-      this.config.types.SignedBeaconBlock.serialize(signedBlock)
+      this.config.types.SignedBeaconBlock.serialize(signedBlock) as Buffer
     );
   }
 
@@ -37,7 +37,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     pubKey: BLSPubkey,
     options: IAttestationSearchOptions): Promise<Attestation[]> {
     options = deepmerge({gt: 0, lt: Number.MAX_SAFE_INTEGER}, options);
-    const data = await this.db.search({
+    const data = await this.db.values({
       gt: encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + options.gt),
       lt: encodeKey(Bucket.proposedAttestations, "" + toHexString(this.incrementPubKey(pubKey)) + options.lt)
     });
@@ -47,7 +47,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public async setAttestation(pubKey: BLSPubkey, attestation: Attestation): Promise<void> {
     await this.db.put(
       encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + attestation.data.target.epoch),
-      this.config.types.Attestation.serialize(attestation)
+      this.config.types.Attestation.serialize(attestation) as Buffer
     );
   }
 
