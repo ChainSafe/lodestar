@@ -1,5 +1,5 @@
 import {IBeaconChain} from "../../chain";
-import {OpPool} from "../../opPool";
+import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
@@ -9,7 +9,7 @@ import {getCommitteeIndexSubnet} from "../../network/gossip/utils";
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
   network: INetwork;
-  opPool: OpPool;
+  db: IBeaconDb;
 }
 
 export class AttestationCollector implements IService {
@@ -17,7 +17,7 @@ export class AttestationCollector implements IService {
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
-  private readonly opPool: OpPool;
+  private readonly db: IBeaconDb;
 
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
@@ -25,7 +25,7 @@ export class AttestationCollector implements IService {
     this.config = config;
     this.chain = modules.chain;
     this.network = modules.network;
-    this.opPool = modules.opPool;
+    this.db = modules.db;
   }
 
   public async start(): Promise<void> {
@@ -70,6 +70,6 @@ export class AttestationCollector implements IService {
   };
 
   private handleCommitteeAttestation = async ({attestation}: {attestation: Attestation}): Promise<void> => {
-    await this.opPool.attestations.receive(attestation);
+    await this.db.attestation.add(attestation);
   };
 }

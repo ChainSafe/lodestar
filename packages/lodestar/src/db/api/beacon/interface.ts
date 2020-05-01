@@ -33,24 +33,24 @@ export interface IBeaconDb {
 
   chain: ChainRepository;
 
+  // states
   state: StateRepository;
 
+  // bad blocks
   badBlock: BadBlockRepository;
 
+  // unfinalized blocks
   block: BlockRepository;
 
+  // finalized blocks
   blockArchive: BlockArchiveRepository;
 
+  // op pool
   attestation: AttestationRepository;
-
   aggregateAndProof: AggregateAndProofRepository;
-
   voluntaryExit: VoluntaryExitRepository;
-
   proposerSlashing: ProposerSlashingRepository;
-
   attesterSlashing: AttesterSlashingRepository;
-
   depositData: DepositDataRepository;
 
   depositDataRootList: DepositDataRootListRepository;
@@ -60,6 +60,8 @@ export interface IBeaconDb {
    * @param publicKey
    */
   getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
+
+  processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 
   /**
    * Stores block and state and set them as chain head

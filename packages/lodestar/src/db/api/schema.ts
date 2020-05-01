@@ -6,15 +6,22 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 // Buckets are separate database namespaces
 export enum Bucket {
   // beacon chain
+  // every state
   state, // Root -> BeaconState
+  // unfinalized blocks
   block, // Root -> SignedBeaconBlock
+  // finalized blocks
   blockArchive, // Slot -> SignedBeaconBlock
   blockSlotRefs, // Slot -> Root
+  // known bad block
   invalidBlock, // Root -> boolean
+  // finalized chain
   mainChain, // Slot -> Root<BeaconBlock>
+  // justified, finalized state and block hashes
   chainInfo, // Key -> Number64 | stateHash | blockHash
+  // lists of deposit data roots
   depositDataRootList, // depositIndex -> DepositDataRootList
-  // operations
+  // op pool
   attestation, // Root -> Attestation
   aggregateAndProof, // Root -> AggregateAndProof
   depositData, // index -> DepositData

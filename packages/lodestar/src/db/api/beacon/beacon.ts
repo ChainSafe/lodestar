@@ -106,4 +106,16 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
   }
 
+  /**
+   * Remove stored operations based on a newly processed block
+   */
+  public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
+    await Promise.all([
+      this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
+      this.depositData.deleteOld(signedBlock.message.body.eth1Data.depositCount),
+      this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
+      this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
+      this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations)
+    ]);
+  }
 }

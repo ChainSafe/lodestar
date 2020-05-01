@@ -6,7 +6,6 @@ import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot, ValidatorIndex} from "@ch
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
-import {OpPool} from "../../../opPool";
 import {assembleBody} from "./body";
 import {IEth1Notifier} from "../../../eth1";
 import {processSlots, stateTransition, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -18,7 +17,6 @@ export async function assembleBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  opPool: OpPool,
   eth1: IEth1Notifier,
   slot: Slot,
   proposerIndex: ValidatorIndex,
@@ -37,7 +35,7 @@ export async function assembleBlock(
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
-    body: await assembleBody(config, opPool, eth1, depositDataRootList, currentState, randao),
+    body: await assembleBody(config, db, eth1, depositDataRootList, currentState, randao),
   };
 
   block.stateRoot = config.types.BeaconState.hashTreeRoot(

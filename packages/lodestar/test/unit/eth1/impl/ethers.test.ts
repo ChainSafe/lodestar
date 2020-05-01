@@ -11,8 +11,6 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {OpPool} from "../../../../src/opPool";
-import {DepositDataOperations} from "../../../../src/opPool/modules";
 import {after, before, describe, it} from "mocha";
 
 chai.use(chaiAsPromised);
@@ -20,7 +18,6 @@ chai.use(chaiAsPromised);
 describe("Eth1Notifier", () => {
   const ganacheProvider = ganache.provider({blockTime: 1});
   const provider = new ethers.providers.Web3Provider(ganacheProvider as any);
-  let opPool: any;
   let eth1: IEth1Notifier;
   let sandbox: SinonSandbox;
   const logger: ILogger = new WinstonLogger();
@@ -28,8 +25,6 @@ describe("Eth1Notifier", () => {
   before(async function (): Promise<void> {
     logger.silent = true;
     sandbox = sinon.createSandbox();
-    opPool = sandbox.createStubInstance(OpPool);
-    opPool.deposits = sandbox.createStubInstance(DepositDataOperations);
     eth1 = new EthersEth1Notifier({
       ...defaults,
       providerInstance: provider

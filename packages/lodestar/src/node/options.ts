@@ -7,7 +7,6 @@ import defaultDatabaseOptions, {IDatabaseOptions} from "../db/options";
 import defaultApiOptions, {IApiOptions} from "../api/options";
 import defaultEth1Options, {IEth1Options} from "../eth1/options";
 import defaultNetworkOptions, {INetworkOptions} from "../network/options";
-import defaultOpPoolOptions, {IOpPoolOptions} from "../opPool/options";
 import defaultSyncOptions, {ISyncOptions} from "../sync/options";
 import defaultLoggerOptions, {IBeaconLoggerOptions} from "./loggerOptions";
 import defaultMetricsOptions, {IMetricsOptions} from "../metrics/options";
@@ -18,7 +17,6 @@ export interface IBeaconNodeOptions {
   api: IApiOptions;
   eth1: IEth1Options;
   network: INetworkOptions;
-  opPool: IOpPoolOptions;
   sync: ISyncOptions;
   logger: IBeaconLoggerOptions;
   metrics: IMetricsOptions;
@@ -30,7 +28,6 @@ const config: IBeaconNodeOptions = {
   api: defaultApiOptions,
   eth1: defaultEth1Options,
   network: defaultNetworkOptions,
-  opPool: defaultOpPoolOptions,
   sync: defaultSyncOptions,
   logger: defaultLoggerOptions,
   metrics: defaultMetricsOptions,

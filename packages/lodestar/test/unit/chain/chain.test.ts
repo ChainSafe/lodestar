@@ -5,7 +5,6 @@ import {expect} from "chai";
 import {StateRepository, BlockRepository} from "../../../src/db/api/beacon/repositories";
 import {IEth1Notifier} from "../../../src/eth1";
 import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
-import {OpPool} from "../../../src/opPool";
 import {WinstonLogger, bytesToInt} from "@chainsafe/lodestar-utils";
 import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
@@ -13,7 +12,7 @@ import {generateState} from "../../utils/state";
 
 describe("BeaconChain", function() {
   const sandbox = sinon.createSandbox();
-  let dbStub: any, eth1: IEth1Notifier, opPool: any, metrics: any, forkChoice: any;
+  let dbStub: any, eth1: IEth1Notifier, metrics: any, forkChoice: any;
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
@@ -23,13 +22,12 @@ describe("BeaconChain", function() {
       block: sandbox.createStubInstance(BlockRepository),
     };
     eth1 = new InteropEth1Notifier();
-    opPool = sandbox.createStubInstance(OpPool);
     metrics = sandbox.createStubInstance(BeaconMetrics);
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state = generateState();
     dbStub.state.get.resolves(state);
     dbStub.state.getLatest.resolves(state);
-    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, opPool, logger, metrics, forkChoice});
+    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
     await chain.start();
   });
 

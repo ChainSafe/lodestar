@@ -8,7 +8,6 @@ import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
 import {IBeaconChain} from "../chain";
-import {OpPool} from "../opPool";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
@@ -35,7 +34,6 @@ export interface ISyncModules {
   reputationStore: IReputationStore;
   logger: ILogger;
   chain: IBeaconChain;
-  opPool: OpPool;
   initialSync?: InitialSync;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;

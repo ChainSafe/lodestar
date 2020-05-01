@@ -32,14 +32,12 @@ import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DIS
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
-import {OpPool} from "../../opPool";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
   chain: IBeaconChain;
   db: IBeaconDb;
-  opPool: OpPool;
   config: IBeaconConfig;
   logger: ILogger;
 }
@@ -47,14 +45,12 @@ interface GossipMessageValidatorModules {
 export class GossipMessageValidator implements IGossipMessageValidator {
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
-  private readonly opPool: OpPool;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
 
-  public constructor({chain, db, opPool, config, logger}: GossipMessageValidatorModules) {
+  public constructor({chain, db, config, logger}: GossipMessageValidatorModules) {
     this.chain = chain;
     this.db = db;
-    this.opPool = opPool;
     this.config = config;
     this.logger = logger;
   }
@@ -134,7 +130,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         currentSlot >= attestation.data.slot)) {
       return false;
     }
-    const existingAttestations = await this.opPool.attestations.geAttestationsBySlot(attestation.data.slot) || [];
+    const existingAttestations = await this.db.attestation.geAttestationsBySlot(attestation.data.slot) || [];
     // each attestation has only 1 validator index
     const existingValidatorIndexes = existingAttestations.map(
       item => getAttestingIndices(this.config, state, item.data, item.aggregationBits)[0]);
@@ -165,12 +161,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    if (await this.opPool.aggregateAndProofs.hasAttestation(aggregate)) {
+    if (await this.db.aggregateAndProof.hasAttestation(aggregate)) {
       return false;
     }
 
     const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-    const existingAttestations = await this.opPool.aggregateAndProofs.getByAggregatorAndSlot(
+    const existingAttestations = await this.db.aggregateAndProof.getByAggregatorAndSlot(
       aggregatorIndex, slot) || [];
     if (existingAttestations.length > 0) {
       return false;
@@ -264,7 +260,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       attesterSlashing.attestation2.attestingIndices.valueOf() as ValidatorIndex[],
       sszEqualPredicate(this.config.types.ValidatorIndex)
     );
-    if (await this.opPool.attesterSlashings.hasAll(attesterSlashedIndices)) {
+    if (await this.db.attesterSlashing.hasAll(attesterSlashedIndices)) {
       return false;
     }
 

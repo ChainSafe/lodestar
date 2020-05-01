@@ -11,7 +11,7 @@ import {sleep} from "../../../src/util/sleep";
 import Libp2p from "libp2p";
 import sinon from "sinon";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
-import {SignedBeaconBlock, Attestation} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock, Attestation, ResponseBody} from "@chainsafe/lodestar-types";
 import {generateState} from "../../utils/state";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {IBeaconChain} from "../../../src/chain";
@@ -248,7 +248,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
     netB.reqResp.once("request", (peerId, method, requestId, request) => {
-      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+      netB.reqResp.sendResponse(requestId, null, netB.metadata);
     });
 
     const enrB = ENR.createFromPeerId(peerIdB);

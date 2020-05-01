@@ -7,11 +7,12 @@ import {Bucket, encodeKey as _encodeKey} from "../../schema";
 export type Id = Uint8Array | string | number | bigint;
 
 /**
- * Repository manages a Buffer to Buffer kv database
- * It translates typed keys and values to Buffers required by the database controller
+ * Repository is a high level kv storage
+ * managing a Buffer to Buffer kv database
+ * It translates typed keys and values to Buffers required by the underlying database
  * 
- * SSZ-encoded values,
- * indexed by id
+ * By default, SSZ-encoded values,
+ * indexed by root
  */
 export abstract class Repository<I extends Id, T> {
   protected config: IBeaconConfig;
