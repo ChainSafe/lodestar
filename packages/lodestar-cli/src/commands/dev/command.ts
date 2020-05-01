@@ -142,7 +142,6 @@ export class DevCommand implements ICliCommand {
       config: node.config,
       sync: node.sync,
       eth1: node.eth1,
-      opPool: node.opPool,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
       network: node.network,

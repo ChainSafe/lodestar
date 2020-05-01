@@ -69,8 +69,6 @@ describe("Attestation collector",function() {
         network: {
           gossip: fakeGossip
         },
-        // @ts-ignore
-        opPool: null
       }
     );
     await realClock.start();

@@ -99,7 +99,6 @@ describe("e2e interop simulation", function() {
       config: node.config,
       sync: node.sync,
       eth1: node.eth1,
-      opPool: node.opPool,
       network: node.network,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
