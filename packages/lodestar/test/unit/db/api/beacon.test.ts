@@ -31,7 +31,7 @@ describe("beacon db api", function() {
 
   beforeEach(function () {
     controller = sandbox.createStubInstance<LevelDbController>(LevelDbController);
-    db = new BeaconDb({controller, config}) as unknown as StubbedBeaconDb;
+    db = new BeaconDb({controller, config}) as  StubbedBeaconDb;
     db.block = sandbox.createStubInstance(BlockRepository) as any;
     db.state = sandbox.createStubInstance(StateRepository) as any;
     db.chain = sandbox.createStubInstance(ChainRepository) as any;

@@ -11,19 +11,13 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
-import {
-  BlockArchiveRepository,
-  BlockRepository,
-  ChainRepository,
-  StateRepository
-} from "../../../src/db/api/beacon/repositories";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
-import { StubbedBeaconDb } from "../../utils/stub";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -82,12 +76,7 @@ describe("[sync] rpc", function () {
     ]);
     repsA = new ReputationStore();
 
-    const db = {
-      state: sandbox.createStubInstance(StateRepository),
-      chain: sandbox.createStubInstance(ChainRepository),
-      block: sandbox.createStubInstance(BlockRepository),
-      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
-    } as StubbedBeaconDb;
+    const db = new StubbedBeaconDb(sandbox);
     db.state.get.resolves(state);
     db.chain.getChainHeadSlot.resolves(0);
     //db.block.getChainHead.resolves(block);

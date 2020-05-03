@@ -17,16 +17,6 @@ import {
   generateEmptySignedAggregateAndProof
 } from "../../../utils/attestation";
 import {
-  AggregateAndProofRepository,
-  AttestationRepository,
-  AttesterSlashingRepository,
-  BadBlockRepository,
-  BlockRepository,
-  ProposerSlashingRepository,
-  StateRepository,
-  VoluntaryExitRepository
-} from "../../../../src/db/api/beacon/repositories";
-import {
   generateEmptyAttesterSlashing,
   generateEmptyProposerSlashing
 } from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -59,17 +49,7 @@ describe("GossipMessageValidator", () => {
     isBlsVerifyStub = sandbox.stub(bls, "verify");
     getBeaconProposerIndexStub = sandbox.stub(proposerUtils, "getBeaconProposerIndex");
 
-    dbStub = {
-      badBlock: sandbox.createStubInstance(BadBlockRepository),
-      block: sandbox.createStubInstance(BlockRepository),
-      attestation: sandbox.createStubInstance(AttestationRepository),
-      voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
-      proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
-      attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
-      state: sandbox.createStubInstance(StateRepository),
-      aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
-      getStateForSlot: sandbox.stub(),
-    } as unknown as StubbedBeaconDb;
+    dbStub = new StubbedBeaconDb(sandbox);
     logger = new WinstonLogger();
     logger.silent = true;
     validator = new GossipMessageValidator({

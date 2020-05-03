@@ -28,12 +28,11 @@ describe("gossip handler", function () {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     gossipStub = sinon.createStubInstance(Gossip);
     networkStub.gossip = gossipStub;
-    // @ts-ignore
-    dbStub = {
-      attesterSlashing: sinon.createStubInstance(AttesterSlashingRepository),
-      proposerSlashing: sinon.createStubInstance(ProposerSlashingRepository),
-      voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
-    } as StubbedBeaconDb;
+    dbStub = new StubbedBeaconDb(sinon);
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("should handle new block", async function () {

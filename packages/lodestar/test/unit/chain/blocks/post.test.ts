@@ -24,9 +24,7 @@ describe("post block process stream", function () {
   let attestationProcessorStub: SinonStubbedInstance<AttestationProcessor>;
 
   beforeEach(function () {
-    dbStub = sinon.createStubInstance(BeaconDb) as unknown as StubbedBeaconDb;
-    dbStub.block = sinon.createStubInstance(BlockRepository) as any;
-    dbStub.chain = sinon.createStubInstance(ChainRepository) as any;
+    dbStub = new StubbedBeaconDb(sinon);
     slotMetricsStub = sinon.createStubInstance(Gauge);
     currentEpochLiveValidatorsMetricsStub = sinon.createStubInstance(Gauge);
     metricsStub = sinon.createStubInstance(BeaconMetrics);

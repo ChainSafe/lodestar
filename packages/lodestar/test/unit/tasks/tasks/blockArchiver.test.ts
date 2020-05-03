@@ -1,14 +1,14 @@
 import {describe, it, beforeEach} from "mocha";
-import sinon from "sinon";
-import {BlockRepository} from "../../../../src/db/api/beacon/repositories";
-import {BlockArchiveRepository} from "../../../../src/db/api/beacon/repositories/blockArchive";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {expect} from "chai";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
+import sinon from "sinon";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import { StubbedBeaconDb } from "../../../utils/stub";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+
+import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
+import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("block archiver task", function () {
 
@@ -17,10 +17,7 @@ describe("block archiver task", function () {
   let dbStub: StubbedBeaconDb, loggerStub: any;
 
   beforeEach(function () {
-    dbStub = {
-      block: sandbox.createStubInstance(BlockRepository),
-      blockArchive: sandbox.createStubInstance(BlockArchiveRepository)
-    } as StubbedBeaconDb;
+    dbStub = new StubbedBeaconDb(sandbox);
     loggerStub = sandbox.createStubInstance(WinstonLogger);
   });
 

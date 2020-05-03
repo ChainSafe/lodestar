@@ -11,13 +11,6 @@ import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {
-  AggregateAndProofRepository,
-  VoluntaryExitRepository,
-  DepositDataRepository,
-  ProposerSlashingRepository,
-  AttestationRepository,
-} from "../../../../../src/db/api/beacon/repositories";
 
 describe("blockAssembly - body", function () {
 
@@ -26,13 +19,7 @@ describe("blockAssembly - body", function () {
   let dbStub: StubbedBeaconDb, eth1: any, generateDepositsStub: any;
 
   beforeEach(() => {
-    dbStub = {
-      aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
-      voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
-      depositData: sandbox.createStubInstance(DepositDataRepository),
-      proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
-      attesterSlashing: sandbox.createStubInstance(AttestationRepository),
-    } as unknown as StubbedBeaconDb;
+    dbStub = new StubbedBeaconDb(sandbox);
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
     eth1.getEth1Vote = sandbox.stub();
