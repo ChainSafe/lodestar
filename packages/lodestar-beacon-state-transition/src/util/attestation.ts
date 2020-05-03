@@ -111,3 +111,14 @@ export function isValidAttestationSlot(
     currentSlot <= attestationSlot + config.params.SLOTS_PER_EPOCH
   );
 }
+
+export function isUnaggregatedAttestation(attestation: Attestation): boolean {
+  const aggregationBits = attestation.aggregationBits;
+  let count = 0;
+  for (let i = 0; i < aggregationBits.length; i++) {
+    if (aggregationBits[i]) {
+      count++;
+    }
+  }
+  return count === 1;
+}

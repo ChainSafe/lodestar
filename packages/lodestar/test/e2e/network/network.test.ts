@@ -248,7 +248,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
     netB.reqResp.once("request", (peerId, method, requestId, request) => {
-      netB.reqResp.sendResponse(requestId, null, [netB.metadata]);
+      netB.reqResp.sendResponse(requestId, null, netB.metadata);
     });
 
     const enrB = ENR.createFromPeerId(peerIdB);
