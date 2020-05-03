@@ -10,7 +10,7 @@ import rimraf from "rimraf";
 describe("sync 2 dev nodes", function() {
   this.timeout(100000);
   const logger: ILogger = new WinstonLogger();
-  logger.silent = false;
+  logger.silent = true;
   const tmpDir = ".tmp";
 
   after(() => {
@@ -44,6 +44,9 @@ describe("sync 2 dev nodes", function() {
     };
     const dev2Cmd = new DevCommand();
     await dev2Cmd.action(dev2CmdOptions, logger);
+    // autoDial=false so we have to dial manually
+    // if autoDial=true connection direction is always "inbound" hence no handshake => no sync
+    await dev2Cmd.node.network.connect(devCmd.node.network.peerInfo);
     // make sure initial sync work
     const dev2Url = `http://127.0.0.1:${dev2CmdOptions.restPort}`;
     await waitForBlock(config, dev2Url, 3, logger);
