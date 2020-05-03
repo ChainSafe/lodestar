@@ -6,7 +6,8 @@ import {EventEmitter} from "events";
 import {fromHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64,
   ForkDigest,
-  ENRForkID} from "@chainsafe/lodestar-types";
+  ENRForkID,
+  Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
@@ -14,7 +15,7 @@ import {IEth1Notifier} from "../eth1";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
-import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest, GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
@@ -86,9 +87,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(this.forkChoice.head());
   }
 
-  public isInitialized(): boolean {
-    //TODO: implement
-    return true;
+  public async getFinalizedCheckpoint(): Promise<Checkpoint> {
+    const state = await this.getHeadState();
+    const epoch = state.finalizedCheckpoint.epoch;
+    const root = (epoch === GENESIS_EPOCH)?
+      await this.db.chain.getFinalizedBlockRoot() : state.finalizedCheckpoint.root;
+    return {
+      epoch,
+      root,
+    };
   }
 
   public async start(): Promise<void> {

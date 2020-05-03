@@ -81,6 +81,7 @@ describe("[sync] rpc", function () {
     db.chain.getChainHeadSlot.resolves(0);
     //db.block.getChainHead.resolves(block);
     db.block.get.resolves(block);
+    db.block.getBySlot.resolves(block);
     db.blockArchive.get.resolves(block);
     db.blockArchive.valuesStream.returns(async function * () {
       yield block;
