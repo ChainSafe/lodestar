@@ -1,6 +1,7 @@
 import {Attestation, BeaconState, CommitteeIndex, Epoch,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch,isUnaggregatedAttestation}
+  from "@chainsafe/lodestar-beacon-state-transition";
 import {Repository} from "../../db/api/beacon/repositories";
 import {OperationsModule} from "./abstract";
 
@@ -18,7 +19,7 @@ export class AttestationOperations extends OperationsModule<Attestation> {
       return attestation.data.index === committeeIndex
           && computeEpochAtSlot(this.config, attestation.data.slot) === epoch
           //filter out aggregated attestations
-          && attestation.aggregationBits.length === 1;
+          && isUnaggregatedAttestation(attestation);
     });
   }
 
