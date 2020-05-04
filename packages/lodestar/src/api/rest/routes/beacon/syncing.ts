@@ -10,7 +10,7 @@ export const registerSyncingEndpoint: LodestarRestApiEndpoint = (server, {config
     async (request, reply) => {
       const responseValue = await api.beacon.getSyncingStatus();
       let response: Json;
-      if(responseValue === true) {
+      if(responseValue === false) {
         response = {
           // eslint-disable-next-line @typescript-eslint/camelcase
           is_syncing: config.types.Boolean.toJson(responseValue)

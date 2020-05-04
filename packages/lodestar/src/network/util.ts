@@ -7,7 +7,7 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, RequestId} from "../constants";
+import {Method, RequestId, Methods, MethodResponseType} from "../constants";
 
 // req/resp
 
@@ -56,48 +56,19 @@ export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): 
 export function getRequestMethodSSZType(
   config: IBeaconConfig, method: Method
 ): Type<any> {
-  let type: Type<any>;
-  switch (method) {
-    case Method.Status:
-      type = config.types.Status;
-      break;
-    case Method.Goodbye:
-      type = config.types.Goodbye;
-      break;
-    case Method.Ping:
-      type = config.types.Ping;
-      break;
-    case Method.BeaconBlocksByRange:
-      type = config.types.BeaconBlocksByRangeRequest;
-      break;
-    case Method.BeaconBlocksByRoot:
-      type = config.types.BeaconBlocksByRootRequest;
-      break;
-  }
-  return type;
+  return Methods[method].requestSSZType(config);
 }
 
 export function getResponseMethodSSZType(
   config: IBeaconConfig, method: Method
 ): Type<any> {
-  let type: Type<any>;
-  switch (method) {
-    case Method.Status:
-      type = config.types.Status;
-      break;
-    case Method.Goodbye:
-      type = config.types.Goodbye;
-      break;
-    case Method.Ping:
-      type = config.types.Ping;
-      break;
-    case Method.Metadata:
-      type = config.types.Metadata;
-      break;
-    case Method.BeaconBlocksByRange:
-    case Method.BeaconBlocksByRoot:
-      type = config.types.SignedBeaconBlock;
-      break;
-  }
-  return type;
+  return Methods[method].responseSSZType(config);
+}
+
+export function isRequestOnly(method: Method): boolean {
+  return Methods[method].responseType === MethodResponseType.NoResponse;
+}
+
+export function isRequestSingleChunk(method: Method): boolean {
+  return Methods[method].responseType === MethodResponseType.SingleResponse;
 }

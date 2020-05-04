@@ -54,6 +54,10 @@ export class NaiveRegularSync implements IRegularSync {
     this.chain.removeListener("processedBlock", this.setNewTarget);
   }
 
+  public getHighestBlock(): Slot {
+    return this.currentTarget;
+  }
+
   private setNewTarget = async (lastProcessedBlock?: SignedBeaconBlock): Promise<void> => {
     if(lastProcessedBlock && this.currentTarget > lastProcessedBlock.message.slot) {
       //chain is processing blocks but not yet at target slot

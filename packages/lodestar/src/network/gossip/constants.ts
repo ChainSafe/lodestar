@@ -16,7 +16,7 @@ export enum GossipEvent {
 }
 
 export const AttestationSubnetRegExp =
-new RegExp("^(/eth2/)([a-f0-9]{8})(/committee_index)([0-9]+)(_beacon_attestation/)([a-z]+)$");
+new RegExp("^(/eth2/)([a-f0-9]{8})(/committee_index)([0-9]+)(_beacon_attestation/)([a-z_]+)$");
 
 export const GossipTopicRegExp = new RegExp("^(/eth2/)([a-f0-9]{8})/(\\w+)(/[a-z]+)");
 

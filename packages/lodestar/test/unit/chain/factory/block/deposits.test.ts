@@ -1,25 +1,23 @@
-import sinon, { SinonStubbedInstance } from "sinon";
+import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+
 import {ZERO_HASH} from "../../../../../src/constants";
-import {OpPool} from "../../../../../src/opPool";
 import {generateDeposits} from "../../../../../src/chain/factory/block/deposits";
 import {generateState} from "../../../../utils/state";
 import {generateDepositData} from "../../../../utils/deposit";
-import {DepositDataOperations} from "../../../../../src/opPool/modules";
-import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {StubbedBeaconDb} from "../../../../utils/stub";
+import {DepositDataRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe("blockAssembly - deposits", function() {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool: SinonStubbedInstance<OpPool>;
-  let depositDataStub: SinonStubbedInstance<DepositDataOperations>;
+  let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
-    opPool = sandbox.createStubInstance(OpPool);
-    depositDataStub = sandbox.createStubInstance(DepositDataOperations);
-    opPool.depositData = depositDataStub as unknown as DepositDataOperations;
+    dbStub = new StubbedBeaconDb(sandbox);
   });
 
   afterEach(() => {
@@ -29,7 +27,7 @@ describe("blockAssembly - deposits", function() {
   it("return empty array if no pending deposits", async function() {
     const result = await generateDeposits(
       config,
-      opPool as unknown as OpPool,
+      dbStub,
       generateState({
         eth1DepositIndex: 1,
       }),
@@ -45,7 +43,7 @@ describe("blockAssembly - deposits", function() {
 
   it("return deposits with valid proofs", async function() {
     const deposits = [generateDepositData(), generateDepositData()];
-    depositDataStub.getAllBetween.resolves(deposits);
+    dbStub.depositData.values.resolves(deposits);
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
 
@@ -58,7 +56,7 @@ describe("blockAssembly - deposits", function() {
     };
     const result = await generateDeposits(
       config,
-      opPool as unknown as OpPool,
+      dbStub,
       generateState({
         eth1DepositIndex: 0,
       }),

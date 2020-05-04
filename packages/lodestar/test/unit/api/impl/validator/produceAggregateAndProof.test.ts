@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IValidatorApi, ValidatorApi} from "../../../../../src/api/impl/validator";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {AttestationOperations} from "../../../../../src/opPool";
+import {AttestationRepository} from "../../../../../src/db/api/beacon/repositories";
 import {PrivateKey, verifyAggregate} from "@chainsafe/bls";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
@@ -13,14 +13,14 @@ describe("produce aggregate and proof api implementation", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let attestationsPoolStub: SinonStubbedInstance<AttestationOperations>;
+  let attestationStub: SinonStubbedInstance<AttestationRepository>;
   
   let api: IValidatorApi;
 
   beforeEach(function () {
-    attestationsPoolStub = sinon.createStubInstance(AttestationOperations);
+    attestationStub = sinon.createStubInstance(AttestationRepository);
     // @ts-ignore
-    api = new ValidatorApi({}, {opPool: {attestations: attestationsPoolStub}, db: {getValidatorIndex: () => 1}, config});
+    api = new ValidatorApi({}, {db: {attestation: attestationStub, getValidatorIndex: () => 1}, config});
   });
 
   afterEach(function () {
@@ -28,7 +28,7 @@ describe("produce aggregate and proof api implementation", function () {
   });
 
   it("should get aggregated attestation", async function () {
-    attestationsPoolStub.getCommiteeAttestations.resolves([
+    attestationStub.getCommiteeAttestations.resolves([
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
     ]);

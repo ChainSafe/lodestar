@@ -1,15 +1,21 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {stateTransition, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
+import {ChainEventEmitter} from "..";
 
 export function processBlock(
-  config: IBeaconConfig, db: IBeaconDb, logger: ILogger, forkChoice: ILMDGHOST, pool: BlockPool
+  config: IBeaconConfig,
+  db: IBeaconDb,
+  logger: ILogger,
+  forkChoice: ILMDGHOST,
+  pool: BlockPool,
+  eventBus: ChainEventEmitter,
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<{block: SignedBeaconBlock; postState: BeaconState}> {
   return (source) => {
     return (async function*() {
@@ -26,12 +32,18 @@ export function processBlock(
         }
         // On successful transition, update system state
         await Promise.all([
-          db.state.set(job.signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
-          db.block.set(blockRoot, job.signedBlock),
+          db.state.put(job.signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
+          db.block.put(blockRoot, job.signedBlock),
         ]);
         const newChainHeadRoot = await updateForkChoice(config, db, forkChoice, job.signedBlock, newState);
         if(newChainHeadRoot) {
           logger.important(`Fork choice changed head to 0x${toHexString(newChainHeadRoot)}`);
+          if(!config.types.Fork.equals(preState.fork, newState.fork)) {
+            const epoch = computeEpochAtSlot(config, newState.slot);
+            const currentVersion = newState.fork.currentVersion;
+            logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
+            eventBus.emit("forkDigestChanged");
+          }
           await updateDepositMerkleTree(config, db, newState);
         }
         pool.onProcessedBlock(job.signedBlock);
@@ -95,13 +107,13 @@ export async function updateDepositMerkleTree(
     newState.eth1Data.depositCount - newState.eth1DepositIndex
   );
   const [depositDatas, depositDataRootList] = await Promise.all([
-    db.depositData.getAllBetween(newState.eth1DepositIndex, upperIndex),
+    db.depositData.values({gt: newState.eth1DepositIndex, lt: upperIndex}),
     db.depositDataRootList.get(newState.eth1DepositIndex),
   ]);
 
   depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
   //TODO: remove deposits with index <= newState.depositIndex
-  await db.depositDataRootList.set(newState.eth1DepositIndex, depositDataRootList);
+  await db.depositDataRootList.put(newState.eth1DepositIndex, depositDataRootList);
 }
 
 export async function runStateTransition(
@@ -114,7 +126,7 @@ export async function runStateTransition(
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate
-    await db.block.storeBadBlock(blockRoot);
+    await db.badBlock.put(blockRoot);
     logger.warn(`Found bad block, block root: ${toHexString(blockRoot)} ` + e.message);
     return null;
   }

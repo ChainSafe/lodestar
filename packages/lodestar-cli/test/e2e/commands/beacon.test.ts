@@ -1,12 +1,15 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import rimraf from "rimraf";
 import fs from "fs";
+import {assert} from "chai";
 import {BeaconNodeCommand, DepositCommand} from "../../../src/commands";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 import {JsonRpcProvider} from "ethers/providers";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {savePeerId} from "@chainsafe/lodestar/lib/network/nodejs";
+import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import {dump} from "js-yaml";
 
 describe("beacon cli", function() {
   this.timeout(0);
@@ -16,6 +19,7 @@ describe("beacon cli", function() {
   //same folder of default db
   const tmpDir = ".tmp";
   const peerIdPath = `${tmpDir}/peer-id.json`;
+  const forkFile = `${tmpDir}/forks.yml`;
 
   before(async () => {
     if (fs.existsSync(tmpDir)) {
@@ -24,6 +28,16 @@ describe("beacon cli", function() {
     fs.mkdirSync(`${tmpDir}/lodestar-db`, {recursive: true});
     const peerId = await createPeerId();
     await savePeerId(peerIdPath, peerId);
+    const ALL_FORKS = [
+      {
+        currentVersion: 2,
+        epoch: 100,
+        // GENESIS_FORK_VERSION is <Buffer 00 00 00 01> but previousVersion = 16777216 not 1 due to bytesToInt
+        previousVersion: bytesToInt(config.params.GENESIS_FORK_VERSION)
+      },
+    ];
+    const yml = dump(ALL_FORKS);
+    fs.writeFileSync(forkFile, yml);
   });
 
   after(() => {
@@ -66,11 +80,15 @@ describe("beacon cli", function() {
       eth1RpcUrl: eth1Network.rpcUrl(),
       networkId: "999",
       depositContractBlockNum: "0", // not really but it's ok
-      depositContract: contractAddress
+      depositContract: contractAddress,
+      forkFile: forkFile,
     };
     const cmd = new BeaconNodeCommand();
-    await cmd.action(cmdOptions, logger);
+    const node = await cmd.action(cmdOptions, logger);
     logger.verbose("cmd.action started node successfully");
+    const enrForkID = await node.chain.getENRForkID();
+    assert(config.types.Version.equals(enrForkID.nextForkVersion, intToBytes(2, 4)));
+    assert(enrForkID.nextForkEpoch === 100);
     await new Promise((resolve) => setTimeout(resolve, 10 * config.params.SECONDS_PER_SLOT * 1000));
     await cmd.node.stop();
     logger.verbose("cmd.stop stopped node successfully");

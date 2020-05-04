@@ -75,7 +75,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network.getPeers().map((peerInfo) => {
-        this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+        return this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
       }));
   }
 
@@ -112,7 +112,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     // send status response
     try {
       const status = await this.createStatus();
-      this.network.reqResp.sendResponse(id, null, [status]);
+      this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
@@ -142,7 +142,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)]);
+    this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
     // //  TODO: fix once we can check if response is sent
     const disconnect = this.network.disconnect.bind(this.network);
     setTimeout(async () => {
@@ -156,12 +156,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onPing(peerInfo: PeerInfo, id: RequestId, request: Ping): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [this.network.metadata.seqNumber]);
+    this.network.reqResp.sendResponse(id, null, this.network.metadata.seqNumber);
     // TODO handle peer sequence number update
   }
 
   public async onMetadata(peerInfo: PeerInfo, id: RequestId): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, [this.network.metadata.metadata]);
+    this.network.reqResp.sendResponse(id, null, this.network.metadata.metadata);
   }
 
   public async onBeaconBlocksByRange(
@@ -169,11 +169,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
-      const archiveBlocksStream = this.db.blockArchive.getAllBetweenStream(
-        request.startSlot - 1,
-        request.startSlot + request.count,
-        request.step
-      );
+      const archiveBlocksStream = this.db.blockArchive.valuesStream({
+        gte: request.startSlot,
+        lt: request.startSlot + request.count,
+        step: request.step,
+      });
       const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.db.block, request);
       this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
@@ -187,11 +187,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
-      const getBlockArchive = this.db.blockArchive.get.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root) || await getBlockArchive(root);
+          const block = await getBlock(root);
           if (block) {
             yield block;
           }
@@ -256,7 +255,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         i <= (request.startSlot + request.count) && count < request.count;
         i += request.step
       ) {
-        const block = await blockDb.getBlockBySlot(i);
+        const block = await blockDb.getBySlot(i);
         if(block) {
           yield block;
         }

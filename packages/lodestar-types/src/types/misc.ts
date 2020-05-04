@@ -18,6 +18,7 @@ import {
   CommitteeIndex,
   Bytes32,
   Domain,
+  ForkDigest,
 } from "./primitive";
 
 export interface Fork {
@@ -34,6 +35,15 @@ export interface ForkData {
   currentVersion: Version;
   // root of genesis validator list
   genesisValidatorsRoot: Root;
+}
+
+export interface ENRForkID {
+  // Current fork digest
+  forkDigest: ForkDigest;
+  // next planned fork versin
+  nextForkVersion: Version;
+  // next fork epoch
+  nextForkEpoch: Epoch;
 }
 
 export interface Checkpoint {

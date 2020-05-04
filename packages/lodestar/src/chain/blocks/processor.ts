@@ -15,7 +15,6 @@ import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
-import {OpPool} from "../../opPool";
 
 export class BlockProcessor implements IService {
 
@@ -25,7 +24,6 @@ export class BlockProcessor implements IService {
   private readonly forkChoice: ILMDGHOST;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
-  private readonly opPool: OpPool;
   private readonly attestationProcessor: IAttestationProcessor;
 
   /**
@@ -38,9 +36,13 @@ export class BlockProcessor implements IService {
   private controller: AbortController = new AbortController();
 
   constructor(
-    config: IBeaconConfig, logger: ILogger, db: IBeaconDb,
-    forkChoice: ILMDGHOST, metrics: IBeaconMetrics, eventBus: ChainEventEmitter,
-    opPool: OpPool, attestationProcessor: IAttestationProcessor
+    config: IBeaconConfig,
+    logger: ILogger,
+    db: IBeaconDb,
+    forkChoice: ILMDGHOST,
+    metrics: IBeaconMetrics,
+    eventBus: ChainEventEmitter,
+    attestationProcessor: IAttestationProcessor
   ) {
     this.config = config;
     this.logger = logger;
@@ -48,7 +50,6 @@ export class BlockProcessor implements IService {
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
-    this.opPool = opPool;
     this.attestationProcessor = attestationProcessor;
     this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus);
   }
@@ -64,14 +65,13 @@ export class BlockProcessor implements IService {
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
       validateBlock(this.config, this.logger, this.db, this.forkChoice),
-      processBlock(this.config, this.db, this.logger, this.forkChoice, this.pendingBlocks),
+      processBlock(this.config, this.db, this.logger, this.forkChoice, this.pendingBlocks, this.eventBus),
       postProcess(
         this.config,
         this.db,
         this.logger,
         this.metrics,
         this.eventBus,
-        this.opPool,
         this.attestationProcessor)
     );
   }

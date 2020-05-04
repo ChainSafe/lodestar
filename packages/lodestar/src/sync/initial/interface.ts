@@ -7,6 +7,7 @@ import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IService} from "../../node";
+import {ISyncModule} from "../interface";
 
 export interface IInitialSyncModules {
   config: IBeaconConfig;
@@ -22,4 +23,4 @@ export interface IInitialSyncEvents {
 }
 export type InitialSyncEventEmitter = StrictEventEmitter<EventEmitter, IInitialSyncEvents>;
 
-export type InitialSync = IService & InitialSyncEventEmitter;
+export type InitialSync = IService & InitialSyncEventEmitter & ISyncModule;

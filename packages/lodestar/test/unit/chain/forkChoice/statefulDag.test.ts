@@ -1,10 +1,12 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
 
 import {StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice/statefulDag/lmdGhost";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT, GENESIS_EPOCH} from "../../../../src/constants";
+import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
+import {sleep} from "../../../../src/util/sleep";
 
 describe("StatefulDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -30,12 +32,12 @@ describe("StatefulDagLMDGHOST", () => {
   let clock: SinonFakeTimers;
 
   const addBlock = (
-    lmd: StatefulDagLMDGHOST, 
-    slot: Slot, 
-    blockRootBuf: Uint8Array, 
-    stateRootBuf: Uint8Array, 
-    parentRootBuf: Uint8Array, 
-    justifiedCheckpoint: Checkpoint, 
+    lmd: StatefulDagLMDGHOST,
+    slot: Slot,
+    blockRootBuf: Uint8Array,
+    stateRootBuf: Uint8Array,
+    parentRootBuf: Uint8Array,
+    justifiedCheckpoint: Checkpoint,
     finalizedCheckpoint: Checkpoint): void => lmd.addBlock({slot, blockRootBuf, stateRootBuf, parentRootBuf, justifiedCheckpoint, finalizedCheckpoint});
 
   beforeEach(() => {
@@ -44,6 +46,29 @@ describe("StatefulDagLMDGHOST", () => {
 
   afterEach(() => {
     clock.restore();
+  });
+
+  it("should call onTick per epoch", async () => {
+    const spy = sinon.spy();
+    const genesisTime = Math.floor(Date.now() / 1000);
+    const lmd = new StatefulDagLMDGHOST(config);
+    lmd.onTick = spy;
+    const realClock = new LocalClock(config, Math.round(Date.now() / 1000));
+    await realClock.start();
+    lmd.start(genesisTime, realClock);
+    // wait for next epoch to run onNewEpoch
+    const timePerEpoch = 1 * config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT * 1000;
+    const promise = sleep(timePerEpoch);
+    clock.tick(timePerEpoch);
+    await promise;
+    expect(spy.callCount).to.be.equal(1);
+    await lmd.stop();
+    // 1 more epoch to check execute onTick
+    const promise2 = sleep(timePerEpoch);
+    clock.tick(1 * timePerEpoch);
+    await promise2;
+    // no more onTick call
+    expect(spy.callCount).to.be.equal(1);
   });
 
   it("should accept blocks to create a DAG", () => {
@@ -190,19 +215,19 @@ describe("StatefulDagLMDGHOST", () => {
       // addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockA) === true, "should return true");
     });
-  
+
     it("should update justified block within SAFE_SLOTS_TO_UPDATE_JUSTIFIED", () => {
       const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
       const lmd = new StatefulDagLMDGHOST(config);
-      lmd.start(genesisTime);
+      lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
       addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockB) === true, "should return true");
     });
-  
+
     /**
-     * 
+     *
      * a -- b
      *  \
      *   \
@@ -221,13 +246,13 @@ describe("StatefulDagLMDGHOST", () => {
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime);
+      lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === false, "should return false because not on same branch");
     });
-  
+
     /**
-     * 
+     *
      * a -- b -- c
      */
     it("should not update justified block because conflict justified check point", () => {
@@ -239,7 +264,7 @@ describe("StatefulDagLMDGHOST", () => {
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockB, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime);
+      lmd.start(genesisTime, new LocalClock(config, Math.round(new Date().getTime() /1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === true, "should be able to update justified checkpoint");
     });

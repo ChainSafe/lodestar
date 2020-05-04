@@ -15,12 +15,13 @@ import {ENR, Discv5Discovery} from "@chainsafe/discv5";
 
 export interface ILibp2pOptions {
   peerInfo: PeerInfo;
-  autoDial?: boolean;
+  autoDial: boolean;
   discv5: {
     bindAddr: string;
     enr: ENR;
     bootEnrs?: ENR[];
   };
+  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
   bootnodes?: string[];
 }
 
@@ -32,7 +33,7 @@ export class NodejsNode extends LibP2p {
         connEncryption: [NOISE, SECIO],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: [
+        peerDiscovery: options.peerDiscovery || [
           Bootstrap,
           MDNS,
           Discv5Discovery,

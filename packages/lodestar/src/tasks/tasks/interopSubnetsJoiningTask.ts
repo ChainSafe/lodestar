@@ -2,13 +2,15 @@ import {ITask} from "../interface";
 import {INetwork} from "../../network";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {randBetween} from "@chainsafe/lodestar-utils";
+import {randBetween, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 
 export interface IInteropSubnetsJoiningModules {
   network: INetwork;
   chain: IBeaconChain;
+  logger: ILogger;
 }
 
 export class InteropSubnetsJoiningTask implements ITask {
@@ -16,27 +18,51 @@ export class InteropSubnetsJoiningTask implements ITask {
   private readonly config: IBeaconConfig;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly logger: ILogger;
+  private subnets: Set<number>;
+  private forkDigest: ForkDigest;
 
   private timers: (NodeJS.Timeout)[] = [];
-  
+
   public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
     this.config = config;
     this.network = modules.network;
     this.chain = modules.chain;
+    this.logger = modules.logger;
+    this.subnets = new Set();
+  }
+
+  public async start(): Promise<void> {
+    this.forkDigest = this.chain.currentForkDigest;
+    this.chain.on("forkDigest", this.handleForkDigest);
+    await this.run();
+  }
+
+  public async stop(): Promise<void> {
+    this.chain.removeListener("forkDigest", this.handleForkDigest);
+    return this.cleanUp();
   }
 
   public async run(): Promise<void> {
-    const forkDigest = this.chain.currentForkDigest;
     for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
-      this.subscribeToRandomSubnet(forkDigest);
+      this.subscribeToRandomSubnet(this.forkDigest);
     }
   }
-  
-  public async stop(): Promise<void> {
-    this.timers.forEach((timer) => clearTimeout(timer));
-  }
 
-  //TODO: handle cleanup and unsubscribing
+  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+    this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
+    await this.cleanUp();
+    this.forkDigest = forkDigest;
+    await this.run();
+  };
+
+  private async cleanUp(): Promise<void> {
+    this.timers.forEach((timer) => clearTimeout(timer));
+    this.subnets.forEach((subnet) => {
+      this.network.gossip.unsubscribeFromAttestationSubnet(this.forkDigest, subnet, this.handleWireAttestation);
+    });
+    this.subnets.clear();
+  }
 
   /**
      * @return choosen subnet
@@ -61,11 +87,13 @@ export class InteropSubnetsJoiningTask implements ITask {
       forkDigest,
       subnet
     ) as unknown as NodeJS.Timeout);
+    this.subnets.add(subnet);
     return subnet;
   }
 
   private handleChangeSubnets = async (forkDigest: ForkDigest, subnet: number): Promise<void> => {
     this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleWireAttestation);
+    this.subnets.delete(subnet);
     this.subscribeToRandomSubnet(forkDigest);
   };
 

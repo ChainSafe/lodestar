@@ -21,7 +21,6 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
-import {OpPool} from "../../../opPool";
 import {IValidatorApi} from "./interface";
 import {assembleBlock} from "../../../chain/factory/block";
 import {IEth1Notifier} from "../../../eth1";
@@ -43,6 +42,7 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
+import {getCommitteeIndexSubnet} from "../../../network/gossip/utils";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -53,13 +53,12 @@ export class ValidatorApi implements IValidatorApi {
   private db: IBeaconDb;
   private network: INetwork;
   private sync: IBeaconSync;
-  private opPool: OpPool;
   private eth1: IEth1Notifier;
   private logger: ILogger;
 
   public constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config"|"chain"|"db"|"opPool"|"eth1"|"sync"|"network"|"logger">
+    modules: Pick<IApiModules, "config"|"chain"|"db"|"eth1"|"sync"|"network"|"logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
@@ -68,14 +67,13 @@ export class ValidatorApi implements IValidatorApi {
     this.network = modules.network;
     this.sync = modules.sync;
     this.logger = modules.logger;
-    this.opPool = modules.opPool;
     this.eth1 = modules.eth1;
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
     const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
     return await assembleBlock(
-      this.config, this.chain, this.db, this.opPool, this.eth1, slot, validatorIndex, randaoReveal
+      this.config, this.chain, this.db, this.eth1, slot, validatorIndex, randaoReveal
     );
   }
 
@@ -114,7 +112,7 @@ export class ValidatorApi implements IValidatorApi {
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
-      this.opPool.attestations.receive(attestation)
+      this.db.attestation.add(attestation)
     ]);
   }
 
@@ -155,15 +153,14 @@ export class ValidatorApi implements IValidatorApi {
     signedAggregateAndProof: SignedAggregateAndProof,
   ): Promise<void> {
     await Promise.all([
-      this.opPool.aggregateAndProofs.receive(signedAggregateAndProof.message),
+      this.db.aggregateAndProof.add(signedAggregateAndProof.message),
       this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof)
     ]);
   }
 
   public async getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
-    return await this.opPool.attestations.getCommiteeAttestations(epoch, committeeIndex);
+    return await this.db.attestation.getCommiteeAttestations(epoch, committeeIndex);
   }
-
 
   public async produceAggregateAndProof(
     attestationData: AttestationData, aggregator: BLSPubkey
@@ -221,6 +218,8 @@ export class ValidatorApi implements IValidatorApi {
       slot,
       committeeIndex
     );
+    const subnet = getCommitteeIndexSubnet(committeeIndex);
+    await this.network.searchSubnetPeers(subnet);
   }
 
 }

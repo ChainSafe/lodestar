@@ -9,13 +9,14 @@ import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constan
 import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
-import {ILodestarGossipMessage} from "./interface";
+import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
+import {GossipEncoding} from "./encoding";
 
 export function getGossipTopic(
   event: GossipEvent,
   forkDigestValue: ForkDigest,
-  encoding = "ssz",
+  encoding = GossipEncoding.SSZ_SNAPPY,
   params: Map<string, string> = new Map()): string {
   const forkDigestHash = toHexString(forkDigestValue).toLowerCase().substring(2);
   let topic = `/eth2/${forkDigestHash}/${event}/${encoding}`;
@@ -28,7 +29,7 @@ export function getGossipTopic(
 export function getAttestationSubnetTopic(
   attestation: Attestation,
   forkDigestValue: ForkDigest,
-  encoding = "ssz"): string {
+  encoding = GossipEncoding.SSZ_SNAPPY): string {
   return getGossipTopic(
     GossipEvent.ATTESTATION_SUBNET,
     forkDigestValue,
@@ -41,7 +42,14 @@ export function getAttestationSubnet(attestation: Attestation): string {
   return getCommitteeIndexSubnet(attestation.data.index);
 }
 
-export function getGossipEvent(topic: string): GossipEvent {
+export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
+  if (isAttestationSubnetEvent(event)) {
+    return GossipEvent.ATTESTATION_SUBNET;
+  }
+  return event as GossipEvent;
+}
+
+export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
   const topicName = groups[3] as keyof typeof GossipEvent;
   return topicName as GossipEvent;
@@ -49,6 +57,14 @@ export function getGossipEvent(topic: string): GossipEvent {
 
 export function getCommitteeIndexSubnet(committeeIndex: CommitteeIndex): string {
   return String(committeeIndex % ATTESTATION_SUBNET_COUNT);
+}
+
+export function getAttestationSubnetEvent(subnet: number): string {
+  return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
+}
+
+export function isAttestationSubnetEvent(event: keyof IGossipEvents | string): boolean {
+  return event.toString().startsWith(GossipEvent.ATTESTATION_SUBNET);
 }
 
 export function isAttestationSubnetTopic(topic: string): boolean {
