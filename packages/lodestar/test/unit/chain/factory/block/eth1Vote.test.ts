@@ -1,65 +1,59 @@
-import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {beforeEach, describe, it} from "mocha";
-import {getEth1Vote} from "../../../../src/eth1/impl/eth1Vote";
-import {generateState} from "../../../utils/state";
+import {getEth1Vote} from "../../../../../src/chain/factory/block/eth1Vote";
+import {generateState} from "../../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Block} from "ethers/providers";
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
+import {StubbedBeaconDb} from "../../../../utils/stub";
 
-describe("et1h vote", function () {
+describe("eth1 vote", function () {
 
   const sandbox = sinon.createSandbox();
-
-  let eth1Notifier: SinonStubbedInstance<IEth1Notifier>;
+  let db: StubbedBeaconDb;
 
   beforeEach(function () {
-    eth1Notifier = sandbox.createStubInstance(EthersEth1Notifier);
+    db = new StubbedBeaconDb(sandbox);
   });
 
   it("get eth1 vote - happy path", async function () {
-    eth1Notifier.findBlocks.returns([{
-
-    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
       depositCount: 10
     };
-    eth1Notifier.getEth1Data.resolves(expectedVote);
-    const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
+    db.eth1Data.values.resolves([expectedVote]);
+    const eth1Vote = await getEth1Vote(
       config,
+      db,
       generateState({slot: 5, eth1DataVotes: [expectedVote]}),
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
+    expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - default vote", async function () {
-    eth1Notifier.findBlocks.returns([{
-
-    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
       depositCount: 10
     };
-    eth1Notifier.getEth1Data.resolves(expectedVote);
-    const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
+    db.eth1Data.values.resolves([expectedVote]);
+    const eth1Vote = await getEth1Vote(
       config,
+      db,
       generateState({slot: 3, eth1DataVotes: [{
         blockHash: Buffer.alloc(32, 1),
         depositRoot: Buffer.alloc(32, 1),
         depositCount: 12
       }]}),
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
+    expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
 
   it("get eth1 vote - tiebreak", async function () {
-    eth1Notifier.findBlocks.returns([{} as Block, {} as Block]);
     const expectedVote1: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
@@ -70,33 +64,30 @@ describe("et1h vote", function () {
       depositRoot: Buffer.alloc(32),
       depositCount: 12
     };
-    eth1Notifier.getEth1Data.onFirstCall().resolves(expectedVote2);
-    eth1Notifier.getEth1Data.onSecondCall().resolves(expectedVote1);
-    const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
+    db.eth1Data.values.resolves([expectedVote2, expectedVote1]);
+    const eth1Vote = await getEth1Vote(
       config,
+      db,
       generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1]}),
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(2);
+    expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote1)).to.be.true;
   });
 
   it("get eth1 vote - no vote in state", async function () {
-    eth1Notifier.findBlocks.returns([{
-
-    } as Block]);
     const expectedVote: Eth1Data = {
       blockHash: Buffer.alloc(32),
       depositRoot: Buffer.alloc(32),
       depositCount: 10
     };
-    eth1Notifier.getEth1Data.resolves(expectedVote);
-    const eth1Vote = await getEth1Vote.bind(eth1Notifier)(
+    db.eth1Data.values.resolves([expectedVote]);
+    const eth1Vote = await getEth1Vote(
       config,
+      db,
       generateState({slot: 5, eth1DataVotes: []}),
     );
-    expect(eth1Notifier.getEth1Data.callCount).to.be.equal(1);
+    expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
-
 
 });

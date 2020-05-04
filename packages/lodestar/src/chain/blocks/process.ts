@@ -44,7 +44,6 @@ export function processBlock(
             logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
             eventBus.emit("forkDigestChanged");
           }
-          await updateDepositMerkleTree(config, db, newState);
         }
         pool.onProcessedBlock(job.signedBlock);
         yield {preState, postState: newState, block: job.signedBlock};
@@ -97,23 +96,6 @@ export async function updateForkChoice(
   } else {
     return null;
   }
-}
-
-export async function updateDepositMerkleTree(
-  config: IBeaconConfig, db: IBeaconDb, newState: BeaconState
-): Promise<void> {
-  const upperIndex = newState.eth1DepositIndex + Math.min(
-    config.params.MAX_DEPOSITS,
-    newState.eth1Data.depositCount - newState.eth1DepositIndex
-  );
-  const [depositDatas, depositDataRootList] = await Promise.all([
-    db.depositData.values({gt: newState.eth1DepositIndex, lt: upperIndex}),
-    db.depositDataRootList.get(newState.eth1DepositIndex),
-  ]);
-
-  depositDataRootList.push(...depositDatas.map(config.types.DepositData.hashTreeRoot));
-  //TODO: remove deposits with index <= newState.depositIndex
-  await db.depositDataRootList.put(newState.eth1DepositIndex, depositDataRootList);
 }
 
 export async function runStateTransition(

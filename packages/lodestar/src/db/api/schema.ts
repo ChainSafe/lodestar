@@ -19,8 +19,9 @@ export enum Bucket {
   mainChain, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
   chainInfo, // Key -> Number64 | stateHash | blockHash
-  // lists of deposit data roots
-  depositDataRootList, // depositIndex -> DepositDataRootList
+  // eth1 processing
+  eth1Data, // timestamp -> Eth1Data
+  depositDataRoot, // depositIndex -> Root<DepositData>
   // op pool
   attestation, // Root -> Attestation
   aggregateAndProof, // Root -> AggregateAndProof
@@ -29,6 +30,7 @@ export enum Bucket {
   proposerSlashing, // ValidatorIndex -> ProposerSlashing
   attesterSlashing, // Root -> AttesterSlashing
   // validator
+  validator,
   lastProposedBlock,
   proposedAttestations,
 }

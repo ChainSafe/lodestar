@@ -1,197 +1,114 @@
-import chai, {assert, expect} from "chai";
+import {afterEach, beforeEach, describe, it} from "mocha";
+import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Contract, ethers} from "ethers";
-import ganache from "ganache-core";
-import sinon, {SinonSandbox} from "sinon";
-import {Block, Provider} from "ethers/providers";
-import {promisify} from "es6-promisify";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {Block, JsonRpcProvider} from "ethers/providers";
+
 import {toHexString} from "@chainsafe/ssz";
-import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EthersEth1Notifier, IEth1Notifier} from "../../../../src/eth1";
-import defaults from "../../../../src/eth1/dev/options";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {after, before, describe, it} from "mocha";
+
+import {EthersEth1Notifier} from "../../../../src/eth1";
+import defaults from "../../../../src/eth1/dev/options";
+import {StubbedBeaconDb} from "../../../utils/stub";
 
 chai.use(chaiAsPromised);
 
 describe("Eth1Notifier", () => {
-  const ganacheProvider = ganache.provider({blockTime: 1});
-  const provider = new ethers.providers.Web3Provider(ganacheProvider as any);
-  let eth1: IEth1Notifier;
-  let sandbox: SinonSandbox;
+  const sandbox = sinon.createSandbox();
   const logger: ILogger = new WinstonLogger();
+  let contract: SinonStubbedInstance<ethers.Contract>;
+  let provider: SinonStubbedInstance<JsonRpcProvider>;
+  let db: StubbedBeaconDb;
+  let eth1: EthersEth1Notifier;
 
-  before(async function (): Promise<void> {
+  beforeEach(async function (): Promise<void> {
     logger.silent = true;
-    sandbox = sinon.createSandbox();
+    contract = sandbox.createStubInstance(Contract) as any;
+    provider = sandbox.createStubInstance(JsonRpcProvider) as any;
+    db = new StubbedBeaconDb(sandbox);
     eth1 = new EthersEth1Notifier({
       ...defaults,
-      providerInstance: provider
+      contract: contract as any,
+      providerInstance: provider as any,
     },
     {
       config,
-      logger: logger
+      db,
+      logger,
     });
   });
 
-  after(async () => {
+  afterEach(async () => {
     sandbox.restore();
-    await promisify(ganacheProvider.close)();
     logger.silent = false;
   });
 
-  it(
-    "should fail to start because there isn't contract at given address",
-    async function (): Promise<void> {
-      await expect(eth1.start())
-        .to.be.rejectedWith("There is no deposit contract at given address");
-    }
-  );
+  it("should start/stop notifier", async function (): Promise<void> {
+    const lastProcessedEth1Data = {
+      blockHash: Buffer.alloc(32, 1),
+      depositRoot: Buffer.alloc(32, 2),
+      depositCount: 5,
+    };
+    const lastProcessedBlock = {
+      number: 5000000,
+    } as Block;
+    const currentBlockNumber = lastProcessedBlock.number;
+    db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
 
-  it(
-    "should start notifier",
-    async function (): Promise<void> {
-      const stubContract = sinon.createStubInstance(Contract);
-      const stubProvider = sinon.createStubInstance(Provider);
-      stubProvider.getLogs = sandbox.stub();
-      stubProvider.getNetwork = sandbox.stub();
-      stubProvider.on = sandbox.stub();
-      // @ts-ignore
-      stubContract.interface = {
-        events: {
-          Deposit: {
-            //random hash
-            topic: "depositHash"
-          }
-        },
-        parseLog: sandbox.stub()
-      };
-      const notifier = new EthersEth1Notifier({
-        ...defaults,
-        // @ts-ignore
-        providerInstance: stubProvider,
-        // @ts-ignore
-        contract: stubContract
-      },
-      {
-        config,
-        logger: logger
-      }
-      );
-      stubContract.on.returns(null);
-      stubProvider.getNetwork.resolves({
-        chainId: 212,
-        ensAddress:"",
-        name: "test"
-      });
-      await notifier.start();
-      expect(stubProvider.on.withArgs("block", sinon.match.any).calledOnce).to.be.true;
-      expect(stubContract.on.withArgs("DepositEvent", sinon.match.any).called).to.be.true;
-    }
-  );
 
-  it(
-    "should stop notifier",
-    async function (): Promise<void> {
-      const contract = sinon.createStubInstance(Contract);
-      const notifier = new EthersEth1Notifier({
-        ...defaults,
-        providerInstance: provider,
-        // @ts-ignore
-        contract
-      },
-      {
-        config,
-        logger: logger
-      });
-      contract.removeAllListeners.returns(null);
-      await notifier.stop();
-      expect(contract.removeAllListeners.withArgs("DepositEvent").calledOnce).to.be.true;
-    }
-  );
+    provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
+    provider.getBlockNumber.resolves(currentBlockNumber);
 
-  it("should process a Deposit log", async function () {
-    const cb = sinon.spy();
-    eth1.on("deposit", cb);
-
-    const pubKey = toHexString(bls.generateKeyPair().publicKey.toBytesCompressed());
-    const withdrawalCredentials = toHexString(Buffer.alloc(32));
-    const amount = toHexString(config.types.Number64.serialize(32000000000));
-    const signature = toHexString(Buffer.alloc(94));
-    const merkleTreeIndex = toHexString(config.types.Number64.serialize(0));
-    await eth1.processDepositLog(pubKey, withdrawalCredentials, amount, signature, merkleTreeIndex);
-    assert(cb.calledOnce, "deposit event did not fire");
+    await eth1.start();
+    expect(provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash), false).calledOnce).to.be.true;
+    await eth1.stop();
   });
 
-  it("should process a new block", async function () {
-    const cb = sinon.spy();
-    eth1.on("block", cb);
-
-    await eth1.processBlockHeadUpdate(0);
-    assert(cb.calledOnce, "new block event did not fire");
-  });
-
-  it("should get block 0", async function (): Promise<void> {
-    const block = await eth1.getBlock(0);
-    expect(block).to.not.be.null;
+  it("should fail to start because there isn't contract at given address", async function (): Promise<void> {
+    eth1 = new EthersEth1Notifier({
+      ...defaults,
+      providerInstance: provider as any,
+    }, {
+      config,
+      db,
+      logger,
+    });
+    await expect(
+      eth1.start()
+    ).to.be.rejectedWith("There is no deposit contract at given address");
   });
 
   it("should get block by hash", async function (): Promise<void> {
+    provider.getBlock.withArgs(0, false).resolves({} as Block);
     let block = await eth1.getBlock(0);
     block = await eth1.getBlock(block.hash);
     expect(block).to.not.be.null;
   });
 
-  it("should get latest block", async function (): Promise<void> {
-    const block = await eth1.getHead();
-    expect(block).to.not.be.null;
-  });
-
-  it("should get deposit root from contract", async function (): Promise<void> {
-    const spy = sinon.stub();
+  it("should get deposit events from a block", async () => {
+    provider.getLogs.resolves([]);
     // @ts-ignore
-    const contract: Contract = {
-      // eslint-disable-next-line
-      get_deposit_root: spy
-    };
-    const notifier = new EthersEth1Notifier({
-      ...defaults,
-      providerInstance: provider,
-      contract
-    },
-    {
-      config,
-      logger: logger
+    contract.interface = sandbox.stub();
+    // @ts-ignore
+    contract.interface.parseLog = sandbox.stub().resolves({
+      values: [{
+        index: toHexString(Buffer.alloc(8)),
+        pubkey: toHexString(Buffer.alloc(48)),
+        withdrawalCredentials: toHexString(Buffer.alloc(32)),
+        amount: toHexString(Buffer.alloc(8)),
+        signature: toHexString(Buffer.alloc(96)),
+      }],
     });
-    const testDepositRoot = Buffer.alloc(32);
-    spy.resolves("0x" + testDepositRoot.toString("hex"));
-
-    const depositRoot = await notifier.depositRoot();
-    expect(depositRoot).to.be.deep.equal(testDepositRoot);
-
-  });
-
-  it("should get eth1 data", async function () {
-    const requiredBlockHash = Buffer.from("testHash");
-    eth1.getBlock = async (blockNum: string | number) => {
-      expect(blockNum).to.be.equal(80);
-      return  {hash: "0x" + requiredBlockHash.toString("hex")} as Block;
+    // @ts-ignore
+    contract.interface.events = {
+      DepositEvent: {
+        topic: ""
+      }
     };
-    eth1.depositCount = async (hash: string) => {
-      expect(hash).to.be.equal("0x" + requiredBlockHash.toString("hex"));
-      return 10;
-    };
-    eth1.depositRoot = async (hash: string) => {
-      expect(hash).to.be.equal("0x" + requiredBlockHash.toString("hex"));
-      return Buffer.alloc(32);
-    };
-    const block = await eth1.getBlock(80);
-    const eth1Data = await eth1.getEth1Data(block);
-    expect(eth1Data).to.not.be.null;
-    expect(eth1Data.blockHash).to.be.deep.equal(requiredBlockHash);
-    expect(eth1Data.depositRoot).to.be.deep.equal(Buffer.alloc(32));
-    expect(eth1Data.depositCount).to.be.deep.equal(10);
-
+    expect(
+      await eth1.getDepositEvents(0)
+    ).to.not.be.null;
   });
 });
