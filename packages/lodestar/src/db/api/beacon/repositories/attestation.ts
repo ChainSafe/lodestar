@@ -1,4 +1,4 @@
-import {Attestation, BeaconState, CommitteeIndex, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -30,9 +30,9 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
     });
   }
 
-  public async geAttestationsBySlot(slot: Slot): Promise<Attestation[]> {
+  public async geAttestationsByTargetEpoch(epoch: Epoch): Promise<Attestation[]> {
     const attestations = await this.values() || [];
-    return attestations.filter((attestation) => attestation.data.slot === slot);
+    return attestations.filter((attestation) => attestation.data.target.epoch === epoch);
   }
 
   public async removeOld(state: BeaconState): Promise<void> {
