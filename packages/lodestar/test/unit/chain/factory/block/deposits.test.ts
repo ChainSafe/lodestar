@@ -17,9 +17,7 @@ describe("blockAssembly - deposits", function() {
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
-    dbStub = {
-      depositData: sandbox.createStubInstance(DepositDataRepository),
-    } as StubbedBeaconDb;
+    dbStub = new StubbedBeaconDb(sandbox);
   });
 
   afterEach(() => {

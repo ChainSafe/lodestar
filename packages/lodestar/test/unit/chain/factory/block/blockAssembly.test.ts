@@ -1,18 +1,16 @@
 import sinon from "sinon";
-import { expect } from "chai";
+import {expect} from "chai";
 
-import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition";
-import { assembleBlock } from "../../../../../src/chain/factory/block";
-import { EthersEth1Notifier } from "../../../../../src/eth1";
-import { generateState } from "../../../../utils/state";
-import { StatefulDagLMDGHOST } from "../../../../../../lodestar/src/chain/forkChoice";
-import { BeaconChain } from "../../../../../src/chain";
-import { generateEmptyBlock, generateEmptySignedBlock } from "../../../../utils/block";
-import { BlockRepository, DepositDataRootListRepository, StateRepository } from "../../../../../src/db/api/beacon/repositories";
+import {assembleBlock} from "../../../../../src/chain/factory/block";
+import {EthersEth1Notifier} from "../../../../../src/eth1";
+import {generateState} from "../../../../utils/state";
+import {StatefulDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
+import {BeaconChain} from "../../../../../src/chain";
+import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
-import { IBeaconDb } from "../../../../../src/db";
 
 describe("block assembly", function () {
 
@@ -29,11 +27,7 @@ describe("block assembly", function () {
     chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
     chainStub.forkChoice = forkChoiceStub;
 
-    beaconDB = {
-      block: sandbox.createStubInstance(BlockRepository),
-      state: sandbox.createStubInstance(StateRepository),
-      depositDataRootList: sandbox.createStubInstance(DepositDataRootListRepository)
-    } as StubbedBeaconDb;
+    beaconDB = new StubbedBeaconDb(sandbox);
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
   });
 
