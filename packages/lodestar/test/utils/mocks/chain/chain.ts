@@ -4,7 +4,7 @@ import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint} from "@chai
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {computeForkDigest, GENESIS_EPOCH, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IMockChainParams {
@@ -41,7 +41,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
-    return {epoch: GENESIS_EPOCH, root: ZERO_HASH};
+    return this.state.finalizedCheckpoint;
   }
 
   public get currentForkDigest(): ForkDigest {
