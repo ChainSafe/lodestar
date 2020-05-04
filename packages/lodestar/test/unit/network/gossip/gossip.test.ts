@@ -2,7 +2,7 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {INetworkOptions} from "../../../../src/network/options";
 import {ENR} from "@chainsafe/discv5";
 import {createPeerId} from "../../../../src/network";
-import {MetadataController, IMetadataModules} from "../../../../src/network/metadata";
+import {MetadataController} from "../../../../src/network/metadata";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
@@ -163,7 +163,10 @@ describe("Network Gossip", function() {
       });
       chain.emit("forkDigest", chain.currentForkDigest);
       const block = generateEmptySignedBlock();
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, "ssz", new Map()), block);
+      pubsub.emit(
+        getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, GossipEncoding.SSZ_SNAPPY, new Map()),
+        block
+      );
       await received;
     });
   });
