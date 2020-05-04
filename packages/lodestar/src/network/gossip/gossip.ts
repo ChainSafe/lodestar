@@ -7,7 +7,7 @@ import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
-import {getGossipTopic, mapGossipEvent, getAttestationSubnetEvent,} from "./utils";
+import {getAttestationSubnetEvent, getGossipTopic, mapGossipEvent,} from "./utils";
 import {INetworkOptions} from "../options";
 import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";
 import {GossipEvent} from "./constants";
@@ -25,17 +25,18 @@ import {LodestarGossipsub} from "./gossipsub";
 import {
   Attestation,
   AttesterSlashing,
+  Epoch,
+  ForkDigest,
   ProposerSlashing,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   SignedVoluntaryExit,
-  Slot,
-  ForkDigest,
-  Epoch,
-  SignedAggregateAndProof
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
-import {computeForkDigest, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {MetadataController} from "../metadata";
+import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
 
 
@@ -51,6 +52,8 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   private handlers: Map<string, GossipHandlerFn>;
   private metadata: MetadataController;
+  //TODO: make this configurable
+  private supportedEncodings = [GossipEncoding.SSZ_SNAPPY, GossipEncoding.SSZ];
 
   public constructor(
     opts: INetworkOptions,
@@ -158,7 +161,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
-      this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
+      this.supportedEncodings.forEach((encoding) => {
+        this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
+      });
     }
     if(listener) {
       this.removeListener(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
@@ -184,7 +189,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
     if(this.listenerCount(event.toString()) === 0 && !event.toString().startsWith("gossipsub")) {
-      this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, "ssz", params));
+      this.supportedEncodings.forEach((encoding) => {
+        this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
+      });
     }
     if(listener) {
       this.on(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
@@ -213,31 +220,35 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {
     const handlers = new Map();
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
-    handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, "ssz"),
-      handleIncomingBlock.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTATION, forkDigest, "ssz"),
-      handleIncomingAttestation.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, "ssz"),
-      handleIncomingAggregateAndProof.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkDigest, "ssz"),
-      handleIncomingAttesterSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigest, "ssz"),
-      handleIncomingProposerSlashing.bind(this));
-    handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigest, "ssz"),
-      handleIncomingVoluntaryExit.bind(this));
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const that = this;
+    this.supportedEncodings.forEach((encoding) => {
+      handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, encoding),
+        handleIncomingBlock.bind(that));
+      handlers.set(getGossipTopic(GossipEvent.ATTESTATION, forkDigest, encoding),
+        handleIncomingAttestation.bind(that));
+      handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, encoding),
+        handleIncomingAggregateAndProof.bind(that));
+      handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkDigest, encoding),
+        handleIncomingAttesterSlashing.bind(that));
+      handlers.set(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigest, encoding),
+        handleIncomingProposerSlashing.bind(that));
+      handlers.set(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigest, encoding),
+        handleIncomingVoluntaryExit.bind(that));
 
-    for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const committeeAttestationHandler = getCommitteeAttestationHandler(subnet);
-      handlers.set(
-        getGossipTopic(
-          GossipEvent.ATTESTATION_SUBNET,
-          forkDigest,
-          "ssz",
-          new Map([["subnet", String(subnet)]])
-        ),
-        committeeAttestationHandler.bind(this)
-      );
-    }
+      for(let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+        const committeeAttestationHandler = getCommitteeAttestationHandler(subnet);
+        handlers.set(
+          getGossipTopic(
+            GossipEvent.ATTESTATION_SUBNET,
+            forkDigest,
+            encoding,
+            new Map([["subnet", String(subnet)]])
+          ),
+          committeeAttestationHandler.bind(that)
+        );
+      }
+    });
     return handlers;
   }
 

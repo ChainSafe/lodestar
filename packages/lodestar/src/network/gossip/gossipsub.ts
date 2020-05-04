@@ -3,6 +3,7 @@ import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {compress, uncompress} from "snappyjs";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
@@ -14,6 +15,7 @@ import {
 } from "./utils";
 import {GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
+import {getTopicEncoding, GossipEncoding} from "./encoding";
 
 /**
  * This validates messages in Gossipsub and emit the transformed messages.
@@ -91,6 +93,13 @@ export class LodestarGossipsub extends Gossipsub {
     });
   }
 
+  publish(topic: string, data: Buffer): Promise<void> {
+    const encoding = getTopicEncoding(topic);
+    if(encoding === GossipEncoding.SSZ_SNAPPY) {
+      data = compress(data);
+    }
+    return super.publish(topic, data);
+  }
 
   private getTopicValidator(topic: string): GossipMessageValidatorFn {
     if (isAttestationSubnetTopic(topic)) {
@@ -125,6 +134,9 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   private deserializeGossipMessage(topic: string, message: IGossipMessage): { object: GossipObject; subnet?: number} {
+    if(getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
+      message.data = uncompress(message.data);
+    }
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
       return {object: this.config.types.Attestation.deserialize(message.data), subnet};
