@@ -97,7 +97,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       });
     });
   }
-  
+
   public sendResponse(id: RequestId, err: RpcError|null, response?: ResponseBody): void {
     return this.sendResponseStream(id, err, async function *() {
       if(response !== null && response !== undefined) {
@@ -125,30 +125,30 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   public async status(peerInfo: PeerInfo, request: Status): Promise<Status> {
     return await this.sendRequest<Status>(peerInfo, Method.Status, request);
   }
-  
+
   public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
     try {
       await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request);
     } catch (e) {
-      this.logger.warn("Failed to send goodbye request. Error: " + e.message);
+      this.logger.warn(`Failed to send goodbye request to ${peerInfo.id.toB58String()}. Error: ${e.message}`);
     }
   }
-  
+
   public async ping(peerInfo: PeerInfo, request: Ping): Promise<Ping> {
     return await this.sendRequest<Ping>(peerInfo, Method.Ping, request);
   }
-  
+
   public async metadata(peerInfo: PeerInfo): Promise<Metadata> {
     return await this.sendRequest<Metadata>(peerInfo, Method.Metadata);
   }
-  
+
   public async beaconBlocksByRange(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[]> {
     return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRange, request);
   }
-  
+
   public async beaconBlocksByRoot(
     peerInfo: PeerInfo,
     request: BeaconBlocksByRootRequest
