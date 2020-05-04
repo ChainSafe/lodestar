@@ -3,23 +3,24 @@
  */
 
 import deepmerge from "deepmerge";
+import LibP2p from "libp2p";
+import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {initBLS} from "@chainsafe/bls";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
+
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
-import LibP2p from "libp2p";
-import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
-import {OpPool} from "../opPool";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
 import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
-import {initBLS} from "@chainsafe/bls";
 
 export interface IService {
   start(): Promise<void>;
@@ -47,7 +48,6 @@ export class BeaconNode {
   public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
-  public opPool: OpPool;
   public api: IService;
   public sync: IBeaconSync;
   public reps: ReputationStore;
@@ -84,16 +84,10 @@ export class BeaconNode {
       config,
       logger: logger.child(this.conf.logger.eth1),
     });
-    this.opPool = new OpPool(this.conf.opPool, {
-      config,
-      eth1: this.eth1,
-      db: this.db
-    });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
-      opPool: this.opPool,
       logger: logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
@@ -101,7 +95,6 @@ export class BeaconNode {
     const gossipMessageValidator = new GossipMessageValidator({
       chain: this.chain,
       db: this.db,
-      opPool: this.opPool,
       config,
       logger: logger.child(this.conf.logger.network)
     });
@@ -117,7 +110,6 @@ export class BeaconNode {
       config,
       db: this.db,
       chain: this.chain,
-      opPool: this.opPool,
       network: this.network,
       reputationStore: this.reps,
       logger: logger.child(this.conf.logger.sync),
@@ -127,7 +119,6 @@ export class BeaconNode {
       {
         config,
         logger: this.logger,
-        opPool: this.opPool,
         db: this.db,
         sync: this.sync,
         network: this.network,
@@ -149,6 +140,8 @@ export class BeaconNode {
 
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");
+
+    this.eth1.on("deposit", this.putDepositData);
     //if this wasm inits starts piling up, we can extract them to separate methods
     await initBLS();
     await this.metrics.start();
@@ -157,17 +150,16 @@ export class BeaconNode {
     await this.eth1.start();
     await this.chain.start();
     await this.network.start();
-    await this.opPool.start();
     this.sync.start();
     await this.api.start();
     await this.chores.start();
   }
 
   public async stop(): Promise<void> {
+    this.eth1.off("deposit", this.putDepositData);
     await this.chores.stop();
     await this.api.stop();
     await this.sync.stop();
-    await this.opPool.stop();
     await this.chain.stop();
     await this.eth1.stop();
     await this.network.stop();
@@ -175,6 +167,10 @@ export class BeaconNode {
     await this.metricsServer.stop();
     await this.metrics.stop();
   }
+
+  private putDepositData = async (index: number, depositData: DepositData): Promise<void> => {
+    return this.db.depositData.put(index, depositData);
+  };
 }
 
 export default BeaconNode;

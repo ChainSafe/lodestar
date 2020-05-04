@@ -5,6 +5,12 @@ import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
+/**
+ * DepositData indexed by deposit index
+ *
+ * Added via gossip or api
+ * Removed when included on chain or old
+ */
 export class DepositDataRepository extends Repository<number, DepositData> {
 
   public constructor(

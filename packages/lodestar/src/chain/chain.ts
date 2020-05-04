@@ -19,7 +19,6 @@ import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
-import {OpPool} from "../opPool";
 import {AttestationProcessor} from "./attestation";
 import {IBeaconClock} from "./clock/interface";
 import {LocalClock} from "./clock/local/LocalClock";
@@ -29,7 +28,6 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
-  opPool: OpPool;
   db: IBeaconDb;
   eth1: IEth1Notifier;
   logger: ILogger;
@@ -52,7 +50,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public clock: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly opPool: OpPool;
   private readonly eth1: IEth1Notifier;
   private readonly logger: ILogger;
   private readonly metrics: IBeaconMetrics;
@@ -63,14 +60,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private eth1Listener: (eth1Block: Block) => void;
 
   public constructor(
-    opts: IChainOptions, {config, db, eth1, opPool, logger, metrics, forkChoice}: IBeaconChainModules) {
+    opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
     super();
     this.opts = opts;
     this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
-    this.opPool = opPool;
     this.logger = logger;
     this.metrics = metrics;
     this.forkChoice = forkChoice || new StatefulDagLMDGHOST(config);
@@ -78,7 +74,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
-      config, logger, db, this.forkChoice, metrics, this, this.opPool, this.attestationProcessor);
+      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor
+    );
   }
 
   public async getHeadState(): Promise<BeaconState|null> {

@@ -10,7 +10,7 @@ import {
   ForkDigest
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
-import {OpPool} from "../../opPool";
+import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -18,14 +18,14 @@ export class BeaconGossipHandler implements IGossipHandler {
 
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
-  private readonly opPool: OpPool;
+  private readonly db: IBeaconDb;
   private readonly logger: ILogger;
   private currentForkDigest: ForkDigest;
 
-  constructor(chain: IBeaconChain, network: INetwork, opPool: OpPool, logger: ILogger) {
+  constructor(chain: IBeaconChain, network: INetwork, db: IBeaconDb, logger: ILogger) {
     this.chain = chain;
     this.network = network;
-    this.opPool = opPool;
+    this.db = db;
     this.logger = logger;
   }
 
@@ -78,15 +78,15 @@ export class BeaconGossipHandler implements IGossipHandler {
   };
 
   private onAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
-    await this.opPool.attesterSlashings.receive(attesterSlashing);
+    await this.db.attesterSlashing.add(attesterSlashing);
   };
 
   private onProposerSlashing = async (proposerSlashing: ProposerSlashing): Promise<void> => {
-    await this.opPool.proposerSlashings.receive(proposerSlashing);
+    await this.db.proposerSlashing.add(proposerSlashing);
   };
 
   private onVoluntaryExit = async (exit: SignedVoluntaryExit): Promise<void> => {
-    await this.opPool.voluntaryExits.receive(exit);
+    await this.db.voluntaryExit.add(exit);
   };
 
 }

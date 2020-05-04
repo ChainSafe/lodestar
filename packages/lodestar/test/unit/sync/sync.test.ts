@@ -11,7 +11,6 @@ import {BeaconSync, SyncMode} from "../../../src/sync";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect} from "chai";
 import {BeaconDb} from "../../../src/db/api";
-import {OpPool} from "../../../src/opPool";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
@@ -27,7 +26,7 @@ describe("sync", function () {
   let loggerStub: SinonStubbedInstance<ILogger>;
   let regularSyncStub: SinonStubbedInstance<IRegularSync>;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
-  
+
   const getSync = (opts: ISyncOptions): IBeaconSync => {
     return new BeaconSync(
       opts,
@@ -35,7 +34,6 @@ describe("sync", function () {
         chain: chainStub,
         config,
         db: sinon.createStubInstance(BeaconDb),
-        opPool: sinon.createStubInstance(OpPool) as unknown as OpPool,
         regularSync: regularSyncStub,
         initialSync: initialSyncStub,
         network: networkStub,
@@ -46,7 +44,7 @@ describe("sync", function () {
         logger: loggerStub,
       });
   };
-  
+
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     reqRespStub = sinon.createStubInstance(BeaconReqRespHandler);
@@ -57,7 +55,7 @@ describe("sync", function () {
     regularSyncStub = sinon.createStubInstance(NaiveRegularSync);
     initialSyncStub = sinon.createStubInstance(FastSync);
   });
-  
+
   it("is synced should be true", async function () {
     const sync = getSync({minPeers: 0, blockPerChunk: 10});
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
@@ -74,7 +72,7 @@ describe("sync", function () {
     expect(sync.isSynced()).to.be.false;
     await sync.stop();
   });
-  
+
   it("get sync status if synced", async function () {
     const sync = getSync({minPeers: 0, blockPerChunk: 10});
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
@@ -115,7 +113,5 @@ describe("sync", function () {
     expect(status.startingBlock.toString()).to.be.deep.equal("0");
     expect(status.currentBlock.toString()).to.be.deep.equal("10");
   });
-  
-  
-  
+
 });

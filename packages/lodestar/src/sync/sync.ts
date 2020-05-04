@@ -48,7 +48,7 @@ export class BeaconSync implements IBeaconSync {
     this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip = modules.gossipHandler ||
-      new BeaconGossipHandler(modules.chain, modules.network, modules.opPool, this.logger);
+      new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
   }
 

@@ -9,14 +9,12 @@ import {IApiOptions} from "./options";
 import {ApiNamespace} from "./index";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconSync} from "../sync";
-import {OpPool} from "../opPool";
 import {INetwork} from "../network";
 
 export interface IApiModules {
   config: IBeaconConfig;
   logger: ILogger;
   chain: IBeaconChain;
-  opPool: OpPool;
   sync: IBeaconSync;
   network: INetwork;
   db: IBeaconDb;
