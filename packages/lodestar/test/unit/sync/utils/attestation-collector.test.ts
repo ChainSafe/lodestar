@@ -1,12 +1,13 @@
 import {describe, it} from "mocha";
+import {expect} from "chai";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
 import {AttestationCollector} from "../../../../src/sync/utils";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
-import sinon from "sinon";
 import {Gossip} from "../../../../src/network/gossip/gossip";
-import {OpPool} from "../../../../src/opPool";
 import {getCommitteeIndexSubnet} from "../../../../src/network/gossip/utils";
-import {expect} from "chai";
+import {BeaconDb} from "../../../../src/db";
 
 describe("Attestation collector",function() {
 
@@ -15,7 +16,7 @@ describe("Attestation collector",function() {
   it("should subscribe and collect attestations", async function () {
     const clock = sandbox.useFakeTimers();
     const fakeGossip = sandbox.createStubInstance(Gossip);
-    const fakeOpPool = sandbox.createStubInstance(OpPool);
+    const dbStub = sandbox.createStubInstance(BeaconDb);
     const realClock = new LocalClock(config, Math.round(new Date().getTime() /1000));
     const collector = new AttestationCollector(
       config,
@@ -28,8 +29,7 @@ describe("Attestation collector",function() {
         network: {
           gossip: fakeGossip
         },
-        // @ts-ignore
-        opPool: fakeOpPool
+        db: dbStub,
       }
     );
     await realClock.start();
@@ -69,8 +69,6 @@ describe("Attestation collector",function() {
         network: {
           gossip: fakeGossip
         },
-        // @ts-ignore
-        opPool: null
       }
     );
     await realClock.start();

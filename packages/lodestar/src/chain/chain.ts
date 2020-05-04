@@ -5,7 +5,8 @@
 import {EventEmitter} from "events";
 import {fromHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {Attestation, BeaconState, Root, SignedBeaconBlock, Uint16, Uint64,
-  ForkDigest} from "@chainsafe/lodestar-types";
+  ForkDigest,
+  ENRForkID} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
@@ -18,20 +19,20 @@ import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
-import {OpPool} from "../opPool";
 import {AttestationProcessor} from "./attestation";
 import {IBeaconClock} from "./clock/interface";
 import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {Block} from "ethers/providers";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
-  opPool: OpPool;
   db: IBeaconDb;
   eth1: IEth1Notifier;
   logger: ILogger;
   metrics: IBeaconMetrics;
+  forkChoice?: ILMDGHOST;
 }
 
 export interface IBlockProcessJob {
@@ -39,6 +40,7 @@ export interface IBlockProcessJob {
   trusted: boolean;
 }
 
+const MAX_VERSION = Buffer.from([255, 255, 255, 255]);
 export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public readonly chain: string;
@@ -48,7 +50,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public clock: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly opPool: OpPool;
   private readonly eth1: IEth1Notifier;
   private readonly logger: ILogger;
   private readonly metrics: IBeaconMetrics;
@@ -58,22 +59,23 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private attestationProcessor: IAttestationProcessor;
   private eth1Listener: (eth1Block: Block) => void;
 
-  public constructor(opts: IChainOptions, {config, db, eth1, opPool, logger, metrics}: IBeaconChainModules) {
+  public constructor(
+    opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
     super();
     this.opts = opts;
     this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
-    this.opPool = opPool;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = new StatefulDagLMDGHOST(config);
+    this.forkChoice = forkChoice || new StatefulDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
-      config, logger, db, this.forkChoice, metrics, this, this.opPool, this.attestationProcessor);
+      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor
+    );
   }
 
   public async getHeadState(): Promise<BeaconState|null> {
@@ -100,12 +102,14 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest = await this.getCurrentForkDigest();
+    this.on("forkDigestChanged", this.handleForkDigestChanged);
   }
 
   public async stop(): Promise<void> {
     await this.forkChoice.stop();
     await this.clock.stop();
     await this.blockProcessor.stop();
+    this.removeListener("forkDigestChanged", this.handleForkDigestChanged);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -133,7 +137,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
     // Determine whether a genesis state already in
     // the database matches what we were provided
-    const storedGenesisBlock = await this.db.block.getBlockBySlot(GENESIS_SLOT);
+    const storedGenesisBlock = await this.db.block.getBySlot(GENESIS_SLOT);
     if (storedGenesisBlock !== null &&
       !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");
@@ -144,7 +148,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.db.chain.setFinalizedBlockRoot(blockRoot),
       this.db.chain.setJustifiedStateRoot(stateRoot),
       this.db.chain.setFinalizedStateRoot(stateRoot),
-      this.db.depositDataRootList.set(genesisState.eth1DepositIndex, depositDataRootList)
+      this.db.depositDataRootList.put(genesisState.eth1DepositIndex, depositDataRootList)
     ]);
     const justifiedFinalizedCheckpoint = {
       root: blockRoot,
@@ -159,6 +163,23 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });
     this.logger.info("Beacon chain initialized");
+  }
+
+  public async getENRForkID(): Promise<ENRForkID> {
+    const state = await this.getHeadState();
+    const currentVersion = state.fork.currentVersion;
+    const nextVersion = this.config.params.ALL_FORKS && this.config.params.ALL_FORKS.find(
+      fork => this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4)));
+    return {
+      forkDigest: this.currentForkDigest,
+      nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : MAX_VERSION,
+      nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
+    };
+  }
+
+  private async handleForkDigestChanged(): Promise<void> {
+    this._currentForkDigest = await this.getCurrentForkDigest();
+    this.emit("forkDigest", this._currentForkDigest);
   }
 
   private async getCurrentForkDigest(): Promise<ForkDigest> {

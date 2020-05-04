@@ -4,13 +4,13 @@ import {IService} from "../../node";
 
 export interface IDatabaseApiOptions {
   config: IBeaconConfig;
-  controller: IDatabaseController;
+  controller: IDatabaseController<Buffer, Buffer>;
 }
 
-export abstract class DatabaseService implements IService{
+export abstract class DatabaseService implements IService {
 
   protected config: IBeaconConfig;
-  protected db: IDatabaseController;
+  protected db: IDatabaseController<Buffer,Buffer>;
 
   protected constructor(opts: IDatabaseApiOptions) {
     this.config = opts.config;

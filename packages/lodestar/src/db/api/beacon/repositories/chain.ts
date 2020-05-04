@@ -2,70 +2,69 @@ import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IDatabaseController} from "../../../controller";
-import {Bucket, encodeKey, Key} from "../../../schema";
+import {Bucket, encodeKey, Key} from "../../schema";
 
 export class ChainRepository {
 
   private config: IBeaconConfig;
+  private db: IDatabaseController<Buffer, Buffer>;
 
-  private db: IDatabaseController;
-
-  public constructor(config: IBeaconConfig, db: IDatabaseController) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.db = db;
     this.config = config;
   }
 
-  public getKey(id: Key): Buffer | string {
+  public encodeKey(id: Key): Buffer {
     return encodeKey(Bucket.chainInfo, id);
   }
 
   public getLatestStateRoot(): Promise<Uint8Array|null> {
-    return this.db.get(this.getKey(Key.latestState));
+    return this.db.get(this.encodeKey(Key.latestState));
   }
 
   public async setLatestStateRoot(root: Uint8Array): Promise<void> {
     await this.db.put(
-      this.getKey(Key.latestState),
-      this.config.types.Root.serialize(root)
+      this.encodeKey(Key.latestState),
+      this.config.types.Root.serialize(root) as Buffer
     );
   }
 
   public getJustifiedStateRoot(): Promise<Uint8Array|null> {
-    return this.db.get(this.getKey(Key.justifiedState));
+    return this.db.get(this.encodeKey(Key.justifiedState));
   }
 
   public async setJustifiedStateRoot(root: Uint8Array): Promise<void> {
     await this.db.put(
-      this.getKey(Key.justifiedState),
-      this.config.types.Root.serialize(root)
+      this.encodeKey(Key.justifiedState),
+      this.config.types.Root.serialize(root) as Buffer
     );
   }
 
   public getFinalizedStateRoot(): Promise<Uint8Array|null> {
-    return this.db.get(this.getKey(Key.finalizedState));
+    return this.db.get(this.encodeKey(Key.finalizedState));
   }
 
   public async setFinalizedStateRoot(root: Uint8Array): Promise<void> {
     await this.db.put(
-      this.getKey(Key.finalizedState),
-      this.config.types.Root.serialize(root)
+      this.encodeKey(Key.finalizedState),
+      this.config.types.Root.serialize(root) as Buffer
     );
   }
 
   public getFinalizedBlockRoot(): Promise<Uint8Array|null> {
-    return this.db.get(this.getKey(Key.finalizedBlock));
+    return this.db.get(this.encodeKey(Key.finalizedBlock));
   }
 
   public async setFinalizedBlockRoot(root: Uint8Array): Promise<void> {
-    return await this.db.put(this.getKey(Key.finalizedBlock), root);
+    return await this.db.put(this.encodeKey(Key.finalizedBlock), root as Buffer);
   }
 
   public getJustifiedBlockRoot(): Promise<Uint8Array|null> {
-    return this.db.get(this.getKey(Key.justifiedBlock));
+    return this.db.get(this.encodeKey(Key.justifiedBlock));
   }
 
   public async setJustifiedBlockRoot(root: Uint8Array): Promise<void> {
-    return await this.db.put(this.getKey(Key.justifiedBlock), root);
+    return await this.db.put(this.encodeKey(Key.justifiedBlock), root as Buffer);
   }
 
   public async getBlockRoot(slot: Slot): Promise<Uint8Array | null> {
@@ -78,7 +77,7 @@ export class ChainRepository {
 
   public async getChainHeadSlot(): Promise<Slot | null> {
     try {
-      const heightBuf = await this.db.get(this.getKey(Key.chainHeight));
+      const heightBuf = await this.db.get(this.encodeKey(Key.chainHeight));
       if(!heightBuf) {
         throw new Error("Missing chain height");
       }
@@ -89,7 +88,7 @@ export class ChainRepository {
   }
 
   public async setChainHeadSlot(slot: number): Promise<void> {
-    await this.db.put(this.getKey(Key.chainHeight), this.config.types.Slot.serialize(slot));
+    await this.db.put(this.encodeKey(Key.chainHeight), this.config.types.Slot.serialize(slot) as Buffer);
   }
 
   public async getChainHeadRoot(): Promise<Uint8Array | null> {

@@ -9,6 +9,7 @@ import {
   AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
+  BadBlockRepository,
   BlockRepository,
   BlockArchiveRepository,
   ChainRepository,
@@ -24,6 +25,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public chain: ChainRepository;
 
   public state: StateRepository;
+
+  public badBlock: BadBlockRepository;
 
   public block: BlockRepository;
 
@@ -47,6 +50,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     super(opts);
     this.chain = new ChainRepository(this.config, this.db);
     this.state = new StateRepository(this.config, this.db, this.chain);
+    this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db, this.chain);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
@@ -64,7 +68,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   ): Promise<void> {
     await Promise.all([
       this.block.add(signedBlock),
-      this.state.set(signedBlock.message.stateRoot.valueOf() as Uint8Array, state),
+      this.state.put(signedBlock.message.stateRoot.valueOf() as Uint8Array, state),
     ]);
     const slot = signedBlock.message.slot;
     await Promise.all([
@@ -102,4 +106,16 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
   }
 
+  /**
+   * Remove stored operations based on a newly processed block
+   */
+  public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
+    await Promise.all([
+      this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
+      this.depositData.deleteOld(signedBlock.message.body.eth1Data.depositCount),
+      this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
+      this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
+      this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations)
+    ]);
+  }
 }

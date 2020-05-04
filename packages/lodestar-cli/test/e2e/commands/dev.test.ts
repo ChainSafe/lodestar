@@ -14,6 +14,7 @@ import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
 import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {join} from "path";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
+import {expect} from "chai";
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;
@@ -70,17 +71,19 @@ describe("e2e interop simulation", function() {
     const conf = {
       db: {name: LODESTAR_DIR}
     };
-    minimalConfig.params.SECONDS_PER_SLOT = SECONDS_PER_SLOT;
-    minimalConfig.params.SLOTS_PER_EPOCH = SLOTS_PER_EPOCH;
+    // don't want to affect other tests
+    const devConfig = Object.assign({}, {params: minimalConfig.params}, minimalConfig);
+    devConfig.params = Object.assign({}, minimalConfig.params, {SECONDS_PER_SLOT, SLOTS_PER_EPOCH});
+    expect(devConfig.params.SECONDS_PER_SLOT).to.be.lt(minimalConfig.params.SECONDS_PER_SLOT);
     const peerId = await createPeerId();
     const libp2p = await createNodeJsLibp2p(
       peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}
     );
-    node = new BeaconNode(conf, {config: minimalConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
+    node = new BeaconNode(conf, {config: devConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 
     const genesisTime = Math.floor(Date.now()/1000);
-    const depositDataRootList = minimalConfig.types.DepositDataRootList.tree.defaultValue();
-    const state = quickStartState(minimalConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
+    const depositDataRootList = devConfig.types.DepositDataRootList.tree.defaultValue();
+    const state = quickStartState(devConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
     await node.chain.initializeBeaconChain(state, depositDataRootList);
     await node.start();
   }
@@ -99,7 +102,6 @@ describe("e2e interop simulation", function() {
       config: node.config,
       sync: node.sync,
       eth1: node.eth1,
-      opPool: node.opPool,
       network: node.network,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,

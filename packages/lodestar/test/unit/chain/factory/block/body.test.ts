@@ -2,37 +2,24 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {
-  AggregateAndProofOperations,
-  AttestationOperations,
-  DepositDataOperations,
-  OpPool,
-  ProposerSlashingOperations,
-  VoluntaryExitOperations
-} from "../../../../../src/opPool";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import * as depositUtils from "../../../../../src/chain/factory/block/deposits";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {generateEmptyVoluntaryExit} from "../../../../utils/voluntaryExits";
+import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {generateDeposit} from "../../../../utils/deposit";
+import {StubbedBeaconDb} from "../../../../utils/stub";
 
 describe("blockAssembly - body", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let opPool: OpPool, eth1: any, generateDepositsStub: any;
+  let dbStub: StubbedBeaconDb, eth1: any, generateDepositsStub: any;
 
   beforeEach(() => {
-    opPool = {
-      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
-      voluntaryExits: sandbox.createStubInstance(VoluntaryExitOperations),
-      depositData: sandbox.createStubInstance(DepositDataOperations),
-      proposerSlashings: sandbox.createStubInstance(ProposerSlashingOperations),
-      attesterSlashings: sandbox.createStubInstance(AttestationOperations),
-    } as unknown as OpPool;
+    dbStub = new StubbedBeaconDb(sandbox);
     generateDepositsStub = sandbox.stub(depositUtils, "generateDeposits");
     eth1 = sandbox.createStubInstance(EthersEth1Notifier);
     eth1.getEth1Vote = sandbox.stub();
@@ -43,19 +30,15 @@ describe("blockAssembly - body", function () {
   });
 
   it("should generate block body", async function() {
-    // @ts-ignore
-    opPool.proposerSlashings.getAll.resolves([generateEmptyProposerSlashing()]);
-    // @ts-ignore
-    opPool.attesterSlashings.getAll.resolves([generateEmptyAttesterSlashing()]);
-    // @ts-ignore
-    opPool.aggregateAndProofs.getBlockAttestations.resolves([generateEmptyAttestation()]);
-    // @ts-ignore
-    opPool.voluntaryExits.getAll.resolves([generateEmptyVoluntaryExit()]);
+    dbStub.proposerSlashing.values.resolves([generateEmptyProposerSlashing()]);
+    dbStub.attesterSlashing.values.resolves([generateEmptyAttesterSlashing()]);
+    dbStub.aggregateAndProof.getBlockAttestations.resolves([generateEmptyAttestation()]);
+    dbStub.voluntaryExit.values.resolves([generateEmptySignedVoluntaryExit()]);
     generateDepositsStub.resolves([generateDeposit()]);
     eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
-      opPool,
+      dbStub,
       eth1,
       config.types.DepositDataRootList.tree.defaultValue(),
       generateState(),
@@ -72,27 +55,23 @@ describe("blockAssembly - body", function () {
   });
 
   it("should generate block body with max respective field lengths", async function() {
-    // @ts-ignore
-    opPool.proposerSlashings.getAll.resolves(
+    dbStub.proposerSlashing.values.resolves(
       new Array(config.params.MAX_PROPOSER_SLASHINGS + 1).map(generateEmptyProposerSlashing)
     );
-    // @ts-ignore
-    opPool.attesterSlashings.getAll.resolves(
+    dbStub.attesterSlashing.values.resolves(
       new Array(config.params.MAX_ATTESTER_SLASHINGS + 1).map(generateEmptyAttesterSlashing)
     );
-    // @ts-ignore
-    opPool.aggregateAndProofs.getBlockAttestations.resolves(
-        
-      new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation));
-    // @ts-ignore
-    opPool.voluntaryExits.getAll.resolves(
-      new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptyVoluntaryExit)
+    dbStub.aggregateAndProof.getBlockAttestations.resolves(
+      new Array(config.params.MAX_ATTESTATIONS + 1).map(generateEmptyAttestation)
+    );
+    dbStub.voluntaryExit.values.resolves(
+      new Array(config.params.MAX_VOLUNTARY_EXITS + 1).map(generateEmptySignedVoluntaryExit)
     );
     generateDepositsStub.resolves([generateDeposit()]);
     eth1.getEth1Vote.resolves([]);
     const result = await assembleBody(
       config,
-      opPool,
+      dbStub,
       eth1,
       config.types.DepositDataRootList.tree.defaultValue(),
       generateState(),

@@ -108,7 +108,7 @@ export default class BlockProposingService {
     await this.storeBlock(signedBlock);
     await this.provider.validator.publishBlock(signedBlock);
     this.logger.info(
-      `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))}`
+      `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
     );
     return signedBlock;
   }

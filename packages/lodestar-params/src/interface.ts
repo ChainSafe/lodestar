@@ -70,4 +70,17 @@ export interface IBeaconParams {
   MAX_ATTESTATIONS: number;
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
+
+  // Old and future forks
+  ALL_FORKS: IFork[];
 }
+
+interface IFork {
+  // 4 bytes
+  previousVersion: number;
+  // 4 bytes
+  currentVersion: number;
+  // Fork epoch number
+  epoch: number;
+}
+

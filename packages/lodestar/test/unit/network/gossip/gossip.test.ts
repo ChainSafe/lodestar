@@ -2,7 +2,7 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {INetworkOptions} from "../../../../src/network/options";
 import {ENR} from "@chainsafe/discv5";
 import {createPeerId} from "../../../../src/network";
-import {MetadataController} from "../../../../src/network/metadata";
+import {MetadataController, IMetadataModules} from "../../../../src/network/metadata";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
@@ -19,6 +19,7 @@ import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
+import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("Network Gossip", function() {
   let gossip: Gossip;
@@ -26,6 +27,7 @@ describe("Network Gossip", function() {
   const sandbox = sinon.createSandbox();
   let pubsub: IGossipSub;
   let chain: IBeaconChain;
+  let state: BeaconState;
 
   beforeEach(async () => {
     const networkOpts: INetworkOptions = {
@@ -38,18 +40,19 @@ describe("Network Gossip", function() {
     };
     const peerIdB = await createPeerId();
     const enr = ENR.createFromPeerId(peerIdB);
-    metadata = new MetadataController({enr}, {config});
     const libp2p = sandbox.createStubInstance(NodejsNode);
     const logger = new WinstonLogger();
     logger.silent = true;
     const validator = sandbox.createStubInstance(GossipMessageValidator);
+    state = generateState();
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: 0n,
-      state: generateState(),
+      state,
       config
     });
+    metadata = new MetadataController({enr}, {config,  chain, logger});
     pubsub = new MockGossipSub();
     gossip = new Gossip(networkOpts, metadata, {config, libp2p, logger, validator, chain, pubsub});
     await gossip.start();
@@ -149,6 +152,20 @@ describe("Network Gossip", function() {
     });
 
     // other topics are the same
+
+    it("should handle fork digest changed", async () => {
+      // fork digest is changed after gossip started
+      const oldForkDigest = chain.currentForkDigest;
+      state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
+      expect(config.types.ForkDigest.equals(chain.currentForkDigest, oldForkDigest)).to.be.false;
+      const received = new Promise((resolve) => {
+        gossip.subscribeToBlock(chain.currentForkDigest, resolve);
+      });
+      chain.emit("forkDigest", chain.currentForkDigest);
+      const block = generateEmptySignedBlock();
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, "ssz", new Map()), block);
+      await received;
+    });
   });
 
   describe("Metadata", async function() {

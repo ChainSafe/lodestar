@@ -1,5 +1,5 @@
 import {IBeaconChain} from "../../chain";
-import {OpPool} from "../../opPool";
+import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
@@ -9,7 +9,7 @@ import {getCommitteeIndexSubnet} from "../../network/gossip/utils";
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
   network: INetwork;
-  opPool: OpPool;
+  db: IBeaconDb;
 }
 
 export class AttestationCollector implements IService {
@@ -17,15 +17,15 @@ export class AttestationCollector implements IService {
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
-  private readonly opPool: OpPool;
-
+  private readonly db: IBeaconDb;
+  private timers: (NodeJS.Timeout)[];
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
   public constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {
     this.config = config;
     this.chain = modules.chain;
     this.network = modules.network;
-    this.opPool = modules.opPool;
+    this.db = modules.db;
   }
 
   public async start(): Promise<void> {
@@ -33,6 +33,7 @@ export class AttestationCollector implements IService {
   }
 
   public async stop(): Promise<void> {
+    this.timers.forEach((timer) => clearTimeout(timer));
     this.chain.clock.unsubscribeFromNewSlot(this.checkDuties);
   }
 
@@ -49,17 +50,18 @@ export class AttestationCollector implements IService {
   private checkDuties = (slot: Slot): void => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.currentForkDigest;
+    this.timers = [];
     committees.forEach((committeeIndex) => {
       this.network.gossip.subscribeToAttestationSubnet(
         forkDigest,
         getCommitteeIndexSubnet(committeeIndex),
         this.handleCommitteeAttestation
       );
-      setTimeout(
+      this.timers.push(setTimeout(
         this.unsubscribeSubnet,
         this.config.params.SECONDS_PER_SLOT * 1000,
         getCommitteeIndexSubnet(committeeIndex)
-      );
+      ) as unknown as NodeJS.Timeout);
     });
     this.aggregationDuties.delete(slot);
   };
@@ -70,6 +72,6 @@ export class AttestationCollector implements IService {
   };
 
   private handleCommitteeAttestation = async ({attestation}: {attestation: Attestation}): Promise<void> => {
-    await this.opPool.attestations.receive(attestation);
+    await this.db.attestation.add(attestation);
   };
 }

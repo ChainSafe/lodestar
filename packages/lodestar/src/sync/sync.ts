@@ -35,7 +35,7 @@ export class BeaconSync implements IBeaconSync {
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
-  
+
   private startingBlock: Slot = 0;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
@@ -47,7 +47,8 @@ export class BeaconSync implements IBeaconSync {
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
     this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
-    this.gossip = modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.opPool);
+    this.gossip = modules.gossipHandler ||
+      new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
   }
 
@@ -115,7 +116,7 @@ export class BeaconSync implements IBeaconSync {
       this.regularSync.start()
     ]);
   }
-  
+
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...", this.getPeers());
     while (this.mode !== SyncMode.STOPPED && this.getPeers().length < this.opts.minPeers) {

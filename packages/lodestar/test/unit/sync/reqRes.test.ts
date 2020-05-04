@@ -124,7 +124,6 @@ describe("sync req resp", function () {
       latestMetadata: null, latestStatus: null, score: 0
     });
     reqRespStub.sendResponse.resolves(0);
-    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     dbStub.state.get.resolves(generateState());
     try {
       await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
@@ -177,7 +176,6 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    dbStub.block.getChainHead.resolves(generateEmptySignedBlock());
     dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);

@@ -1,69 +1,49 @@
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BulkRepository} from "../repository";
-import {IDatabaseController} from "../../../controller";
-import {Bucket, encodeKey} from "../../../schema";
-import {isEligibleBlock} from "./util";
+
+import {IDatabaseController, IFilterOptions} from "../../../controller";
+import {Bucket} from "../../schema";
+import {Repository} from "./abstract";
+
+export interface IBlockFilterOptions extends IFilterOptions<Slot> {
+  step?: number;
+}
 
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
-export class BlockArchiveRepository extends BulkRepository<SignedBeaconBlock> {
+export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> {
 
   public constructor(
     config: IBeaconConfig,
-    db: IDatabaseController
+    db: IDatabaseController<Buffer, Buffer>,
   ) {
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
-  }
-
-  public async addMany(blocks: SignedBeaconBlock[]): Promise<void> {
-    await this.db.batchPut(
-      blocks.map((block) => ({
-        key: encodeKey(this.bucket, this.getId(block)),
-        value: this.type.serialize(block)
-      }))
-    );
   }
 
   public getId(value: SignedBeaconBlock): Slot {
     return value.message.slot;
   }
 
-  public async getAllBetween(
-    lowerLimit: number | null,
-    upperLimit: number | null,
-    step: number | null = 1
-  ): Promise<SignedBeaconBlock[]> {
+  public async values(opts?: IBlockFilterOptions): Promise<SignedBeaconBlock[]> {
     const result = [];
-    for await (const signedBlock of this.getAllBetweenStream(lowerLimit, upperLimit, step)) {
-      result.push(signedBlock);
+    for await (const value of this.valuesStream(opts)) {
+      result.push(value);
     }
     return result;
   }
 
-  public getAllBetweenStream(
-    lowerLimit: number | null,
-    upperLimit: number | null,
-    step: number | null = 1
-  ): AsyncGenerator<SignedBeaconBlock> {
-    let safeLowerLimit;
-    if(lowerLimit === null) {
-      safeLowerLimit = Buffer.alloc(0);
-    } else {
-      safeLowerLimit = lowerLimit;
-    }
-    const safeUpperLimit = upperLimit || Number.MAX_SAFE_INTEGER;
-    const dataStream = this.db.searchStream({
-      gt: encodeKey(this.bucket, safeLowerLimit),
-      lt: encodeKey(this.bucket, safeUpperLimit),
-    });
-    const deserialize = this.type.deserialize.bind(this.type);
-    return (async function * () {
-      for await (const data of dataStream) {
-        const block = deserialize(data);
-        if (isEligibleBlock(block, step, safeLowerLimit)) {
-          yield block;
+  public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
+    const dbFilterOpts = this.dbFilterOptions(opts);
+    const firstSlot = dbFilterOpts.gt ?
+      this.decodeKey(dbFilterOpts.gt) + 1 :
+      this.decodeKey(dbFilterOpts.gte);
+    const valuesStream = super.valuesStream(opts);
+    const step = opts && opts.step || 1;
+    return (async function* () {
+      for await (const value of valuesStream) {
+        if ((value.message.slot - firstSlot) % step === 0) {
+          yield value;
         }
       }
     })();

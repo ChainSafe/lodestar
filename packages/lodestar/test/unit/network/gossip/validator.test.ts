@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
@@ -17,15 +17,6 @@ import {
   generateEmptySignedAggregateAndProof
 } from "../../../utils/attestation";
 import {
-  AggregateAndProofRepository,
-  AttestationRepository,
-  AttesterSlashingRepository,
-  BlockRepository,
-  ProposerSlashingRepository,
-  StateRepository,
-  VoluntaryExitRepository
-} from "../../../../src/db/api/beacon/repositories";
-import {
   generateEmptyAttesterSlashing,
   generateEmptyProposerSlashing
 } from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
@@ -33,17 +24,17 @@ import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {OpPool, AggregateAndProofOperations, AttestationOperations, AttesterSlashingOperations} from "../../../../src/opPool";
-import Sinon from "sinon";
+import {IBeaconDb} from "../../../../src/db";
+import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
-  let verifyBlockSignatureStub: any, dbStub: any, logger: any, isValidIndexedAttestationStub: any,
+  let verifyBlockSignatureStub: any, dbStub: StubbedBeaconDb, logger: any, isValidIndexedAttestationStub: any,
     isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
-    isValidIncomingAttesterSlashingStub: any, chainStub: any,
-    getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: Sinon.SinonStub,
-    opPoolStub: any, getBeaconProposerIndexStub: Sinon.SinonStub;
+    isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain,
+    getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: SinonStub,
+    getBeaconProposerIndexStub: SinonStub;
 
   beforeEach(() => {
     verifyBlockSignatureStub = sandbox.stub(blockUtils, "verifyBlockSignature");
@@ -53,29 +44,19 @@ describe("GossipMessageValidator", () => {
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
-    chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     isBlsVerifyStub = sandbox.stub(bls, "verify");
-    opPoolStub = {
-      attestations: sandbox.createStubInstance(AttestationOperations),
-      aggregateAndProofs: sandbox.createStubInstance(AggregateAndProofOperations),
-      attesterSlashings: sandbox.createStubInstance(AttesterSlashingOperations)
-    } as unknown as OpPool;
     getBeaconProposerIndexStub = sandbox.stub(proposerUtils, "getBeaconProposerIndex");
 
-    dbStub = {
-      block: sandbox.createStubInstance(BlockRepository),
-      attestation: sandbox.createStubInstance(AttestationRepository),
-      voluntaryExit: sandbox.createStubInstance(VoluntaryExitRepository),
-      proposerSlashing: sandbox.createStubInstance(ProposerSlashingRepository),
-      attesterSlashing: sandbox.createStubInstance(AttesterSlashingRepository),
-      state: sandbox.createStubInstance(StateRepository),
-      aggregateAndProof: sandbox.createStubInstance(AggregateAndProofRepository),
-      getStateForSlot: sandbox.stub(),
-    };
+    dbStub = new StubbedBeaconDb(sandbox);
     logger = new WinstonLogger();
     logger.silent = true;
-    validator = new GossipMessageValidator({chain: chainStub, db: dbStub, opPool: opPoolStub, config, logger});
+    validator = new GossipMessageValidator({
+      chain: chainStub,
+      db: dbStub as unknown as IBeaconDb,
+      config, logger,
+    });
   });
 
   afterEach(() => {
@@ -89,87 +70,87 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBlockBySlot.calledOnce).to.be.false;
+      expect(dbStub.block.getBySlot.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - block is too old", async () => {
       const block = generateEmptySignedBlock();
       block.message.slot = 3;
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       const state = generateState();
       state.finalizedCheckpoint.epoch = 1000;
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBlockBySlot.calledOnce).to.be.false;
+      expect(dbStub.block.getBySlot.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - prevent DOS", async () => {
-      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT });
+      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBlockBySlot.resolves(block);
+      dbStub.block.getBySlot.resolves(block);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBlockBySlot.calledOnce).to.be.true;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.false;
+      expect(dbStub.block.getBySlot.calledOnce).to.be.true;
+      expect(dbStub.badBlock.has.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - bad block", async () => {
-      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT });
+      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBlockBySlot.resolves(null);
-      dbStub.block.isBadBlock.resolves(true);
+      dbStub.block.getBySlot.resolves(null);
+      dbStub.badBlock.has.resolves(true);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.true;
+      expect(dbStub.badBlock.has.calledOnce).to.be.true;
       expect(verifyBlockSignatureStub.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid incoming block - invalid signature", async () => {
-      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT });
+      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBlockBySlot.resolves(null);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.block.getBySlot.resolves(null);
+      dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(false);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(verifyBlockSignatureStub.calledOnce).to.be.true;
       expect(getBeaconProposerIndexStub.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid incoming block - invalid proposer index", async () => {
-      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT });
+      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBlockBySlot.resolves(null);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.block.getBySlot.resolves(null);
+      dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
       getBeaconProposerIndexStub.returns(1000);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
     });
-  
+
     it("should return valid incoming block", async () => {
-      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT });
+      const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBlockBySlot.resolves(null);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.block.getBySlot.resolves(null);
+      dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
       getBeaconProposerIndexStub.returns(block.message.proposerIndex);
       expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
       expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
     });
-  
+
     it("should return valid incoming block - block in previous epoch", async () => {
       const block = generateEmptySignedBlock();
       const epoch = 10;
       block.message.slot = (epoch - 1) * config.params.SLOTS_PER_EPOCH + 1;
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       dbStub.block.has.resolves(false);
       const state = generateState();
       state.slot = epoch * config.params.SLOTS_PER_EPOCH + 1;
@@ -181,97 +162,93 @@ describe("GossipMessageValidator", () => {
     });
   });
 
-  describe("validate unaggregated attestation", () => {
-    it("should return invalid unaggregated attestation", () => {
-      expect(validator.isUnaggregatedAttestation(generateEmptyAttestation())).to.be.false;
-    });
-  
-    it("should return valid unaggregated attestation", () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      expect(validator.isUnaggregatedAttestation(attestation)).to.be.equal(true);
-    });
-  });
-
   describe("validate committee attestation", () => {
     it("should return invalid committee attestation - invalid subnet", async () => {
       const attestation = generateEmptyAttestation();
       const invalidSubnet = 2000;
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, invalidSubnet)).to.be.false;
     });
-  
-    it("should return invalid committee attestation - invalid unaggregated attestation", async () => {
-      const attestation = generateEmptyAttestation();
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.block.has.calledOnce).to.be.false;
-    });
-  
-    it("should return invalid committee attestation - block not exist", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(false);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.block.has.calledOnce).to.be.true;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.false;
-    });
-  
-    it("should return invalid committee attestation - bad block", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(true);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.true;
-    });
-  
+
     it("should return invalid committee attestation - invalid slot", async () => {
       const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
       const state = generateState();
       state.genesisTime = Math.floor(new Date("2000-01-01").getTime()) / 1000;
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.true;
     });
-  
+
+    it("should return invalid committee attestation - invalid unaggregated attestation", async () => {
+      const attestation = generateEmptyAttestation();
+      // aggregationBits are all false
+      const state = generateState();
+      dbStub.state.get.resolves(state);
+      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
+      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.false;
+    });
+
     it("should return invalid committee attestation - prevent DOS", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
-      opPoolStub.attestations.geAttestationsBySlot.resolves([attestation]);
+      dbStub.attestation.geAttestationsByTargetEpoch.resolves([attestation]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.true;
-      expect(opPoolStub.attestations.geAttestationsBySlot.calledOnce).to.be.true;
+      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
+      expect(dbStub.block.has.calledOnce).to.be.false;
+      expect(getAttestingIndicesStub.calledOnce).to.be.false;
     });
-  
+
+    it("should return invalid committee attestation - block not exist", async () => {
+      const attestation = generateEmptyAttestation();
+      attestation.aggregationBits[0] = true;
+      dbStub.block.has.resolves(false);
+      const state = generateState();
+      dbStub.state.get.resolves(state);
+      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
+      getAttestingIndicesStub.returns([0]);
+      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
+      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
+      expect(dbStub.block.has.calledOnce).to.be.true;
+      expect(dbStub.badBlock.has.calledOnce).to.be.false;
+    });
+
+    it("should return invalid committee attestation - bad block", async () => {
+      const attestation = generateEmptyAttestation();
+      attestation.aggregationBits[0] = true;
+      dbStub.block.has.resolves(true);
+      dbStub.badBlock.has.resolves(true);
+      const state = generateState();
+      dbStub.state.get.resolves(state);
+      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
+      getAttestingIndicesStub.returns([0]);
+      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
+      expect(dbStub.badBlock.has.calledOnce).to.be.true;
+      expect(isValidIndexedAttestationStub.calledOnce).to.be.false;
+    });
+
     it("should return invalid committee attestation - invalid attestation", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
-      opPoolStub.attestations.geAttestationsBySlot.resolves([]);
+      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       isValidIndexedAttestationStub.returns(false);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
     });
-  
+
     it("should return valid committee attestation", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
-      opPoolStub.attestations.geAttestationsBySlot.resolves([]);
+      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       isValidIndexedAttestationStub.returns(true);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(true);
@@ -292,22 +269,22 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
-      opPoolStub.aggregateAndProofs.hasAttestation.resolves(true);
+      dbStub.aggregateAndProof.hasAttestation.resolves(true);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
-      expect(opPoolStub.aggregateAndProofs.hasAttestation.calledOnce).to.be.true;
+      expect(dbStub.aggregateAndProof.hasAttestation.calledOnce).to.be.true;
     });
 
     it("should return invalid signed aggregation and proof - prevent DOS", async () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
-      opPoolStub.aggregateAndProofs.hasAttestation.resolves(false);
-      opPoolStub.aggregateAndProofs.getByAggregatorAndSlot.resolves([generateEmptyAttestation()]);
+      dbStub.aggregateAndProof.hasAttestation.resolves(false);
+      dbStub.aggregateAndProof.getByAggregatorAndEpoch.resolves([generateEmptyAttestation()]);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
-      expect(opPoolStub.aggregateAndProofs.getByAggregatorAndSlot.calledOnce).to.be.true;
+      expect(dbStub.aggregateAndProof.getByAggregatorAndEpoch.calledOnce).to.be.true;
       expect(dbStub.block.has.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid signed aggregation and proof - block not existed", async () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
@@ -316,18 +293,18 @@ describe("GossipMessageValidator", () => {
       dbStub.block.has.resolves(false);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
       expect(dbStub.block.has.calledOnce).to.be.true;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.false;
+      expect(dbStub.badBlock.has.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid signed aggregation and proof - invalid block", async () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(true);
+      dbStub.badBlock.has.resolves(true);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
-      expect(dbStub.block.isBadBlock.calledOnce).to.be.true;
+      expect(dbStub.badBlock.has.calledOnce).to.be.true;
       expect(isAggregatorStub.calledOnce).to.be.false;
     });
 
@@ -335,7 +312,7 @@ describe("GossipMessageValidator", () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       getAttestingIndicesStub.returns([0]);
@@ -344,12 +321,12 @@ describe("GossipMessageValidator", () => {
       expect(isAggregatorStub.calledOnce).to.be.true;
       expect(getAttestingIndicesStub.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid signed aggregation and proof - invalid attestor", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       isAggregatorStub.returns(true);
@@ -358,12 +335,12 @@ describe("GossipMessageValidator", () => {
       expect(getAttestingIndicesStub.calledOnce).to.be.true;
       expect(isBlsVerifyStub.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid signed aggregation and proof - invalid selection proof", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
@@ -374,12 +351,12 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
       expect(isBlsVerifyStub.calledOnce).to.be.true;
     });
-  
+
     it("should return invalid signed aggregation and proof - invalid signature", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
@@ -392,12 +369,12 @@ describe("GossipMessageValidator", () => {
       expect(isBlsVerifyStub.calledTwice).to.be.true;
       expect(isValidIndexedAttestationStub.calledOnce).to.be.false;
     });
-  
+
     it("should return invalid signed aggregation and proof - invalid indexed attestation", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
@@ -410,12 +387,12 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
       expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
     });
-  
+
     it("should return valid signed aggregation and proof", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       dbStub.block.has.resolves(true);
-      dbStub.block.isBadBlock.resolves(false);
+      dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
@@ -434,14 +411,14 @@ describe("GossipMessageValidator", () => {
       const attestation = generateEmptyAttestation();
       expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
     });
-  
+
     it("should return invalid unaggregated attestation - attestation existed", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       dbStub.attestation.has.resolves(true);
       expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
     });
-  
+
     it("should return invalid unaggregated attestation - attestation is too old", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
@@ -453,7 +430,7 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
     });
-  
+
     it("should return valid unaggregated attestation", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
@@ -474,7 +451,7 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
       expect(isValidIncomingVoluntaryExitStub.called).to.be.false;
     });
-  
+
     it("should return invalid Voluntary Exit - invalid", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
@@ -484,7 +461,7 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
       expect(isValidIncomingVoluntaryExitStub.called).to.be.true;
     });
-  
+
     it("should return valid Voluntary Exit", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
@@ -502,7 +479,7 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.false;
       expect(isValidIncomingProposerSlashingStub.called).to.be.false;
     });
-  
+
     it("should return invalid proposer slashing - invalid", async () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
@@ -512,7 +489,7 @@ describe("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.false;
       expect(isValidIncomingProposerSlashingStub.called).to.be.true;
     });
-  
+
     it("should return valid proposer slashing", async () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
@@ -526,24 +503,24 @@ describe("GossipMessageValidator", () => {
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      opPoolStub.attesterSlashings.hasAll.resolves(true);
+      dbStub.attesterSlashing.hasAll.resolves(true);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.false;
       expect(isValidIncomingAttesterSlashingStub.called).to.be.false;
     });
-  
+
     it("should return invalid attester slashing - invalid", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      opPoolStub.attesterSlashings.hasAll.resolves(false);
+      dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(false);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.false;
       expect(isValidIncomingAttesterSlashingStub.called).to.be.true;
     });
-  
+
     it("should return valid attester slashing", async () => {
       const slashing = generateEmptyAttesterSlashing();
-      opPoolStub.attesterSlashings.hasAll.resolves(false);
+      dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
       dbStub.state.get.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(true);

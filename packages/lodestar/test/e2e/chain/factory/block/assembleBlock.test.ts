@@ -7,7 +7,6 @@ import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {OpPool} from "../../../../../src/opPool";
 import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {
   getBeaconProposerIndex,
@@ -34,7 +33,6 @@ import {
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 
 describe("produce block", function () {
@@ -51,7 +49,6 @@ describe("produce block", function () {
     depositData: sinon.createStubInstance(DepositDataRepository),
   }; // missing transfer
   // @ts-ignore
-  const opPoolStub = new OpPool({}, {config: config, db: dbStub, eth1: sinon.createStubInstance(EthersEth1Notifier)});
   const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
   eth1Stub.getEth1Vote = sinon.stub();
   const chainStub = sinon.createStubInstance(BeaconChain);
@@ -78,15 +75,15 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    dbStub.block.getChainHead.resolves(parentBlock);
+    //dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
     dbStub.depositDataRootList.get.resolves(depositDataRootList);
-    dbStub.proposerSlashing.getAll.resolves([]);
-    dbStub.aggregateAndProof.getAll.resolves([]);
-    dbStub.attesterSlashing.getAll.resolves([]);
-    dbStub.voluntaryExit.getAll.resolves([]);
-    dbStub.depositData.getAllBetween.resolves([]);
+    dbStub.proposerSlashing.values.resolves([]);
+    dbStub.aggregateAndProof.getBlockAttestations.resolves([]);
+    dbStub.attesterSlashing.values.resolves([]);
+    dbStub.voluntaryExit.values.resolves([]);
+    dbStub.depositData.values.resolves([]);
     eth1Stub.depositCount.resolves(1);
     eth1Stub.depositRoot.resolves(tree.root);
     eth1Stub.getEth1Vote.resolves({depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)});
@@ -108,7 +105,7 @@ describe("produce block", function () {
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
       // @ts-ignore
-      return await assembleBlock(config, chainStub, dbStub, opPoolStub, eth1Stub, slot, validatorIndex, randao);
+      return await assembleBlock(config, chainStub, dbStub, eth1Stub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
     expect(() => stateTransition(config, state, block, false)).to.not.throw();

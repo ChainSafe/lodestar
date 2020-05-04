@@ -95,7 +95,7 @@ export class DevCommand implements ICliCommand {
       {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/127.0.0.1/udp/0"}},
       {isMergeableObject: isPlainObject}
     );
-    const libp2p = await createNodeJsLibp2p(peerId, conf.network);
+    const libp2p = await createNodeJsLibp2p(peerId, conf.network, false);
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
@@ -142,7 +142,6 @@ export class DevCommand implements ICliCommand {
       config: node.config,
       sync: node.sync,
       eth1: node.eth1,
-      opPool: node.opPool,
       logger: new WinstonLogger({module: "API"}),
       chain: node.chain,
       network: node.network,

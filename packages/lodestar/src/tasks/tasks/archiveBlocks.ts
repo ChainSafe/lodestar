@@ -33,7 +33,7 @@ export class ArchiveBlocksTask implements ITask {
   }
 
   public async run(): Promise<void> {
-    const blocks = (await this.db.block.getAll()).filter(
+    const blocks = (await this.db.block.values()).filter(
       (block) =>
         computeEpochAtSlot(this.config, block.message.slot) < this.finalizedCheckpoint.epoch
     );
@@ -41,8 +41,8 @@ export class ArchiveBlocksTask implements ITask {
         +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`
     );
     await Promise.all([
-      this.db.blockArchive.addMany(blocks),
-      this.db.block.deleteManyByValue(blocks)
+      this.db.blockArchive.batchAdd(blocks),
+      this.db.block.batchRemove(blocks)
     ]);
     this.logger.info(`Archiving of ${blocks.length} finalized blocks completed `
         + `(finalized epoch #${this.finalizedCheckpoint.epoch})`);

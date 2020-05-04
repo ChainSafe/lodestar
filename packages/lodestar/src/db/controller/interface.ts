@@ -1,47 +1,45 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * @module db/controller
  */
 
-import {EventEmitter} from "events";
-
-export interface ISearchOptions {
-  gt: any;
-  lt: any;
+export interface IFilterOptions<K> {
+  gt?: K;
+  gte?: K;
+  lt?: K;
+  lte?: K;
+  reverse?: boolean;
+  limit?: number;
+}
+export interface IKeyValue<K, V> {
+  key: K;
+  value: V;
 }
 
-export interface IDatabaseController extends EventEmitter{
-
-  get(key: any): Promise<Buffer | null>;
-
-  batchPut(items: { key: any; value: any }[]): Promise<any>;
-
-  batchDelete(items: any[]): Promise<any>;
-
-  /**
-   * Should return items which has key prefix >= opts.gt && prefix < opt.lt
-   * @param opts
-   */
-  search(opts: ISearchOptions): Promise<any[]>;
-
-  /**
-   * Similar to search but returns data chunk asap instead of waiting for the whole
-   * data array to return.
-   * @param opts 
-   */
-  searchStream(opts: ISearchOptions): AsyncIterable<any>;
-
-  /**
-   * Should insert or update
-   * @param key
-   * @param value
-   */
-  put(key: any, value: any): Promise<any>;
-
-  delete(key: any): Promise<void>;
+export interface IDatabaseController<K, V> {
+  // service start / stop
 
   start(): Promise<void>;
-
   stop(): Promise<void>;
 
+  // Core API
+
+  get(key: K): Promise<V | null>;
+  put(key: K, value: V): Promise<void>;
+  delete(key: K): Promise<void>;
+
+  // Batch operations
+
+  batchPut(items: IKeyValue<K, V>[]): Promise<void>;
+  batchDelete(keys: K[]): Promise<void>;
+
+  // Iterate over entries
+
+  keysStream(opts?: IFilterOptions<K>): AsyncIterable<K>;
+  keys(opts?: IFilterOptions<K>): Promise<K[]>;
+
+  valuesStream(opts?: IFilterOptions<K>): AsyncIterable<V>;
+  values(opts?: IFilterOptions<K>): Promise<V[]>;
+
+  entriesStream(opts?: IFilterOptions<K>): AsyncIterable<IKeyValue<K, V>>;
+  entries(opts?: IFilterOptions<K>): Promise<IKeyValue<K, V>[]>;
 }

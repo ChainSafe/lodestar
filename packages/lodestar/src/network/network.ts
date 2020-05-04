@@ -60,7 +60,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, logger});
         const enr = opts.discv5 && opts.discv5.enr || undefined;
-        this.metadata = new MetadataController({enr}, {config});
+        this.metadata = new MetadataController({enr}, {config, chain, logger});
         this.gossip = (new Gossip(opts, this.metadata,
           {config, libp2p, logger, validator, chain})) as unknown as IGossip;
         resolve();
@@ -73,6 +73,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     await this.reqResp.start();
     await this.gossip.start();
+    await this.metadata.start();
     this.libp2p.on("peer:connect", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
     const multiaddresses = this.libp2p.peerInfo.multiaddrs.toArray().map((m) => m.toString()).join(",");
@@ -82,6 +83,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   public async stop(): Promise<void> {
     this.libp2p.removeListener("peer:connect", this.emitPeerConnect);
     this.libp2p.removeListener("peer:disconnect", this.emitPeerDisconnect);
+    await this.metadata.stop();
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
