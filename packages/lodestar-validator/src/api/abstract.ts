@@ -20,6 +20,7 @@ export abstract class AbstractApiClient
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;
   private beaconNodeInterval: NodeJS.Timeout;
+  private slotCountingTimeout: NodeJS.Timeout;
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
@@ -46,6 +47,9 @@ export abstract class AbstractApiClient
     this.running = false;
     if(this.beaconNodeInterval) {
       clearInterval(this.beaconNodeInterval);
+    }
+    if(this.slotCountingTimeout) {
+      clearTimeout(this.slotCountingTimeout);
     }
   }
 
@@ -74,7 +78,7 @@ export abstract class AbstractApiClient
         (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch);
-    setTimeout(
+    this.slotCountingTimeout = setTimeout(
       this.updateSlot,
       diffTillNextSlot
     );
@@ -89,7 +93,7 @@ export abstract class AbstractApiClient
       cb(this.currentSlot);
     });
     //recursively invoke update slot after SECONDS_PER_SLOT
-    setTimeout(
+    this.slotCountingTimeout = setTimeout(
       this.updateSlot,
       this.config.params.SECONDS_PER_SLOT * 1000
     );
