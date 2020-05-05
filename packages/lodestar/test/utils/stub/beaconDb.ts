@@ -13,10 +13,11 @@ import {
   BlockArchiveRepository,
   ChainRepository,
   DepositDataRepository,
-  DepositDataRootListRepository,
+  DepositDataRootRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository,
+  Eth1DataRepository,
 } from "../../../src/db/api/beacon/repositories";
 
 export class StubbedBeaconDb extends BeaconDb {
@@ -35,7 +36,8 @@ export class StubbedBeaconDb extends BeaconDb {
   public attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
   public depositData: SinonStubbedInstance<DepositDataRepository> & DepositDataRepository;
 
-  public depositDataRootList: SinonStubbedInstance<DepositDataRootListRepository> & DepositDataRootListRepository;
+  public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
+  public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   public storeChainHead:
   SinonStubbedInstance<(block: SignedBeaconBlock, state: BeaconState) => Promise<void>>
@@ -67,7 +69,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
-    this.depositDataRootList = sinon.createStubInstance(DepositDataRootListRepository) as any;
 
     this.attestation = sinon.createStubInstance(AttestationRepository) as any;
     this.aggregateAndProof = sinon.createStubInstance(AggregateAndProofRepository) as any;
@@ -75,6 +76,9 @@ export class StubbedBeaconDb extends BeaconDb {
     this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as any;
     this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as any;
     this.depositData = sinon.createStubInstance(DepositDataRepository) as any;
+
+    this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
+    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
 
     this.storeChainHead = sinon.stub(this, "storeChainHead") as any;
     this.updateChainHead = sinon.stub(this, "updateChainHead") as any;

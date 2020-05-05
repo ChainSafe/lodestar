@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
-import {Goodbye, Status} from "@chainsafe/lodestar-types";
+import {Goodbye, Status, BeaconBlocksByRangeRequest, ResponseBody, RequestId, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {Method, ZERO_HASH} from "../../../src/constants";
@@ -10,17 +10,14 @@ import {BeaconChain} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
-import {
-  BlockArchiveRepository,
-  BlockRepository,
-  ChainRepository,
-  StateRepository
-} from "../../../src/db/api/beacon/repositories";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {RpcError} from "../../../src/network/error";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -30,28 +27,19 @@ describe("sync req resp", function () {
     repsStub: SinonStubbedInstance<ReputationStore>,
     logger: WinstonLogger,
     reqRespStub: SinonStubbedInstance<ReqResp>;
-  let dbStub: {
-    chain: SinonStubbedInstance<ChainRepository>;
-    state: SinonStubbedInstance<StateRepository>;
-    block: SinonStubbedInstance<BlockRepository>;
-    blockArchive: SinonStubbedInstance<BlockArchiveRepository>;
-  };
+  let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.getHeadState.resolves(generateState());
+    chainStub.getFinalizedCheckpoint.resolves({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     // @ts-ignore
     chainStub.config = config;
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    networkStub.reqResp = reqRespStub as unknown as ReqResp;
-    dbStub = {
-      chain: sandbox.createStubInstance(ChainRepository),
-      state: sandbox.createStubInstance(StateRepository),
-      block: sandbox.createStubInstance(BlockRepository),
-      blockArchive: sandbox.createStubInstance(BlockArchiveRepository),
-    };
+    networkStub.reqResp = reqRespStub as unknown as ReqResp & SinonStubbedInstance<ReqResp>;
+    dbStub = new StubbedBeaconDb(sandbox);
     repsStub = sandbox.createStubInstance(ReputationStore);
     logger = new WinstonLogger();
     logger.silent = true;
@@ -71,27 +59,6 @@ describe("sync req resp", function () {
     logger.silent = false;
   });
 
-
-  it("should able to create Status - genesis time", async function () {
-    chainStub.networkId = 1n;
-    chainStub.chainId = 1;
-    chainStub.isInitialized.returns(false);
-    const expected: Status = {
-      forkDigest: Buffer.alloc(4),
-      finalizedRoot: ZERO_HASH ,
-      finalizedEpoch: 0,
-      headRoot: ZERO_HASH,
-      headSlot: 0,
-    };
-
-    try {
-      // @ts-ignore
-      const result = await syncRpc.createStatus();
-      expect(result).deep.equal(expected);
-    }catch (e) {
-      expect.fail(e.stack);
-    }
-  });
 
   it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
@@ -204,5 +171,37 @@ describe("sync req resp", function () {
     }catch (e) {
       expect.fail(e.stack);
     }
+  });
+
+  it("should handle request - onBeaconBlocksByRange", async function() {
+    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const body: BeaconBlocksByRangeRequest = {
+      startSlot: 2,
+      count: 4,
+      step: 2,
+    };
+    dbStub.blockArchive.valuesStream.returns(async function* () {
+      for (const slot of [2, 4]) {
+        const block = generateEmptySignedBlock();
+        block.message.slot = slot;
+        yield block;
+      }
+    }());
+    // block 6 does not exist
+    const block8 = generateEmptySignedBlock();
+    block8.message.slot = 8;
+    dbStub.block.getBySlot.onFirstCall().resolves(null);
+    dbStub.block.getBySlot.onSecondCall().resolves(block8);
+    let blockStream: AsyncIterable<ResponseBody>;
+    reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
+      blockStream = chunkIter;
+    });
+    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", body);
+    const slots = [];
+    for await(const body of blockStream) {
+      slots.push((body as SignedBeaconBlock).message.slot);
+    }
+    // count is 4 but it returns only 3 blocks because block 6 does not exist
+    expect(slots).to.be.deep.equal([2,4,8]);
   });
 });

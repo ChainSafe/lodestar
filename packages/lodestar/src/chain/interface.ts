@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
+import StrictEventEmitter from "strict-event-emitter-types";
 
-import {List, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
@@ -14,7 +14,6 @@ import {
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
-import StrictEventEmitter from "strict-event-emitter-types";
 import {IBeaconClock} from "./clock/interface";
 
 export interface IChainEvents {
@@ -59,6 +58,8 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
+  getFinalizedCheckpoint(): Promise<Checkpoint>;
+
   /**
    * Add attestation to the fork-choice rule
    */
@@ -70,12 +71,9 @@ export interface IBeaconChain extends ChainEventEmitter {
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
 
   /**
-   * Used for starting beacon chain with fake genesis state (dev, test, interop).
-   * Note: Invoke this before {@link start}
+   * Initialize the chain with a genesis state
    */
-  initializeBeaconChain(genesisState: BeaconState, depositDataRootList: TreeBacked<List<Root>>): Promise<void>;
-
-  isInitialized(): boolean;
+  initializeBeaconChain(genesisState: BeaconState): Promise<void>;
 }
 
 export interface IAttestationProcessor {

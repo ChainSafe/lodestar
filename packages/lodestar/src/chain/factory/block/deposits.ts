@@ -12,7 +12,8 @@ export async function generateDeposits(
   db: IBeaconDb,
   state: BeaconState,
   eth1Data: Eth1Data,
-  depositDataRootList: TreeBacked<List<Root>>): Promise<Deposit[]> {
+  depositDataRootList: TreeBacked<List<Root>>,
+): Promise<Deposit[]> {
   if(eth1Data.depositCount > state.eth1DepositIndex) {
     const eth1DepositIndex = state.eth1DepositIndex;
     const upperIndex = eth1DepositIndex + Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);

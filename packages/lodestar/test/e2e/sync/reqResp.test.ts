@@ -18,6 +18,7 @@ import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -50,7 +51,7 @@ describe("[sync] rpc", function () {
     const state = generateState();
 
     state.finalizedCheckpoint = {
-      epoch: 0,
+      epoch: computeEpochAtSlot(config, block.message.slot),
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
     };
     const chain = new MockBeaconChain({
@@ -81,6 +82,7 @@ describe("[sync] rpc", function () {
     db.chain.getChainHeadSlot.resolves(0);
     //db.block.getChainHead.resolves(block);
     db.block.get.resolves(block);
+    db.block.getBySlot.resolves(block);
     db.blockArchive.get.resolves(block);
     db.blockArchive.valuesStream.returns(async function * () {
       yield block;
@@ -135,7 +137,11 @@ describe("[sync] rpc", function () {
     await new Promise((resolve) => {
       netB.reqResp.once("request", resolve);
     });
-    await sleep(200);
+    await new Promise((resolve, reject) => {
+      // if there is goodbye request from B
+      netA.reqResp.once("request", reject);
+      setTimeout(resolve, 200);
+    });
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
   });

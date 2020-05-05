@@ -23,6 +23,7 @@ import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {BeaconNodeOptions} from "../../lodestar/node/options";
+import {interopDeposits} from "../../lodestar/interop/deposits";
 import {getConfig, getDevGenesisState, getPeerId, resetPath} from "./utils";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
@@ -110,7 +111,16 @@ export class DevCommand implements ICliCommand {
     );
 
     this.node = new BeaconNode(conf, {config, logger, eth1: new InteropEth1Notifier(), libp2p});
-    await this.node.chain.initializeBeaconChain(state, depositDataRootList);
+    const deposits = interopDeposits(
+      config, config.types.DepositDataRootList.tree.defaultValue(), parseInt(options.validatorCount),
+    );
+    for (let i = 0; i < deposits.length; i++) {
+      await Promise.all([
+        this.node.db.depositData.put(i, deposits[i].data),
+        this.node.db.depositDataRoot.put(i, config.types.DepositData.hashTreeRoot(deposits[i].data)),
+      ]);
+    }
+    await this.node.chain.initializeBeaconChain(state);
     await this.node.start();
 
     if (options.validators) {

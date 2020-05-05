@@ -136,6 +136,18 @@ export interface DepositData {
   signature: BLSSignature;
 }
 
+export interface DepositEvent {
+  index: Number64;
+  // BLS pubkey
+  pubkey: BLSPubkey;
+  // Withdrawal credentials
+  withdrawalCredentials: Bytes32;
+  // Amount in Gwei
+  amount: Gwei;
+  // Signing over DepositMessage
+  signature: BLSSignature;
+}
+
 export interface BeaconBlockHeader {
   slot: Slot;
   proposerIndex: ValidatorIndex;

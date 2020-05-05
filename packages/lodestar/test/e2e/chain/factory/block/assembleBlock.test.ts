@@ -7,7 +7,6 @@ import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {EthersEth1Notifier} from "../../../../../src/eth1";
 import {
   getBeaconProposerIndex,
   signedBlockToSignedHeader,
@@ -19,38 +18,15 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 
-import {
-  AggregateAndProofRepository,
-  AttesterSlashingRepository,
-  BlockRepository,
-  ChainRepository,
-  DepositDataRepository,
-  DepositDataRootListRepository,
-  ProposerSlashingRepository,
-  StateRepository,
-  VoluntaryExitRepository
-} from "../../../../../src/db/api/beacon/repositories";
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
+import {StubbedBeaconDb} from "../../../../utils/stub";
 
 describe("produce block", function () {
   this.timeout(0);
-  const dbStub = {
-    chain: sinon.createStubInstance(ChainRepository),
-    block: sinon.createStubInstance(BlockRepository),
-    state: sinon.createStubInstance(StateRepository),
-    depositDataRootList: sinon.createStubInstance(DepositDataRootListRepository),
-    proposerSlashing: sinon.createStubInstance(ProposerSlashingRepository),
-    attesterSlashing: sinon.createStubInstance(AttesterSlashingRepository),
-    aggregateAndProof: sinon.createStubInstance(AggregateAndProofRepository),
-    voluntaryExit: sinon.createStubInstance(VoluntaryExitRepository),
-    depositData: sinon.createStubInstance(DepositDataRepository),
-  }; // missing transfer
-  // @ts-ignore
-  const eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
-  eth1Stub.getEth1Vote = sinon.stub();
+  const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
 
@@ -78,25 +54,13 @@ describe("produce block", function () {
     //dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));
     dbStub.block.get.withArgs(chainStub.forkChoice.head()).resolves(parentBlock);
-    dbStub.depositDataRootList.get.resolves(depositDataRootList);
+    dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);
     dbStub.attesterSlashing.values.resolves([]);
     dbStub.voluntaryExit.values.resolves([]);
     dbStub.depositData.values.resolves([]);
-    eth1Stub.depositCount.resolves(1);
-    eth1Stub.depositRoot.resolves(tree.root);
-    eth1Stub.getEth1Vote.resolves({depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)});
-    // @ts-ignore
-    eth1Stub.getHead.resolves({
-      hash: "0x" + ZERO_HASH.toString("hex"),
-      number: config.params.ETH1_FOLLOW_DISTANCE + 1
-    });
-    // @ts-ignore
-    eth1Stub.getBlock.resolves({
-      hash: "0x" + ZERO_HASH.toString("hex"),
-      number: 1
-    });
+    dbStub.eth1Data.values.resolves([{depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)}]);
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(
@@ -105,7 +69,7 @@ describe("produce block", function () {
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
       // @ts-ignore
-      return await assembleBlock(config, chainStub, dbStub, eth1Stub, slot, validatorIndex, randao);
+      return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
     expect(() => stateTransition(config, state, block, false)).to.not.throw();
