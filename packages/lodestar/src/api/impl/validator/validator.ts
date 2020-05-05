@@ -23,7 +23,6 @@ import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 import {IValidatorApi} from "./interface";
 import {assembleBlock} from "../../../chain/factory/block";
-import {IEth1Notifier} from "../../../eth1";
 import {ApiNamespace, IApiModules} from "../../index";
 import {IApiOptions} from "../../options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -53,12 +52,11 @@ export class ValidatorApi implements IValidatorApi {
   private db: IBeaconDb;
   private network: INetwork;
   private sync: IBeaconSync;
-  private eth1: IEth1Notifier;
   private logger: ILogger;
 
   public constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config"|"chain"|"db"|"eth1"|"sync"|"network"|"logger">
+    modules: Pick<IApiModules, "config"|"chain"|"db"|"sync"|"network"|"logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
@@ -67,13 +65,12 @@ export class ValidatorApi implements IValidatorApi {
     this.network = modules.network;
     this.sync = modules.sync;
     this.logger = modules.logger;
-    this.eth1 = modules.eth1;
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
     const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
     return await assembleBlock(
-      this.config, this.chain, this.db, this.eth1, slot, validatorIndex, randaoReveal
+      this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
   }
 

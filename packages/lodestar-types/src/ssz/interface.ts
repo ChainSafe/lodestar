@@ -48,6 +48,7 @@ export interface IBeaconSSZTypes {
   HistoricalBatch: ContainerType<t.HistoricalBatch>;
   DepositMessage: ContainerType<t.DepositMessage>;
   DepositData: ContainerType<t.DepositData>;
+  DepositEvent: ContainerType<t.DepositEvent>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
   SigningRoot: ContainerType<t.SigningRoot>;
@@ -125,6 +126,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "HistoricalBatch",
   "DepositMessage",
   "DepositData",
+  "DepositEvent",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
   "SigningRoot",
