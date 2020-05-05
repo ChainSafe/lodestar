@@ -1,6 +1,7 @@
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 import {Repository} from "./abstract";
 import {IDatabaseController, IKeyValue} from "../../../controller";
@@ -18,7 +19,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   public decodeKey(data: Buffer): number {
-    return this.config.types.Number64.deserialize(super.decodeKey(data) as unknown as Uint8Array);
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   // depositDataRoots stored by depositData index

@@ -1,37 +1,40 @@
-import {toBufferLE, toBigIntLE} from "bigint-buffer";
+import {
+  toBufferLE, toBigIntLE,
+  toBufferBE, toBigIntBE,
+} from "bigint-buffer";
+
+type Endianness = "le" | "be";
+
 /**
  * Return a byte array from a number or BigInt
  */
-export function intToBytes(value: bigint | number, length: number): Buffer {
-  if (typeof  value === "number" && length <= 6) { // value is a number and length is at most 6 bytes
-    const b = Buffer.alloc(length);
-    b.writeUIntLE(value, 0, length);
-    return b;
-  } else { // value is number and is too large, or a BigInt
-    value = BigInt(value);
-    return toBufferLE(value, length);
-  }
+export function intToBytes(value: bigint | number, length: number, endianness: Endianness = "le"): Buffer {
+  return bigIntToBytes(BigInt(value), length, endianness);
 }
 
 /**
  * Convert byte array in LE to integer.
  */
-export function bytesToInt(value: Uint8Array): number {
-  const length = value.length;
-  let result = 0;
-  for (let i = 0; i < length; i++) {
-    result += value[i] * 2 ** (8 * i);
+export function bytesToInt(value: Uint8Array, endianness: Endianness = "le"): number {
+  return Number(bytesToBigInt(value, endianness));
+}
+
+export function bigIntToBytes(value: bigint, length: number, endianness: Endianness = "le"): Buffer {
+  if (endianness === "le") {
+    return toBufferLE(value, length);
+  } else if (endianness === "be") {
+    return toBufferBE(value, length);
   }
-  return result;
+  throw new Error("endianness must be either 'le' or 'be'");
 }
 
-export function bytesToBigInt(value: Uint8Array): bigint {
-  return toBigIntLE(value as Buffer);
-}
-
-export function bigIntToBytes(value: bigint, length: number): Uint8Array {
-  const b = toBufferLE(value, length);
-  return new Uint8Array(b.buffer, b.byteOffset, length);
+export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"): bigint {
+  if (endianness === "le") {
+    return toBigIntLE(value as Buffer);
+  } else if (endianness === "be") {
+    return toBigIntBE(value as Buffer);
+  }
+  throw new Error("endianness must be either 'le' or 'be'");
 }
 
 
