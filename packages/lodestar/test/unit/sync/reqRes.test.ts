@@ -21,6 +21,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -40,6 +41,7 @@ describe("sync req resp", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.getHeadState.resolves(generateState());
+    chainStub.getFinalizedCheckpoint.resolves({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     // @ts-ignore
     chainStub.config = config;
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
@@ -71,27 +73,6 @@ describe("sync req resp", function () {
     logger.silent = false;
   });
 
-
-  it("should able to create Status - genesis time", async function () {
-    chainStub.networkId = 1n;
-    chainStub.chainId = 1;
-    chainStub.isInitialized.returns(false);
-    const expected: Status = {
-      forkDigest: Buffer.alloc(4),
-      finalizedRoot: ZERO_HASH ,
-      finalizedEpoch: 0,
-      headRoot: ZERO_HASH,
-      headSlot: 0,
-    };
-
-    try {
-      // @ts-ignore
-      const result = await syncRpc.createStatus();
-      expect(result).deep.equal(expected);
-    }catch (e) {
-      expect.fail(e.stack);
-    }
-  });
 
   it("should start and stop sync rpc", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));

@@ -58,6 +58,8 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
+  getFinalizedCheckpoint(): Promise<Checkpoint>;
+
   /**
    * Add attestation to the fork-choice rule
    */
@@ -72,8 +74,6 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Initialize the chain with a genesis state
    */
   initializeBeaconChain(genesisState: BeaconState): Promise<void>;
-
-  isInitialized(): boolean;
 }
 
 export interface IAttestationProcessor {

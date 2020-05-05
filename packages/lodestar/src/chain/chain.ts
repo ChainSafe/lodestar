@@ -7,6 +7,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
+  Checkpoint,
   ENRForkID,
   Eth1Data,
   ForkDigest,
@@ -15,7 +16,7 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest, GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -92,9 +93,15 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(this.forkChoice.head());
   }
 
-  public isInitialized(): boolean {
-    //TODO: implement
-    return true;
+  public async getFinalizedCheckpoint(): Promise<Checkpoint> {
+    const state = await this.getHeadState();
+    const epoch = state.finalizedCheckpoint.epoch;
+    const root = (epoch === GENESIS_EPOCH)?
+      await this.db.chain.getFinalizedBlockRoot() : state.finalizedCheckpoint.root;
+    return {
+      epoch,
+      root,
+    };
   }
 
   public async start(): Promise<void> {
