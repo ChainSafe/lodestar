@@ -36,7 +36,7 @@
     "@chainsafe/bls": "1.0.0",
     "@chainsafe/lodestar-config": "^0.6.0",
     "@chainsafe/lodestar-utils": "^0.6.0",
-    "@chainsafe/ssz": "^0.6.2",
+    "@chainsafe/ssz": "^0.6.4",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },
