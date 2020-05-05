@@ -12,7 +12,7 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "version": "0.6.0",
-  "main": "",
+  "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
