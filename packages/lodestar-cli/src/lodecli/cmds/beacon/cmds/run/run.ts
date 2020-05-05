@@ -2,11 +2,14 @@ import process from "process";
 import {Arguments} from "yargs";
 import deepmerge from "deepmerge";
 import {initBLS} from "@chainsafe/bls";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconParams} from "@chainsafe/lodestar-params";
+import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {IBeaconArgs} from "../../options";
@@ -22,7 +25,10 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
   const peerId = await readPeerId(options.network.peerIdFile);
   options.network.discv5.enr = await readEnr(options.network.enrFile);
 
-  const config = options.chain.name === "mainnet" ? mainnetConfig : mainnetConfig;
+  const config = createIBeaconConfig({
+    ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
+    ...createIBeaconParams(options.chain.params || {}),
+  });
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
