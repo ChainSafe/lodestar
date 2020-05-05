@@ -6,17 +6,14 @@ import PeerInfo from "peer-info";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
-  Epoch,
   Goodbye,
   Ping,
   RequestBody,
-  Root,
   SignedBeaconBlock,
-  Slot,
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, RequestId, ZERO_HASH} from "../../constants";
+import {Method, RequestId} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
@@ -24,6 +21,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
 import {IReputationStore} from "../IReputation";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -121,23 +119,22 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
-    return !this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest);
+    if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
+      return true;
+    }
 
-    //TODO: fix this, doesn't work if we are starting sync(archive is empty) or we don't have finalized epoch
-    // const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    // const startBlock = await this.db.blockArchive.get(startSlot);
-    // // we're on a further (or equal) finalized epoch
-    // // but the peer's block root at that epoch doesn't match ours
-    // if (
-    //   state.finalizedCheckpoint.epoch >= request.finalizedEpoch &&
-    //   !this.config.types.Root.equals(
-    //     request.finalizedRoot,
-    //     this.config.types.BeaconBlock.hashTreeRoot(startBlock.message)
-    //   )
-    // ) {
-    //   return true;
-    // }
-    // return false;
+    const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
+    const state = await this.chain.getHeadState();
+    // we're on a further (or equal) finalized epoch
+    // but the peer's block root at that epoch doesn't match ours
+    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch) {
+      const startBlock = (state.finalizedCheckpoint.epoch > request.finalizedEpoch) ?
+        await this.db.blockArchive.get(startSlot) : await this.db.block.getBySlot(startSlot);
+      return !this.config.types.Root.equals(
+        request.finalizedRoot,
+        this.config.types.BeaconBlock.hashTreeRoot(startBlock.message));
+    }
+    return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -203,28 +200,14 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async createStatus(): Promise<Status> {
-    let headSlot: Slot,
-      headRoot: Root,
-      finalizedEpoch: Epoch,
-      finalizedRoot: Root;
-    if (!this.chain.isInitialized()) {
-      headSlot = 0;
-      headRoot = ZERO_HASH;
-      finalizedEpoch = 0;
-      finalizedRoot = ZERO_HASH;
-    } else {
-      const state = await this.chain.getHeadState();
-      headSlot = state.slot;
-      headRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
-      finalizedEpoch = state.finalizedCheckpoint.epoch;
-      finalizedRoot = state.finalizedCheckpoint.root;
-    }
+    const finalizedCheckpoint = await this.chain.getFinalizedCheckpoint();
+    const state = await this.chain.getHeadState();
     return {
       forkDigest: this.chain.currentForkDigest,
-      finalizedRoot,
-      finalizedEpoch,
-      headRoot,
-      headSlot,
+      finalizedRoot: finalizedCheckpoint.root,
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      headRoot: this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader),
+      headSlot: state.slot,
     };
   }
 

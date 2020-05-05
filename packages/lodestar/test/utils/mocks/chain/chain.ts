@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 
-import {Number64, Uint16, Uint64, ForkDigest, ENRForkID} from "@chainsafe/lodestar-types";
+import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
@@ -21,13 +21,11 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public networkId: Uint64;
   public clock: IBeaconClock;
 
-  private initialized: boolean;
   private state: BeaconState|null;
   private config: IBeaconConfig;
 
   public constructor({genesisTime, chainId, networkId, state, config}: Partial<IMockChainParams>) {
     super();
-    this.initialized = genesisTime > 0;
     this.chainId = chainId || 0;
     this.networkId = networkId || 0n;
     this.state = state;
@@ -42,6 +40,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return this.state;
   }
 
+  public async getFinalizedCheckpoint(): Promise<Checkpoint> {
+    return this.state.finalizedCheckpoint;
+  }
+
   public get currentForkDigest(): ForkDigest {
     return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
   }
@@ -52,10 +54,6 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   public async getENRForkID(): Promise<ENRForkID> {
     return undefined;
-  }
-
-  isInitialized(): boolean {
-    return !!this.initialized;
   }
 
   receiveAttestation(): Promise<void> {
