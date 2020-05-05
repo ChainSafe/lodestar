@@ -89,13 +89,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     const state = await this.getHeadState();
-    const epoch = state.finalizedCheckpoint.epoch;
-    const root = (epoch === GENESIS_EPOCH)?
-      await this.db.chain.getFinalizedBlockRoot() : state.finalizedCheckpoint.root;
-    return {
-      epoch,
-      root,
-    };
+    return state.finalizedCheckpoint;
   }
 
   public async start(): Promise<void> {
