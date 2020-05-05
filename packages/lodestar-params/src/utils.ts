@@ -1,9 +1,13 @@
-import {TypeMap} from "./types";
-import {IBeaconParams} from "./interface";
 import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
+import {TypeMap, typeMap} from "./types";
+import {IBeaconParams} from "./interface";
 import * as constants from "./constants";
 
-export function convertTypes(params: Record<string, unknown>, typeMap: TypeMap<string, unknown>): IBeaconParams {
+export function createIBeaconParams(params: Record<string, unknown>): Partial<IBeaconParams> {
+  return convertTypes(params, typeMap);
+}
+
+export function convertTypes(params: Record<string, unknown>, typeMap: TypeMap<string, unknown>): Partial<IBeaconParams> {
   for(const k in params) {
     if(params.hasOwnProperty(k)) {
       if(typeMap[k]) {
