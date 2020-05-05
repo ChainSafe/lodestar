@@ -27,7 +27,7 @@ export class RetryProvider extends JsonRpcProvider {
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (error: any) => {
-          if (error.statusCode !== 429 || attempts >= this.attempts) {
+          if (attempts >= this.attempts) {
             return Promise.reject(error);
           } else {
             return Promise.resolve(undefined);

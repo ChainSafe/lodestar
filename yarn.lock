@@ -926,13 +926,14 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
-"@chainsafe/ssz@0.6.2", "@chainsafe/ssz@^0.6.2":
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.2.tgz#f548f13ca17ce2f9a06bfe16b7521a566faa6067"
-  integrity sha512-w6wk6kBB2KXeiu1wI2VXPDQqNjen7P0uK+NcxXAzBcD3HDr/XHzjBz1U1BI96uTjRI6kbXhujejAWFUOSNAunA==
+"@chainsafe/ssz@0.6.4", "@chainsafe/ssz@^0.6.4":
+  version "0.6.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.4.tgz#1ee5e5599790a34f16406cd743ad83c9dc1d6bee"
+  integrity sha512-FeBwchyzSXBNJ/xToMDeldwM1IARIul9DZpEFLlzktKM+1zaJ9zRE2gMZf1dPPcUB15053dkb3ZsdqTIlm+BaA==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
     "@chainsafe/persistent-merkle-tree" "^0.1.2"
+    case "^1.6.3"
 
 "@evocateur/libnpmaccess@^3.1.2":
   version "3.1.2"
@@ -4247,6 +4248,11 @@ caniuse-lite@^1.0.30000844, caniuse-lite@^1.0.30001043:
   version "1.0.30001045"
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001045.tgz#a770df9de36ad6ca0c34f90eaa797a2dbbb1b619"
   integrity sha512-Y8o2Iz1KPcD6FjySbk1sPpvJqchgxk/iow0DABpGyzA1UeQAuxh63Xh0Enj5/BrsYbXtCN32JmR4ZxQTCQ6E6A==
+
+case@^1.6.3:
+  version "1.6.3"
+  resolved "https://registry.yarnpkg.com/case/-/case-1.6.3.tgz#0a4386e3e9825351ca2e6216c60467ff5f1ea1c9"
+  integrity sha512-mzDSXIPaFwVDvZAHqZ9VlbyF4yyXRuX6IvB06WvPYkqJVO24kX1PPhv9bfpKNFZyxYFmmgo03HUiD8iklmJYRQ==
 
 caseless@~0.12.0:
   version "0.12.0"

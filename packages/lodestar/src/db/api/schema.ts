@@ -59,7 +59,7 @@ export function encodeKey(
     buf.write(key, 1);
   } else if (typeof key === "number" || typeof key === "bigint") {
     buf = Buffer.alloc(9);
-    intToBytes(BigInt(key), 8).copy(buf, 1);
+    intToBytes(BigInt(key), 8, "be").copy(buf, 1);
   } else {
     buf = Buffer.alloc(key.length + 1);
     buf.set(key, 1);

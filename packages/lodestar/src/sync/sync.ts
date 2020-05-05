@@ -29,7 +29,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly chain: IBeaconChain;
   private readonly peerReputations: IReputationStore;
 
-  private mode: SyncMode = SyncMode.WAITING_PEERS;
+  private mode: SyncMode;
   private initialSync: InitialSync;
   private regularSync: IRegularSync;
   private reqResp: IReqRespHandler;
@@ -50,9 +50,11 @@ export class BeaconSync implements IBeaconSync {
     this.gossip = modules.gossipHandler ||
       new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
+    this.mode = SyncMode.STOPPED;
   }
 
   public async start(): Promise<void> {
+    this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
     await this.attestationCollector.start();
     this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
@@ -68,6 +70,9 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public async stop(): Promise<void> {
+    if (this.mode === SyncMode.STOPPED) {
+      return;
+    }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
     await this.initialSync.stop();
