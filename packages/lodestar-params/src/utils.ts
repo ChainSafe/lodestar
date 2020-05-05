@@ -7,7 +7,10 @@ export function createIBeaconParams(params: Record<string, unknown>): Partial<IB
   return convertTypes(params, typeMap);
 }
 
-export function convertTypes(params: Record<string, unknown>, typeMap: TypeMap<string, unknown>): Partial<IBeaconParams> {
+export function convertTypes(
+  params: Record<string, unknown>,
+  typeMap: TypeMap<string, unknown>,
+): Partial<IBeaconParams> {
   for(const k in params) {
     if(params.hasOwnProperty(k)) {
       if(typeMap[k]) {
