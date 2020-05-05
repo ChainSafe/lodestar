@@ -20,7 +20,7 @@ describe("encodeKey", () => {
       } else if (typeof key === "string") {
         expected = Buffer.concat([Buffer.from([bucket]), Buffer.from(key)]);
       } else if (typeof key === "number" || typeof key === "bigint") {
-        expected = Buffer.concat([Buffer.from([bucket]), intToBytes(BigInt(key), 8)]);
+        expected = Buffer.concat([Buffer.from([bucket]), intToBytes(BigInt(key), 8, "be")]);
       }
       const actual = encodeKey(bucket, key);
       assert.deepEqual(actual, expected);
