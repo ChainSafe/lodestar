@@ -12,6 +12,7 @@ import * as beaconFile from "./beaconFile";
 export interface IBeaconArgs extends IBeaconFileArgs {
   chain: {
     params: Record<string, unknown>;
+    genesisStateFile?: string;
   };
 }
 

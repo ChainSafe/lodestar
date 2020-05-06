@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import process from "process";
 import {Arguments} from "yargs";
 import deepmerge from "deepmerge";
@@ -45,5 +46,10 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
 
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
+  if (options.chain.genesisStateFile) {
+    await node.chain.initializeBeaconChain(
+      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.chain.genesisStateFile))
+    );
+  }
   await node.start();
 }
