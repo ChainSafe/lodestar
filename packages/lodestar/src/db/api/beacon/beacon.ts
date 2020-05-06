@@ -14,7 +14,8 @@ import {
   BlockArchiveRepository,
   ChainRepository,
   DepositDataRepository,
-  DepositDataRootListRepository,
+  DepositDataRootRepository,
+  Eth1DataRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository
@@ -23,28 +24,20 @@ import {
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public chain: ChainRepository;
-
   public state: StateRepository;
-
   public badBlock: BadBlockRepository;
-
   public block: BlockRepository;
-
   public blockArchive: BlockArchiveRepository;
 
   public attestation: AttestationRepository;
-
   public aggregateAndProof: AggregateAndProofRepository;
-
   public voluntaryExit: VoluntaryExitRepository;
-
   public proposerSlashing: ProposerSlashingRepository;
-
   public attesterSlashing: AttesterSlashingRepository;
-
   public depositData: DepositDataRepository;
 
-  public depositDataRootList: DepositDataRootListRepository;
+  public depositDataRoot: DepositDataRootRepository;
+  public eth1Data: Eth1DataRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -59,7 +52,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
     this.depositData = new DepositDataRepository(this.config, this.db);
-    this.depositDataRootList = new DepositDataRootListRepository(this.config, this.db);
+    this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
+    this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
   public async storeChainHead(

@@ -129,6 +129,16 @@ export const DepositData = (ssz: IBeaconSSZTypes): ContainerType => new Containe
   },
 });
 
+export const DepositEvent = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    index: ssz.Number64,
+    pubkey: ssz.BLSPubkey,
+    withdrawalCredentials: ssz.Bytes32,
+    amount: ssz.Gwei,
+    signature: ssz.BLSSignature,
+  },
+});
+
 export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     slot: ssz.Slot,

@@ -15,6 +15,7 @@ import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
 import {join} from "path";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {expect} from "chai";
+import {interopDeposits} from "../../../src/lodestar/interop/deposits";
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;
@@ -83,8 +84,15 @@ describe("e2e interop simulation", function() {
 
     const genesisTime = Math.floor(Date.now()/1000);
     const depositDataRootList = devConfig.types.DepositDataRootList.tree.defaultValue();
+    const deposits = interopDeposits(devConfig, devConfig.types.DepositDataRootList.tree.defaultValue(), VALIDATOR_COUNT);
+    for (let i = 0; i < deposits.length; i++) {
+      await Promise.all([
+        node.db.depositData.put(i, deposits[i].data),
+        node.db.depositDataRoot.put(i, devConfig.types.DepositData.hashTreeRoot(deposits[i].data)),
+      ]);
+    }
     const state = quickStartState(devConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
-    await node.chain.initializeBeaconChain(state, depositDataRootList);
+    await node.chain.initializeBeaconChain(state);
     await node.start();
   }
 

@@ -15,13 +15,14 @@ import {
   BlockRepository,
   ChainRepository,
   DepositDataRepository,
-  DepositDataRootListRepository,
+  DepositDataRootRepository,
   ProposerSlashingRepository,
   StateRepository,
   VoluntaryExitRepository,
   AggregateAndProofRepository,
   BlockArchiveRepository,
-  BadBlockRepository
+  BadBlockRepository,
+  Eth1DataRepository,
 } from "./repositories";
 
 /**
@@ -53,7 +54,11 @@ export interface IBeaconDb {
   attesterSlashing: AttesterSlashingRepository;
   depositData: DepositDataRepository;
 
-  depositDataRootList: DepositDataRootListRepository;
+  // eth1 processing
+
+  // all deposit data roots and merkle tree
+  depositDataRoot: DepositDataRootRepository;
+  eth1Data: Eth1DataRepository;
   /**
    * Returns validator index coresponding to validator
    * public key in registry,

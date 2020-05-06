@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import rimraf from "rimraf";
 import fs from "fs";
 import {assert} from "chai";
-import {BeaconNodeCommand, DepositCommand} from "../../../src/commands";
+import {BeaconNodeCommand, DepositCommand, IBeaconCommandOptions} from "../../../src/commands";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {PrivateEth1Network} from "@chainsafe/lodestar/lib/eth1/dev";
 import {JsonRpcProvider} from "ethers/providers";
@@ -82,7 +82,9 @@ describe("beacon cli", function() {
       depositContractBlockNum: "0", // not really but it's ok
       depositContract: contractAddress,
       forkFile: forkFile,
-    };
+      config: config,
+    } as unknown as IBeaconCommandOptions;
+    cmdOptions.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT = 48;
     const cmd = new BeaconNodeCommand();
     const node = await cmd.action(cmdOptions, logger);
     logger.verbose("cmd.action started node successfully");

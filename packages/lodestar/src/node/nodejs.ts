@@ -4,7 +4,6 @@
 
 import deepmerge from "deepmerge";
 import LibP2p from "libp2p";
-import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {initBLS} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -82,6 +81,7 @@ export class BeaconNode {
     });
     this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
+      db: this.db,
       logger: logger.child(this.conf.logger.eth1),
     });
     this.chain = new BeaconChain(this.conf.chain, {
@@ -123,7 +123,6 @@ export class BeaconNode {
         sync: this.sync,
         network: this.network,
         chain: this.chain,
-        eth1: this.eth1,
       }
     );
     this.chores = new TasksService(
@@ -141,7 +140,6 @@ export class BeaconNode {
   public async start(): Promise<void> {
     this.logger.info("Starting eth2 beacon node - LODESTAR!");
 
-    this.eth1.on("deposit", this.putDepositData);
     //if this wasm inits starts piling up, we can extract them to separate methods
     await initBLS();
     await this.metrics.start();
@@ -156,7 +154,6 @@ export class BeaconNode {
   }
 
   public async stop(): Promise<void> {
-    this.eth1.off("deposit", this.putDepositData);
     await this.chores.stop();
     await this.api.stop();
     await this.sync.stop();
@@ -167,10 +164,6 @@ export class BeaconNode {
     await this.metricsServer.stop();
     await this.metrics.stop();
   }
-
-  private putDepositData = async (index: number, depositData: DepositData): Promise<void> => {
-    return this.db.depositData.put(index, depositData);
-  };
 }
 
 export default BeaconNode;

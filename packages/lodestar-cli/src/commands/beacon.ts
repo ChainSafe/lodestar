@@ -7,6 +7,7 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
@@ -19,7 +20,7 @@ import {initBLS} from "@chainsafe/bls";
 import fs from "fs";
 import {load} from "js-yaml";
 
-interface IBeaconCommandOptions {
+export interface IBeaconCommandOptions {
   [key: string]: string;
   peerId: string;
   forkFile?: string;
@@ -27,6 +28,8 @@ interface IBeaconCommandOptions {
   preset?: string;
   loggingLevel?: string;
   eth1BlockNum?: string;
+  // @ts-ignore
+  config?: IBeaconConfig;
 }
 
 export class BeaconNodeCommand implements ICliCommand {
@@ -82,7 +85,9 @@ export class BeaconNodeCommand implements ICliCommand {
     const discv5 = nodeOptions.network? Object.assign(defaultDiscv5Opt, nodeOptions.network.discv5) : defaultDiscv5Opt;
     const libp2pOpt = nodeOptions.network? Object.assign(nodeOptions.network, {discv5}) : {discv5};
     const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
-    const config = cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;
+    const config = cmdOptions.config
+      ? cmdOptions.config
+      : cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;
     // nodejs will create EthersEth1Notifier by default
     if (cmdOptions.forkFile) {
       // @ts-ignore

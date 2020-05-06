@@ -154,6 +154,54 @@ export abstract class Repository<I extends Id, T> {
     })();
   }
 
+  public async firstKey(): Promise<I | null> {
+    const keys = await this.keys({limit: 1});
+    if (!keys.length) {
+      return null;
+    }
+    return keys[0];
+  }
+
+  public async lastKey(): Promise<I | null> {
+    const keys = await this.keys({limit: 1, reverse: true});
+    if (!keys.length) {
+      return null;
+    }
+    return keys[0];
+  }
+
+  public async firstValue(): Promise<T | null> {
+    const values = await this.values({limit: 1});
+    if (!values.length) {
+      return null;
+    }
+    return values[0];
+  }
+
+  public async lastValue(): Promise<T | null> {
+    const values = await this.values({limit: 1, reverse: true});
+    if (!values.length) {
+      return null;
+    }
+    return values[0];
+  }
+
+  public async firstEntry(): Promise<IKeyValue<I, T> | null> {
+    const entries = await this.entries({limit: 1});
+    if (!entries.length) {
+      return null;
+    }
+    return entries[0];
+  }
+
+  public async lastEntry(): Promise<IKeyValue<I, T> | null> {
+    const entries = await this.entries({limit: 1, reverse: true});
+    if (!entries.length) {
+      return null;
+    }
+    return entries[0];
+  }
+
   /**
    * Transforms opts from I to Buffer
    */
