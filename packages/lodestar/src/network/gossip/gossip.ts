@@ -212,9 +212,11 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   private unregisterHandlers(): void {
-    this.handlers.forEach((handler, topic) => {
-      this.pubsub.removeListener(topic, handler);
-    });
+    if (this.handlers) {
+      this.handlers.forEach((handler, topic) => {
+        this.pubsub.removeListener(topic, handler);
+      });
+    }
   }
 
   private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {

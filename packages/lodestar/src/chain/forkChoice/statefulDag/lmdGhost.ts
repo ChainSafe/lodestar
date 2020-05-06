@@ -262,7 +262,9 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   public async stop(): Promise<void> {
-    this.clock.unsubscribeFromNewEpoch(this.onTick);
+    if (this.clock) {
+      this.clock.unsubscribeFromNewEpoch(this.onTick);
+    }
   }
 
   public onTick(): void {
