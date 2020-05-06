@@ -13,7 +13,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, RequestId} from "../../constants";
+import {GENESIS_EPOCH, Method, RequestId} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
@@ -22,6 +22,7 @@ import {IReqRespHandler} from "./interface";
 import {BlockRepository} from "../../db/api/beacon/repositories";
 import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {toHexString} from "@chainsafe/ssz";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -120,6 +121,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
     if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
+      this.logger.warn("Fork digest mismatch " 
+          + `expected=${toHexString(currentForkDigest)} received ${toHexString(request.forkDigest)}`
+      );
       return true;
     }
 
@@ -127,12 +131,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     const state = await this.chain.getHeadState();
     // we're on a further (or equal) finalized epoch
     // but the peer's block root at that epoch doesn't match ours
-    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch) {
+    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch && request.finalizedEpoch !== GENESIS_EPOCH) {
       const startBlock = (state.finalizedCheckpoint.epoch > request.finalizedEpoch) ?
         await this.db.blockArchive.get(startSlot) : await this.db.block.getBySlot(startSlot);
-      return !this.config.types.Root.equals(
+      const result = !this.config.types.Root.equals(
         request.finalizedRoot,
         this.config.types.BeaconBlock.hashTreeRoot(startBlock.message));
+      if(result) {
+        this.logger.warn("Finalized root mismatch "
+            + `expected=${toHexString(currentForkDigest)} received ${toHexString(request.forkDigest)}`
+        );
+        return result;
+      }
     }
     return false;
   }

@@ -13,10 +13,10 @@ import {
   ForkDigest,
   SignedBeaconBlock,
   Uint16,
-  Uint64,
+  Uint64
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest, GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -95,13 +95,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     const state = await this.getHeadState();
-    const epoch = state.finalizedCheckpoint.epoch;
-    const root = (epoch === GENESIS_EPOCH)?
-      await this.db.chain.getFinalizedBlockRoot() : state.finalizedCheckpoint.root;
-    return {
-      epoch,
-      root,
-    };
+    return state.finalizedCheckpoint;
   }
 
   public async start(): Promise<void> {
