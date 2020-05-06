@@ -1,6 +1,6 @@
 import {Argv} from "yargs";
 
-import {mergeOptions, canonicalOptions} from "../../../util";
+import {mergeOptions} from "../../../util";
 import {IGlobalArgs} from "../../../options";
 import {IBeaconFileArgs} from "./beaconFile";
 
