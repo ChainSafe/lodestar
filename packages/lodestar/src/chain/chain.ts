@@ -113,7 +113,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async stop(): Promise<void> {
     await this.forkChoice.stop();
-    await this.clock.stop();
+
+    if (this.clock) {
+      await this.clock.stop();
+    }
+
     await this.blockProcessor.stop();
     this.removeListener("forkDigestChanged", this.handleForkDigestChanged);
   }

@@ -51,7 +51,15 @@ export class LodestarGossipsub extends Gossipsub {
     if (this.interval) {
       clearInterval(this.interval);
     }
-    await super.stop();
+
+    try {
+      await super.stop();
+    }
+    catch(error) {
+      if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
+        throw error;
+      }
+    }
   }
 
   public async validate(rawMessage: IGossipMessage): Promise<boolean> {
