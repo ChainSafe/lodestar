@@ -4,3 +4,10 @@
 
 
 This helps start Beacon Node, Validator ... in other packages.
+
+### Lodecli
+
+We have an experimental new CLI called `lodecli` which currently provides a subset of the `lodestar` CLI functionality.
+
+`./bin/lodecli beacon init` - this will write a configuration and network identity to disk, by default `./.lodecli`
+`./bin/lodecli beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodecli`
