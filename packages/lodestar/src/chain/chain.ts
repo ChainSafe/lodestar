@@ -3,21 +3,20 @@
  */
 
 import {EventEmitter} from "events";
-import {toHexString, List, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
   Checkpoint,
   ENRForkID,
   Eth1Data,
-  Root,
   ForkDigest,
   SignedBeaconBlock,
   Uint16,
   Uint64
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest, GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -26,7 +25,6 @@ import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
-import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
