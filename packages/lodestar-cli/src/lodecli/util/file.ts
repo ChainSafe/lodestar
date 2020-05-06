@@ -10,7 +10,7 @@ export async function mkdir(filename: string): Promise<void> {
   try {
     await fs.promises.readdir(filename);
   } catch (e) {
-    await fs.promises.mkdir(filename);
+    await fs.promises.mkdir(filename, {recursive: true});
   }
 }
 
