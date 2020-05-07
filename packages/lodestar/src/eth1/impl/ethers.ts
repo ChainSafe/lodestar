@@ -193,7 +193,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     depositEvents.forEach((depositEvent) => {
       this.emit("deposit", depositEvent.index, depositEvent);
     });
-    this.emit("eth1Data", block.timestamp, eth1Data);
+    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
     this.processingBlock = false;
     return true;
   }

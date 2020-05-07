@@ -16,7 +16,7 @@ export interface IDepositEvent extends DepositData {
 
 export interface IEth1Events {
   deposit: (index: Number64, depositData: DepositData) => void;
-  eth1Data: (timestamp: number, eth1Data: Eth1Data) => void;
+  eth1Data: (timestamp: number, eth1Data: Eth1Data, blockNumber: number) => void;
 }
 
 export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;

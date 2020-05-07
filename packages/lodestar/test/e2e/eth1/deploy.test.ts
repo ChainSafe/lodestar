@@ -35,7 +35,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   beforeEach(async function () {
     this.timeout(0);
     rimraf.sync(dbPath);
-    logger.silent = true;
+    logger.silent = false;
     logger.level = LogLevel.verbose;
     db = new BeaconDb({
       config,
@@ -65,30 +65,50 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
 
   it("should process blocks", async function () {
     this.timeout(0);
-    // process 10 blocks, starting from depositContract.deployedAt
-    // there should be two deposits to process
-    provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 10);
+    // process 2 blocks, should be 1 deposit
+    const targetBlockNumber = opts.depositContract.deployedAt + 2;
+    provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
+    const blockPromise = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
+
+      if(blockNumber === targetBlockNumber) {
+        eth1Notifier.removeAllListeners("eth1Data");
+        resolve();
+      }
+    }));
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 12000));
-    const tree = await db.depositDataRoot.getTreeBacked(1);
-    expect(tree.length).to.be.equal(2);
+    await blockPromise;
+    const tree = await db.depositDataRoot.getTreeBacked(0);
+    expect(tree.length).to.be.equal(1);
   });
 
   it("should resume processing blocks after restart", async function () {
     this.timeout(0);
     // process 3 blocks, starting from depositContract.deployedAt
     // there should be one deposit to process
-    provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 3);
+    const target1BlockNumber = opts.depositContract.deployedAt + 3;
+    provider.getBlockNumber = sinon.stub().resolves(target1BlockNumber);
+    const blockPromise1 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
+      if(blockNumber === target1BlockNumber) {
+        eth1Notifier.removeAllListeners("eth1Data");
+        resolve();
+      }
+    }));
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await blockPromise1;
     await eth1Notifier.stop();
     const tree = await db.depositDataRoot.getTreeBacked(0);
     expect(tree.length).to.be.equal(1);
-
+    const target2BlockNumber = opts.depositContract.deployedAt + 10;
     // process 7 more blocks, it should start from where it left off
-    provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 10);
+    provider.getBlockNumber = sinon.stub().resolves(target2BlockNumber);
+    const blockPromise2 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
+      if(blockNumber === target2BlockNumber) {
+        eth1Notifier.removeAllListeners("eth1Data");
+        resolve();
+      }
+    }));
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    await blockPromise2;
     const tree2 = await db.depositDataRoot.getTreeBacked(1);
     expect(tree2.length).to.be.equal(2);
   });
