@@ -1,6 +1,5 @@
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController} from "../../../controller";
 import {Bucket, decodeNumberKey} from "../../schema";
