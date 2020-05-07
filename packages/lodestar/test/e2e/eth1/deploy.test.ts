@@ -35,7 +35,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   beforeEach(async function () {
     this.timeout(0);
     rimraf.sync(dbPath);
-    logger.silent = false;
+    logger.silent = true;
     logger.level = LogLevel.verbose;
     db = new BeaconDb({
       config,
