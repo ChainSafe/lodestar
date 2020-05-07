@@ -1,14 +1,14 @@
-import * as fs from "fs";
 import {expect} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
-import {describe, it, beforeEach, afterEach} from "mocha";
+import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {IEth1Options} from "../../../src/eth1/options";
+import rimraf from "rimraf";
 
 describe("Eth1Notifier - using goerli known deployed contract", () => {
 
@@ -34,7 +34,9 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
 
   beforeEach(async function () {
     this.timeout(0);
+    rimraf.sync(dbPath);
     logger.silent = true;
+    logger.level = LogLevel.verbose;
     db = new BeaconDb({
       config,
       controller: new LevelDbController({name: dbPath}, {logger}),
@@ -53,7 +55,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   afterEach(async () => {
     await eth1Notifier.stop();
     await db.stop();
-    await fs.promises.rmdir(dbPath, {recursive: true});
+    rimraf.sync(dbPath);
     logger.silent = false;
   });
 

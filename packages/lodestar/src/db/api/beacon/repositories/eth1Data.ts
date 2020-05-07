@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
+import {Bucket, decodeNumberKey} from "../../schema";
 import {Repository} from "./abstract";
 
 export class Eth1DataRepository extends Repository<number, Eth1Data> {
@@ -16,7 +16,7 @@ export class Eth1DataRepository extends Repository<number, Eth1Data> {
   }
 
   public decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return decodeNumberKey(super.decodeKey(data) as unknown as Uint8Array);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

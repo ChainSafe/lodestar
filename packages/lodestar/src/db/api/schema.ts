@@ -57,7 +57,7 @@ export function encodeKey(
     buf = Buffer.alloc(key.length + 1);
     buf.write(key, 1);
   } else if (typeof key === "number" || typeof key === "bigint") {
-    const idBuf = Buffer.from(key.toString(10), "ascii");
+    const idBuf = Buffer.from(key.toString(10), "utf-8");
     buf = Buffer.alloc(idBuf.length + 1);
     idBuf.copy(buf, 1);
   } else {
@@ -66,4 +66,8 @@ export function encodeKey(
   }
   buf.writeUInt8(bucket, 0);
   return buf;
+}
+
+export function decodeNumberKey(key: Uint8Array): number {
+  return Number(Buffer.from(key).toString("utf-8"));
 }

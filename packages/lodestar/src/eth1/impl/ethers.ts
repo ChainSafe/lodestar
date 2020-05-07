@@ -90,8 +90,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
     // then start listening for incoming blocks
-    this.onNewEth1Block(headBlockNumber).then(() => {
-      this.provider.on("block", this.onNewEth1Block.bind(this));
+    this.processBlocks(headBlockNumber).then(() => {
+      if(this.started) {
+        this.provider.on("block", this.onNewEth1Block.bind(this));
+      }
     });
   }
 
@@ -100,8 +102,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.verbose("Eth1 notifier already stopped");
       return;
     }
-    this.started = false;
     this.provider.removeAllListeners("block");
+    this.started = false;
     while (this.processingBlock) {
       await sleep(5);
     }
@@ -127,7 +129,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     let blockNumber = this.lastProcessedEth1BlockNumber + 1;
     while (blockNumber <= toNumber && await this.processBlock(blockNumber)) {
       blockNumber++;
-    }
+    };
   }
 
   /**
@@ -208,7 +210,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async getBlock(blockTag: string | number): Promise<Block> {
-    return this.provider.getBlock(blockTag, false);
+    try {
+      return this.provider.getBlock(blockTag, false);
+    } catch (e) {
+      this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
+      return null;
+    }
   }
 
   public async initContract(): Promise<void> {
