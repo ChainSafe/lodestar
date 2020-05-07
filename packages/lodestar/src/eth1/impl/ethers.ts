@@ -69,6 +69,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async start(): Promise<void> {
+    if (!this.opts.enabled) {
+      this.logger.verbose("Eth1 notifier is disabled" );
+      return;
+    }
     if (this.started) {
       this.logger.verbose("Eth1 notifier already started" );
       return;

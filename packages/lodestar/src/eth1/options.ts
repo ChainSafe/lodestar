@@ -4,6 +4,7 @@ import {BaseProvider} from "ethers/providers";
 import {EventFragment, FunctionFragment, Interface, ParamType} from "ethers/utils";
 
 export interface IEth1Options {
+  enabled: boolean;
   provider: {
     url: string;
     network: Number64;
@@ -18,6 +19,7 @@ export interface IEth1Options {
 }
 
 const config: IEth1Options = {
+  enabled: true,
   provider: {
     url: "http://localhost:8545",
     network: 200

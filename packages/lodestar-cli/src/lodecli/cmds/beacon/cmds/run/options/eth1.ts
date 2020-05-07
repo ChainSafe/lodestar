@@ -1,5 +1,15 @@
 import {Options} from "yargs";
 
+export const eth1Enabled: Options = {
+  alias: [
+    "eth1.enabled",
+  ],
+  description: "Whether to follow the eth1 chain",
+  type: "boolean",
+  default: true,
+  group: "eth1",
+};
+
 export const eth1ProviderUrl: Options = {
   alias: [
     "eth1.provider.url",
