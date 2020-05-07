@@ -35,13 +35,17 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   beforeEach(async function () {
     this.timeout(0);
     rimraf.sync(dbPath);
-    logger.silent = true;
+    logger.silent = false;
     logger.level = LogLevel.verbose;
     db = new BeaconDb({
       config,
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
-    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, opts.provider.network);
+    provider = new ethers.providers.JsonRpcProvider(
+      opts.provider.url,
+      {name: "goerli", chainId: opts.provider.network}
+    );
+    provider.connection.allowInsecure = true;
     eth1Notifier = new EthersEth1Notifier(
       {...opts, providerInstance: provider},
       {
@@ -65,7 +69,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // there should be two deposits to process
     provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 10);
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 9000));
+    await new Promise(resolve => setTimeout(resolve, 12000));
     const tree = await db.depositDataRoot.getTreeBacked(1);
     expect(tree.length).to.be.equal(2);
   });
@@ -76,7 +80,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // there should be one deposit to process
     provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 3);
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
     await eth1Notifier.stop();
     const tree = await db.depositDataRoot.getTreeBacked(0);
     expect(tree.length).to.be.equal(1);
@@ -84,7 +88,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // process 7 more blocks, it should start from where it left off
     provider.getBlockNumber = sinon.stub().resolves(opts.depositContract.deployedAt + config.params.ETH1_FOLLOW_DISTANCE + 10);
     await eth1Notifier.start();
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 8000));
     const tree2 = await db.depositDataRoot.getTreeBacked(1);
     expect(tree2.length).to.be.equal(2);
   });
