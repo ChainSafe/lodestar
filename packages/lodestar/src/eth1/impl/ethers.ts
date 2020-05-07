@@ -7,14 +7,14 @@ import {Contract, ethers} from "ethers";
 import {Block} from "ethers/providers";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {isValidAddress} from "../../util/address";
 import {sleep} from "../../util/sleep";
 import {IBeaconDb} from "../../db";
 import {RetryProvider} from "./retryProvider";
 import {IEth1Options} from "../options";
-import {Eth1EventEmitter, IEth1Notifier, IDepositEvent} from "../interface";
+import {Eth1EventEmitter, IDepositEvent, IEth1Notifier} from "../interface";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -129,7 +129,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     let blockNumber = this.lastProcessedEth1BlockNumber + 1;
     while (blockNumber <= toNumber && await this.processBlock(blockNumber)) {
       blockNumber++;
-    };
+    }
   }
 
   /**
