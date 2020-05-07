@@ -53,6 +53,7 @@ export class NodejsNode extends LibP2p {
             peerInfo: options.peerInfo
           },
           bootstrap: {
+            enabled: !!(options.bootnodes && options.bootnodes.length),
             interval: 2000,
             list: (options.bootnodes || []) as string[],
           },
