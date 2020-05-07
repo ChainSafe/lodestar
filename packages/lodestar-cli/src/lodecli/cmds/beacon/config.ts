@@ -31,7 +31,11 @@ export async function writeBeaconConfig(filename: string, config: Partial<IBeaco
  * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
  */
 export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> {
-  return readFileSync(filename) as Partial<IBeaconNodeOptions>;
+  try {
+    return readFileSync(filename) as Partial<IBeaconNodeOptions>;
+  } catch(e) {
+    return {};
+  }
 }
 
 export async function initBeaconConfig(filename: string, args: IBeaconArgs): Promise<void> {
