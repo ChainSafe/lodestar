@@ -27,10 +27,6 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
   const peerId = await readPeerId(options.network.peerIdFile);
   // read local enr from disk
   options.network.discv5.enr = await readEnr(options.network.enrFile);
-  // read bootstrap enrs from configuration
-  options.network.discv5.bootEnrs = options.network.discv5.bootEnrs
-    ? options.network.discv5.bootEnrs.map(e => ENR.decodeTxt(e as unknown as string))
-    : [];
 
   const config = createIBeaconConfig({
     ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
@@ -47,7 +43,7 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
 
   async function cleanup(): Promise<void> {
     await node.stop();
-    await writeEnr(options.network.enrFile, options.network.discv5.enr, peerId);
+    await writeEnr(options.network.enrFile, options.network.discv5.enr as ENR, peerId);
   }
 
   process.on("SIGTERM", cleanup);

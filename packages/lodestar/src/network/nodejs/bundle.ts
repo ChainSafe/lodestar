@@ -10,7 +10,7 @@ import SECIO from "libp2p-secio";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerInfo from "peer-info";
-import {ENR, Discv5Discovery} from "@chainsafe/discv5";
+import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
 
 
 export interface ILibp2pOptions {
@@ -18,8 +18,8 @@ export interface ILibp2pOptions {
   autoDial: boolean;
   discv5: {
     bindAddr: string;
-    enr: ENR;
-    bootEnrs?: ENR[];
+    enr: ENRInput;
+    bootEnrs?: ENRInput[];
   };
   peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
   bootnodes?: string[];
