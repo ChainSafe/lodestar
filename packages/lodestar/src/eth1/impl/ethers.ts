@@ -129,7 +129,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     let blockNumber = this.lastProcessedEth1BlockNumber + 1;
     while (blockNumber <= toNumber && await this.processBlock(blockNumber)) {
       blockNumber++;
-    };
+    }
   }
 
   /**
