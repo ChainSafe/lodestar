@@ -10,3 +10,12 @@ export const chainPreset: Options = {
   choices: ["mainnet", "minimal"],
   default: "mainnet",
 };
+
+export const chainGenesisStateFile: Options = {
+  alias: [
+    "chain.genesisStateFile",
+  ],
+  description: "Genesis state in ssz-encoded format",
+  type: "string",
+  normalize: true,
+};
