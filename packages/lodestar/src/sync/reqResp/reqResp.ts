@@ -212,11 +212,16 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private async createStatus(): Promise<Status> {
     const finalizedCheckpoint = await this.chain.getFinalizedCheckpoint();
     const state = await this.chain.getHeadState();
+    // The state-root in latest-header is not yet updated to match the state-root in that actual block
+    // Copy the header, update the state root, and derive the true latest block root.
+    const headHeader = this.config.types.BeaconBlockHeader.clone(state.latestBlockHeader);
+    headHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(state);
+    const headBlockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(headHeader);
     return {
       forkDigest: this.chain.currentForkDigest,
       finalizedRoot: finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
-      headRoot: this.config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader),
+      headRoot: headBlockRoot,
       headSlot: state.slot,
     };
   }
