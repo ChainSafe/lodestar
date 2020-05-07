@@ -18,6 +18,17 @@ export const discv5BindAddr: Options = {
   group: "network",
 };
 
+export const discv5BootEnrs: Options = {
+  alias: [
+    "network.discv5.bootEnrs",
+  ],
+  type: "array",
+  default: [],
+  group: "network",
+};
+
+
+
 export const networkMaxPeers: Options = {
   alias: [
     "network.maxPeers",

@@ -14,6 +14,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {IBeaconArgs} from "../../options";
+import {ENR} from "@chainsafe/discv5";
 
 /**
  * Run a beacon node
@@ -24,7 +25,12 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
   options = deepmerge(defaultOptions, options) as Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>;
 
   const peerId = await readPeerId(options.network.peerIdFile);
+  // read local enr from disk
   options.network.discv5.enr = await readEnr(options.network.enrFile);
+  // read bootstrap enrs from configuration
+  options.network.discv5.bootEnrs = options.network.discv5.bootEnrs
+    ? options.network.discv5.bootEnrs.map(e => ENR.decodeTxt(e as unknown as string))
+    : [];
 
   const config = createIBeaconConfig({
     ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
