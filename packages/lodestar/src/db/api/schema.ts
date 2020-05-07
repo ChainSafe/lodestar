@@ -58,8 +58,9 @@ export function encodeKey(
     buf = Buffer.alloc(key.length + 1);
     buf.write(key, 1);
   } else if (typeof key === "number" || typeof key === "bigint") {
-    buf = Buffer.alloc(9);
-    intToBytes(BigInt(key), 8, "be").copy(buf, 1);
+    const idBuf = Buffer.from(key.toString(10), "ascii");
+    buf = Buffer.alloc(idBuf.length + 1);
+    idBuf.copy(buf, 1);
   } else {
     buf = Buffer.alloc(key.length + 1);
     buf.set(key, 1);

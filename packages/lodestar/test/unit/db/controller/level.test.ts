@@ -1,6 +1,4 @@
-import {assert, expect} from "chai";
-// @ts-ignore
-import level from "level";
+import {expect} from "chai";
 // @ts-ignore
 import leveldown from "leveldown";
 import {LevelDbController} from "../../../../src/db/controller";
