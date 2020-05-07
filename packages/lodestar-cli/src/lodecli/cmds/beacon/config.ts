@@ -14,10 +14,11 @@ export function createBeaconConfig(args: IBeaconArgs): Partial<IBeaconNodeOption
   // don't create hidden options
   const config: Partial<IBeaconNodeOptions> = {};
   for (const [alias, option] of Object.entries(beaconRunOptions)) {
-    if (!option.hidden && option.default !== undefined) {
-      // handle duck typed access to a subobject
-      const preferredNameArr = alias.split(".");
-      setSubObject(config, preferredNameArr, getSubObject(cliDefaults, preferredNameArr));
+    // handle duck typed access to a subobject
+    const preferredNameArr = alias.split(".");
+    const value = getSubObject(cliDefaults, preferredNameArr);
+    if (value !== undefined && (value !== option.default || !option.hidden)) {
+      setSubObject(config, preferredNameArr, value);
     }
   }
   return config;
