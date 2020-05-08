@@ -884,7 +884,25 @@
   optionalDependencies:
     "@chainsafe/eth2-spec-tests" "^0.10.1-fix"
 
-"@chainsafe/discv5@0.1.1", "@chainsafe/discv5@^0.1.0", "@chainsafe/discv5@^0.1.1":
+"@chainsafe/discv5@0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.1.2.tgz#6fbe80316873c0def83231ae028edbd0d3f6879a"
+  integrity sha512-dzHdAzfLhUZN/7fNJrmfynAICtW/xvSWQwQI1Lrsq/pVFx3ysmiYQm2z/C2dXG+ntfXsGesfCIfOZlElPjrK3g==
+  dependencies:
+    base64url "^3.0.1"
+    bcrypto "^4.2.8"
+    bigint-buffer "^1.1.5"
+    debug "^4.1.1"
+    dgram "^1.0.1"
+    is-ip "^3.1.0"
+    libp2p-crypto "^0.17.5"
+    multiaddr "^7.4.2"
+    peer-id "^0.13.11"
+    peer-info "^0.17.5"
+    rlp "^2.2.4"
+    strict-event-emitter-types "^2.0.0"
+
+"@chainsafe/discv5@^0.1.0", "@chainsafe/discv5@^0.1.1":
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.1.1.tgz#5cfdaba06a2560aec1cb88ff4386005a9ad6024c"
   integrity sha512-SnOloWkgggE1pbGi5l5KMicCL7A9RMlMKNW3AkQ1XIa8dDxW5mWnDv4T5tkvHbTlBypy1S4jQWhz88GreZZrbw==
