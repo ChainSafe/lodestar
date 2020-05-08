@@ -3,7 +3,7 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, ValidatorIndex, Checkpoint, Slot, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconClock} from "../clock/interface";
 
 
