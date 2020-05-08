@@ -7,6 +7,7 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams} from "@chainsafe/lodestar-params";
 import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
+import {params as schlesiParams} from "@chainsafe/lodestar-params/lib/presets/schlesi";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
@@ -26,8 +27,9 @@ export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOp
   const peerId = await readPeerId(options.network.peerIdFile);
   options.network.discv5.enr = await readEnr(options.network.enrFile);
 
+  const chainName = options.chain.name;
   const config = createIBeaconConfig({
-    ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
+    ...(chainName === "mainnet" ? mainnetParams : (chainName === "schlesi")? schlesiParams: minimalParams),
     ...createIBeaconParams(options.chain.params || {}),
   });
   const libp2p = await createNodeJsLibp2p(peerId, options.network);

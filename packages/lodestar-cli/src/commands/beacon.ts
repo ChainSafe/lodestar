@@ -7,6 +7,7 @@ import {CommanderStatic} from "commander";
 import deepmerge from "deepmerge";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config as schlesiConfig} from "@chainsafe/lodestar-config/lib/presets/schlesi";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
@@ -87,7 +88,8 @@ export class BeaconNodeCommand implements ICliCommand {
     const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
     const config = cmdOptions.config
       ? cmdOptions.config
-      : cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;
+      : cmdOptions.preset === "minimal" ? minimalConfig
+        : cmdOptions.preset === "schlesi" ? schlesiConfig: mainnetConfig;
     // nodejs will create EthersEth1Notifier by default
     if (cmdOptions.forkFile) {
       // @ts-ignore
