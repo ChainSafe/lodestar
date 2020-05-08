@@ -140,7 +140,7 @@ describe("[sync] rpc", function () {
     await new Promise((resolve, reject) => {
       // if there is goodbye request from B
       netA.reqResp.once("request", reject);
-      setTimeout(resolve, 200);
+      setTimeout(resolve, 1000);
     });
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
