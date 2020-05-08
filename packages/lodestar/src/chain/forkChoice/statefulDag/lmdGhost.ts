@@ -253,6 +253,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Start method, should not wait for it.
    * @param genesisTime
+   * @param clock
    */
   public async start(genesisTime: number, clock: IBeaconClock): Promise<void> {
     this.genesisTime = genesisTime;
@@ -377,12 +378,16 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
   }
 
-  public head(): Uint8Array {
+  public head(): {root: Uint8Array; slot: Slot} {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
     }
-    return fromHexString(this.justified.node.bestTarget.blockRoot);
+    const bestTarget = this.justified.node.bestTarget;
+    return {
+      root: fromHexString(bestTarget.blockRoot),
+      slot: bestTarget.slot
+    };
   }
 
   public headStateRoot(): Uint8Array {

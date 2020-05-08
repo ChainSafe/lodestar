@@ -34,7 +34,7 @@ describe("block assembly", function () {
   });
 
   it("should assemble block", async function () {
-    const head = chainStub.forkChoice.head();
+    const head = chainStub.forkChoice.head().root;
     beaconDB.block.get.withArgs(head).resolves(generateEmptySignedBlock());
     beaconDB.state.get.resolves(generateState({slot: 1}));
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());

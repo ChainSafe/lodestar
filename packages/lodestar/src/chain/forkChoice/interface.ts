@@ -3,7 +3,7 @@
  * @module chain/forkChoice
  */
 
-import {Gwei, ValidatorIndex, Checkpoint, Slot} from "@chainsafe/lodestar-types";
+import {Gwei, ValidatorIndex, Checkpoint, Slot, Root} from "@chainsafe/lodestar-types";
 import {IBeaconClock} from "../clock/interface";
 
 
@@ -12,7 +12,7 @@ export interface ILMDGHOST {
   stop(): Promise<void>;
   addBlock(info: BlockChainInfo): void;
   addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
-  head(): Uint8Array;
+  head(): {slot: Slot; root: Uint8Array};
   headStateRoot(): Uint8Array;
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;

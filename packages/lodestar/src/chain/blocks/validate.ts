@@ -26,7 +26,7 @@ export function validateBlock(
           );
           continue;
         }
-        const currentSlot = (await db.block.get(forkChoice.head())).message.slot;
+        const currentSlot = (await db.block.get(forkChoice.head().root)).message.slot;
         logger.info(
           `Received block with hash ${toHexString(blockHash)}` +
             `at slot ${job.signedBlock.message.slot}. Current state slot ${currentSlot}`

@@ -11,6 +11,7 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
+import {Root} from "@chainsafe/lodestar-types";
 
 describe("block process stream", function () {
 
@@ -93,7 +94,7 @@ describe("block process stream", function () {
     dbStub.state.get.resolves(generateState());
     stateTransitionStub.resolves(generateState());
     dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
-    forkChoiceStub.head.returns(Buffer.alloc(32, 1));
+    forkChoiceStub.head.returns({root: Buffer.alloc(32, 1), slot: 0});
     const result = await pipe(
       [receivedJob],
       processBlock(config, dbStub, sinon.createStubInstance(WinstonLogger), forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub),
@@ -118,7 +119,7 @@ describe("block process stream", function () {
     dbStub.state.get.resolves(generateState());
     stateTransitionStub.resolves(generateState());
     dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
-    forkChoiceStub.head.returns(Buffer.alloc(32, 2));
+    forkChoiceStub.head.returns({root: Buffer.alloc(32, 2), slot: 0});
     dbStub.depositData.values.resolves([]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     dbStub.block.get.resolves(receivedJob.signedBlock);
