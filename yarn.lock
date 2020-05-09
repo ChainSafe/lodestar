@@ -944,6 +944,18 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
+"@chainsafe/snappy-stream@3.0.4":
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-3.0.4.tgz#73b156d89e2ca82d7041a67ca7fb2427c4ff1f4d"
+  integrity sha512-8uLpo2cSj9clLescnmx0+rMGkoCaFxP6GHaOMFlrSYYUCb5OBqbTm5gOy/8lLFea8T+aW9Cfj7tGo9ba4zL7/g==
+  dependencies:
+    bl "^1.0.0"
+    buffer-alloc "^1.2.0"
+    buffer-equal "1.0.0"
+    buffer-from "^1.1.1"
+    fast-crc32c "^1.0.1"
+    snappy "^6.0.1"
+
 "@chainsafe/ssz@0.6.4", "@chainsafe/ssz@^0.6.4":
   version "0.6.4"
   resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.4.tgz#1ee5e5599790a34f16406cd743ad83c9dc1d6bee"
@@ -12942,18 +12954,6 @@ snapdragon@^0.8.1:
     source-map "^0.5.6"
     source-map-resolve "^0.5.0"
     use "^3.1.0"
-
-snappy-stream@^3.0.2:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/snappy-stream/-/snappy-stream-3.0.2.tgz#4ef5a518c2e65258f3e826c5d03bfda5bb022948"
-  integrity sha512-MlUycQOE+Hl6+Gg3Rwn87l1BE0qLPkhIvmX3FyhoO90Ksm6sEzH5/xrFZRVBrEh47fABjW+zE+xGghjOwhqYjg==
-  dependencies:
-    bl "^1.0.0"
-    buffer-alloc "^1.2.0"
-    buffer-equal "1.0.0"
-    buffer-from "^1.1.1"
-    fast-crc32c "^1.0.1"
-    snappy "^6.0.1"
 
 snappy@^6.0.1:
   version "6.3.4"
