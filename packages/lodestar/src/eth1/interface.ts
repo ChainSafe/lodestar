@@ -30,7 +30,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
 
   /**
    * Returns block by block hash or number
-   * @param blockHashOrBlockNumber
+   * @param blockTag
    */
   getBlock(blockTag: string | number): Promise<Block>;
 
