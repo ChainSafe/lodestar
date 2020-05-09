@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "lerna run build",
+    "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
     "cli": "./packages/lodestar-cli/bin/lodestar"
   },
