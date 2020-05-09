@@ -84,7 +84,7 @@
     "prom-client": "^11.5.3",
     "qs": "^6.7.0",
     "randombytes": "^2.1.0",
-    "snappy-stream": "^3.0.2",
+    "@chainsafe/snappy-stream": "3.0.4",
     "snappyjs": "^0.6.0",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
