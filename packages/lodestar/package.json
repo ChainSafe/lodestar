@@ -112,6 +112,7 @@
     "eventsource": "^1.0.7",
     "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
     "mocha": "^6.2.2",
+    "rimraf": "^3.0.2",
     "supertest": "^4.0.2",
     "webpack": "^4.39.1"
   },
