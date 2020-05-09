@@ -1,5 +1,6 @@
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController, IFilterOptions} from "../../../controller";
 import {Bucket} from "../../schema";
@@ -19,6 +20,10 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     db: IDatabaseController<Buffer, Buffer>,
   ) {
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
+  }
+
+  public decodeKey(data: Buffer): number {
+    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   public getId(value: SignedBeaconBlock): Slot {
