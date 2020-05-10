@@ -1,4 +1,4 @@
-import {createCompressStream} from "snappy-stream";
+import {createCompressStream} from "@chainsafe/snappy-stream";
 import {SnappyFramesUncompress} from "../../../../../src/network/encoders/snappy-frames/uncompress";
 import {expect} from "chai";
 
@@ -6,11 +6,11 @@ describe("snappy frames uncompress", function () {
 
   it("should work with short input", function (done) {
     const compressStream = createCompressStream();
-    
+
     const decompress = new SnappyFramesUncompress();
-    
+
     const testData = "Small test data";
-    
+
     compressStream.on("data", function (data) {
       const result = decompress.uncompress(data);
       if(result) {
@@ -18,7 +18,7 @@ describe("snappy frames uncompress", function () {
         done();
       }
     });
-    
+
     compressStream.write(testData);
   });
 
@@ -53,5 +53,5 @@ describe("snappy frames uncompress", function () {
 
     expect(decompress.uncompress(Buffer.alloc(3, 1))).to.be.null;
   });
-    
+
 });
