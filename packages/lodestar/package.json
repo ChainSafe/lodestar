@@ -84,7 +84,7 @@
     "prom-client": "^11.5.3",
     "qs": "^6.7.0",
     "randombytes": "^2.1.0",
-    "snappy-stream": "^3.0.2",
+    "@chainsafe/snappy-stream": "3.0.4",
     "snappyjs": "^0.6.0",
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
@@ -112,6 +112,7 @@
     "eventsource": "^1.0.7",
     "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
     "mocha": "^6.2.2",
+    "rimraf": "^3.0.2",
     "supertest": "^4.0.2",
     "webpack": "^4.39.1"
   },
