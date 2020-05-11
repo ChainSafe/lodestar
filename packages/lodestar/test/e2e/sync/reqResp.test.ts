@@ -19,6 +19,8 @@ import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
+import {getBlockHeadInfo} from "../../utils/headBlockInfo";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -49,17 +51,24 @@ describe("[sync] rpc", function () {
 
   beforeEach(async () => {
     const state = generateState();
-
-    state.finalizedCheckpoint = {
-      epoch: computeEpochAtSlot(config, block.message.slot),
-      root: config.types.BeaconBlock.hashTreeRoot(block.message),
-    };
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: 0n,
       state,
       config
+    });
+    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    chain.forkChoice = forkChoiceStub;
+    forkChoiceStub.head.returns(getBlockHeadInfo({
+      finalizedCheckpoint: {
+        epoch: computeEpochAtSlot(config, block.message.slot),
+        root: config.types.BeaconBlock.hashTreeRoot(block.message),
+      }
+    }));
+    forkChoiceStub.getFinalized.returns({
+      epoch: computeEpochAtSlot(config, block.message.slot),
+      root: config.types.BeaconBlock.hashTreeRoot(block.message),
     });
     netA = new Libp2pNetwork(
       opts,

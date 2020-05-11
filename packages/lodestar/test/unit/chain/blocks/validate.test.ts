@@ -9,6 +9,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
+import {getBlockHeadInfo} from "../../../utils/headBlockInfo";
 
 describe("block validate stream", function () {
 
@@ -52,7 +53,9 @@ describe("block validate stream", function () {
     receivedBlock.message.slot = 0;
     blockDbStub.has.withArgs(config.types.BeaconBlock.hashTreeRoot(receivedBlock.message)).resolves(false);
     forkChoiceStub.getFinalized.returns({epoch: 0, root: Buffer.alloc(0)});
-    forkChoiceStub.head.returns({root: Buffer.alloc(0), slot: 0});
+    forkChoiceStub.head.returns(
+      getBlockHeadInfo({blockRootBuf: Buffer.alloc(32, 0), slot: 0})
+    );
     blockDbStub.get.resolves(config.types.SignedBeaconBlock.defaultValue());
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],

@@ -56,7 +56,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   afterEach(async () => {
     await eth1Notifier.stop();
     await db.stop();
-    await fs.promises.rmdir(dbPath, {recursive: true});
+    rimraf.sync(dbPath);
     logger.silent = false;
   });
 

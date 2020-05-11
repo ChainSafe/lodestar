@@ -86,11 +86,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async getHeadState(): Promise<BeaconState|null> {
-    return this.db.state.get(this.forkChoice.headStateRoot().valueOf() as Uint8Array);
+    return this.db.state.get(this.forkChoice.headStateRoot());
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
-    return this.db.block.get(this.forkChoice.head().root.valueOf() as Uint8Array);
+    return this.db.block.get(this.forkChoice.headBlockRoot());
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {

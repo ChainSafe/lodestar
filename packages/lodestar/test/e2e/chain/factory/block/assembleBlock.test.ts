@@ -53,7 +53,7 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     //dbStub.block.getChainHead.resolves(parentBlock);
     dbStub.state.get.resolves(config.types.BeaconState.clone(state));
-    dbStub.block.get.withArgs(chainStub.forkChoice.head().root).resolves(parentBlock);
+    dbStub.block.get.withArgs(chainStub.forkChoice.headBlockRoot()).resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);

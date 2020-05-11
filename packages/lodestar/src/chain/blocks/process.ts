@@ -88,7 +88,7 @@ export async function updateForkChoice(
     finalizedCheckpoint: newState.finalizedCheckpoint
   });
   const currentRoot = await db.chain.getChainHeadRoot();
-  const headRoot = forkChoice.head().root.valueOf() as Uint8Array;
+  const headRoot = forkChoice.headBlockRoot();
   if (currentRoot && !config.types.Root.equals(currentRoot, headRoot)) {
     const signedBlock = await db.block.get(headRoot);
     await db.updateChainHead(headRoot, signedBlock.message.stateRoot.valueOf() as Uint8Array);

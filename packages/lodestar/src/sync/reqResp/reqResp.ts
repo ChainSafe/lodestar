@@ -210,13 +210,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async createStatus(): Promise<Status> {
-    const finalizedCheckpoint = await this.chain.forkChoice.getFinalized();
     const head = this.chain.forkChoice.head();
     return {
       forkDigest: this.chain.currentForkDigest,
-      finalizedRoot: finalizedCheckpoint.root,
-      finalizedEpoch: finalizedCheckpoint.epoch,
-      headRoot: head.root,
+      finalizedRoot: head.finalizedCheckpoint.root,
+      finalizedEpoch: head.finalizedCheckpoint.epoch,
+      headRoot: head.blockRootBuf,
       headSlot: head.slot,
     };
   }

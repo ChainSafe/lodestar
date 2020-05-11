@@ -2,11 +2,18 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import PeerInfo from "peer-info";
 import PeerId from "peer-id";
-import {Goodbye, Status, BeaconBlocksByRangeRequest, ResponseBody, RequestId, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {
+  BeaconBlocksByRangeRequest,
+  Goodbye,
+  RequestId,
+  ResponseBody,
+  SignedBeaconBlock,
+  Status
+} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import {Method, ZERO_HASH} from "../../../src/constants";
-import {BeaconChain} from "../../../src/chain";
+import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
+import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
@@ -15,9 +22,9 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
-import {GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {RpcError} from "../../../src/network/error";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {getBlockHeadInfo} from "../../utils/headBlockInfo";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -25,14 +32,18 @@ describe("sync req resp", function () {
   let chainStub: SinonStubbedInstance<BeaconChain>,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     repsStub: SinonStubbedInstance<ReputationStore>,
+    forkChoiceStub: SinonStubbedInstance<ILMDGHOST>,
     logger: WinstonLogger,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
+    forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    chainStub.forkChoice = forkChoiceStub;
+    forkChoiceStub.head.returns(getBlockHeadInfo({}));
+    forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     chainStub.getHeadState.resolves(generateState());
-    chainStub.getFinalizedCheckpoint.resolves({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     // @ts-ignore
     chainStub.config = config;
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
@@ -67,6 +78,7 @@ describe("sync req resp", function () {
     repsStub.get.returns({
       latestMetadata: null, latestStatus: null, score: 0
     });
+
 
 
     try {
