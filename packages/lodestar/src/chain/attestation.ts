@@ -1,6 +1,14 @@
 import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {
+  Attestation,
+  AttestationRootHex,
+  BeaconState,
+  BlockRootHex,
+  Root,
+  SignedBeaconBlock,
+  Slot
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
@@ -13,7 +21,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
-import {GENESIS_EPOCH} from "../constants";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "../constants";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
@@ -84,19 +92,27 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
     const justifiedCheckpoint = this.forkChoice.getJustified();
-    const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
-    const checkpointState = await this.db.state.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
-    const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
+    const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
+    let checkpointState: BeaconState;
+    if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
+      const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
+      checkpointState = await this.db.state.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
+    } else {
+      // should be genesis state
+      checkpointState = await this.db.state.getJustified();
+    }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
-    assert([currentEpoch, previousEpoch].includes(target.epoch), "attestation is targeting too old epoch");
+    assert([previousEpoch, currentEpoch].includes(target.epoch),
+      `attestation is targeting too old epoch ${target.epoch}, current=${currentEpoch}`
+    );
     assert(
       target.epoch === computeEpochAtSlot(this.config, attestation.data.slot),
       "attestation is not targeting current epoch"
     );
     assert(
-      getCurrentSlot(this.config, checkpointState.genesisTime) >= computeStartSlotAtEpoch(this.config, target.epoch)
+      currentSlot >= computeStartSlotAtEpoch(this.config, target.epoch)
       , "Current slot less than this target epoch's start slot"
     );
     const block = await this.db.block.get(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
