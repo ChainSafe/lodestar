@@ -5,7 +5,7 @@ export interface ISyncOptions {
 
 
 const config: ISyncOptions = {
-  minPeers: 1,
+  minPeers: 3,
   blockPerChunk: 20
 };
 
