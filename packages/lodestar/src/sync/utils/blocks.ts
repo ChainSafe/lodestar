@@ -3,6 +3,7 @@ import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -46,11 +47,12 @@ export async function getBlockRangeFromPeer(
 }
 
 export async function getBlockRange(
+  logger: ILogger,
   rpc: IReqResp,
   peers: PeerInfo[],
   range: ISlotRange,
   blocksPerChunk = 10,
-  maxRetry = 3
+  maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
@@ -61,11 +63,15 @@ export async function getBlockRange(
     const peerBalancer = new RoundRobinArray(peers);
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
+        const peer = peerBalancer.next();
         try {
-          const chunkBlocks = await getBlockRangeFromPeer(rpc, peerBalancer.next(), chunk);
+          const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {
+          logger.debug(`Failed to obtain chunk ${JSON.stringify(chunk)} `
+              +`from peer ${peer.id.toB58String()}. Error: ${e.message}`
+          );
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }

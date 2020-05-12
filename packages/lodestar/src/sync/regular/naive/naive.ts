@@ -24,7 +24,7 @@ export class NaiveRegularSync implements IRegularSync {
   private readonly logger: ILogger;
 
   private readonly opts: IRegularSyncOptions;
-  
+
   private currentTarget: Slot;
   private targetSlotSource: Pushable<Slot>;
 
@@ -82,12 +82,12 @@ export class NaiveRegularSync implements IRegularSync {
   private async sync(): Promise<void> {
     await pipe(
       this.targetSlotSource,
-      targetSlotToBlockChunks(this.config, this.chain), 
-      fetchBlockChunks(this.chain, this.network.reqResp, this.getSyncPeers, this.opts.blockPerChunk),
-      processSyncBlocks(this.chain, this.logger)
+      targetSlotToBlockChunks(this.config, this.chain),
+      fetchBlockChunks(this.logger, this.chain, this.network.reqResp, this.getSyncPeers, this.opts.blockPerChunk),
+      processSyncBlocks(this.config, this.chain, this.logger)
     );
   }
-  
+
   private getSyncPeers = async (minSlot: Slot): Promise<PeerInfo[]> => {
     //not sure how to check this since we need to sync two epoch before we will have finalized like others
     // const chainFinalizedCheckpoint = (await this.chain.getHeadState()).finalizedCheckpoint;
