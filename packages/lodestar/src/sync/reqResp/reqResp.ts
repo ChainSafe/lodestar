@@ -121,18 +121,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
     if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.warn("Fork digest mismatch " 
+      this.logger.warn("Fork digest mismatch "
           + `expected=${toHexString(currentForkDigest)} received ${toHexString(request.forkDigest)}`
       );
       return true;
     }
 
     const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    const state = await this.chain.getHeadState();
+    const finalizedCheckpoint = await this.chain.forkChoice.getFinalized();
     // we're on a further (or equal) finalized epoch
     // but the peer's block root at that epoch doesn't match ours
-    if (state.finalizedCheckpoint.epoch >= request.finalizedEpoch && request.finalizedEpoch !== GENESIS_EPOCH) {
-      const startBlock = (state.finalizedCheckpoint.epoch > request.finalizedEpoch) ?
+    if (finalizedCheckpoint.epoch >= request.finalizedEpoch && request.finalizedEpoch !== GENESIS_EPOCH) {
+      const startBlock = (finalizedCheckpoint.epoch > request.finalizedEpoch) ?
         await this.db.blockArchive.get(startSlot) : await this.db.block.getBySlot(startSlot);
       const result = !this.config.types.Root.equals(
         request.finalizedRoot,
@@ -210,19 +210,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async createStatus(): Promise<Status> {
-    const finalizedCheckpoint = await this.chain.getFinalizedCheckpoint();
-    const state = await this.chain.getHeadState();
-    // The state-root in latest-header is not yet updated to match the state-root in that actual block
-    // Copy the header, update the state root, and derive the true latest block root.
-    const headHeader = this.config.types.BeaconBlockHeader.clone(state.latestBlockHeader);
-    headHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(state);
-    const headBlockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(headHeader);
+    const head = this.chain.forkChoice.head();
     return {
       forkDigest: this.chain.currentForkDigest,
-      finalizedRoot: finalizedCheckpoint.root,
-      finalizedEpoch: finalizedCheckpoint.epoch,
-      headRoot: headBlockRoot,
-      headSlot: state.slot,
+      finalizedRoot: head.finalizedCheckpoint.root,
+      finalizedEpoch: head.finalizedCheckpoint.epoch,
+      headRoot: head.blockRoot,
+      headSlot: head.slot,
     };
   }
 
