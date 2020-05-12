@@ -9,7 +9,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import {
   fetchBlockChunks,

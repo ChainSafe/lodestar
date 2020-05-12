@@ -13,15 +13,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndices,
-  getCurrentSlot
+  getAttestingIndices
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "../constants";
+import {GENESIS_EPOCH} from "../constants";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
