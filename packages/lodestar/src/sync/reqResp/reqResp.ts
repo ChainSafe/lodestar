@@ -215,7 +215,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       forkDigest: this.chain.currentForkDigest,
       finalizedRoot: head.finalizedCheckpoint.root,
       finalizedEpoch: head.finalizedCheckpoint.epoch,
-      headRoot: head.blockRootBuf,
+      headRoot: head.blockRoot,
       headSlot: head.slot,
     };
   }

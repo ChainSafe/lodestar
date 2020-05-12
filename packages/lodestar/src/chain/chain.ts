@@ -161,9 +161,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     };
     this.forkChoice.addBlock({
       slot: genesisBlock.slot,
-      blockRootBuf: blockRoot,
-      stateRootBuf: stateRoot,
-      parentRootBuf: Buffer.alloc(32),
+      blockRoot: blockRoot,
+      stateRoot: stateRoot,
+      parentRoot: Buffer.alloc(32),
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });

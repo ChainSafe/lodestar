@@ -24,7 +24,7 @@ import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {RpcError} from "../../../src/network/error";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {getBlockHeadInfo} from "../../utils/headBlockInfo";
+import {getBlockSummary} from "../../utils/headBlockInfo";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -41,7 +41,7 @@ describe("sync req resp", function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub.forkChoice = forkChoiceStub;
-    forkChoiceStub.head.returns(getBlockHeadInfo({}));
+    forkChoiceStub.head.returns(getBlockSummary({}));
     forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     chainStub.getHeadState.resolves(generateState());
     // @ts-ignore

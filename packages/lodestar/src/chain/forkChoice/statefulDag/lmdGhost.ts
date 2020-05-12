@@ -13,7 +13,7 @@ import {
   getCurrentSlot
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {BlockHeadInfo, ILMDGHOST} from "../interface";
+import {BlockSummary, ILMDGHOST} from "../interface";
 
 import {HexCheckpoint, NodeInfo, RootHex} from "./interface";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
@@ -278,23 +278,24 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
   }
 
-  public addBlock({slot, blockRootBuf, stateRootBuf, parentRootBuf,
-    justifiedCheckpoint, finalizedCheckpoint}: BlockHeadInfo): void {
+  public addBlock(
+    {slot, blockRoot, stateRoot, parentRoot, justifiedCheckpoint, finalizedCheckpoint}: BlockSummary
+  ): void {
     this.synced = false;
-    const blockRoot = toHexString(blockRootBuf);
-    const parentRoot = toHexString(parentRootBuf);
+    const blockRootHex = toHexString(blockRoot);
+    const parentRootHex = toHexString(parentRoot);
     // ensure blockRoot exists
-    const node: Node = this.nodes[blockRoot] || new Node({
+    const node: Node = this.nodes[blockRootHex] || new Node({
       slot,
-      blockRoot,
-      stateRoot: stateRootBuf,
-      parent: this.nodes[parentRoot],
+      blockRoot: blockRootHex,
+      stateRoot: stateRoot,
+      parent: this.nodes[parentRootHex],
       justifiedCheckpoint: {rootHex: toHexString(justifiedCheckpoint.root), epoch: justifiedCheckpoint.epoch},
       finalizedCheckpoint: {rootHex: toHexString(finalizedCheckpoint.root), epoch: finalizedCheckpoint.epoch},
     });
     // best target is the node itself
     node.bestTarget = node;
-    this.nodes[blockRoot] = node;
+    this.nodes[blockRootHex] = node;
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     if (this.finalized) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
@@ -302,7 +303,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
         `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
       assert.equal(
-        this.getAncestor(blockRoot, finalizedSlot),
+        this.getAncestor(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
         `Fork choice: Block slot ${node.slot} is not on the same chain`);
     }
@@ -329,8 +330,8 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       }
     }
     // if parent root exists, link to blockRoot
-    if (this.nodes[parentRoot]) {
-      this.nodes[parentRoot].addChild(
+    if (this.nodes[parentRootHex]) {
+      this.nodes[parentRootHex].addChild(
         node,
         this.getJustifiedCheckpoint(),
         this.getFinalizedCheckpoint());
@@ -380,7 +381,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
   }
 
-  public head(): BlockHeadInfo {
+  public head(): BlockSummary {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
@@ -394,10 +395,10 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       parentRootBuf = ZERO_HASH;
     }
     return {
-      blockRootBuf: fromHexString(headInfo.blockRoot),
-      parentRootBuf: parentRootBuf,
       slot: headInfo.slot,
-      stateRootBuf: headInfo.stateRoot.valueOf() as Uint8Array,
+      blockRoot: fromHexString(headInfo.blockRoot),
+      parentRoot: parentRootBuf,
+      stateRoot: headInfo.stateRoot.valueOf() as Uint8Array,
       justifiedCheckpoint: {
         epoch: headInfo.justifiedCheckpoint.epoch,
         root: fromHexString(headInfo.justifiedCheckpoint.rootHex)
@@ -410,11 +411,11 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   public headStateRoot(): Uint8Array {
-    return this.head().stateRootBuf;
+    return this.head().stateRoot;
   }
 
   public headBlockRoot(): Uint8Array {
-    return this.head().blockRootBuf;
+    return this.head().blockRoot;
   }
 
   public headBlockSlot(): Slot {

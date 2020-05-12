@@ -11,7 +11,7 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {getBlockHeadInfo} from "../../../utils/headBlockInfo";
+import {getBlockSummary} from "../../../utils/headBlockInfo";
 
 describe("block process stream", function () {
 

@@ -81,9 +81,9 @@ export async function updateForkChoice(
 ): Promise<Root|null> {
   forkChoice.addBlock({
     slot: block.message.slot,
-    blockRootBuf: config.types.BeaconBlock.hashTreeRoot(block.message),
-    stateRootBuf: block.message.stateRoot.valueOf() as Uint8Array,
-    parentRootBuf: block.message.parentRoot.valueOf() as Uint8Array,
+    blockRoot: config.types.BeaconBlock.hashTreeRoot(block.message),
+    stateRoot: block.message.stateRoot.valueOf() as Uint8Array,
+    parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
     justifiedCheckpoint: newState.currentJustifiedCheckpoint,
     finalizedCheckpoint: newState.finalizedCheckpoint
   });
