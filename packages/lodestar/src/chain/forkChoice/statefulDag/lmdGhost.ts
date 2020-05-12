@@ -386,9 +386,16 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       this.syncChanges();
     }
     const headInfo = this.justified.node.bestTarget;
+    const parent = headInfo.parent;
+    let parentRootBuf: Uint8Array;
+    if(parent && parent.blockRoot) {
+      parentRootBuf = fromHexString(parent.blockRoot);
+    } else {
+      parentRootBuf = ZERO_HASH;
+    }
     return {
       blockRootBuf: fromHexString(headInfo.blockRoot),
-      parentRootBuf: fromHexString(headInfo.parent.blockRoot),
+      parentRootBuf: parentRootBuf,
       slot: headInfo.slot,
       stateRootBuf: headInfo.stateRoot.valueOf() as Uint8Array,
       justifiedCheckpoint: {
