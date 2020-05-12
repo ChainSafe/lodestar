@@ -5,16 +5,18 @@
 import assert from "assert";
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, Epoch, Gwei, Number64, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSlotsSinceEpochStart,
-  getCurrentSlot,
-  computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeSlotsSinceEpochStart,
+  computeStartSlotAtEpoch,
+  getCurrentSlot
+} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ILMDGHOST, BlockChainInfo} from "../interface";
+import {BlockHeadInfo, ILMDGHOST} from "../interface";
 
-import {RootHex, NodeInfo, HexCheckpoint} from "./interface";
-import {GENESIS_EPOCH} from "../../../constants";
+import {HexCheckpoint, NodeInfo, RootHex} from "./interface";
+import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "./attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 
@@ -253,6 +255,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   /**
    * Start method, should not wait for it.
    * @param genesisTime
+   * @param clock
    */
   public async start(genesisTime: number, clock: IBeaconClock): Promise<void> {
     this.genesisTime = genesisTime;
@@ -276,7 +279,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   public addBlock({slot, blockRootBuf, stateRootBuf, parentRootBuf,
-    justifiedCheckpoint, finalizedCheckpoint}: BlockChainInfo): void {
+    justifiedCheckpoint, finalizedCheckpoint}: BlockHeadInfo): void {
     this.synced = false;
     const blockRoot = toHexString(blockRootBuf);
     const parentRoot = toHexString(parentRootBuf);
@@ -377,20 +380,45 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
   }
 
-  public head(): Uint8Array {
+  public head(): BlockHeadInfo {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
     }
-    return fromHexString(this.justified.node.bestTarget.blockRoot);
+    const headInfo = this.justified.node.bestTarget;
+    const parent = headInfo.parent;
+    let parentRootBuf: Uint8Array;
+    if(parent && parent.blockRoot) {
+      parentRootBuf = fromHexString(parent.blockRoot);
+    } else {
+      parentRootBuf = ZERO_HASH;
+    }
+    return {
+      blockRootBuf: fromHexString(headInfo.blockRoot),
+      parentRootBuf: parentRootBuf,
+      slot: headInfo.slot,
+      stateRootBuf: headInfo.stateRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: {
+        epoch: headInfo.justifiedCheckpoint.epoch,
+        root: fromHexString(headInfo.justifiedCheckpoint.rootHex)
+      },
+      finalizedCheckpoint: {
+        epoch: headInfo.finalizedCheckpoint.epoch,
+        root: fromHexString(headInfo.finalizedCheckpoint.rootHex)
+      }
+    };
   }
 
   public headStateRoot(): Uint8Array {
-    assert(this.justified);
-    if (!this.synced) {
-      this.syncChanges();
-    }
-    return this.justified.node.bestTarget.stateRoot.valueOf() as Uint8Array;
+    return this.head().stateRootBuf;
+  }
+
+  public headBlockRoot(): Uint8Array {
+    return this.head().blockRootBuf;
+  }
+
+  public headBlockSlot(): Slot {
+    return this.head().slot;
   }
 
   // To address the bouncing attack, only update conflicting justified
@@ -414,16 +442,16 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   public getJustified(): Checkpoint {
     if (!this.justified) {
-      return null;
+      return {epoch: 0, root: ZERO_HASH};
     }
-    return {root: fromHexString(this.justified.node.blockRoot), epoch: this.justified.epoch};
+    return this.head().justifiedCheckpoint;
   }
 
   public getFinalized(): Checkpoint {
     if (!this.finalized) {
-      return null;
+      return {epoch: 0, root: ZERO_HASH};
     }
-    return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
+    return this.head().finalizedCheckpoint;
   }
 
   /**
