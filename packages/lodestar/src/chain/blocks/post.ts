@@ -5,7 +5,6 @@ import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
-import {Epoch} from "@chainsafe/lodestar-types/lib";
 import {ILMDGHOST} from "../forkChoice";
 
 export function postProcess(

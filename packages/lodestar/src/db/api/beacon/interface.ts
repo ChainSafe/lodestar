@@ -3,7 +3,6 @@
  */
 
 import {
-  BeaconState,
   BLSPubkey,
   ValidatorIndex,
   SignedBeaconBlock,
