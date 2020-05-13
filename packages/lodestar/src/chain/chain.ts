@@ -13,7 +13,8 @@ import {
   ForkDigest,
   SignedBeaconBlock,
   Uint16,
-  Uint64
+  Uint64,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -93,6 +94,18 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(this.forkChoice.headBlockRoot());
   }
 
+  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
+    const finalizedCheckpoint = this.forkChoice.getFinalized();
+    if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
+      return this.db.blockArchive.get(slot);
+    }
+    const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+    if (!summary) {
+      return null;
+    }
+    return this.db.block.get(summary.blockRoot);
+  }
+
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.forkChoice.getFinalized();
   }
@@ -143,7 +156,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
     // Determine whether a genesis state already in
     // the database matches what we were provided
-    const storedGenesisBlock = await this.db.block.getBySlot(GENESIS_SLOT);
+    const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
     if (storedGenesisBlock !== null &&
       !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");

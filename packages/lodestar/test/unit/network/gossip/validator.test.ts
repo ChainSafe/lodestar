@@ -70,7 +70,7 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBySlot.calledOnce).to.be.false;
+      expect(chainStub.getBlockAtSlot.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - block is too old", async () => {
@@ -81,7 +81,7 @@ describe("GossipMessageValidator", () => {
       state.finalizedCheckpoint.epoch = 1000;
       dbStub.state.get.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBySlot.calledOnce).to.be.false;
+      expect(chainStub.getBlockAtSlot.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - prevent DOS", async () => {
@@ -89,9 +89,9 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBySlot.resolves(block);
+      chainStub.getBlockAtSlot.resolves(block);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(dbStub.block.getBySlot.calledOnce).to.be.true;
+      expect(chainStub.getBlockAtSlot.calledOnce).to.be.true;
       expect(dbStub.badBlock.has.calledOnce).to.be.false;
     });
 
@@ -100,7 +100,7 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBySlot.resolves(null);
+      chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(true);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(dbStub.badBlock.has.calledOnce).to.be.true;
@@ -112,7 +112,7 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBySlot.resolves(null);
+      chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(false);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
@@ -125,7 +125,7 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBySlot.resolves(null);
+      chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
       getBeaconProposerIndexStub.returns(1000);
@@ -138,7 +138,7 @@ describe("GossipMessageValidator", () => {
       dbStub.state.get.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
-      dbStub.block.getBySlot.resolves(null);
+      chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
       getBeaconProposerIndexStub.returns(block.message.proposerIndex);

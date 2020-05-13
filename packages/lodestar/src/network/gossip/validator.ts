@@ -74,8 +74,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const existingBLock = await this.db.block.getBySlot(signedBlock.message.slot);
-    if (existingBLock && existingBLock.message.proposerIndex === signedBlock.message.proposerIndex) {
+    const existingBlock = await this.chain.getBlockAtSlot(signedBlock.message.slot);
+    if (existingBlock && existingBlock.message.proposerIndex === signedBlock.message.proposerIndex) {
       // same proposer submitted twice
       return false;
     }

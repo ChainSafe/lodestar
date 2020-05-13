@@ -202,8 +202,8 @@ describe("sync req resp", function () {
     // block 6 does not exist
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
-    dbStub.block.getBySlot.onFirstCall().resolves(null);
-    dbStub.block.getBySlot.onSecondCall().resolves(block8);
+    chainStub.getBlockAtSlot.onFirstCall().resolves(null);
+    chainStub.getBlockAtSlot.onSecondCall().resolves(block8);
     let blockStream: AsyncIterable<ResponseBody>;
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;
