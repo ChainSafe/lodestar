@@ -57,7 +57,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<boolean> => {
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     const slot = signedBlock.message.slot;
     if (state.slot < slot) {
       processSlots(this.config, state, slot);
@@ -105,7 +105,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     const attestationData = attestation.data;
     const slot = attestationData.slot;
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     if (state.slot < slot) {
       processSlots(this.config, state, slot);
     }
@@ -140,7 +140,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const aggregateAndProof = signedAggregationAndProof.message;
     const aggregate = aggregateAndProof.aggregate;
     const attestationData = aggregate.data;
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     const slot = attestationData.slot;
     if (state.slot < slot) {
       processSlots(this.config, state, slot);
@@ -221,7 +221,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // skip attestation if its too old
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     return attestation.data.target.epoch >= state.finalizedCheckpoint.epoch;
   };
 
@@ -230,7 +230,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return false;
     }
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
     if (state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
@@ -243,7 +243,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
       return false;
     }
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     return isValidProposerSlashing(this.config, state, proposerSlashing);
   };
 
@@ -257,7 +257,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const state = await this.db.state.get(this.chain.forkChoice.headStateRoot());
+    const state = await this.chain.getHeadState();
     return isValidAttesterSlashing(this.config, state, attesterSlashing);
   };
 }

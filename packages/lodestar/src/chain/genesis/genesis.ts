@@ -2,6 +2,7 @@
  * @module chain/genesis
  */
 
+import {TreeBacked} from "@chainsafe/ssz";
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -33,7 +34,7 @@ export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
-  deposits: Deposit[]): BeaconState {
+  deposits: Deposit[]): TreeBacked<BeaconState> {
   const state = getGenesisBeaconState(
     config,
     eth1Timestamp - eth1Timestamp % config.params.MIN_GENESIS_DELAY + 2 * config.params.MIN_GENESIS_DELAY,
@@ -74,7 +75,7 @@ export function initializeBeaconStateFromEth1(
   // Set genesis validators root for domain separation and chain versioning
   state.genesisValidatorsRoot = config.types.BeaconState.fields.validators.hashTreeRoot(state.validators);
 
-  return state;
+  return state as TreeBacked<BeaconState>;
 }
 
 export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {

@@ -51,9 +51,8 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    //dbStub.block.getChainHead.resolves(parentBlock);
-    dbStub.state.get.resolves(config.types.BeaconState.clone(state));
-    dbStub.block.get.withArgs(chainStub.forkChoice.headBlockRoot()).resolves(parentBlock);
+    chainStub.getHeadState.resolves(config.types.BeaconState.clone(state));
+    chainStub.getHeadBlock.resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);

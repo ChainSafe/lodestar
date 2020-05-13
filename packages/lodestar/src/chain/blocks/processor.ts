@@ -42,7 +42,7 @@ export class BlockProcessor implements IService {
     forkChoice: ILMDGHOST,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
-    attestationProcessor: IAttestationProcessor
+    attestationProcessor: IAttestationProcessor,
   ) {
     this.config = config;
     this.logger = logger;
@@ -65,14 +65,23 @@ export class BlockProcessor implements IService {
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
       validateBlock(this.config, this.logger, this.db, this.forkChoice),
-      processBlock(this.config, this.db, this.logger, this.forkChoice, this.pendingBlocks, this.eventBus),
+      processBlock(
+        this.config,
+        this.logger,
+        this.db,
+        this.forkChoice,
+        this.pendingBlocks,
+        this.eventBus
+      ),
       postProcess(
         this.config,
-        this.db,
         this.logger,
+        this.db,
+        this.forkChoice,
         this.metrics,
         this.eventBus,
-        this.attestationProcessor)
+        this.attestationProcessor
+      )
     );
   }
 

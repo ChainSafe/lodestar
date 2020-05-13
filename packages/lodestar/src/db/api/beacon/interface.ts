@@ -13,17 +13,17 @@ import {
   AttestationRepository,
   AttesterSlashingRepository,
   BlockRepository,
-  ChainRepository,
   DepositDataRepository,
   DepositDataRootRepository,
   ProposerSlashingRepository,
-  StateRepository,
+  StateArchiveRepository,
   VoluntaryExitRepository,
   AggregateAndProofRepository,
   BlockArchiveRepository,
   BadBlockRepository,
   Eth1DataRepository,
 } from "./repositories";
+import {StateCache} from "./stateCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -32,19 +32,20 @@ import {
  */
 export interface IBeaconDb {
 
-  chain: ChainRepository;
-
-  // states
-  state: StateRepository;
-
   // bad blocks
   badBlock: BadBlockRepository;
 
   // unfinalized blocks
   block: BlockRepository;
 
+  // unfinalized states
+  stateCache: StateCache;
+
   // finalized blocks
   blockArchive: BlockArchiveRepository;
+
+  // finalized states
+  stateArchive: StateArchiveRepository;
 
   // op pool
   attestation: AttestationRepository;
@@ -67,22 +68,4 @@ export interface IBeaconDb {
   getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
-
-  /**
-   * Stores block and state and set them as chain head
-   */
-  storeChainHead(
-    block: SignedBeaconBlock,
-    state: BeaconState
-  ): Promise<void>;
-
-  /**
-   * Fetches block and state by root and sets them as chain head
-   * @param blockRoot
-   * @param stateRoot
-   */
-  updateChainHead(
-    blockRoot: Uint8Array,
-    stateRoot: Uint8Array
-  ): Promise<void>;
 }

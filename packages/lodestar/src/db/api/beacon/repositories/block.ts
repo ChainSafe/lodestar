@@ -4,7 +4,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
-import {ChainRepository} from "./chain";
 
 /**
  * Blocks by root
@@ -13,14 +12,10 @@ import {ChainRepository} from "./chain";
  */
 export class BlockRepository extends Repository<Uint8Array, SignedBeaconBlock> {
 
-  private chain: ChainRepository;
-
   public constructor(
     config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-    chain: ChainRepository) {
+    db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.block, config.types.SignedBeaconBlock);
-    this.chain = chain;
   }
 
   /**
