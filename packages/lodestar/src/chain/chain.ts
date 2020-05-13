@@ -221,6 +221,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         this.eth1.on("eth1Data", genesisListener);
       });
     }
+    // set metrics based on beacon state
+    this.metrics.currentSlot.set(state.slot);
+    this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
+    this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
+    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
 
