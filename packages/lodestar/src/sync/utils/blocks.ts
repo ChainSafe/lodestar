@@ -13,6 +13,9 @@ import {ILogger} from "@chainsafe/lodestar-utils";
  * @param targetSlot
  */
 export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
+  if(blocksPerChunk < 5) {
+    blocksPerChunk = 5;
+  }
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
   for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk) {
@@ -67,6 +70,9 @@ export async function getBlockRange(
         const peer = peerBalancer.next();
         try {
           const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+          if(chunkBlocks.length === 0) {
+            throw "received 0 blocks, try another peer";
+          }
           blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {
