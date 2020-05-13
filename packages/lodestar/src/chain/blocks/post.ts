@@ -34,16 +34,11 @@ export function postProcess(
           );
           // newly justified epoch
           if (preJustifiedEpoch < postState.currentJustifiedCheckpoint.epoch) {
-            logger.important(`Epoch ${postState.currentJustifiedCheckpoint.epoch} is justified!`);
-            metrics.previousJustifiedEpoch.set(preJustifiedEpoch);
-            metrics.currentJustifiedEpoch.set(postState.currentJustifiedCheckpoint.epoch);
-            eventBus.emit("justifiedCheckpoint", postState.currentJustifiedCheckpoint);
+            newJustifiedEpoch(logger, metrics, eventBus, postState);
           }
           // newly finalized epoch
           if (preFinalizedEpoch < postState.finalizedCheckpoint.epoch) {
-            logger.important(`Epoch ${postState.finalizedCheckpoint.epoch} is finalized!`);
-            metrics.currentFinalizedEpoch.set(postState.finalizedCheckpoint.epoch);
-            eventBus.emit("finalizedCheckpoint", postState.finalizedCheckpoint);
+            newFinalizedEpoch(logger, metrics, eventBus, postState);
           }
           metrics.currentEpochLiveValidators.set(
             Array.from(postState.validators).filter((v: Validator) => isActiveValidator(v, currentEpoch)).length
@@ -53,4 +48,27 @@ export function postProcess(
       return;
     })();
   };
+}
+
+function newJustifiedEpoch(
+  logger: ILogger,
+  metrics: IBeaconMetrics,
+  eventBus: ChainEventEmitter,
+  state: BeaconState
+): void {
+  logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified!`);
+  metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
+  metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
+  eventBus.emit("justifiedCheckpoint", state.currentJustifiedCheckpoint);
+}
+
+function newFinalizedEpoch(
+  logger: ILogger,
+  metrics: IBeaconMetrics,
+  eventBus: ChainEventEmitter,
+  state: BeaconState
+): void {
+  logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized!`);
+  metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+  eventBus.emit("finalizedCheckpoint", state.finalizedCheckpoint);
 }
