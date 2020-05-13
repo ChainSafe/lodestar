@@ -19,7 +19,7 @@ describe("BeaconChain", function() {
   beforeEach(async () => {
     dbStub = new StubbedBeaconDb(sandbox, config);
     eth1 = new InteropEth1Notifier();
-    metrics = sandbox.createStubInstance(BeaconMetrics);
+    metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state = generateState();
     dbStub.stateCache.get.resolves(state as any);
