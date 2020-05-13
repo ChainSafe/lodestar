@@ -12,11 +12,15 @@ export class StateCache {
     this.cache = {};
   }
   public async get(root: ByteVector): Promise<TreeBacked<BeaconState> | null> {
-    return this.cache[toHexString(root)] || null;
+    const state = this.cache[toHexString(root)];
+    if (!state) {
+      return null;
+    }
+    return state.clone();
   }
 
   public async add(state: TreeBacked<BeaconState>): Promise<void> {
-    this.cache[toHexString(state.hashTreeRoot())] = state;
+    this.cache[toHexString(state.hashTreeRoot())] = state.clone();
   }
 
   public async delete(root: ByteVector): Promise<void> {
