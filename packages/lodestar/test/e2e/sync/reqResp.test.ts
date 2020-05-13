@@ -88,7 +88,7 @@ describe("[sync] rpc", function () {
     repsA = new ReputationStore();
 
     const db = new StubbedBeaconDb(sandbox, config);
-    db.stateCache.get.returns(state as any);
+    db.stateCache.get.resolves(state as any);
     db.block.get.resolves(block);
     db.blockArchive.get.resolves(block);
     db.blockArchive.valuesStream.returns(async function * () {

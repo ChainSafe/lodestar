@@ -40,7 +40,7 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
-    dbStub.stateCache.get.returns(state);
+    dbStub.stateCache.get.resolves(state);
     dbStub.block.has.resolves(true);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.true;
@@ -52,7 +52,7 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
-    dbStub.stateCache.get.returns(state);
+    dbStub.stateCache.get.resolves(state);
     dbStub.block.has.resolves(false);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.false;
@@ -66,8 +66,8 @@ describe("AttestationProcessor", function () {
       const block = generateEmptySignedBlock();
       dbStub.block.get.resolves(block);
       const state = generateState();
-      dbStub.stateCache.get.returns(state);
-      forkChoiceStub.getJustified.returns({})
+      dbStub.stateCache.get.resolves(state);
+      forkChoiceStub.getJustified.returns({});
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
@@ -85,7 +85,7 @@ describe("AttestationProcessor", function () {
       block.message.slot = 1;
       dbStub.block.get.resolves(block);
       const state = generateState();
-      dbStub.stateCache.get.returns(state);
+      dbStub.stateCache.get.resolves(state);
       forkChoiceStub.getJustified.returns({})
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
@@ -103,7 +103,7 @@ describe("AttestationProcessor", function () {
     dbStub.block.get.resolves(block);
     const state = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
-    dbStub.stateCache.get.returns(state);
+    dbStub.stateCache.get.resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     getAttestingIndicesStub.returns([0]);
     state.balances = [];

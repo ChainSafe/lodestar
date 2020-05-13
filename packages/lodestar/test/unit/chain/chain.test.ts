@@ -22,7 +22,7 @@ describe("BeaconChain", function() {
     metrics = sandbox.createStubInstance(BeaconMetrics);
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state = generateState();
-    dbStub.stateCache.get.returns(state as any);
+    dbStub.stateCache.get.resolves(state as any);
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
     await chain.start();

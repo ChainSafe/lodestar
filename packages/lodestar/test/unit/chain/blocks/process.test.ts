@@ -64,7 +64,7 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.stateCache.get.returns(null);
+    dbStub.stateCache.get.resolves(null);
     const result = await pipe(
       [receivedJob],
       processBlock(
@@ -86,7 +86,7 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.stateCache.get.returns(generateState() as any);
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.throws();
     const result = await pipe(
       [receivedJob],
@@ -109,7 +109,7 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.stateCache.get.returns(generateState() as any);
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(
@@ -140,7 +140,7 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.stateCache.get.returns(generateState() as any);
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));

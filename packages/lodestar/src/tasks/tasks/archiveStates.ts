@@ -39,14 +39,16 @@ export class ArchiveStatesTask implements ITask {
       `Started archiving states (finalized epoch #${this.finalizedCheckpoint.epoch})...`
     );
     // store the last available state in the finalized epoch
-    const finalizedState = this.db.stateCache.values()
+    const finalizedState = (await this.db.stateCache.values())
       .filter((state) => computeEpochAtSlot(this.config, state.slot) === this.finalizedCheckpoint.epoch)
       .sort((a, b) => b.slot - a.slot)[0];
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
-    this.db.stateCache.values()
-      .filter((state) => state.slot < finalizedState.slot)
-      .forEach((state) => this.db.stateCache.delete(state.hashTreeRoot()));
+    await this.db.stateCache.batchDelete(
+      (await this.db.stateCache.values())
+        .filter((state) => state.slot < finalizedState.slot)
+        .map((state) => state.hashTreeRoot())
+    );
     this.logger.info(
       `Archiving of finalized states completed (finalized epoch #${this.finalizedCheckpoint.epoch})`);
   }

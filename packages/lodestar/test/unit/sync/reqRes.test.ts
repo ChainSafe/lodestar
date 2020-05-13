@@ -103,7 +103,7 @@ describe("sync req resp", function () {
       latestMetadata: null, latestStatus: null, score: 0
     });
     reqRespStub.sendResponse.resolves(0);
-    dbStub.stateCache.get.returns(generateState() as any);
+    dbStub.stateCache.get.resolves(generateState() as any);
     try {
       await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
@@ -159,7 +159,7 @@ describe("sync req resp", function () {
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
-    dbStub.stateCache.get.returns(state as any);
+    dbStub.stateCache.get.resolves(state as any);
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });

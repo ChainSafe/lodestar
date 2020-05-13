@@ -11,23 +11,27 @@ export class StateCache {
   constructor() {
     this.cache = {};
   }
-  public get(root: ByteVector): TreeBacked<BeaconState> | undefined {
-    return this.cache[toHexString(root)];
+  public async get(root: ByteVector): Promise<TreeBacked<BeaconState> | null> {
+    return this.cache[toHexString(root)] || null;
   }
 
-  public add(state: TreeBacked<BeaconState>): void {
+  public async add(state: TreeBacked<BeaconState>): Promise<void> {
     this.cache[toHexString(state.hashTreeRoot())] = state;
   }
 
-  public delete(root: ByteVector): void {
+  public async delete(root: ByteVector): Promise<void> {
     delete this.cache[toHexString(root)];
+  }
+
+  public async batchDelete(roots: ByteVector[]): Promise<void> {
+    await Promise.all(roots.map((root) => this.delete(root)));
   }
 
   public clear(): void {
     this.cache = {};
   }
 
-  public values(): TreeBacked<BeaconState>[] {
+  public async values(): Promise<TreeBacked<BeaconState>[]> {
     return Object.values(this.cache);
   }
 }
