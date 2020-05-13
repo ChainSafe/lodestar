@@ -11,13 +11,14 @@ export interface ILMDGHOST {
   start(genesisTime: number, clock: IBeaconClock): Promise<void>;
   stop(): Promise<void>;
   addBlock(info: BlockSummary): void;
-  addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
+  addAttestation(blockRoot: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
   head(): BlockSummary;
   headBlockSlot(): Slot;
   headBlockRoot(): Uint8Array;
   headStateRoot(): Uint8Array;
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;
+  getBlockSummaryAtSlot(slot: Slot): BlockSummary;
 }
 
 /*
