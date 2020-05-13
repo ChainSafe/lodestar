@@ -26,7 +26,7 @@ import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import {ILMDGHOST, ArrayDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
@@ -77,7 +77,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.eth1 = eth1;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = forkChoice || new StatefulDagLMDGHOST(config);
+    this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
@@ -117,6 +117,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
+    await this.restoreForkChoice();
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
@@ -191,6 +192,30 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : MAX_VERSION,
       nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
     };
+  }
+
+  /**
+   * Restore forkchoice state from database.
+   * TODO: if performance is not good, we may store the whole forkchoice to db on stop()
+   * and compare that against last block in db.
+   */
+  public async restoreForkChoice(): Promise<void> {
+    const start = Date.now();
+    const blocks = await this.db.block.getAll() || [];
+    for (const block of blocks) {
+      const stateRoot = block.message.stateRoot.valueOf() as Uint8Array;
+      const state = await this.db.state.get(stateRoot);
+      await this.forkChoice.addBlock({
+        slot: block.message.slot,
+        blockRoot: this.config.types.BeaconBlock.hashTreeRoot(block.message),
+        stateRoot: stateRoot,
+        parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
+        justifiedCheckpoint: state.currentJustifiedCheckpoint,
+        finalizedCheckpoint: state.finalizedCheckpoint
+      });
+      await this.attestationProcessor.receiveBlock(block);
+    }
+    this.logger.info(`Restore forkchoice in ${Math.floor(Date.now() - start)/1000} seconds, numblock=${blocks.length}`);
   }
 
   private async handleForkDigestChanged(): Promise<void> {
