@@ -30,7 +30,11 @@ export class HttpMetricsServer implements IMetricsServer {
   }
   public async stop(): Promise<void> {
     if (this.opts.enabled) {
-      await promisify(this.http.close.bind(this.http))();
+      try {
+        await promisify(this.http.close.bind(this.http))();
+      } catch (e) {
+        this.logger.warn("Failed to stop metrics server. Error: " + e.message);
+      }
     }
   }
 
