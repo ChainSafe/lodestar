@@ -19,8 +19,10 @@ export function postProcess(
   return async (source) => {
     return (async function() {
       for await(const {block, preState, postState} of source) {
-        await db.processBlockOperations(block);
-        await attestationProcessor.receiveBlock(block);
+        await Promise.all([
+          db.processBlockOperations(block),
+          attestationProcessor.receiveBlock(block),
+        ]);
         metrics.currentSlot.set(block.message.slot);
         eventBus.emit("processedBlock", block);
         const preSlot = preState.slot;
