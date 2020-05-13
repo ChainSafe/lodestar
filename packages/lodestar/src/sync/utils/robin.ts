@@ -8,8 +8,14 @@ export class RoundRobinArray<T> {
     this.array = this.shuffle(array);
   }
 
-  public next(): T {
-    return this.array[this.index++];
+  public next(): T|null {
+    const item = this.array[this.index++];
+    if(item) {
+      return item;
+    } {
+      this.index = 0;
+      return this.array[this.index];
+    }
   }
 
   private shuffle(array: T[]): T[] {

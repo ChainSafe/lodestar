@@ -67,6 +67,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
         this.network.reqResp.status(peerInfo, myStatus)));
+
   }
 
   public async stop(): Promise<void> {

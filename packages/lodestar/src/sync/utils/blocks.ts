@@ -51,9 +51,10 @@ export async function getBlockRange(
   rpc: IReqResp,
   peers: PeerInfo[],
   range: ISlotRange,
-  blocksPerChunk = 10,
+  blocksPerChunk?: number,
   maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
+  blocksPerChunk = blocksPerChunk || range.end - range.start;
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched

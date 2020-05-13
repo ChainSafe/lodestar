@@ -61,11 +61,12 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
 
 
 export function targetSlotToBlockChunks(
-  config: IBeaconConfig, chain: IBeaconChain
+  config: IBeaconConfig, chain: IBeaconChain, getInitialSyncPeers: (minSlot: Slot) => Promise<PeerInfo[]>
 ): (source: AsyncIterable<Slot>) => AsyncGenerator<ISlotRange> {
   return (source) => {
     return (async function*() {
       for await (const targetSlot of source) {
+        await getInitialSyncPeers(targetSlot);
         yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1, targetSlot);
       }
     })();
@@ -79,27 +80,43 @@ export function fetchBlockChunks(
   chain: IBeaconChain,
   reqResp: IReqResp,
   getPeers: (minSlot: Slot) => Promise<PeerInfo[]>,
-  blocksPerChunk = 10
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  maxBlocksPerChunk?: number
 ): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {
   return (source) => {
     return (async function*() {
-      for await (const blockRange of source) {
+      for await (const slotRange of source) {
         let peers = await getPeers(
-          blockRange.end
+          slotRange.end
         );
-        while (peers.length === 0) {
+        let retry = 0;
+        while (peers.length === 0 && retry < 5) {
           logger.info("Waiting for peers...");
-          await sleep(3000);
+          await sleep(6000);
           peers = await getPeers(
-            blockRange.end
+            slotRange.end
           );
+          retry++;
         }
-        yield await getBlockRange(
-          logger,
-          reqResp,
-          peers,
-          blockRange,
-          blocksPerChunk
+        if(peers.length === 0) {
+          logger.error("Can't find new peers, stopping sync");
+          return yield [];
+        }
+        const totalBlocks = slotRange.end - slotRange.start;
+        const chunks = chunkify(Math.ceil(totalBlocks / peers.length), slotRange.start, slotRange.end);
+        yield* chunks.map((chunk) => {
+          try {
+            return getBlockRange(
+              logger,
+              reqResp,
+              peers,
+              chunk
+            );
+          } catch (e) {
+            logger.debug("Failed to get block range " + JSON.stringify(chunk) + ". Error: " + e.message);
+            return [];
+          }
+        }
         );
       }
     })();

@@ -82,7 +82,7 @@ export class NaiveRegularSync implements IRegularSync {
   private async sync(): Promise<void> {
     await pipe(
       this.targetSlotSource,
-      targetSlotToBlockChunks(this.config, this.chain),
+      targetSlotToBlockChunks(this.config, this.chain, this.getSyncPeers),
       fetchBlockChunks(this.logger, this.chain, this.network.reqResp, this.getSyncPeers, this.opts.blockPerChunk),
       processSyncBlocks(this.config, this.chain, this.logger)
     );

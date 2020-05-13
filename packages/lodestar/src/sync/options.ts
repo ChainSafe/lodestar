@@ -10,7 +10,7 @@ export interface ISyncOptions {
 
 
 const config: ISyncOptions = {
-  minPeers: 3,
+  minPeers: 2,
   //2 epochs
   maxSlotImport: 64,
   blockPerChunk: 20
