@@ -3,7 +3,7 @@
  */
 
 import {EventEmitter} from "events";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
@@ -13,7 +13,8 @@ import {
   ForkDigest,
   SignedBeaconBlock,
   Uint16,
-  Uint64
+  Uint64,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -81,16 +82,28 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
-      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor
+      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
     );
   }
 
   public async getHeadState(): Promise<BeaconState|null> {
-    return this.db.state.get(this.forkChoice.headStateRoot());
+    return this.db.stateCache.get(this.forkChoice.headStateRoot());
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
     return this.db.block.get(this.forkChoice.headBlockRoot());
+  }
+
+  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
+    const finalizedCheckpoint = this.forkChoice.getFinalized();
+    if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
+      return this.db.blockArchive.get(slot);
+    }
+    const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+    if (!summary) {
+      return null;
+    }
+    return this.db.block.get(summary.blockRoot);
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
@@ -106,7 +119,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.clock.start();
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
-    this._currentForkDigest = await this.getCurrentForkDigest();
+    this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
   }
 
@@ -133,7 +146,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.blockProcessor.receiveBlock(signedBlock, trusted);
   }
 
-  public async initializeBeaconChain(genesisState: BeaconState): Promise<void> {
+  public async initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void> {
     const genesisBlock = getEmptyBlock();
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = stateRoot;
@@ -141,20 +154,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`Initializing beacon chain with state root ${toHexString(stateRoot)}`
             + ` and genesis block root ${toHexString(blockRoot)}`
     );
-    // Determine whether a genesis state already in
-    // the database matches what we were provided
-    const storedGenesisBlock = await this.db.block.getBySlot(GENESIS_SLOT);
-    if (storedGenesisBlock !== null &&
-      !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
-      throw new Error("A genesis state with different configuration was detected! Please clean the database.");
-    }
-    await Promise.all([
-      this.db.storeChainHead({message: genesisBlock, signature: EMPTY_SIGNATURE}, genesisState),
-      this.db.chain.setJustifiedBlockRoot(blockRoot),
-      this.db.chain.setFinalizedBlockRoot(blockRoot),
-      this.db.chain.setJustifiedStateRoot(stateRoot),
-      this.db.chain.setFinalizedStateRoot(stateRoot),
-    ]);
     const justifiedFinalizedCheckpoint = {
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, genesisBlock.slot)
@@ -167,6 +166,18 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });
+    this.db.stateCache.add(genesisState);
+    // Determine whether a genesis state already in
+    // the database matches what we were provided
+    const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
+    if (storedGenesisBlock !== null &&
+      !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)) {
+      throw new Error("A genesis state with different configuration was detected! Please clean the database.");
+    }
+    await Promise.all([
+      this.db.block.add({message: genesisBlock, signature: EMPTY_SIGNATURE}),
+      this.db.stateArchive.add(genesisState),
+    ]);
     this.logger.info("Beacon chain initialized");
   }
 
@@ -194,10 +205,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   // If we don't have a state yet, we have to wait for genesis state
   private async waitForState(): Promise<BeaconState> {
-    let state: BeaconState;
-    try {
-      state = await this.db.state.getLatest();
-    } catch (err) {
+    let state: BeaconState = await this.db.stateArchive.lastValue();
+    if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
       state = await new Promise((resolve) => {
         const genesisListener = async (timestamp: number, eth1Data: Eth1Data): Promise<void> => {
@@ -210,6 +219,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         this.eth1.on("eth1Data", genesisListener);
       });
     }
+    // set metrics based on beacon state
+    this.metrics.currentSlot.set(state.slot);
+    this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
+    this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
+    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
 

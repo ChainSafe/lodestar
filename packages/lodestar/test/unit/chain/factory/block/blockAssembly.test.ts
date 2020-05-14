@@ -35,8 +35,8 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     const head = chainStub.forkChoice.headBlockRoot();
-    beaconDB.block.get.withArgs(head).resolves(generateEmptySignedBlock());
-    beaconDB.state.get.resolves(generateState({slot: 1}));
+    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
+    chainStub.getHeadState.resolves(generateState({slot: 1}) as any);
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
@@ -46,8 +46,8 @@ describe("block assembly", function () {
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(beaconDB.state.get.calledOnce).to.be.true;
-      expect(beaconDB.block.get.calledOnceWith(head));
+      expect(chainStub.getHeadState.calledOnce).to.be.true;
+      expect(chainStub.getHeadBlock.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);

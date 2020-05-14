@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BeaconState, BLSPubkey, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -12,22 +12,22 @@ import {
   BadBlockRepository,
   BlockRepository,
   BlockArchiveRepository,
-  ChainRepository,
   DepositDataRepository,
   DepositDataRootRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
-  StateRepository,
+  StateArchiveRepository,
   VoluntaryExitRepository
 } from "./repositories";
+import {StateCache} from "./stateCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
-  public chain: ChainRepository;
-  public state: StateRepository;
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
+  public stateCache: StateCache;
   public blockArchive: BlockArchiveRepository;
+  public stateArchive: StateArchiveRepository;
 
   public attestation: AttestationRepository;
   public aggregateAndProof: AggregateAndProofRepository;
@@ -41,11 +41,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
-    this.chain = new ChainRepository(this.config, this.db);
-    this.state = new StateRepository(this.config, this.db, this.chain);
     this.badBlock = new BadBlockRepository(this.config, this.db);
-    this.block = new BlockRepository(this.config, this.db, this.chain);
+    this.block = new BlockRepository(this.config, this.db);
+    this.stateCache = new StateCache();
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
+    this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
     this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
@@ -56,46 +56,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
-  public async storeChainHead(
-    signedBlock: SignedBeaconBlock,
-    state: BeaconState
-  ): Promise<void> {
-    await Promise.all([
-      this.block.add(signedBlock),
-      this.state.put(signedBlock.message.stateRoot.valueOf() as Uint8Array, state),
-    ]);
-    const slot = signedBlock.message.slot;
-    await Promise.all([
-      this.chain.setLatestStateRoot(signedBlock.message.stateRoot.valueOf() as Uint8Array),
-      this.chain.setChainHeadSlot(slot)
-    ]);
-  }
-
-  public async updateChainHead(
-    blockRoot: Uint8Array,
-    stateRoot: Uint8Array
-  ): Promise<void> {
-    const [storedBlock, storedState] = await Promise.all([
-      this.block.get(blockRoot),
-      this.state.get(stateRoot),
-    ]);
-    // block should already be set
-    if(!storedBlock) {
-      throw new Error("unknown block root");
-    }
-    // state should already be set
-    if(!storedState) {
-      throw new Error("unknown state root");
-    }
-    const slot = storedBlock.message.slot;
-    await Promise.all([
-      this.chain.setLatestStateRoot(storedBlock.message.stateRoot.valueOf() as Uint8Array),
-      this.chain.setChainHeadSlot(slot)
-    ]);
-  }
-
   public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
-    const state = await this.state.getLatest();
+    const state = await this.stateArchive.lastValue();
     //TODO: cache this (hashmap)
     return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
   }

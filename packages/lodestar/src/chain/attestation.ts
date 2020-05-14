@@ -41,7 +41,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const state = await this.db.state.get(this.forkChoice.headStateRoot());
+      const state = await this.db.stateCache.get(this.forkChoice.headStateRoot());
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
@@ -85,7 +85,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
-    const checkpointState = await this.db.state.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
+    const checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
     const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;

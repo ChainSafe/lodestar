@@ -44,9 +44,12 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(
-        config, dbStub,
+        config,
         sinon.createStubInstance(WinstonLogger),
-        forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub
+        dbStub,
+        forkChoiceStub,
+        blockPoolStub as unknown as BlockPool,
+        eventBusStub
       ),
       collect
     );
@@ -61,12 +64,13 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.state.get.resolves(null);
+    dbStub.stateCache.get.resolves(null);
     const result = await pipe(
       [receivedJob],
       processBlock(
-        config, dbStub,
+        config,
         sinon.createStubInstance(WinstonLogger),
+        dbStub,
         forkChoiceStub,
         blockPoolStub as unknown as BlockPool, eventBusStub
       ),
@@ -82,13 +86,14 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.state.get.resolves(generateState());
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.throws();
     const result = await pipe(
       [receivedJob],
       processBlock(
-        config, dbStub,
+        config,
         sinon.createStubInstance(WinstonLogger),
+        dbStub,
         forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub
       ),
       collect
@@ -104,17 +109,18 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.state.get.resolves(generateState());
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
-    dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
+    //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(
       Buffer.alloc(32,1)
     );
     const result = await pipe(
       [receivedJob],
       processBlock(
-        config, dbStub,
+        config,
         sinon.createStubInstance(WinstonLogger),
+        dbStub,
         forkChoiceStub, blockPoolStub as unknown as BlockPool,
         eventBusStub
       ),
@@ -123,9 +129,7 @@ describe("block process stream", function () {
     expect(result).to.have.length(1);
     expect(dbStub.badBlock.put.notCalled).to.be.true;
     expect(dbStub.block.put.calledOnce).to.be.true;
-    expect(dbStub.state.put.calledOnce).to.be.true;
-    // @ts-ignore
-    expect(dbStub.updateChainHead.notCalled).to.be.true;
+    expect(dbStub.stateCache.add.calledOnce).to.be.true;
     expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;
   });
 
@@ -136,9 +140,9 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
-    dbStub.state.get.resolves(generateState());
+    dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
-    dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
+    //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
     dbStub.depositData.values.resolves([]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
@@ -146,8 +150,9 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(
-        config, dbStub,
+        config,
         sinon.createStubInstance(WinstonLogger),
+        dbStub,
         forkChoiceStub, blockPoolStub as unknown as BlockPool,
         eventBusStub
       ),
@@ -156,9 +161,7 @@ describe("block process stream", function () {
     expect(result).to.have.length(1);
     expect(dbStub.badBlock.put.notCalled).to.be.true;
     expect(dbStub.block.put.calledOnce).to.be.true;
-    expect(dbStub.state.put.calledOnce).to.be.true;
-    // @ts-ignore
-    expect(dbStub.updateChainHead.calledOnce).to.be.true;
+    expect(dbStub.stateCache.add.calledOnce).to.be.true;
     expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;
   });
 });

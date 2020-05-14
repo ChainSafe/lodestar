@@ -79,6 +79,30 @@ export class Node {
     this.children = {};
   }
 
+  public toBlockSummary(): BlockSummary {
+    const parent = this.parent;
+    let parentRootBuf: Uint8Array;
+    if(parent && parent.blockRoot) {
+      parentRootBuf = fromHexString(parent.blockRoot);
+    } else {
+      parentRootBuf = ZERO_HASH;
+    }
+    return {
+      slot: this.slot,
+      blockRoot: fromHexString(this.blockRoot),
+      parentRoot: parentRootBuf,
+      stateRoot: this.stateRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: {
+        epoch: this.justifiedCheckpoint.epoch,
+        root: fromHexString(this.justifiedCheckpoint.rootHex)
+      },
+      finalizedCheckpoint: {
+        epoch: this.finalizedCheckpoint.epoch,
+        root: fromHexString(this.finalizedCheckpoint.rootHex)
+      }
+    };
+  }
+
   /**
    * Compare two nodes for equality
    */
@@ -382,32 +406,14 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   public head(): BlockSummary {
+    return this.headNode().toBlockSummary();
+  }
+  public headNode(): Node {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
     }
-    const headInfo = this.justified.node.bestTarget;
-    const parent = headInfo.parent;
-    let parentRootBuf: Uint8Array;
-    if(parent && parent.blockRoot) {
-      parentRootBuf = fromHexString(parent.blockRoot);
-    } else {
-      parentRootBuf = ZERO_HASH;
-    }
-    return {
-      slot: headInfo.slot,
-      blockRoot: fromHexString(headInfo.blockRoot),
-      parentRoot: parentRootBuf,
-      stateRoot: headInfo.stateRoot.valueOf() as Uint8Array,
-      justifiedCheckpoint: {
-        epoch: headInfo.justifiedCheckpoint.epoch,
-        root: fromHexString(headInfo.justifiedCheckpoint.rootHex)
-      },
-      finalizedCheckpoint: {
-        epoch: headInfo.finalizedCheckpoint.epoch,
-        root: fromHexString(headInfo.finalizedCheckpoint.rootHex)
-      }
-    };
+    return this.justified.node.bestTarget;
   }
 
   public headStateRoot(): Uint8Array {
@@ -420,6 +426,19 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   public headBlockSlot(): Slot {
     return this.head().slot;
+  }
+
+  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+    const head = this.headNode();
+    let node = head;
+    // navigate from the head node, up the chain until either the slot is found or the slot is passed
+    while(node.slot !== slot) {
+      if (node.slot < slot) {
+        return null;
+      }
+      node = node.parent;
+    }
+    return node.toBlockSummary();
   }
 
   // To address the bouncing attack, only update conflicting justified

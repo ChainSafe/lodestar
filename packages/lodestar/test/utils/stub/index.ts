@@ -2,8 +2,10 @@ import {SinonStubbedInstance} from "sinon";
 
 import {ILMDGHOST, IBeaconChain} from "../../../src/chain";
 
-export interface StubbedChain extends IBeaconChain {
+interface IStubbedChain extends IBeaconChain {
   forkChoice: SinonStubbedInstance<ILMDGHOST>;
 }
+
+export type StubbedChain = IStubbedChain & SinonStubbedInstance<IBeaconChain>;
 
 export * from "./beaconDb";

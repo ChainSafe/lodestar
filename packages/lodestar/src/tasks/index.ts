@@ -8,6 +8,7 @@ import {IBeaconDb} from "../db/api";
 import {IBeaconChain} from "../chain";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
+import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
@@ -59,6 +60,7 @@ export class TasksService implements IService {
 
   private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {
     new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
+    new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
   };
 
 }

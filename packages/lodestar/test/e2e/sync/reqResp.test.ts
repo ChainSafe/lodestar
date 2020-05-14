@@ -58,6 +58,7 @@ describe("[sync] rpc", function () {
       state,
       config
     });
+    chain.getBlockAtSlot = sinon.stub().resolves(block);
     const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(getBlockSummary({
@@ -86,12 +87,9 @@ describe("[sync] rpc", function () {
     ]);
     repsA = new ReputationStore();
 
-    const db = new StubbedBeaconDb(sandbox);
-    db.state.get.resolves(state);
-    db.chain.getChainHeadSlot.resolves(0);
-    //db.block.getChainHead.resolves(block);
+    const db = new StubbedBeaconDb(sandbox, config);
+    db.stateCache.get.resolves(state as any);
     db.block.get.resolves(block);
-    db.block.getBySlot.resolves(block);
     db.blockArchive.get.resolves(block);
     db.blockArchive.valuesStream.returns(async function * () {
       yield block;
@@ -148,7 +146,7 @@ describe("[sync] rpc", function () {
     });
     await new Promise((resolve, reject) => {
       // if there is goodbye request from B
-      netA.reqResp.once("request", reject);
+      netA.reqResp.once("request", (a, b, c) => reject([a, b, c]));
       setTimeout(resolve, 2000);
     });
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
