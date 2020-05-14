@@ -165,11 +165,11 @@ export function validateBlocks(
  */
 export function processSyncBlocks(
   config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, trusted = false
-): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot> {
+): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot|null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let headRoot = chain.forkChoice.headBlockRoot();
-    let headSlot = 0;
+    let lastProcessedSlot: Slot|null = null;
     for await (const blocks of source) {
       logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
       blockBuffer.push(...blocks);
@@ -180,13 +180,13 @@ export function processSyncBlocks(
         if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
           await chain.receiveBlock(block, trusted);
           headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
-          headSlot = block.message.slot;
+          lastProcessedSlot = block.message.slot;
         } else {
           blockBuffer.unshift(block);
           break;
         }
       }
     }
-    return headSlot;
+    return lastProcessedSlot;
   };
 }

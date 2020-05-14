@@ -11,16 +11,12 @@ import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../inte
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
 import {toHexString} from "@chainsafe/ssz";
 import {ISlotRange} from "../../interface";
-import {
-  fetchBlockChunks,
-  getCommonFinalizedCheckpoint,
-  getStatusFinalizedCheckpoint,
-  processSyncBlocks
-} from "../../utils";
+import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
+import {GENESIS_EPOCH} from "../../../constants";
 
 export class FastSync
   extends (EventEmitter as { new(): InitialSyncEventEmitter })
@@ -62,12 +58,18 @@ export class FastSync
     this.chain.on("processedCheckpoint", this.checkSyncCompleted);
     this.chain.on("processedBlock", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
+    this.blockImportTarget = this.chain.forkChoice.headBlockSlot();
     this.targetCheckpoint = getCommonFinalizedCheckpoint(
       this.config,
       this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
     );
-    if(!this.targetCheckpoint || this.targetCheckpoint.epoch == 0) {
+    if(
+      !this.targetCheckpoint
+        || this.targetCheckpoint.epoch == GENESIS_EPOCH
+        || this.targetCheckpoint.epoch <= computeEpochAtSlot(this.config, this.blockImportTarget)
+    ) {
       this.logger.info("No peers with higher finalized epoch");
+      await this.stop();
       return;
     }
     this.setBlockImportTarget();

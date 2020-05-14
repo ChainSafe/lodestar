@@ -71,15 +71,15 @@ export async function getBlockRange(
         const peer = peerBalancer.next();
         try {
           const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
-          if(chunkBlocks.length === 0) {
-            throw new Error("received 0 blocks, try another peer");
+          if(chunkBlocks.length > 0) {
+            blocks = blocks.concat(chunkBlocks);
           }
-          blocks = blocks.concat(chunkBlocks);
           return null;
         } catch (e) {
           logger.debug(`Failed to obtain chunk ${JSON.stringify(chunk)} `
               +`from peer ${peer.id.toB58String()}. Error: ${e.message}`
           );
+          await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }
@@ -89,7 +89,6 @@ export async function getBlockRange(
     if(retry > maxRetry) {
       logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
     }
-    await sleep(2000);
   }
   return sortBlocks(blocks);
 }

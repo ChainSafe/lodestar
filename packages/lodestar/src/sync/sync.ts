@@ -3,7 +3,7 @@ import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import {CommitteeIndex, Root, SignedBeaconBlock, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
@@ -51,6 +51,7 @@ export class BeaconSync implements IBeaconSync {
       new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
+    this.logger.level = LogLevel.verbose;
   }
 
   public async start(): Promise<void> {
