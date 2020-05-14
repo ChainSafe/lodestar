@@ -76,6 +76,7 @@ describe("beacon cli", function() {
       preset: "minimal",
       eth1: "ganache",
       peerId: peerIdPath,
+      autoDial: "false",
       eth1BlockNum: block.number.toString(),
       eth1RpcUrl: eth1Network.rpcUrl(),
       networkId: "999",

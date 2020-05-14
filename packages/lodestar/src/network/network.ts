@@ -178,6 +178,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     const conn = this.getConnection(peerInfo);
     this.metrics.peers.inc();
     this.logger.verbose("peer connected " + peerInfo.id.toB58String() + " " + conn.stat.direction);
+    //tmp fix, we will just do double status exchange but nothing major
     this.emit("peer:connect", peerInfo, "outbound");
   };
 

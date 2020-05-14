@@ -24,6 +24,7 @@ describe("sync 2 dev nodes", function() {
       genesisState,
       validators: "8",
       preset: "minimal",
+      autoDial: "false",
       validatorCount: "8",
       rest: "true",
       restPort: "9596"
@@ -37,6 +38,8 @@ describe("sync 2 dev nodes", function() {
     const dev2CmdOptions = {
       preset: "minimal",
       genesisState,
+      minPeers: "1",
+      autoDial: "false",
       multiaddrs: "/ip4/127.0.0.1/tcp/30607",
       bindAddr: "/ip4/0.0.0.0/udp/5502",
       rest: "true",

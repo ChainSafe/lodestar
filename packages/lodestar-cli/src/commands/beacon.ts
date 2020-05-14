@@ -26,6 +26,7 @@ export interface IBeaconCommandOptions {
   forkFile?: string;
   configFile?: string;
   preset?: string;
+  autoDial?: string;
   loggingLevel?: string;
   eth1BlockNum?: string;
   // @ts-ignore
@@ -84,7 +85,9 @@ export class BeaconNodeCommand implements ICliCommand {
       bootEnrs: [] as ENR[]};
     const discv5 = nodeOptions.network? Object.assign(defaultDiscv5Opt, nodeOptions.network.discv5) : defaultDiscv5Opt;
     const libp2pOpt = nodeOptions.network? Object.assign(nodeOptions.network, {discv5}) : {discv5};
-    const libp2p = await createNodeJsLibp2p(peerId, libp2pOpt);
+    const libp2p = await createNodeJsLibp2p(
+      peerId, libp2pOpt, !(cmdOptions.autoDial && cmdOptions.autoDial === "false")
+    );
     const config = cmdOptions.config
       ? cmdOptions.config
       : cmdOptions.preset === "minimal" ? minimalConfig : mainnetConfig;

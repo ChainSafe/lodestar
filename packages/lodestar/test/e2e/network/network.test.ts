@@ -41,7 +41,7 @@ describe("[network] network", function () {
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
-  const validator = sinon.createStubInstance(GossipMessageValidator);
+  const validator = {} as GossipMessageValidator;
   validator.isValidIncomingBlock = sinon.stub();
   validator.isValidIncomingAggregateAndProof = sinon.stub();
   validator.isValidIncomingUnaggregatedAttestation = sinon.stub();
@@ -140,6 +140,7 @@ describe("[network] network", function () {
     await netA.connect(netB.peerInfo);
     await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // @ts-ignore
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -192,6 +193,7 @@ describe("[network] network", function () {
       });
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // @ts-ignore
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -212,6 +214,7 @@ describe("[network] network", function () {
       netA.gossip.subscribeToAttestation(forkDigest, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // @ts-ignore
     validator.isValidIncomingUnaggregatedAttestation.resolves(true);
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
@@ -233,6 +236,7 @@ describe("[network] network", function () {
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
     attestation.data.index = 0;
+    // @ts-ignore
     validator.isValidIncomingCommitteeAttestation.resolves(true);
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
@@ -247,7 +251,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    netB.reqResp.once("request", (peerId, method, requestId, request) => {
+    netB.reqResp.once("request", (peerId, method, requestId) => {
       netB.reqResp.sendResponse(requestId, null, netB.metadata);
     });
 

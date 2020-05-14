@@ -34,6 +34,7 @@ export interface IDevCommandOptions {
   genesisTime?: string;
   validatorCount?: string;
   genesisState?: string;
+  minPeers?: string;
   preset?: string;
   validators?: string;
   db?: string;
