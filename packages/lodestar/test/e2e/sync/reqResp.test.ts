@@ -134,6 +134,7 @@ describe("[sync] rpc", function () {
   });
 
   it("hello handshake on peer connect with correct encoding", async function () {
+    // A sends status request to B with ssz encoding
     repsA.get(netB.peerInfo.id.toB58String()).encoding = ReqRespEncoding.SSZ;
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.be.equal(null);
     const connected = Promise.all([
@@ -154,21 +155,9 @@ describe("[sync] rpc", function () {
     });
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
-    // A should send status request to B with ssz encoding
+    // B should store A with ssz as preferred encoding
     expect(repsA.get(netB.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
     expect(repsB.get(netA.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
-    // A should send requests to B with ssz_snappy encoding
-    repsA.get(netB.peerInfo.id.toB58String()).encoding = ReqRespEncoding.SSZ_SNAPPY;
-    netA.reqResp.metadata(netB.peerInfo);
-    await new Promise((resolve, reject) => {
-      netB.reqResp.once("request", (_, __, ___, encoding) => {
-        if (encoding === ReqRespEncoding.SSZ_SNAPPY) {
-          resolve();
-        } else {
-          reject("incorrect encoding " + encoding);
-        }
-      });
-    });
   });
 
   it("goodbye on rpc stop", async function () {

@@ -73,7 +73,7 @@ describe("[network] rpc", () => {
   it("can send/receive status messages from connected peers", async function () {
     this.timeout(6000);
     // send status from A to B, await status response
-    rpcB.once("request", (peerInfo, method, id, encoding, body) => {
+    rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
         rpcB.sendResponse(id, null, body as Status);
       }, 100);
@@ -92,7 +92,7 @@ describe("[network] rpc", () => {
       assert.fail("status not received");
     }
     // send status from B to A, await status response
-    rpcA.once("request", (peerInfo, method, id, encoding, body) => {
+    rpcA.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
         rpcA.sendResponse(id, null, body as Status);
       }, 100);
@@ -122,7 +122,7 @@ describe("[network] rpc", () => {
       return block;
     };
     // send block by range requests from A to B
-    rpcB.on("request", (peerInfo, method, id, encoding, body) => {
+    rpcB.on("request", (peerInfo, method, id, body) => {
       const requestBody = body as BeaconBlocksByRangeRequest;
       const blocks: SignedBeaconBlock[] = [];
       for (let i = requestBody.startSlot; i < + requestBody.startSlot + requestBody.count; i++) {

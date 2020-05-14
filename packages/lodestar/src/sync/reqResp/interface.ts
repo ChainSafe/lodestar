@@ -5,7 +5,7 @@
 import PeerInfo from "peer-info";
 import {RequestBody} from "@chainsafe/lodestar-types";
 
-import {Method, RequestId, ReqRespEncoding} from "../../constants";
+import {Method, RequestId} from "../../constants";
 
 /**
  * The IReqRespHandler module handles app-level requests / responses from other peers,
@@ -15,6 +15,5 @@ export interface IReqRespHandler {
   start: () => Promise<void>;
   stop: () => Promise<void>;
 
-  onRequest: (peerInfo: PeerInfo,
-    method: Method, id: RequestId, encoding: ReqRespEncoding, body: RequestBody) => Promise<void>;
+  onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
 }

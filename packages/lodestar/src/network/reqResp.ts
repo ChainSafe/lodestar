@@ -84,7 +84,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             pipe(
               stream.source,
               eth2RequestDecode(this.config, this.logger, method, encoding),
-              this.handleRpcRequest(peerId, method, encoding),
+              this.storePeerEncodingPreference(peerId, method, encoding),
+              this.handleRpcRequest(peerId, method),
               eth2ResponseEncode(this.config, this.logger, method, encoding),
               stream.sink
             );
@@ -160,17 +161,31 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
-  private handleRpcRequest(
+  private storePeerEncodingPreference(
     peerId: PeerId, method: Method, encoding: ReqRespEncoding
+  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody> {
+    return (source: AsyncIterable<RequestBody>) => {
+      const peerReputations = this.peerReputations;
+      return (async function*() {
+        if (method === Method.Status) {
+          peerReputations.get(peerId.toB58String()).encoding = encoding;
+        }
+        yield* source;
+      })();
+    };
+  }
+
+  private handleRpcRequest(
+    peerId: PeerId, method: Method
   ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
     return (source) => {
       return (async function * () {
         for await (const request of source) {
-          yield* getResponse(peerId, method, encoding, request);
+          yield* getResponse(peerId, method, request);
           return;
         }
-        yield* getResponse(peerId, method, encoding);
+        yield* getResponse(peerId, method);
       })();
     };
   }
@@ -178,7 +193,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private getResponse = (
     peerId: PeerId,
     method: Method,
-    encoding: ReqRespEncoding,
     request?: RequestBody): AsyncIterable<IResponseChunk> => {
     const requestId = randomRequestId();
     this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
@@ -190,7 +204,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
-      this.emit("request", new PeerInfo(peerId), method, requestId, encoding, request);
+      this.emit("request", new PeerInfo(peerId), method, requestId, request);
     });
 
     return (async function * () {

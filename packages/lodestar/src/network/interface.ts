@@ -14,7 +14,7 @@ import {
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
-import {Method, RequestId, ReqRespEncoding} from "../constants";
+import {Method, RequestId} from "../constants";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
 import {RpcError} from "./error";
@@ -29,7 +29,7 @@ interface IRespEvents {
 }
 
 export interface IReqEvents {
-  request: (peerInfo: PeerInfo, method: Method, id: RequestId, encoding: ReqRespEncoding, body: RequestBody) => void;
+  request: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => void;
 }
 
 export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;

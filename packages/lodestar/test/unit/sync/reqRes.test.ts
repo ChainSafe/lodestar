@@ -105,7 +105,7 @@ describe("sync req resp", function () {
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
     try {
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", ReqRespEncoding.SSZ_SNAPPY, body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
       expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
@@ -127,7 +127,7 @@ describe("sync req resp", function () {
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", ReqRespEncoding.SSZ_SNAPPY, body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }
@@ -169,7 +169,7 @@ describe("sync req resp", function () {
     const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves();
     try {
-      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", ReqRespEncoding.SSZ_SNAPPY, goodbye);
+      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);
       // expect(networkStub.disconnect.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -208,7 +208,7 @@ describe("sync req resp", function () {
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;
     });
-    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", ReqRespEncoding.SSZ_SNAPPY, body);
+    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", body);
     const slots = [];
     for await(const body of blockStream) {
       slots.push((body as SignedBeaconBlock).message.slot);

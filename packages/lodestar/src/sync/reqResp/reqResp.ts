@@ -13,7 +13,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_EPOCH, Method, RequestId, ReqRespEncoding} from "../../constants";
+import {GENESIS_EPOCH, Method, RequestId} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
@@ -81,12 +81,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     peerInfo: PeerInfo,
     method: Method,
     id: RequestId,
-    encoding: ReqRespEncoding,
     body?: RequestBody,
   ): Promise<void> => {
     switch (method) {
       case Method.Status:
-        return await this.onStatus(peerInfo, id, body as Status, encoding);
+        return await this.onStatus(peerInfo, id, body as Status);
       case Method.Goodbye:
         return await this.onGoodbye(peerInfo, id, body as Goodbye);
       case Method.Ping:
@@ -102,13 +101,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
   };
 
-  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status, encoding: ReqRespEncoding): Promise<void> {
+  public async onStatus(peerInfo: PeerInfo, id: RequestId, request: Status): Promise<void> {
     if (await this.shouldDisconnectOnStatus(request)) {
       await this.network.reqResp.goodbye(peerInfo, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
     }
     // set status on peer
     this.reps.get(peerInfo.id.toB58String()).latestStatus = request;
-    this.reps.get(peerInfo.id.toB58String()).encoding = encoding;
     // send status response
     try {
       const status = await this.createStatus();
