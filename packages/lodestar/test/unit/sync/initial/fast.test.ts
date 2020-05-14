@@ -2,7 +2,7 @@ import {describe} from "mocha";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {BeaconChain, IBeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
@@ -16,13 +16,16 @@ describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
 
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
   let targetSlotToBlockChunksStub: SinonStub;
 
   beforeEach(function () {
+    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub.forkChoice = forkChoiceStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
@@ -34,6 +37,7 @@ describe("fast sync", function () {
   });
 
   it("no peers with finalized epoch", async function () {
+    forkChoiceStub.headBlockSlot.returns(0);
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {

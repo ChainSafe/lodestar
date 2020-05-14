@@ -133,6 +133,7 @@ export class FastSync
               ),
               processSyncBlocks(config, chain, logger, true)
             );
+            logger.debug("last fetched slot=" + lastSlot);
             if(lastSlot) {
               //set new target from last block we've received
               setBlockImportTarget(lastSlot, false);
@@ -153,7 +154,7 @@ export class FastSync
   };
 
   private checkSyncCompleted = async (processedCheckpoint: Checkpoint): Promise<void> => {
-    this.logger.info(`Sync progress - currentEpoch=${processedCheckpoint.epoch},`
+    this.logger.important(`Sync progress - currentEpoch=${processedCheckpoint.epoch},`
         +` targetEpoch=${this.targetCheckpoint.epoch}`
     );
     if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {

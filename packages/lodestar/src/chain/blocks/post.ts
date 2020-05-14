@@ -15,7 +15,9 @@ export function postProcess(
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
-): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock; finalized: boolean}>) => Promise<void> {
+): (source: AsyncIterable<{
+    preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock; finalized: boolean;
+  }>) => Promise<void> {
   return async (source) => {
     return (async function() {
       for await(const {block, preState, postState, finalized} of source) {

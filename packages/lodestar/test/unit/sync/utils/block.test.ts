@@ -41,6 +41,7 @@ describe("sync - block utils", function () {
     });
 
     it("refetch failed chunks", async function () {
+      const timer = sinon.useFakeTimers();
       const peer1 = new PeerInfo(await PeerId.create());
       const peer2 = new PeerInfo(await PeerId.create());
       const peers = [peer1, peer2];
@@ -50,8 +51,11 @@ describe("sync - block utils", function () {
       rpcStub.beaconBlocksByRange
         .onSecondCall()
         .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
-      const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
+      const blockPromise = getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
+      await timer.tickAsync(1000);
+      const blocks = await blockPromise;
       expect(blocks.length).to.be.equal(2);
+      timer.reset();
     });
 
     it("no chunks", async function () {
@@ -69,17 +73,17 @@ describe("sync - block utils", function () {
       const result = chunkify(10, 0, 30);
       expect(result.length).to.be.equal(3);
       expect(result[0].start).to.be.equal(0);
-      expect(result[0].end).to.be.equal(9);
-      expect(result[1].start).to.be.equal(10);
-      expect(result[1].end).to.be.equal(19);
-      expect(result[2].start).to.be.equal(20);
-      expect(result[2].end).to.be.equal(29);
+      expect(result[0].end).to.be.equal(10);
+      expect(result[1].start).to.be.equal(11);
+      expect(result[1].end).to.be.equal(21);
+      expect(result[2].start).to.be.equal(22);
+      expect(result[2].end).to.be.equal(30);
     });
 
     it("should return chunks of block range - not rounded", function () {
       const result = chunkify(10, 0, 25);
       expect(result.length).to.be.equal(3);
-      expect(result[2].start).to.be.equal(20);
+      expect(result[2].start).to.be.equal(22);
       expect(result[2].end).to.be.equal(25);
     });
   });

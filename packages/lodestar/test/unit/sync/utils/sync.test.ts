@@ -171,7 +171,7 @@ describe("sync utils", function () {
         targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
         collect
       );
-      expect(chunks.length).to.be.equal(2);
+      expect(chunks.length).to.be.equal(1);
     });
   });
 

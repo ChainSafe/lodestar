@@ -102,22 +102,17 @@ export function fetchBlockChunks(
           logger.error("Can't find new peers, stopping sync");
           return;
         }
-        const totalBlocks = slotRange.end - slotRange.start;
-        const chunks = chunkify(Math.ceil(totalBlocks / peers.length), slotRange.start, slotRange.end);
-        yield* chunks.map(async(chunk) => {
-          try {
-            return await getBlockRange(
-              logger,
-              reqResp,
-              peers,
-              chunk
-            );
-          } catch (e) {
-            logger.debug("Failed to get block range " + JSON.stringify(chunk) + ". Error: " + e.message);
-            return [];
-          }
+        try {
+          yield await getBlockRange(
+            logger,
+            reqResp,
+            peers,
+            slotRange
+          );
+        } catch (e) {
+          logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+          return;
         }
-        );
       }
     })();
   };
@@ -180,7 +175,9 @@ export function processSyncBlocks(
         if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
           await chain.receiveBlock(block, trusted);
           headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
-          lastProcessedSlot = block.message.slot;
+          if(block.message.slot > lastProcessedSlot) {
+            lastProcessedSlot = block.message.slot;
+          }
         } else {
           blockBuffer.unshift(block);
           break;

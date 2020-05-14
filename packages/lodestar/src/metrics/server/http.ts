@@ -9,9 +9,9 @@ import {IMetricsOptions} from "../options";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 export class HttpMetricsServer implements IMetricsServer {
+  public http: http.Server;
   private opts: IMetricsOptions;
   private metrics: IMetrics;
-  private http: http.Server;
   private logger: ILogger;
 
   public constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: IMetrics; logger: ILogger}) {

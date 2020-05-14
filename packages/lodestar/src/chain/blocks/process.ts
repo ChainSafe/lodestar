@@ -16,7 +16,8 @@ export function processBlock(
   forkChoice: ILMDGHOST,
   pool: BlockPool,
   eventBus: ChainEventEmitter,
-): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<{preState: BeaconState, block: SignedBeaconBlock; postState: BeaconState, finalized: boolean}> {
+): (source: AsyncIterable<IBlockProcessJob>) =>
+  AsyncGenerator<{preState: BeaconState; block: SignedBeaconBlock; postState: BeaconState; finalized: boolean}> {
   return (source) => {
     return (async function*() {
       for await(const job of source) {

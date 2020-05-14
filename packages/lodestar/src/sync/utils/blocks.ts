@@ -19,7 +19,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
   }
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk) {
+  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk + 1) {
     if(i + blocksPerChunk > targetSlot) {
       chunks.push({
         start: i,
@@ -28,7 +28,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     } else {
       chunks.push({
         start: i,
-        end: i + blocksPerChunk - 1
+        end: i + blocksPerChunk
       });
     }
   }
@@ -45,7 +45,7 @@ export async function getBlockRangeFromPeer(
     {
       startSlot: chunk.start,
       step: 1,
-      count: chunk.end - chunk.start
+      count: chunk.end - chunk.start + 1
     }
   ) as SignedBeaconBlock[];
 }
@@ -58,7 +58,11 @@ export async function getBlockRange(
   blocksPerChunk?: number,
   maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
-  blocksPerChunk = blocksPerChunk || range.end - range.start;
+  const totalBlocks = range.end - range.start;
+  blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks/peers.length);
+  if(blocksPerChunk < 5) {
+    blocksPerChunk = totalBlocks;
+  }
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched
@@ -86,7 +90,7 @@ export async function getBlockRange(
       })
     )).filter((chunk) => chunk !== null);
     retry++;
-    if(retry > maxRetry) {
+    if(retry > maxRetry || retry > peers.length) {
       logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
     }
   }

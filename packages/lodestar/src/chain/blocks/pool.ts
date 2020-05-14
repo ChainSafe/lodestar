@@ -32,7 +32,7 @@ export class BlockPool {
     } else {
       this.pool.set(key, [job]);
       //this prevents backward syncing
-      if(job.signedBlock.message.slot > this.forkChoice.headBlockSlot() + 5) {
+      if(job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 5) {
         this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
       }
     }
