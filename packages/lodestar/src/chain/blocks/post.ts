@@ -15,14 +15,14 @@ export function postProcess(
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
-): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock}>) => Promise<void> {
+): (source: AsyncIterable<{preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock; finalized: boolean}>) => Promise<void> {
   return async (source) => {
     return (async function() {
-      for await(const {block, preState, postState} of source) {
-        await Promise.all([
-          db.processBlockOperations(block),
-          attestationProcessor.receiveBlock(block),
-        ]);
+      for await(const {block, preState, postState, finalized} of source) {
+        await db.processBlockOperations(block);
+        if(!finalized) {
+          await attestationProcessor.receiveBlock(block);
+        }
         metrics.currentSlot.set(block.message.slot);
         eventBus.emit("processedBlock", block);
         const preSlot = preState.slot;
