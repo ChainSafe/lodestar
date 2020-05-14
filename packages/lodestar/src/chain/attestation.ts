@@ -48,8 +48,8 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const state = await this.db.stateCache.get(this.forkChoice.headStateRoot());
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
+      const currentSlot = this.forkChoice.headBlockSlot();
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < currentSlot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
       }
@@ -84,7 +84,11 @@ export class AttestationProcessor implements IAttestationProcessor {
     const blockPendingAttestations = this.pendingAttestations.get(toHexString(blockRoot)) ||
       new Map<AttestationRootHex, Attestation>();
     for (const [hash, attestation] of blockPendingAttestations) {
-      await this.processAttestation(attestation, fromHexString(hash));
+      try {
+        await this.processAttestation(attestation, fromHexString(hash));
+      } catch (e) {
+        this.logger.warn("Failed to process attestation. Reason: " + e.message);
+      }
     }
     this.pendingAttestations.delete(toHexString(blockRoot));
   }

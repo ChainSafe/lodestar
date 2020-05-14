@@ -4,6 +4,7 @@ import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Pushable} from "it-pushable";
 import {ChainEventEmitter} from "../interface";
+import {ILMDGHOST} from "../forkChoice";
 
 export class BlockPool {
 
@@ -12,11 +13,16 @@ export class BlockPool {
   private readonly config: IBeaconConfig;
   private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
   private readonly eventBus: ChainEventEmitter;
+  private readonly forkChoice: ILMDGHOST;
 
-  constructor(config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>, eventBus: ChainEventEmitter) {
+  constructor(
+    config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>,
+    eventBus: ChainEventEmitter, forkChoice: ILMDGHOST
+  ) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;
     this.eventBus = eventBus;
+    this.forkChoice = forkChoice;
   }
 
   public addPendingBlock(job: IBlockProcessJob): void {
@@ -25,7 +31,10 @@ export class BlockPool {
       this.pool.get(key).push(job);
     } else {
       this.pool.set(key, [job]);
-      this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
+      //this prevents backward syncing
+      if(job.signedBlock.message.slot > this.forkChoice.headBlockSlot() + 5) {
+        this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
+      }
     }
   }
 
@@ -38,7 +47,7 @@ export class BlockPool {
         .sort((a, b) => a.signedBlock.message.slot - b.signedBlock.message.slot)
         .forEach((job) => {
           this.blockProcessorSource.push(job);
-        }); 
+        });
     }
   }
 
