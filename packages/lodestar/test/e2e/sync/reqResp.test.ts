@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import {Method} from "../../../src/constants";
+import {Method, ReqRespEncoding} from "../../../src/constants";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
 import Libp2p from "libp2p";
@@ -71,21 +71,22 @@ describe("[sync] rpc", function () {
       epoch: computeEpochAtSlot(config, block.message.slot),
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
     });
+    repsA = new ReputationStore();
+    repsB = new ReputationStore();
     netA = new Libp2pNetwork(
       opts,
-      new ReputationStore(),
+      repsA,
       {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
     );
     netB = new Libp2pNetwork(
       opts,
-      new ReputationStore(),
+      repsB,
       {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
     );
     await Promise.all([
       netA.start(),
       netB.start(),
     ]);
-    repsA = new ReputationStore();
 
     const db = new StubbedBeaconDb(sandbox, config);
     db.stateCache.get.resolves(state as any);
@@ -103,7 +104,7 @@ describe("[sync] rpc", function () {
       reputationStore: repsA,
       logger,
     });
-    repsB = new ReputationStore();
+
     rpcB = new BeaconReqRespHandler({
       config,
       db,
@@ -132,7 +133,9 @@ describe("[sync] rpc", function () {
     ]);
   });
 
-  it("hello handshake on peer connect", async function () {
+  it("hello handshake on peer connect with correct encoding", async function () {
+    repsA.get(netB.peerInfo.id.toB58String()).encoding = ReqRespEncoding.SSZ;
+    expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.be.equal(null);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
@@ -151,6 +154,21 @@ describe("[sync] rpc", function () {
     });
     expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
     expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
+    // A should send status request to B with ssz encoding
+    expect(repsA.get(netB.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
+    expect(repsB.get(netA.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
+    // A should send requests to B with ssz_snappy encoding
+    repsA.get(netB.peerInfo.id.toB58String()).encoding = ReqRespEncoding.SSZ_SNAPPY;
+    netA.reqResp.metadata(netB.peerInfo);
+    await new Promise((resolve, reject) => {
+      netB.reqResp.once("request", (_, __, ___, encoding) => {
+        if (encoding === ReqRespEncoding.SSZ_SNAPPY) {
+          resolve();
+        } else {
+          reject("incorrect encoding " + encoding);
+        }
+      });
+    });
   });
 
   it("goodbye on rpc stop", async function () {

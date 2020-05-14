@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
+import {GENESIS_EPOCH, Method, ZERO_HASH, ReqRespEncoding} from "../../../src/constants";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -76,7 +76,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
 
 
@@ -100,12 +100,12 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
     try {
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", ReqRespEncoding.SSZ_SNAPPY, body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
       expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
@@ -123,11 +123,11 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
+      await syncRpc.onRequest(peerInfo, Method.Status, "status", ReqRespEncoding.SSZ_SNAPPY, body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }
@@ -169,7 +169,7 @@ describe("sync req resp", function () {
     const goodbye: Goodbye = 1n;
     networkStub.disconnect.resolves();
     try {
-      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);
+      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", ReqRespEncoding.SSZ_SNAPPY, goodbye);
       // expect(networkStub.disconnect.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -208,7 +208,7 @@ describe("sync req resp", function () {
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;
     });
-    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", body);
+    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", ReqRespEncoding.SSZ_SNAPPY, body);
     const slots = [];
     for await(const body of blockStream) {
       slots.push((body as SignedBeaconBlock).message.slot);

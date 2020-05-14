@@ -2,12 +2,13 @@
  * @module sync
  */
 import {Status, Metadata} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT} from "../constants";
+import {ATTESTATION_SUBNET_COUNT, ReqRespEncoding} from "../constants";
 
 export interface IReputation {
   latestStatus: Status | null;
   latestMetadata: Metadata | null;
   score: number;
+  encoding: ReqRespEncoding | null;
 }
 
 export interface IReputationStore {
@@ -27,7 +28,8 @@ export class ReputationStore implements IReputationStore {
     const reputation: IReputation = {
       latestStatus: null,
       latestMetadata: null,
-      score: 0
+      score: 0,
+      encoding: null,
     };
     this.reputations.set(peerId, reputation);
     return reputation;

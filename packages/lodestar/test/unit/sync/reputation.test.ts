@@ -1,8 +1,8 @@
 import sinon from "sinon";
 import {expect} from  "chai";
 import {IReputation, ReputationStore} from "../../../src/sync/IReputation";
-import { AttestationSubnets } from "@chainsafe/lodestar-types";
-import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {AttestationSubnets} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 
 describe("syncing", function () {
@@ -23,6 +23,7 @@ describe("syncing", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
+      encoding: null,
     };
     try {
       const result = reps.add("lodestar");

@@ -58,7 +58,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
       Promise.resolve(libp2p).then((libp2p) => {
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
-        this.reqResp = new ReqResp(opts, {config, libp2p, logger});
+        this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
         const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
         const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
         this.metadata = new MetadataController({enr}, {config, chain, logger});

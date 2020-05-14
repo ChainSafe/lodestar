@@ -9,6 +9,7 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {createNode} from "../../utils/network";
+import {ReputationStore} from "../../../src/sync/IReputation";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -35,8 +36,8 @@ describe("[network] rpc", () => {
       connectTimeout: 5000,
       disconnectTimeout: 5000,
     };
-    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger});
-    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger});
+    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger, peerReputations: new ReputationStore()});
+    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger, peerReputations: new ReputationStore()});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -72,7 +73,7 @@ describe("[network] rpc", () => {
   it("can send/receive status messages from connected peers", async function () {
     this.timeout(6000);
     // send status from A to B, await status response
-    rpcB.once("request", (peerInfo, method, id, body) => {
+    rpcB.once("request", (peerInfo, method, id, encoding, body) => {
       setTimeout(() => {
         rpcB.sendResponse(id, null, body as Status);
       }, 100);
@@ -91,7 +92,7 @@ describe("[network] rpc", () => {
       assert.fail("status not received");
     }
     // send status from B to A, await status response
-    rpcA.once("request", (peerInfo, method, id, body) => {
+    rpcA.once("request", (peerInfo, method, id, encoding, body) => {
       setTimeout(() => {
         rpcA.sendResponse(id, null, body as Status);
       }, 100);
@@ -121,7 +122,7 @@ describe("[network] rpc", () => {
       return block;
     };
     // send block by range requests from A to B
-    rpcB.on("request", (peerInfo, method, id, body) => {
+    rpcB.on("request", (peerInfo, method, id, encoding, body) => {
       const requestBody = body as BeaconBlocksByRangeRequest;
       const blocks: SignedBeaconBlock[] = [];
       for (let i = requestBody.startSlot; i < + requestBody.startSlot + requestBody.count; i++) {
