@@ -135,7 +135,6 @@ export class FastSync
               //set new target from last block we've received
               setBlockImportTarget(lastSlot, false);
             } else {
-              console.log("last slot", lastSlot);
               //we didn't receive any block, set target from last requested slot
               setBlockImportTarget(slotRange.end, true);
             }
