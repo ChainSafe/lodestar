@@ -19,7 +19,6 @@ import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
-import {BlockRepository} from "../../db/api/beacon/repositories";
 import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -129,12 +128,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
 
     const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    const finalizedCheckpoint = await this.chain.forkChoice.getFinalized();
+    const finalizedCheckpoint = this.chain.forkChoice.getFinalized();
     // we're on a further (or equal) finalized epoch
     // but the peer's block root at that epoch doesn't match ours
     if (finalizedCheckpoint.epoch >= request.finalizedEpoch && request.finalizedEpoch !== GENESIS_EPOCH) {
-      const startBlock = (finalizedCheckpoint.epoch > request.finalizedEpoch) ?
-        await this.db.blockArchive.get(startSlot) : await this.db.block.getBySlot(startSlot);
+      const startBlock = await this.chain.getBlockAtSlot(startSlot);
       const result = !this.config.types.Root.equals(
         request.finalizedRoot,
         this.config.types.BeaconBlock.hashTreeRoot(startBlock.message));
@@ -182,7 +180,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         lt: request.startSlot + request.count * request.step,
         step: request.step,
       });
-      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.db.block, request);
+      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.chain, request);
       this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
@@ -216,7 +214,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       forkDigest: this.chain.currentForkDigest,
       finalizedRoot: head.finalizedCheckpoint.root,
       finalizedEpoch: head.finalizedCheckpoint.epoch,
-      headRoot: head.blockRootBuf,
+      headRoot: head.blockRoot,
       headSlot: head.slot,
     };
   }
@@ -234,7 +232,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private injectRecentBlocks = async function* (
     archiveStream: AsyncIterable<SignedBeaconBlock>,
-    blockDb: BlockRepository,
+    chain: IBeaconChain,
     request: BeaconBlocksByRangeRequest
   ): AsyncGenerator<SignedBeaconBlock> {
     let slot = -1;
@@ -245,7 +243,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     slot = (slot === -1)? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
     while (slot < upperSlot) {
-      const block = await blockDb.getBySlot(slot);
+      const block = await chain.getBlockAtSlot(slot);
       if(block) {
         yield block;
       }

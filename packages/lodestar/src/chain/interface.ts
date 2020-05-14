@@ -11,6 +11,7 @@ import {
   Uint64,
   ForkDigest,
   ENRForkID,
+  Slot,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
@@ -59,6 +60,8 @@ export interface IBeaconChain extends ChainEventEmitter {
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
+
+  getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
 
   /**
    * Add attestation to the fork-choice rule

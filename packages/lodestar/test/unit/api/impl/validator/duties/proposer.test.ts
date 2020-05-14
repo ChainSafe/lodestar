@@ -1,27 +1,25 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BlockRepository, StateRepository} from "../../../../../../src/db/api/beacon/repositories";
+import {BlockRepository} from "../../../../../../src/db/api/beacon/repositories";
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
 import {expect} from "chai";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
 
 
 describe("get proposers api impl", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let dbStub: any, chainStub: SinonStubbedInstance<IBeaconChain>;
+  let dbStub: StubbedBeaconDb, chainStub: SinonStubbedInstance<IBeaconChain>;
   
   let api: IValidatorApi;
 
   beforeEach(function () {
-    dbStub = {
-      state: sandbox.createStubInstance(StateRepository),
-      block: sandbox.createStubInstance(BlockRepository),
-    };
+    dbStub = new StubbedBeaconDb(sandbox, config);
     chainStub = sandbox.createStubInstance(BeaconChain);
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, config});
@@ -32,7 +30,7 @@ describe("get proposers api impl", function () {
   });
 
   it("should get proposers", async function () {
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}});
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     chainStub.getHeadState.resolves(
       generateState(
         {
@@ -65,5 +63,4 @@ describe("get proposers api impl", function () {
     const result = await api.getProposerDuties(2);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
-    
 });

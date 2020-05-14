@@ -24,7 +24,7 @@ import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {RpcError} from "../../../src/network/error";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {getBlockHeadInfo} from "../../utils/headBlockInfo";
+import {getBlockSummary} from "../../utils/headBlockInfo";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -41,7 +41,7 @@ describe("sync req resp", function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
     chainStub.forkChoice = forkChoiceStub;
-    forkChoiceStub.head.returns(getBlockHeadInfo({}));
+    forkChoiceStub.head.returns(getBlockSummary({}));
     forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
@@ -103,7 +103,7 @@ describe("sync req resp", function () {
       latestMetadata: null, latestStatus: null, score: 0
     });
     reqRespStub.sendResponse.resolves(0);
-    dbStub.state.get.resolves(generateState());
+    dbStub.stateCache.get.resolves(generateState() as any);
     try {
       await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
@@ -159,7 +159,7 @@ describe("sync req resp", function () {
     const state = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
-    dbStub.state.get.resolves(state);
+    dbStub.stateCache.get.resolves(state as any);
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });
@@ -202,8 +202,8 @@ describe("sync req resp", function () {
     // block 6 does not exist
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
-    dbStub.block.getBySlot.onFirstCall().resolves(null);
-    dbStub.block.getBySlot.onSecondCall().resolves(block8);
+    chainStub.getBlockAtSlot.onFirstCall().resolves(null);
+    chainStub.getBlockAtSlot.onSecondCall().resolves(block8);
     let blockStream: AsyncIterable<ResponseBody>;
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;

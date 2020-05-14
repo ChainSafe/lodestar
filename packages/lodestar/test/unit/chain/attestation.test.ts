@@ -4,14 +4,14 @@ import {AttestationProcessor} from "../../../src/chain/attestation";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
-import {BlockRepository, StateRepository} from "../../../src/db/api/beacon/repositories";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {generateEmptySignedBlock} from "../../utils/block";
-import {generateEmptyAttestation} from "../../utils/attestation";
-import {generateState} from "../../utils/state";
-import {generateValidators} from "../../utils/validator";
-import {fail} from "assert";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import { BlockRepository } from "../../../src/db/api/beacon/repositories";
+import { WinstonLogger } from "@chainsafe/lodestar-utils/lib/logger";
+import { generateEmptySignedBlock } from "../../utils/block";
+import { generateEmptyAttestation } from "../../utils/attestation";
+import { generateState } from "../../utils/state";
+import { generateValidators } from "../../utils/validator";
+import { fail } from "assert";
+import { StubbedBeaconDb } from "../../utils/stub";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -22,10 +22,7 @@ describe("AttestationProcessor", function () {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    dbStub = {
-      state: sandbox.createStubInstance(StateRepository),
-      block: sandbox.createStubInstance(BlockRepository),
-    };
+    dbStub = new StubbedBeaconDb(sandbox, config);
     logger = new WinstonLogger();
     logger.silent = true;
     attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, {config, db: dbStub, logger});
@@ -43,7 +40,7 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
-    dbStub.state.get.resolves(state);
+    dbStub.stateCache.get.resolves(state);
     dbStub.block.has.resolves(true);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.true;
@@ -55,7 +52,7 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     const state = generateState();
     dbStub.block.get.resolves(block);
-    dbStub.state.get.resolves(state);
+    dbStub.stateCache.get.resolves(state);
     dbStub.block.has.resolves(false);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.false;
@@ -69,7 +66,7 @@ describe("AttestationProcessor", function () {
       const block = generateEmptySignedBlock();
       dbStub.block.get.resolves(block);
       const state = generateState();
-      dbStub.state.get.resolves(state);
+      dbStub.stateCache.get.resolves(state);
       forkChoiceStub.getJustified.returns({} as Checkpoint);
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
@@ -88,8 +85,8 @@ describe("AttestationProcessor", function () {
       block.message.slot = 1;
       dbStub.block.get.resolves(block);
       const state = generateState();
-      dbStub.state.get.resolves(state);
-      forkChoiceStub.getJustified.returns({} as Checkpoint);
+      dbStub.stateCache.get.resolves(state);
+      forkChoiceStub.getJustified.returns({} as Checkpoint)
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
@@ -105,8 +102,8 @@ describe("AttestationProcessor", function () {
     const block = generateEmptySignedBlock();
     dbStub.block.get.resolves(block);
     const state = generateState();
-    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
-    dbStub.state.getJustified.resolves(state);
+    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
+    dbStub.stateCache.getJustified.resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     forkChoiceStub.headBlockSlot.returns(0);
     getAttestingIndicesStub.returns([0]);

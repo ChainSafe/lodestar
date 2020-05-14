@@ -1,7 +1,7 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {SignedBeaconBlock, BeaconState, BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock, BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {
@@ -11,23 +11,23 @@ import {
   BadBlockRepository,
   BlockRepository,
   BlockArchiveRepository,
-  ChainRepository,
   DepositDataRepository,
   DepositDataRootRepository,
   ProposerSlashingRepository,
-  StateRepository,
   VoluntaryExitRepository,
   Eth1DataRepository,
+  StateArchiveRepository,
 } from "../../../src/db/api/beacon/repositories";
+import {StateCache} from "../../../src/db/api/beacon/stateCache";
 
 export class StubbedBeaconDb extends BeaconDb {
   public db: SinonStubbedInstance<LevelDbController>;
 
-  public chain: SinonStubbedInstance<ChainRepository> & ChainRepository;
-  public state: SinonStubbedInstance<StateRepository> & StateRepository;
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
+  public stateCache: SinonStubbedInstance<StateCache> & StateCache;
   public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
+  public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
   public attestation: SinonStubbedInstance<AttestationRepository> & AttestationRepository;
   public aggregateAndProof: SinonStubbedInstance<AggregateAndProofRepository> & AggregateAndProofRepository;
@@ -38,16 +38,6 @@ export class StubbedBeaconDb extends BeaconDb {
 
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
-
-  public storeChainHead:
-  SinonStubbedInstance<(block: SignedBeaconBlock, state: BeaconState) => Promise<void>>
-  &
-  ((block: SignedBeaconBlock, state: BeaconState) => Promise<void>);
-
-  public updateChainHead:
-  SinonStubbedInstance<(blockRoot: Uint8Array, stateRoot: Uint8Array) => Promise<void>>
-  &
-  ((blockRoot: Uint8Array, stateRoot: Uint8Array) => Promise<void>);
 
   public getValidatorIndex:
   SinonStubbedInstance<(publicKey: BLSPubkey) => Promise<ValidatorIndex>>
@@ -64,11 +54,11 @@ export class StubbedBeaconDb extends BeaconDb {
       config,
       controller: sinon.createStubInstance(LevelDbController),
     });
-    this.chain = sinon.createStubInstance(ChainRepository) as any;
-    this.state = sinon.createStubInstance(StateRepository) as any;
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
+    this.stateCache = sinon.createStubInstance(StateCache) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
+    this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;
 
     this.attestation = sinon.createStubInstance(AttestationRepository) as any;
     this.aggregateAndProof = sinon.createStubInstance(AggregateAndProofRepository) as any;
@@ -80,8 +70,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
 
-    this.storeChainHead = sinon.stub(this, "storeChainHead") as any;
-    this.updateChainHead = sinon.stub(this, "updateChainHead") as any;
     this.getValidatorIndex = sinon.stub(this, "getValidatorIndex") as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
   }

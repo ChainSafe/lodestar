@@ -1,7 +1,7 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {stateTransition, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -11,8 +11,8 @@ import {ChainEventEmitter} from "..";
 
 export function processBlock(
   config: IBeaconConfig,
-  db: IBeaconDb,
   logger: ILogger,
+  db: IBeaconDb,
   forkChoice: ILMDGHOST,
   pool: BlockPool,
   eventBus: ChainEventEmitter,
@@ -32,12 +32,12 @@ export function processBlock(
         }
         // On successful transition, update system state
         await Promise.all([
-          db.state.put(job.signedBlock.message.stateRoot.valueOf() as Uint8Array, newState),
+          db.stateCache.add(newState as TreeBacked<BeaconState>),
           db.block.put(blockRoot, job.signedBlock),
         ]);
-        const newChainHeadRoot = await updateForkChoice(config, db, forkChoice, job.signedBlock, newState);
-        if(newChainHeadRoot) {
-          logger.info(`Processed new chain head 0x${toHexString(newChainHeadRoot)} as slot ${newState.slot}`);
+        const newChainHeadRoot = await updateForkChoice(config, forkChoice, job.signedBlock, newState);
+        if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
+          logger.info(`Processed new chain head 0x${toHexString(newChainHeadRoot)}, slot=${newState.slot}`);
           if(!config.types.Fork.equals(preState.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -65,11 +65,11 @@ export async function getPreState(
     pool.addPendingBlock(job);
     return null;
   }
-  return await db.state.get(parentBlock.message.stateRoot as Uint8Array);
+  return await db.stateCache.get(parentBlock.message.stateRoot as Uint8Array);
 }
 
 /**
- * Returns new chainhead or null
+ * Returns new chainhead
  * @param config
  * @param db
  * @param forkChoice
@@ -77,25 +77,17 @@ export async function getPreState(
  * @param newState
  */
 export async function updateForkChoice(
-  config: IBeaconConfig, db: IBeaconDb, forkChoice: ILMDGHOST, block: SignedBeaconBlock, newState: BeaconState
-): Promise<Root|null> {
+  config: IBeaconConfig, forkChoice: ILMDGHOST, block: SignedBeaconBlock, newState: BeaconState
+): Promise<Root> {
   forkChoice.addBlock({
     slot: block.message.slot,
-    blockRootBuf: config.types.BeaconBlock.hashTreeRoot(block.message),
-    stateRootBuf: block.message.stateRoot.valueOf() as Uint8Array,
-    parentRootBuf: block.message.parentRoot.valueOf() as Uint8Array,
+    blockRoot: config.types.BeaconBlock.hashTreeRoot(block.message),
+    stateRoot: block.message.stateRoot.valueOf() as Uint8Array,
+    parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
     justifiedCheckpoint: newState.currentJustifiedCheckpoint,
     finalizedCheckpoint: newState.finalizedCheckpoint
   });
-  const currentRoot = await db.chain.getChainHeadRoot();
-  const headRoot = forkChoice.headBlockRoot();
-  if (currentRoot && !config.types.Root.equals(currentRoot, headRoot)) {
-    const signedBlock = await db.block.get(headRoot);
-    await db.updateChainHead(headRoot, signedBlock.message.stateRoot.valueOf() as Uint8Array);
-    return headRoot;
-  } else {
-    return null;
-  }
+  return forkChoice.headBlockRoot();
 }
 
 export async function runStateTransition(

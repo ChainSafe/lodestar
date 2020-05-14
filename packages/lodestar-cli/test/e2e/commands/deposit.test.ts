@@ -16,7 +16,7 @@ describe("[CLI] deposit", function() {
     logger.silent = true;
     eth1Network = new PrivateEth1Network({
       host: "127.0.0.1",
-      port: 32567
+      port: 32568
     },
     {
       logger,

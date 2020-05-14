@@ -1,11 +1,11 @@
 import {EventEmitter} from "events";
 
-import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint} from "@chainsafe/lodestar-types";
+import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint, Slot, SignedBeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
-import {BeaconState} from "@chainsafe/lodestar-types";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {generateEmptySignedBlock} from "../../block";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -38,6 +38,12 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   public async getHeadState(): Promise<BeaconState| null> {
     return this.state;
+  }
+
+  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
+    const block = generateEmptySignedBlock();
+    block.message.slot = slot;
+    return block;
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {

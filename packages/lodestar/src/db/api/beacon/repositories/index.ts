@@ -1,10 +1,9 @@
 export * from "./abstract";
 
-export * from "./chain";
 export * from "./badBlock";
 export * from "./block";
 export * from "./blockArchive";
-export * from "./state";
+export * from "./stateArchive";
 
 export * from "./attestation";
 export * from "./aggregateAndProof";

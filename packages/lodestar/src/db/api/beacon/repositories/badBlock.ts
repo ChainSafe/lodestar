@@ -3,14 +3,11 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
-import {ChainRepository} from "./chain";
 
 /**
  * bad block roots
  */
 export class BadBlockRepository extends Repository<Uint8Array, boolean> {
-
-  private chain: ChainRepository;
 
   public constructor(
     config: IBeaconConfig,

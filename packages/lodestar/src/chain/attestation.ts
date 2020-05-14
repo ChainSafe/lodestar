@@ -48,7 +48,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const state = await this.db.state.get(this.forkChoice.headStateRoot());
+      const state = await this.db.stateCache.get(this.forkChoice.headStateRoot());
       if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
@@ -96,7 +96,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     let checkpointState: BeaconState;
     if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
       const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
-      checkpointState = await this.db.state.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
+      checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
     } else {
       // should be genesis state
       checkpointState = await this.db.state.getJustified();

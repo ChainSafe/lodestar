@@ -16,7 +16,7 @@ export function quickStartOptionToState(
   if (!fileExt) {
     throw new Error("invalid quick start options");
   }
-  const deserialized = config.types.BeaconState.deserialize(readFileSync(option));
+  const deserialized = config.types.BeaconState.tree.deserialize(readFileSync(option));
   interopDeposits(config, depositDataRootList, deserialized.validators.length);
   return deserialized;
 }
