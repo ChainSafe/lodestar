@@ -6,14 +6,13 @@ import {MetadataController} from "../../../../src/network/metadata";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
-import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../../../src/chain";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {IGossipSub} from "../../../../src/network/gossip/interface";
+import {IGossipMessageValidator, IGossipSub} from "../../../../src/network/gossip/interface";
 import {MockGossipSub} from "../../../utils/mocks/gossipsub";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
@@ -43,7 +42,7 @@ describe("Network Gossip", function() {
     const libp2p = sandbox.createStubInstance(NodejsNode);
     const logger = new WinstonLogger();
     logger.silent = true;
-    const validator = sandbox.createStubInstance(GossipMessageValidator);
+    const validator = {} as IGossipMessageValidator;
     state = generateState();
     chain = new MockBeaconChain({
       genesisTime: 0,

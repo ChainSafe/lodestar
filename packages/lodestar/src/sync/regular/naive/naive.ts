@@ -44,6 +44,11 @@ export class NaiveRegularSync implements IRegularSync {
     this.chain.on("processedBlock", this.checkSyncProgress);
     this.currentTarget = this.chain.forkChoice.headBlockSlot();
     this.targetSlotRangeSource = pushable<ISlotRange>();
+    const newTarget = await this.getNewTarget();
+    if(newTarget === this.currentTarget) {
+      this.logger.info("Already on latest know slot!");
+      await this.stop();
+    }
     await Promise.all([
       this.sync(),
       this.setTarget()

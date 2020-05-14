@@ -178,7 +178,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     const conn = this.getConnection(peerInfo);
     this.metrics.peers.inc();
     this.logger.verbose("peer connected " + peerInfo.id.toB58String() + " " + conn.stat.direction);
-    this.emit("peer:connect", peerInfo, conn.stat.direction);
+    this.emit("peer:connect", peerInfo, "outbound");
   };
 
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {

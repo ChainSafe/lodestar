@@ -57,7 +57,7 @@ describe("sync", function () {
   });
 
   it("is synced should be true", async function () {
-    const sync = getSync({minPeers: 0, blockPerChunk: 10});
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
     await sync.start();
@@ -65,7 +65,7 @@ describe("sync", function () {
   });
 
   it("is synced should be false", async function () {
-    const sync = getSync({minPeers: 1, blockPerChunk: 10});
+    const sync = getSync({minPeers: 1, maxSlotImport: 10, blockPerChunk: 10});
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
     sync.start();
@@ -74,7 +74,7 @@ describe("sync", function () {
   });
 
   it("get sync status if synced", async function () {
-    const sync = getSync({minPeers: 0, blockPerChunk: 10});
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
     await sync.start();
@@ -83,7 +83,7 @@ describe("sync", function () {
   });
 
   it("get sync status - regular sync", async function () {
-    const sync = getSync({minPeers: 0, blockPerChunk: 10});
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
     chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
@@ -99,7 +99,7 @@ describe("sync", function () {
   });
 
   it("get sync status - initial sync", async function () {
-    const sync = getSync({minPeers: 0, blockPerChunk: 10});
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
     chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
