@@ -166,7 +166,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });
-    this.db.stateCache.add(genesisState);
+    await this.db.stateCache.add(genesisState);
     // Determine whether a genesis state already in
     // the database matches what we were provided
     const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
@@ -258,7 +258,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return null;
     }
     this.logger.info(`Initializing beacon chain with eth1 block ${blockHashHex}`);
-    await this.initializeBeaconChain(genesisState);
+    await this.initializeBeaconChain(genesisState as TreeBacked<BeaconState>);
     this.logger.info(`Genesis state is ready with ${genesisState.validators.length} validators`);
     return genesisState;
   };

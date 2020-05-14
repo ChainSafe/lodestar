@@ -99,7 +99,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
     } else {
       // should be genesis state
-      checkpointState = await this.db.state.getJustified();
+      checkpointState = await this.db.stateArchive.get(0);
     }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;

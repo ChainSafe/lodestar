@@ -100,7 +100,7 @@ export function fetchBlockChunks(
         }
         if(peers.length === 0) {
           logger.error("Can't find new peers, stopping sync");
-          return yield [];
+          return;
         }
         const totalBlocks = slotRange.end - slotRange.start;
         const chunks = chunkify(Math.ceil(totalBlocks / peers.length), slotRange.start, slotRange.end);

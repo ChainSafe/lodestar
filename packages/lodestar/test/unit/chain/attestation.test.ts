@@ -12,6 +12,7 @@ import { generateState } from "../../utils/state";
 import { generateValidators } from "../../utils/validator";
 import { fail } from "assert";
 import { StubbedBeaconDb } from "../../utils/stub";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -103,7 +104,7 @@ describe("AttestationProcessor", function () {
     dbStub.block.get.resolves(block);
     const state = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
-    dbStub.stateCache.getJustified.resolves(state);
+    dbStub.stateArchive.get.withArgs(0).resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     forkChoiceStub.headBlockSlot.returns(0);
     getAttestingIndicesStub.returns([0]);
