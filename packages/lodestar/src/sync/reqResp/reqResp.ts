@@ -66,6 +66,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     await Promise.all(
       this.network.getPeers().map((peerInfo) =>
         this.network.reqResp.status(peerInfo, myStatus)));
+
   }
 
   public async stop(): Promise<void> {
@@ -147,6 +148,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onGoodbye(peerInfo: PeerInfo, id: RequestId, request: Goodbye): Promise<void> {
+    this.logger.info(`Received goodbye request from ${peerInfo.id.toB58String()}, reason=${request}`);
     this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
     // //  TODO: fix once we can check if response is sent
     const disconnect = this.network.disconnect.bind(this.network);
@@ -224,7 +226,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       try {
         this.reps.get(peerInfo.id.toB58String()).latestStatus = await this.network.reqResp.status(peerInfo, request);
       } catch (e) {
-        this.logger.error(e);
+        this.logger.error(`Failed to get peer ${peerInfo.id.toB58String()} latest status. Error: ` + e.message);
       }
     }
   };

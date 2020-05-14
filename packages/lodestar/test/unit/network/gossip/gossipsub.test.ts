@@ -1,21 +1,21 @@
 import {describe, it} from "mocha";
 import {generateEmptySignedBlock} from "../../../utils/block";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";import {IGossipMessage} from "libp2p-gossipsub";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {IGossipMessage} from "libp2p-gossipsub";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {IGossipMessageValidator} from "../../../network/gossip/interface";
 import sinon from "sinon";
-import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {createPeerId} from "../../../../src/network";
 import PeerInfo from "peer-info";
 import {compress} from "snappyjs";
+
 const forkValue = Buffer.alloc(4);
 
-describe("validate", function() {
+describe("gossipsub", function() {
   const sandbox = sinon.createSandbox();
   let validator: IGossipMessageValidator;
   let gossipSub: LodestarGossipsub;
@@ -29,14 +29,14 @@ describe("validate", function() {
       seqno: Buffer.from("0"),
       topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue)]
     };
-    validator = sinon.createStubInstance(GossipMessageValidator);
+    validator = {} as IGossipMessageValidator;
     const registrar = {
       handle: (): null => null,
       register: (): string => "",
       unregister: (): boolean => false,
     };
     const peerInfo = new PeerInfo(await createPeerId());
-    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(), 
+    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(),
       peerInfo, registrar, {});
   });
 

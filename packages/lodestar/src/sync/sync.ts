@@ -123,9 +123,10 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private async waitForPeers(): Promise<void> {
-    this.logger.info("Waiting for peers...", this.getPeers());
+    this.logger.info("Waiting for peers...");
     while (this.mode !== SyncMode.STOPPED && this.getPeers().length < this.opts.minPeers) {
-      await sleep(1000);
+      this.logger.warn(`Current peerCount=${this.getPeers().length}, required = ${this.opts.minPeers}`);
+      await sleep(3000);
     }
   }
 

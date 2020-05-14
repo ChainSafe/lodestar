@@ -34,6 +34,7 @@ export interface IDevCommandOptions {
   genesisTime?: string;
   validatorCount?: string;
   genesisState?: string;
+  minPeers?: string;
   preset?: string;
   validators?: string;
   db?: string;
@@ -96,7 +97,7 @@ export class DevCommand implements ICliCommand {
       {discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/127.0.0.1/udp/0"}},
       {isMergeableObject: isPlainObject}
     );
-    const libp2p = await createNodeJsLibp2p(peerId, conf.network, false);
+    const libp2p = await createNodeJsLibp2p(peerId, conf.network, true);
 
     const config = options.preset === "minimal" ? minimalConfig : mainnetConfig;
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();

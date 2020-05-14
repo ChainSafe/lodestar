@@ -47,7 +47,7 @@ Terminal 1:
 `bin/lodestar dev -r -c 8` - It will run beacon node and 8 validators with all the default settings. State will be written to .tmp/state.ssz
 
 Terminal 2:
-`bin/lodestar dev --bootnodes "/ip4/127.0.0.1/tcp/30606" --multiaddrs "/ip4/127.0.0.1/tcp/30607" --bindAddr "/ip4/0.0.0.0/udp/5502" -v 0 -r` - Will connect to bootnode (node 1 default multiaddrs) and won't start validators.
+`bin/lodestar dev --bootnodes "/ip4/127.0.0.1/tcp/30606" --multiaddrs "/ip4/127.0.0.1/tcp/30607" --bindAddr "/ip4/0.0.0.0/udp/5502" -v 0 -r --minPeers 1` - Will connect to bootnode (node 1 default multiaddrs) and won't start validators.
 
 <!---
 ### Starting private eth1 chain

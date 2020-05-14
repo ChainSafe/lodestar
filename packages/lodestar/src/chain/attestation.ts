@@ -1,12 +1,19 @@
 import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {
+  Attestation,
+  AttestationRootHex,
+  BeaconState,
+  BlockRootHex,
+  Root,
+  SignedBeaconBlock,
+  Slot
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndices,
-  getCurrentSlot
+  getAttestingIndices
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
@@ -41,8 +48,8 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
-      const state = await this.db.stateCache.get(this.forkChoice.headStateRoot());
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < state.slot) {
+      const currentSlot = this.forkChoice.headBlockSlot();
+      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < currentSlot) {
         this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
         return;
       }
@@ -77,26 +84,38 @@ export class AttestationProcessor implements IAttestationProcessor {
     const blockPendingAttestations = this.pendingAttestations.get(toHexString(blockRoot)) ||
       new Map<AttestationRootHex, Attestation>();
     for (const [hash, attestation] of blockPendingAttestations) {
-      await this.processAttestation(attestation, fromHexString(hash));
+      try {
+        await this.processAttestation(attestation, fromHexString(hash));
+      } catch (e) {
+        this.logger.warn("Failed to process attestation. Reason: " + e.message);
+      }
     }
     this.pendingAttestations.delete(toHexString(blockRoot));
   }
 
   public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
     const justifiedCheckpoint = this.forkChoice.getJustified();
-    const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
-    const checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
-    const currentSlot = getCurrentSlot(this.config, checkpointState.genesisTime);
+    const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
+    let checkpointState: BeaconState;
+    if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
+      const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
+      checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
+    } else {
+      // should be genesis state
+      checkpointState = await this.db.stateArchive.get(0);
+    }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
-    assert([currentEpoch, previousEpoch].includes(target.epoch), "attestation is targeting too old epoch");
+    assert([previousEpoch, currentEpoch].includes(target.epoch),
+      `attestation is targeting too old epoch ${target.epoch}, current=${currentEpoch}`
+    );
     assert(
       target.epoch === computeEpochAtSlot(this.config, attestation.data.slot),
       "attestation is not targeting current epoch"
     );
     assert(
-      getCurrentSlot(this.config, checkpointState.genesisTime) >= computeStartSlotAtEpoch(this.config, target.epoch)
+      currentSlot >= computeStartSlotAtEpoch(this.config, target.epoch)
       , "Current slot less than this target epoch's start slot"
     );
     const block = await this.db.block.get(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);

@@ -160,7 +160,7 @@ export class LodestarGossipsub extends Gossipsub {
         objType = this.config.types.Attestation;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
-        objType = this.config.types.AggregateAndProof;
+        objType = this.config.types.SignedAggregateAndProof;
         break;
       case GossipEvent.ATTESTER_SLASHING:
         objType = this.config.types.AttesterSlashing;

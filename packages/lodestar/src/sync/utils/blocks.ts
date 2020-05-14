@@ -3,6 +3,8 @@ import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {sleep} from "../../util/sleep";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -12,9 +14,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
  * @param targetSlot
  */
 export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
+  if(blocksPerChunk < 5) {
+    blocksPerChunk = 5;
+  }
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk) {
+  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk + 1) {
     if(i + blocksPerChunk > targetSlot) {
       chunks.push({
         start: i,
@@ -23,7 +28,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     } else {
       chunks.push({
         start: i,
-        end: i + blocksPerChunk - 1
+        end: i + blocksPerChunk
       });
     }
   }
@@ -40,18 +45,24 @@ export async function getBlockRangeFromPeer(
     {
       startSlot: chunk.start,
       step: 1,
-      count: chunk.end - chunk.start
+      count: chunk.end - chunk.start + 1
     }
   ) as SignedBeaconBlock[];
 }
 
 export async function getBlockRange(
+  logger: ILogger,
   rpc: IReqResp,
   peers: PeerInfo[],
   range: ISlotRange,
-  blocksPerChunk = 10,
-  maxRetry = 3
+  blocksPerChunk?: number,
+  maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
+  const totalBlocks = range.end - range.start;
+  blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks/peers.length);
+  if(blocksPerChunk < 5) {
+    blocksPerChunk = totalBlocks;
+  }
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
   //try to fetch chunks from different peers until all chunks are fetched
@@ -61,19 +72,26 @@ export async function getBlockRange(
     const peerBalancer = new RoundRobinArray(peers);
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
+        const peer = peerBalancer.next();
         try {
-          const chunkBlocks = await getBlockRangeFromPeer(rpc, peerBalancer.next(), chunk);
-          blocks = blocks.concat(chunkBlocks);
+          const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+          if(chunkBlocks.length > 0) {
+            blocks = blocks.concat(chunkBlocks);
+          }
           return null;
         } catch (e) {
+          logger.debug(`Failed to obtain chunk ${JSON.stringify(chunk)} `
+              +`from peer ${peer.id.toB58String()}. Error: ${e.message}`
+          );
+          await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }
       })
     )).filter((chunk) => chunk !== null);
     retry++;
-    if(retry > maxRetry) {
-      throw new Error("Max req retry for blocks by range");
+    if(retry > maxRetry || retry > peers.length) {
+      logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
     }
   }
   return sortBlocks(blocks);

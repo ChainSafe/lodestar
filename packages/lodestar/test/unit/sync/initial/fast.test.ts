@@ -2,7 +2,7 @@ import {describe} from "mocha";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
@@ -14,28 +14,32 @@ import {expect} from "chai";
 describe("fast sync", function () {
 
   const sandbox = sinon.createSandbox();
-  
+
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
   let targetSlotToBlockChunksStub: SinonStub;
-  
+
   beforeEach(function () {
+    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub.forkChoice = forkChoiceStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
     targetSlotToBlockChunksStub = sandbox.stub(syncUtils, "targetSlotToBlockChunks");
   });
-  
+
   afterEach(function () {
     sandbox.restore();
   });
-  
+
   it("no peers with finalized epoch", async function () {
+    forkChoiceStub.headBlockSlot.returns(0);
     const sync = new FastSync(
-      {blockPerChunk: 5, minPeers: 0},
+      {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
         chain: chainStub,
@@ -50,11 +54,15 @@ describe("fast sync", function () {
     networkStub.getPeers.returns([]);
     await sync.start();
   });
-  
+
   it("should sync till target and end", function (done) {
     const chainEventEmitter = new EventEmitter();
+    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub.headBlockSlot.returns(0);
+    // @ts-ignore
+    chainEventEmitter.forkChoice = forkChoiceStub;
     const sync = new FastSync(
-      {blockPerChunk: 5, minPeers: 0},
+      {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
         //@ts-ignore
@@ -79,7 +87,7 @@ describe("fast sync", function () {
     });
     const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
-    endCallbackStub.callsFake(() => {
+    endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledTwice).to.be.true;
       done();
       return this;
@@ -91,8 +99,12 @@ describe("fast sync", function () {
 
   it("should continue syncing if there is new target", function (done) {
     const chainEventEmitter = new EventEmitter();
+    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub.headBlockSlot.returns(0);
+    // @ts-ignore
+    chainEventEmitter.forkChoice = forkChoiceStub;
     const sync = new FastSync(
-      {blockPerChunk: 5, minPeers: 0},
+      {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
         //@ts-ignore
@@ -121,7 +133,7 @@ describe("fast sync", function () {
     });
     const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
-    endCallbackStub.callsFake(() => {
+    endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledThrice).to.be.true;
       done();
       return this;

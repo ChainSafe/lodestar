@@ -15,15 +15,26 @@ import * as blockUtils from "../../../../src/sync/utils/blocks";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {collect} from "../../chain/blocks/utils";
 import {generateState} from "../../../utils/state";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import PeerInfo from "peer-info";
 
 describe("sync utils", function () {
+
+  let timer: SinonFakeTimers;
+
+  beforeEach(function () {
+    timer = sinon.useFakeTimers();
+  });
+
+  after(function () {
+    timer.restore();
+  });
 
   describe("get highest common slot", function () {
     it("no pears", function () {
@@ -74,7 +85,7 @@ describe("sync utils", function () {
   });
 
   describe("get common finalized checkpoint", function () {
-    
+
     it("no peers", function () {
       const result = getCommonFinalizedCheckpoint(config, []);
       expect(result).to.be.null;
@@ -91,7 +102,7 @@ describe("sync utils", function () {
         root: Buffer.alloc(32, 4)
       };
       const result = getCommonFinalizedCheckpoint(
-        config, 
+        config,
         [generateReputation({
           latestStatus: generateStatus({
             finalizedEpoch: checkpoint.epoch,
@@ -132,22 +143,22 @@ describe("sync utils", function () {
       );
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
-    
+
   });
 
   describe("targetSlotToBlockChunks process", function () {
-    
+
     let chainStub: SinonStubbedInstance<IBeaconChain>;
-    
+
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
     });
-    
+
     it("should work target less than epoch slots", async function () {
       chainStub.getHeadState.resolves(generateState({slot: 0}));
       const chunks = await pipe(
         [5],
-        targetSlotToBlockChunks(config, chainStub),
+        targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
         collect
       );
       expect(chunks.length).to.be.equal(1);
@@ -157,36 +168,41 @@ describe("sync utils", function () {
       chainStub.getHeadState.resolves(generateState({slot: 0}));
       const chunks = await pipe(
         [config.params.SLOTS_PER_EPOCH + 2],
-        targetSlotToBlockChunks(config, chainStub),
+        targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
         collect
       );
-      expect(chunks.length).to.be.equal(2);
+      expect(chunks.length).to.be.equal(1);
     });
   });
-  
+
   describe("fetchBlockChunk process", function () {
-    
+
     const sandbox = sinon.createSandbox();
-    
+
     let getPeersStub: SinonStub, getBlockRangeStub: SinonStub;
-    
+
     beforeEach(function () {
       getPeersStub = sinon.stub();
       getBlockRangeStub = sandbox.stub(blockUtils, "getBlockRange");
     });
-    
+
     afterEach(function () {
       sandbox.restore();
     });
-    
+
     it("no peers", async function () {
       getPeersStub.resolves([]);
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
-      const result = await pipe(
+      let result = pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(sinon.createStubInstance(BeaconChain), sinon.createStubInstance(ReqResp), getPeersStub),
+        fetchBlockChunks(
+          sinon.createStubInstance(WinstonLogger),
+          sinon.createStubInstance(BeaconChain),
+          sinon.createStubInstance(ReqResp), getPeersStub),
         collect
       );
+      await timer.tickAsync(30000);
+      result = await result;
       expect(result.length).to.be.equal(0);
     });
 
@@ -195,33 +211,45 @@ describe("sync utils", function () {
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
       const result = await pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(sinon.createStubInstance(BeaconChain), sinon.createStubInstance(ReqResp), getPeersStub),
+        fetchBlockChunks(
+          sinon.createStubInstance(WinstonLogger),
+          sinon.createStubInstance(BeaconChain),
+          sinon.createStubInstance(ReqResp), getPeersStub),
         collect
       );
       expect(result.length).to.be.equal(1);
       expect(getBlockRangeStub.calledOnce).to.be.true;
     });
-    
+
   });
-  
+
   describe("block process", function () {
 
     let chainStub: SinonStubbedInstance<IBeaconChain>;
-    
+    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
+      forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+      chainStub.forkChoice = forkChoiceStub;
     });
-    
+
     it("should work", async function () {
+      forkChoiceStub.headBlockRoot.returns(generateEmptySignedBlock().message.parentRoot.valueOf() as Uint8Array);
+      const block1 = generateEmptySignedBlock();
+      const block2 = generateEmptySignedBlock();
+      block2.message.slot = 3;
+      block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       await pipe(
-        [[generateEmptySignedBlock()], [generateEmptySignedBlock()]],
-        processSyncBlocks(chainStub, sinon.createStubInstance(WinstonLogger))
+        [[block2], [block1]],
+        processSyncBlocks(
+          config, chainStub, sinon.createStubInstance(WinstonLogger))
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
     });
-    
+
   });
-    
+
 });
 
 function generateReputation(overiddes: Partial<IReputation>): IReputation {

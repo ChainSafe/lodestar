@@ -9,6 +9,7 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 import PeerId from "peer-id";
 import {BeaconBlockHeader, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 describe("sync - block utils", function () {
 
@@ -17,9 +18,11 @@ describe("sync - block utils", function () {
     const sandbox = sinon.createSandbox();
 
     let rpcStub: SinonStubbedInstance<ReqResp>;
+    let loggerStub: SinonStubbedInstance<ILogger>;
 
     beforeEach(function () {
       rpcStub = sandbox.createStubInstance(ReqResp);
+      loggerStub = sandbox.createStubInstance(WinstonLogger);
     });
 
     afterEach(function () {
@@ -27,38 +30,39 @@ describe("sync - block utils", function () {
     });
 
     it("happy path", async function () {
-      const peer1 = {id: 1} as unknown as PeerInfo;
-      const peer2 = {id: 2} as unknown as PeerInfo;
+      const peer1 = new PeerInfo(await PeerId.create());
+      const peer2 = new PeerInfo(await PeerId.create());
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange
-        .withArgs(peer1, sinon.match.any)
-        .resolves([generateEmptySignedBlock()]);
-      rpcStub.beaconBlocksByRange
-        .withArgs(peer2, sinon.match.any)
-        .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
-      const blocks = await getBlockRange(rpcStub, peers, {start: 0, end: 4}, 2);
+        .withArgs(sinon.match(peers[0]).or(sinon.match(peers[1])), sinon.match.any)
+        .resolves([generateEmptySignedBlock(), generateEmptySignedBlock(), generateEmptySignedBlock()]);
+      const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
       expect(blocks.length).to.be.equal(3);
     });
 
     it("refetch failed chunks", async function () {
-      const peer1 = {id: 1} as unknown as PeerInfo;
-      const peer2 = {id: 2} as unknown as PeerInfo;
+      const timer = sinon.useFakeTimers();
+      const peer1 = new PeerInfo(await PeerId.create());
+      const peer2 = new PeerInfo(await PeerId.create());
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange
-        .withArgs(peer1, sinon.match.any)
-        .resolves([generateEmptySignedBlock()]);
-      rpcStub.beaconBlocksByRange
-        .withArgs(peer2, sinon.match.any)
+        .onFirstCall()
         .throws();
-      const blocks = await getBlockRange(rpcStub, peers, {start: 0, end: 4}, 2);
+      rpcStub.beaconBlocksByRange
+        .onSecondCall()
+        .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
+      const blockPromise = getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
+      await timer.tickAsync(1000);
+      const blocks = await blockPromise;
       expect(blocks.length).to.be.equal(2);
+      timer.reset();
     });
 
     it("no chunks", async function () {
       const peer1 = {id: 1} as unknown as PeerInfo;
       const peers: PeerInfo[] = [peer1];
       rpcStub.beaconBlocksByRange.resolves([]);
-      const blocks = await getBlockRange(rpcStub, peers, {start: 4, end: 4}, 2);
+      const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 4, end: 4}, 2);
       expect(blocks.length).to.be.equal(0);
     });
 
@@ -69,17 +73,17 @@ describe("sync - block utils", function () {
       const result = chunkify(10, 0, 30);
       expect(result.length).to.be.equal(3);
       expect(result[0].start).to.be.equal(0);
-      expect(result[0].end).to.be.equal(9);
-      expect(result[1].start).to.be.equal(10);
-      expect(result[1].end).to.be.equal(19);
-      expect(result[2].start).to.be.equal(20);
-      expect(result[2].end).to.be.equal(29);
+      expect(result[0].end).to.be.equal(10);
+      expect(result[1].start).to.be.equal(11);
+      expect(result[1].end).to.be.equal(21);
+      expect(result[2].start).to.be.equal(22);
+      expect(result[2].end).to.be.equal(30);
     });
 
     it("should return chunks of block range - not rounded", function () {
       const result = chunkify(10, 0, 25);
       expect(result.length).to.be.equal(3);
-      expect(result[2].start).to.be.equal(20);
+      expect(result[2].start).to.be.equal(22);
       expect(result[2].end).to.be.equal(25);
     });
   });

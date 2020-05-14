@@ -1,5 +1,5 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
 import * as syncUtils from "../../../../src/sync/utils";
@@ -12,13 +12,16 @@ describe("fast regular sync", function () {
   const sandbox = sinon.createSandbox();
 
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
   let targetSlotToBlockChunksStub: SinonStub;
 
   beforeEach(function () {
+    forkChoiceStub  = sinon.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub.forkChoice = forkChoiceStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getHighestCommonSlot");
@@ -36,22 +39,6 @@ describe("fast regular sync", function () {
   afterEach(function () {
     sandbox.restore();
   });
-  
-  it("already synced", async function() {
-    const sync = new NaiveRegularSync(
-      {blockPerChunk: 10},
-      {
-        chain: chainStub,
-        config,
-        logger: sinon.createStubInstance(WinstonLogger),
-        network: networkStub,
-        reputationStore: repsStub
-      }
-    );
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
-    getTargetStub.returns(0);
-    await sync.start();
-  });
 
   it("already synced", async function() {
     const sync = new NaiveRegularSync(
@@ -64,7 +51,7 @@ describe("fast regular sync", function () {
         reputationStore: repsStub
       }
     );
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
+    forkChoiceStub.headBlockSlot.returns(0);
     getTargetStub.returns(0);
     await sync.start();
   });

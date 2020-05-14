@@ -1,8 +1,8 @@
-import sinon from "sinon";
-import { expect } from "chai";
-import { AttestationProcessor } from "../../../src/chain/attestation";
-import { BeaconChain, StatefulDagLMDGHOST } from "../../../src/chain";
-import { config } from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {expect} from "chai";
+import {AttestationProcessor} from "../../../src/chain/attestation";
+import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import { BlockRepository } from "../../../src/db/api/beacon/repositories";
 import { WinstonLogger } from "@chainsafe/lodestar-utils/lib/logger";
@@ -12,11 +12,12 @@ import { generateState } from "../../utils/state";
 import { generateValidators } from "../../utils/validator";
 import { fail } from "assert";
 import { StubbedBeaconDb } from "../../utils/stub";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
   let attestationProcessor: AttestationProcessor;
-  let chainStub: any, forkChoiceStub: any, dbStub: any, logger: any,
+  let chainStub: any, forkChoiceStub: SinonStubbedInstance<ILMDGHOST>, dbStub: any, logger: any,
     processAttestationStub: any, getAttestingIndicesStub: any;
 
   beforeEach(() => {
@@ -25,7 +26,7 @@ describe("AttestationProcessor", function () {
     dbStub = new StubbedBeaconDb(sandbox, config);
     logger = new WinstonLogger();
     logger.silent = true;
-    attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, { config, db: dbStub, logger })
+    attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, {config, db: dbStub, logger});
     getAttestingIndicesStub = sandbox.stub(utils, "getAttestingIndices");
   });
 
@@ -67,7 +68,7 @@ describe("AttestationProcessor", function () {
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.stateCache.get.resolves(state);
-      forkChoiceStub.getJustified.returns({});
+      forkChoiceStub.getJustified.returns({} as Checkpoint);
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
@@ -86,7 +87,7 @@ describe("AttestationProcessor", function () {
       dbStub.block.get.resolves(block);
       const state = generateState();
       dbStub.stateCache.get.resolves(state);
-      forkChoiceStub.getJustified.returns({})
+      forkChoiceStub.getJustified.returns({} as Checkpoint)
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
@@ -103,11 +104,12 @@ describe("AttestationProcessor", function () {
     dbStub.block.get.resolves(block);
     const state = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
-    dbStub.stateCache.get.resolves(state);
+    dbStub.stateArchive.get.withArgs(0).resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
+    forkChoiceStub.headBlockSlot.returns(0);
     getAttestingIndicesStub.returns([0]);
     state.balances = [];
-    state.validators = generateValidators(3, {})
+    state.validators = generateValidators(3, {});
 
     await attestationProcessor.processAttestation(attestation, attestationHash);
     expect(getAttestingIndicesStub.called).to.be.true;

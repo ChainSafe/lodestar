@@ -78,7 +78,7 @@ describe("e2e interop simulation", function() {
     expect(devConfig.params.SECONDS_PER_SLOT).to.be.lt(minimalConfig.params.SECONDS_PER_SLOT);
     const peerId = await createPeerId();
     const libp2p = await createNodeJsLibp2p(
-      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}
+      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}, false
     );
     node = new BeaconNode(conf, {config: devConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
 

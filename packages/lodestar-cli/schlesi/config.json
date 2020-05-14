@@ -1,0 +1,54 @@
+{
+  "api": {
+    "enabled": true,
+    "namespaces": [
+      "beacon",
+      "validator"
+    ],
+    "host": "127.0.0.1",
+    "port": 9596,
+    "cors": {
+      "origin": "*"
+    }
+  },
+  "chain": {
+    "preset": "mainnet"
+  },
+  "eth1": {
+    "enabled": false,
+    "provider": {
+      "url": "http://goerli.prylabs.net",
+      "network": 5
+    },
+    "depositContract": {
+      "deployedAt": 2596126,
+      "address": "0xA15554BF93a052669B511ae29EA21f3581677ac5"
+    }
+  },
+  "log": {
+    "chain": "verbose",
+    "network": "verbose",
+    "sync": "verbose"
+  },
+  "metrics": {
+    "enabled": true,
+    "serverPort": 5000
+  },
+  "network": {
+    "discv5": {
+      "enabled": true,
+      "bindAddr": "/ip4/0.0.0.0/udp/0",
+      "bootEnrs": []
+    },
+    "maxPeers": 25,
+    "bootMultiaddrs": [
+      "/ip4/51.15.119.157/tcp/9000/p2p/16Uiu2HAkvLCWwVEfF365ZWXB6siDL1mUpcd1XQ1nSXAHmvM5W7wn",
+      "/ip4/51.15.119.157/tcp/9500/p2p/16Uiu2HAmSUvW1q4yH4QzZGpWHrLvpCzPdufSFex5odbhNj6zDEjQ",
+      "/ip4/51.15.119.157/tcp/13000/p2p/16Uiu2HAmNYCpko7ahZrZrzcpJRjL6bJ3JmPFiCbb9bgR3UHbHBsH",
+      "/ip4/51.15.119.157/tcp/13500/p2p/16Uiu2HAm37N426LzqRQF7YCo2u7HRCkAGrxPhv4QHxGu6YE51YWJ"
+    ],
+    "localMultiaddrs": [
+      "/ip4/0.0.0.0/tcp/0"
+    ]
+  }
+}

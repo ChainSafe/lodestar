@@ -8,12 +8,21 @@ export class RoundRobinArray<T> {
     this.array = this.shuffle(array);
   }
 
-  public next(): T {
-    return this.array[this.index++];
+  public next(): T|null {
+    const item = this.array[this.index++];
+    if(item) {
+      return item;
+    } {
+      this.index = 0;
+      return this.array[this.index];
+    }
   }
 
   private shuffle(array: T[]): T[] {
-    //TODO: implement some shuffling algorith
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
     return array;
   }
 }

@@ -16,7 +16,8 @@ export function processBlock(
   forkChoice: ILMDGHOST,
   pool: BlockPool,
   eventBus: ChainEventEmitter,
-): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<{block: SignedBeaconBlock; postState: BeaconState}> {
+): (source: AsyncIterable<IBlockProcessJob>) =>
+  AsyncGenerator<{preState: BeaconState; block: SignedBeaconBlock; postState: BeaconState; finalized: boolean}> {
   return (source) => {
     return (async function*() {
       for await(const job of source) {
@@ -37,7 +38,7 @@ export function processBlock(
         ]);
         const newChainHeadRoot = await updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
-          logger.important(`Fork choice changed head to 0x${toHexString(newChainHeadRoot)}`);
+          logger.info(`Processed new chain head 0x${toHexString(newChainHeadRoot)}, slot=${newState.slot}`);
           if(!config.types.Fork.equals(preState.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -46,7 +47,7 @@ export function processBlock(
           }
         }
         pool.onProcessedBlock(job.signedBlock);
-        yield {preState, postState: newState, block: job.signedBlock};
+        yield {preState, postState: newState, block: job.signedBlock, finalized: job.trusted};
       }
     })();
   };
@@ -59,7 +60,7 @@ export async function getPreState(
   const parentBlock = await db.block.get(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-    logger.warn(`Block(${toHexString(blockRoot)}) at slot ${job.signedBlock.message.slot}`
+    logger.debug(`Block(${toHexString(blockRoot)}) at slot ${job.signedBlock.message.slot}`
             + ` is missing parent block (${toHexString(job.signedBlock.message.parentRoot)}).`
     );
     pool.addPendingBlock(job);
@@ -101,7 +102,8 @@ export async function runStateTransition(
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate
     await db.badBlock.put(blockRoot);
-    logger.warn(`Found bad block, block root: ${toHexString(blockRoot)} ` + e.message);
+    logger.warn(`Found bad block with root: ${toHexString(blockRoot)} slot: ${job.signedBlock.message.slot}` +
+      ` Error: ${e.message}`);
     return null;
   }
 }
