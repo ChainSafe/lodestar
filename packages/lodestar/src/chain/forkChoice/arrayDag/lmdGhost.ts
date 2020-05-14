@@ -317,31 +317,15 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public head(): BlockSummary {
+    return this.toBlockSummary(this.headNode());
+  }
+
+  public headNode(): Node {
     assert(this.justified);
     if (!this.synced) {
       this.syncChanges();
     }
-    const headInfo = this.nodes[this.justified.node.bestTarget];
-    let parentRootBuf: Uint8Array;
-    if(headInfo.hasParent()) {
-      parentRootBuf = fromHexString(this.nodes[headInfo.parent].blockRoot);
-    } else {
-      parentRootBuf = ZERO_HASH;
-    }
-    return {
-      slot: headInfo.slot,
-      blockRoot: fromHexString(headInfo.blockRoot),
-      parentRoot: parentRootBuf,
-      stateRoot: headInfo.stateRoot.valueOf() as Uint8Array,
-      justifiedCheckpoint: {
-        epoch: headInfo.justifiedCheckpoint.epoch,
-        root: fromHexString(headInfo.justifiedCheckpoint.rootHex)
-      },
-      finalizedCheckpoint: {
-        epoch: headInfo.finalizedCheckpoint.epoch,
-        root: fromHexString(headInfo.finalizedCheckpoint.rootHex)
-      }
-    };
+    return this.nodes[this.justified.node.bestTarget];
   }
 
   public headBlockRoot(): Uint8Array {
@@ -359,6 +343,19 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     }
     const bestTarget = this.nodes[this.justified.node.bestTarget];
     return bestTarget.stateRoot.valueOf() as Uint8Array;
+  }
+
+  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+    const head = this.headNode();
+    let node = head;
+    // navigate from the head node, up the chain until either the slot is found or the slot is passed
+    while(node.slot !== slot) {
+      if (node.slot < slot || !node.hasParent()) {
+        return null;
+      }
+      node = this.nodes[node.parent];
+    }
+    return this.toBlockSummary(node);
   }
 
   // To address the bouncing attack, only update conflicting justified
@@ -580,6 +577,29 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       }
       this.finalized.node.parent = NO_NODE;
     }
+  }
+
+  private toBlockSummary(node: Node): BlockSummary {
+    let parentRootBuf: Uint8Array;
+    if(node.hasParent()) {
+      parentRootBuf = fromHexString(this.nodes[node.parent].blockRoot);
+    } else {
+      parentRootBuf = ZERO_HASH;
+    }
+    return {
+      slot: node.slot,
+      blockRoot: fromHexString(node.blockRoot),
+      parentRoot: parentRootBuf,
+      stateRoot: node.stateRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: {
+        epoch: node.justifiedCheckpoint.epoch,
+        root: fromHexString(node.justifiedCheckpoint.rootHex)
+      },
+      finalizedCheckpoint: {
+        epoch: node.finalizedCheckpoint.epoch,
+        root: fromHexString(node.finalizedCheckpoint.rootHex)
+      }
+    };
   }
 
 }
