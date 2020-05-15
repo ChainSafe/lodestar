@@ -7,7 +7,7 @@ WORKDIR /usr/app
 # Install node dependencies - done in a separate step so Docker can cache it.
 COPY . .
 
-RUN yarn install --force --non-interactive --ignore-optional --frozen-lockfile && yarn cache clean
+RUN yarn install --force --network-timeout 1000000 --non-interactive --ignore-optional --frozen-lockfile && yarn cache clean
 
 WORKDIR /usr/app/packages/lodestar-cli/bin
 
