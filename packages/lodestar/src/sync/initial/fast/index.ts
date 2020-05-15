@@ -99,18 +99,21 @@ export class FastSync
     }
   }
 
+  private updateBlockImportTarget = (target: Slot): void => {
+    this.logger.verbose(`updating block target ${target}`);
+    this.blockImportTarget = target;
+  };
 
-  private setBlockImportTarget = (target?: Slot, triggerSync = true): void => {
-    const lastTarget = this.blockImportTarget;
-    this.blockImportTarget = target || this.getNewBlockImportTarget(target);
-    if(triggerSync) {
-      this.logger.info(
-        `Fetching blocks for ${this.chain.forkChoice.headBlockSlot()}...${this.blockImportTarget} slot range`
-      );
-      this.syncTriggerSource.push(
-        {start: lastTarget + 1, end: this.blockImportTarget}
-      );
-    }
+  private setBlockImportTarget = (fromSlot?: Slot): void => {
+    const lastTarget = fromSlot || this.blockImportTarget;
+    const newTarget = this.getNewBlockImportTarget(this.blockImportTarget);
+    this.logger.info(
+      `Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`
+    );
+    this.syncTriggerSource.push(
+      {start: lastTarget + 1, end: newTarget}
+    );
+    this.updateBlockImportTarget(newTarget);
   };
 
   private async sync(): Promise<void> {
@@ -123,6 +126,7 @@ export class FastSync
         const logger = this.logger;
         const opts = this.opts;
         const setBlockImportTarget = this.setBlockImportTarget;
+        const updateBlockImportTarget = this.updateBlockImportTarget;
         const getInitialSyncPeers = this.getInitialSyncPeers;
         return (async function() {
           for await (const slotRange of source) {
@@ -136,10 +140,11 @@ export class FastSync
             logger.debug("last fetched slot=" + lastSlot);
             if(lastSlot) {
               //set new target from last block we've received
-              setBlockImportTarget(lastSlot, false);
+              // it will trigger new sync once last block is processed
+              updateBlockImportTarget(lastSlot);
             } else {
               //we didn't receive any block, set target from last requested slot
-              setBlockImportTarget(slotRange.end, true);
+              setBlockImportTarget(slotRange.end);
             }
           }
         })();
