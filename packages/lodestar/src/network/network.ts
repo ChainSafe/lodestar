@@ -102,8 +102,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     return !!this.libp2p.registrar.getConnection(peerInfo);
   }
 
-  public getConnection(peer: PeerInfo): LibP2pConnection {
-    return this.libp2p.registrar.getConnection(peer);
+  public getConnection(peer: PeerInfo): LibP2pConnection|undefined {
+    return this.libp2p.registrar.connections.get(peer.id.toB58String()).pop();
   }
 
   public async connect(peerInfo: PeerInfo): Promise<void> {
@@ -179,7 +179,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.metrics.peers.inc();
     this.logger.verbose("peer connected " + peerInfo.id.toB58String() + " " + conn.stat.direction);
     //tmp fix, we will just do double status exchange but nothing major
-    this.emit("peer:connect", peerInfo, "outbound");
+    this.emit("peer:connect", peerInfo, conn.stat.direction);
   };
 
   private emitPeerDisconnect = (peerInfo: PeerInfo): void => {

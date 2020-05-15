@@ -9235,9 +9235,9 @@ libp2p-tcp@^0.14.5:
     multiaddr "^7.2.1"
     stream-to-it "^0.2.0"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#mpetrunic/expose-registrar-connections":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#2ac3b45b71222fe9932877be5e4d21d1ab7a0f48"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#971ce90b715ae5dadad88d47c9e423e0fd2f0c8a"
   dependencies:
     "@chainsafe/discv5" "^0.1.1"
     "@types/node" "^13.7.0"
