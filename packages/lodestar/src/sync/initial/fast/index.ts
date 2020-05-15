@@ -100,7 +100,7 @@ export class FastSync
   }
 
   private updateBlockImportTarget = (target: Slot): void => {
-    console.log("updating block target", target);
+    this.logger.verbose(`updating block target ${target}`);
     this.blockImportTarget = target;
   };
 
