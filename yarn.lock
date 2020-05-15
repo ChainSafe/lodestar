@@ -9237,7 +9237,7 @@ libp2p-tcp@^0.14.5:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#2ac3b45b71222fe9932877be5e4d21d1ab7a0f48"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#f3ef499044c35eb021b6dd2cb67b0431f527a9e6"
   dependencies:
     "@chainsafe/discv5" "^0.1.1"
     "@types/node" "^13.7.0"
