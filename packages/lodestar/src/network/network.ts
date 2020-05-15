@@ -103,7 +103,12 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public getConnection(peer: PeerInfo): LibP2pConnection|undefined {
-    return this.libp2p.registrar.connections.get(peer.id.toB58String()).pop();
+    const id = peer.id.toB58String();
+    if(this.libp2p.registrar.connections.has(id)) {
+      return this.libp2p.registrar.connections.get(id).slice(-1).pop();
+    } else {
+      return undefined;
+    }
   }
 
   public async connect(peerInfo: PeerInfo): Promise<void> {
