@@ -473,9 +473,9 @@ describe("ArrayDagLMDGHOST", () => {
       blockC.message.slot = blockB.message.slot + 1;
       blockC.message.parentRoot = blockBRoot;
       const blockCRoot = config.types.BeaconBlock.hashTreeRoot(blockC.message);
-      dbStub.block.getAll.resolves([
-        blockA, blockB, blockC
-      ]);
+      // dbStub.block.getAll.resolves([
+      //   blockA, blockB, blockC
+      // ]);
       const genesisTime = Math.floor(Date.now() / 1000);
       const state = generateState();
       state.finalizedCheckpoint = {

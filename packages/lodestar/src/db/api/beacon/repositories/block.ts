@@ -24,11 +24,4 @@ export class BlockRepository extends Repository<Uint8Array, SignedBeaconBlock> {
   public getId(value: SignedBeaconBlock): Uint8Array {
     return this.config.types.BeaconBlock.hashTreeRoot(value.message);
   }
-
-  public async getAll(): Promise<SignedBeaconBlock[]> {
-    const allBlocks = await this.values();
-    // sort asc
-    allBlocks.sort((a, b) => a.message.slot - b.message.slot);
-    return allBlocks;
-  }
 }
