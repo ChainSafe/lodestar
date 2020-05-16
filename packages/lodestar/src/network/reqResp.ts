@@ -27,6 +27,7 @@ import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk} from "./encoders/interface";
+import {IReputationStore} from "../sync/IReputation";
 
 interface IReqEventEmitterClass {
   new(): ReqEventEmitter;
@@ -40,6 +41,7 @@ interface IReqRespModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
+  peerReputations: IReputationStore;
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
@@ -62,11 +64,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private libp2p: LibP2p;
   private logger: ILogger;
   private responseListener: ResponseEventListener;
+  private peerReputations: IReputationStore;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger}: IReqRespModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, peerReputations, logger}: IReqRespModules) {
     super();
     this.config = config;
     this.libp2p = libp2p;
+    this.peerReputations = peerReputations;
     this.logger = logger;
     this.responseListener = new ResponseEventListener();
   }
@@ -80,6 +84,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             pipe(
               stream.source,
               eth2RequestDecode(this.config, this.logger, method, encoding),
+              this.storePeerEncodingPreference(peerId, method, encoding),
               this.handleRpcRequest(peerId, method),
               eth2ResponseEncode(this.config, this.logger, method, encoding),
               stream.sink
@@ -156,6 +161,20 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRoot, request);
   }
 
+  private storePeerEncodingPreference(
+    peerId: PeerId, method: Method, encoding: ReqRespEncoding
+  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody> {
+    return (source: AsyncIterable<RequestBody>) => {
+      const peerReputations = this.peerReputations;
+      return (async function*() {
+        if (method === Method.Status) {
+          peerReputations.get(peerId.toB58String()).encoding = encoding;
+        }
+        yield* source;
+      })();
+    };
+  }
+
   private handleRpcRequest(
     peerId: PeerId, method: Method
   ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
@@ -171,7 +190,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     };
   }
 
-  private getResponse = (peerId: PeerId, method: Method, request?: RequestBody): AsyncIterable<IResponseChunk> => {
+  private getResponse = (
+    peerId: PeerId,
+    method: Method,
+    request?: RequestBody): AsyncIterable<IResponseChunk> => {
     const requestId = randomRequestId();
     this.logger.verbose(`${requestId} - receive ${method} request from ${peerId.toB58String()}`);
     // eslint-disable-next-line
@@ -195,6 +217,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     method: Method,
     body?: RequestBody,
   ): Promise<T> {
+    const reputaton = this.peerReputations.getFromPeerInfo(peerInfo);
+    const encoding = reputaton.encoding || ReqRespEncoding.SSZ_SNAPPY;
     const requestOnly = isRequestOnly(method);
     const requestSingleChunk = isRequestSingleChunk(method);
     return await new Promise((resolve, reject) => {
@@ -209,7 +233,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       try {
         const responses: Array<T> = [];
         pipe(
-          this.sendRequestStream(peerInfo, method, body),
+          this.sendRequestStream(peerInfo, method, encoding, body),
           async (source: AsyncIterable<T>): Promise<void> => {
             for await (const response of source) {
               renewTimer();
@@ -235,8 +259,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private sendRequestStream<T extends ResponseBody>(
     peerInfo: PeerInfo,
     method: Method,
+    encoding: ReqRespEncoding,
     body?: RequestBody,
-    encoding = ReqRespEncoding.SSZ_SNAPPY
   ): AsyncIterable<T> {
     const {libp2p, config, logger} = this;
 

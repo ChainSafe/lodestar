@@ -9,6 +9,7 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {createNode} from "../../utils/network";
+import {ReputationStore} from "../../../src/sync/IReputation";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -35,8 +36,8 @@ describe("[network] rpc", () => {
       connectTimeout: 5000,
       disconnectTimeout: 5000,
     };
-    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger});
-    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger});
+    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger, peerReputations: new ReputationStore()});
+    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger, peerReputations: new ReputationStore()});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
