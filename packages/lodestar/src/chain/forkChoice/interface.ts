@@ -3,7 +3,7 @@
  * @module chain/forkChoice
  */
 
-import {Checkpoint, Gwei, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Checkpoint, Gwei, Slot, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconClock} from "../clock/interface";
 
 
@@ -32,3 +32,40 @@ export interface BlockSummary {
   justifiedCheckpoint: Checkpoint;
   finalizedCheckpoint: Checkpoint;
 }
+
+/**
+ * Root is a block root as a hex string
+ *
+ * Used here for light weight and easy comparison
+ */
+export type RootHex = string;
+
+/**
+ * Minimal representation of attsetation for the purposes of fork choice
+ */
+export interface ForkChoiceAttestation {
+  target: RootHex;
+  attester: ValidatorIndex;
+  weight: Gwei;
+}
+
+/**
+ * Attestation aggregated across participants
+ */
+export interface AggregatedAttestation {
+  target: RootHex;
+  weight: Gwei;
+  prevWeight: Gwei;
+}
+
+/**
+ * Same to Checkpoint but with root as hex string
+ * this helps checkpoint's check inside node without a config
+ */
+export interface HexCheckpoint {
+  rootHex: RootHex;
+  epoch: Epoch;
+}
+
+// non Existent node
+export const NO_NODE = -1;

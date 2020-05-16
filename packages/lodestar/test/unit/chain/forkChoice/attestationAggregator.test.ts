@@ -2,7 +2,7 @@ import {assert} from "chai";
 
 import {
   AttestationAggregator,
-} from "../../../../src/chain/forkChoice/statefulDag/attestationAggregator";
+} from "../../../../src/chain/forkChoice/attestationAggregator";
 
 
 describe("AttestationAggregator", () => {
