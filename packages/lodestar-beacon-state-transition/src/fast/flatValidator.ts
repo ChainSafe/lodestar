@@ -22,3 +22,7 @@ export function createIFlatValidator(v: Validator): IFlatValidator {
     withdrawableEpoch: v.withdrawableEpoch,
   };
 }
+
+export function isActiveIFlatValidator(v: IFlatValidator, epoch: Epoch): boolean {
+  return v.activationEpoch <= epoch && epoch < v.exitEpoch;
+}

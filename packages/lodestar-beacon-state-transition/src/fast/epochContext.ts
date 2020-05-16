@@ -23,8 +23,7 @@ export class EpochContext {
   public previousShuffling?: IEpochShuffling;
   public currentShuffling?: IEpochShuffling;
   public nextShuffling?: IEpochShuffling;
-
-  private config: IBeaconConfig;
+  public config: IBeaconConfig;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
