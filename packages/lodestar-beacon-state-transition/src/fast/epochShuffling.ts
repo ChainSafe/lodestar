@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getSeed} from "../util";
 import { DomainType } from "../constants";
 import { intDiv } from "@chainsafe/lodestar-utils";
+import { unshuffleList } from "../util/shuffle";
 
 export interface IEpochShuffling {
   /**
@@ -29,10 +30,6 @@ export interface IEpochShuffling {
    * some shards may not have a committee this epoch
    */
   committees: ValidatorIndex[][][];
-}
-
-function shuffleList(activeIndices: ValidatorIndex[], seed: Uint8Array): ValidatorIndex[] {
-  return activeIndices;
 }
 
 export function computeCommitteeCount(config: IBeaconConfig, activeValidatorCount: number): number {
@@ -64,7 +61,7 @@ export function computeEpochShuffling(
 
   // copy
   const shuffling = activeIndices.slice();
-  shuffleList(shuffling, seed);
+  unshuffleList(config, shuffling, seed);
 
   const activeValidatorCount = activeIndices.length;
   const committeesPerSlot = computeCommitteeCount(config, activeValidatorCount);
