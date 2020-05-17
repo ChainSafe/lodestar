@@ -3,8 +3,8 @@ import {LogLevels, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 
 export const logChain: Options = {
   alias: [
-    "log.chain",
-    "logger.chain",
+    "log.chain.level",
+    "logger.chain.level",
   ],
   hidden: true,
   type: "string",
@@ -15,8 +15,8 @@ export const logChain: Options = {
 
 export const logDb: Options = {
   alias: [
-    "log.db",
-    "logger.db",
+    "log.db.level",
+    "logger.db.level",
   ],
   hidden: true,
   type: "string",
@@ -27,8 +27,8 @@ export const logDb: Options = {
 
 export const logEth1: Options = {
   alias: [
-    "log.eth1",
-    "logger.eth1",
+    "log.eth1.level",
+    "logger.eth1.level",
   ],
   hidden: true,
   type: "string",
@@ -39,8 +39,8 @@ export const logEth1: Options = {
 
 export const logNode: Options = {
   alias: [
-    "log.node",
-    "logger.node",
+    "log.node.level",
+    "logger.node.level",
   ],
   hidden: true,
   type: "string",
@@ -51,8 +51,8 @@ export const logNode: Options = {
 
 export const logNetwork: Options = {
   alias: [
-    "log.network",
-    "logger.network",
+    "log.network.level",
+    "logger.network.level",
   ],
   hidden: true,
   type: "string",
@@ -63,8 +63,8 @@ export const logNetwork: Options = {
 
 export const logSync: Options = {
   alias: [
-    "log.sync",
-    "logger.sync",
+    "log.sync.level",
+    "logger.sync.level",
   ],
   hidden: true,
   type: "string",
@@ -75,8 +75,8 @@ export const logSync: Options = {
 
 export const logMetrics: Options = {
   alias: [
-    "log.metrics",
-    "logger.metrics",
+    "log.metrics.level",
+    "logger.metrics.level",
   ],
   hidden: true,
   type: "string",
@@ -87,8 +87,8 @@ export const logMetrics: Options = {
 
 export const logChores: Options = {
   alias: [
-    "log.chores",
-    "logger.chores",
+    "log.chores.level",
+    "logger.chores.level",
   ],
   hidden: true,
   type: "string",
