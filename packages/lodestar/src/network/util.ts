@@ -7,18 +7,9 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  Method,
-  RequestId,
-  Methods,
-  MethodResponseType,
-  RpcResponseStatus,
-  TTFB_TIMEOUT,
-  RESP_TIMEOUT
-} from "../constants";
+import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
 import AbortController from "abort-controller";
-import {RpcError} from "./error";
 
 // req/resp
 
