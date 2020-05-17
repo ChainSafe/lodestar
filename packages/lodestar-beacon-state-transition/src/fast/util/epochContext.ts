@@ -3,8 +3,8 @@ import {ValidatorIndex, Epoch, BeaconState, Slot, CommitteeIndex} from "@chainsa
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
-import {GENESIS_EPOCH, DomainType} from "../constants";
-import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSeed} from "../util";
+import {GENESIS_EPOCH, DomainType} from "../../constants";
+import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSeed} from "../../util";
 import {IEpochShuffling, computeEpochShuffling} from "./epochShuffling";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {

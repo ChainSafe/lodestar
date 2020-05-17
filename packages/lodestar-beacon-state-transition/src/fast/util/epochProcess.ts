@@ -1,21 +1,18 @@
+import {List} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-import {IAttesterStatus, createIAttesterStatus, FLAG_UNSLASHED, FLAG_ELIGIBLE_ATTESTER, FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER, hasMarkers, FLAG_CURR_SOURCE_ATTESTER, FLAG_CURR_TARGET_ATTESTER, FLAG_CURR_HEAD_ATTESTER} from "./attesterStatus";
+import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../util";
+import {FAR_FUTURE_EPOCH} from "../../constants";
+import {
+  IAttesterStatus, createIAttesterStatus, hasMarkers,
+  FLAG_UNSLASHED, FLAG_ELIGIBLE_ATTESTER,
+  FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER,
+  FLAG_CURR_SOURCE_ATTESTER, FLAG_CURR_TARGET_ATTESTER, FLAG_CURR_HEAD_ATTESTER,
+} from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {EpochContext} from "./epochContext";
-import { computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch } from "../util";
-import { createIFlatValidator, isActiveIFlatValidator } from "./flatValidator";
-import { FAR_FUTURE_EPOCH } from "../constants";
-import { IBeaconConfig } from "@chainsafe/lodestar-config";
-import { List } from "@chainsafe/ssz";
-
-export function getChurnLimit(config: IBeaconConfig, activeValidatorCount: number): number {
-  return Math.max(
-    config.params.MIN_PER_EPOCH_CHURN_LIMIT,
-    intDiv(activeValidatorCount, config.params.CHURN_LIMIT_QUOTIENT),
-  );
-}
+import {createIFlatValidator, isActiveIFlatValidator} from "./flatValidator";
 
 export interface IEpochProcess {
   prevEpoch: Epoch;
