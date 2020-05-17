@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {LogLevels, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
+import {LogLevel, LogLevels} from "@chainsafe/lodestar-utils/lib/logger";
 
 export const logChain: Options = {
   alias: [
@@ -9,7 +9,7 @@ export const logChain: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -21,7 +21,7 @@ export const logDb: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -33,7 +33,7 @@ export const logEth1: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -45,7 +45,7 @@ export const logNode: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -57,7 +57,7 @@ export const logNetwork: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -69,7 +69,7 @@ export const logSync: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -81,7 +81,7 @@ export const logMetrics: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
 
@@ -93,6 +93,6 @@ export const logChores: Options = {
   hidden: true,
   type: "string",
   choices: LogLevels,
-  default: LogLevels[LogLevel.info],
+  default: LogLevel.info,
   group: "log",
 };
