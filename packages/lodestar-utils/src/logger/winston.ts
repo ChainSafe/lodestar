@@ -18,7 +18,7 @@ export class WinstonLogger implements ILogger {
       ...options,
     };
     this.winston = createLogger({
-      level: LogLevel[LogLevel.verbose], // log level switching handled in `createLogEntry`
+      level: options.level, // log level switching handled in `createLogEntry`
       defaultMeta: {
         module: options.module || "",
       },
