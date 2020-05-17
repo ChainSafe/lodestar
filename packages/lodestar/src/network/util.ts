@@ -7,7 +7,18 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, RequestId, Methods, MethodResponseType} from "../constants";
+import {
+  Method,
+  RequestId,
+  Methods,
+  MethodResponseType,
+  RpcResponseStatus,
+  TTFB_TIMEOUT,
+  RESP_TIMEOUT
+} from "../constants";
+import {source as abortSource} from "abortable-iterator";
+import AbortController from "abort-controller";
+import {RpcError} from "./error";
 
 // req/resp
 
@@ -71,4 +82,25 @@ export function isRequestOnly(method: Method): boolean {
 
 export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
+}
+
+export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+  return (source) => {
+    return (async function*() {
+      const controller = new AbortController();
+      let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
+      const renewTimer = (): void => {
+        clearTimeout(responseTimer);
+        responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
+      };
+      const cancelTimer = (): void => {
+        clearTimeout(responseTimer);
+      };
+      for await(const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
+        renewTimer();
+        yield item;
+      }
+      cancelTimer();
+    })();
+  };
 }

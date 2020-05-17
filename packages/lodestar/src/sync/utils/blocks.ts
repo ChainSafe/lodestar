@@ -39,7 +39,7 @@ export async function getBlockRangeFromPeer(
   rpc: IReqResp,
   peer: PeerInfo,
   chunk: ISlotRange
-): Promise<SignedBeaconBlock[]> {
+): Promise<SignedBeaconBlock[]|null> {
   return await rpc.beaconBlocksByRange(
     peer,
     {
@@ -75,7 +75,7 @@ export async function getBlockRange(
         const peer = peerBalancer.next();
         try {
           const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
-          if(chunkBlocks.length > 0) {
+          if(chunkBlocks && chunkBlocks.length > 0) {
             blocks = blocks.concat(chunkBlocks);
           }
           return null;
