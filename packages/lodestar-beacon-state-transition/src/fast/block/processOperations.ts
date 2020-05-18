@@ -1,4 +1,12 @@
-import {BeaconBlockBody, BeaconState, ProposerSlashing, AttesterSlashing, Attestation, Deposit, VoluntaryExit} from "@chainsafe/lodestar-types";
+import {
+  Attestation,
+  AttesterSlashing,
+  BeaconBlockBody,
+  BeaconState,
+  Deposit,
+  ProposerSlashing,
+  VoluntaryExit,
+} from "@chainsafe/lodestar-types";
 
 import {EpochContext} from "../util";
 import {processProposerSlashing} from "./processProposerSlashing";
@@ -6,7 +14,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import { List } from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 
 type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
 type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation) => void;

@@ -18,7 +18,12 @@ export function processRandao(
   // verify RANDAO reveal
   const proposerIndex = epochCtx.getBeaconProposer(state.slot);
   const proposerPubkey = epochCtx.index2pubkey[proposerIndex];
-  const signingRoot = computeSigningRoot(config, config.types.Epoch, epoch, getDomain(config, state, DomainType.RANDAO));
+  const signingRoot = computeSigningRoot(
+    config,
+    config.types.Epoch,
+    epoch,
+    getDomain(config, state, DomainType.RANDAO)
+  );
   const randaoReveal = body.randaoReveal.valueOf() as Uint8Array;
   if (!verify(proposerPubkey, signingRoot, randaoReveal)) {
     throw new Error();
