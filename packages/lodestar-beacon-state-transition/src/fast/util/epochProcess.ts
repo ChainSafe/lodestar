@@ -61,12 +61,19 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   const out = createIEpochProcess();
 
   const config = epochCtx.config;
+  const Root = config.types.Root;
+  const {
+    EPOCHS_PER_SLASHINGS_VECTOR,
+    MAX_EFFECTIVE_BALANCE,
+    EFFECTIVE_BALANCE_INCREMENT,
+    EJECTION_BALANCE,
+  } = config.params;
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
-  const slashingsEpoch = currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2);
+  const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
@@ -103,7 +110,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
 
     if (
       v.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      v.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE
+      v.effectiveBalance === MAX_EFFECTIVE_BALANCE
     ) {
       out.indicesToSetActivationEligibility.push(i);
     }
@@ -118,7 +125,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     if (
       status.active &&
       v.exitEpoch === FAR_FUTURE_EPOCH &&
-      v.effectiveBalance <= config.params.EJECTION_BALANCE
+      v.effectiveBalance <= EJECTION_BALANCE
     ) {
       out.indicesToEject.push(i);
     }
@@ -126,13 +133,13 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     out.statuses.push(status);
   });
 
-  if (out.totalActiveStake < config.params.EFFECTIVE_BALANCE_INCREMENT) {
-    out.totalActiveStake = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  if (out.totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
+    out.totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
   }
 
   // order by sequence of activationEligibilityEpoch setting and then index
   out.indicesToMaybeActivate.sort((a, b) => (
-    (out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch) |
+    (out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch) ||
     a - b
   ));
 
@@ -172,8 +179,8 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       const attTarget = attData.target;
 
       const attBits = Array.from(aggregationBits);
-      const attVotedTargetRoot = attTarget.root === actualTargetBlockRoot;
-      const attVotedHeadRoot = attBeaconBlockRoot === getBlockRootAtSlot(config, state, attSlot);
+      const attVotedTargetRoot = Root.equals(attTarget.root, actualTargetBlockRoot);
+      const attVotedHeadRoot = Root.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
 
       // attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
       const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);

@@ -34,7 +34,7 @@ export function processAttesterSlashing(
     }
   }
   const validators = state.validators;
-  indices.sort().forEach((index) => {
+  indices.sort((a, b) => a - b).forEach((index) => {
     if (isSlashableValidator(validators[index], epochCtx.currentShuffling.epoch)) {
       slashValidator(epochCtx, state, index);
       slashedAny = true;

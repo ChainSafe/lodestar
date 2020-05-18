@@ -36,7 +36,7 @@ export function processJustificationAndFinalization(
     };
     bits[1] = true;
   }
-  if (process.currEpochTargetStake * BigInt(3) >= process.totalActiveStake * BigInt(3)) {
+  if (process.currEpochTargetStake * BigInt(3) >= process.totalActiveStake * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
       root: getBlockRoot(config, state, currentEpoch),

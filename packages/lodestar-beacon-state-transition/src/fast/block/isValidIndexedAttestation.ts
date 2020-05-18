@@ -21,7 +21,10 @@ export function isValidIndexedAttestation(
     return false;
   }
   // verify indices are sorted and unique
-  if (!isSorted([...new Set(indices).values()])) {
+  if (!config.types.CommitteeIndices.equals(
+    indices,
+    [...(new Set(indices)).values()].sort((a, b) => a - b))
+  ) {
     return false;
   }
   // verify aggregate signature

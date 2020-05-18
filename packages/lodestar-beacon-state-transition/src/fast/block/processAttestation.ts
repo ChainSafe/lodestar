@@ -58,15 +58,15 @@ export function processAttestation(
   const getIndexedAttestation = (attestation: Attestation): IndexedAttestation => {
     const bits = Array.from(attestation.aggregationBits);
     const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices: number[] = [];
+    const attestingIndices = new Set<number>();
     committee.forEach((index, i) => {
       if (bits[i]) {
-        attestingIndices.push(index);
+        attestingIndices.add(index);
       }
     });
 
     return {
-      attestingIndices: attestingIndices.sort(),
+      attestingIndices: [...attestingIndices.values()].sort(),
       data: data,
       signature: attestation.signature,
     };

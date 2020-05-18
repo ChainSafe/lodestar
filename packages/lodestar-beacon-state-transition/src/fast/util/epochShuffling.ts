@@ -72,8 +72,8 @@ export function computeEpochShuffling(
     const index = (slot * committeesPerSlot) + committeeIndex;
     const startOffset = intDiv(activeValidatorCount * index, committeeCount);
     const endOffset = intDiv(activeValidatorCount * (index + 1), committeeCount);
-    if (!(startOffset < endOffset)) {
-      throw new Error("Invalid offsets");
+    if (!(startOffset <= endOffset)) {
+      throw new Error(`Invalid offsets: start ${startOffset} must be less than or equal end ${endOffset}`);
     }
     return shuffling.slice(startOffset, endOffset);
   };

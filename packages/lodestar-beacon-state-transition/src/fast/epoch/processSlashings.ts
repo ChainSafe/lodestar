@@ -17,7 +17,7 @@ export function processSlashings(
   const increment = BigInt(epochCtx.config.params.EFFECTIVE_BALANCE_INCREMENT);
   process.indicesToSlash.forEach((index) => {
     const effectiveBalance = process.statuses[index].validator.effectiveBalance;
-    const penaltyNumerator = effectiveBalance / increment / slashingsScale;
+    const penaltyNumerator = effectiveBalance / increment * slashingsScale;
     const penalty = penaltyNumerator / totalBalance * increment;
     decreaseBalance(state, index, penalty);
   });

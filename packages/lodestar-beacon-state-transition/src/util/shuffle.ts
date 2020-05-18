@@ -87,7 +87,7 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
   // check if list size fits in uint32
   assert(listSize == input.length);
 
-  const buf = new Buffer(_SHUFFLE_H_TOTAL_SIZE);
+  const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
   if (!dir) {
     // Start at last round.

@@ -44,7 +44,7 @@ export class EpochContext {
     ]));
 
     this.currentShuffling = computeEpochShuffling(this.config, state, indicesBounded, currentEpoch);
-    if (previousEpoch === currentEpoch) {
+    if (previousEpoch === currentEpoch) { // in case of genesis
       this.previousShuffling = this.currentShuffling;
     } else {
       this.previousShuffling = computeEpochShuffling(this.config, state, indicesBounded, previousEpoch);
