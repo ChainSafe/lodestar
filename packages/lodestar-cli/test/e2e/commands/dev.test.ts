@@ -27,7 +27,7 @@ const SLOTS_PER_EPOCH = 5;
 const VALIDATOR_DIR = ".tmp/test/validators";
 const LODESTAR_DIR = ".tmp/test/lodestar-db";
 
-describe.only("e2e interop simulation", function() {
+describe("e2e interop simulation", function() {
   this.timeout(100000);
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
