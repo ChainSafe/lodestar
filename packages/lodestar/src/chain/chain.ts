@@ -14,7 +14,7 @@ import {
   SignedBeaconBlock,
   Uint16,
   Uint64,
-  Slot
+  Slot,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -121,6 +121,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
+    await this.restoreFromFinalized();
   }
 
   public async stop(): Promise<void> {
@@ -191,6 +192,69 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : MAX_VERSION,
       nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
     };
+  }
+
+  /**
+   * Restore state cache and forkchoice from last finalized state.
+   */
+  private async restoreFromFinalized(): Promise<void> {
+    const start = Date.now();
+    const lastFinalizedState: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
+    this.db.stateCache.add(lastFinalizedState);
+    // the block respective to finalized epoch is still in block db
+    const allBlocks = await this.db.block.values();
+    this.logger.info(`Found ${allBlocks.length} blocks in database`);
+    if (!allBlocks || allBlocks.length === 0) {
+      return;
+    }
+    if (allBlocks.length === 1) {
+      const block = allBlocks[0];
+      const blockHash = this.config.types.BeaconBlock.hashTreeRoot(block.message);
+      if (this.config.types.Root.equals(blockHash, this.forkChoice.head().blockRoot)) {
+        this.logger.info("Chain is up to date, no need to restore");
+        return;
+      }
+    }
+    const finalizedStateRoot = this.config.types.BeaconState.hashTreeRoot(lastFinalizedState);
+    const sortedBlocks = allBlocks.sort((a, b) => a.message.slot - b.message.slot);
+    const isCheckpointNotGenesis = lastFinalizedState.slot > GENESIS_SLOT;
+    const finalizedBlock = sortedBlocks.find(block => {
+      return (block.message.slot === lastFinalizedState.slot) &&
+      // at genesis the genesis block's state root is not equal to genesis state root
+      (isCheckpointNotGenesis? this.config.types.Root.equals(block.message.stateRoot, finalizedStateRoot) : true);
+    });
+    if (!finalizedBlock) {
+      this.logger.error(`Cannot find block for finalized state at slot ${lastFinalizedState.slot}`);
+    } else {
+      this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot}`);
+    }
+    const blockCheckpoint = {
+      root: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
+      epoch: computeEpochAtSlot(this.config, finalizedBlock.message.slot)
+    };
+    this.forkChoice.addBlock({
+      slot: finalizedBlock.message.slot,
+      blockRoot: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
+      stateRoot: finalizedBlock.message.stateRoot.valueOf() as Uint8Array,
+      parentRoot: finalizedBlock.message.parentRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: (isCheckpointNotGenesis)? lastFinalizedState.currentJustifiedCheckpoint : blockCheckpoint,
+      finalizedCheckpoint: (isCheckpointNotGenesis)? lastFinalizedState.finalizedCheckpoint : blockCheckpoint
+    });
+
+    for (const block of sortedBlocks) {
+      await this.receiveBlock(block, true);
+    }
+    await new Promise((resolve) => {
+      const lastBlock = sortedBlocks[sortedBlocks.length - 1];
+      this.on("processedBlock", (signedBlock) => {
+        if (signedBlock.message.slot === lastBlock.message.slot &&
+          this.config.types.SignedBeaconBlock.equals(signedBlock, lastBlock)) {
+          resolve();
+        }
+      });
+    });
+    const duration = Math.floor(Date.now() - start) / 1000;
+    this.logger.important(`Restored chain state for ${sortedBlocks.length} blocks in ${duration}s`);
   }
 
   private async handleForkDigestChanged(): Promise<void> {
