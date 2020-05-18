@@ -64,7 +64,7 @@ export class BlockProcessor implements IService {
         //use onAbort to collect and save pending blocks
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
-      validateBlock(this.config, this.logger, this.db, this.forkChoice),
+      validateBlock(this.config, this.logger, this.forkChoice),
       processBlock(
         this.config,
         this.logger,
