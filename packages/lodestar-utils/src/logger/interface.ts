@@ -3,22 +3,17 @@
  */
 
 export enum LogLevel {
-  error,
-  warn,
-  info,
-  verbose,
-  debug,
-  silly,
+  error = "error",
+  warn = "warn",
+  info = "info",
+  verbose = "verbose",
+  debug = "debug",
+  silly = "silly",
 }
 
-export const LogLevels = [
-  "error",
-  "warn",
-  "info",
-  "verbose",
-  "debug",
-  "silly",
-];
+// @ts-ignore
+export const LogLevels = Object.keys(LogLevel).map(key => LogLevel[key]);
+
 
 export const customColors = {
   error: "red",
@@ -32,7 +27,7 @@ export const customColors = {
 export const defaultLogLevel = LogLevel.info;
 
 export interface ILoggerOptions {
-  level: typeof LogLevel[number];
+  level: LogLevel;
   module: string;
 }
 

@@ -26,7 +26,7 @@ import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "./forkChoice";
+import {ILMDGHOST, ArrayDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
@@ -79,7 +79,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.eth1 = eth1;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = forkChoice || new StatefulDagLMDGHOST(config);
+    this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});

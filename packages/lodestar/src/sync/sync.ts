@@ -108,12 +108,14 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private async startInitialSync(): Promise<void> {
+    if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
     await this.regularSync.stop();
     await this.initialSync.start();
   }
 
   private async startRegularSync(): Promise<void> {
+    if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     await Promise.all([

@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
+import {GENESIS_EPOCH, Method, ZERO_HASH, ReqRespEncoding} from "../../../src/constants";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -76,7 +76,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerInfo, peerInfo]);
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
 
 
@@ -100,7 +100,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
@@ -123,7 +123,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));

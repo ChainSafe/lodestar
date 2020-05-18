@@ -38,12 +38,12 @@ export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 export interface IReqResp extends ReqEventEmitter {
   sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void;
   sendResponse(id: RequestId, err: RpcError, response?: ResponseBody): void;
-  status(peerInfo: PeerInfo, request: Status): Promise<Status>;
+  status(peerInfo: PeerInfo, request: Status): Promise<Status|null>;
   goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void>;
-  ping(peerInfo: PeerInfo, request: Ping): Promise<Ping>;
-  metadata(peerInfo: PeerInfo): Promise<Metadata>;
-  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
-  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
+  ping(peerInfo: PeerInfo, request: Ping): Promise<Ping|null>;
+  metadata(peerInfo: PeerInfo): Promise<Metadata|null>;
+  beaconBlocksByRange(peerInfo: PeerInfo, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]|null>;
+  beaconBlocksByRoot(peerInfo: PeerInfo, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]|null>;
 }
 
 // network

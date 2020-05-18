@@ -3,7 +3,7 @@
  */
 
 import {createLogger, format, Logger, transports} from "winston";
-import {defaultLogLevel, LogLevel, ILogger, ILoggerOptions} from "./interface";
+import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 import chalk from "chalk";
 
 export class WinstonLogger implements ILogger {
@@ -13,12 +13,12 @@ export class WinstonLogger implements ILogger {
 
   public constructor(options?: Partial<ILoggerOptions>) {
     options = {
-      level: LogLevel[defaultLogLevel],
+      level: defaultLogLevel,
       module: "",
       ...options,
     };
     this.winston = createLogger({
-      level: LogLevel[LogLevel.verbose], // log level switching handled in `createLogEntry`
+      level: options.level, // log level switching handled in `createLogEntry`
       defaultMeta: {
         module: options.module || "",
       },
@@ -45,8 +45,7 @@ export class WinstonLogger implements ILogger {
       ],
       exitOnError: false
     });
-    //@ts-ignore
-    this._level = LogLevel[options.level];
+    this._level = options.level;
     this._silent = false;
     if (typeof process !== "undefined" && typeof process.env !== "undefined") {
       this._silent = process.env.LODESTAR_SILENCE === "true";
@@ -100,24 +99,23 @@ export class WinstonLogger implements ILogger {
 
   public child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
-    const winston = this.winston.child({namespace: options.module});
+    const winston = this.winston.child({namespace: options.module, level: options.level});
+    winston.level = options.level || this._level;
     return Object.assign(logger, {
       winston,
-      _level: options.level,
+      _level: options.level || this._level,
       _silent: this._silent,
-
     });
   }
 
   private createLogEntry(level: LogLevel, message: string | object, context: object = {}): void {
-    if (this.silent || level > this._level) {
+    if (this.silent || this.winston.levels[level] > this.winston.levels[this.winston.level]) {
       return;
     }
-
     if (typeof message === "object") {
-      this.winston.log(LogLevel[level], JSON.stringify(message));
+      this.winston.log(level, JSON.stringify(message));
     } else {
-      this.winston.log(LogLevel[level], message, context);
+      this.winston.log(level, message, context);
     }
   }
 

@@ -18,7 +18,7 @@ export class AttestationCollector implements IService {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
-  private timers: (NodeJS.Timeout)[];
+  private timers: (NodeJS.Timeout)[] = [];
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
   public constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {

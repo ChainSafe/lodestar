@@ -8,6 +8,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IService} from "../../node";
 import {ISyncModule} from "../interface";
+import {ISyncStats} from "../stats";
 
 export interface IInitialSyncModules {
   config: IBeaconConfig;
@@ -15,6 +16,7 @@ export interface IInitialSyncModules {
   network: INetwork;
   reputationStore: IReputationStore;
   logger: ILogger;
+  stats?: ISyncStats;
 }
 
 export interface IInitialSyncEvents {

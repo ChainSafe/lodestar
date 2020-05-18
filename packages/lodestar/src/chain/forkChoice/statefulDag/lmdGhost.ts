@@ -15,9 +15,10 @@ import {
 
 import {BlockSummary, ILMDGHOST} from "../interface";
 
-import {HexCheckpoint, NodeInfo, RootHex} from "./interface";
+import {NodeInfo} from "./interface";
+import {HexCheckpoint, RootHex} from "../interface";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
-import {AttestationAggregator} from "./attestationAggregator";
+import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 
 /**
