@@ -17,6 +17,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
 import {GENESIS_EPOCH} from "../../../constants";
+import {ISyncStats, SyncStats} from "../../stats";
 
 export class FastSync
   extends (EventEmitter as { new(): InitialSyncEventEmitter })
@@ -28,6 +29,7 @@ export class FastSync
   private readonly reps: IReputationStore;
   private readonly network: INetwork;
   private readonly logger: ILogger;
+  private readonly stats: ISyncStats;
 
   /**
    * Targeted finalized checkpoint. Initial sync should only sync up to that point.
@@ -43,7 +45,10 @@ export class FastSync
    */
   private syncTriggerSource: Pushable<ISlotRange>;
 
-  public constructor(opts: ISyncOptions, {config, chain, network, reputationStore, logger}: IInitialSyncModules) {
+  public constructor(
+    opts: ISyncOptions,
+    {config, chain, network, reputationStore, logger, stats}: IInitialSyncModules
+  ) {
     super();
     this.config = config;
     this.chain = chain;
@@ -51,6 +56,7 @@ export class FastSync
     this.opts = opts;
     this.network = network;
     this.logger = logger;
+    this.stats = stats || new SyncStats(this.chain);
     this.syncTriggerSource = pushable<ISlotRange>();
   }
 
@@ -73,12 +79,14 @@ export class FastSync
       return;
     }
     this.setBlockImportTarget();
+    await this.stats.start();
     await this.sync();
     this.logger.info("Started initial syncing");
   }
 
   public async stop(): Promise<void> {
     this.logger.info("initial sync stop");
+    await this.stats.stop();
     this.syncTriggerSource.end();
     this.chain.removeListener("processedBlock", this.checkSyncProgress);
     this.chain.removeListener("processedCheckpoint", this.checkSyncCompleted);
@@ -159,8 +167,13 @@ export class FastSync
   };
 
   private checkSyncCompleted = async (processedCheckpoint: Checkpoint): Promise<void> => {
+    const estimate = this.stats.getEstimate(
+      computeStartSlotAtEpoch(this.config, processedCheckpoint.epoch),
+      this.getHighestBlock()
+    );
     this.logger.important(`Sync progress - currentEpoch=${processedCheckpoint.epoch},`
-        +` targetEpoch=${this.targetCheckpoint.epoch}`
+        +` targetEpoch=${this.targetCheckpoint.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s`
+        +`, estimateTillComplete=${Math.round((estimate/3600) * 10)/10} hours`
     );
     if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
       if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {

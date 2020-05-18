@@ -10,6 +10,7 @@ import * as syncUtils from "../../../../src/sync/utils";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {EventEmitter} from "events";
 import {expect} from "chai";
+import {SyncStats} from "../../../../src/sync/stats";
 
 describe("fast sync", function () {
 
@@ -45,6 +46,7 @@ describe("fast sync", function () {
         chain: chainStub,
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
+        stats: sinon.createStubInstance(SyncStats),
         reputationStore: repsStub
       }
     );
@@ -61,6 +63,10 @@ describe("fast sync", function () {
     forkChoiceStub.headBlockSlot.returns(0);
     // @ts-ignore
     chainEventEmitter.forkChoice = forkChoiceStub;
+    const statsStub = sinon.createStubInstance(SyncStats);
+    statsStub.start.resolves();
+    statsStub.getEstimate.returns(1);
+    statsStub.getSyncSpeed.returns(1);
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
@@ -69,6 +75,7 @@ describe("fast sync", function () {
         chain: chainEventEmitter,
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
+        stats: statsStub,
         reputationStore: repsStub
       }
     );
@@ -103,6 +110,10 @@ describe("fast sync", function () {
     forkChoiceStub.headBlockSlot.returns(0);
     // @ts-ignore
     chainEventEmitter.forkChoice = forkChoiceStub;
+    const statsStub = sinon.createStubInstance(SyncStats);
+    statsStub.start.resolves();
+    statsStub.getEstimate.returns(1);
+    statsStub.getSyncSpeed.returns(1);
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
@@ -111,6 +122,7 @@ describe("fast sync", function () {
         chain: chainEventEmitter,
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
+        stats: statsStub,
         reputationStore: repsStub
       }
     );
