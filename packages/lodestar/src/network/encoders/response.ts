@@ -30,7 +30,7 @@ export function eth2ResponseEncode(
           const serialized = type.serialize(chunk.body as any);
           serializedData = Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length);
         } catch (e) {
-          logger.warn(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`); 
+          logger.warn(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`);
         }
         //yield encoded ssz length
         yield Buffer.from(encode(serializedData.length));
@@ -64,7 +64,7 @@ export function eth2ResponseDecode(
           if(status !== RpcResponseStatus.SUCCESS) {
             logger.warn(`Received err status ${status} for method ${method}`);
             break;
-          }   
+          }
         }
         if(buffer.length === 0) continue;
         if(sszLength === null) {
@@ -98,7 +98,7 @@ export function eth2ResponseDecode(
               }
             } catch (e) {
               logger.warn(`Failed to ssz deserialize data for method ${method}. Error: ${e.message}`);
-            }   
+            }
           }
         }
       }
