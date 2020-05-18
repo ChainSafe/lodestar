@@ -4,9 +4,8 @@ import {AttestationProcessor} from "../../../src/chain/attestation";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
-import { BlockRepository } from "../../../src/db/api/beacon/repositories";
 import { WinstonLogger } from "@chainsafe/lodestar-utils/lib/logger";
-import { generateEmptySignedBlock } from "../../utils/block";
+import { generateEmptyBlockSummary } from "../../utils/block";
 import { generateEmptyAttestation } from "../../utils/attestation";
 import { generateState } from "../../utils/state";
 import { generateValidators } from "../../utils/validator";
@@ -38,11 +37,11 @@ describe("AttestationProcessor", function () {
   it("receiveAttestation - should process attestation after receiveAttestation", async () => {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
-    const block = generateEmptySignedBlock();
+    const block = generateEmptyBlockSummary();
     const state = generateState();
-    dbStub.block.get.resolves(block);
+    forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     dbStub.stateCache.get.resolves(state);
-    dbStub.block.has.resolves(true);
+    forkChoiceStub.hasBlock.returns(true);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.true;
   });
@@ -50,11 +49,11 @@ describe("AttestationProcessor", function () {
   it("receiveAttestation - should not process attestation after receiveAttestation - block not exist", async () => {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
-    const block = generateEmptySignedBlock();
+    const block = generateEmptyBlockSummary();
     const state = generateState();
-    dbStub.block.get.resolves(block);
+    forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     dbStub.stateCache.get.resolves(state);
-    dbStub.block.has.resolves(false);
+    forkChoiceStub.hasBlock.returns(false);
     await attestationProcessor.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.false;
   });
@@ -64,8 +63,8 @@ describe("AttestationProcessor", function () {
       const attestation = generateEmptyAttestation();
       attestation.data.target.epoch = 2019;
       const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
-      const block = generateEmptySignedBlock();
-      dbStub.block.get.resolves(block);
+      const block = generateEmptyBlockSummary();
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
       const state = generateState();
       dbStub.stateCache.get.resolves(state);
       forkChoiceStub.getJustified.returns({} as Checkpoint);
@@ -82,12 +81,12 @@ describe("AttestationProcessor", function () {
     try {
       const attestation = generateEmptyAttestation();
       const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
-      const block = generateEmptySignedBlock();
-      block.message.slot = 1;
-      dbStub.block.get.resolves(block);
+      const block = generateEmptyBlockSummary();
+      block.slot = 1;
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
       const state = generateState();
       dbStub.stateCache.get.resolves(state);
-      forkChoiceStub.getJustified.returns({} as Checkpoint)
+      forkChoiceStub.getJustified.returns({} as Checkpoint);
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
@@ -100,8 +99,8 @@ describe("AttestationProcessor", function () {
   it("processAttestation - should call forkChoice", async () => {
     const attestation = generateEmptyAttestation();
     const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
-    const block = generateEmptySignedBlock();
-    dbStub.block.get.resolves(block);
+    const block = generateEmptyBlockSummary();
+    forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     const state = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
     dbStub.stateArchive.get.withArgs(0).resolves(state);

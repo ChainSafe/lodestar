@@ -442,6 +442,15 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return node.toBlockSummary();
   }
 
+  public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
+    const node = this.getNode(blockRoot);
+    return (node)? node.toBlockSummary() : null;
+  }
+
+  public hasBlock(blockRoot: Uint8Array): boolean {
+    return !!this.getNode(blockRoot);
+  }
+
   // To address the bouncing attack, only update conflicting justified
   //  checkpoints in the fork choice if in the early slots of the epoch.
   public shouldUpdateJustifiedCheckpoint(blockRoot: Uint8Array): boolean {
