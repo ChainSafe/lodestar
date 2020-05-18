@@ -103,6 +103,9 @@ export class AttestationProcessor implements IAttestationProcessor {
         this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
       if (justifiedBlock) {
         checkpointState = await this.db.stateCache.get(justifiedBlock.stateRoot);
+      } else {
+        // should not happen
+        throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
       }
     } else {
       // should be genesis state
@@ -122,7 +125,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       , "Current slot less than this target epoch's start slot"
     );
     const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
-    assert(!!block, "The block of attestation data does not exist");
+    assert(!!block, `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
     assert(block.slot <= attestation.data.slot, "Attestation is for past block");
 
     const validators = getAttestingIndices(
