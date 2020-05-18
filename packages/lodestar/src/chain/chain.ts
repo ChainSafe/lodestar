@@ -203,11 +203,12 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.db.stateCache.add(lastFinalizedState);
     // the block respective to finalized epoch is still in block db
     const allBlocks = await this.db.block.values();
-    this.logger.info(`Found ${allBlocks.length} blocks in database`);
     if (!allBlocks || allBlocks.length === 0) {
       return;
     }
+    this.logger.info(`Found ${allBlocks.length} blocks in database`);
     if (allBlocks.length === 1) {
+      // start from scratch
       const block = allBlocks[0];
       const blockHash = this.config.types.BeaconBlock.hashTreeRoot(block.message);
       if (this.config.types.Root.equals(blockHash, this.forkChoice.head().blockRoot)) {
