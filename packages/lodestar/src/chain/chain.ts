@@ -34,6 +34,7 @@ import {AttestationProcessor} from "./attestation";
 import {IBeaconClock} from "./clock/interface";
 import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
+import {sortBlocks} from "../sync/utils";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -121,7 +122,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
-    await this.restoreFromFinalized();
+    await this.restoreHeadState();
   }
 
   public async stop(): Promise<void> {
@@ -194,13 +195,24 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     };
   }
 
+  public async waitForBlockProcessed(blockRoot: Uint8Array): Promise<void> {
+    await new Promise((resolve) => {
+      this.on("processedBlock", (signedBlock) => {
+        const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
+        if (this.config.types.Root.equals(root, blockRoot)) {
+          resolve();
+        }
+      });
+    });
+  }
+
   /**
    * Restore state cache and forkchoice from last finalized state.
    */
-  private async restoreFromFinalized(): Promise<void> {
-    const start = Date.now();
-    const lastFinalizedState: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
-    this.db.stateCache.add(lastFinalizedState);
+  private async restoreHeadState(): Promise<void> {
+    this.logger.profile("restoreHeadState");
+    const lastKnownState: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
+    this.db.stateCache.add(lastKnownState);
     // the block respective to finalized epoch is still in block db
     const allBlocks = await this.db.block.values();
     if (!allBlocks || allBlocks.length === 0) {
@@ -211,21 +223,21 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       // start from scratch
       const block = allBlocks[0];
       const blockHash = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-      if (this.config.types.Root.equals(blockHash, this.forkChoice.head().blockRoot)) {
+      if (this.config.types.Root.equals(blockHash, this.forkChoice.headBlockRoot())) {
         this.logger.info("Chain is up to date, no need to restore");
         return;
       }
     }
-    const finalizedStateRoot = this.config.types.BeaconState.hashTreeRoot(lastFinalizedState);
-    const sortedBlocks = allBlocks.sort((a, b) => a.message.slot - b.message.slot);
-    const isCheckpointNotGenesis = lastFinalizedState.slot > GENESIS_SLOT;
+    const lastKnownStateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
+    const sortedBlocks = sortBlocks(allBlocks);
+    const isCheckpointNotGenesis = lastKnownState.slot > GENESIS_SLOT;
     const finalizedBlock = sortedBlocks.find(block => {
-      return (block.message.slot === lastFinalizedState.slot) &&
+      return (block.message.slot === lastKnownState.slot) &&
       // at genesis the genesis block's state root is not equal to genesis state root
-      (isCheckpointNotGenesis? this.config.types.Root.equals(block.message.stateRoot, finalizedStateRoot) : true);
+      (isCheckpointNotGenesis? this.config.types.Root.equals(block.message.stateRoot, lastKnownStateRoot) : true);
     });
     if (!finalizedBlock) {
-      this.logger.error(`Cannot find block for finalized state at slot ${lastFinalizedState.slot}`);
+      this.logger.error(`Cannot find block for finalized state at slot ${lastKnownState.slot}`);
     } else {
       this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot}`);
     }
@@ -238,24 +250,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       blockRoot: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
       stateRoot: finalizedBlock.message.stateRoot.valueOf() as Uint8Array,
       parentRoot: finalizedBlock.message.parentRoot.valueOf() as Uint8Array,
-      justifiedCheckpoint: (isCheckpointNotGenesis)? lastFinalizedState.currentJustifiedCheckpoint : blockCheckpoint,
-      finalizedCheckpoint: (isCheckpointNotGenesis)? lastFinalizedState.finalizedCheckpoint : blockCheckpoint
+      justifiedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.currentJustifiedCheckpoint : blockCheckpoint,
+      finalizedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.finalizedCheckpoint : blockCheckpoint
     });
 
     for (const block of sortedBlocks) {
       await this.receiveBlock(block, true);
     }
-    await new Promise((resolve) => {
-      const lastBlock = sortedBlocks[sortedBlocks.length - 1];
-      this.on("processedBlock", (signedBlock) => {
-        if (signedBlock.message.slot === lastBlock.message.slot &&
-          this.config.types.SignedBeaconBlock.equals(signedBlock, lastBlock)) {
-          resolve();
-        }
-      });
-    });
-    const duration = Math.floor(Date.now() - start) / 1000;
-    this.logger.important(`Restored chain state for ${sortedBlocks.length} blocks in ${duration}s`);
+    const lastBlock = sortedBlocks[sortedBlocks.length - 1];
+    await this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message));
+    this.logger.important(`Finish restoring chain head from ${allBlocks.length} blocks`);
+    this.logger.profile("restoreHeadState");
   }
 
   private async handleForkDigestChanged(): Promise<void> {

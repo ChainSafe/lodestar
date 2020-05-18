@@ -67,6 +67,10 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.silly, message, context);
   }
 
+  public profile(message: string, option?: {level: string; message: string}): void {
+    this.winston.profile(message, option);
+  }
+
   public set level(level: LogLevel) {
     this.winston.level = LogLevel[level];
     this._level = level;
