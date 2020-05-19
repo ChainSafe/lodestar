@@ -10,6 +10,7 @@ export function processAttesterSlashing(
   epochCtx: EpochContext,
   state: BeaconState,
   attesterSlashing: AttesterSlashing,
+  verifySignatures = true,
 ): void {
   const config = epochCtx.config;
   const attestation1 = attesterSlashing.attestation1;
@@ -17,10 +18,10 @@ export function processAttesterSlashing(
   if (!isSlashableAttestationData(config, attestation1.data, attestation2.data)) {
     throw new Error();
   }
-  if (!isValidIndexedAttestation(epochCtx, state, attestation1)) {
+  if (!isValidIndexedAttestation(epochCtx, state, attestation1, verifySignatures)) {
     throw new Error();
   }
-  if (!isValidIndexedAttestation(epochCtx, state, attestation2)) {
+  if (!isValidIndexedAttestation(epochCtx, state, attestation2, verifySignatures)) {
     throw new Error();
   }
 

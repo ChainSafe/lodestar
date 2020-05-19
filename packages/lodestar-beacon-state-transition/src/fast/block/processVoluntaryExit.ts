@@ -11,6 +11,7 @@ export function processVoluntaryExit(
   epochCtx: EpochContext,
   state: BeaconState,
   signedVoluntaryExit: SignedVoluntaryExit,
+  verifySignature = true,
 ): void {
   const config = epochCtx.config;
   const voluntaryExit = signedVoluntaryExit.message;
@@ -33,14 +34,16 @@ export function processVoluntaryExit(
     throw new Error();
   }
   // verify signature
-  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
-  const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
-  if (!verify(
-    validator.pubkey.valueOf() as Uint8Array,
-    signingRoot,
-    signedVoluntaryExit.signature.valueOf() as Uint8Array,
-  )) {
-    throw new Error();
+  if (verifySignature) {
+    const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
+    const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
+    if (!verify(
+      validator.pubkey.valueOf() as Uint8Array,
+      signingRoot,
+      signedVoluntaryExit.signature.valueOf() as Uint8Array,
+    )) {
+      throw new Error();
+    }
   }
   // initiate exit
   initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);

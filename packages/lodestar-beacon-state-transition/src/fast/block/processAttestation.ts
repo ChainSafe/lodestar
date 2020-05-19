@@ -9,6 +9,7 @@ export function processAttestation(
   epochCtx: EpochContext,
   state: BeaconState,
   attestation: Attestation,
+  verifySignature = true,
 ): void {
   const config = epochCtx.config;
   const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
@@ -72,7 +73,7 @@ export function processAttestation(
     };
   };
 
-  if (!isValidIndexedAttestation(epochCtx, state, getIndexedAttestation(attestation))) {
+  if (!isValidIndexedAttestation(epochCtx, state, getIndexedAttestation(attestation), verifySignature)) {
     throw new Error();
   }
 }

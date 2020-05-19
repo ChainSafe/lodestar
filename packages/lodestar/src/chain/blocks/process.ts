@@ -99,7 +99,7 @@ export async function runStateTransition(
 ): Promise<BeaconState|null> {
   try {
     // if block is trusted don't verify state roots, proposer or signature
-    return fastStateTransition(epochCtx, preState, job.signedBlock, !job.trusted);//, !job.trusted, !job.trusted);
+    return fastStateTransition(epochCtx, preState, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate

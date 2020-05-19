@@ -14,7 +14,9 @@ export function fastStateTransition(
   epochCtx: EpochContext,
   state: BeaconState,
   signedBlock: SignedBeaconBlock,
-  validateResult = true
+  verifyStateRoot = true,
+  verifyProposer = true,
+  verifySignatures = true,
 ): BeaconState {
   const types = epochCtx.config.types;
   const postState = types.BeaconState.clone(state);
@@ -22,15 +24,15 @@ export function fastStateTransition(
   // process slots (including those with no blocks) since block
   processSlots(epochCtx, postState, block.slot);
   // verify signature
-  if (validateResult) {
+  if (verifyProposer) {
     if (!verifyBlockSignature(epochCtx.config, postState, signedBlock)) {
       throw new Error();
     }
   }
   // process block
-  processBlock(epochCtx, postState, block);
+  processBlock(epochCtx, postState, block, verifySignatures);
   // verify state root
-  if (validateResult) {
+  if (verifyStateRoot) {
     if (!types.Root.equals(
       block.stateRoot,
       types.BeaconState.hashTreeRoot(postState)

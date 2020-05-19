@@ -1,6 +1,5 @@
 import {verifyAggregate} from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
-import {isSorted} from "@chainsafe/lodestar-utils";
 
 import {DomainType} from "../../constants";
 import {getDomain, computeSigningRoot} from "../../util";
@@ -11,6 +10,7 @@ export function isValidIndexedAttestation(
   epochCtx: EpochContext,
   state: BeaconState,
   indexedAttestation: IndexedAttestation,
+  verifySignature = true,
 ): boolean {
   const config = epochCtx.config;
   const {MAX_VALIDATORS_PER_COMMITTEE} = config.params;
@@ -28,6 +28,9 @@ export function isValidIndexedAttestation(
     return false;
   }
   // verify aggregate signature
+  if (!verifySignature) {
+    return true;
+  }
   const pubkeys = indices.map((i) => epochCtx.index2pubkey[i]);
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);

@@ -11,6 +11,7 @@ export function processProposerSlashing(
   epochCtx: EpochContext,
   state: BeaconState,
   proposerSlashing: ProposerSlashing,
+  verifySignatures = true,
 ): void {
   const config = epochCtx.config;
   const {BeaconBlockHeader} = config.types;
@@ -35,21 +36,23 @@ export function processProposerSlashing(
     throw new Error();
   }
   // verify signatures
-  [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].forEach((signedHeader) => {
-    const domain = getDomain(
-      config,
-      state,
-      DomainType.BEACON_PROPOSER,
-      computeEpochAtSlot(config, signedHeader.message.slot)
-    );
-    const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
-    if (!verify(
-      proposer.pubkey.valueOf() as Uint8Array,
-      signingRoot,
-      signedHeader.signature.valueOf() as Uint8Array
-    )) {
-      throw new Error();
-    }
-  });
+  if (verifySignatures) {
+    [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].forEach((signedHeader) => {
+      const domain = getDomain(
+        config,
+        state,
+        DomainType.BEACON_PROPOSER,
+        computeEpochAtSlot(config, signedHeader.message.slot)
+      );
+      const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
+      if (!verify(
+        proposer.pubkey.valueOf() as Uint8Array,
+        signingRoot,
+        signedHeader.signature.valueOf() as Uint8Array
+      )) {
+        throw new Error();
+      }
+    });
+  }
   slashValidator(epochCtx, state, header1.proposerIndex);
 }

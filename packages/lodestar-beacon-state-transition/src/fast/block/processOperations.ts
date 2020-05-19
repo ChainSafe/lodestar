@@ -17,12 +17,13 @@ import {processVoluntaryExit} from "./processVoluntaryExit";
 import {List} from "@chainsafe/ssz";
 
 type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
-type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation) => void;
+type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation, verify: boolean) => void;
 
 export function processOperations(
   epochCtx: EpochContext,
   state: BeaconState,
-  body: BeaconBlockBody
+  body: BeaconBlockBody,
+  verifySignatures = true,
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = Math.min(
@@ -41,7 +42,7 @@ export function processOperations(
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]).forEach(([operations, processOp]) => {
     Array.from(operations).forEach((op) => {
-      processOp(epochCtx, state, op);
+      processOp(epochCtx, state, op, verifySignatures);
     });
   });
 }

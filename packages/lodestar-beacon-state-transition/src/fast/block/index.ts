@@ -26,10 +26,11 @@ export {
 export function processBlock(
   epochCtx: EpochContext,
   state: BeaconState,
-  block: BeaconBlock
+  block: BeaconBlock,
+  verifySignatures = true,
 ): void {
   processBlockHeader(epochCtx, state, block);
-  processRandao(epochCtx, state, block.body);
+  processRandao(epochCtx, state, block.body, verifySignatures);
   processEth1Data(epochCtx, state, block.body);
-  processOperations(epochCtx, state, block.body);
+  processOperations(epochCtx, state, block.body, verifySignatures);
 }
