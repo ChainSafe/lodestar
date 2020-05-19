@@ -25,6 +25,7 @@
     "test:ssz-main": "mocha --colors 'test/spec/ssz/**/*mainnet.test.ts'",
     "test:ssz-min": "mocha --colors 'test/spec/ssz/**/*minimal.test.ts'",
     "test:spec": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
+    "test:spec-fast": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
     "test:spec-main": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
     "test:spec-min": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
   },
