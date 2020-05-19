@@ -3,17 +3,16 @@ import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 
 export function validateBlock(
-  config: IBeaconConfig, logger: ILogger, db: IBeaconDb, forkChoice: ILMDGHOST
+  config: IBeaconConfig, logger: ILogger, forkChoice: ILMDGHOST
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<IBlockProcessJob> {
   return (source) => {
     return (async function*() {
       for await(const job of source) {
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        if (await db.block.has(blockHash)) {
+        if (forkChoice.hasBlock(blockHash)) {
           logger.debug(`Block ${toHexString(blockHash)} was already processed, skipping...`);
           continue;
         }

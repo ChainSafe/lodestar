@@ -11,7 +11,6 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {getBlockSummary} from "../../../utils/headBlockInfo";
 
 describe("block process stream", function () {
 
@@ -85,7 +84,7 @@ describe("block process stream", function () {
       trusted: false
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+    forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.throws();
     const result = await pipe(
@@ -108,7 +107,7 @@ describe("block process stream", function () {
       trusted: false
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+    forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
@@ -139,7 +138,7 @@ describe("block process stream", function () {
       trusted: false
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+    forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves(generateState());
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
