@@ -21,6 +21,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
+import {LogLevel} from "@chainsafe/lodestar-utils";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -41,7 +42,7 @@ block2.message.slot = BLOCK_SLOT + 1;
 describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  const logger = new WinstonLogger({level: "VERBOSE"});
+  const logger = new WinstonLogger({level: LogLevel.verbose});
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
