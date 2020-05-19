@@ -1,5 +1,5 @@
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
-import {bigIntSqrt} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 
 import {
   EpochContext, IEpochProcess,
@@ -18,16 +18,15 @@ export function getAttestationDeltas(
   const rewards = Array.from({length: validatorCount}, () => BigInt(0));
   const penalties = Array.from({length: validatorCount}, () => BigInt(0));
 
-  let totalBalance = process.totalActiveStake;
-  if (totalBalance === BigInt(0)) {
-    totalBalance = BigInt(1);
-  }
-
   const increment = params.EFFECTIVE_BALANCE_INCREMENT;
-  const prevEpochSourceStake = process.prevEpochUnslashedStake.sourceStake / increment;
-  const prevEpochTargetStake = process.prevEpochUnslashedStake.targetStake / increment;
-  const prevEpochHeadStake = process.prevEpochUnslashedStake.headStake / increment;
+  let totalBalance = bigIntMax(process.totalActiveStake, increment);
 
+  // increment is factored out from balance totals to avoid overflow
+  const prevEpochSourceStake = bigIntMax(process.prevEpochUnslashedStake.sourceStake, increment) / increment;
+  const prevEpochTargetStake = bigIntMax(process.prevEpochUnslashedStake.targetStake, increment) / increment;
+  const prevEpochHeadStake = bigIntMax(process.prevEpochUnslashedStake.headStake, increment) / increment;
+
+  // sqrt first, before factoring out the increment for later usage
   const balanceSqRoot = bigIntSqrt(totalBalance);
   const finalityDelay = BigInt(process.prevEpoch - state.finalizedCheckpoint.epoch);
 
