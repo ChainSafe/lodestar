@@ -48,6 +48,7 @@ export interface IBeaconChainModules {
 export interface IBlockProcessJob {
   signedBlock: SignedBeaconBlock;
   trusted: boolean;
+  reprocess: boolean;
 }
 
 const MAX_VERSION = Buffer.from([255, 255, 255, 255]);
@@ -122,7 +123,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
-    await this.restoreHeadState();
+    await this.restoreHeadState(state);
   }
 
   public async stop(): Promise<void> {
@@ -144,11 +145,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.attestationProcessor.receiveAttestation(attestation);
   }
 
-  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
-    this.blockProcessor.receiveBlock(signedBlock, trusted);
+  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false, reprocess = false): Promise<void> {
+    this.blockProcessor.receiveBlock(signedBlock, trusted, reprocess);
   }
 
   public async initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void> {
+    // don't want to initialize from a genesis state if already run beacon node
+    const lastKnownState = await this.db.stateArchive.lastValue();
+    if (lastKnownState) {
+      this.logger.info(`Found finalized state at slot ${lastKnownState.slot}, starting chain from there`);
+      return;
+    }
     const genesisBlock = getEmptyBlock();
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = stateRoot;
@@ -209,38 +216,43 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   /**
    * Restore state cache and forkchoice from last finalized state.
    */
-  private async restoreHeadState(): Promise<void> {
+  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>): Promise<void> {
+    this.logger.info(`Found last known/finalized state at epoch #${lastKnownState.finalizedCheckpoint.epoch}`);
     this.logger.profile("restoreHeadState");
-    const lastKnownState: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
     this.db.stateCache.add(lastKnownState);
     // the block respective to finalized epoch is still in block db
     const allBlocks = await this.db.block.values();
     if (!allBlocks || allBlocks.length === 0) {
       return;
     }
-    this.logger.info(`Found ${allBlocks.length} blocks in database`);
+    const sortedBlocks = sortBlocks(allBlocks);
+    const firstBlock = allBlocks[0];
+    const lastBlock = allBlocks[allBlocks.length - 1];
+    let firstSLot = firstBlock.message.slot;
+    let lastSlot = lastBlock.message.slot;
+    this.logger.info(`Found ${allBlocks.length} blocks in database, from slot ${firstSLot} to ${lastSlot}`);
     if (allBlocks.length === 1) {
       // start from scratch
-      const block = allBlocks[0];
-      const blockHash = this.config.types.BeaconBlock.hashTreeRoot(block.message);
+      const blockHash = this.config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
       if (this.config.types.Root.equals(blockHash, this.forkChoice.headBlockRoot())) {
         this.logger.info("Chain is up to date, no need to restore");
         return;
       }
     }
-    const lastKnownStateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
-    const sortedBlocks = sortBlocks(allBlocks);
     const isCheckpointNotGenesis = lastKnownState.slot > GENESIS_SLOT;
+    const stateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
     const finalizedBlock = sortedBlocks.find(block => {
       return (block.message.slot === lastKnownState.slot) &&
       // at genesis the genesis block's state root is not equal to genesis state root
-      (isCheckpointNotGenesis? this.config.types.Root.equals(block.message.stateRoot, lastKnownStateRoot) : true);
+      (isCheckpointNotGenesis? this.config.types.Root.equals(block.message.stateRoot, stateRoot) : true);
     });
     if (!finalizedBlock) {
-      this.logger.error(`Cannot find block for finalized state at slot ${lastKnownState.slot}`);
+      throw new Error(`Cannot find block for finalized state at slot ${lastKnownState.slot}`);
     } else {
-      this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot}`);
+      this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot},
+        root=${toHexString(this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message))}`);
     }
+    // init forkchoice
     const blockCheckpoint = {
       root: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
       epoch: computeEpochAtSlot(this.config, finalizedBlock.message.slot)
@@ -253,11 +265,20 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.currentJustifiedCheckpoint : blockCheckpoint,
       finalizedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.finalizedCheckpoint : blockCheckpoint
     });
-
-    for (const block of sortedBlocks) {
-      await this.receiveBlock(block, true);
+    // init state cache
+    this.db.stateCache.add(lastKnownState);
+    // no need to process the finalized block
+    const processedBlocks = sortedBlocks.filter((block) => block.message.slot > finalizedBlock.message.slot);
+    if (!processedBlocks.length) {
+      this.logger.info("No need to process blocks");
+      return;
     }
-    const lastBlock = sortedBlocks[sortedBlocks.length - 1];
+    firstSLot = processedBlocks[0].message.slot;
+    lastSlot = processedBlocks[processedBlocks.length - 1].message.slot;
+    this.logger.info(`Start processing from slot ${firstSLot} to ${lastSlot} to rebuild state cache and forkchoice`);
+    for (const block of processedBlocks) {
+      await this.receiveBlock(block, true, true);
+    }
     await this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message));
     this.logger.important(`Finish restoring chain head from ${allBlocks.length} blocks`);
     this.logger.profile("restoreHeadState");
@@ -274,8 +295,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   // If we don't have a state yet, we have to wait for genesis state
-  private async waitForState(): Promise<BeaconState> {
-    let state: BeaconState = await this.db.stateArchive.lastValue();
+  private async waitForState(): Promise<TreeBacked<BeaconState>> {
+    let state: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
       state = await new Promise((resolve) => {
@@ -302,7 +323,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
    *
    * Returns the BeaconState if it is valid else null
    */
-  private checkGenesis = async (timestamp: number, eth1Data: Eth1Data): Promise<BeaconState | null> => {
+  private checkGenesis = async (timestamp: number, eth1Data: Eth1Data): Promise<TreeBacked<BeaconState> | null> => {
     const blockHashHex = toHexString(eth1Data.blockHash);
     this.logger.info(`Checking if block ${blockHashHex} will form valid genesis state`);
     const depositDatas = await this.db.depositData.values({lt: eth1Data.depositCount});

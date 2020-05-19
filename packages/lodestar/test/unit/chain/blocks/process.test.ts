@@ -37,7 +37,8 @@ describe("block process stream", function () {
   it("missing parent block", async function () {
     const receivedJob: IBlockProcessJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     };
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(null);
     const result = await pipe(
@@ -59,7 +60,8 @@ describe("block process stream", function () {
   it("missing parent state", async function () {
     const receivedJob: IBlockProcessJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
@@ -81,7 +83,8 @@ describe("block process stream", function () {
   it("failed state transition", async function () {
     const receivedJob: IBlockProcessJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
@@ -104,7 +107,8 @@ describe("block process stream", function () {
   it("successful block process - not new chain head", async function () {
     const receivedJob: IBlockProcessJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
@@ -135,7 +139,8 @@ describe("block process stream", function () {
   it("successful block process - new chain head", async function () {
     const receivedJob: IBlockProcessJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);

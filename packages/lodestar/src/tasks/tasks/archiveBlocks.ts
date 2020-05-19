@@ -37,14 +37,16 @@ export class ArchiveBlocksTask implements ITask {
       (block) =>
         computeEpochAtSlot(this.config, block.message.slot) < this.finalizedCheckpoint.epoch
     );
-    this.logger.info(`Started archiving ${blocks.length} block `
+    const fromSlot = blocks.length > 0? Math.min(...blocks.map(block => block.message.slot)) : undefined;
+    const toSlot = blocks.length > 0? Math.max(...blocks.map(block => block.message.slot)) : undefined;
+    this.logger.info(`Started archiving ${blocks.length} blocks from slot ${fromSlot} to ${toSlot}`
         +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`
     );
     await Promise.all([
       this.db.blockArchive.batchAdd(blocks),
       this.db.block.batchRemove(blocks)
     ]);
-    this.logger.info(`Archiving of ${blocks.length} finalized blocks completed `
+    this.logger.info(`Archiving of ${blocks.length} finalized blocks from slot ${fromSlot} to ${toSlot} completed `
         + `(finalized epoch #${this.finalizedCheckpoint.epoch})`);
   }
 }

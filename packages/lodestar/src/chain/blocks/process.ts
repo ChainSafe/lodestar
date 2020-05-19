@@ -32,10 +32,15 @@ export function processBlock(
           continue;
         }
         // On successful transition, update system state
-        await Promise.all([
-          db.stateCache.add(newState as TreeBacked<BeaconState>),
-          db.block.put(blockRoot, job.signedBlock),
-        ]);
+        if (job.reprocess) {
+          await db.stateCache.add(newState as TreeBacked<BeaconState>);
+        } else {
+          await Promise.all([
+            db.stateCache.add(newState as TreeBacked<BeaconState>),
+            db.block.put(blockRoot, job.signedBlock),
+          ]);
+        }
+
         const newChainHeadRoot = updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
           logger.info("Processed new chain head",
