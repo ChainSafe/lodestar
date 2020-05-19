@@ -66,7 +66,7 @@ export function processAttestation(
     });
 
     return {
-      attestingIndices: [...attestingIndices.values()].sort(),
+      attestingIndices: [...attestingIndices.values()].sort((a, b) => a - b),
       data: data,
       signature: attestation.signature,
     };
