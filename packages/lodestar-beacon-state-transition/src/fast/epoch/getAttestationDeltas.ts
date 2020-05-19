@@ -40,20 +40,22 @@ export function getAttestationDeltas(
   const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;
 
   process.statuses.forEach((status, i) => {
-    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-      const effBalance = status.validator.effectiveBalance;
-      const baseReward = effBalance * BASE_REWARD_FACTOR / balanceSqRoot / BASE_REWARDS_PER_EPOCH;
+    const effBalance = status.validator.effectiveBalance;
+    const baseReward = effBalance * BASE_REWARD_FACTOR / balanceSqRoot / BASE_REWARDS_PER_EPOCH;
 
+    // inclusion speed bonus
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
+      const proposerReward = baseReward / PROPOSER_REWARD_QUOTIENT;
+      rewards[status.proposerIndex] += proposerReward;
+      const maxAttesterReward = baseReward - proposerReward;
+      rewards[i] += maxAttesterReward / BigInt(status.inclusionDelay);
+    }
+    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
       if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
         // justification-participation reward
         rewards[i] += baseReward * prevEpochSourceStake / totalBalance;
 
-        // inclusion speed bonus
-        const proposerReward = baseReward / PROPOSER_REWARD_QUOTIENT;
-        rewards[status.proposerIndex] += proposerReward;
-        const maxAttesterReward = baseReward - proposerReward;
-        rewards[i] += maxAttesterReward / BigInt(status.inclusionDelay);
       } else {
         // justification-non-participation R-penalty
         penalties[i] += baseReward;
@@ -80,7 +82,7 @@ export function getAttestationDeltas(
       // take away max rewards if we're not finalizing
       if (finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY) {
         penalties[i] += baseReward * BASE_REWARDS_PER_EPOCH;
-        if (!hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER | FLAG_UNSLASHED)) {
+        if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED)) {
           penalties[i] += effBalance * finalityDelay / INACTIVITY_PENALTY_QUOTIENT;
         }
       }
