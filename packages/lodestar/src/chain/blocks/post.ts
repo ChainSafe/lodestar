@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, isActiveValidator} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, isActiveValidator, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
@@ -11,6 +11,7 @@ export function postProcess(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
+  epochCtx: EpochContext,
   forkChoice: ILMDGHOST,
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
@@ -45,7 +46,7 @@ export function postProcess(
             newFinalizedEpoch(logger, metrics, eventBus, postState);
           }
           metrics.currentEpochLiveValidators.set(
-            Array.from(postState.validators).filter((v: Validator) => isActiveValidator(v, currentEpoch)).length
+            epochCtx.currentShuffling.activeIndices.length
           );
         }
       }

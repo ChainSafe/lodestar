@@ -83,6 +83,7 @@ export class BlockProcessor implements IService {
         this.config,
         this.logger,
         this.db,
+        this.epochCtx,
         this.forkChoice,
         this.metrics,
         this.eventBus,
