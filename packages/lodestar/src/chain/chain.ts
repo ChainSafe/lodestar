@@ -231,9 +231,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const sortedBlocks = sortBlocks(allBlocks);
     const firstBlock = allBlocks[0];
     const lastBlock = allBlocks[allBlocks.length - 1];
-    let firstSLot = firstBlock.message.slot;
+    let firstSlot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
-    this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSLot} to ${lastSlot}`);
+    this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`);
     // initially we initialize database with genesis block
     if (allBlocks.length === 1) {
       // start from scratch
@@ -277,13 +277,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       this.logger.info("No need to process blocks");
       return;
     }
-    firstSLot = processedBlocks[0].message.slot;
+    firstSlot = processedBlocks[0].message.slot;
     lastSlot = processedBlocks[processedBlocks.length - 1].message.slot;
-    this.logger.info(`Start processing from slot ${firstSLot} to ${lastSlot} to rebuild state cache and forkchoice`);
-    for (const block of processedBlocks) {
-      await this.receiveBlock(block, true, true);
-    }
-    await this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message));
+    this.logger.info(`Start processing from slot ${firstSlot} to ${lastSlot} to rebuild state cache and forkchoice`);
+    await Promise.all([
+      ...processedBlocks.map(block => this.receiveBlock(block, true, true)),
+      this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message))
+    ]);
     this.logger.important(`Finish restoring chain head from ${allBlocks.length} blocks`);
     this.logger.profile("restoreHeadState");
   }
