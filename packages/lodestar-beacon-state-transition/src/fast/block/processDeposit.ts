@@ -22,7 +22,7 @@ export function processDeposit(
     state.eth1DepositIndex,
     state.eth1Data.depositRoot.valueOf() as Uint8Array,
   )) {
-    throw new Error();
+    throw new Error("Deposit has invalid merkle proof");
   }
 
   // deposits must be processed in order
@@ -61,7 +61,7 @@ export function processDeposit(
     });
     state.balances.push(amount);
   } else {
-    // increase balance by deposi amount
+    // increase balance by deposit amount
     const index = epochCtx.pubkey2index.get(pubkey);
     increaseBalance(state, index, amount);
   }

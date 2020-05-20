@@ -28,7 +28,7 @@ export function processRandao(
       getDomain(config, state, DomainType.RANDAO)
     );
     if (!verify(proposerPubkey, signingRoot, randaoReveal)) {
-      throw new Error();
+      throw new Error("RANDAO reveal is an invalid signature");
     }
   }
   // mix in RANDAO reveal

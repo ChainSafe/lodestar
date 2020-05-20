@@ -26,7 +26,7 @@ export function fastStateTransition(
   // verify signature
   if (verifyProposer) {
     if (!verifyBlockSignature(epochCtx.config, postState, signedBlock)) {
-      throw new Error();
+      throw new Error("Invalid block signature");
     }
   }
   // process block
@@ -37,7 +37,7 @@ export function fastStateTransition(
       block.stateRoot,
       types.BeaconState.hashTreeRoot(postState)
     )) {
-      throw new Error();
+      throw new Error("Invalid state root");
     }
   }
   return postState;

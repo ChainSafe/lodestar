@@ -19,19 +19,25 @@ export function processVoluntaryExit(
   const currentEpoch = epochCtx.currentShuffling.epoch;
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
-    throw new Error();
+    throw new Error("VoluntaryExit validator is not active");
   }
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error();
+    throw new Error(
+      "VoluntaryExit validator exit has already been initiated: " +
+      `exitEpoch=${validator.exitEpoch}`
+    );
   }
   // exits must specify an epoch when they become valid; they are not valid before then
   if (!(currentEpoch >= voluntaryExit.epoch)) {
-    throw new Error();
+    throw new Error(
+      "VoluntaryExit epoch is not yet valid: " +
+      `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
+    );
   }
   // verify the validator had been active long enough
   if (!(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD)) {
-    throw new Error();
+    throw new Error("VoluntaryExit validator has not been active for long enough");
   }
   // verify signature
   if (verifySignature) {
@@ -42,7 +48,7 @@ export function processVoluntaryExit(
       signingRoot,
       signedVoluntaryExit.signature.valueOf() as Uint8Array,
     )) {
-      throw new Error();
+      throw new Error("VoluntaryExit has an invalid signature");
     }
   }
   // initiate exit

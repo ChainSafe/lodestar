@@ -16,13 +16,13 @@ export function processAttesterSlashing(
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
   if (!isSlashableAttestationData(config, attestation1.data, attestation2.data)) {
-    throw new Error();
+    throw new Error("AttesterSlashing is not slashable");
   }
   if (!isValidIndexedAttestation(epochCtx, state, attestation1, verifySignatures)) {
-    throw new Error();
+    throw new Error("AttesterSlashing attestation1 is not a valid IndexedAttestation");
   }
   if (!isValidIndexedAttestation(epochCtx, state, attestation2, verifySignatures)) {
-    throw new Error();
+    throw new Error("AttesterSlashing attestation2 is not a valid IndexedAttestation");
   }
 
   let slashedAny = false;
@@ -42,6 +42,6 @@ export function processAttesterSlashing(
     }
   });
   if (!slashedAny) {
-    throw new Error();
+    throw new Error("AttesterSlashing did not result in any slashings");
   }
 }

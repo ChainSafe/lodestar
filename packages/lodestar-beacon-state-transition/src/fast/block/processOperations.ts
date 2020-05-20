@@ -31,7 +31,10 @@ export function processOperations(
     state.eth1Data.depositCount - state.eth1DepositIndex
   );
   if (body.deposits.length !== maxDeposits) {
-    throw new Error();
+    throw new Error(
+      "Block contains incorrect number of deposits: " +
+      `depositCount=${body.deposits.length} expected=${maxDeposits}`
+    );
   }
 
   ([
