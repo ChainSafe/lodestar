@@ -15,7 +15,8 @@ export const defaultLogFormat = format.combine(
 
     return (
       `${info.timestamp}  [${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}:`
-      +` ${info.message} ${serializeContext(info.context)}`
+      + ` ${info.message} ${serializeContext(info.context)}`
+      + `${info.durationMs? "- duration=" + info.durationMs + "ms": ""}`
     );
   })
 );
