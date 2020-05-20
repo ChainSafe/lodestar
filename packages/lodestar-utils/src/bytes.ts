@@ -2,6 +2,7 @@ import {
   toBufferLE, toBigIntLE,
   toBufferBE, toBigIntBE,
 } from "bigint-buffer";
+import {ArrayLike} from "@chainsafe/ssz";
 
 type Endianness = "le" | "be";
 
@@ -38,8 +39,13 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
 }
 
 
-export function toHex(buffer: Uint8Array): string {
-  return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset).toString("hex");
+export function toHex(buffer: ArrayLike<number>): string {
+  if(buffer instanceof Uint8Array) {
+    return "0x" + Buffer.from(buffer.buffer, buffer.byteOffset).toString("hex");
+  } else {
+    return "0x" + Buffer.from(buffer).toString("hex");
+  }
+
 }
 
 export function fromHex(hex: string): Uint8Array {
