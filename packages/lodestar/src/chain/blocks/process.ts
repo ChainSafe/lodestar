@@ -38,7 +38,9 @@ export function processBlock(
         ]);
         const newChainHeadRoot = updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
-          logger.info(`Processed new chain head 0x${toHexString(newChainHeadRoot)}, slot=${newState.slot}`);
+          logger.info("Processed new chain head",
+            {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
+          );
           if(!config.types.Fork.equals(preState.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -73,7 +75,6 @@ export async function getPreState(
 /**
  * Returns new chainhead
  * @param config
- * @param db
  * @param forkChoice
  * @param block
  * @param newState
