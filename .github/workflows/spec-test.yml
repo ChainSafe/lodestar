@@ -31,5 +31,7 @@ jobs:
     - name: Build
       run: node_modules/.bin/lerna run build
       if: steps.cache-deps.outputs.cache-hit == 'true'
-    - name: Spec tests
+    - name: Mainnet-slow Spec tests
       run: node_modules/.bin/lerna run test:spec-main
+    - name: Mainnet-fast tests
+      run: node_modules/.bin/lerna run test:spec-fast
