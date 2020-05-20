@@ -217,7 +217,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
    * Restore state cache and forkchoice from last finalized state.
    */
   private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>): Promise<void> {
-    this.logger.info(`Found last known/finalized state at epoch #${lastKnownState.finalizedCheckpoint.epoch}`);
+    const finalizedCheckpoint = lastKnownState.finalizedCheckpoint;
+    const finalizedEpoch = finalizedCheckpoint.epoch;
+    const finalizedRoot = finalizedCheckpoint.root;
+    this.logger.info(`Found last known state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
     this.db.stateCache.add(lastKnownState);
     // the block respective to finalized epoch is still in block db
@@ -230,7 +233,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const lastBlock = allBlocks[allBlocks.length - 1];
     let firstSLot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
-    this.logger.info(`Found ${allBlocks.length} blocks in database, from slot ${firstSLot} to ${lastSlot}`);
+    this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSLot} to ${lastSlot}`);
+    // initially we initialize database with genesis block
     if (allBlocks.length === 1) {
       // start from scratch
       const blockHash = this.config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
@@ -253,7 +257,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
         root=${toHexString(this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message))}`);
     }
     // init forkchoice
-    const blockCheckpoint = {
+    const blockCheckpoint: Checkpoint = {
       root: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
       epoch: computeEpochAtSlot(this.config, finalizedBlock.message.slot)
     };

@@ -21,7 +21,6 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
-import {LogLevel} from "@chainsafe/lodestar-utils";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
