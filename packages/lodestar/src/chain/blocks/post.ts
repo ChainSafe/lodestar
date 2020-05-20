@@ -1,5 +1,5 @@
-import {computeEpochAtSlot, isActiveValidator, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {BeaconState, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";

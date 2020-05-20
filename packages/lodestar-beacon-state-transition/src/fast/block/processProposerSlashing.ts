@@ -23,7 +23,7 @@ export function processProposerSlashing(
     throw new Error(
       "ProposerSlashing slots do not match: " +
       `slot1=${header1.slot} slot2=${header2.slot}`
-      );
+    );
   }
   // verify header proposer indices match
   if (header1.proposerIndex !== header2.proposerIndex) {
