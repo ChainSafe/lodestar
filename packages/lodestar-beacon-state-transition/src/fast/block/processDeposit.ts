@@ -17,7 +17,7 @@ export function processDeposit(
   // verify the merkle branch
   if (!verifyMerkleBranch(
     config.types.DepositData.hashTreeRoot(deposit.data),
-    Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
+    Array.from({length: deposit.proof.length}, (_, i) => deposit.proof[i].valueOf() as Uint8Array),
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
     state.eth1Data.depositRoot.valueOf() as Uint8Array,
