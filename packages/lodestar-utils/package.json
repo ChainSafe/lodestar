@@ -39,7 +39,8 @@
     "camelcase": "^5.3.1",
     "chalk": "^2.4.2",
     "js-yaml": "^3.13.1",
-    "winston": "^3.2.1"
+    "winston": "^3.2.1",
+    "winston-transport": "^4.3.0"
   },
   "devDependencies": {
     "@types/camelcase": "^5.2.0",

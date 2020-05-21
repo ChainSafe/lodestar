@@ -244,7 +244,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       );
     } catch (e) {
       this.logger.error(
-        `failed to send ${method}(${encoding}) to peer ${peerInfo.id.toB58String()}. Error: ${e.message}`
+        `failed to send ${method}(${encoding}) to peer ${peerInfo.id.toB58String()}.`, e
       );
     }
   }

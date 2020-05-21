@@ -129,7 +129,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     const blockRoot = attestationData.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!await this.db.block.has(blockRoot) || await this.db.badBlock.has(blockRoot)) {
+    if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
       return false;
     }
     return isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation));
@@ -166,7 +166,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!await this.db.block.has(blockRoot) || await this.db.badBlock.has(blockRoot)) {
+    if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
       return false;
     }
 

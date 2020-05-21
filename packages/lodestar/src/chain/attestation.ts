@@ -43,7 +43,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.pendingAttestations = new Map<BlockRootHex, Map<AttestationRootHex, Attestation>>();
   }
 
-  public async receiveAttestation(attestation: Attestation): Promise<void> {
+  public async  receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
     this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
     try {
@@ -57,13 +57,13 @@ export class AttestationProcessor implements IAttestationProcessor {
       return;
     }
     const targetRoot = attestation.data.target.root;
-    if (!await this.db.block.has(targetRoot.valueOf() as Uint8Array)) {
+    if (!this.forkChoice.hasBlock(targetRoot.valueOf() as Uint8Array)) {
       this.chain.emit("unknownBlockRoot", targetRoot);
       this.addPendingAttestation(targetRoot, attestation, attestationHash);
       return;
     }
     const beaconBlockRoot = attestation.data.beaconBlockRoot;
-    if (!await this.db.block.has(beaconBlockRoot.valueOf() as Uint8Array)) {
+    if (!this.forkChoice.hasBlock(beaconBlockRoot.valueOf() as Uint8Array)) {
       this.chain.emit("unknownBlockRoot", beaconBlockRoot);
       this.addPendingAttestation(beaconBlockRoot, attestation, attestationHash);
       return;
@@ -99,8 +99,14 @@ export class AttestationProcessor implements IAttestationProcessor {
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     let checkpointState: BeaconState;
     if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
-      const justifiedBlock = await this.db.block.get(justifiedCheckpoint.root.valueOf() as Uint8Array);
-      checkpointState = await this.db.stateCache.get(justifiedBlock.message.stateRoot.valueOf() as Uint8Array);
+      const justifiedBlock =
+        this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
+      if (justifiedBlock) {
+        checkpointState = await this.db.stateCache.get(justifiedBlock.stateRoot);
+      } else {
+        // should not happen
+        throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
+      }
     } else {
       // should be genesis state
       checkpointState = await this.db.stateArchive.get(0);
@@ -118,8 +124,9 @@ export class AttestationProcessor implements IAttestationProcessor {
       currentSlot >= computeStartSlotAtEpoch(this.config, target.epoch)
       , "Current slot less than this target epoch's start slot"
     );
-    const block = await this.db.block.get(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
-    assert(block.message.slot <= attestation.data.slot, "Attestation is for past block");
+    const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
+    assert(!!block, `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
+    assert(block.slot <= attestation.data.slot, "Attestation is for past block");
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);

@@ -23,7 +23,7 @@ export function processBlock(
     return (async function*() {
       for await(const job of source) {
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        const preState = await getPreState(config, db, pool, logger, job);
+        const preState = await getPreState(config, db, forkChoice, pool, logger, job);
         if(!preState) {
           continue;
         }
@@ -37,9 +37,11 @@ export function processBlock(
           db.stateCache.add(newState as TreeBacked<BeaconState>),
           db.block.put(blockRoot, job.signedBlock),
         ]);
-        const newChainHeadRoot = await updateForkChoice(config, forkChoice, job.signedBlock, newState);
+        const newChainHeadRoot = updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
-          logger.info(`Processed new chain head 0x${toHexString(newChainHeadRoot)}, slot=${newState.slot}`);
+          logger.info("Processed new chain head",
+            {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
+          );
           if(!config.types.Fork.equals(preState.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -56,9 +58,10 @@ export function processBlock(
 }
 
 export async function getPreState(
-  config: IBeaconConfig, db: IBeaconDb, pool: BlockPool, logger: ILogger, job: IBlockProcessJob
+  config: IBeaconConfig, db: IBeaconDb, forkChoice: ILMDGHOST, pool: BlockPool, logger: ILogger, job: IBlockProcessJob
 ): Promise<BeaconState|null> {
-  const parentBlock = await db.block.get(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
+  const parentBlock =
+    forkChoice.getBlockSummaryByBlockRoot(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     logger.debug(`Block(${toHexString(blockRoot)}) at slot ${job.signedBlock.message.slot}`
@@ -67,20 +70,19 @@ export async function getPreState(
     pool.addPendingBlock(job);
     return null;
   }
-  return await db.stateCache.get(parentBlock.message.stateRoot as Uint8Array);
+  return await db.stateCache.get(parentBlock.stateRoot as Uint8Array);
 }
 
 /**
  * Returns new chainhead
  * @param config
- * @param db
  * @param forkChoice
  * @param block
  * @param newState
  */
-export async function updateForkChoice(
+export function updateForkChoice(
   config: IBeaconConfig, forkChoice: ILMDGHOST, block: SignedBeaconBlock, newState: BeaconState
-): Promise<Root> {
+): Root {
   forkChoice.addBlock({
     slot: block.message.slot,
     blockRoot: config.types.BeaconBlock.hashTreeRoot(block.message),

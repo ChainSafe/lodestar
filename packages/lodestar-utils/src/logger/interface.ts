@@ -2,6 +2,8 @@
  * @module logger
  */
 
+import {ArrayLike} from "@chainsafe/ssz";
+
 export enum LogLevel {
   error = "error",
   warn = "warn",
@@ -31,18 +33,20 @@ export interface ILoggerOptions {
   module: string;
 }
 
+export type Context = {[k: string]: string|number|BigInt|ArrayLike<number>};
+
 export interface ILogger {
   level: LogLevel;
   silent: boolean;
 
-  error(message: string|object, context?: object): void;
-  warn(message: string|object, context?: object): void;
-  info(message: string|object, context?: object): void;
-  verbose(message: string|object, context?: object): void;
-  debug(message: string|object, context?: object): void;
-  silly(message: string|object, context?: object): void;
+  error(message: string, context?: Context|Error): void;
+  warn(message: string, context?: Context|Error): void;
+  info(message: string, context?: Context): void;
+  important(message: string, context?: Context): void;
+  verbose(message: string, context?: Context): void;
+  debug(message: string, context?: Context): void;
+  silly(message: string, context?: Context): void;
 
   // custom
   child(options: ILoggerOptions): ILogger;
-  important(message: string|object, context?: object): void;
 }
