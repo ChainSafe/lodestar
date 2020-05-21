@@ -27,17 +27,20 @@ describe("block pool", function () {
     forkChoiceStub.headBlockSlot.returns(0);
     pool.addPendingBlock({
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     const differentParentRoot = config.types.SignedBeaconBlock.defaultValue();
     differentParentRoot.message.parentRoot = Buffer.alloc(32, 1);
     pool.addPendingBlock({
       signedBlock: differentParentRoot,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     pool.addPendingBlock({
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
 
     expect(
@@ -57,7 +60,8 @@ describe("block pool", function () {
     block.message.slot = 10;
     pool.addPendingBlock({
       signedBlock: block,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     expect(
       // @ts-ignore
@@ -73,13 +77,15 @@ describe("block pool", function () {
     pendingBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(requiredBlock.message);
     pool.addPendingBlock({
       signedBlock: pendingBlock,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
 
     pool.onProcessedBlock(requiredBlock);
     pool.addPendingBlock({
       signedBlock: pendingBlock,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     expect(sourceStub.push.calledOnce).to.be.true;
     expect(eventBusStub.emit.calledTwice).to.be.true;
@@ -95,17 +101,19 @@ describe("block pool", function () {
     pendingBlock2.message.slot = 2;
     pool.addPendingBlock({
       signedBlock: pendingBlock,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     pool.addPendingBlock({
       signedBlock: pendingBlock2,
-      trusted: false
+      trusted: false,
+      reprocess: false,
     });
     pool.onProcessedBlock(requiredBlock);
 
     expect(sourceStub.push.calledTwice).to.be.true;
-    expect(sourceStub.push.firstCall.calledWith({signedBlock: pendingBlock2, trusted: false})).to.be.true;
-    expect(sourceStub.push.secondCall.calledWith({signedBlock: pendingBlock, trusted: false})).to.be.true;
+    expect(sourceStub.push.firstCall.calledWith({signedBlock: pendingBlock2, trusted: false, reprocess: false,})).to.be.true;
+    expect(sourceStub.push.secondCall.calledWith({signedBlock: pendingBlock, trusted: false, reprocess: false})).to.be.true;
   });
 
   it("should proceed without pending blocks", function () {

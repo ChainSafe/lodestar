@@ -15,7 +15,7 @@ import {ILMDGHOST, BlockSummary, NO_NODE} from "../interface";
 
 import {NodeInfo} from "./interface";
 import {RootHex, HexCheckpoint} from "../interface";
-import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
+import {GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 
@@ -215,7 +215,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     // best target is the node itself
     node.bestTarget = nodeIndex;
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
-    if (this.finalized) {
+    if (this.finalized && this.finalized.node) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
       assert(node.slot > finalizedSlot,
         `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
@@ -223,7 +223,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       assert.equal(
         this.getAncestor(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain`);
+        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
     }
 
     let shouldCheckBestTarget = false;
@@ -243,7 +243,8 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       // Update justified if new justified is later than store justified
       // or if store justified is not in chain with finalized checkpoint
       if (justifiedCheckpoint.epoch > this.justified.epoch ||
-        this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot) {
+        (this.finalized.node &&
+          this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
         this.setJustified(justifiedCheckpoint);
       }
     }
@@ -317,6 +318,9 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public head(): BlockSummary {
+    if (!this.headNode()) {
+      return null;
+    }
     return this.toBlockSummary(this.headNode());
   }
 
@@ -325,15 +329,17 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     if (!this.synced) {
       this.syncChanges();
     }
-    return this.nodes[this.justified.node.bestTarget];
+    return this.justified.node? this.nodes[this.justified.node.bestTarget] : null;
   }
 
   public headBlockRoot(): Uint8Array {
-    return this.head().blockRoot;
+    const head = this.head();
+    return head? head.blockRoot : ZERO_HASH;
   }
 
   public headBlockSlot(): Slot {
-    return this.head().slot;
+    const head = this.head();
+    return head? head.slot : GENESIS_SLOT;
   }
 
   public headStateRoot(): Uint8Array {
@@ -348,6 +354,9 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
     const head = this.headNode();
     let node = head;
+    if (!node) {
+      return null;
+    }
     // navigate from the head node, up the chain until either the slot is found or the slot is passed
     while(node.slot !== slot) {
       if (node.slot < slot || !node.hasParent()) {
@@ -379,7 +388,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     }
     const hexBlockRoot = toHexString(blockRoot);
     const justifiedSlot = computeStartSlotAtEpoch(this.config, this.justified.epoch);
-    if (this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
+    if (this.justified.node && this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
       return false;
     }
 
@@ -387,14 +396,14 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public getJustified(): Checkpoint {
-    if (!this.justified) {
+    if (!this.justified || !this.justified.node) {
       return null;
     }
     return {root: fromHexString(this.justified.node.blockRoot), epoch: this.justified.epoch};
   }
 
   public getFinalized(): Checkpoint {
-    if (!this.finalized) {
+    if (!this.finalized || !this.finalized.node) {
       return null;
     }
     return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
@@ -514,7 +523,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
    * first epoch it has ZERO finalized/justified checkpoints.
    */
   private getJustifiedCheckpoint(): HexCheckpoint {
-    if (this.finalized.epoch === GENESIS_EPOCH) {
+    if (this.finalized.epoch === GENESIS_EPOCH || !this.justified.node) {
       return null;
     }
     return {rootHex: this.justified.node.blockRoot, epoch: this.justified.epoch};
@@ -527,7 +536,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
    * first epoch it has ZERO finalized/justified checkpoints.
    */
   private getFinalizedCheckpoint(): HexCheckpoint {
-    if (this.finalized.epoch === GENESIS_EPOCH) {
+    if (this.finalized.epoch === GENESIS_EPOCH || !this.finalized.node) {
       return null;
     }
     return {rootHex: this.finalized.node.blockRoot, epoch: this.finalized.epoch};
@@ -572,7 +581,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   private prune(): void {
-    if (this.finalized) {
+    if (this.finalized && this.finalized.node) {
       const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot).map(node => node.blockRoot);
       const numDelete = nodesToDel.length;
       this.nodes = this.nodes.slice(numDelete);

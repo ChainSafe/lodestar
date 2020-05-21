@@ -1,7 +1,7 @@
 import rimraf from "rimraf";
 import {ENR} from "@chainsafe/discv5";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
@@ -16,6 +16,10 @@ import {join} from "path";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {expect} from "chai";
 import {interopDeposits} from "../../../src/lodestar/interop/deposits";
+import {BlockSummary} from "@chainsafe/lodestar/lib/chain";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState} from "@chainsafe/lodestar-types";
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;
@@ -27,26 +31,41 @@ describe("e2e interop simulation", function() {
   this.timeout(100000);
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
+  // logger.level = LogLevel.debug;
   let node: BeaconNode;
   let validators: ValidatorClient[];
+  let head: BlockSummary;
+  let cachedStates: BeaconState[];
+  let blockSummaries: BlockSummary[];
+  const conf = {
+    db: {name: LODESTAR_DIR}
+  };
+  // don't want to affect other tests
+  const devConfig = Object.assign({}, {params: minimalConfig.params}, minimalConfig);
+  devConfig.params = Object.assign({}, minimalConfig.params, {SECONDS_PER_SLOT, SLOTS_PER_EPOCH});
 
-  before(async () => {
+  before(() => {
     rimraf.sync(VALIDATOR_DIR);
     rimraf.sync(LODESTAR_DIR);
+  });
+
+  beforeEach(async () => {
     validators = [];
   });
 
-  after(async () => {
+  afterEach(async () => {
     const promises = validators.map((validator: ValidatorClient) => validator.stop());
     await Promise.all(promises);
     logger.info("Stopped all validators");
     await new Promise(resolve => setTimeout(resolve, SECONDS_PER_SLOT * 1000));
     await node.stop();
     logger.info("Stopped Beacon Node");
+  });
+
+  after(() => {
     rimraf.sync(VALIDATOR_DIR);
     rimraf.sync(LODESTAR_DIR);
   });
-
 
   it("should be able to run until a justified epoch with minimal config", async () => {
     await initializeNode();
@@ -64,23 +83,41 @@ describe("e2e interop simulation", function() {
       });
     });
     await received;
+    // data for next test
+    cachedStates = (await node.db.stateCache.values()).sort((a, b) => a.slot - b.slot);
+    const forkChoice = node.chain.forkChoice;
+    blockSummaries = cachedStates.map(state => forkChoice.getBlockSummaryAtSlot(state.slot));
+    head = forkChoice.head();
+  });
+
+
+  it("should restore chain state upon start", async () => {
+    node = await getBeaconNode(conf, devConfig);
+    expect((await node.db.stateCache.values()).length).to.be.equal(0);
+    await node.start();
+
+    // Same state cache
+    const newCachedStates = (await node.db.stateCache.values()).sort((a, b) => a.slot - b.slot);
+    expect(cachedStates.length).to.be.equal(newCachedStates.length);
+    cachedStates.forEach((state, index) => {
+      expect(devConfig.types.BeaconState.equals(state, newCachedStates[index]));
+    });
+    const forkChoice = node.chain.forkChoice;
+    const newBlockSummaries = newCachedStates.map(state => forkChoice.getBlockSummaryAtSlot(state.slot));
+    // Forkchoice: Same block summaries
+    blockSummaries.forEach((blockSummary, index) => {
+      expect(blockSummary).to.be.deep.equal(newBlockSummaries[index]);
+    });
+    // Forkchoice: same head
+    expect(node.chain.forkChoice.head()).to.be.deep.equal(head);
   });
 
   async function initializeNode(): Promise<void> {
     // BeaconNode has default config
     mkdirSync(LODESTAR_DIR, {recursive: true});
-    const conf = {
-      db: {name: LODESTAR_DIR}
-    };
-    // don't want to affect other tests
-    const devConfig = Object.assign({}, {params: minimalConfig.params}, minimalConfig);
-    devConfig.params = Object.assign({}, minimalConfig.params, {SECONDS_PER_SLOT, SLOTS_PER_EPOCH});
+
     expect(devConfig.params.SECONDS_PER_SLOT).to.be.lt(minimalConfig.params.SECONDS_PER_SLOT);
-    const peerId = await createPeerId();
-    const libp2p = await createNodeJsLibp2p(
-      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}, false
-    );
-    node = new BeaconNode(conf, {config: devConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
+    node = await getBeaconNode(conf, devConfig);
 
     const genesisTime = Math.floor(Date.now()/1000);
     const depositDataRootList = devConfig.types.DepositDataRootList.tree.defaultValue();
@@ -94,6 +131,14 @@ describe("e2e interop simulation", function() {
     const state = quickStartState(devConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
     await node.chain.initializeBeaconChain(state);
     await node.start();
+  }
+
+  async function getBeaconNode(conf: Partial<IBeaconNodeOptions>, devConfig: IBeaconConfig): Promise<BeaconNode> {
+    const peerId = await createPeerId();
+    const libp2p = await createNodeJsLibp2p(
+      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}, false
+    );
+    return new BeaconNode(conf, {config: devConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
   }
 
   async function startValidators(): Promise<void> {

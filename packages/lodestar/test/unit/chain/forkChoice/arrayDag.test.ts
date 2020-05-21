@@ -460,54 +460,6 @@ describe("ArrayDagLMDGHOST", () => {
 
   describe("ensure correct indices", () => {
     /**
-     * A(0) -- B(1) -- C(2)
-     */
-    it.skip("Should build correct indices upon start", async () => {
-      const blockA = generateEmptySignedBlock();
-      const blockB = generateEmptySignedBlock();
-      blockB.message.slot = blockA.message.slot + 1;
-      const blockARoot = config.types.BeaconBlock.hashTreeRoot(blockA.message);
-      blockB.message.parentRoot = blockARoot;
-      const blockBRoot = config.types.BeaconBlock.hashTreeRoot(blockB.message);
-      const blockC = generateEmptySignedBlock();
-      blockC.message.slot = blockB.message.slot + 1;
-      blockC.message.parentRoot = blockBRoot;
-      const blockCRoot = config.types.BeaconBlock.hashTreeRoot(blockC.message);
-      // dbStub.block.getAll.resolves([
-      //   blockA, blockB, blockC
-      // ]);
-      const genesisTime = Math.floor(Date.now() / 1000);
-      const state = generateState();
-      state.finalizedCheckpoint = {
-        epoch: GENESIS_EPOCH,
-        root: blockARoot,
-      };
-      state.currentJustifiedCheckpoint = {
-        epoch: GENESIS_EPOCH,
-        root: blockARoot,
-      };
-      // dbStub.state.get.resolves(state);
-      const eth1 = new InteropEth1Notifier();
-      const logger = new WinstonLogger();
-      const metrics = sinon.createStubInstance(BeaconMetrics);
-      const chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice: lmd});
-      // await chain.restoreForkChoice();
-      await lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
-      const nodeA = lmd.getNode(blockARoot);
-      expect(nodeA.hasParent()).to.be.false;
-      expect(nodeA.bestChild).to.be.equal(1);// BlockB
-      expect(nodeA.bestTarget).to.be.equal(2);// BlockC
-      expect(Object.values(nodeA.children)).to.be.deep.equal([1]);
-      const nodeB = lmd.getNode(blockBRoot);
-      expect(nodeB.parent).to.be.equal(0);// BlockA
-      expect(nodeB.bestChild).to.be.equal(2);// BlockC
-      expect(nodeB.bestTarget).to.be.equal(2);// BlockC
-      expect(Object.values(nodeB.children)).to.be.deep.equal([2]);// BlockC
-      const nodeC = lmd.getNode(blockCRoot);
-      expect(nodeC).not.to.be.undefined;
-    });
-
-    /**
      *              b -- d -- e
      *             / \
      *            /   c -- f

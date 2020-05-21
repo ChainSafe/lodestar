@@ -46,6 +46,7 @@ export interface ILogger {
   verbose(message: string, context?: Context): void;
   debug(message: string, context?: Context): void;
   silly(message: string, context?: Context): void;
+  profile(message: string, option?: {level: string; message: string}): void;
 
   // custom
   child(options: ILoggerOptions): ILogger;

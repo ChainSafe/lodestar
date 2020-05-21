@@ -7,7 +7,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {Libp2pNetwork} from "../../../src/network";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
@@ -21,7 +21,6 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
-import {LogLevel} from "@chainsafe/lodestar-utils";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {

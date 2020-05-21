@@ -89,8 +89,8 @@ export class BlockProcessor implements IService {
     this.controller.abort();
   }
 
-  public receiveBlock(block: SignedBeaconBlock, trusted = false): void {
-    this.blockProcessingSource.push({signedBlock: block, trusted});
+  public receiveBlock(block: SignedBeaconBlock, trusted = false, reprocess = false): void {
+    this.blockProcessingSource.push({signedBlock: block, trusted, reprocess});
   }
 
 }

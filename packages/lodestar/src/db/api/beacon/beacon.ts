@@ -74,4 +74,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations)
     ]);
   }
+
+  public async stop(): Promise<void> {
+    await super.stop();
+    this.stateCache.clear();
+  }
 }
