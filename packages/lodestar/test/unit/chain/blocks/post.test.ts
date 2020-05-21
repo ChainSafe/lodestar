@@ -1,6 +1,7 @@
 import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {expect} from "chai";
 import {BeaconChain, ChainEventEmitter, StatefulDagLMDGHOST} from "../../../../src/chain";
@@ -14,6 +15,7 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("post block process stream", function () {
 
+  let epochCtxStub: SinonStubbedInstance<EpochContext>;
   let forkChoiceStub: SinonStubbedInstance<StatefulDagLMDGHOST>;
   let dbStub: StubbedBeaconDb;
   let metricsStub: SinonStubbedInstance<IBeaconMetrics>;
@@ -23,6 +25,10 @@ describe("post block process stream", function () {
   let attestationProcessorStub: SinonStubbedInstance<AttestationProcessor>;
 
   beforeEach(function () {
+    epochCtxStub = sinon.createStubInstance(EpochContext);
+    epochCtxStub.currentShuffling = {
+      activeIndices: [],
+    } as any;
     forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
     dbStub = new StubbedBeaconDb(sinon);
     slotMetricsStub = sinon.createStubInstance(Gauge);
@@ -39,7 +45,7 @@ describe("post block process stream", function () {
       blockRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
       parentRoot: Buffer.alloc(32),
-    } as any)
+    } as any);
   });
 
   it("no epoch transition", async function () {
@@ -57,6 +63,7 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,
@@ -82,6 +89,7 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,
@@ -117,6 +125,7 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,
