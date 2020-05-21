@@ -17,6 +17,8 @@ export * from "./epoch";
 export * from "./block";
 export * from "./slot";
 
+export * from "./fast";
+
 /**
  * The ETH2.0 Beacon Chain state transition function
  * @param config Beacon Chain configuration

@@ -57,16 +57,20 @@ export function getActiveValidatorIndices(state: BeaconState, epoch: Epoch): Val
   return indices;
 }
 
+export function getChurnLimit(config: IBeaconConfig, activeValidatorCount: number): number {
+  return Math.max(
+    config.params.MIN_PER_EPOCH_CHURN_LIMIT,
+    intDiv(activeValidatorCount, config.params.CHURN_LIMIT_QUOTIENT),
+  );
+}
+
 /**
  * Return the validator churn limit for the current epoch.
  */
 export function getValidatorChurnLimit(config: IBeaconConfig, state: BeaconState): number {
-  return Math.max(
-    config.params.MIN_PER_EPOCH_CHURN_LIMIT,
-    intDiv(
-      getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length,
-      config.params.CHURN_LIMIT_QUOTIENT
-    ),
+  return getChurnLimit(
+    config,
+    getActiveValidatorIndices(state, getCurrentEpoch(config, state)).length,
   );
 }
 

@@ -9,6 +9,7 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
+import { generateValidator } from "../../utils/validator";
 
 describe("BeaconChain", function() {
   const sandbox = sinon.createSandbox();
@@ -22,6 +23,7 @@ describe("BeaconChain", function() {
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state = generateState();
+    state.validators = Array.from({length: 5}, () => generateValidator({activationEpoch: 0}));
     dbStub.stateCache.get.resolves(state as any);
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});

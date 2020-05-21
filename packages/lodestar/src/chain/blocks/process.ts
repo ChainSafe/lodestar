@@ -1,6 +1,6 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {stateTransition, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {fastStateTransition, computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
@@ -13,6 +13,7 @@ export function processBlock(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
+  epochCtx: EpochContext,
   forkChoice: ILMDGHOST,
   pool: BlockPool,
   eventBus: ChainEventEmitter,
@@ -27,7 +28,7 @@ export function processBlock(
           continue;
         }
         // Run the state transition
-        const newState = await runStateTransition(config, db, logger, preState, job);
+        const newState = await runStateTransition(config, db, logger, epochCtx, preState, job);
         if(!newState) {
           continue;
         }
@@ -100,11 +101,12 @@ export function updateForkChoice(
 
 export async function runStateTransition(
   config: IBeaconConfig, db: IBeaconDb, logger: ILogger,
+  epochCtx: EpochContext,
   preState: BeaconState, job: IBlockProcessJob
 ): Promise<BeaconState|null> {
   try {
     // if block is trusted don't verify state roots, proposer or signature
-    return stateTransition(config, preState, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
+    return fastStateTransition(epochCtx, preState, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate

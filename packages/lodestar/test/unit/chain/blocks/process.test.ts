@@ -1,5 +1,6 @@
 import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
@@ -8,13 +9,14 @@ import {expect} from "chai";
 import {BeaconChain, ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition";
+import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("block process stream", function () {
 
   let dbStub: StubbedBeaconDb;
+  let epochCtxStub: SinonStubbedInstance<EpochContext>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
@@ -24,9 +26,10 @@ describe("block process stream", function () {
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
+    epochCtxStub  = sinon.createStubInstance(EpochContext);
     blockPoolStub = sinon.createStubInstance(BlockPool);
     forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-    stateTransitionStub = sandbox.stub(stateTransitionUtils, "stateTransition");
+    stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(BeaconChain);
   });
 
@@ -47,6 +50,7 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         blockPoolStub as unknown as BlockPool,
         eventBusStub
@@ -72,6 +76,7 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         blockPoolStub as unknown as BlockPool, eventBusStub
       ),
@@ -96,6 +101,7 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub, blockPoolStub as unknown as BlockPool, eventBusStub
       ),
       collect
@@ -124,6 +130,7 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub, blockPoolStub as unknown as BlockPool,
         eventBusStub
       ),
@@ -145,8 +152,7 @@ describe("block process stream", function () {
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
-    stateTransitionStub.resolves(generateState());
-    //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
+    stateTransitionStub.returns(generateState());
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
     dbStub.depositData.values.resolves([]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
@@ -157,6 +163,7 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
+        epochCtxStub as unknown as EpochContext,
         forkChoiceStub, blockPoolStub as unknown as BlockPool,
         eventBusStub
       ),

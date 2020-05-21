@@ -17,7 +17,7 @@ import {
   Slot,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -59,6 +59,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chainId: Uint16;
   public networkId: Uint64;
   public clock: IBeaconClock;
+  private epochCtx: EpochContext;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
@@ -75,6 +76,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.opts = opts;
     this.chain = opts.name;
     this.config = config;
+    this.epochCtx = new EpochContext(config);
     this.db = db;
     this.eth1 = eth1;
     this.logger = logger;
@@ -84,7 +86,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.networkId = 0n; // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
-      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
+      config, logger, db, this.epochCtx, this.forkChoice, metrics, this, this.attestationProcessor,
     );
   }
 
@@ -116,6 +118,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.verbose("Starting chain");
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
+    this.epochCtx.loadState(state);
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
