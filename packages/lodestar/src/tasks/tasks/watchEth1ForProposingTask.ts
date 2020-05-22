@@ -35,7 +35,7 @@ export class WatchEth1ForProposingTask {
   public async start(): Promise<void> {
     this.sync.on("initialsync:completed", this.finishInitSync);
     const startEth1BlockNumber = await this.db.getLastProcessedEth1BlockNumber();
-    const eth1DataStream = await this.eth1.getDepositEventsByBlock(false, startEth1BlockNumber);
+    const eth1DataStream = await this.eth1.getDepositEventsFromBlock(false, startEth1BlockNumber);
     if (!eth1DataStream) {
       this.logger
         .warn(`watchEth1: No need to run WatchEth1ForProposingTask task startEth1BlockNumber=${startEth1BlockNumber}`);

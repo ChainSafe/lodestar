@@ -80,11 +80,11 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   /**
-   * Main methods to be called either to build genesis state or to save data to propose block later.
+   * Main methods to be called either to build genesis state or to save data to propose blocks later.
    * @param isScanEth1ForGenesis
    * @param fromBlock
    */
-  public async getDepositEventsByBlock(
+  public async getDepositEventsFromBlock(
     isScanEth1ForGenesis: boolean, fromBlock?: number): Promise<Pushable<IDepositEvent[]>> {
     if (!isScanEth1ForGenesis && !this.opts.enabled) {
       this.logger.warn(`eth1 is disabled so can't get deposit event, fromBlock=${fromBlock}`);
@@ -182,9 +182,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
   }
 
-  /**
-   * This can be scanned for genesis, or scan until stop for proposing block.
-   */
   private async doGetDepositEventsByBlock(): Promise<void> {
     const followBlockNumber = await this.provider.getBlockNumber() - this.config.params.ETH1_FOLLOW_DISTANCE;
     this.logger.info(
@@ -258,15 +255,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         this.logger.verbose("eth1: Set lastProcessedEth1BlockNumber to " + this.lastProcessedEth1BlockNumber);
         return;
       }
-      // const lastBlockNumber = depositEvents[depositEvents.length - 1].blockNumber;
-      // const firstBlockNumber = depositEvents[0].blockNumber;
-      // for (let blockNumber = firstBlockNumber; blockNumber <= lastBlockNumber; blockNumber++) {
-      //   const blockDepositEvents = depositEvents.filter(event => event.blockNumber === blockNumber);
-      //   if (blockDepositEvents.length > 0) {
-      //     this.logger.info(`eth1: Found ${blockDepositEvents.length} deposit events for block ${blockNumber}`);
-      //     this.eth1DataSource.push(blockDepositEvents);
-      //   }
-      // }
       // consumers should group by block whenever it needs to
       this.eth1DataSource.push(depositEvents);
       this.lastProcessedEth1BlockNumber = toBlockNbr;

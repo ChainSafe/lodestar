@@ -14,7 +14,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async start(): Promise<void> {}
   public async stop(): Promise<void> {}
-  public async getDepositEventsByBlock(): Promise<Pushable<IDepositEvent[]>> {
+  public async getDepositEventsFromBlock(): Promise<Pushable<IDepositEvent[]>> {
     return null;
   }
   public async foundGenesis(): Promise<void> {}

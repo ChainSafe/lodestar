@@ -82,7 +82,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.stateCache.clear();
   }
 
-  // TODO: small e2e to make sure it works
   public async getLastProcessedEth1BlockNumber(): Promise<number> {
     const data = await this.db.get(
       encodeKey(Bucket.chainInfo, "lastProcessedBlockNumber")

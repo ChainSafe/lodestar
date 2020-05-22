@@ -60,7 +60,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     const targetBlockNumber = opts.depositContract.deployedAt + 10;
     provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
     await eth1Notifier.start();
-    const eth1DataStream = await eth1Notifier.getDepositEventsByBlock(true);
+    const eth1DataStream = await eth1Notifier.getDepositEventsFromBlock(true);
 
     await pipe(eth1DataStream, async function(source: AsyncIterable<IDepositEvent[]>) {
       for await (const events of source) {

@@ -28,7 +28,7 @@ export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;
 export interface IEth1Notifier extends Eth1EventEmitter {
   start(): Promise<void>;
   stop(): Promise<void>;
-  getDepositEventsByBlock(isScanEth1ForGenesis: boolean, fromBlock?: number): Promise<Pushable<IDepositEvent[]>>;
+  getDepositEventsFromBlock(isScanEth1ForGenesis: boolean, fromBlock?: number): Promise<Pushable<IDepositEvent[]>>;
   foundGenesis(): Promise<void>;
   /**
    * Returns block by block hash or number

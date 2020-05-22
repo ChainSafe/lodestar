@@ -114,7 +114,7 @@ export class GenesisBuilder {
 
   public genesis = async (): Promise<TreeBacked<BeaconState>> => {
     await this.initialize();
-    const eth1DataStream = await this.eth1.getDepositEventsByBlock(true, undefined);
+    const eth1DataStream = await this.eth1.getDepositEventsFromBlock(true, undefined);
     const {isFormingValidGenesisState: processSingleBlock, state} = this;
     const foundGenesis = this.eth1.foundGenesis.bind(this.eth1);
     return await pipe(eth1DataStream,
@@ -130,9 +130,6 @@ export class GenesisBuilder {
       });
   };
 
-  /**
-   * This processes deposit events of a single eth1 block.
-   */
   private doProcessDepositEvents = async (depositEvents: IDepositEvent[]): Promise<void> => {
     const depositDataRoots = new Map<number, Root>();
     depositEvents.forEach(
