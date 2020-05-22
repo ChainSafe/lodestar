@@ -244,7 +244,7 @@ describe("[network] network", function () {
     netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback);
     expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(0);
   });
-  it("should connect to new peer by subnet", async function() {
+  it.only("should connect to new peer by subnet", async function() {
     const subnet = 10;
     netB.metadata.attnets[subnet] = true;
     const connected = Promise.all([
