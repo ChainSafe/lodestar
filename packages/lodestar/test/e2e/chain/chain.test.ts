@@ -16,7 +16,7 @@ import {BeaconSync} from "../../../src/sync";
 import sinon from "sinon";
 import {sleep} from "../../../src/util/sleep";
 
-describe("genesis state", () => {
+describe("BeaconChain", () => {
 
   let eth1Notifier: IEth1Notifier;
   let chain: BeaconChain;
@@ -103,7 +103,7 @@ describe("genesis state", () => {
   /**
    * this test has to start immediately after the above test.
    */
-  it("should start WatchEth1ForProposingTask successfully", async function() {
+  it("should start WatchEth1ForProposingTask and store proposing data successfully", async function() {
     this.timeout(100000);
     const lastProcessedEth1Block = await db.getLastProcessedEth1BlockNumber();
     logger.info(`At genesis, lastProcessedEth1Block=${lastProcessedEth1Block}`);

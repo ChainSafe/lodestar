@@ -83,7 +83,15 @@ export class GenesisBuilder {
         depositRoot: this.depositTree.tree().root,
         depositCount: events[events.length - 1].index + 1,
       };
-      await this.db.eth1Data.put(block.timestamp, eth1Data);
+
+      await Promise.all([
+        // proposing data
+        this.db.depositData.batchPut(events.map((depositEvent) => ({
+          key: depositEvent.index,
+          value: depositEvent,
+        }))),
+        this.db.eth1Data.put(block.timestamp, eth1Data)
+      ]);
     }
     return isValid;
   };
@@ -135,11 +143,6 @@ export class GenesisBuilder {
     depositEvents.forEach(
       event => depositDataRoots.set(event.index, this.config.types.DepositData.hashTreeRoot(event)));
     await Promise.all([
-      // op pool depositData
-      this.db.depositData.batchPut(depositEvents.map((depositEvent) => ({
-        key: depositEvent.index,
-        value: depositEvent,
-      }))),
       // deposit data roots
       this.db.depositDataRoot.batchPut(depositEvents.map((depositEvent) => ({
         key: depositEvent.index,

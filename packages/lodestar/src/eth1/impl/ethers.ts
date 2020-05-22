@@ -90,7 +90,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       this.logger.warn(`eth1 is disabled so can't get deposit event, fromBlock=${fromBlock}`);
       return null;
     }
-    // if we try to form deposit, allow to scan deposit events even eth1 is disabled
+    // if we try to form genesis, allow to scan deposit events even eth1 is disabled
     if (!this.opts.enabled) {
       await this.initialize();
     }
@@ -99,7 +99,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.eth1DataSource = pushable<IDepositEvent[]>();
     this.targetBlockSource = pushable<number>();
     // should not wait
-    this.doGetDepositEventsByBlock();
+    this.doGetDepositEventsFromLastProcessedBlock();
     return this.eth1DataSource;
   }
 
@@ -182,7 +182,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
   }
 
-  private async doGetDepositEventsByBlock(): Promise<void> {
+  private async doGetDepositEventsFromLastProcessedBlock(): Promise<void> {
     const followBlockNumber = await this.provider.getBlockNumber() - this.config.params.ETH1_FOLLOW_DISTANCE;
     this.logger.info(
       `eth1: Start scanning Eth1Data last block =${this.lastProcessedEth1BlockNumber}` +
