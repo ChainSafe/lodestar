@@ -81,7 +81,6 @@ export class BeaconNode {
     });
     this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
       config,
-      db: this.db,
       logger: logger.child(this.conf.logger.eth1),
     });
     this.chain = new BeaconChain(this.conf.chain, {
@@ -110,6 +109,7 @@ export class BeaconNode {
       config,
       db: this.db,
       chain: this.chain,
+      eth1: this.eth1,
       network: this.network,
       reputationStore: this.reps,
       logger: logger.child(this.conf.logger.sync),
@@ -132,7 +132,8 @@ export class BeaconNode {
         chain: this.chain,
         sync: this.sync,
         network: this.network,
-        logger: this.logger.child(this.conf.logger.chores)
+        logger: this.logger.child(this.conf.logger.chores),
+        eth1: this.eth1,
       }
     );
   }

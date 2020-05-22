@@ -15,6 +15,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../lib/sync";
+import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 
 describe("sync", function () {
 
@@ -32,6 +33,7 @@ describe("sync", function () {
       opts,
       {
         chain: chainStub,
+        eth1: new InteropEth1Notifier(),
         config,
         db: sinon.createStubInstance(BeaconDb),
         regularSync: regularSyncStub,

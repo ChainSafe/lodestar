@@ -20,6 +20,8 @@ import {
   VoluntaryExitRepository
 } from "./repositories";
 import {StateCache} from "./stateCache";
+import {encodeKey, Bucket} from "../schema";
+import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
@@ -78,5 +80,21 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public async stop(): Promise<void> {
     await super.stop();
     this.stateCache.clear();
+  }
+
+  // TODO: small e2e to make sure it works
+  public async getLastProcessedEth1BlockNumber(): Promise<number> {
+    const data = await this.db.get(
+      encodeKey(Bucket.chainInfo, "lastProcessedBlockNumber")
+    );
+    if(!data) {
+      return undefined;
+    }
+    return bytesToInt(data);
+  }
+
+  public async setLastProcessedEth1BlockNumber(eth1BlockNumber: number): Promise<void> {
+    const data = intToBytes(eth1BlockNumber, 32);
+    return this.db.put(encodeKey(Bucket.chainInfo, "lastProcessedBlockNumber"), data);
   }
 }

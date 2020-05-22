@@ -11,7 +11,6 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {EthersEth1Notifier} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
-import {StubbedBeaconDb} from "../../../utils/stub";
 
 chai.use(chaiAsPromised);
 
@@ -20,14 +19,12 @@ describe("Eth1Notifier", () => {
   const logger: ILogger = new WinstonLogger();
   let contract: SinonStubbedInstance<ethers.Contract>;
   let provider: SinonStubbedInstance<JsonRpcProvider>;
-  let db: StubbedBeaconDb;
   let eth1: EthersEth1Notifier;
 
   beforeEach(async function (): Promise<void> {
     logger.silent = true;
     contract = sandbox.createStubInstance(Contract) as any;
     provider = sandbox.createStubInstance(JsonRpcProvider) as any;
-    db = new StubbedBeaconDb(sandbox);
     eth1 = new EthersEth1Notifier({
       ...defaults,
       contract: contract as any,
@@ -35,7 +32,6 @@ describe("Eth1Notifier", () => {
     },
     {
       config,
-      db,
       logger,
     });
   });
@@ -55,14 +51,12 @@ describe("Eth1Notifier", () => {
       number: 5000000,
     } as Block;
     const currentBlockNumber = lastProcessedBlock.number;
-    db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
 
 
     provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
     provider.getBlockNumber.resolves(currentBlockNumber);
 
     await eth1.start();
-    expect(provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash), false).calledOnce).to.be.true;
     await eth1.stop();
   });
 
@@ -72,7 +66,6 @@ describe("Eth1Notifier", () => {
       providerInstance: provider as any,
     }, {
       config,
-      db,
       logger,
     });
     await expect(

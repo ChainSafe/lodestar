@@ -67,4 +67,8 @@ export interface IBeaconDb {
   getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
+
+  getLastProcessedEth1BlockNumber(): Promise<number>;
+
+  setLastProcessedEth1BlockNumber(eth1BlockNumber: number): Promise<void>;
 }

@@ -1,4 +1,4 @@
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncModules, SyncEventEmitter} from "./interface";
 import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
@@ -12,6 +12,8 @@ import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, RoundRobinArray} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
+import {IEth1Notifier} from "../eth1";
+import {EventEmitter} from "events";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -21,12 +23,15 @@ export enum SyncMode {
   STOPPED
 }
 
-export class BeaconSync implements IBeaconSync {
+export class BeaconSync
+  extends (EventEmitter as { new(): SyncEventEmitter })
+  implements IBeaconSync {
 
   private readonly opts: ISyncOptions;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly eth1: IEth1Notifier;
   private readonly peerReputations: IReputationStore;
 
   private mode: SyncMode;
@@ -39,9 +44,11 @@ export class BeaconSync implements IBeaconSync {
   private startingBlock: Slot = 0;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
+    super();
     this.opts = opts;
     this.network = modules.network;
     this.chain = modules.chain;
+    this.eth1 = modules.eth1;
     this.logger = modules.logger;
     this.peerReputations = modules.reputationStore;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
@@ -64,6 +71,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     await this.startInitialSync();
+    this.emit("initialsync:completed");
     await this.startRegularSync();
     this.mode = SyncMode.SYNCED;
     this.startingBlock = (await this.chain.getHeadBlock()).message.slot;

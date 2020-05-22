@@ -6,17 +6,18 @@
 
 import {EventEmitter} from "events";
 
-import {Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
+import {Number64, DepositData} from "@chainsafe/lodestar-types";
 import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {Pushable} from "it-pushable";
 
 export interface IDepositEvent extends DepositData {
   index: number;
+  blockNumber: number;
 }
 
 export interface IEth1Events {
   deposit: (index: Number64, depositData: DepositData) => void;
-  eth1Data: (timestamp: number, eth1Data: Eth1Data, blockNumber: number) => void;
 }
 
 export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;
@@ -27,7 +28,8 @@ export type Eth1EventEmitter = StrictEventEmitter<EventEmitter, IEth1Events>;
 export interface IEth1Notifier extends Eth1EventEmitter {
   start(): Promise<void>;
   stop(): Promise<void>;
-
+  getDepositEventsByBlock(isScanEth1ForGenesis: boolean, fromBlock?: number): Promise<Pushable<IDepositEvent[]>>;
+  foundGenesis(): Promise<void>;
   /**
    * Returns block by block hash or number
    * @param blockTag
