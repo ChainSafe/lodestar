@@ -51,7 +51,7 @@ export interface IBeaconSSZTypes {
   DepositEvent: ContainerType<t.DepositEvent>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
-  SigningRoot: ContainerType<t.SigningRoot>;
+  SigningData: ContainerType<t.SigningData>;
   DepositDataRootList: ContainerType<List<t.Root>>;
   AttestationSubnets: BitVectorType;
   // operations
@@ -129,7 +129,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "DepositEvent",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
-  "SigningRoot",
+  "SigningData",
   "DepositDataRootList",
   "AttestationSubnets",
   // operations
