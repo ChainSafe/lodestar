@@ -7,7 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {processSlots, stateTransition, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {stateTransition, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 
@@ -23,17 +23,13 @@ export async function assembleBlock(
 ): Promise<BeaconBlock | null> {
   const parentBlock = await chain.getHeadBlock();
   const currentState = await chain.getHeadState();
-
-  if (slot > currentState.slot) {
-    processSlots(config, currentState, slot);
-  }
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
-    body: await assembleBody(config, db, currentState, randaoReveal, graffiti),
+    body: await assembleBody(config, db, {...currentState, slot}, randaoReveal, graffiti),
   };
 
   block.stateRoot = config.types.BeaconState.hashTreeRoot(

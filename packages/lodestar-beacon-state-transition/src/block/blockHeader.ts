@@ -15,6 +15,8 @@ export function processBlockHeader(
 ): void {
   // Verify that the slots match
   assert(block.slot === state.slot);
+  // Verify that the block is newer than latest block header
+  assert(block.slot > state.latestBlockHeader.slot);
   // Verify that proposer index is the correct index
   assert(block.proposerIndex === getBeaconProposerIndex(config, state));
   // Verify that the parent matches

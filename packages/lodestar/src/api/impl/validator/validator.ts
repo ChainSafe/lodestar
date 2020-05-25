@@ -85,7 +85,9 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadState(),
         this.db.getValidatorIndex(validatorPubKey)
       ]);
-      processSlots(this.config, headState, slot);
+      if (slot > headState.slot) {
+        processSlots(this.config, headState, slot);
+      }
       return await assembleAttestation(
         {config: this.config, db: this.db},
         headState,

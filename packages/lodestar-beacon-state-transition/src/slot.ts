@@ -15,7 +15,7 @@ export function processSlots(
   state: BeaconState,
   slot: Slot,
 ): void{
-  assert(state.slot <= slot);
+  assert(state.slot < slot);
 
   while (state.slot < slot){
     processSlot(config, state);
