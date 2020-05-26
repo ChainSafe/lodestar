@@ -29,7 +29,7 @@ import {
   processDeposit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bigIntMin, ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
+import {TreeBacked, List, fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {IEth1Notifier, IDepositEvent} from "../../eth1";
 import pipe from "it-pipe";
@@ -74,8 +74,8 @@ export class GenesisBuilder {
   public isFormingValidGenesisState = async (events: IDepositEvent[]): Promise<boolean> => {
     const block = await this.eth1.getBlock(events[0].blockNumber);
     applyTimestamp(this.config, this.state, block.timestamp);
-    applyEth1BlockHash(this.state, fromHexString(block.hash));
-    const isValid = isValidGenesisState(this.config, this.state);
+    applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
+    const isValid = isValidGenesisState(this.config, this.state, this.logger);
     this.logger.verbose(`genesis: Process block ${block.number}, valid genesis state=${isValid}`);
     if (isValid) {
       const eth1Data = {
@@ -208,8 +208,9 @@ export function initializeBeaconStateFromEth1(
   return state as TreeBacked<BeaconState>;
 }
 
-function applyEth1BlockHash(state: BeaconState, eth1BlockHash: Bytes32): void {
+function applyEth1BlockHash(config: IBeaconConfig, state: BeaconState, eth1BlockHash: Bytes32): void {
   state.eth1Data.blockHash = eth1BlockHash;
+  state.randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(eth1BlockHash);
 }
 
 function applyTimestamp(config: IBeaconConfig, state: BeaconState, eth1Timestamp: number): void {
@@ -267,14 +268,23 @@ function applyDeposits(
 
 }
 
-export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
+export function isValidGenesisState(config: IBeaconConfig, state: BeaconState, logger: ILogger): boolean {
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
+    logger.verbose(`genesis: not pass MIN_GENESIS_TIME of ${config.params.MIN_GENESIS_TIME}, ` +
+    `state.genesisTime=${state.genesisTime}`);
     return false;
   }
-  return getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length
-      >=
-      config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
-
+  const numActiveValidator = getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length;
+  const result = numActiveValidator >= config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
+  if (result) {
+    logger.info(`genesis: Found genesis state at eth1 block ${toHexString(state.eth1Data.blockHash)} ` +
+    `genesisTime=${state.genesisTime}`);
+  } else {
+    const numValidator = state.validators.length;
+    logger.verbose(`genesis: validator: ${numValidator}, active validator: ${numActiveValidator} , ` +
+    `require: ${config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT}`);
+  }
+  return result;
 }
 
 /**

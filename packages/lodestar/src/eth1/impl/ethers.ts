@@ -263,6 +263,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         `eth1: Failed to process deposit events last eth1 block is ${this.lastProcessedEth1BlockNumber}` +
         `, err=${ex.message}`
       );
+      this.processingBlock = false;
     }
   }
 

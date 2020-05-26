@@ -41,7 +41,7 @@ describe("BeaconChain", () => {
   logger.silent = true;
   // logger.level = LogLevel.verbose;
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
-  schlesiConfig.params = Object.assign({}, config.params, {MIN_GENESIS_TIME: 1587755000, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4});
+  schlesiConfig.params = Object.assign({}, config.params, {MIN_GENESIS_TIME: 1587755000, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4, MIN_GENESIS_DELAY: 3600});
   const sandbox = sinon.createSandbox();
 
   before(async () => {
@@ -92,8 +92,10 @@ describe("BeaconChain", () => {
     expect(toHexString(eth1Data.blockHash)).to.be.equal("0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8");
     expect(toHexString(eth1Data.depositRoot)).to.be.equal("0x24dccd5595a434f57680128048c69548919b067b1285693d06881f6101325d1d");
     expect(eth1Data.depositCount).to.be.equal(4);
-    const forkDigest = await chain.currentForkDigest;
+    const headBlock = await chain.getHeadBlock();
+    expect(toHexString(schlesiConfig.types.BeaconBlock.hashTreeRoot(headBlock.message))).to.be.equal("0xc9cbcb8ceb9b5f71216f5137282bf6a1e3b50f64e42d6c7fb347abe07eb0db82");
     // schlesi fork digest: https://github.com/goerli/schlesi
+    const forkDigest = await chain.currentForkDigest;
     expect(toHexString(forkDigest)).to.be.equal("0x9925efd6");
     logger.info(`chain is started successfully. Genesis state found in ${Math.floor(Date.now() - start) / 1000} seconds`);
     await chain.stop();
