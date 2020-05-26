@@ -17,7 +17,7 @@ export function isValidIndexedAttestation(
   const indices = Array.from(indexedAttestation.attestingIndices);
 
   // verify max number of indices
-  if (!(indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
+  if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
     return false;
   }
   // verify indices are sorted and unique
