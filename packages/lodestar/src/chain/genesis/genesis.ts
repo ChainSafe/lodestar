@@ -29,7 +29,7 @@ import {
   processDeposit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bigIntMin, ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked, List, fromHexString, toHexString} from "@chainsafe/ssz";
+import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {IEth1Notifier, IDepositEvent} from "../../eth1";
 import pipe from "it-pipe";
@@ -75,7 +75,7 @@ export class GenesisBuilder {
     const block = await this.eth1.getBlock(events[0].blockNumber);
     applyTimestamp(this.config, this.state, block.timestamp);
     applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
-    const isValid = isValidGenesisState(this.config, this.state, this.logger);
+    const isValid = isValidGenesisState(this.config, this.state);
     this.logger.verbose(`genesis: Process block ${block.number}, valid genesis state=${isValid}`);
     if (isValid) {
       const eth1Data = {
@@ -268,23 +268,12 @@ function applyDeposits(
 
 }
 
-export function isValidGenesisState(config: IBeaconConfig, state: BeaconState, logger: ILogger): boolean {
+export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
-    logger.verbose(`genesis: not pass MIN_GENESIS_TIME of ${config.params.MIN_GENESIS_TIME}, ` +
-    `state.genesisTime=${state.genesisTime}`);
     return false;
   }
-  const numActiveValidator = getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length;
-  const result = numActiveValidator >= config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
-  if (result) {
-    logger.info(`genesis: Found genesis state at eth1 block ${toHexString(state.eth1Data.blockHash)} ` +
-    `genesisTime=${state.genesisTime}`);
-  } else {
-    const numValidator = state.validators.length;
-    logger.verbose(`genesis: validator: ${numValidator}, active validator: ${numActiveValidator} , ` +
-    `require: ${config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT}`);
-  }
-  return result;
+  return getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length
+    >= config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
 }
 
 /**
