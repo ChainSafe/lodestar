@@ -1,21 +1,20 @@
 import {IDepositEvent} from "../interface";
 
 /**
- * Return deposit events of blocks sorted by block number and deposit index
+ * Return deposit events of blocks grouped/sorted by block number and deposit index
  * @param depositEvents range deposit events
  */
-export function groupDepositEventsByBlock(rangeDepositEvents: IDepositEvent[]): [number, IDepositEvent[]][] {
+export function groupDepositEventsByBlock(rangeDepositEvents: IDepositEvent[]): Map<number, IDepositEvent[]> {
   if (!rangeDepositEvents || rangeDepositEvents.length === 0) {
-    return [];
+    return new Map();
   }
-  const firstBlockNumber = rangeDepositEvents[0].blockNumber;
-  const lastBlockNumber = rangeDepositEvents[rangeDepositEvents.length - 1].blockNumber;
-  const result: [number, IDepositEvent[]][] = [];
-  for (let blockNumber = firstBlockNumber; blockNumber <= lastBlockNumber; blockNumber ++) {
-    const blockDepositEvents = rangeDepositEvents.filter(event => event.blockNumber === blockNumber);
-    if (blockDepositEvents.length > 0) {
-      result.push([blockNumber, blockDepositEvents.sort((event1, event2) => event1.index - event2.index)]);
+  rangeDepositEvents.sort((event1, event2) => event1.index - event2.index);
+  return rangeDepositEvents.reduce<Map<number, IDepositEvent[]>>((previousValue, currentValue) => {
+    const blockNumber = currentValue.blockNumber;
+    if (!previousValue.get(blockNumber)) {
+      previousValue.set(blockNumber, []);
     }
-  }
-  return result;
+    previousValue.get(blockNumber).push(currentValue);
+    return previousValue;
+  }, new Map());
 }
