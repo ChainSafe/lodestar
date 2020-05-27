@@ -4,8 +4,8 @@ import {IDepositEvent} from "../../../../src/eth1";
 
 describe("utils of eth1", function() {
   it("should return empty array", () => {
-    expect(groupDepositEventsByBlock(null)).to.be.deep.equal([]);
-    expect(groupDepositEventsByBlock([])).to.be.deep.equal([]);
+    expect(Array.from(groupDepositEventsByBlock(null).keys())).to.be.deep.equal([]);
+    expect(Array.from(groupDepositEventsByBlock([]).keys())).to.be.deep.equal([]);
   });
 
   it("should return deposit events by block", () => {
@@ -18,16 +18,15 @@ describe("utils of eth1", function() {
       {blockNumber: 3000, index: 3, ...depositData},
     ];
     const blockEvents = groupDepositEventsByBlock(depositEvents);
-    expect(blockEvents.length).to.be.equal(3);
-    expect(blockEvents[0][0]).to.be.equal(1000);
-    expect(blockEvents[0][1].length).to.be.equal(1);
-    expect(blockEvents[1][0]).to.be.equal(2000);
-    expect(blockEvents[1][1].length).to.be.equal(2);
-    // make sure events are sorted
-    expect(blockEvents[1][1][0].index).to.be.lt(blockEvents[1][1][1].index);
-    expect(blockEvents[2][0]).to.be.equal(3000);
-    expect(blockEvents[2][1].length).to.be.equal(2);
-    // make sure events are sorted
-    expect(blockEvents[2][1][0].index).to.be.lt(blockEvents[2][1][1].index);
+    expect(Array.from(blockEvents.keys())).to.be.deep.equals([1000, 2000, 3000]);
+    expect(blockEvents.get(1000).length).to.be.equal(1);
+    expect(blockEvents.get(1000)[0].index).to.be.equal(0);
+    expect(blockEvents.get(2000).length).to.be.equal(2);
+    expect(blockEvents.get(2000)[0].index).to.be.equal(1);
+    expect(blockEvents.get(2000)[1].index).to.be.equal(2);
+    expect(blockEvents.get(3000).length).to.be.equal(2);
+    expect(blockEvents.get(3000)[0].index).to.be.equal(3);
+    expect(blockEvents.get(3000)[1].index).to.be.equal(4);
+
   });
 });
