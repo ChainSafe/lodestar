@@ -15,6 +15,7 @@ import {IBeaconDb} from "../../db";
 import {RetryProvider} from "./retryProvider";
 import {IEth1Options} from "../options";
 import {Eth1EventEmitter, IEth1Notifier, IDepositEvent} from "../interface";
+import {getDepositEventsByBlock} from "./util";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -48,7 +49,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   private started: boolean;
   private processingBlock: boolean;
   private lastProcessedEth1BlockNumber: number;
-  private lastProcessedDepositIndex: number;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
     super();
@@ -83,13 +83,11 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
     const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
     this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-    this.lastProcessedDepositIndex = await this.getLastProcessedDepositIndex();
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
     );
     this.logger.verbose(
-      `Last processed block number: ${this.lastProcessedEth1BlockNumber}, ` +
-      `last processed deposit index: ${this.lastProcessedDepositIndex}`
+      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
     );
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
@@ -108,9 +106,11 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
     this.provider.removeAllListeners("block");
     this.started = false;
+    this.logger.verbose("Eth1 notifier is stopping");
     while (this.processingBlock) {
       await sleep(5);
     }
+    this.logger.verbose("Eth1 notifier stopped");
   }
 
   public async getLastProcessedBlockTag(): Promise<string | number> {
@@ -130,9 +130,27 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async processBlocks(toNumber: number): Promise<void> {
-    let blockNumber = this.lastProcessedEth1BlockNumber + 1;
-    while (blockNumber <= toNumber && await this.processBlock(blockNumber)) {
-      blockNumber++;
+    let rangeBlockNumber = this.lastProcessedEth1BlockNumber;
+    while (rangeBlockNumber < toNumber && this.started) {
+      const blockNumber = Math.min(this.lastProcessedEth1BlockNumber + 100, toNumber);
+      let rangeDepositEvents;
+      try {
+        rangeDepositEvents = await this.getDepositEvents(this.lastProcessedEth1BlockNumber + 1, blockNumber);
+      } catch (ex) {
+        this.logger.warn(`eth1: failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
+          + ` to ${blockNumber}`);
+        continue;
+      }
+      // get deposit events successfully, it's safe to update rangeBlockNumber
+      rangeBlockNumber = blockNumber;
+      if (!rangeDepositEvents || rangeDepositEvents.length === 0) {
+        continue;
+      }
+      for (const [blockNumber, blockDepositEvents] of getDepositEventsByBlock(rangeDepositEvents)) {
+        if (!await this.processBlock(blockNumber, blockDepositEvents)) {
+          break;
+        }
+      }
     }
   }
 
@@ -143,79 +161,71 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    *
    * Returns true if processing was successful
    */
-  public async processBlock(blockNumber: number): Promise<boolean> {
+  public async processBlock(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
     if (!this.started) {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
     this.processingBlock = true;
     this.logger.verbose(`Processing eth1 block ${blockNumber}`);
-    if (blockNumber !== this.lastProcessedEth1BlockNumber + 1) {
-      this.logger.verbose(
-        `eth1 block out of order. expected: ${this.lastProcessedEth1BlockNumber + 1} actual: ${blockNumber}`
-      );
-      this.processingBlock = false;
-      return false;
-    }
     const block = await this.getBlock(blockNumber);
+
     if (!block) {
       this.logger.verbose(`eth1 block ${blockNumber} not found`);
       this.processingBlock = false;
       return false;
     }
-    // get results
-    const depositEvents  = await this.getDepositEvents(blockNumber);
-    if (depositEvents.length) {
-      this.lastProcessedDepositIndex = depositEvents[depositEvents.length - 1].index;
-      this.logger.verbose(
-        `${depositEvents.length} deposits found, latest depositIndex: ${this.lastProcessedDepositIndex}`
-      );
-    }
     // update state
     await Promise.all([
       // op pool depositData
-      this.db.depositData.batchPut(depositEvents.map((depositEvent) => ({
+      this.db.depositData.batchPut(blockDepositEvents.map((depositEvent) => ({
         key: depositEvent.index,
         value: depositEvent,
       }))),
       // deposit data roots
-      this.db.depositDataRoot.batchPut(depositEvents.map((depositEvent) => ({
+      this.db.depositDataRoot.batchPut(blockDepositEvents.map((depositEvent) => ({
         key: depositEvent.index,
         value: this.config.types.DepositData.hashTreeRoot(depositEvent),
       }))),
     ]);
-    const depositTree = await this.db.depositDataRoot.getTreeBacked(this.lastProcessedDepositIndex);
+    const depositTree = await this.db.depositDataRoot.getTreeBacked(blockDepositEvents[0].index - 1);
+    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     const eth1Data = {
       blockHash: fromHexString(block.hash),
       depositRoot: depositTree.tree().root,
-      depositCount: this.lastProcessedDepositIndex + 1,
+      depositCount,
     };
     // eth1 data
     await this.db.eth1Data.put(block.timestamp, eth1Data);
-    this.lastProcessedEth1BlockNumber++;
+    this.lastProcessedEth1BlockNumber = blockNumber;
     // emit events
-    depositEvents.forEach((depositEvent) => {
+    blockDepositEvents.forEach((depositEvent) => {
       this.emit("deposit", depositEvent.index, depositEvent);
     });
-    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
     this.processingBlock = false;
+    if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
+      this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
+    }
     return true;
   }
 
-  public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
+  public async getDepositEvents(fromBlockTag: string | number, toBLockTag?: string | number): Promise<IDepositEvent[]> {
     return (await this.provider.getLogs({
-      fromBlock: blockTag,
-      toBlock: blockTag,
+      fromBlock: fromBlockTag,
+      toBlock: toBLockTag || fromBlockTag,
       address: this.contract.address,
       topics: [this.contract.interface.events.DepositEvent.topic],
     })).map((log) => {
-      return this.parseDepositEvent(this.contract.interface.parseLog(log).values);
+      const blockNumber = log.blockNumber;
+      return this.parseDepositEvent(this.contract.interface.parseLog(log).values, blockNumber);
     });
   }
 
   public async getBlock(blockTag: string | number): Promise<Block> {
     try {
-      return this.provider.getBlock(blockTag, false);
+      // without await we can't catch error
+      const block = await this.provider.getBlock(blockTag, false);
+      return block;
     } catch (e) {
       this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
       return null;
@@ -244,8 +254,9 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    * Parse DepositEvent log
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private parseDepositEvent(log: any): IDepositEvent {
+  private parseDepositEvent(log: any, blockNumber: number): IDepositEvent {
     return {
+      blockNumber,
       index: this.config.types.Number64.deserialize(fromHexString(log.index)),
       pubkey: fromHexString(log.pubkey),
       withdrawalCredentials: fromHexString(log.withdrawal_credentials),
