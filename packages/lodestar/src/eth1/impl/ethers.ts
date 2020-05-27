@@ -10,12 +10,11 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 import {isValidAddress} from "../../util/address";
-import {sleep} from "../../util/sleep";
 import {IBeaconDb} from "../../db";
 import {RetryProvider} from "./retryProvider";
 import {IEth1Options} from "../options";
 import {Eth1EventEmitter, IEth1Notifier, IDepositEvent} from "../interface";
-import {getDepositEventsByBlock} from "./util";
+import {groupDepositEventsByBlock} from "./util";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -47,7 +46,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   private logger: ILogger;
 
   private started: boolean;
-  private processingBlock: boolean;
   private lastProcessedEth1BlockNumber: number;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
@@ -106,10 +104,6 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
     this.provider.removeAllListeners("block");
     this.started = false;
-    this.logger.verbose("Eth1 notifier is stopping");
-    while (this.processingBlock) {
-      await sleep(5);
-    }
     this.logger.verbose("Eth1 notifier stopped");
   }
 
@@ -146,8 +140,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         continue;
       }
       let success = true;
-      for (const [blockNumber, blockDepositEvents] of getDepositEventsByBlock(rangeDepositEvents)) {
-        if (!await this.processBlock(blockNumber, blockDepositEvents)) {
+      for (const [blockNumber, blockDepositEvents] of groupDepositEventsByBlock(rangeDepositEvents)) {
+        if (!await this.processDepositEvents(blockNumber, blockDepositEvents)) {
           success = false;
           break;
         }
@@ -167,20 +161,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    *
    * Returns true if processing was successful
    */
-  public async processBlock(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+  public async processDepositEvents(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
     if (!this.started) {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
-    this.processingBlock = true;
-    this.logger.verbose(`Processing eth1 block ${blockNumber}`);
-    const block = await this.getBlock(blockNumber);
-
-    if (!block) {
-      this.logger.verbose(`eth1 block ${blockNumber} not found`);
-      this.processingBlock = false;
-      return false;
-    }
+    this.logger.verbose(`Processing deposit events of eth1 block ${blockNumber}`);
     // update state
     await Promise.all([
       // op pool depositData
@@ -194,6 +180,27 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
         value: this.config.types.DepositData.hashTreeRoot(depositEvent),
       }))),
     ]);
+    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
+    if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
+      return await this.processEth1Votes(blockNumber, blockDepositEvents);
+    }
+    return true;
+  }
+
+  /**
+   * Process proposing data of eth1 block
+   * @param blockNumber
+   * @param blockDepositEvents
+   * @returns true if success
+   */
+  public async processEth1Votes(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+    this.logger.verbose(`Processing proposing data of eth1 block ${blockNumber}`);
+    const block = await this.getBlock(blockNumber);
+
+    if (!block) {
+      this.logger.verbose(`eth1 block ${blockNumber} not found`);
+      return false;
+    }
     const depositTree = await this.db.depositDataRoot.getTreeBacked(blockDepositEvents[0].index - 1);
     const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     const eth1Data = {
@@ -208,10 +215,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     blockDepositEvents.forEach((depositEvent) => {
       this.emit("deposit", depositEvent.index, depositEvent);
     });
-    this.processingBlock = false;
-    if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
-      this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
-    }
+    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
     return true;
   }
 
