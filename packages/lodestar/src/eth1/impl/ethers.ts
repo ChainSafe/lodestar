@@ -129,6 +129,10 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
   }
 
+  /**
+   * Process blocks from lastProcessedEth1BlockNumber + 1 until toNumber.
+   * @param toNumber
+   */
   public async processBlocks(toNumber: number): Promise<void> {
     let rangeBlockNumber = this.lastProcessedEth1BlockNumber;
     while (rangeBlockNumber < toNumber && this.started) {
@@ -141,15 +145,17 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
           + ` to ${blockNumber}`);
         continue;
       }
-      // get deposit events successfully, it's safe to update rangeBlockNumber
-      rangeBlockNumber = blockNumber;
-      if (!rangeDepositEvents || rangeDepositEvents.length === 0) {
-        continue;
-      }
+      let success = true;
       for (const [blockNumber, blockDepositEvents] of getDepositEventsByBlock(rangeDepositEvents)) {
         if (!await this.processBlock(blockNumber, blockDepositEvents)) {
+          success = false;
           break;
         }
+      }
+      // no error, it's safe to update rangeBlockNumber
+      if (success) {
+        rangeBlockNumber = blockNumber;
+        this.lastProcessedEth1BlockNumber = blockNumber;
       }
     }
   }
