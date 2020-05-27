@@ -11,6 +11,7 @@ import {Block} from "ethers/providers";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 export interface IDepositEvent extends DepositData {
+  blockNumber: number;
   index: number;
 }
 

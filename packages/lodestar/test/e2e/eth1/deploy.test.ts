@@ -32,21 +32,25 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
   const logger: ILogger = new WinstonLogger();
-
+  // chain can't receive eth1Data that's not qualified genesis condition so we need this test config
+  const testConfig = Object.assign({}, {params: config.params}, config);
+  // 1586833385 is timestamp of the contract's block
+  testConfig.params = Object.assign({}, config.params,
+    {MIN_GENESIS_TIME: 1586833385, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1, ETH1_FOLLOW_DISTANCE: 0});
   beforeEach(async function () {
     this.timeout(0);
     rimraf.sync(dbPath);
     logger.silent = true;
     logger.level = LogLevel.verbose;
     db = new BeaconDb({
-      config,
+      config: testConfig,
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
     provider = new ethers.providers.JsonRpcProvider(opts.provider.url, opts.provider.network);
     eth1Notifier = new EthersEth1Notifier(
       {...opts, providerInstance: provider},
       {
-        config,
+        config: testConfig,
         db,
         logger,
       });
@@ -63,7 +67,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   it("should process blocks", async function () {
     this.timeout(0);
     // process 2 blocks, should be 1 deposit
-    const targetBlockNumber = opts.depositContract.deployedAt + 2;
+    const targetBlockNumber = opts.depositContract.deployedAt + 1;
     provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
     const blockPromise = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
       if(blockNumber === targetBlockNumber) {
@@ -84,7 +88,8 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     const target1BlockNumber = opts.depositContract.deployedAt + 3;
     provider.getBlockNumber = sinon.stub().resolves(target1BlockNumber);
     const blockPromise1 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
-      if(blockNumber === target1BlockNumber) {
+      // 1 event at deployedAt + 1
+      if(blockNumber === opts.depositContract.deployedAt + 1) {
         eth1Notifier.removeAllListeners("eth1Data");
         resolve();
       }
@@ -98,7 +103,8 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // process 7 more blocks, it should start from where it left off
     provider.getBlockNumber = sinon.stub().resolves(target2BlockNumber);
     const blockPromise2 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
-      if(blockNumber === target2BlockNumber) {
+      // 1 more event at deployedAt + 9
+      if(blockNumber === opts.depositContract.deployedAt + 9) {
         eth1Notifier.removeAllListeners("eth1Data");
         resolve();
       }
