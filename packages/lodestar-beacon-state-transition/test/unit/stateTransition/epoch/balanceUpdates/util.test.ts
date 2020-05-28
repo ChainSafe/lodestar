@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
-import {getBaseReward} from "../../../../epoch/balanceUpdates/util";
+import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/util";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 
 describe('process epoch - balance updates', function () {

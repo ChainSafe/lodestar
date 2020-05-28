@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utilsEpoch from "../../../../../src/epoch/util";
 import * as utils from "../../../../../src/util";
 import * as baseReward
-  from "../../../../epoch/balanceUpdates/util";
+  from "../../../../../src/epoch/balanceUpdates/util";
 
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
