@@ -90,7 +90,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
     // then start listening for incoming blocks
-    this.processBlocks(headBlockNumber).then(() => {
+    this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE).then(() => {
       if(this.started) {
         this.provider.on("block", this.onNewEth1Block.bind(this));
       }
