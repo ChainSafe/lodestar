@@ -9,12 +9,12 @@ export function groupDepositEventsByBlock(rangeDepositEvents: IDepositEvent[]): 
     return new Map();
   }
   rangeDepositEvents.sort((event1, event2) => event1.index - event2.index);
-  return rangeDepositEvents.reduce<Map<number, IDepositEvent[]>>((previousValue, currentValue) => {
-    const blockNumber = currentValue.blockNumber;
-    if (!previousValue.get(blockNumber)) {
-      previousValue.set(blockNumber, []);
+  return rangeDepositEvents.reduce<Map<number, IDepositEvent[]>>((groupedEvents, event) => {
+    const blockNumber = event.blockNumber;
+    if (!groupedEvents.get(blockNumber)) {
+      groupedEvents.set(blockNumber, []);
     }
-    previousValue.get(blockNumber).push(currentValue);
-    return previousValue;
+    groupedEvents.get(blockNumber).push(event);
+    return groupedEvents;
   }, new Map());
 }
