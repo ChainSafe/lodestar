@@ -182,7 +182,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     ]);
     const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
-      return await this.processEth1Votes(blockNumber, blockDepositEvents);
+      return await this.processEth1Data(blockNumber, blockDepositEvents);
     }
     return true;
   }
@@ -193,7 +193,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    * @param blockDepositEvents
    * @returns true if success
    */
-  public async processEth1Votes(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+  public async processEth1Data(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
     this.logger.verbose(`Processing proposing data of eth1 block ${blockNumber}`);
     const block = await this.getBlock(blockNumber);
 
@@ -225,17 +225,13 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
       toBlock: toBLockTag || fromBlockTag,
       address: this.contract.address,
       topics: [this.contract.interface.events.DepositEvent.topic],
-    })).map((log) => {
-      const blockNumber = log.blockNumber;
-      return this.parseDepositEvent(this.contract.interface.parseLog(log).values, blockNumber);
-    });
+    })).map((log) => this.parseDepositEvent(log));
   }
 
   public async getBlock(blockTag: string | number): Promise<Block> {
     try {
       // without await we can't catch error
-      const block = await this.provider.getBlock(blockTag, false);
-      return block;
+      return await this.provider.getBlock(blockTag, false);
     } catch (e) {
       this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
       return null;
@@ -264,14 +260,15 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    * Parse DepositEvent log
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private parseDepositEvent(log: any, blockNumber: number): IDepositEvent {
+  private parseDepositEvent(log: any): IDepositEvent {
+    const values = this.contract.interface.parseLog(log).values;
     return {
-      blockNumber,
-      index: this.config.types.Number64.deserialize(fromHexString(log.index)),
-      pubkey: fromHexString(log.pubkey),
-      withdrawalCredentials: fromHexString(log.withdrawal_credentials),
-      amount: this.config.types.Gwei.deserialize(fromHexString(log.amount)),
-      signature: fromHexString(log.signature),
+      blockNumber: log.blockNumber,
+      index: this.config.types.Number64.deserialize(fromHexString(values.index)),
+      pubkey: fromHexString(values.pubkey),
+      withdrawalCredentials: fromHexString(values.withdrawal_credentials),
+      amount: this.config.types.Gwei.deserialize(fromHexString(values.amount)),
+      signature: fromHexString(values.signature),
     };
   }
 }
