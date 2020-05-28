@@ -82,7 +82,7 @@ describe("process block - voluntary exits", function () {
   });
 
   it("should fail - invalid signature", function () {
-    const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.params.SHARD_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptySignedVoluntaryExit();
     exit.message.epoch = 0;
     state.validators.push(generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH}));
@@ -97,7 +97,7 @@ describe("process block - voluntary exits", function () {
 
   it("should process exit", function () {
     const validator = generateValidator({activation: 1, exit: FAR_FUTURE_EPOCH});
-    const state = generateState({slot: (config.params.PERSISTENT_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
+    const state = generateState({slot: (config.params.SHARD_COMMITTEE_PERIOD + 1) * config.params.SLOTS_PER_EPOCH});
     const exit = generateEmptySignedVoluntaryExit();
     exit.message.epoch = 0;
     state.validators.push(validator);
