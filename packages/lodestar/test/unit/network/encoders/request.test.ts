@@ -9,33 +9,33 @@ import {expect} from "chai";
 import {createStatus} from "./utils";
 
 describe("request encoders", function () {
-    
+
   let loggerStub: SinonStubbedInstance<ILogger>;
-    
+
   beforeEach(function () {
     loggerStub = sinon.createStubInstance(WinstonLogger);
   });
 
   it("should work - basic request - ssz", async function () {
     const requests = await pipe(
-      [1n],
+      [0n],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0], 1n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0], 0n)).to.be.true;
   });
 
   it("should work - basic request - ssz_snappy", async function () {
     const requests = await pipe(
-      [1n],
+      [0n],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0], 1n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0], 0n)).to.be.true;
   });
 
   it("should work - container request - ssz", async function () {
@@ -87,23 +87,21 @@ describe("request encoders", function () {
   it("should work - no request body - ssz", async function () {
     const requests = await pipe(
       [],
-      eth2RequestEncode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ),
       collect
     );
-    expect(requests.length).to.be.equal(0);
+    expect(requests.length).to.be.equal(1);
   });
 
   it("should work - no request body - ssz_snappy", async function () {
     const requests = await pipe(
       [],
-      eth2RequestEncode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
-    expect(requests.length).to.be.equal(0);
+    expect(requests.length).to.be.equal(1);
   });
-  
+
   it("should warn user if failed to decode request", async function () {
     await pipe(
       [1n],
@@ -132,5 +130,5 @@ describe("request encoders", function () {
     );
     expect(loggerStub.warn.calledOnce).to.be.true;
   });
-    
+
 });
