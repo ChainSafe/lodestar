@@ -10,11 +10,11 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
 import {isValidAddress} from "../../util/address";
-import {sleep} from "../../util/sleep";
 import {IBeaconDb} from "../../db";
 import {RetryProvider} from "./retryProvider";
 import {IEth1Options} from "../options";
 import {Eth1EventEmitter, IEth1Notifier, IDepositEvent} from "../interface";
+import {groupDepositEventsByBlock} from "./util";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -46,9 +46,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   private logger: ILogger;
 
   private started: boolean;
-  private processingBlock: boolean;
   private lastProcessedEth1BlockNumber: number;
-  private lastProcessedDepositIndex: number;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
     super();
@@ -83,18 +81,16 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
     const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
     this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-    this.lastProcessedDepositIndex = await this.getLastProcessedDepositIndex();
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
     );
     this.logger.verbose(
-      `Last processed block number: ${this.lastProcessedEth1BlockNumber}, ` +
-      `last processed deposit index: ${this.lastProcessedDepositIndex}`
+      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
     );
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
     // then start listening for incoming blocks
-    this.processBlocks(headBlockNumber).then(() => {
+    this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE).then(() => {
       if(this.started) {
         this.provider.on("block", this.onNewEth1Block.bind(this));
       }
@@ -108,9 +104,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
     this.provider.removeAllListeners("block");
     this.started = false;
-    while (this.processingBlock) {
-      await sleep(5);
-    }
+    this.logger.verbose("Eth1 notifier stopped");
   }
 
   public async getLastProcessedBlockTag(): Promise<string | number> {
@@ -129,10 +123,34 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
   }
 
+  /**
+   * Process blocks from lastProcessedEth1BlockNumber + 1 until toNumber.
+   * @param toNumber
+   */
   public async processBlocks(toNumber: number): Promise<void> {
-    let blockNumber = this.lastProcessedEth1BlockNumber + 1;
-    while (blockNumber <= toNumber && await this.processBlock(blockNumber)) {
-      blockNumber++;
+    let rangeBlockNumber = this.lastProcessedEth1BlockNumber;
+    while (rangeBlockNumber < toNumber && this.started) {
+      const blockNumber = Math.min(this.lastProcessedEth1BlockNumber + 100, toNumber);
+      let rangeDepositEvents;
+      try {
+        rangeDepositEvents = await this.getDepositEvents(this.lastProcessedEth1BlockNumber + 1, blockNumber);
+      } catch (ex) {
+        this.logger.warn(`eth1: failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
+          + ` to ${blockNumber}`);
+        continue;
+      }
+      let success = true;
+      for (const [blockNumber, blockDepositEvents] of groupDepositEventsByBlock(rangeDepositEvents)) {
+        if (!await this.processDepositEvents(blockNumber, blockDepositEvents)) {
+          success = false;
+          break;
+        }
+      }
+      // no error, it's safe to update rangeBlockNumber
+      if (success) {
+        rangeBlockNumber = blockNumber;
+        this.lastProcessedEth1BlockNumber = blockNumber;
+      }
     }
   }
 
@@ -143,79 +161,77 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    *
    * Returns true if processing was successful
    */
-  public async processBlock(blockNumber: number): Promise<boolean> {
+  public async processDepositEvents(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
     if (!this.started) {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
-    this.processingBlock = true;
-    this.logger.verbose(`Processing eth1 block ${blockNumber}`);
-    if (blockNumber !== this.lastProcessedEth1BlockNumber + 1) {
-      this.logger.verbose(
-        `eth1 block out of order. expected: ${this.lastProcessedEth1BlockNumber + 1} actual: ${blockNumber}`
-      );
-      this.processingBlock = false;
-      return false;
-    }
-    const block = await this.getBlock(blockNumber);
-    if (!block) {
-      this.logger.verbose(`eth1 block ${blockNumber} not found`);
-      this.processingBlock = false;
-      return false;
-    }
-    // get results
-    const depositEvents  = await this.getDepositEvents(blockNumber);
-    if (depositEvents.length) {
-      this.lastProcessedDepositIndex = depositEvents[depositEvents.length - 1].index;
-      this.logger.verbose(
-        `${depositEvents.length} deposits found, latest depositIndex: ${this.lastProcessedDepositIndex}`
-      );
-    }
+    this.logger.verbose(`Processing deposit events of eth1 block ${blockNumber}`);
     // update state
     await Promise.all([
       // op pool depositData
-      this.db.depositData.batchPut(depositEvents.map((depositEvent) => ({
+      this.db.depositData.batchPut(blockDepositEvents.map((depositEvent) => ({
         key: depositEvent.index,
         value: depositEvent,
       }))),
       // deposit data roots
-      this.db.depositDataRoot.batchPut(depositEvents.map((depositEvent) => ({
+      this.db.depositDataRoot.batchPut(blockDepositEvents.map((depositEvent) => ({
         key: depositEvent.index,
         value: this.config.types.DepositData.hashTreeRoot(depositEvent),
       }))),
     ]);
-    const depositTree = await this.db.depositDataRoot.getTreeBacked(this.lastProcessedDepositIndex);
-    const eth1Data = {
-      blockHash: fromHexString(block.hash),
-      depositRoot: depositTree.tree().root,
-      depositCount: this.lastProcessedDepositIndex + 1,
-    };
-    // eth1 data
-    await this.db.eth1Data.put(block.timestamp, eth1Data);
-    this.lastProcessedEth1BlockNumber++;
-    // emit events
-    depositEvents.forEach((depositEvent) => {
-      this.emit("deposit", depositEvent.index, depositEvent);
-    });
-    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
-    this.processingBlock = false;
+    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
+    if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
+      return await this.processEth1Data(blockNumber, blockDepositEvents);
+    }
     return true;
   }
 
-  public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
+  /**
+   * Process proposing data of eth1 block
+   * @param blockNumber
+   * @param blockDepositEvents
+   * @returns true if success
+   */
+  public async processEth1Data(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+    this.logger.verbose(`Processing proposing data of eth1 block ${blockNumber}`);
+    const block = await this.getBlock(blockNumber);
+
+    if (!block) {
+      this.logger.verbose(`eth1 block ${blockNumber} not found`);
+      return false;
+    }
+    const depositTree = await this.db.depositDataRoot.getTreeBacked(blockDepositEvents[0].index - 1);
+    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
+    const eth1Data = {
+      blockHash: fromHexString(block.hash),
+      depositRoot: depositTree.tree().root,
+      depositCount,
+    };
+    // eth1 data
+    await this.db.eth1Data.put(block.timestamp, eth1Data);
+    this.lastProcessedEth1BlockNumber = blockNumber;
+    // emit events
+    blockDepositEvents.forEach((depositEvent) => {
+      this.emit("deposit", depositEvent.index, depositEvent);
+    });
+    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
+    return true;
+  }
+
+  public async getDepositEvents(fromBlockTag: string | number, toBLockTag?: string | number): Promise<IDepositEvent[]> {
     return (await this.provider.getLogs({
-      fromBlock: blockTag,
-      toBlock: blockTag,
+      fromBlock: fromBlockTag,
+      toBlock: toBLockTag || fromBlockTag,
       address: this.contract.address,
       topics: [this.contract.interface.events.DepositEvent.topic],
-    })).map((log) => {
-      return this.parseDepositEvent(this.contract.interface.parseLog(log).values);
-    });
+    })).map((log) => this.parseDepositEvent(log));
   }
 
   public async getBlock(blockTag: string | number): Promise<Block> {
     try {
-      return this.provider.getBlock(blockTag, false);
+      // without await we can't catch error
+      return await this.provider.getBlock(blockTag, false);
     } catch (e) {
       this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
       return null;
@@ -245,12 +261,14 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private parseDepositEvent(log: any): IDepositEvent {
+    const values = this.contract.interface.parseLog(log).values;
     return {
-      index: this.config.types.Number64.deserialize(fromHexString(log.index)),
-      pubkey: fromHexString(log.pubkey),
-      withdrawalCredentials: fromHexString(log.withdrawal_credentials),
-      amount: this.config.types.Gwei.deserialize(fromHexString(log.amount)),
-      signature: fromHexString(log.signature),
+      blockNumber: log.blockNumber,
+      index: this.config.types.Number64.deserialize(fromHexString(values.index)),
+      pubkey: fromHexString(values.pubkey),
+      withdrawalCredentials: fromHexString(values.withdrawal_credentials),
+      amount: this.config.types.Gwei.deserialize(fromHexString(values.amount)),
+      signature: fromHexString(values.signature),
     };
   }
 }
