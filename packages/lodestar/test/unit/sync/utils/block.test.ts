@@ -47,7 +47,7 @@ describe("sync - block utils", function () {
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange
         .onFirstCall()
-        .throws();
+        .resolves(null);
       rpcStub.beaconBlocksByRange
         .onSecondCall()
         .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
