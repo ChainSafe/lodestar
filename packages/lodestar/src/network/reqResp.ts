@@ -166,8 +166,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private storePeerEncodingPreference(
     peerId: PeerId, method: Method, encoding: ReqRespEncoding
-  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody> {
-    return (source: AsyncIterable<RequestBody>) => {
+  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody|null> {
+    return (source) => {
       const peerReputations = this.peerReputations;
       return (async function*() {
         if (method === Method.Status) {
@@ -180,7 +180,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private handleRpcRequest(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
+  ): ((source: AsyncIterable<RequestBody|null>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
     return (source) => {
       return (async function * () {
@@ -188,7 +188,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           yield* getResponse(peerId, method, request);
           return;
         }
-        yield* getResponse(peerId, method);
       })();
     };
   }
@@ -262,7 +261,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       const {stream} = await libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
       logger.verbose(`sending ${method} with encoding=${encoding} request to ${peerInfo.id.toB58String()}`);
       yield* pipe(
-        (body !== null && body !== undefined) ? [body] : [],
+        (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
         stream,
         eth2ResponseDecode(config, logger, method, encoding)
