@@ -41,7 +41,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "1.0.0",
+    "@chainsafe/bls": "2.0.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.8.0",
     "@chainsafe/lodestar-config": "^0.8.0",
     "@chainsafe/lodestar-types": "^0.8.0",

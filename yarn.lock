@@ -873,16 +873,14 @@
     bip39 "^3.0.2"
     buffer "^5.4.3"
 
-"@chainsafe/bls@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-1.0.0.tgz#1db8d26b14e8b27c6b6deba7c94342629588e263"
-  integrity sha512-IBQK77Hr0RsvxC/KfOLsuR7fv5IZwiLcUUv4l39AQUnclckewoBEzzV1dExQtLuFrm+JOWJ2OAulAsg6vuS41Q==
+"@chainsafe/bls@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-2.0.0.tgz#d0e59b890f543d975b637423940397ade7e4581a"
+  integrity sha512-Hb8lsiI9ydPxc1vDhBkM1Mawn0b0WKV3JeDoXXKNKx7ERlSNuEi1EfCIabCQN53ANaotqJmjTosnrD8VyWsqxQ==
   dependencies:
     "@chainsafe/bls-keygen" "^0.0.2"
-    "@chainsafe/eth2-bls-wasm" "^0.4.0"
+    "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
-  optionalDependencies:
-    "@chainsafe/eth2-spec-tests" "^0.10.1-fix"
 
 "@chainsafe/discv5@0.1.3":
   version "0.1.3"
@@ -920,10 +918,10 @@
     rlp "^2.2.4"
     strict-event-emitter-types "^2.0.0"
 
-"@chainsafe/eth2-bls-wasm@^0.4.0":
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.4.0.tgz#94e89e4e53ec6cdcc07178dbfeb0b80215550d2f"
-  integrity sha512-4BGktOKmUyyYJNCio5Zn1LdxaGWLhPqdUoZXokrfCLW3SKhw4E6MlnpAHwPtvnDuGSkmdF/GLhYeyjQYTtovqg==
+"@chainsafe/eth2-bls-wasm@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.5.0.tgz#45d0cb8807b569537d1e0099922a9617e0410b3a"
+  integrity sha512-7aHphmg504W4YTvAEvGscODrr1Fo5Mf9NxB72fuFv2BKUS/0BPgkoxG9tA+KxcFQq1hs/VUeLhq6qVdI5WfNNA==
   dependencies:
     buffer "^5.4.3"
 
@@ -931,11 +929,6 @@
   version "0.12.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.12.0.tgz#f95ffe5bc20ddaa4d2240cffe1e417877adc8055"
   integrity sha512-EECbmI/1SdjSPUaQOkZqBOA6AfhviS7jlXVmAs3P2biJTeH2p0p31V4fZImR2NXAgGVFAP16sRx2OCwflOq0mw==
-
-"@chainsafe/eth2-spec-tests@^0.10.1-fix":
-  version "0.10.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.10.1.tgz#a5705e0efc7333172426d4c3abdccb265c0c9ebb"
-  integrity sha512-87HnZbXT1g390sbw2ptKMON/9T61H8m5/cbfzDZFulF8ZWAZGpOdXhMArQi/PFS2o78pNHCqRKsSh1LPnjpUDg==
 
 "@chainsafe/persistent-merkle-tree@^0.1.2":
   version "0.1.2"

@@ -38,7 +38,7 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "1.0.0",
+    "@chainsafe/bls": "2.0.0",
     "@chainsafe/bls-keygen": "^0.1.0",
     "@chainsafe/discv5": "^0.1.0",
     "@chainsafe/lodestar": "^0.8.0",
