@@ -12,6 +12,8 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import sinon from "sinon";
+import {PublicKey} from "@chainsafe/bls/lib/publicKey";
+import {Signature} from "@chainsafe/bls";
 
 describe("BeaconChain", function() {
   this.timeout(100000);
@@ -20,6 +22,8 @@ describe("BeaconChain", function() {
   let chain: BeaconChain;
   let provider: ethers.providers.JsonRpcProvider;
   let metrics: any;
+  const sandbox = sinon.createSandbox();
+  let fromByteStub: any;
   const opts: IEth1Options = {
     ...defaults,
     provider: {
@@ -35,11 +39,10 @@ describe("BeaconChain", function() {
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
   const logger: ILogger = new WinstonLogger();
-  logger.silent = false;
+  logger.silent = true;
   logger.level = LogLevel.verbose;
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
   schlesiConfig.params = Object.assign({}, config.params, {MIN_GENESIS_TIME: 1587755000, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4, MIN_GENESIS_DELAY: 3600});
-  const sandbox = sinon.createSandbox();
 
   before(async () => {
     await fs.promises.rmdir(dbPath, {recursive: true});
@@ -63,6 +66,7 @@ describe("BeaconChain", function() {
 
 
   beforeEach(async function () {
+    fromByteStub = sandbox.stub(PublicKey, "fromBytes");
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     chain = new BeaconChain(chainOpts, {config: schlesiConfig, db, eth1: eth1Notifier, logger, metrics});
   });
@@ -78,6 +82,11 @@ describe("BeaconChain", function() {
   });
 
   it("should detect schlesi genesis state", async function() {
+    // schlesi is 0.11.2 and 0.12 uses bls 2.0.0 which has a breaking change
+    // so we want to bypass signature verifications
+    fromByteStub.returns({
+      verifyMessage: (_: Signature, __: Uint8Array) => true
+    });
     await eth1Notifier.start();
     const start = Date.now();
     await chain.start();
