@@ -35,7 +35,7 @@ describe("BeaconChain", function() {
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
   const logger: ILogger = new WinstonLogger();
-  logger.silent = true;
+  logger.silent = false;
   logger.level = LogLevel.verbose;
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
   schlesiConfig.params = Object.assign({}, config.params, {MIN_GENESIS_TIME: 1587755000, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4, MIN_GENESIS_DELAY: 3600});
