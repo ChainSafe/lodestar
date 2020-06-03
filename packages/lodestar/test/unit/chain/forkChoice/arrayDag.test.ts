@@ -7,14 +7,8 @@ import {GENESIS_SLOT, GENESIS_EPOCH} from "../../../../src/constants";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {sleep} from "../../../../src/util/sleep";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {generateEmptySignedBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
 import {toHexString} from "@chainsafe/ssz";
-import {NO_NODE, BeaconChain} from "../../../../src/chain";
-import chainOpts from "../../../../src/chain/options";
-import {InteropEth1Notifier} from "../../../../src/eth1/impl/interop";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {BeaconMetrics} from "../../../../src/metrics";
+import {NO_NODE} from "../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
 
 describe("ArrayDagLMDGHOST", () => {
@@ -455,6 +449,25 @@ describe("ArrayDagLMDGHOST", () => {
       assert.deepEqual(lmd.headBlockRoot(), blockI, "i should be the head");
       const headStateRoot = lmd.headStateRoot();
       assert.deepEqual(headStateRoot, stateI);
+    });
+  });
+
+  describe("getAncestor", () => {
+    /**
+     * genesis - a - b -c
+     */
+    it("should return correct ancestor", () => {
+      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotA = 1 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotB = 2 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotC = 3 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      expect(lmd.getAncestor(toHexString(blockC), slotA)).to.be.equal(toHexString(blockA));
+      expect(lmd.getAncestor(toHexString(blockC), slotA + 1)).to.be.equal(toHexString(blockA));
+      expect(lmd.getAncestor(toHexString(genesis), GENESIS_SLOT)).to.be.equal(toHexString(genesis));
+      expect(lmd.getAncestor(toHexString(genesis), GENESIS_SLOT - 1)).to.be.equal(null);
     });
   });
 

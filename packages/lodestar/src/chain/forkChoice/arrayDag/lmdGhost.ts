@@ -410,6 +410,32 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   /**
+   * Get ancestor of a root until a slot
+   * @param root the starting root to look for ancestor
+   * @param slot target slot - normally slot < slotOf(root)
+   */
+  public getAncestor(root: RootHex, slot: Slot): RootHex | null {
+    const idx = this.nodeIndices.get(root);
+    if (idx === undefined) {
+      return null;
+    }
+    const node = this.nodes[idx];
+    if (node.slot > slot) {
+      if (node.hasParent()) {
+        const parentNode = this.nodes[node.parent];
+        return this.getAncestor(parentNode.blockRoot, slot);
+      } else {
+        return null;
+      }
+    } else if (node.slot === slot) {
+      return node.blockRoot;
+    } else {
+      // root is older than queried slot, thus a skip slot. Return latest root prior to slot
+      return root;
+    }
+  }
+
+  /**
    * Update node weight.
    * delta = 0: node's best target's epochs are conflict to the store or become conform to the store.
    * delta > 0: propagate onAddWeight
@@ -556,28 +582,6 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     const rootHex = toHexString(blockRoot);
     const idx = this.nodeIndices.get(rootHex);
     this.justified = {node: this.nodes[idx], epoch};
-  }
-
-  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
-    const idx = this.nodeIndices.get(root);
-    if (idx === undefined) {
-      return null;
-    }
-    const node = this.nodes[idx];
-    if (node.slot > slot) {
-      if (node.hasParent()) {
-        const parentNode = this.nodes[node.parent];
-        return this.getAncestor(parentNode.blockRoot, slot);
-      } else {
-        return null;
-      }
-      // return (node.hasParent())? this.getAncestor(parentNode.blockRoot, slot) : null;
-    } else if (node.slot === slot) {
-      return node.blockRoot;
-    } else {
-      // root is older than queried slot, thus a skip slot. Return latest root prior to slot
-      return root;
-    }
   }
 
   private prune(): void {

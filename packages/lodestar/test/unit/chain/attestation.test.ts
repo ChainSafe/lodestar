@@ -4,14 +4,15 @@ import {AttestationProcessor} from "../../../src/chain/attestation";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
-import { WinstonLogger } from "@chainsafe/lodestar-utils/lib/logger";
-import { generateEmptyBlockSummary } from "../../utils/block";
-import { generateEmptyAttestation } from "../../utils/attestation";
-import { generateState } from "../../utils/state";
-import { generateValidators } from "../../utils/validator";
-import { fail } from "assert";
-import { StubbedBeaconDb } from "../../utils/stub";
+import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {generateEmptyBlockSummary} from "../../utils/block";
+import {generateEmptyAttestation} from "../../utils/attestation";
+import {generateState} from "../../utils/state";
+import {generateValidators} from "../../utils/validator";
+import {fail} from "assert";
+import {StubbedBeaconDb} from "../../utils/stub";
 import {Checkpoint} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -91,6 +92,32 @@ describe("AttestationProcessor", function () {
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
     } catch (err) {
+      expect(forkChoiceStub.getAncestor.called).to.be.false;
+      expect(getAttestingIndicesStub.called).to.be.false;
+      expect(forkChoiceStub.addAttestation.called).to.be.false;
+    }
+  });
+
+  it("processAttestation - should not call forkChoice - invalid target root", async () => {
+    try {
+      const attestation = generateEmptyAttestation();
+      const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
+      const block = generateEmptyBlockSummary();
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
+      const state = generateState();
+      state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
+      dbStub.stateArchive.get.withArgs(0).resolves(state);
+      forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
+      forkChoiceStub.headBlockSlot.returns(0);
+      getAttestingIndicesStub.returns([0]);
+      state.balances = [];
+      state.validators = generateValidators(3, {});
+
+      await attestationProcessor.processAttestation(attestation, attestationHash);
+      fail("expect an AssertionError");
+    } catch (e) {
+      expect(e.message).to.be.equal("FFG and LMD vote must be consistent with each other");
+      expect(forkChoiceStub.getAncestor.called).to.be.true;
       expect(getAttestingIndicesStub.called).to.be.false;
       expect(forkChoiceStub.addAttestation.called).to.be.false;
     }
@@ -102,13 +129,14 @@ describe("AttestationProcessor", function () {
     const block = generateEmptyBlockSummary();
     forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     const state = generateState();
-    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT
+    state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
     dbStub.stateArchive.get.withArgs(0).resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     forkChoiceStub.headBlockSlot.returns(0);
     getAttestingIndicesStub.returns([0]);
     state.balances = [];
     state.validators = generateValidators(3, {});
+    forkChoiceStub.getAncestor.returns(toHexString(attestation.data.target.root));
 
     await attestationProcessor.processAttestation(attestation, attestationHash);
     expect(getAttestingIndicesStub.called).to.be.true;

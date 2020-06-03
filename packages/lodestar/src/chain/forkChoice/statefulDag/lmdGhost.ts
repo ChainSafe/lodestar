@@ -485,6 +485,26 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   }
 
   /**
+   * Get ancestor of a root until a slot
+   * @param root the starting root to look for ancestor
+   * @param slot target slot - normally slot < slotOf(root)
+   */
+  public getAncestor(root: RootHex, slot: Slot): RootHex | null {
+    const node = this.nodes[root];
+    if (!node) {
+      return null;
+    }
+    if (node.slot > slot) {
+      return (node.parent)? this.getAncestor(node.parent.blockRoot, slot) : null;
+    } else if (node.slot === slot) {
+      return node.blockRoot;
+    } else {
+      // root is older than queried slot, thus a skip slot. Return latest root prior to slot
+      return root;
+    }
+  }
+
+  /**
    * Don't want to check the initial justified/finalized checkpoint for the 1st epoch
    * because initial state does not have checkpoints in database.
    * First addBlock (for genesis block) call has checkpoints but from the 2nd call in the
@@ -522,21 +542,6 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     const {root: blockRoot, epoch} = checkpoint;
     const rootHex = toHexString(blockRoot);
     this.justified = {node: this.nodes[rootHex], epoch};
-  }
-
-  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
-    const node = this.nodes[root];
-    if (!node) {
-      return null;
-    }
-    if (node.slot > slot) {
-      return (node.parent)? this.getAncestor(node.parent.blockRoot, slot) : null;
-    } else if (node.slot === slot) {
-      return node.blockRoot;
-    } else {
-      // root is older than queried slot, thus a skip slot. Return latest root prior to slot
-      return root;
-    }
   }
 
   private prune(): void {
