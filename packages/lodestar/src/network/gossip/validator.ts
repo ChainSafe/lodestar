@@ -9,7 +9,6 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
-import {getAttestationSubnet} from "./utils";
 import {
   getCurrentSlot,
   getIndexedAttestation,
@@ -27,6 +26,7 @@ import {
   computeSigningRoot,
   getBeaconProposerIndex,
   isUnaggregatedAttestation,
+  computeSubnetForAttestation,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
@@ -100,12 +100,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingCommitteeAttestation = async (attestation: Attestation, subnet: number): Promise<boolean> => {
-    if (String(subnet) !== getAttestationSubnet(attestation)) {
+    const state = await this.chain.getHeadState();
+    if (subnet !== computeSubnetForAttestation(this.config, state, attestation)) {
       return false;
     }
     const attestationData = attestation.data;
     const slot = attestationData.slot;
-    const state = await this.chain.getHeadState();
     if (state.slot < slot) {
       processSlots(this.config, state, slot);
     }

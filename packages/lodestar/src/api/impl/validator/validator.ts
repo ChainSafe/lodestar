@@ -33,7 +33,8 @@ import {
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   getDomain,
-  processSlots
+  processSlots,
+  computeSubnetForSlot
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
@@ -41,7 +42,6 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
-import {getCommitteeIndexSubnet} from "../../../network/gossip/utils";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -213,12 +213,13 @@ export class ValidatorApi implements IValidatorApi {
     if(!valid) {
       throw new Error("Invalid slot signature");
     }
-    this.sync.collectAttestations(
+    await this.sync.collectAttestations(
       slot,
       committeeIndex
     );
-    const subnet = getCommitteeIndexSubnet(committeeIndex);
-    await this.network.searchSubnetPeers(subnet);
+    const headState = await this.chain.getHeadState();
+    const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+    await this.network.searchSubnetPeers(String(subnet));
   }
 
 }

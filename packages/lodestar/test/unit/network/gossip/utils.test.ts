@@ -10,7 +10,6 @@ import {
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
-import {generateEmptyAttestation} from "../../../utils/attestation";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 
@@ -40,8 +39,9 @@ describe("gossip utils", function () {
     });
 
     it("get attestation subnet topic", function () {
-      const topic = getAttestationSubnetTopic(generateEmptyAttestation(), forkValue);
-      expect(topic).to.be.equal("/eth2/00000000/committee_index0_beacon_attestation/ssz_snappy");
+      const subnet = 10;
+      const topic = getAttestationSubnetTopic(subnet, forkValue);
+      expect(topic).to.be.equal("/eth2/00000000/committee_index10_beacon_attestation/ssz_snappy");
     });
 
   });
