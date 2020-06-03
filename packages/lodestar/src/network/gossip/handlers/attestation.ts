@@ -4,11 +4,12 @@
 
 import {toHexString} from "@chainsafe/ssz";
 import {Gossip, GossipHandlerFn} from "../gossip";
-import {getAttestationSubnetTopic, getGossipTopic, getAttestationSubnetEvent} from "../utils";
+import {getGossipTopic, getAttestationSubnetEvent} from "../utils";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition";
+import {GossipEncoding} from "../encoding";
 
 export async function handleIncomingAttestation(this: Gossip, obj: GossipObject): Promise<void> {
   try {
@@ -44,7 +45,12 @@ export async function publishCommiteeAttestation(this: Gossip, attestation: Atte
   const headState = await this.chain.getHeadState();
   const subnet = computeSubnetForAttestation(this.config, headState, attestation);
   await this.pubsub.publish(
-    getAttestationSubnetTopic(subnet, forkDigestValue),
+    getGossipTopic(
+      GossipEvent.ATTESTATION_SUBNET,
+      forkDigestValue,
+      GossipEncoding.SSZ_SNAPPY,
+      new Map([["subnet", String(subnet)]])
+    ),
     Buffer.from(this.config.types.Attestation.serialize(attestation)));
   //backward compatible
   await this.pubsub.publish(

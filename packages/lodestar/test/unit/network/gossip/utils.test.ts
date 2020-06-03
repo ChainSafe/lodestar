@@ -1,7 +1,6 @@
 import {describe, it} from "mocha";
 import {
   getAttestationSubnetEvent,
-  getAttestationSubnetTopic,
   getGossipTopic,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
@@ -40,7 +39,12 @@ describe("gossip utils", function () {
 
     it("get attestation subnet topic", function () {
       const subnet = 10;
-      const topic = getAttestationSubnetTopic(subnet, forkValue);
+      const topic = getGossipTopic(
+        GossipEvent.ATTESTATION_SUBNET,
+        forkValue,
+        GossipEncoding.SSZ_SNAPPY,
+        new Map([["subnet", String(subnet)]])
+      );
       expect(topic).to.be.equal("/eth2/00000000/beacon_attestation_10/ssz_snappy");
     });
 

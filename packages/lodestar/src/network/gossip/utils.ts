@@ -24,18 +24,6 @@ export function getGossipTopic(
   return topic;
 }
 
-export function getAttestationSubnetTopic(
-  subnet: number,
-  forkDigestValue: ForkDigest,
-  encoding = GossipEncoding.SSZ_SNAPPY): string {
-  return getGossipTopic(
-    GossipEvent.ATTESTATION_SUBNET,
-    forkDigestValue,
-    encoding,
-    new Map([["subnet", String(subnet)]])
-  );
-}
-
 
 export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
   if (isAttestationSubnetEvent(event)) {
