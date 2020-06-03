@@ -41,7 +41,7 @@ describe("gossip utils", function () {
     it("get attestation subnet topic", function () {
       const subnet = 10;
       const topic = getAttestationSubnetTopic(subnet, forkValue);
-      expect(topic).to.be.equal("/eth2/00000000/committee_index10_beacon_attestation/ssz_snappy");
+      expect(topic).to.be.equal("/eth2/00000000/beacon_attestation_10/ssz_snappy");
     });
 
   });
