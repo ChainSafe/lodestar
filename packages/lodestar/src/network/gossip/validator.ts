@@ -27,6 +27,7 @@ import {
   getBeaconProposerIndex,
   isUnaggregatedAttestation,
   computeSubnetForAttestation,
+  getBeaconCommittee,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
@@ -114,7 +115,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     // Make sure this is unaggregated attestation
-    if (!isUnaggregatedAttestation(attestation)) {
+    if (getAttestingIndices(this.config, state, attestationData, attestation.aggregationBits).length !== 1) {
       return false;
     }
     const existingAttestations = await this.db.attestation.geAttestationsByTargetEpoch(
@@ -165,6 +166,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
+    if (getAttestingIndices(this.config, state, attestationData, aggregate.aggregationBits).length < 1) {
+      return false;
+    }
+
     const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
     if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
       return false;
@@ -175,8 +180,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const attestorIndices = getAttestingIndices(this.config, state, attestationData, aggregate.aggregationBits);
-    if (!attestorIndices.includes(aggregatorIndex)) {
+    const committee = getBeaconCommittee(this.config, state, attestationData.slot, attestationData.index);
+    if (!committee.includes(aggregatorIndex)) {
       return false;
     }
 
