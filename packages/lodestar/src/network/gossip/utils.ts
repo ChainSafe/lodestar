@@ -3,10 +3,8 @@
  */
 
 import assert from "assert";
-import {Attestation, ForkDigest} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT} from "../../constants";
+import {ForkDigest} from "@chainsafe/lodestar-types";
 import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
-import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage, IGossipEvents} from "./interface";
@@ -26,21 +24,6 @@ export function getGossipTopic(
   return topic;
 }
 
-export function getAttestationSubnetTopic(
-  attestation: Attestation,
-  forkDigestValue: ForkDigest,
-  encoding = GossipEncoding.SSZ_SNAPPY): string {
-  return getGossipTopic(
-    GossipEvent.ATTESTATION_SUBNET,
-    forkDigestValue,
-    encoding,
-    new Map([["subnet", getAttestationSubnet(attestation)]])
-  );
-}
-
-export function getAttestationSubnet(attestation: Attestation): string {
-  return getCommitteeIndexSubnet(attestation.data.index);
-}
 
 export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
   if (isAttestationSubnetEvent(event)) {
@@ -55,9 +38,6 @@ export function topicToGossipEvent(topic: string): GossipEvent {
   return topicName as GossipEvent;
 }
 
-export function getCommitteeIndexSubnet(committeeIndex: CommitteeIndex): string {
-  return String(committeeIndex % ATTESTATION_SUBNET_COUNT);
-}
 
 export function getAttestationSubnetEvent(subnet: number): string {
   return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;

@@ -1,7 +1,6 @@
 import {describe, it} from "mocha";
 import {
   getAttestationSubnetEvent,
-  getAttestationSubnetTopic,
   getGossipTopic,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
@@ -10,7 +9,6 @@ import {
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
-import {generateEmptyAttestation} from "../../../utils/attestation";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 
@@ -40,8 +38,14 @@ describe("gossip utils", function () {
     });
 
     it("get attestation subnet topic", function () {
-      const topic = getAttestationSubnetTopic(generateEmptyAttestation(), forkValue);
-      expect(topic).to.be.equal("/eth2/00000000/committee_index0_beacon_attestation/ssz_snappy");
+      const subnet = 10;
+      const topic = getGossipTopic(
+        GossipEvent.ATTESTATION_SUBNET,
+        forkValue,
+        GossipEncoding.SSZ_SNAPPY,
+        new Map([["subnet", String(subnet)]])
+      );
+      expect(topic).to.be.equal("/eth2/00000000/beacon_attestation_10/ssz_snappy");
     });
 
   });

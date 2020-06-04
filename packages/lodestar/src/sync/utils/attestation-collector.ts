@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
-import {getCommitteeIndexSubnet} from "../../network/gossip/utils";
+import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
@@ -37,9 +37,11 @@ export class AttestationCollector implements IService {
     this.chain.clock.unsubscribeFromNewSlot(this.checkDuties);
   }
 
-  public subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+  public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
     const forkDigest = this.chain.currentForkDigest;
-    this.network.gossip.subscribeToAttestationSubnet(forkDigest, getCommitteeIndexSubnet(committeeIndex));
+    const headState = await this.chain.getHeadState();
+    const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+    this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
     if(this.aggregationDuties.has(slot)) {
       this.aggregationDuties.get(slot).add(committeeIndex);
     } else {
@@ -47,20 +49,22 @@ export class AttestationCollector implements IService {
     }
   }
 
-  private checkDuties = (slot: Slot): void => {
+  private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.currentForkDigest;
     this.timers = [];
+    const headState = await this.chain.getHeadState();
     committees.forEach((committeeIndex) => {
+      const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(
         forkDigest,
-        getCommitteeIndexSubnet(committeeIndex),
+        subnet,
         this.handleCommitteeAttestation
       );
       this.timers.push(setTimeout(
         this.unsubscribeSubnet,
         this.config.params.SECONDS_PER_SLOT * 1000,
-        getCommitteeIndexSubnet(committeeIndex)
+        subnet
       ) as unknown as NodeJS.Timeout);
     });
     this.aggregationDuties.delete(slot);

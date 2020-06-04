@@ -164,6 +164,8 @@ describe("GossipMessageValidator", () => {
 
   describe("validate committee attestation", () => {
     it("should return invalid committee attestation - invalid subnet", async () => {
+      const state = generateState();
+      chainStub.getHeadState.resolves(state);
       const attestation = generateEmptyAttestation();
       const invalidSubnet = 2000;
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, invalidSubnet)).to.be.false;
