@@ -136,7 +136,7 @@ describe("AttestationProcessor", function () {
     getAttestingIndicesStub.returns([0]);
     state.balances = [];
     state.validators = generateValidators(3, {});
-    forkChoiceStub.getAncestor.returns(toHexString(attestation.data.target.root));
+    forkChoiceStub.getAncestor.returns(attestation.data.target.root as Uint8Array);
 
     await attestationProcessor.processAttestation(attestation, attestationHash);
     expect(getAttestingIndicesStub.called).to.be.true;

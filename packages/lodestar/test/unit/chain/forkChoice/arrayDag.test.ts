@@ -464,10 +464,10 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
-      expect(lmd.getAncestor(toHexString(blockC), slotA)).to.be.equal(toHexString(blockA));
-      expect(lmd.getAncestor(toHexString(blockC), slotA + 1)).to.be.equal(toHexString(blockA));
-      expect(lmd.getAncestor(toHexString(genesis), GENESIS_SLOT)).to.be.equal(toHexString(genesis));
-      expect(lmd.getAncestor(toHexString(genesis), GENESIS_SLOT - 1)).to.be.equal(null);
+      expect(Buffer.from(lmd.getAncestor(blockC, slotA))).to.be.deep.equal(blockA);
+      expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1))).to.be.deep.equal(blockA);
+      expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
+      expect(lmd.getAncestor(genesis, GENESIS_SLOT - 1)).to.be.equal(null);
     });
   });
 
