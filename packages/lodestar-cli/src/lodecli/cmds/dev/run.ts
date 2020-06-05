@@ -1,4 +1,4 @@
-import {mkdirSync} from "fs";
+import fs, {mkdirSync} from "fs";
 import process from "process";
 import {Arguments} from "yargs";
 import deepmerge from "deepmerge";
@@ -51,6 +51,14 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   if(options.dev.genesisValidators) {
     const state = await initDevChain(node, options.dev.genesisValidators);
     storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
+  }else if (options.chain.genesisStateFile) {
+    await node.chain.initializeBeaconChain(
+      config.types.BeaconState.tree.deserialize(
+        await fs.promises.readFile(
+          join(options.rootDir, options.chain.genesisStateFile)
+        )
+      )
+    );
   }
 
   await node.start();

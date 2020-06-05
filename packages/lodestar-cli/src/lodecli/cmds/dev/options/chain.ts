@@ -10,3 +10,19 @@ export const chainPreset: Options = {
   choices: ["mainnet", "minimal"],
   default: "minimal",
 };
+
+export const chainGenesisStateFile: Options = {
+  alias: [
+    "chain.genesisStateFile",
+    "f"
+  ],
+  description: "Path to genesis state ssz encoded file relative to rootDir",
+  type: "string",
+  normalize: true,
+};
+
+export interface IChainArgs {
+  chain?: {
+    genesisStateFile?: string;
+  };
+}

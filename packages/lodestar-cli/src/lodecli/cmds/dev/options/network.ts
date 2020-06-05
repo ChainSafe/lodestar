@@ -54,6 +54,7 @@ export const networkLocalMultiaddrs: Options = {
     "network.multiaddrs",
   ],
   type: "array",
+
   default: [
     "/ip4/127.0.0.1/tcp/30606"
   ],
