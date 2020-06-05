@@ -4,6 +4,8 @@ import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {interopDeposits} from "./interop/deposits";
 import {IBeaconDb} from "@chainsafe/lodestar/lib/db/api/beacon/interface";
 import {getInteropState} from "./interop/state";
+import {mkdirSync, writeFileSync} from "fs";
+import {dirname} from "path";
 
 export async function initDevChain(
   node: BeaconNode, validatorCount: number
@@ -24,6 +26,11 @@ export async function initDevChain(
   return state;
 }
 
+export function storeSSZState(config: IBeaconConfig, state: BeaconState, path: string): void {
+  mkdirSync(dirname(path), {recursive: true});
+  writeFileSync(path, config.types.BeaconState.serialize(state));
+}
+
 async function storeDeposits(config: IBeaconConfig, db: IBeaconDb, deposits: Deposit[]): Promise<void> {
   for (let i = 0; i < deposits.length; i++) {
     await Promise.all([
@@ -32,4 +39,3 @@ async function storeDeposits(config: IBeaconConfig, db: IBeaconDb, deposits: Dep
     ]);
   }
 }
-

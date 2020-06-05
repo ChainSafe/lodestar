@@ -11,7 +11,7 @@ import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {createEnr, createPeerId} from "../../network";
-import {initDevChain} from "./utils/state";
+import {initDevChain, storeSSZState} from "./utils/state";
 import rimraf from "rimraf";
 import {join} from "path";
 import {IDevOptions} from "./options";
@@ -35,12 +35,12 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
-  const chainDir = join(options.rootDir, "beacon");
-  const validatorsDir = join(options.rootDir, "validators");
+  const chainDir = join(options.rootDir, "dev", "beacon");
+  const validatorsDir = join(options.rootDir, "dev", "validators");
   mkdirSync(chainDir, {recursive: true});
   mkdirSync(validatorsDir, {recursive: true});
 
-  options.db.name = join(chainDir, peerId.toB58String());
+  options.db.name = join(chainDir, "db-" + peerId.toB58String());
 
   const node = new BeaconNode(options, {
     config,
@@ -49,7 +49,8 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   });
 
   if(options.dev.genesisValidators) {
-    await initDevChain(node, options.dev.genesisValidators);
+    const state = await initDevChain(node, options.dev.genesisValidators);
+    storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
   }
 
   await node.start();
