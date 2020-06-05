@@ -49,6 +49,7 @@
     "@chainsafe/ssz": "^0.6.5",
     "axios": "^0.19.0",
     "axios-mock-adapter": "^1.17.0",
+    "bigint-buffer": "^1.1.5",
     "eventsource": "^1.0.7",
     "strict-event-emitter-types": "^2.0.0"
   },
