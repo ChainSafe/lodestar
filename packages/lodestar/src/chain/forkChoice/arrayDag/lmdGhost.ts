@@ -221,7 +221,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
         `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
       assert.equal(
-        this.getAncestor(blockRootHex, finalizedSlot),
+        this.getAncestorHex(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
         `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
     }
@@ -244,7 +244,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       // or if store justified is not in chain with finalized checkpoint
       if (justifiedCheckpoint.epoch > this.justified.epoch ||
         (this.finalized.node &&
-          this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
+          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
         this.setJustified(justifiedCheckpoint);
       }
     }
@@ -388,7 +388,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     }
     const hexBlockRoot = toHexString(blockRoot);
     const justifiedSlot = computeStartSlotAtEpoch(this.config, this.justified.epoch);
-    if (this.justified.node && this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
+    if (this.justified.node && this.getAncestorHex(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
       return false;
     }
 
@@ -407,6 +407,16 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       return null;
     }
     return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
+  }
+
+  /**
+   * Get ancestor of a root until a slot
+   * @param root the starting root to look for ancestor
+   * @param slot target slot - normally slot < slotOf(root)
+   */
+  public getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null {
+    const ancestor = this.getAncestorHex(toHexString(root), slot);
+    return ancestor? fromHexString(ancestor) : null;
   }
 
   /**
@@ -558,7 +568,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     this.justified = {node: this.nodes[idx], epoch};
   }
 
-  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
+  private getAncestorHex(root: RootHex, slot: Slot): RootHex | null {
     const idx = this.nodeIndices.get(root);
     if (idx === undefined) {
       return null;
@@ -567,7 +577,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     if (node.slot > slot) {
       if (node.hasParent()) {
         const parentNode = this.nodes[node.parent];
-        return this.getAncestor(parentNode.blockRoot, slot);
+        return this.getAncestorHex(parentNode.blockRoot, slot);
       } else {
         return null;
       }

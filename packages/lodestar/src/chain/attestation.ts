@@ -127,6 +127,11 @@ export class AttestationProcessor implements IAttestationProcessor {
     const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
     assert(!!block, `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
     assert(block.slot <= attestation.data.slot, "Attestation is for past block");
+    const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
+    const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot as Uint8Array, targetSlot);
+    assert(
+      ancestor && this.config.types.Root.equals(target.root, ancestor),
+      "FFG and LMD vote must be consistent with each other");
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
