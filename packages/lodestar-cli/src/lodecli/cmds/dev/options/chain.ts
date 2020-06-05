@@ -19,6 +19,7 @@ export const chainGenesisStateFile: Options = {
   description: "Path to genesis state ssz encoded file relative to rootDir",
   type: "string",
   normalize: true,
+  group: "chain"
 };
 
 export interface IChainArgs {
