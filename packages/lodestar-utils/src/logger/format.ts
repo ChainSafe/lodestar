@@ -26,6 +26,7 @@ export function serializeContext(context?: Context|Error): string {
   if(context instanceof Error) {
     return context.stack;
   }
+  if (typeof context === "string") return context;
   return Object.keys(context).map((key) => {
     let value = "";
     if(Array.isArray(context[key]) || context[key] instanceof Uint8Array) {
