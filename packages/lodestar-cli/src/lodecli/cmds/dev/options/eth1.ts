@@ -1,3 +1,7 @@
+/**
+ * Copied from ../../beacon/cmds/run/options/eth1.ts so we can change default values.
+ */
+
 import {Options} from "yargs";
 
 export const eth1Enabled: Options = {

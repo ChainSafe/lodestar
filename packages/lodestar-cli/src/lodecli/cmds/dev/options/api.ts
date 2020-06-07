@@ -1,3 +1,7 @@
+/**
+ * Copied from ../../beacon/cmds/run/options/api.ts so we can change default values.
+ */
+
 import {Options} from "yargs";
 
 export const apiEnabled: Options = {

@@ -1,3 +1,6 @@
+/**
+ * Copied from ../../beacon/cmds/run/options/network.ts so we can change default values.
+ */
 import {Options} from "yargs";
 
 export const discv5Enabled: Options = {

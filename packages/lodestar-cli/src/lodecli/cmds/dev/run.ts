@@ -32,6 +32,7 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   const config = createIBeaconConfig({
     ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
   });
+
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
