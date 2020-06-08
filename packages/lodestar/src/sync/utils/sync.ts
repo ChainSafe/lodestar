@@ -21,7 +21,17 @@ export function getHighestCommonSlot(peers: IReputation[]): Slot {
   }, new Map<Slot, number>());
   if(slotStatuses.size) {
     const best =  [...slotStatuses.entries()]
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => {
+        const aVotes = a[1];
+        const bVotes = b[1];
+        if(aVotes > bVotes) return -1;
+        if(aVotes < bVotes) return 1;
+        const aSlot = a[0];
+        const bSlot = b[0];
+        if(aSlot > bSlot) return -1;
+        if(aSlot < bSlot) return 1;
+        return 0;
+      });
     return best[0][0];
   } else {
     return 0;
@@ -47,11 +57,14 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
       }
       return current;
     }, new Map());
-
   if(checkpointVotes.size > 0) {
     return Array.from(checkpointVotes.values())
       .sort((voteA, voteB) => {
-        return voteB.votes - voteA.votes;
+        if (voteA.votes > voteB.votes) return -1;
+        if (voteA.votes < voteB.votes) return 1;
+        if(voteA.checkpoint.epoch > voteB.checkpoint.epoch) return -1;
+        if(voteA.checkpoint.epoch < voteB.checkpoint.epoch) return 1;
+        return 0;
       }).shift().checkpoint;
   } else {
     return null;
@@ -179,6 +192,15 @@ export function processSyncBlocks(
             lastProcessedSlot = block.message.slot;
           }
         } else {
+          logger.warn(
+            "Received block parent root doesn't match our head",
+            {
+              head: toHexString(headRoot),
+              headSlot: chain.forkChoice.headBlockSlot(),
+              blockParent: toHexString(block.message.parentRoot),
+              blockSlot: block.message.slot
+            }
+          );
           blockBuffer.unshift(block);
           break;
         }
