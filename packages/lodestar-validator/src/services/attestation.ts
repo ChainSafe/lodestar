@@ -169,10 +169,19 @@ export class AttestationService {
       message: aggregateAndProof,
       signature: this.getAggregateAndProofSignature(fork, genesisValidatorsRoot, aggregateAndProof),
     };
-    await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
-    this.logger.info(
-      `Published signed aggregatte and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
-    );
+    try {
+      await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
+      this.logger.info(
+        `Published signed aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
+      );
+    } catch (e) {
+      await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
+      this.logger.error(
+        `Failed to publish aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`,
+        e
+      );
+    }
+
   };
 
   private getAggregateAndProofSignature(
