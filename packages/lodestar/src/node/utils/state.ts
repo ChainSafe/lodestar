@@ -1,11 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {interopDeposits} from "./interop/deposits";
-import {IBeaconDb} from "@chainsafe/lodestar/lib/db/api/beacon/interface";
 import {getInteropState} from "./interop/state";
 import {mkdirSync, writeFileSync} from "fs";
 import {dirname} from "path";
+import {BeaconNode} from "../nodejs";
+import {IBeaconDb} from "../../db/api";
 
 export async function initDevChain(
   node: BeaconNode, validatorCount: number
