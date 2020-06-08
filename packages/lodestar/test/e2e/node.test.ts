@@ -22,4 +22,20 @@ describe("beacon node", function () {
     await bn.stop();
   });
 
+  it("should finalize block", async function () {
+    this.timeout(60000);
+    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 1, SLOTS_PER_EPOCH: 8});
+    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 50000);
+    const validators = getDevValidators(bn, 8);
+    await bn.start();
+    validators.forEach((v) => v.start());
+    try {
+      await finalizationEventListener;
+    } catch (e) {
+      assert.fail("Failed to reach finalization");
+    }
+    await Promise.all(validators.map((v) => v.stop()));
+    await bn.stop();
+  });
+
 });
