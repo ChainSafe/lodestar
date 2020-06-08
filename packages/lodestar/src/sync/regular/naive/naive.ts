@@ -26,7 +26,7 @@ export class NaiveRegularSync implements IRegularSync {
 
   private readonly opts: IRegularSyncOptions;
 
-  private currentTarget: Slot;
+  private currentTarget: Slot = 0;
   private targetSlotRangeSource: Pushable<ISlotRange>;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
@@ -45,10 +45,11 @@ export class NaiveRegularSync implements IRegularSync {
     this.currentTarget = this.chain.forkChoice.headBlockSlot();
     this.targetSlotRangeSource = pushable<ISlotRange>();
     const newTarget = await this.getNewTarget();
-    if(newTarget === this.currentTarget) {
+    if(newTarget <= this.currentTarget) {
       this.logger.info("Already on latest know slot!");
       await this.stop();
     }
+    this.logger.info("Setting target", {newTargetSlot: newTarget});
     await Promise.all([
       this.sync(),
       this.setTarget()
@@ -78,7 +79,10 @@ export class NaiveRegularSync implements IRegularSync {
       this.logger.info(`Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
-    this.currentTarget = newTarget;
+    if(newTarget > this.currentTarget) {
+      this.currentTarget = newTarget;
+    }
+
   };
 
   private checkSyncProgress = async(lastProcessedBlock: SignedBeaconBlock): Promise<void> => {

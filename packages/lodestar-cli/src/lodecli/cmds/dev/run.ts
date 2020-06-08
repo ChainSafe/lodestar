@@ -17,7 +17,7 @@ import {IDevOptions} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
 import {ApiClientOverInstance, Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
-import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/src/node/utils/state";
+import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 
 /**
  * Run a beacon node
