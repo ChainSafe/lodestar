@@ -24,10 +24,8 @@ import {
   getDomain,
   computeEpochAtSlot,
   computeSigningRoot,
-  getBeaconProposerIndex,
   isUnaggregatedAttestation,
-  computeSubnetForAttestation,
-  getBeaconCommittee,
+  computeSubnetForAttestation
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
@@ -92,7 +90,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const supposedProposerIndex = getBeaconProposerIndex(this.config, state);
+    const supposedProposerIndex = this.chain.epochCtx.getBeaconProposer(signedBlock.message.slot);
     if (supposedProposerIndex !== signedBlock.message.proposerIndex) {
       return false;
     }
@@ -180,7 +178,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const committee = getBeaconCommittee(this.config, state, attestationData.slot, attestationData.index);
+    const committee = this.chain.epochCtx.getBeaconCommittee(attestationData.slot, attestationData.index);
     if (!committee.includes(aggregatorIndex)) {
       return false;
     }
