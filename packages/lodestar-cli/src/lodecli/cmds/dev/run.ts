@@ -11,13 +11,13 @@ import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {createEnr, createPeerId} from "../../network";
-import {initDevChain, storeSSZState} from "./utils/state";
 import rimraf from "rimraf";
 import {join} from "path";
 import {IDevOptions} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
-import {Validator} from "@chainsafe/lodestar-validator/lib";
-import {getValidatorApiClient} from "./utils/validator";
+import {ApiClientOverInstance, Validator} from "@chainsafe/lodestar-validator/lib";
+import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
+import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/src/node/utils/state";
 
 /**
  * Run a beacon node
