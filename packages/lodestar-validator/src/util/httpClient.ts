@@ -34,7 +34,6 @@ export class HttpClient {
       this.logger.verbose(`HttpClient POST url=${url} result=${JSON.stringify(result.data)}`);
       return result.data;
     } catch(reason) {
-      console.log(reason);
       this.logger.verbose(`HttpClient POST error url=${url}`);
       throw handleError(reason);
     }
@@ -43,7 +42,11 @@ export class HttpClient {
 
 const handleError = (error: AxiosError): AxiosError => {
   if (error.response) {
-    error.message = error.response.data.message || "Request failed with response status " + error.response.status;
+    if(error.response.status === 404) {
+      error.message = "Endpoint not found";
+    } else {
+      error.message = error.response.data.message || "Request failed with response status " + error.response.status;
+    }
   } else if (error.request) {
     error.message = error.request.message;
   }
