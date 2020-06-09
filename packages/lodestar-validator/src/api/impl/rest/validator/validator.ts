@@ -32,7 +32,6 @@ export class RestValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    console.log("getting proposer duties");
     const url = `/duties/${epoch.toString()}/proposer`;
     const responseData = await this.client.get<Json[]>(url);
     return responseData.map(value => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
@@ -67,11 +66,11 @@ export class RestValidatorApi implements IValidatorApi {
 
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
-    slot: Slot,
-    committeeIndex: CommitteeIndex
+    committeeIndex: CommitteeIndex,
+    slot: Slot
   ): Promise<Attestation> {
     const url = "/attestation"
-        +`?slot=${slot}&committee_index=${committeeIndex}&validator_pubkey=${toHexString(validatorPubKey)}`;
+        +`?slot=${slot}&attestation_committee_index=${committeeIndex}&validator_pubkey=${toHexString(validatorPubKey)}`;
     return this.config.types.Attestation.fromJson(await this.client.get<Json>(url), {case: "snake"});
   }
 
