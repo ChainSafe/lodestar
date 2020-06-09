@@ -16,7 +16,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, ValidatedRequestBody} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   createResponseEvent,
@@ -166,8 +166,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private storePeerEncodingPreference(
     peerId: PeerId, method: Method, encoding: ReqRespEncoding
-  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody> {
-    return (source: AsyncIterable<RequestBody>) => {
+  ): (source: AsyncIterable<ValidatedRequestBody>) => AsyncGenerator<ValidatedRequestBody> {
+    return (source) => {
       const peerReputations = this.peerReputations;
       return (async function*() {
         if (method === Method.Status) {
@@ -180,12 +180,16 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private handleRpcRequest(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
+  ): ((source: AsyncIterable<ValidatedRequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
     return (source) => {
       return (async function * () {
         for await (const request of source) {
-          yield* getResponse(peerId, method, request);
+          if (request === RpcResponseStatus.ERR_INVALID_REQ) {
+            yield {status: RpcResponseStatus.ERR_INVALID_REQ};
+          } else {
+            yield* getResponse(peerId, method, request);
+          }
           return;
         }
         yield* getResponse(peerId, method);

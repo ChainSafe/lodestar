@@ -48,7 +48,7 @@
     "@chainsafe/lodestar-utils": "^0.8.0",
     "@chainsafe/lodestar-validator": "^0.8.0",
     "@chainsafe/snappy-stream": "3.0.4",
-    "@chainsafe/ssz": "0.6.4",
+    "@chainsafe/ssz": "^0.6.7",
     "@types/async": "^3.0.1",
     "abort-controller": "^3.0.0",
     "abortable-iterator": "^3.0.0",

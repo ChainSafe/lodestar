@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Method, MethodResponseType, Methods, ReqRespEncoding, RpcResponseStatus} from "../../constants";
 import {decode, encode} from "varint";
-import {encodeResponseStatus, getCompressor, getDecompressor} from "./utils";
+import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import BufferList from "bl";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 
@@ -62,14 +62,25 @@ export function eth2ResponseDecode(
           status = buffer.get(0);
           buffer.consume(1);
           if(status !== RpcResponseStatus.SUCCESS) {
-            logger.warn(`Received err status ${status} for method ${method}`);
+            logger.warn(`eth2ResponseDecode: Received err status ${status} for method ${method}`);
             break;
           }
         }
         if(buffer.length === 0) continue;
         if(sszLength === null) {
           sszLength = decode(buffer.slice());
+          if (decode.bytes > 10) {
+            throw new Error(`eth2ResponseDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` +
+            `, method ${method}`);
+          }
           buffer.consume(decode.bytes);
+        }
+        if (sszLength < type.minSize() || sszLength > type.maxSize()) {
+          throw new Error(`eth2ResponseDecode: Invalid szzLength of ${sszLength} for method ${method}`);
+        }
+        if (buffer.length > maxEncodedLen(sszLength, encoding)) {
+          throw new Error(`eth2ResponseDecode: too much bytes read (${buffer.length}) for method ${method}, ` +
+            `sszLength ${sszLength}`);
         }
         if(buffer.length === 0) continue;
         let uncompressed: Buffer;
@@ -82,8 +93,7 @@ export function eth2ResponseDecode(
         if(uncompressed) {
           uncompressedData.append(uncompressed);
           if(uncompressedData.length > sszLength) {
-            logger.warn(`Received too much data for method ${method}`);
-            break;
+            throw new Error(`Received too much data for method ${method}`);
           }
           if(uncompressedData.length === sszLength) {
             try {
@@ -101,6 +111,9 @@ export function eth2ResponseDecode(
             }
           }
         }
+      }
+      if (buffer.length > 0) {
+        throw new Error(`There is remaining data not deserialized for method ${method}`);
       }
     })();
   };

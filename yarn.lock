@@ -930,10 +930,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.12.0.tgz#f95ffe5bc20ddaa4d2240cffe1e417877adc8055"
   integrity sha512-EECbmI/1SdjSPUaQOkZqBOA6AfhviS7jlXVmAs3P2biJTeH2p0p31V4fZImR2NXAgGVFAP16sRx2OCwflOq0mw==
 
-"@chainsafe/persistent-merkle-tree@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.2.tgz#d052e068fa69be60117f47d686b28caf4b6d9b5a"
-  integrity sha512-W3WLCMnuYpXHALnDD1wd09H8m3dNtv1Rqx8+3VS/6gbILJaydGDUvroDIltshRg3bpVMTsTSxAM54J9ddNOApw==
+"@chainsafe/persistent-merkle-tree@^0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.1.3.tgz#95d16f5faefc4d75f2861859ec5474f34767a4f7"
+  integrity sha512-ZFu7Zoxjt1A9W5whMVlwWJ+dGMF6+iL99lI9g7kIaG1JbI37M0F4TszO5Fe758e6/XJdGl5SFLi+923JYVB/ow==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
@@ -949,13 +949,13 @@
     fast-crc32c "^1.0.1"
     snappy "^6.0.1"
 
-"@chainsafe/ssz@0.6.4", "@chainsafe/ssz@^0.6.4":
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.4.tgz#1ee5e5599790a34f16406cd743ad83c9dc1d6bee"
-  integrity sha512-FeBwchyzSXBNJ/xToMDeldwM1IARIul9DZpEFLlzktKM+1zaJ9zRE2gMZf1dPPcUB15053dkb3ZsdqTIlm+BaA==
+"@chainsafe/ssz@^0.6.7":
+  version "0.6.7"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.7.tgz#472683c2d553fbfdb950b7805596f85c0bf46991"
+  integrity sha512-1r6yGc0fa7GMik7xEYKpYm7bTLgSeaLnbER9maS/9PLrpWz794njrwvrREpcUu/yks7SWuKSNJX1b+cAE6x0bA==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
-    "@chainsafe/persistent-merkle-tree" "^0.1.2"
+    "@chainsafe/persistent-merkle-tree" "^0.1.3"
     case "^1.6.3"
 
 "@evocateur/libnpmaccess@^3.1.2":

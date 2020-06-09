@@ -46,3 +46,10 @@ export function getDecompressor(encoding: ReqRespEncoding): IDecompressor {
 export function encodeResponseStatus(status: number): Buffer {
   return Buffer.from([status]);
 }
+
+export function maxEncodedLen(sszLength: number, encoding: ReqRespEncoding): number {
+  if (encoding === ReqRespEncoding.SSZ) {
+    return sszLength;
+  }
+  return 32 + sszLength + sszLength / 6;
+}
