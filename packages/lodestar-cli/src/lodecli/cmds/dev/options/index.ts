@@ -9,9 +9,11 @@ import * as logger from "./logger";
 import * as metrics from "./metrics";
 import * as network from "./network";
 import * as sync from "./sync";
+import * as validator from "./validator";
 import {IGlobalArgs} from "../../../options";
 import {IChainArgs} from "./chain";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IValidatorArgs} from "./validator";
 
 export const devRunOptions = canonicalOptions({
   ...dev,
@@ -22,6 +24,7 @@ export const devRunOptions = canonicalOptions({
   ...metrics,
   ...network,
   ...sync,
+  ...validator,
 });
 
-export type IDevOptions = IGlobalArgs & IChainArgs & IDevArgs & Partial<IBeaconNodeOptions>;
+export type IDevOptions = IGlobalArgs & IValidatorArgs & IChainArgs & IDevArgs & Partial<IBeaconNodeOptions>;

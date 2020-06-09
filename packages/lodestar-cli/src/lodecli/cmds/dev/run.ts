@@ -16,8 +16,8 @@ import rimraf from "rimraf";
 import {join} from "path";
 import {IDevOptions} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
-import {ApiClientOverInstance, Validator} from "@chainsafe/lodestar-validator/lib";
-import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
+import {Validator} from "@chainsafe/lodestar-validator/lib";
+import {getValidatorApiClient} from "./utils/validator";
 
 /**
  * Run a beacon node
@@ -67,11 +67,7 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   let validators: Validator[];
   if(options.dev.startValidators) {
     const range = options.dev.startValidators.split(":").map(s => parseInt(s));
-    const api = new ApiClientOverInstance({
-      config: node.config,
-      validator: new ValidatorApi({}, {...node, logger}),
-      beacon: new BeaconApi({}, {...node, logger}),
-    });
+    const api = getValidatorApiClient(options.validator.beaconUrl, logger, node);
     validators = Array.from(
       {length:range[1] + range[0]},(v,i)=>i+range[0]
     ).map((index) => {
