@@ -24,7 +24,7 @@ export const defaultLogFormat = format.combine(
 export function serializeContext(context?: Context|Error): string {
   if(!context) return "";
   if(context instanceof Error) {
-    return context.stack;
+    return "Error: " + context.message + "\n" + context.stack;
   }
   return Object.keys(context).map((key) => {
     let value = "";
