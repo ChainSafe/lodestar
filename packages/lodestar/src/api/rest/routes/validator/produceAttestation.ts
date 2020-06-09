@@ -3,7 +3,6 @@ import {IncomingMessage, Server, ServerResponse} from "http";
 import fastify, {DefaultQuery} from "fastify";
 import {fromHexString} from "@chainsafe/ssz";
 import {LodestarRestApiEndpoint} from "../../interface";
-import {EMPTY_SIGNATURE} from "../../../../constants";
 
 interface IQuery extends DefaultQuery {
   validator_pubkey: string;
