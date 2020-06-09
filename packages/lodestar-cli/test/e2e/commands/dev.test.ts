@@ -1,25 +1,26 @@
 import rimraf from "rimraf";
 import {ENR} from "@chainsafe/discv5";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ILogger, WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {InteropEth1Notifier} from "@chainsafe/lodestar/lib/eth1/impl/interop";
 import {createPeerId} from "@chainsafe/lodestar/lib/network";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {quickStartState} from "../../../src/lodestar/interop/state";
 import {existsSync, mkdirSync} from "fs";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib/api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {interopKeypair} from "../../../src/lodestar/interop/keypairs";
-import {ValidatorClient} from "@chainsafe/lodestar/lib/validator/nodejs";
+import {Validator} from "@chainsafe/lodestar-validator";
 import {join} from "path";
 import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
 import {expect} from "chai";
-import {interopDeposits} from "../../../src/lodestar/interop/deposits";
 import {BlockSummary} from "@chainsafe/lodestar/lib/chain";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState} from "@chainsafe/lodestar-types";
+import {interopDeposits} from "../../../src/lodecli/cmds/dev/utils/interop/deposits";
+import {getInteropState} from "../../../src/lodecli/cmds/dev/utils/interop/state";
+import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
+import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 
 const VALIDATOR_COUNT = 5;
 const SECONDS_PER_SLOT = 2;
@@ -33,7 +34,7 @@ describe("e2e interop simulation", function() {
   logger.silent = true;
   // logger.level = LogLevel.debug;
   let node: BeaconNode;
-  let validators: ValidatorClient[];
+  let validators: Validator[];
   let head: BlockSummary;
   let cachedStates: BeaconState[];
   let blockSummaries: BlockSummary[];
@@ -54,7 +55,7 @@ describe("e2e interop simulation", function() {
   });
 
   afterEach(async () => {
-    const promises = validators.map((validator: ValidatorClient) => validator.stop());
+    const promises = validators.map((validator: Validator) => validator.stop());
     await Promise.all(promises);
     logger.info("Stopped all validators");
     await new Promise(resolve => setTimeout(resolve, SECONDS_PER_SLOT * 1000));
@@ -121,14 +122,18 @@ describe("e2e interop simulation", function() {
 
     const genesisTime = Math.floor(Date.now()/1000);
     const depositDataRootList = devConfig.types.DepositDataRootList.tree.defaultValue();
-    const deposits = interopDeposits(devConfig, devConfig.types.DepositDataRootList.tree.defaultValue(), VALIDATOR_COUNT);
+    const deposits = interopDeposits(
+      devConfig,
+      devConfig.types.DepositDataRootList.tree.defaultValue(),
+      VALIDATOR_COUNT
+    );
     for (let i = 0; i < deposits.length; i++) {
       await Promise.all([
         node.db.depositData.put(i, deposits[i].data),
         node.db.depositDataRoot.put(i, devConfig.types.DepositData.hashTreeRoot(deposits[i].data)),
       ]);
     }
-    const state = quickStartState(devConfig, depositDataRootList, genesisTime, VALIDATOR_COUNT);
+    const state = getInteropState(devConfig, depositDataRootList, genesisTime, deposits);
     await node.chain.initializeBeaconChain(state);
     await node.start();
   }
@@ -136,7 +141,14 @@ describe("e2e interop simulation", function() {
   async function getBeaconNode(conf: Partial<IBeaconNodeOptions>, devConfig: IBeaconConfig): Promise<BeaconNode> {
     const peerId = await createPeerId();
     const libp2p = await createNodeJsLibp2p(
-      peerId, {maxPeers: 0, discv5: {enr: ENR.createFromPeerId(peerId), bindAddr: "/ip4/0.0.0.0/udp/0", bootEnrs: []}}, false
+      peerId,
+      {
+        maxPeers: 0,
+        discv5: {
+          enr: ENR.createFromPeerId(peerId),
+          bindAddr: "/ip4/127.0.0.1/udp/0", bootEnrs: []
+        }
+      }, false
     );
     return new BeaconNode(conf, {config: devConfig, logger, eth1: new InteropEth1Notifier(), libp2p});
   }
@@ -170,16 +182,19 @@ describe("e2e interop simulation", function() {
     const index = await node.db.getValidatorIndex(keypair.publicKey.toBytesCompressed());
     const validatorLogger =new WinstonLogger({module: `Validator #${index}`});
     validatorLogger.silent = true;
-    const validator = new ValidatorClient(
+    const validator = new Validator(
       {
-        validatorKey: keypair.privateKey.toHexString(),
-        restApi: rpcInstance,
-        db: join(VALIDATOR_DIR, "validator-db-" + index),
+        keypair,
+        api: rpcInstance,
+        logger,
+        db: new ValidatorDB({
+          config: node.config,
+          controller: new LevelDbController({
+            name: join(VALIDATOR_DIR, "validator-db-" + index)
+          }, {logger})
+        }),
         config: node.config
       },
-      {
-        logger
-      }
     );
     validators.push(validator);
     await validator.start();

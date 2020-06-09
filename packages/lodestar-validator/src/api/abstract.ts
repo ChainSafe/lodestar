@@ -40,7 +40,9 @@ export abstract class AbstractApiClient
 
   public async connect(): Promise<void> {
     await this.startSlotCounting();
-    this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
+    if(!this.beaconNodeInterval) {
+      this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
+    }
   }
 
   public async disconnect(): Promise<void> {
@@ -62,13 +64,14 @@ export abstract class AbstractApiClient
       return;
     }
     const genesisTime =  await this.beacon.getGenesisTime();
-    if (genesisTime && (Date.now() / 1000) > genesisTime) {
+    if (genesisTime && Math.floor(Date.now() / 1000) > genesisTime) {
       this.emit("beaconChainStarted");
       clearInterval(this.beaconNodeInterval);
     }
   }
 
   private async startSlotCounting(): Promise<void> {
+    if(this.running) return;
     this.running = true;
     const genesisTime = await this.beacon.getGenesisTime();
     const diffInSeconds = (Math.floor(Date.now() / 1000)) - genesisTime;

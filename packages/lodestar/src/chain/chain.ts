@@ -223,7 +223,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const finalizedCheckpoint = lastKnownState.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const finalizedRoot = finalizedCheckpoint.root;
-    this.logger.info(`Found last known state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
+    this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
     this.db.stateCache.add(lastKnownState);
     // the block respective to finalized epoch is still in block db

@@ -3,7 +3,7 @@ import {Deposit, DepositData, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {sign} from "@chainsafe/bls";
 import {DomainType} from "@chainsafe/lodestar/lib/constants";
-import {interopKeypairs} from "./keypairs";
+import {interopKeypairs} from "@chainsafe/lodestar-validator";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function interopDeposits(

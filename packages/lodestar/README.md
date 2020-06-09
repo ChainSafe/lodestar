@@ -44,10 +44,10 @@ You can always download spec test cases by running `yarn install --force`.
 `cd packages/lodestar-cli`
 
 Terminal 1:
-`bin/lodestar dev -r -c 8` - It will run beacon node and 8 validators with all the default settings. State will be written to .tmp/state.ssz
+`bin/lodecli dev  --dev.genesisValidators 8 --dev.reset` - It will run beacon node and 8 validators with all the default settings. State will be written to .tmp/state.ssz
 
 Terminal 2:
-`bin/lodestar dev --bootnodes "/ip4/127.0.0.1/tcp/30606" --multiaddrs "/ip4/127.0.0.1/tcp/30607" --bindAddr "/ip4/0.0.0.0/udp/5502" -v 0 -r --minPeers 1` - Will connect to bootnode (node 1 default multiaddrs) and won't start validators.
+`bin/lodecli dev --dev.startValidators 0:0 --chain.genesisStateFile ./dev/genesis.ssz --network.localMultiaddrs /ip4/127.0.0.1/tcp/30607 --sync.minPeers 1` - Will connect to bootnode (node 1 default multiaddrs) and won't start validators.
 
 <!---
 ### Starting private eth1 chain

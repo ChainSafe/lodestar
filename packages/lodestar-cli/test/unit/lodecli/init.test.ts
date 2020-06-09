@@ -16,8 +16,7 @@ describe("beacon cli", function() {
 
   it("should init beacon configuration", async function() {
     // initialize beacon node configured to talk to testnet
-    // @ts-ignore
-    await new Promise(resolve => yargs().defaults({
+    await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
     }).command(beacon as any).help().parse(["beacon", "init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));

@@ -7,7 +7,8 @@ export interface IGlobalArgs {
 export const rootDir: Options = {
   default: "./.lodecli",
   description: "Lodecli root directory",
-  hidden: true,
   normalize: true,
   type: "string",
 };
+
+export const globalOptions = {rootDir};
