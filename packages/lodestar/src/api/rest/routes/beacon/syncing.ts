@@ -16,7 +16,7 @@ export const registerSyncingEndpoint: LodestarRestApiEndpoint = (server, {config
           is_syncing: config.types.Boolean.toJson(responseValue)
         };
       } else {
-        response = config.types.SyncingStatus.toJson(responseValue as SyncingStatus);
+        response = config.types.SyncingStatus.toJson(responseValue as SyncingStatus, {case: "snake"});
       }
       reply
         .code(200)
