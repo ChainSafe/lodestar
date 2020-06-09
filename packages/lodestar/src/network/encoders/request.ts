@@ -1,10 +1,11 @@
-import {Method, Methods, ReqRespEncoding, RpcResponseStatus, ValidatedRequestBody} from "../../constants";
+import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {decode, encode} from "varint";
 import BufferList from "bl";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
+import {IValidatedRequestBody} from "./interface";
 
 export function eth2RequestEncode(
   config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
@@ -34,7 +35,7 @@ export function eth2RequestEncode(
 
 export function eth2RequestDecode(
   config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<ValidatedRequestBody> {
+): (source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<IValidatedRequestBody> {
   return (source) => {
     return (async function*() {
       let sszDataLength: number = null;
@@ -50,7 +51,7 @@ export function eth2RequestDecode(
           if (decode.bytes > 10) {
             logger.error(`eth2RequestDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` +
             `, method ${method}`);
-            yield RpcResponseStatus.ERR_INVALID_REQ;
+            yield {isValid: false};
             break;
           }
           chunk = chunk.slice(decode.bytes);
@@ -60,13 +61,13 @@ export function eth2RequestDecode(
         }
         if (sszDataLength < type.minSize() || sszDataLength > type.maxSize()) {
           logger.error(`eth2RequestDecode: Invalid szzLength of ${sszDataLength} for method ${method}`);
-          yield RpcResponseStatus.ERR_INVALID_REQ;
+          yield {isValid: false};
           break;
         }
         if (chunk.length > maxEncodedLen(sszDataLength, encoding)) {
           logger.error(`eth2RequestDecode: too much bytes read (${chunk.length}) for method ${method}, ` +
             `sszLength ${sszDataLength}`);
-          yield RpcResponseStatus.ERR_INVALID_REQ;
+          yield {isValid: false};
           break;
         }
         let uncompressed: Buffer;
@@ -74,7 +75,7 @@ export function eth2RequestDecode(
           uncompressed = decompressor.uncompress(chunk.slice());
         } catch (e) {
           logger.error("Failed to decompress request data. Error: " + e.message);
-          yield RpcResponseStatus.ERR_INVALID_REQ;
+          yield {isValid: false};
           break;
         }
         if(uncompressed) {
@@ -85,14 +86,14 @@ export function eth2RequestDecode(
         }
         if(buffer.length > sszDataLength) {
           logger.error("Too long message received for method " + method);
-          yield RpcResponseStatus.ERR_INVALID_REQ;
+          yield {isValid: false};
           break;
         }
         try {
-          yield type.deserialize(buffer.slice(0, sszDataLength)) as RequestBody;
+          yield {isValid: true, body: type.deserialize(buffer.slice(0, sszDataLength)) as RequestBody};
         } catch (e) {
           logger.error(`Malformed input. Failed to deserialize ${method} request type. Error: ${e.message}`);
-          yield RpcResponseStatus.ERR_INVALID_REQ;
+          yield {isValid: false};
           break;
         }
         //only one request body accepted

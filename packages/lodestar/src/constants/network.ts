@@ -1,7 +1,6 @@
 // gossip
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {RequestBody} from "@chainsafe/lodestar-types";
 
 export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
@@ -69,7 +68,6 @@ export enum RpcResponseStatus {
   ERR_RESP_TIMEOUT = 2,
 }
 
-export type ValidatedRequestBody = RequestBody | RpcResponseStatus.ERR_INVALID_REQ;
 
 export const GOSSIP_MAX_SIZE = 2**20;
 export const MAX_CHUNK_SIZE = 2**20;

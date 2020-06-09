@@ -16,7 +16,7 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, ValidatedRequestBody} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   createResponseEvent,
@@ -33,7 +33,7 @@ import PeerInfo from "peer-info";
 import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
-import {IResponseChunk} from "./encoders/interface";
+import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IReputationStore} from "../sync/IReputation";
 
 interface IReqEventEmitterClass {
@@ -166,7 +166,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private storePeerEncodingPreference(
     peerId: PeerId, method: Method, encoding: ReqRespEncoding
-  ): (source: AsyncIterable<ValidatedRequestBody>) => AsyncGenerator<ValidatedRequestBody> {
+  ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
     return (source) => {
       const peerReputations = this.peerReputations;
       return (async function*() {
@@ -180,15 +180,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private handleRpcRequest(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<ValidatedRequestBody>) => AsyncGenerator<IResponseChunk>) {
+  ): ((source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
     return (source) => {
       return (async function * () {
         for await (const request of source) {
-          if (request === RpcResponseStatus.ERR_INVALID_REQ) {
+          if (!request.isValid) {
             yield {status: RpcResponseStatus.ERR_INVALID_REQ};
           } else {
-            yield* getResponse(peerId, method, request);
+            yield* getResponse(peerId, method, request.body);
           }
           return;
         }
