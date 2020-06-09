@@ -26,6 +26,11 @@ export abstract class AbstractApiClient
   abstract beacon: IBeaconApi;
   abstract validator: IValidatorApi;
 
+  protected constructor(config: IBeaconConfig) {
+    super();
+    this.config = config;
+  }
+
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
       this.newEpochCallbacks.push(cb);
@@ -39,8 +44,8 @@ export abstract class AbstractApiClient
   }
 
   public async connect(): Promise<void> {
-    await this.startSlotCounting();
     if(!this.beaconNodeInterval) {
+      this.running = true;
       this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
     }
   }
@@ -66,14 +71,12 @@ export abstract class AbstractApiClient
     const genesisTime =  await this.beacon.getGenesisTime();
     if (genesisTime && Math.floor(Date.now() / 1000) > genesisTime) {
       this.emit("beaconChainStarted");
+      await this.startSlotCounting(genesisTime);
       clearInterval(this.beaconNodeInterval);
     }
   }
 
-  private async startSlotCounting(): Promise<void> {
-    if(this.running) return;
-    this.running = true;
-    const genesisTime = await this.beacon.getGenesisTime();
+  private async startSlotCounting(genesisTime: number): Promise<void> {
     const diffInSeconds = (Math.floor(Date.now() / 1000)) - genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
     //update slot after remaining seconds until next slot

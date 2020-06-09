@@ -83,12 +83,16 @@ export class AttestationService {
           isAggregator
         });
       if (isAggregator) {
-        await this.provider.validator.subscribeCommitteeSubnet(
-          duty.attestationSlot,
-          slotSignature,
-          duty.committeeIndex,
-          this.publicKey
-        );
+        try {
+          await this.provider.validator.subscribeCommitteeSubnet(
+            duty.attestationSlot,
+            slotSignature,
+            duty.committeeIndex,
+            this.publicKey
+          );
+        } catch (e) {
+          this.logger.error("Failed to subscribe to committee subnet", e);
+        }
       }
     }
   };

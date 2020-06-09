@@ -59,6 +59,7 @@ export default class BlockProposingService {
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
+    console.log("new slot", slot);
     if(this.nextProposalSlots.includes(slot)) {
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
