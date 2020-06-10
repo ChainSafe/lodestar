@@ -165,7 +165,9 @@ export function validateBlocks(
 
 /**
  * Bufferes and orders block and passes them to chain.
- * Returns last processed slot.
+ * Returns last processed slot if it was successful,
+ * current head slot if there was consensus split
+ * or null if there was no slots
  * @param config
  * @param chain
  * @param logger
@@ -201,7 +203,8 @@ export function processSyncBlocks(
               blockSlot: block.message.slot
             }
           );
-          blockBuffer.unshift(block);
+          //this will trigger sync to retry to fetch this chunk again
+          lastProcessedSlot = chain.forkChoice.headBlockSlot();
           break;
         }
       }
