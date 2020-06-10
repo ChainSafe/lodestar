@@ -163,32 +163,4 @@ describe("Network Gossip", function() {
     });
   });
 
-  // describe("Metadata", async function() {
-  //   it("subscribeToAttestationSubnet", () => {
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
-  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-  //     // subscribe same subnet again, should not change seq number
-  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
-  //   });
-
-  //   it("unsubscribeFromAttestationSubnet", () => {
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
-  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
-  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
-  //     // unsubscribe same subnet again
-  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
-  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 10);
-  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(4);
-  //   });
-  // });
-
 });
