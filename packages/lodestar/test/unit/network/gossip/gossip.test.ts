@@ -1,8 +1,5 @@
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {INetworkOptions} from "../../../../src/network/options";
-import {ENR} from "@chainsafe/discv5";
-import {createPeerId} from "../../../../src/network";
-import {MetadataController} from "../../../../src/network/metadata";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
@@ -22,7 +19,6 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("Network Gossip", function() {
   let gossip: Gossip;
-  let metadata: MetadataController;
   const sandbox = sinon.createSandbox();
   let pubsub: IGossipSub;
   let chain: IBeaconChain;
@@ -37,8 +33,6 @@ describe("Network Gossip", function() {
       connectTimeout: 0,
       disconnectTimeout: 0,
     };
-    const peerIdB = await createPeerId();
-    const enr = ENR.createFromPeerId(peerIdB);
     const libp2p = sandbox.createStubInstance(NodejsNode);
     const logger = new WinstonLogger();
     logger.silent = true;
@@ -51,9 +45,8 @@ describe("Network Gossip", function() {
       state,
       config
     });
-    metadata = new MetadataController({enr}, {config,  chain, logger});
     pubsub = new MockGossipSub();
-    gossip = new Gossip(networkOpts, metadata, {config, libp2p, logger, validator, chain, pubsub});
+    gossip = new Gossip(networkOpts, {config, libp2p, logger, validator, chain, pubsub});
     await gossip.start();
   });
 
@@ -170,32 +163,32 @@ describe("Network Gossip", function() {
     });
   });
 
-  describe("Metadata", async function() {
-    it("subscribeToAttestationSubnet", () => {
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-      // subscribe same subnet again, should not change seq number
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
-    });
+  // describe("Metadata", async function() {
+  //   it("subscribeToAttestationSubnet", () => {
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
+  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
+  //     // subscribe same subnet again, should not change seq number
+  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
+  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
+  //   });
 
-    it("unsubscribeFromAttestationSubnet", () => {
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
-      gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
-      // unsubscribe same subnet again
-      gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
-      gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 10);
-      expect(Number(metadata.seqNumber.valueOf())).to.be.equal(4);
-    });
-  });
+  //   it("unsubscribeFromAttestationSubnet", () => {
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(0);
+  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 10);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(1);
+  //     gossip.subscribeToAttestationSubnet(chain.currentForkDigest, 20);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(2);
+  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
+  //     // unsubscribe same subnet again
+  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 20);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(3);
+  //     gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, 10);
+  //     expect(Number(metadata.seqNumber.valueOf())).to.be.equal(4);
+  //   });
+  // });
 
 });

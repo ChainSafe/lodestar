@@ -25,7 +25,7 @@ export interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
-  forkDigestChanged: () => void;
+  forkVersion: () => void;
   forkDigest: (forkDigest: ForkDigest) => void;
 }
 

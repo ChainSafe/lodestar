@@ -51,7 +51,7 @@ export function processBlock(
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
             logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
-            eventBus.emit("forkDigestChanged");
+            eventBus.emit("forkVersion");
           }
         }
         pool.onProcessedBlock(job.signedBlock);

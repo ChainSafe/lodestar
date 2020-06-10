@@ -125,7 +125,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    this.on("forkDigestChanged", this.handleForkDigestChanged);
+    this.on("forkVersion", this.handleForkVersionChanged);
     await this.restoreHeadState(state);
   }
 
@@ -137,7 +137,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     await this.blockProcessor.stop();
-    this.removeListener("forkDigestChanged", this.handleForkDigestChanged);
+    this.removeListener("forkVersion", this.handleForkVersionChanged);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -291,7 +291,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.profile("restoreHeadState");
   }
 
-  private async handleForkDigestChanged(): Promise<void> {
+  private async handleForkVersionChanged(): Promise<void> {
     this._currentForkDigest = await this.getCurrentForkDigest();
     this.emit("forkDigest", this._currentForkDigest);
   }
