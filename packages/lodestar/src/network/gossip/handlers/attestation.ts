@@ -11,19 +11,6 @@ import {GossipObject} from "../interface";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "../encoding";
 
-export async function handleIncomingAttestation(this: Gossip, obj: GossipObject): Promise<void> {
-  try {
-    const attestation = obj as Attestation;
-    this.logger.verbose(
-      `Received attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
-        +` (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
-    );
-    this.emit(GossipEvent.ATTESTATION, attestation);
-  } catch (e) {
-    this.logger.warn("Incoming attestation error", e);
-  }
-}
-
 export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn {
   return function handleIncomingCommitteeAttestation(this: Gossip, obj: GossipObject): void {
     try {
@@ -52,11 +39,6 @@ export async function publishCommiteeAttestation(this: Gossip, attestation: Atte
       new Map([["subnet", String(subnet)]])
     ),
     Buffer.from(this.config.types.Attestation.serialize(attestation)));
-  //backward compatible
-  await this.pubsub.publish(
-    getGossipTopic(GossipEvent.ATTESTATION, forkDigestValue),
-    Buffer.from(this.config.types.Attestation.serialize(attestation))
-  );
   const attestationHex = toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
   this.logger.verbose(
     `Publishing attestation ${attestationHex} for subnet ${subnet}`

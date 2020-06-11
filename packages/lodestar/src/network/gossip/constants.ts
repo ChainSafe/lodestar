@@ -8,7 +8,6 @@ import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 export enum GossipEvent {
   BLOCK = "beacon_block",
   AGGREGATE_AND_PROOF = "beacon_aggregate_and_proof",
-  ATTESTATION = "beacon_attestation",
   ATTESTATION_SUBNET = "beacon_attestation_{subnet}",
   VOLUNTARY_EXIT = "voluntary_exit",
   PROPOSER_SLASHING = "proposer_slashing",

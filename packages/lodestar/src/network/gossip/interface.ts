@@ -25,7 +25,6 @@ export interface IGossipEvents {
   // attestation subnet event is dynamic following this signature
   // [attSubnetTopic: string]: (attestationSubnet: {attestation: Attestation; subnet: number}) => void;
   [GossipEvent.BLOCK]: (signedBlock: SignedBeaconBlock) => void;
-  [GossipEvent.ATTESTATION]: (attestation: Attestation) => void;
   [GossipEvent.AGGREGATE_AND_PROOF]: (attestation: SignedAggregateAndProof) => void;
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
@@ -61,7 +60,6 @@ export interface IGossip extends IService, GossipEventEmitter {
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
   subscribeToBlock(forkDigest: ForkDigest, callback: (signedBlock: SignedBeaconBlock) => void): void;
   subscribeToAggregateAndProof(forkDigest: ForkDigest, callback: (aggregate: SignedAggregateAndProof) => void): void;
-  subscribeToAttestation(forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void;
   subscribeToVoluntaryExit(
     forkDigest: ForkDigest, callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
   subscribeToProposerSlashing(forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void;
@@ -84,7 +82,6 @@ export interface IGossipMessageValidator {
   isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean>;
   isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
   isValidIncomingAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<boolean>;
-  isValidIncomingUnaggregatedAttestation(attestation: Attestation): Promise<boolean>;
   isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean>;
   isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;

@@ -74,7 +74,6 @@
     "libp2p-mplex": "^0.9.5",
     "libp2p-noise": "^1.1.0",
     "libp2p-pubsub": "^0.4.4",
-    "libp2p-secio": "^0.12.5",
     "libp2p-tcp": "^0.14.5",
     "multiaddr": "^7.4.3",
     "noice-json-rpc": "^1.2.0",

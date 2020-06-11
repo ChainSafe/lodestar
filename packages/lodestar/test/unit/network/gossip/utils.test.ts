@@ -74,7 +74,6 @@ describe("gossip utils", function () {
       expect(mapGossipEvent(getAttestationSubnetEvent(0))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
       expect(mapGossipEvent(getAttestationSubnetEvent(1))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
       expect(mapGossipEvent(GossipEvent.BLOCK)).to.be.equal(GossipEvent.BLOCK);
-      expect(mapGossipEvent(GossipEvent.ATTESTATION)).to.be.equal(GossipEvent.ATTESTATION);
       expect(mapGossipEvent(GossipEvent.AGGREGATE_AND_PROOF)).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
       expect(mapGossipEvent(GossipEvent.VOLUNTARY_EXIT)).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
       expect(mapGossipEvent(GossipEvent.PROPOSER_SLASHING)).to.be.equal(GossipEvent.PROPOSER_SLASHING);
@@ -88,9 +87,6 @@ describe("gossip utils", function () {
       expect(
         topicToGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))
       ).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTATION, forkValue))
-      ).to.be.equal(GossipEvent.ATTESTATION);
       expect(
         topicToGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))
       ).to.be.equal(GossipEvent.VOLUNTARY_EXIT);

@@ -9,7 +9,7 @@ import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {sleep} from "../../../src/util/sleep";
 import Libp2p from "libp2p";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {generateState} from "../../utils/state";
@@ -41,10 +41,9 @@ describe("[network] network", function () {
   const logger: ILogger = new WinstonLogger();
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: true, timeout: 5000, pushGateway: false}, {logger});
-  const validator = {} as GossipMessageValidator;
+  const validator = {} as GossipMessageValidator & SinonStubbedInstance<GossipMessageValidator>;
   validator.isValidIncomingBlock = sinon.stub();
   validator.isValidIncomingAggregateAndProof = sinon.stub();
-  validator.isValidIncomingUnaggregatedAttestation = sinon.stub();
   validator.isValidIncomingCommitteeAttestation = sinon.stub();
   let chain: IBeaconChain;
 
@@ -140,7 +139,6 @@ describe("[network] network", function () {
     await netA.connect(netB.peerInfo);
     await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    // @ts-ignore
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -193,7 +191,6 @@ describe("[network] network", function () {
       });
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    // @ts-ignore
     validator.isValidIncomingBlock.resolves(true);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -211,11 +208,10 @@ describe("[network] network", function () {
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
-      netA.gossip.subscribeToAttestation(forkDigest, resolve);
+      netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    // @ts-ignore
-    validator.isValidIncomingUnaggregatedAttestation.resolves(true);
+    validator.isValidIncomingAggregateAndProof.resolves(true);
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
@@ -236,7 +232,6 @@ describe("[network] network", function () {
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
     attestation.data.index = 0;
-    // @ts-ignore
     validator.isValidIncomingCommitteeAttestation.resolves(true);
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;

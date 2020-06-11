@@ -8432,7 +8432,7 @@ it-pair@^1.0.0:
   dependencies:
     get-iterator "^1.0.2"
 
-it-pb-rpc@^0.1.4, it-pb-rpc@^0.1.8:
+it-pb-rpc@^0.1.8:
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/it-pb-rpc/-/it-pb-rpc-0.1.8.tgz#eed8ffdcba2a322a20a45c9db9ec5644499ccaf2"
   integrity sha512-YePzUUonithCTIdVKcOeQEn5mpipCg7ZoWsq7jfjXXtAS6gm6R7KzCe6YBV97i6bljU8hGllTG67FiGfweKNKg==
@@ -9033,7 +9033,7 @@ libp2p-bootstrap@0.10.4:
     peer-id "^0.13.5"
     peer-info "^0.17.0"
 
-libp2p-crypto@^0.17.2, libp2p-crypto@^0.17.3, libp2p-crypto@^0.17.5, libp2p-crypto@^0.17.6, libp2p-crypto@~0.17.0, libp2p-crypto@~0.17.3:
+libp2p-crypto@^0.17.2, libp2p-crypto@^0.17.5, libp2p-crypto@^0.17.6, libp2p-crypto@~0.17.0, libp2p-crypto@~0.17.3:
   version "0.17.6"
   resolved "https://registry.yarnpkg.com/libp2p-crypto/-/libp2p-crypto-0.17.6.tgz#967808e314d557ed2af5b267575335cc7f822ef2"
   integrity sha512-ixTSlXXObarf2x+8voGBywr2SyiZh4nw21ZRe1FVz4sxg47crXLqBXhb7gGy2U6Kf0ANbTVaOgLs45WAtM/HpQ==
@@ -9084,7 +9084,7 @@ libp2p-gossipsub@^0.3.0:
     protons "^1.0.1"
     time-cache "^0.3.0"
 
-libp2p-interfaces@^0.2.1, libp2p-interfaces@^0.2.3, libp2p-interfaces@^0.2.8:
+libp2p-interfaces@^0.2.3, libp2p-interfaces@^0.2.8:
   version "0.2.8"
   resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-0.2.8.tgz#81ea30c4bb606fd940c48446c6660be674379b1f"
   integrity sha512-Uzjlzbjk7Bx9giSU2z3qbQv/N8iV9ARL7GV5g9UNCXEYV+lPx0CUX8egnUlxf7/EMjUTz1PsSsf8C7nOZDbVJQ==
@@ -9181,24 +9181,6 @@ libp2p-pubsub@~0.4.1:
     libp2p-crypto "~0.17.0"
     libp2p-interfaces "^0.2.3"
     protons "^1.0.1"
-
-libp2p-secio@^0.12.5:
-  version "0.12.5"
-  resolved "https://registry.yarnpkg.com/libp2p-secio/-/libp2p-secio-0.12.5.tgz#312058eefe66f440eb169ce3c6684f6f432e0369"
-  integrity sha512-S4/i7Bye/utt7FBmJS97XNLALAzvKmKLuqnwpUn3lWI1ns+Hx+tWu5lMFIobJu1BNvxapzCHkkq8H5jqqdzlRQ==
-  dependencies:
-    bl "^4.0.0"
-    debug "^4.1.1"
-    it-length-prefixed "^3.0.1"
-    it-pair "^1.0.0"
-    it-pb-rpc "^0.1.4"
-    it-pipe "^1.1.0"
-    libp2p-crypto "^0.17.3"
-    libp2p-interfaces "^0.2.1"
-    multiaddr "^7.2.1"
-    multihashing-async "^0.8.0"
-    peer-id "^0.13.6"
-    protons "^1.0.2"
 
 libp2p-tcp@^0.14.1:
   version "0.14.4"
@@ -10141,7 +10123,7 @@ multihashes@~0.4.15, multihashes@~0.4.17:
     multibase "^0.7.0"
     varint "^5.0.0"
 
-multihashing-async@^0.8.0, multihashing-async@^0.8.1:
+multihashing-async@^0.8.1:
   version "0.8.1"
   resolved "https://registry.yarnpkg.com/multihashing-async/-/multihashing-async-0.8.1.tgz#17ca2a8f5ccd1e5d0e9607435d20726a130dd8f5"
   integrity sha512-qu3eIXHebc9a4OU4n/60BdZLFpX+/dGBs3DbzXCxX1aU0rFF19KQAiGl+sRL9wvKIJdeF2+w16RRJrpyTHpkkA==
@@ -11246,7 +11228,7 @@ pbkdf2@^3.0.3, pbkdf2@^3.0.9:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
-peer-id@^0.13.11, peer-id@^0.13.5, peer-id@^0.13.6, peer-id@^0.13.7, peer-id@~0.13.2, peer-id@~0.13.3:
+peer-id@^0.13.11, peer-id@^0.13.5, peer-id@^0.13.7, peer-id@~0.13.2, peer-id@~0.13.3:
   version "0.13.11"
   resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.13.11.tgz#d3b11e45d80839363aeac0e4fa1758368e3b93cd"
   integrity sha512-CWDPr4ppKslARSe1qfMlGjTiDqL4Hl25Qyfq43PEPAeRD2meI8B2HfxO0NMMB8BUhNvNGPeDAwhLptyB9jVwkw==
