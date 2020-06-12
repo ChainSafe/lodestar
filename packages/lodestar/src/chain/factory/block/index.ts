@@ -2,12 +2,13 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot, ValidatorIndex, BeaconState,
+  Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {stateTransition, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 
@@ -32,9 +33,19 @@ export async function assembleBlock(
     body: await assembleBody(config, db, {...currentState, slot}, randaoReveal, graffiti),
   };
 
-  block.stateRoot = config.types.BeaconState.hashTreeRoot(
-    stateTransition(config, currentState, {message: block, signature: EMPTY_SIGNATURE}, false, false, true),
-  );
+
+  block.stateRoot = computeNewStateRoot(config, currentState, block, chain);
 
   return block;
+}
+
+function computeNewStateRoot(config: IBeaconConfig, state: BeaconState, block: BeaconBlock, chain: IBeaconChain): Root {
+  // state is cloned from the cache already
+  const epochContext = chain.epochCtx.copy();
+  const signedBlock = {
+    message: block,
+    signature: EMPTY_SIGNATURE,
+  };
+  const newState = fastStateTransition(epochContext, state, signedBlock, false, false, true);
+  return config.types.BeaconState.hashTreeRoot(newState);
 }

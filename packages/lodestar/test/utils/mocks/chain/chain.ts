@@ -22,7 +22,6 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public clock: IBeaconClock;
   public epochCtx: EpochContext;
 
-
   private state: BeaconState|null;
   private config: IBeaconConfig;
 

@@ -3,13 +3,14 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition";
+import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {generateState} from "../../../../utils/state";
 import {StatefulDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
 import {BeaconChain} from "../../../../../src/chain";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("block assembly", function () {
 
@@ -19,7 +20,7 @@ describe("block assembly", function () {
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
-    stateTransitionStub = sandbox.stub(blockTransitions, "stateTransition");
+    stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
 
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
@@ -34,9 +35,9 @@ describe("block assembly", function () {
   });
 
   it("should assemble block", async function () {
-    const head = chainStub.forkChoice.headBlockRoot();
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
-    chainStub.getHeadState.resolves(generateState({slot: 1}) as any);
+    chainStub.getHeadState.resolves(generateState({slot: 1}));
+    chainStub.epochCtx = new EpochContext(config);
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());
