@@ -6,7 +6,6 @@ import assert from "assert";
 import {hash} from "@chainsafe/ssz";
 import {
   Epoch,
-  ValidatorIndex,
   BeaconState,
   Bytes32,
 } from "@chainsafe/lodestar-types";
@@ -26,7 +25,7 @@ import {DomainType} from "../constants";
  */
 export function computeShuffledIndex(
   config: IBeaconConfig,
-  index: ValidatorIndex,
+  index: number,
   indexCount: number,
   seed: Bytes32
 ): number {

@@ -120,10 +120,6 @@ export class AttestationProcessor implements IAttestationProcessor {
       target.epoch === computeEpochAtSlot(this.config, attestation.data.slot),
       "attestation is not targeting current epoch"
     );
-    assert(
-      currentSlot >= computeStartSlotAtEpoch(this.config, target.epoch)
-      , "Current slot less than this target epoch's start slot"
-    );
     const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
     assert(!!block, `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
     assert(block.slot <= attestation.data.slot, "Attestation is for past block");
