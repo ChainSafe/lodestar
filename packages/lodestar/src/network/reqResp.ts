@@ -59,7 +59,7 @@ class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
     return setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
       const errorGenerator: AsyncGenerator<IResponseChunk> = async function* () {
-        yield {status: RpcResponseStatus.ERR_RESP_TIMEOUT,
+        yield {status: RpcResponseStatus.SERVER_ERROR,
           body: encodeP2pErrorMessage(config, "Timeout processing request")};
       }();
       responseListener(errorGenerator);
