@@ -52,8 +52,8 @@ export class AttestationCollector implements IService {
   private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.currentForkDigest;
-    this.timers = [];
     const headState = await this.chain.getHeadState();
+    this.timers = [];
     committees.forEach((committeeIndex) => {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(
