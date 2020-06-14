@@ -18,7 +18,8 @@ module.exports = {
   },
   plugins: [
     "@typescript-eslint",
-    "eslint-plugin-import"
+    "eslint-plugin-import",
+    "prettier"
   ],
   extends: [
     "eslint:recommended",
@@ -35,6 +36,7 @@ module.exports = {
     }
   },
   rules: {
+    "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
     "@typescript-eslint/class-name-casing": "error",
