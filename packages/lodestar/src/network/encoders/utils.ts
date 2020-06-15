@@ -51,5 +51,6 @@ export function maxEncodedLen(sszLength: number, encoding: ReqRespEncoding): num
   if (encoding === ReqRespEncoding.SSZ) {
     return sszLength;
   }
+  // worst-case compression result by Snappy
   return 32 + sszLength + sszLength / 6;
 }
