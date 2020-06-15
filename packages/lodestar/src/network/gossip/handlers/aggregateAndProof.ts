@@ -25,17 +25,10 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
 export async function publishAggregatedAttestation(
   this: Gossip, signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
   const forkDigestValue = await this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
-  await Promise.all([
-    this.pubsub.publish(
-      getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
-      Buffer.from(this.config.types.SignedAggregateAndProof.serialize(signedAggregateAndProof))
-    ),
-    //to be backward compatible
-    this.pubsub.publish(
-      getGossipTopic(GossipEvent.ATTESTATION, forkDigestValue),
-      Buffer.from(this.config.types.Attestation.serialize(signedAggregateAndProof.message.aggregate))
-    )
-  ]);
+  await this.pubsub.publish(
+    getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
+    Buffer.from(this.config.types.SignedAggregateAndProof.serialize(signedAggregateAndProof))
+  );
 
   this.logger.verbose(
     `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}`

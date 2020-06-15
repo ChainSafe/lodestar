@@ -431,43 +431,6 @@ describe("GossipMessageValidator", () => {
     });
   });
 
-  describe("validate unaggregated attestation", () => {
-    it("should return invalid unaggregated attestation - attestation is not unaggregated", async () => {
-      const attestation = generateEmptyAttestation();
-      expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
-    });
-
-    it("should return invalid unaggregated attestation - attestation existed", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.attestation.has.resolves(true);
-      expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
-    });
-
-    it("should return invalid unaggregated attestation - attestation is too old", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.attestation.has.resolves(false);
-      const state = generateState();
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      state.finalizedCheckpoint.epoch = 2;
-      attestation.data.target.epoch = 1;
-      chainStub.getHeadState.resolves(state);
-      expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.false;
-    });
-
-    it("should return valid unaggregated attestation", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.attestation.has.resolves(false);
-      chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      const state = generateState();
-      state.finalizedCheckpoint.epoch = 2;
-      attestation.data.target.epoch = 2;
-      chainStub.getHeadState.resolves(state);
-      expect(await validator.isValidIncomingUnaggregatedAttestation(attestation)).to.be.equal(true);
-    });
-  });
 
   describe("validate voluntary exit", () => {
     it("should return invalid Voluntary Exit - existing", async () => {

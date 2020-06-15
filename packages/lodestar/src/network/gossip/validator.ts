@@ -214,20 +214,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     return isValidIndexedAttestation(this.config, state, indexedAttestation);
   };
 
-  public isValidIncomingUnaggregatedAttestation = async (attestation: Attestation): Promise<boolean> => {
-    if (!isUnaggregatedAttestation(attestation)) {
-      return false;
-    }
-    // skip attestation if it already exists
-    const root = this.config.types.Attestation.hashTreeRoot(attestation);
-    if (await this.db.attestation.has(root as Buffer)) {
-      return false;
-    }
-    // skip attestation if its too old
-    const state = await this.chain.getHeadState();
-    return attestation.data.target.epoch >= state.finalizedCheckpoint.epoch;
-  };
-
   public isValidIncomingVoluntaryExit = async(voluntaryExit: SignedVoluntaryExit): Promise<boolean> => {
     // skip voluntary exit if it already exists
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {

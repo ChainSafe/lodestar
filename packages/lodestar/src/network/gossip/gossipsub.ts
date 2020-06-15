@@ -120,9 +120,6 @@ export class LodestarGossipsub extends Gossipsub {
       case GossipEvent.BLOCK:
         result = this.validator.isValidIncomingBlock;
         break;
-      case GossipEvent.ATTESTATION:
-        result =  this.validator.isValidIncomingUnaggregatedAttestation;
-        break;
       case GossipEvent.AGGREGATE_AND_PROOF:
         result =  this.validator.isValidIncomingAggregateAndProof;
         break;
@@ -155,9 +152,6 @@ export class LodestarGossipsub extends Gossipsub {
     switch(gossipEvent) {
       case GossipEvent.BLOCK:
         objType = this.config.types.SignedBeaconBlock;
-        break;
-      case GossipEvent.ATTESTATION:
-        objType = this.config.types.Attestation;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
         objType = this.config.types.SignedAggregateAndProof;

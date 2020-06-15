@@ -14,7 +14,6 @@ import {GossipEvent} from "./constants";
 import {handleIncomingBlock, publishBlock} from "./handlers/block";
 import {
   getCommitteeAttestationHandler,
-  handleIncomingAttestation,
   publishCommiteeAttestation
 } from "./handlers/attestation";
 import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
@@ -100,11 +99,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public subscribeToAggregateAndProof(
     forkDigest: ForkDigest, callback: (signedAggregate: SignedAggregateAndProof) => void): void {
     this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
-  }
-
-  public subscribeToAttestation(
-    forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void {
-    this.subscribe(forkDigest, GossipEvent.ATTESTATION, callback);
   }
 
   public subscribeToVoluntaryExit(
@@ -227,8 +221,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.supportedEncodings.forEach((encoding) => {
       handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, encoding),
         handleIncomingBlock.bind(that));
-      handlers.set(getGossipTopic(GossipEvent.ATTESTATION, forkDigest, encoding),
-        handleIncomingAttestation.bind(that));
       handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, encoding),
         handleIncomingAggregateAndProof.bind(that));
       handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkDigest, encoding),
