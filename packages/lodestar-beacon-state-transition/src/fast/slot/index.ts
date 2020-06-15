@@ -19,12 +19,12 @@ export function processSlots(epochCtx: EpochContext, state: BeaconState, slot: S
   while (state.slot < slot) {
     processSlot(epochCtx, state);
     // process epoch on the start slot of the next epoch
-    if ((state.slot + 1) % epochCtx.config.params.SLOTS_PER_EPOCH === 0) {
+    if ((state.slot + 1n) % epochCtx.config.params.SLOTS_PER_EPOCH === 0n) {
       processEpoch(epochCtx, state);
-      state.slot += 1;
+      state.slot += 1n;
       epochCtx.rotateEpochs(state);
     } else {
-      state.slot += 1;
+      state.slot += 1n;
     }
   }
 }

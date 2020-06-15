@@ -16,7 +16,7 @@ export function processJustificationAndFinalization(
   state: BeaconState
 ): void {
   const currentEpoch = getCurrentEpoch(config, state);
-  if(currentEpoch <= GENESIS_EPOCH + 1) {
+  if(currentEpoch <= GENESIS_EPOCH + 1n) {
     return;
   }
   const previousEpoch = getPreviousEpoch(config, state);
@@ -59,28 +59,28 @@ export function processJustificationAndFinalization(
   // The 2nd/3rd/4th most recent epochs are all justified, the 2nd using the 4th as source
   if (
     bits[1] && bits[2] && bits[3] &&
-    oldPreviousJustifiedCheckpoint.epoch + 3 === currentEpoch
+    oldPreviousJustifiedCheckpoint.epoch + 3n === currentEpoch
   ) {
     state.finalizedCheckpoint = oldPreviousJustifiedCheckpoint;
   }
   // The 2nd/3rd most recent epochs are both justified, the 2nd using the 3rd as source
   if (
     bits[1] && bits[2] &&
-    oldPreviousJustifiedCheckpoint.epoch + 2 === currentEpoch
+    oldPreviousJustifiedCheckpoint.epoch + 2n === currentEpoch
   ) {
     state.finalizedCheckpoint = oldPreviousJustifiedCheckpoint;
   }
   // The 1st/2nd/3rd most recent epochs are all justified, the 1st using the 3rd as source
   if (
     bits[0] && bits[1] && bits[2] &&
-    oldCurrentJustifiedCheckpoint.epoch + 2 === currentEpoch
+    oldCurrentJustifiedCheckpoint.epoch + 2n === currentEpoch
   ) {
     state.finalizedCheckpoint = oldCurrentJustifiedCheckpoint;
   }
   // The 1st/2nd most recent epochs are both justified, the 1st using the 2nd as source
   if (
     bits[0] && bits[1] &&
-    oldCurrentJustifiedCheckpoint.epoch + 1 === currentEpoch
+    oldCurrentJustifiedCheckpoint.epoch + 1n === currentEpoch
   ) {
     state.finalizedCheckpoint = oldCurrentJustifiedCheckpoint;
   }

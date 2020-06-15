@@ -5,7 +5,7 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {decreaseBalance, getCurrentEpoch, getTotalActiveBalance,} from "../util";
-import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
+import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 
 /**
@@ -22,7 +22,7 @@ export function processSlashings(config: IBeaconConfig, state: BeaconState): voi
   state.validators.forEach((validator, index) => {
     if (
       validator.slashed &&
-      (currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2)) === validator.withdrawableEpoch
+      (currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR / 2n) === validator.withdrawableEpoch
     ) {
       const penalty = validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT *
         slashingMultiplier / totalBalance * config.params.EFFECTIVE_BALANCE_INCREMENT;

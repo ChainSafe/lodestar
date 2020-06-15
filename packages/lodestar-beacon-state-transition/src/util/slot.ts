@@ -6,7 +6,7 @@ import {GENESIS_SLOT} from "../constants";
 
 export function getSlotsSinceGenesis(config: IBeaconConfig, genesisTime: Number64): Slot {
   const diffInSeconds = (Date.now() / 1000) - genesisTime;
-  return intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT);
+  return BigInt(intDiv(diffInSeconds, config.params.SECONDS_PER_SLOT));
 }
 
 export function getCurrentSlot(config: IBeaconConfig, genesisTime: Number64): Slot {
@@ -15,9 +15,9 @@ export function getCurrentSlot(config: IBeaconConfig, genesisTime: Number64): Sl
 
 export function computeSlotsSinceEpochStart(config: IBeaconConfig, slot: Slot, epoch?: Epoch): number {
   const computeEpoch = epoch ? epoch : computeEpochAtSlot(config, slot);
-  return slot - computeStartSlotAtEpoch(config, computeEpoch);
+  return Number(slot - computeStartSlotAtEpoch(config, computeEpoch));
 }
 
 export function computeTimeAtSlot(config: IBeaconConfig, slot: Slot, genesisTime: Number64): Number64 {
-  return genesisTime + slot * config.params.SECONDS_PER_SLOT;
+  return genesisTime + Number(slot) * config.params.SECONDS_PER_SLOT;
 }

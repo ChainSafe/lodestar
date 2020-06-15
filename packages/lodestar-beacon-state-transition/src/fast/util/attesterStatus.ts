@@ -12,7 +12,7 @@ export const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
 export interface IAttesterStatus {
   flags: number;
   proposerIndex: number; // -1 when not included by any proposer
-  inclusionDelay: number;
+  inclusionDelay: bigint;
   validator: IFlatValidator;
   active: boolean;
 }
@@ -21,7 +21,7 @@ export function createIAttesterStatus(v: IFlatValidator): IAttesterStatus {
   return {
     flags: 0,
     proposerIndex: -1,
-    inclusionDelay: 0,
+    inclusionDelay: 0n,
     validator: v,
     active: false,
   };

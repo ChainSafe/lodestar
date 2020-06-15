@@ -1,6 +1,5 @@
 import {List} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
-import {intDiv} from "@chainsafe/lodestar-utils";
 
 import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
@@ -36,8 +35,8 @@ export interface IEpochProcess {
 
 export function createIEpochProcess(): IEpochProcess {
   return {
-    prevEpoch: 0,
-    currentEpoch: 0,
+    prevEpoch: 0n,
+    currentEpoch: 0n,
     statuses: [],
     totalActiveStake: BigInt(0),
     prevEpochUnslashedStake: {
@@ -51,7 +50,7 @@ export function createIEpochProcess(): IEpochProcess {
     indicesToSetActivationEligibility: [],
     indicesToMaybeActivate: [],
     indicesToEject: [],
-    exitQueueEnd: 0,
+    exitQueueEnd: 0n,
     exitQueueEndChurn: 0,
     churnLimit: 0,
   };
@@ -73,7 +72,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
-  const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
+  const slashingsEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2n;
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
@@ -90,7 +89,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveIFlatValidator(v, prevEpoch) || (v.slashed && (prevEpoch + 1 < v.withdrawableEpoch))) {
+    if (isActiveIFlatValidator(v, prevEpoch) || (v.slashed && (prevEpoch + 1n < v.withdrawableEpoch))) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -139,8 +138,8 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
 
   // order by sequence of activationEligibilityEpoch setting and then index
   out.indicesToMaybeActivate.sort((a, b) => (
-    (out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch) ||
-    a - b
+    Number(out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch)
+    || a - b
   ));
 
   let exitQueueEndChurn = 0;
@@ -152,7 +151,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
 
   const churnLimit = getChurnLimit(config, activeCount);
   if (exitQueueEndChurn >= churnLimit) {
-    exitQueueEnd += 1;
+    exitQueueEnd += 1n;
     exitQueueEndChurn = 0;
   }
 

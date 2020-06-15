@@ -1,4 +1,5 @@
 import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bigIntArrayMax} from "@chainsafe/lodestar-utils";
 
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
@@ -24,10 +25,10 @@ export function initiateValidatorExit(
   const validatorExitEpochs = Array.from(state.validators).map((v) => v.exitEpoch);
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
   exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
-  let exitQueueEpoch = Math.max(...exitEpochs);
+  let exitQueueEpoch = bigIntArrayMax(...exitEpochs);
   const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getChurnLimit(config, epochCtx.currentShuffling.activeIndices.length)) {
-    exitQueueEpoch += 1;
+    exitQueueEpoch += 1n;
   }
 
   // set validator exit epoch and withdrawable epoch

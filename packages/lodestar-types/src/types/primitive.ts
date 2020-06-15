@@ -24,8 +24,8 @@ export type Uint256 = bigint;
 
 // Custom types, defined for type hinting and readability
 
-export type Slot = Number64;
-export type Epoch = Number64;
+export type Slot = Uint64;
+export type Epoch = Uint64;
 export type CommitteeIndex = Number64;
 export type ValidatorIndex = Number64;
 export type Gwei = Uint64;

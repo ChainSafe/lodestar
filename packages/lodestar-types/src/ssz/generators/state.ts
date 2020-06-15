@@ -10,7 +10,7 @@ import {IBeaconSSZTypes} from "../interface";
 
 export const EpochAttestations = (ssz: IBeaconSSZTypes, params: IBeaconParams): ListType => new ListType({
   elementType: ssz.PendingAttestation,
-  limit: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
+  limit: params.MAX_ATTESTATIONS * Number(params.SLOTS_PER_EPOCH),
 });
 
 export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): ContainerType => new ContainerType({
@@ -34,7 +34,7 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
     eth1Data: ssz.Eth1Data,
     eth1DataVotes: new ListType({
       elementType: ssz.Eth1Data,
-      limit: params.EPOCHS_PER_ETH1_VOTING_PERIOD * params.SLOTS_PER_EPOCH,
+      limit: Number(params.EPOCHS_PER_ETH1_VOTING_PERIOD * params.SLOTS_PER_EPOCH),
     }),
     eth1DepositIndex: ssz.Number64,
     // Registry
@@ -48,12 +48,12 @@ export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): Contai
     }),
     randaoMixes: new VectorType({
       elementType: ssz.Bytes32,
-      length: params.EPOCHS_PER_HISTORICAL_VECTOR,
+      length: Number(params.EPOCHS_PER_HISTORICAL_VECTOR),
     }),
     // Slashings
     slashings: new VectorType({
       elementType: ssz.Gwei,
-      length: params.EPOCHS_PER_SLASHINGS_VECTOR,
+      length: Number(params.EPOCHS_PER_SLASHINGS_VECTOR),
     }),
     // Attestations
     previousEpochAttestations: ssz.EpochAttestations,

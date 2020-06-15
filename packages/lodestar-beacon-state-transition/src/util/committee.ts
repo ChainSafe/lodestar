@@ -46,7 +46,10 @@ export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconStat
     1,
     Math.min(
       config.params.MAX_COMMITTEES_PER_SLOT,
-      intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE),
+      intDiv(
+        intDiv(activeValidatorIndices.length, Number(config.params.SLOTS_PER_EPOCH)),
+        config.params.TARGET_COMMITTEE_SIZE
+      ),
     ),
   );
 }
@@ -66,7 +69,7 @@ export function getBeaconCommittee(
     config,
     getActiveValidatorIndices(state, epoch),
     getSeed(config, state, epoch, DomainType.BEACON_ATTESTER),
-    (slot % config.params.SLOTS_PER_EPOCH) * committeesPerSlot + index,
-    committeesPerSlot * config.params.SLOTS_PER_EPOCH
+    Number(slot % config.params.SLOTS_PER_EPOCH) * committeesPerSlot + index,
+    committeesPerSlot * Number(config.params.SLOTS_PER_EPOCH)
   );
 }

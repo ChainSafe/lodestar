@@ -5,7 +5,7 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 
 export function processForkChanged(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
-  const nextEpoch = currentEpoch + 1;
+  const nextEpoch = currentEpoch + 1n;
   const currentForkVersion = state.fork.currentVersion;
   const nextFork = config.params.ALL_FORKS && config.params.ALL_FORKS.find(
     (fork) => config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4)));

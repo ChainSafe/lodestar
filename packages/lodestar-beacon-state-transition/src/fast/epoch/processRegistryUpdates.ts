@@ -24,13 +24,13 @@ export function processRegistryUpdates(
     endChurn += 1;
     if (endChurn >= process.churnLimit) {
       endChurn = 0;
-      exitEnd += 1;
+      exitEnd += 1n;
     }
   });
 
   // set new activation eligibilities
   process.indicesToSetActivationEligibility.forEach((index) => {
-    state.validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
+    state.validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1n;
   });
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;

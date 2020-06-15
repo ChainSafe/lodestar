@@ -33,7 +33,7 @@ export interface IEpochShuffling {
 }
 
 export function computeCommitteeCount(config: IBeaconConfig, activeValidatorCount: number): number {
-  const validatorsPerSlot = intDiv(activeValidatorCount, config.params.SLOTS_PER_EPOCH);
+  const validatorsPerSlot = intDiv(activeValidatorCount, Number(config.params.SLOTS_PER_EPOCH));
   let committeesPerSlot = intDiv(validatorsPerSlot, config.params.TARGET_COMMITTEE_SIZE);
   if (config.params.MAX_COMMITTEES_PER_SLOT < committeesPerSlot) {
     committeesPerSlot = config.params.MAX_COMMITTEES_PER_SLOT;
@@ -66,7 +66,7 @@ export function computeEpochShuffling(
   const activeValidatorCount = activeIndices.length;
   const committeesPerSlot = computeCommitteeCount(config, activeValidatorCount);
 
-  const committeeCount = committeesPerSlot * config.params.SLOTS_PER_EPOCH;
+  const committeeCount = committeesPerSlot * Number(config.params.SLOTS_PER_EPOCH);
 
   const sliceCommittee = (slot: number, committeeIndex: number): ValidatorIndex[] => {
     const index = (slot * committeesPerSlot) + committeeIndex;
@@ -78,7 +78,7 @@ export function computeEpochShuffling(
     return shuffling.slice(startOffset, endOffset);
   };
 
-  const committees = Array.from({length: config.params.SLOTS_PER_EPOCH}, (_, slot) => {
+  const committees = Array.from({length: Number(config.params.SLOTS_PER_EPOCH)}, (_, slot) => {
     return Array.from({length: committeesPerSlot}, (_, committeeIndex) => {
       return sliceCommittee(slot, committeeIndex);
     });

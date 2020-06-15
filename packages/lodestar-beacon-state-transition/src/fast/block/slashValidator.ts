@@ -1,4 +1,5 @@
 import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {bigIntMax} from "@chainsafe/lodestar-utils";
 
 import {decreaseBalance, increaseBalance} from "../../util";
 import {EpochContext} from "../util";
@@ -21,8 +22,8 @@ export function slashValidator(
   initiateValidatorExit(epochCtx, state, slashedIndex);
   const validator = state.validators[slashedIndex];
   validator.slashed = true;
-  validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
-  state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effectiveBalance;
+  validator.withdrawableEpoch = bigIntMax(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
+  state.slashings[Number(epoch % EPOCHS_PER_SLASHINGS_VECTOR)] += validator.effectiveBalance;
   decreaseBalance(state, slashedIndex, validator.effectiveBalance / BigInt(MIN_SLASHING_PENALTY_QUOTIENT));
 
   // apply proposer and whistleblower rewards

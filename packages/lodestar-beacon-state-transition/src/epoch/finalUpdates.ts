@@ -8,14 +8,14 @@ import {
   getCurrentEpoch,
   getRandaoMix
 } from "../util";
-import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
+import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
-  const nextEpoch = currentEpoch + 1;
+  const nextEpoch = currentEpoch + 1n;
   // Reset eth1 data votes
-  if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
+  if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0n) {
     state.eth1DataVotes = [];
   }
   // Update effective balances with hysteresis
@@ -34,12 +34,12 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     }
   });
   // Reset slashings
-  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = 0n;
+  state.slashings[Number(nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR)] = 0n;
   // Set randao mix
-  state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] =
+  state.randaoMixes[Number(nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR)] =
     getRandaoMix(config, state, currentEpoch);
   // Set historical root accumulator
-  if (nextEpoch % intDiv(config.params.SLOTS_PER_HISTORICAL_ROOT, config.params.SLOTS_PER_EPOCH) === 0) {
+  if (nextEpoch % BigInt(config.params.SLOTS_PER_HISTORICAL_ROOT) / config.params.SLOTS_PER_EPOCH === 0n) {
     const historicalBatch: HistoricalBatch = {
       blockRoots: state.blockRoots,
       stateRoots: state.stateRoots,

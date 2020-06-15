@@ -17,6 +17,13 @@ export function bigIntMax(a: bigint, b: bigint): bigint {
   return a > b ? a : b;
 }
 
+/**
+ * Return the max number between many big numbers.
+ */
+export function bigIntArrayMax(...bigints: bigint[]): bigint {
+  return bigints.reduce(bigIntMax, bigints[0]);
+}
+
 export function intDiv(dividend: number, divisor: number): number {
   return Math.floor(dividend / divisor);
 }

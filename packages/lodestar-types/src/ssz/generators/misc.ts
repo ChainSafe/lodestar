@@ -97,12 +97,12 @@ export const Eth1Data = (ssz: IBeaconSSZTypes): ContainerType => new ContainerTy
 
 export const HistoricalBlockRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType => new VectorType({
   elementType: new RootType({expandedType: () => ssz.BeaconBlock}),
-  length: params.SLOTS_PER_HISTORICAL_ROOT,
+  length: Number(params.SLOTS_PER_HISTORICAL_ROOT),
 });
 
 export const HistoricalStateRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType => new VectorType({
   elementType: new RootType({expandedType: () => ssz.BeaconState}),
-  length: params.SLOTS_PER_HISTORICAL_ROOT,
+  length:  Number(params.SLOTS_PER_HISTORICAL_ROOT),
 });
 
 export const HistoricalBatch = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({

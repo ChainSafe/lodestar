@@ -27,7 +27,7 @@ import {computeStartSlotAtEpoch} from "./epoch";
 export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): Root {
   assert(slot < state.slot);
   assert(state.slot <= slot + config.params.SLOTS_PER_HISTORICAL_ROOT);
-  return state.blockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT];
+  return state.blockRoots[Number(slot % config.params.SLOTS_PER_HISTORICAL_ROOT)];
 }
 
 /**

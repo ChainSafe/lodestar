@@ -63,11 +63,11 @@ export class AttestationService {
   public start = async (): Promise<void> => {
     const slot = this.provider.getCurrentSlot();
     //trigger getting duties for current epoch
-    this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+    this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1n);
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
+    const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1n, [this.publicKey]);
     if (
       attesterDuties && attesterDuties.length === 1 &&
             this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
@@ -235,7 +235,7 @@ export class AttestationService {
 
   private async isConflictingAttestation(other: AttestationData): Promise<boolean> {
     const potentialAttestationConflicts =
-            await this.db.getAttestations(this.publicKey, {gt: other.target.epoch - 1});
+            await this.db.getAttestations(this.publicKey, {gt: other.target.epoch - 1n});
     return potentialAttestationConflicts.some((attestation => {
       return isSlashableAttestationData(this.config, attestation.data, other);
     }));
@@ -248,7 +248,7 @@ export class AttestationService {
     const unusedAttestations =
             await this.db.getAttestations(
               this.publicKey,
-              {gt: 0, lt: attestation.data.target.epoch}
+              {gt: 0n, lt: attestation.data.target.epoch}
             );
     await this.db.deleteAttestations(this.publicKey, unusedAttestations);
   }

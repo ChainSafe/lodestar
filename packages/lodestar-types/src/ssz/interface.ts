@@ -20,8 +20,8 @@ export interface IBeaconSSZTypes {
   Uint64: BigIntUintType;
   Uint128: BigIntUintType;
   Uint256: BigIntUintType;
-  Slot: NumberUintType;
-  Epoch: NumberUintType;
+  Slot: BigIntUintType;
+  Epoch: BigIntUintType;
   CommitteeIndex: NumberUintType;
   ValidatorIndex: NumberUintType;
   Gwei: BigIntUintType;

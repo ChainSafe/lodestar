@@ -7,6 +7,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls from "@chainsafe/bls";
+import {bigIntMax} from "@chainsafe/lodestar-utils";
 
 import {FAR_FUTURE_EPOCH, DomainType} from "../constants";
 import {computeActivationExitEpoch, getCurrentEpoch, computeEpochAtSlot} from "./epoch";
@@ -34,13 +35,13 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
   let exitQueueEpoch = computeActivationExitEpoch(config, getCurrentEpoch(config, state));
   state.validators.forEach((v) => {
     if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
-      exitQueueEpoch = Math.max(v.exitEpoch, exitQueueEpoch);
+      exitQueueEpoch = bigIntMax(v.exitEpoch, exitQueueEpoch);
     }
   });
   const exitQueueChurn = Array.from(state.validators)
     .filter((v: Validator) => v.exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getValidatorChurnLimit(config, state)) {
-    exitQueueEpoch += 1;
+    exitQueueEpoch += 1n;
   }
 
   // Set validator exit epoch and withdrawable epoch
@@ -63,13 +64,13 @@ export function slashValidator(
 
   initiateValidatorExit(config, state, slashedIndex);
   state.validators[slashedIndex].slashed = true;
-  state.validators[slashedIndex].withdrawableEpoch = Math.max(
+  state.validators[slashedIndex].withdrawableEpoch = bigIntMax(
     state.validators[slashedIndex].withdrawableEpoch,
     currentEpoch + config.params.EPOCHS_PER_SLASHINGS_VECTOR
   );
 
   const slashedBalance = state.validators[slashedIndex].effectiveBalance;
-  state.slashings[currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] += slashedBalance;
+  state.slashings[Number(currentEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR)] += slashedBalance;
   decreaseBalance(
     state,
     slashedIndex,

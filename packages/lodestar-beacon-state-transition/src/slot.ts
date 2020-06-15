@@ -20,7 +20,7 @@ export function processSlots(
   while (state.slot < slot){
     processSlot(config, state);
     // Process epoch on the first slot of the next epoch
-    if ((state.slot + 1) % config.params.SLOTS_PER_EPOCH === 0){
+    if ((state.slot + 1n) % config.params.SLOTS_PER_EPOCH === 0n){
       processEpoch(config, state);
     }
     state.slot++;
@@ -30,7 +30,7 @@ export function processSlots(
 function processSlot(config: IBeaconConfig, state: BeaconState): void {
   // Cache state root
   const previousStateRoot = config.types.BeaconState.hashTreeRoot(state);
-  state.stateRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousStateRoot;
+  state.stateRoots[Number(state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT)] = previousStateRoot;
 
   // Cache latest block header state root
   if (config.types.Root.equals(state.latestBlockHeader.stateRoot, ZERO_HASH)) {
@@ -39,5 +39,5 @@ function processSlot(config: IBeaconConfig, state: BeaconState): void {
 
   // Cache block root
   const previousBlockRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
-  state.blockRoots[state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT] = previousBlockRoot;
+  state.blockRoots[Number(state.slot % config.params.SLOTS_PER_HISTORICAL_ROOT)] = previousBlockRoot;
 }

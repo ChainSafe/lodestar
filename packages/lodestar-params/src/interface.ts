@@ -38,21 +38,21 @@ export interface IBeaconParams {
   // Time parameters
   MIN_GENESIS_DELAY: number;
   SECONDS_PER_SLOT: number;
-  MIN_ATTESTATION_INCLUSION_DELAY: number;
-  SLOTS_PER_EPOCH: number;
-  MIN_SEED_LOOKAHEAD: number;
-  MAX_SEED_LOOKAHEAD: number;
-  EPOCHS_PER_ETH1_VOTING_PERIOD: number;
+  MIN_ATTESTATION_INCLUSION_DELAY: bigint;
+  SLOTS_PER_EPOCH: bigint;
+  MIN_SEED_LOOKAHEAD: bigint;
+  MAX_SEED_LOOKAHEAD: bigint;
+  EPOCHS_PER_ETH1_VOTING_PERIOD: bigint;
   ETH1_FOLLOW_DISTANCE: number;
-  SLOTS_PER_HISTORICAL_ROOT: number;
-  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
-  PERSISTENT_COMMITTEE_PERIOD: number;
+  SLOTS_PER_HISTORICAL_ROOT: bigint;
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: bigint;
+  PERSISTENT_COMMITTEE_PERIOD: bigint;
 
-  MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
+  MIN_EPOCHS_TO_INACTIVITY_PENALTY: bigint;
 
   // State list lengths
-  EPOCHS_PER_HISTORICAL_VECTOR: number;
-  EPOCHS_PER_SLASHINGS_VECTOR: number;
+  EPOCHS_PER_HISTORICAL_VECTOR: bigint;
+  EPOCHS_PER_SLASHINGS_VECTOR: bigint;
   HISTORICAL_ROOTS_LIMIT: number;
   VALIDATOR_REGISTRY_LIMIT: number;
 
@@ -81,6 +81,6 @@ interface IFork {
   // 4 bytes
   currentVersion: number;
   // Fork epoch number
-  epoch: number;
+  epoch: bigint;
 }
 

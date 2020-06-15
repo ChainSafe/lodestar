@@ -57,7 +57,7 @@ export function computeShuffledIndex(
  * Return the randao mix at a recent [[epoch]].
  */
 export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: Epoch): Bytes32 {
-  return state.randaoMixes[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR];
+  return state.randaoMixes[Number(epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR)];
 }
 
 /**
@@ -67,7 +67,7 @@ export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch,
   const mix = getRandaoMix(
     config,
     state,
-    epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
+    epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1n
   );
 
   return hash(Buffer.concat([

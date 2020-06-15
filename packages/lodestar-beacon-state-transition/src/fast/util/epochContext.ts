@@ -35,8 +35,8 @@ export class EpochContext {
   public loadState(state: BeaconState): void {
     this.syncPubkeys(state);
     const currentEpoch = computeEpochAtSlot(this.config, state.slot);
-    const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
-    const nextEpoch = currentEpoch + 1;
+    const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1n;
+    const nextEpoch = currentEpoch + 1n;
 
     // TODO use readonly iteration here
     const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
@@ -89,7 +89,7 @@ export class EpochContext {
   public rotateEpochs(state: BeaconState): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
-    const nextEpoch = this.currentShuffling.epoch + 1;
+    const nextEpoch = this.currentShuffling.epoch + 1n;
     // TODO use readonly iteration here
     const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
       i, v.activationEpoch, v.exitEpoch,
@@ -115,7 +115,7 @@ export class EpochContext {
     if (epoch !== this.currentShuffling.epoch) {
       throw new Error("beacon proposer index out of range");
     }
-    return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
+    return this.proposers[Number(slot % this.config.params.SLOTS_PER_EPOCH)];
   }
 
   private _resetProposers(state: BeaconState): void {
@@ -138,11 +138,11 @@ export class EpochContext {
     const epoch = computeEpochAtSlot(this.config, slot);
     const epochSlot = slot % this.config.params.SLOTS_PER_EPOCH;
     if (epoch === this.previousShuffling.epoch) {
-      return this.previousShuffling.committees[epochSlot];
+      return this.previousShuffling.committees[Number(epochSlot)];
     } else if (epoch === this.currentShuffling.epoch) {
-      return this.currentShuffling.committees[epochSlot];
+      return this.currentShuffling.committees[Number(epochSlot)];
     } else if (epoch === this.nextShuffling.epoch) {
-      return this.nextShuffling.committees[epochSlot];
+      return this.nextShuffling.committees[Number(epochSlot)];
     } else {
       throw new Error(`crosslink committee retrieval: out of range epoch: ${epoch}`);
     }

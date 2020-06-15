@@ -8,9 +8,9 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
-import {bigIntMax} from "@chainsafe/lodestar-utils";
 
 
 /**

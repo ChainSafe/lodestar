@@ -32,7 +32,7 @@ export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState):
   const eligibleValidatorIndices = Array.from(state.validators)
     .reduce((indices: ValidatorIndex[], v, index) => {
       if (isActiveValidator(v, previousEpoch)
-        || (v.slashed && previousEpoch + 1 < v.withdrawableEpoch)) {
+        || (v.slashed && previousEpoch + 1n < v.withdrawableEpoch)) {
         indices.push(index);
       }
       return indices;

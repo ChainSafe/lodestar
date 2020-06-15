@@ -32,7 +32,7 @@ export function processRandao(
     }
   }
   // mix in RANDAO reveal
-  state.randaoMixes[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
+  state.randaoMixes[Number(epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR)] = xor(
     Buffer.from(getRandaoMix(config, state, epoch) as Uint8Array),
     Buffer.from(hash(randaoReveal)),
   );

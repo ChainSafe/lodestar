@@ -15,7 +15,7 @@ import {GENESIS_EPOCH} from "../constants";
  * Return the epoch number at the given slot.
  */
 export function computeEpochAtSlot(config: IBeaconConfig, slot: Slot): Epoch {
-  return Math.floor(slot / config.params.SLOTS_PER_EPOCH);
+  return slot / config.params.SLOTS_PER_EPOCH;
 }
 
 /**
@@ -29,7 +29,7 @@ export function computeStartSlotAtEpoch(config: IBeaconConfig, epoch: Epoch): Sl
  * Return the epoch at which an activation or exit triggered in ``epoch`` takes effect.
  */
 export function computeActivationExitEpoch(config: IBeaconConfig, epoch: Epoch): Epoch {
-  return epoch + 1 + config.params.MAX_SEED_LOOKAHEAD;
+  return epoch + 1n + config.params.MAX_SEED_LOOKAHEAD;
 }
 
 /**
@@ -47,5 +47,5 @@ export function getPreviousEpoch(config: IBeaconConfig, state: BeaconState): Epo
   if (currentEpoch === GENESIS_EPOCH) {
     return GENESIS_EPOCH;
   }
-  return currentEpoch - 1;
+  return currentEpoch - 1n;
 }

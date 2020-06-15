@@ -22,7 +22,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
   const ejectionBalance = config.params.EJECTION_BALANCE;
   state.validators.forEach((validator, index) => {
     if (isEligibleForActivationQueue(config, validator)) {
-      validator.activationEligibilityEpoch = currentEpoch + 1;
+      validator.activationEligibilityEpoch = currentEpoch + 1n;
     }
     if (isActiveValidator(validator, currentEpoch) &&
       validator.effectiveBalance <= ejectionBalance) {
@@ -39,7 +39,7 @@ export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState
     .map((val: Validator, index: number) => {
       return {val, index};
     })
-    .sort((a, b) => (a.val.activationEligibilityEpoch - b.val.activationEligibilityEpoch) || a.index - b.index)
+    .sort((a, b) => Number(a.val.activationEligibilityEpoch - b.val.activationEligibilityEpoch) || a.index - b.index)
     .map((obj) => obj.val);
   // Dequeued validators for activation up to churn limit
   activationQueue.slice(0, getValidatorChurnLimit(config, state)).forEach((validator) => {
