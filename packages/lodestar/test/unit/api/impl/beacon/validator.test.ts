@@ -5,6 +5,7 @@ import {BeaconApi, IBeaconApi} from "../../../../../src/api/impl/beacon";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 
 describe("get validator details api", function () {
@@ -26,6 +27,8 @@ describe("get validator details api", function () {
   });
 
   it("should get validator details", async function () {
+    chainStub.epochCtx = new EpochContext(config);
+    chainStub.epochCtx.pubkey2index.set(Buffer.alloc(48, 2), 1);
     chainStub.getHeadState.resolves(
       generateState({
         validators: [
@@ -45,6 +48,7 @@ describe("get validator details api", function () {
   });
 
   it("validators not found", async function () {
+    chainStub.epochCtx = new EpochContext(config);
     chainStub.getHeadState.resolves(
       generateState({
         validators: [

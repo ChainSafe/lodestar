@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BLSPubkey, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -56,11 +56,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
-  public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
-    const state = await this.stateArchive.lastValue();
-    //TODO: cache this (hashmap)
-    return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
-  }
 
   /**
    * Remove stored operations based on a newly processed block

@@ -16,6 +16,7 @@ import {
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -40,6 +41,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   chainId: Uint16;
   networkId: Uint64;
   currentForkDigest: ForkDigest;
+  epochCtx: EpochContext;
   /**
    * Start beacon chain processing
    */
