@@ -83,13 +83,18 @@ export default class BlockProposingService {
       epoch
     );
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
-    const block = await this.provider.validator.produceBlock(
-      slot,
-      this.publicKey,
-      this.privateKey.signMessage(
-        randaoSigningRoot
-      ).toBytesCompressed()
-    );
+    let block;
+    try {
+      block = await this.provider.validator.produceBlock(
+        slot,
+        this.publicKey,
+        this.privateKey.signMessage(
+          randaoSigningRoot
+        ).toBytesCompressed()
+      );
+    } catch (e) {
+      this.logger.error(`Failed to produce block for slot ${slot}`, e);
+    }
     if(!block) {
       return null;
     }
@@ -106,10 +111,14 @@ export default class BlockProposingService {
       signature: this.privateKey.signMessage(blockSigningRoot).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);
-    await this.provider.validator.publishBlock(signedBlock);
-    this.logger.info(
-      `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
-    );
+    try {
+      await this.provider.validator.publishBlock(signedBlock);
+      this.logger.info(
+        `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
+      );
+    } catch (e) {
+      this.logger.error(`Failed to publish block for slot ${slot}`, e);
+    }
     return signedBlock;
   }
 

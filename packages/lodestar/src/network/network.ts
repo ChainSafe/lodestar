@@ -124,9 +124,9 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     if (peerIds.length < 3) {
       // If an insufficient number of current peers are subscribed to the topic,
       // the validator must discover new peers on this topic
-      this.logger.info(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
+      this.logger.verbose(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
       const count = await this.connectToNewPeersBySubnet(parseInt(subnet), peerIds);
-      this.logger.info(`Connected to ${count} new peers for subnet ${subnet}`);
+      this.logger.verbose(`Connected to ${count} new peers for subnet ${subnet}`);
     }
   }
 

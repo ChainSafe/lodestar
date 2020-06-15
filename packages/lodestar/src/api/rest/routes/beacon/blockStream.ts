@@ -13,7 +13,7 @@ export const registerBlockStreamEndpoint: LodestarRestApiEndpoint = (server, {ap
         for await (const block of source) {
           const msg: EventMessage = {
             id: String(block.message.slot),
-            data: JSON.stringify(config.types.SignedBeaconBlock.toJson(block))
+            data: JSON.stringify(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}))
           };
           yield msg;
         }

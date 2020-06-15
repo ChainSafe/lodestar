@@ -55,7 +55,7 @@ export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
         .type("application/json")
         .send(responseValue.map((value) => {
           return config.types.AttesterDuty.toJson(
-            value
+            value, {case: "snake"}
           );
         }));
     }

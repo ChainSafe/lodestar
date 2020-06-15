@@ -23,7 +23,6 @@ export const startValidators: Options = {
   requiresArg: false
 };
 
-
 export const resetChainDir: Options = {
   alias: [
     "dev.reset",

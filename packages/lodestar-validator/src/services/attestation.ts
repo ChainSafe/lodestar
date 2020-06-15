@@ -83,12 +83,16 @@ export class AttestationService {
           isAggregator
         });
       if (isAggregator) {
-        await this.provider.validator.subscribeCommitteeSubnet(
-          duty.attestationSlot,
-          slotSignature,
-          duty.committeeIndex,
-          this.publicKey
-        );
+        try {
+          await this.provider.validator.subscribeCommitteeSubnet(
+            duty.attestationSlot,
+            slotSignature,
+            duty.committeeIndex,
+            this.publicKey
+          );
+        } catch (e) {
+          this.logger.error("Failed to subscribe to committee subnet", e);
+        }
       }
     }
   };
@@ -130,7 +134,10 @@ export class AttestationService {
     await new Promise((resolve) => {
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
-          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data));
+          const signedBlock: SignedBeaconBlock =
+              this.config.types.SignedBeaconBlock.fromJson(
+                JSON.parse(evt.data), {case: "snake"}
+              );
           if(signedBlock.message.slot === slot) {
             resolve();
           }
@@ -198,13 +205,18 @@ export class AttestationService {
     committeeIndex: CommitteeIndex,
     fork: Fork,
     genesisValidatorsRoot: Root): Promise<Attestation> {
-    const attestation = await this.provider.validator.produceAttestation(
-      this.publicKey,
-      committeeIndex,
-      slot
-    );
-    if (!attestation) {
-      this.logger.warn(`Failed to obtain attestation from beacon node at slot ${slot} and committee ${committeeIndex}`);
+    let attestation;
+    try {
+      attestation = await this.provider.validator.produceAttestation(
+        this.publicKey,
+        committeeIndex,
+        slot
+      );
+    } catch (e) {
+      this.logger.error(
+        `Failed to obtain attestation from beacon node at slot ${slot} and committee ${committeeIndex}`,
+        e
+      );
       return null;
     }
     if (await this.isConflictingAttestation(attestation.data)) {

@@ -14,16 +14,19 @@ import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {toHexString} from "@chainsafe/ssz";
+import {Json, toHexString} from "@chainsafe/ssz";
 
 export class RestBeaconApi implements IBeaconApi {
 
   private readonly client: HttpClient;
 
+  private readonly logger: ILogger;
+
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
+    this.client = new HttpClient({urlPrefix: `${restUrl}/node`}, {logger});
+    this.logger = logger;
     this.config = config;
   }
 
@@ -39,11 +42,16 @@ export class RestBeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
-    return this.client.get<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}>("/fork");
+    return this.config.types.ForkResponse.fromJson(await this.client.get<Json>("/fork"), {case: "snake"});
   }
 
   public async getGenesisTime(): Promise<Number64> {
-    return this.client.get<Number64>("/genesis_time");
+    try {
+      return await this.client.get<Number64>("/genesis_time");
+    } catch (e) {
+      this.logger.error("Failed to obtain genesis time", e);
+      return 0;
+    }
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {

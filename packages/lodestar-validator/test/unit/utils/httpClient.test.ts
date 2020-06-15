@@ -40,7 +40,7 @@ describe("httpClient test", () => {
     try {
       await httpClient.get<IUser>("/wrong_url");
     } catch(e) {
-      assert.equal(e.message, "404");
+      assert.equal(e.message, "Endpoint not found");
     }
   });
 
@@ -51,7 +51,7 @@ describe("httpClient test", () => {
     try {
       await httpClient.get<IUser>("/users/!");
     } catch(e) {
-      assert.equal(e.message, "500");
+      assert.equal(e.message, "Request failed with response status 500");
     }
   });
 });

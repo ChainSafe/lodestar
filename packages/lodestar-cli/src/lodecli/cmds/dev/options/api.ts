@@ -10,7 +10,7 @@ export const apiEnabled: Options = {
     "api.rest.enabled",
   ],
   type: "boolean",
-  default: false,
+  default: true,
   group: "api",
 };
 
