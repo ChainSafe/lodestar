@@ -4,7 +4,6 @@
 
 import fs from "fs";
 import {CommanderStatic} from "commander";
-import {JsonRpcProvider} from "ethers/providers";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ICliCommand} from "./interface";
@@ -12,7 +11,7 @@ import defaults from "@chainsafe/lodestar/lib/eth1/options";
 import {ILogger, LogLevels, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Eth1Wallet} from "@chainsafe/lodestar/lib/eth1";
 import {CliError} from "../error";
-import * as ethers from "ethers/ethers";
+import {ethers} from "ethers";
 import {initBLS, PrivateKey} from "@chainsafe/bls";
 import {
   deriveKeyFromMnemonic,
@@ -94,7 +93,7 @@ export class DepositCommand implements ICliCommand {
 
   public async action(options: IDepositCommandOptions, logger: ILogger): Promise<void> {
     await initBLS();
-    const provider = new JsonRpcProvider(options.node);
+    const provider = new ethers.providers.JsonRpcProvider(options.node);
     try {
       //check if we can connect to node
       await provider.getBlockNumber();
@@ -157,7 +156,7 @@ export class DepositCommand implements ICliCommand {
    * @param provider
    * @param n number of wallets to retrieve
    */
-  private eth1FromMnemonic(mnemonic: string, provider: JsonRpcProvider, n: number): ethers.Wallet[] {
+  private eth1FromMnemonic(mnemonic: string, provider: ethers.providers.JsonRpcProvider, n: number): ethers.Wallet[] {
     const masterNode = ethers.utils.HDNode.fromMnemonic(mnemonic);
     const base = masterNode.derivePath("m/44'/60'/0'/0");
 
@@ -189,7 +188,7 @@ export class DepositCommand implements ICliCommand {
    * @param path Path to the json file
    * @param provider 
    */
-  private eth1FromJsonKeyFile(path: string, provider: JsonRpcProvider): ethers.Wallet[] {
+  private eth1FromJsonKeyFile(path: string, provider: ethers.providers.JsonRpcProvider): ethers.Wallet[] {
     const jsonString = fs.readFileSync(path, "utf8");
     const {keys} = JSON.parse(jsonString);
     return keys.map((key: IJsonKeyFile) => { return new ethers.Wallet(key.privkey, provider); });

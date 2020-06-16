@@ -7,8 +7,10 @@
 import {EventEmitter} from "events";
 
 import {Eth1Data, Number64, DepositData} from "@chainsafe/lodestar-types";
-import {Block} from "ethers/providers";
+import {ethers} from "ethers";
 import StrictEventEmitter from "strict-event-emitter-types";
+
+export type IEthersAbi = Array<string | ethers.utils.EventFragment | ethers.utils.ParamType>;
 
 export interface IDepositEvent extends DepositData {
   blockNumber: number;
@@ -33,7 +35,7 @@ export interface IEth1Notifier extends Eth1EventEmitter {
    * Returns block by block hash or number
    * @param blockTag
    */
-  getBlock(blockTag: string | number): Promise<Block>;
+  getBlock(blockTag: string | number): Promise<ethers.providers.Block>;
 
   /**
    * Return deposit events at a block

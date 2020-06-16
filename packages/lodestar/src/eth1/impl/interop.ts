@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
-import {Block} from "ethers/providers";
+import {ethers} from "ethers";
 
 import {hash} from "@chainsafe/ssz";
 import {Eth1Data, DepositData} from "@chainsafe/lodestar-types";
@@ -28,7 +28,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
     return [];
   }
-  public async getBlock(blockTag: string | number): Promise<Block> {
-    return null as unknown as Block;
+  public async getBlock(blockTag: string | number): Promise<ethers.providers.Block> {
+    return null as unknown as ethers.providers.Block;
   }
 }

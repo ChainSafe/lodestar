@@ -3,7 +3,6 @@ import {beforeEach, describe, it} from "mocha";
 import {getEth1Vote} from "../../../../../src/chain/factory/block/eth1Vote";
 import {generateState} from "../../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Block} from "ethers/providers";
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {StubbedBeaconDb} from "../../../../utils/stub";
