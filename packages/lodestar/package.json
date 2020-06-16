@@ -83,7 +83,6 @@
     "pouchdb-adapter-memory": "^7.0.0",
     "pouchdb-core": "^7.0.0",
     "prom-client": "^11.5.3",
-    "qs": "^6.7.0",
     "randombytes": "^2.1.0",
     "snappyjs": "^0.6.0",
     "stream-to-it": "^0.2.0",

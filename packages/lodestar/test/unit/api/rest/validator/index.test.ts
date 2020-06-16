@@ -69,7 +69,7 @@ describe("Test validator rest API", function () {
       .get(
         "/validator/duties/2/attester",
       )
-      .query({"validator_pubkeys[]": [toHexString(publicKey1)]})
+      .query({"validator_pubkeys": [toHexString(publicKey1)]})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);

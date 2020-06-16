@@ -33,7 +33,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
           type: "array",
           maxItems: 5,
           items: {
-            types: "string"
+            type: "string"
           }
         }
       }
