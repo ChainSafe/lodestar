@@ -41,7 +41,6 @@ export interface IBeaconChain extends ChainEventEmitter {
   chainId: Uint16;
   networkId: Uint64;
   currentForkDigest: ForkDigest;
-  epochCtx: EpochContext;
   /**
    * Start beacon chain processing
    */
@@ -62,6 +61,8 @@ export interface IBeaconChain extends ChainEventEmitter {
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
+
+  getEpochContext(): EpochContext;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
 
