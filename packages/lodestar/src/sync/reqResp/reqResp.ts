@@ -265,21 +265,15 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     slot = (slot === -1)? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
-    const headRoot = await chain.forkChoice.head().blockRoot;
     const slots = [];
     while (slot < upperSlot) {
       slots.push(slot);
       slot += request.step;
     }
-    const blocks = await chain.getUnfinalizedBlocksAtSlots(slots);
+    const blocks = await chain.getUnfinalizedBlocksAtSlots(slots) || [];
     for (const block of blocks) {
       if(block) {
-        // make sure block is on the same chain to head
-        const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-        const ancestorRoot = chain.forkChoice.getAncestor(headRoot, block.message.slot);
-        if (ancestorRoot && config.types.Root.equals(blockRoot, ancestorRoot)) {
-          yield block;
-        }
+        yield block;
       }
     }
   };

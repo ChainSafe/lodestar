@@ -189,7 +189,7 @@ describe("sync req resp", function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
     const body: BeaconBlocksByRangeRequest = {
       startSlot: 2,
-      count: 5,
+      count: 4,
       step: 2,
     };
     dbStub.blockArchive.valuesStream.returns(async function* () {
@@ -201,14 +201,8 @@ describe("sync req resp", function () {
     }());
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
-    const block10 = generateEmptySignedBlock();
-    block10.message.slot = 10;
     // block 6 does not exist
-    chainStub.getUnfinalizedBlocksAtSlots.resolves([null, block8, block10]);
-    // block8 exists but not on same chain to head
-    forkChoiceStub.getAncestor.onFirstCall().returns(null);
-    // block10 is good
-    forkChoiceStub.getAncestor.onSecondCall().returns(config.types.BeaconBlock.hashTreeRoot(block10.message));
+    chainStub.getUnfinalizedBlocksAtSlots.resolves([null, block8]);
     let blockStream: AsyncIterable<ResponseBody>;
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;
@@ -218,7 +212,7 @@ describe("sync req resp", function () {
     for await(const body of blockStream) {
       slots.push((body as SignedBeaconBlock).message.slot);
     }
-    // count is 5 but it returns only 3 blocks because block 6 does not exist and block 8 is not on same chain to head
-    expect(slots).to.be.deep.equal([2,4,10]);
+    // count is 4 but it returns only 3 blocks because block 6 does not exist
+    expect(slots).to.be.deep.equal([2,4,8]);
   });
 });

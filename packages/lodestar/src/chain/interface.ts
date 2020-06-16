@@ -66,7 +66,7 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<(SignedBeaconBlock|null)[]>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null>;
 
   /**
    * Add attestation to the fork-choice rule
