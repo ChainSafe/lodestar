@@ -4,8 +4,7 @@ import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IQuery extends DefaultQuery {
   epoch: number;
-  // eslint-disable-next-line camelcase
-  committee_index: number;
+  committeeIndex: number;
 }
 
 
@@ -13,13 +12,13 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["epoch", "committee_index"],
+      required: ["epoch", "committeeIndex"],
       properties: {
         epoch: {
           type: "integer",
           minimum: 0
         },
-        "committee_index": {
+        committeeIndex: {
           type: "integer",
           minimum: 0
         }
@@ -35,7 +34,7 @@ export const registerGetWireAttestationEndpoint: LodestarRestApiEndpoint = (fast
     async (request, reply) => {
       const responseValue = await api.validator.getWireAttestations(
         request.query.epoch,
-        request.query.committee_index
+        request.query.committeeIndex
       );
       reply
         .code(200)

@@ -7,17 +7,17 @@ const opts: fastify.RouteShorthandOptions = {
   schema: {
     body: {
       type: "object",
-      requiredKeys: ["committee_index", "slot", "slot_signature", "aggregator_pubkey"],
-      "attestation_committee_index": {
+      requiredKeys: ["attestationCommitteeIndex", "slot", "slotSignature", "aggregatorPubkey"],
+      attestationCommitteeIndex: {
         type: "string"
       },
-      "slot": {
+      slot: {
         type: "string"
       },
-      "slot_signature": {
+      slotSignature: {
         type: "string"
       },
-      "aggregator_pubkey": {
+      aggregatorPubkey: {
         type: "string"
       },
     },
@@ -25,10 +25,10 @@ const opts: fastify.RouteShorthandOptions = {
 };
 
 interface IBody extends DefaultBody {
-  attestation_committee_index: string;
+  attestationCommitteeIndex: string;
   slot: string;
-  slot_signature: string;
-  aggregator_pubkey: string;
+  slotSignature: string;
+  aggregatorPubkey: string;
 }
 
 export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fastify, {api}): void => {
@@ -38,9 +38,9 @@ export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fast
     async (request, reply) => {
       await api.validator.subscribeCommitteeSubnet(
         Number(request.body.slot),
-        fromHexString(request.body.slot_signature),
-        Number(request.body.attestation_committee_index),
-        fromHexString(request.body.aggregator_pubkey)
+        fromHexString(request.body.slotSignature),
+        Number(request.body.attestationCommitteeIndex),
+        fromHexString(request.body.aggregatorPubkey)
       );
       reply
         .code(200)

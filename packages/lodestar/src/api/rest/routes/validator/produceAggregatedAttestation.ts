@@ -4,9 +4,8 @@ import {LodestarRestApiEndpoint} from "../../interface";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
 interface IQuery extends DefaultQuery {
-  // eslint-disable-next-line camelcase
-  attestation_data: string;
-  aggregator_pubkey: string;
+  attestationData: string;
+  aggregatorPubkey: string;
 }
 
 
@@ -14,12 +13,12 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["attestation_data", "aggregator_pubkey"],
+      required: ["attestationData", "aggregatorPubkey"],
       properties: {
-        "attestation_data": {
+        attestationData: {
           type: "string"
         },
-        "aggregator_pubkey": {
+        aggregatorPubkey: {
           type: "string"
         }
       }
@@ -32,10 +31,10 @@ export const registerAggregateAndProofProductionEndpoint: LodestarRestApiEndpoin
     "/aggregate_and_proof",
     opts,
     async (request, reply) => {
-      const serialized = fromHex(request.query.attestation_data);
+      const serialized = fromHex(request.query.attestationData);
       const aggregate = await api.validator.produceAggregateAndProof(
         config.types.AttestationData.deserialize(serialized),
-        config.types.BLSPubkey.fromJson(request.query.aggregator_pubkey, {case: "snake"})
+        config.types.BLSPubkey.fromJson(request.query.aggregatorPubkey, {case: "snake"})
       );
       reply
         .code(200)

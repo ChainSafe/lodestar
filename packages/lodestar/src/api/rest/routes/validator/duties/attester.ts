@@ -8,8 +8,7 @@ interface IParams extends DefaultParams {
 }
 
 interface IQuery extends DefaultQuery {
-  // eslint-disable-next-line camelcase
-  validator_pubkeys: string[];
+  validatorPubkeys: string[];
 }
 
 
@@ -27,9 +26,9 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
     },
     querystring: {
       type: "object",
-      required: ["validator_pubkeys"],
+      required: ["validatorPubkeys"],
       properties: {
-        "validator_pubkeys": {
+        validatorPubkeys: {
           type: "array",
           maxItems: 5,
           items: {
@@ -48,7 +47,7 @@ export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
     async (request, reply) => {
       const responseValue = await api.validator.getAttesterDuties(
         request.params.epoch,
-        request.query.validator_pubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
+        request.query.validatorPubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
       );
       reply
         .code(200)

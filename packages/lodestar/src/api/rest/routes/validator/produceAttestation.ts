@@ -5,10 +5,9 @@ import {fromHexString} from "@chainsafe/ssz";
 import {LodestarRestApiEndpoint} from "../../interface";
 
 interface IQuery extends DefaultQuery {
-  validator_pubkey: string;
-  poc_bit: number;
+  validatorPubkey: string;
   slot: number;
-  attestation_committee_index: number;
+  attestationCommitteeIndex: number;
 }
 
 
@@ -16,12 +15,12 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["validator_pubkey", "slot", "attestation_committee_index"],
+      required: ["validatorPubkey", "slot", "attestationCommitteeIndex"],
       properties: {
-        "validator_pubkey": {
+        validatorPubkey: {
           type: "string"
         },
-        "attestation_committee_index": {
+        attestationCommitteeIndex: {
           type: "integer",
           minimum: 0
         },
@@ -40,8 +39,8 @@ export const registerAttestationProductionEndpoint: LodestarRestApiEndpoint = (f
     opts,
     async (request, reply) => {
       const responseValue = await api.validator.produceAttestation(
-        fromHexString(request.query.validator_pubkey),
-        request.query.attestation_committee_index,
+        fromHexString(request.query.validatorPubkey),
+        request.query.attestationCommitteeIndex,
         request.query.slot
       );
       reply

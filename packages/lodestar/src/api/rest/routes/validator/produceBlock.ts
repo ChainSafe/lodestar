@@ -5,10 +5,8 @@ import {fromHex} from "@chainsafe/lodestar-utils";
 
 interface IQuery extends DefaultQuery {
   slot: number;
-  // eslint-disable-next-line camelcase
-  proposer_pubkey: string;
-  // eslint-disable-next-line camelcase
-  randao_reveal: string;
+  proposerPubkey: string;
+  randaoReveal: string;
 }
 
 
@@ -16,16 +14,16 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
   schema: {
     querystring: {
       type: "object",
-      required: ["slot", "proposer_pubkey", "randao_reveal"],
+      required: ["slot", "proposerPubkey", "randaoReveal"],
       properties: {
         slot: {
           type: "integer",
           minimum: 0
         },
-        "proposer_pubkey": {
+        proposerPubkey: {
           type: "string",
         },
-        "randao_reveal": {
+        randaoReveal: {
           type: "string"
         }
       }
@@ -40,8 +38,8 @@ export const registerBlockProductionEndpoint: LodestarRestApiEndpoint = (fastify
     async (request, reply) => {
       const block = await api.validator.produceBlock(
         request.query.slot,
-        fromHex(request.query.proposer_pubkey),
-        fromHex(request.query.randao_reveal)
+        fromHex(request.query.proposerPubkey),
+        fromHex(request.query.randaoReveal)
       );
       reply
         .code(200)

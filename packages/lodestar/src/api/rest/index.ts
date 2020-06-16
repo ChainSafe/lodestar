@@ -2,6 +2,7 @@ import * as fastify from "fastify";
 import {FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import {IService} from "../../node";
+import {camelcase} from "../../util/camelcase"
 import {IRestApiOptions} from "./options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
@@ -70,6 +71,16 @@ export class RestApi implements IService {
       // applySyncingMiddleware(server, "/validator/*", modules);
       server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
     }
+
+    // Make querystring keys also available in camelCase
+    server.addHook("preValidation", (request, reply, done) => {
+      if (typeof request.query === "object") {
+        for (const key in request.query) {
+          request.query[camelcase(key)] = request.query[key];
+        }
+      }
+      done();
+    });
 
     return server;
   }
