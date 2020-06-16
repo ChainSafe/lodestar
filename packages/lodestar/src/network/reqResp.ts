@@ -33,7 +33,7 @@ import PeerInfo from "peer-info";
 import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
-import {IResponseChunk} from "./encoders/interface";
+import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IReputationStore} from "../sync/IReputation";
 
 interface IReqEventEmitterClass {
@@ -166,8 +166,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private storePeerEncodingPreference(
     peerId: PeerId, method: Method, encoding: ReqRespEncoding
-  ): (source: AsyncIterable<RequestBody>) => AsyncGenerator<RequestBody> {
-    return (source: AsyncIterable<RequestBody>) => {
+  ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
+    return (source) => {
       const peerReputations = this.peerReputations;
       return (async function*() {
         if (method === Method.Status) {
@@ -180,12 +180,16 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   private handleRpcRequest(
     peerId: PeerId, method: Method
-  ): ((source: AsyncIterable<RequestBody>) => AsyncGenerator<IResponseChunk>) {
+  ): ((source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
     return (source) => {
       return (async function * () {
         for await (const request of source) {
-          yield* getResponse(peerId, method, request);
+          if (!request.isValid) {
+            yield {status: RpcResponseStatus.ERR_INVALID_REQ};
+          } else {
+            yield* getResponse(peerId, method, request.body);
+          }
           return;
         }
         yield* getResponse(peerId, method);

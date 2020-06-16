@@ -9,16 +9,18 @@ import {expect} from "chai";
 import {createStatus} from "./utils";
 import {IResponseChunk} from "../../../../src/network/encoders/interface";
 import {generateEmptySignedBlock} from "../../../utils/block";
-import {ResponseBody, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
+import {encode} from "varint";
+import {fail} from "assert";
 
 describe("response decoders", function () {
 
   let loggerStub: SinonStubbedInstance<ILogger>;
-    
+
   beforeEach(function () {
     loggerStub = sinon.createStubInstance(WinstonLogger);
   });
-    
+
   it("should work - no response - ssz", async function () {
     const responses = await pipe(
       [],
@@ -182,7 +184,79 @@ describe("response decoders", function () {
     ) as ResponseBody[];
     expect(responses.length).to.be.equal(5);
   });
-    
+
+  describe("eth2ResponseDecode - response validation", () => {
+    it("should throw Error if it takes more than 10 bytes for varint", async () => {
+      try {
+        await pipe(
+          [Buffer.concat([Buffer.alloc(1), Buffer.from(encode(99999999999999999999999))])],
+          eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
+          collect
+        );
+        fail("expect error here");
+      } catch (err) {
+        expect(err.message).to.be.equal("eth2ResponseDecode: Invalid number of bytes for protobuf varint 11, method beacon_blocks_by_range");
+      }
+    });
+
+    it("should should throw Error if failed ssz size bound validation", async function () {
+      try {
+        await pipe(
+          [Buffer.concat([Buffer.alloc(1), Buffer.alloc(12, 0)])],
+          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
+          collect
+        );
+        fail("expect error here");
+      } catch (err) {
+        expect(err.message).to.be.equal("eth2ResponseDecode: Invalid szzLength of 0 for method status");
+      }
+    });
+
+    it("should throw Error if it read more than maxEncodedLen", async function () {
+      try {
+        await pipe(
+          [Buffer.concat([Buffer.alloc(1),
+            Buffer.from(encode(config.types.Status.minSize())),
+            Buffer.alloc(config.types.Status.minSize() + 10)])],
+          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
+          collect
+        );
+        fail("expect error here");
+      } catch (err) {
+        expect(err.message).to.be.equal("eth2ResponseDecode: too much bytes read (94) for method status, sszLength 84");
+      }
+    });
+
+    it("should throw Error if there is remaining data after all", async function () {
+      try {
+        await pipe(
+          [Buffer.concat([Buffer.alloc(1),
+            Buffer.from(encode(config.types.Status.minSize())),
+            Buffer.alloc(config.types.Status.minSize())])],
+          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
+          collect
+        );
+        fail("expect error here");
+      } catch (err) {
+        expect(err.message).to.be.equal("There is remaining data not deserialized for method status");
+      }
+    });
+
+    it("should yield correct ResponseBody", async function () {
+      const status: Status = config.types.Status.defaultValue();
+      status.finalizedEpoch = 100;
+      const response = await pipe(
+        [Buffer.concat([Buffer.alloc(1),
+          Buffer.from(encode(config.types.Status.minSize())),
+          config.types.Status.serialize(status)])],
+        eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
+        collect
+      );
+      expect(response).to.be.deep.equal([status]);
+    });
+
+  });
+
 });
 
 function generateBlockChunks(n = 3): IResponseChunk[] {

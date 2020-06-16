@@ -34,7 +34,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/lodestar-params": "^0.8.0",
-    "@chainsafe/ssz": "^0.6.4"
+    "@chainsafe/ssz": "^0.6.7"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",

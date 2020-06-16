@@ -1,10 +1,11 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {encode} from "varint";
 
-import {Method, ReqRespEncoding} from "../../../src/constants";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {ReputationStore} from "../../../src/sync/IReputation";
-import {Libp2pNetwork} from "../../../src/network";
+import {Libp2pNetwork, createRpcProtocol} from "../../../src/network";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
@@ -21,6 +22,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
+import pipe from "it-pipe";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -47,6 +49,7 @@ describe("[sync] rpc", function () {
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
+  let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
 
   beforeEach(async () => {
@@ -73,10 +76,11 @@ describe("[sync] rpc", function () {
     });
     repsA = new ReputationStore();
     repsB = new ReputationStore();
+    libP2pA = (await createNode(multiaddr)) as unknown as Libp2p;
     netA = new Libp2pNetwork(
       opts,
       repsA,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+      {config, libp2p: libP2pA, logger, metrics, validator, chain}
     );
     netB = new Libp2pNetwork(
       opts,
@@ -201,5 +205,20 @@ describe("[sync] rpc", function () {
     expect(block.message.slot).to.equal(BLOCK_SLOT);
     const block2 = response[1];
     expect(block2.message.slot).to.equal(BLOCK_SLOT + 1);
+  });
+
+  it("should return invalid request status code", async () => {
+    const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
+    const {stream} = await libP2pA.dialProtocol(netB.peerInfo, protocol) as {stream: Stream};
+    await pipe(
+      [Buffer.from(encode(99999999999999999999999))],
+      stream,
+      async (source: AsyncIterable<Buffer>) => {
+        for await (const val of source) {
+          const status = val.slice()[0];
+          expect(status).to.be.equal(RpcResponseStatus.ERR_INVALID_REQ);
+        }
+      }
+    );
   });
 });

@@ -96,6 +96,6 @@ function getChunkType(value: number): ChunkType {
     case ChunkType.PADDING:
       return ChunkType.PADDING;
     default:
-      throw "Unsupported snappy chunk type";
+      throw new Error("Unsupported snappy chunk type");
   }
 }

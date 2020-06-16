@@ -68,6 +68,7 @@ export enum RpcResponseStatus {
   ERR_RESP_TIMEOUT = 2,
 }
 
+
 export const GOSSIP_MAX_SIZE = 2**20;
 export const MAX_CHUNK_SIZE = 2**20;
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
