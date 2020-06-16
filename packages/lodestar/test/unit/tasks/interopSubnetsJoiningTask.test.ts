@@ -105,7 +105,7 @@ describe("interopSubnetsJoiningTask", () => {
       * config.params.SLOTS_PER_EPOCH
       * config.params.SECONDS_PER_SLOT
       * 1000);
-    // 1 run right after start, 1 run in scheduleNextForkSubscription
+    // at least 1 run right after start, 1 run in scheduleNextForkSubscription
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // subscribe to next fork digest subnet
     expect(spy.args[spy.args.length - 1][0]).to.be.deep.equal(nextForkDigest);

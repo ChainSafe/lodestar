@@ -23,7 +23,9 @@ export class InteropSubnetsJoiningTask {
   private nextForkSubnets: Set<number>;
   private currentForkDigest: ForkDigest;
 
-  private timers: (NodeJS.Timeout)[] = [];
+  private currentTimers: (NodeJS.Timeout)[] = [];
+  private nextForkTimers: (NodeJS.Timeout)[] = [];
+  private nextForkSubsTimer: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
     this.config = config;
@@ -37,18 +39,22 @@ export class InteropSubnetsJoiningTask {
   public async start(): Promise<void> {
     this.currentForkDigest = this.chain.currentForkDigest;
     this.chain.on("forkDigest", this.handleForkDigest);
-    await this.run(this.currentForkDigest, this.currentSubnets);
+    await this.run(this.currentForkDigest);
     await this.scheduleNextForkSubscription();
   }
 
   public async stop(): Promise<void> {
     this.chain.removeListener("forkDigest", this.handleForkDigest);
+    if (this.nextForkSubsTimer) {
+      clearTimeout(this.nextForkSubsTimer);
+    }
+    this.nextForkTimers.forEach(clearTimeout);
     return this.cleanUpCurrentSubscriptions();
   }
 
-  private run = async (forkDigest: ForkDigest, subnets: Set<number>): Promise<void> => {
+  private run = async (forkDigest: ForkDigest): Promise<void> => {
     for (let i = 0; i < this.config.params.RANDOM_SUBNETS_PER_VALIDATOR; i++) {
-      this.subscribeToRandomSubnet(forkDigest, subnets);
+      this.subscribeToRandomSubnet(forkDigest);
     }
   };
 
@@ -68,19 +74,25 @@ export class InteropSubnetsJoiningTask {
       if (timeToPreparedEpoch > 0) {
         const nextForkDigest =
           computeForkDigest(this.config, intToBytes(nextFork.currentVersion, 4), state.genesisValidatorsRoot);
-        setTimeout(this.run, timeToPreparedEpoch, nextForkDigest, this.nextForkSubnets);
+        this.nextForkSubsTimer =
+          setTimeout(this.run, timeToPreparedEpoch, nextForkDigest) as unknown as NodeJS.Timeout;
       }
     }
   };
 
+  /**
+   * Transition from current fork to next fork.
+   */
   private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
     this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
     // at this time current fork digest and next fork digest subnets are subscribed in parallel
     // this cleans up current fork digest subnets subscription and keep subscribed to next fork digest subnets
     await this.cleanUpCurrentSubscriptions();
     this.currentForkDigest = forkDigest;
-    this.nextForkSubnets.forEach((subnet) => this.currentSubnets.add(subnet));
-    this.nextForkSubnets.clear();
+    this.currentSubnets = this.nextForkSubnets;
+    this.nextForkSubnets = new Set();
+    this.currentTimers = this.nextForkTimers;
+    this.nextForkTimers = [];
     await this.scheduleNextForkSubscription();
   };
 
@@ -88,7 +100,7 @@ export class InteropSubnetsJoiningTask {
    * Clean up subscription and timers of current fork.
    */
   private cleanUpCurrentSubscriptions = async (): Promise<void> => {
-    this.timers.forEach((timer) => clearTimeout(timer));
+    this.currentTimers.forEach(clearTimeout);
     const attnets = this.network.metadata.attnets;
     this.currentSubnets.forEach((subnet) => {
       this.network.gossip.unsubscribeFromAttestationSubnet(this.currentForkDigest, subnet, this.handleWireAttestation);
@@ -99,9 +111,11 @@ export class InteropSubnetsJoiningTask {
   };
 
   /**
+   * Subscribe to a random subnet for a fork digest.
+   * This can be either for the current fork or next fork.
    * @return choosen subnet
    */
-  private subscribeToRandomSubnet(forkDigest: ForkDigest, subnets: Set<number>): number {
+  private subscribeToRandomSubnet(forkDigest: ForkDigest): number {
     const subnet = randBetween(0, ATTESTATION_SUBNET_COUNT);
     this.network.gossip.subscribeToAttestationSubnet(
       forkDigest,
@@ -117,7 +131,9 @@ export class InteropSubnetsJoiningTask {
       this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
       2 * this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
     );
-    this.timers.push(setTimeout(
+    const timers = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
+      this.currentTimers : this.nextForkTimers;
+    timers.push(setTimeout(
       this.handleChangeSubnets,
       subscriptionLifetime
             * this.config.params.SLOTS_PER_EPOCH
@@ -126,6 +142,11 @@ export class InteropSubnetsJoiningTask {
       forkDigest,
       subnet
     ) as unknown as NodeJS.Timeout);
+    if (timers.length > this.config.params.RANDOM_SUBNETS_PER_VALIDATOR) {
+      timers.shift();
+    }
+    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
+      this.currentSubnets : this.nextForkSubnets;
     subnets.add(subnet);
     return subnet;
   }
@@ -137,8 +158,10 @@ export class InteropSubnetsJoiningTask {
       attnets[subnet] = false;
       this.network.metadata.attnets = attnets;
     }
-    this.currentSubnets.delete(subnet);
-    this.subscribeToRandomSubnet(forkDigest, this.currentSubnets);
+    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
+      this.currentSubnets : this.nextForkSubnets;
+    subnets.delete(subnet);
+    this.subscribeToRandomSubnet(forkDigest);
   };
 
   private handleWireAttestation = (): void => {
