@@ -35,8 +35,9 @@ describe("produce aggregate and proof api implementation", function () {
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
     ]);
-    chainStub.epochCtx = new EpochContext(config);
-    chainStub.epochCtx.pubkey2index.set(Buffer.alloc(48), 0);
+    const epochCtx = new EpochContext(config);
+    chainStub.getEpochContext.returns(epochCtx);
+    epochCtx.pubkey2index.set(Buffer.alloc(48), 0);
 
     const result = await api.produceAggregateAndProof(generateEmptyAttestation().data, Buffer.alloc(48));
     expect(result.aggregate.signature).to.not.be.null;

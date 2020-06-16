@@ -20,8 +20,8 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public chainId: Uint16;
   public networkId: Uint64;
   public clock: IBeaconClock;
-  public epochCtx: EpochContext;
 
+  private epochCtx: EpochContext;
   private state: BeaconState|null;
   private config: IBeaconConfig;
 
@@ -39,6 +39,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   public async getHeadState(): Promise<BeaconState| null> {
     return this.state;
+  }
+
+  public getEpochContext(): EpochContext {
+    return this.epochCtx;
   }
 
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {

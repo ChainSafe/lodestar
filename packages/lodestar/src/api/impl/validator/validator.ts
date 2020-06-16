@@ -68,7 +68,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const validatorIndex = this.chain.epochCtx.pubkey2index.get(validatorPubkey);
+    const validatorIndex = this.chain.getEpochContext().pubkey2index.get(validatorPubkey);
     return await assembleBlock(
       this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
@@ -83,7 +83,7 @@ export class ValidatorApi implements IValidatorApi {
       const [headBlock, headState, validatorIndex] = await Promise.all([
         this.chain.getHeadBlock(),
         this.chain.getHeadState(),
-        this.chain.epochCtx.pubkey2index.get(validatorPubKey)
+        this.chain.getEpochContext().pubkey2index.get(validatorPubKey)
       ]);
       processSlots(this.config, headState, slot);
       return await assembleAttestation(
@@ -130,7 +130,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    const validatorIndexes = validatorPubKeys.map(this.chain.epochCtx.pubkey2index.get);
+    const validatorIndexes = validatorPubKeys.map(this.chain.getEpochContext().pubkey2index.get);
     const state = await this.chain.getHeadState();
 
     return validatorIndexes.map((validatorIndex) => {
@@ -186,7 +186,7 @@ export class ValidatorApi implements IValidatorApi {
     });
     return {
       aggregate,
-      aggregatorIndex: this.chain.epochCtx.pubkey2index.get(aggregator),
+      aggregatorIndex: this.chain.getEpochContext().pubkey2index.get(aggregator),
       selectionProof: EMPTY_SIGNATURE
     };
   }
