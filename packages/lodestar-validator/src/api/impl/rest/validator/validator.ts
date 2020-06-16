@@ -40,7 +40,7 @@ export class RestValidatorApi implements IValidatorApi {
   public async getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const hexPubKeys = validatorPubKeys.map(toHexString);
     const url = `/duties/${epoch.toString()}/attester?`
-        + hexPubKeys.map((key) => `validator_pubkeys[]=${key}`).join("&");
+        + hexPubKeys.map((key) => `validator_pubkeys=${key}`).join("&");
     const responseData = await this.client.get<Json[]>(url);
     return responseData.map(value => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
   }
