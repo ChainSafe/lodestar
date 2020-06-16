@@ -1,3 +1,4 @@
+export * from "./assert";
 export * from "./math";
 export * from "./bytes";
 export * from "./yaml";

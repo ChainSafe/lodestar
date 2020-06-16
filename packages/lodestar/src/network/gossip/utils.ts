@@ -2,11 +2,11 @@
  * @module network/gossip
  */
 
-import assert from "assert";
 import {Attestation, ForkDigest} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
 import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
+import {assert} from "@chainsafe/lodestar-utils";
 import {IGossipMessage} from "libp2p-gossipsub";
 import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage, IGossipEvents} from "./interface";

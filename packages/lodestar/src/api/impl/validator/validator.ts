@@ -19,6 +19,7 @@ import {
   Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 import {IValidatorApi} from "./interface";
@@ -38,7 +39,6 @@ import {
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
-import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {getCommitteeIndexSubnet} from "../../../network/gossip/utils";
