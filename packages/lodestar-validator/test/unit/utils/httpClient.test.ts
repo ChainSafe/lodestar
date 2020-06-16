@@ -30,6 +30,15 @@ describe("httpClient test", () => {
     assert.equal(user.name, "John Smith");
   });
 
+  it("should handle successful GET request with query correctly", async () => {
+    mock.onGet("/users?id=1").reply(
+      200, {id: 1, name: "John Smith"}
+    );
+    const user: IUser = await httpClient.get<IUser>("/users", {id: 1});
+    assert.equal(user.id, 1);
+    assert.equal(user.name, "John Smith");
+  });
+
   it("should handle successful POST request correctly", async () => {
     mock.onPost("/users", {name: "New comer"}).reply(200, "The user 'New comer' was saved successfully");
     const result: string = await httpClient.post<IUser, string>("/users", {name: "New comer"});
