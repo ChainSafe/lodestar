@@ -27,7 +27,7 @@ export const registerProposerDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
     "/duties/:epoch/proposer",
     opts,
     async (request, reply) => {
-      const responseValue = await api.validator.getProposerDuties(request.params.epoch);
+      const responseValue = await api.validator.getProposerDuties(BigInt(request.params.epoch));
       const response = responseValue.map(duty => config.types.ProposerDuty.toJson(duty));
       reply
         .code(200)

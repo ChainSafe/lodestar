@@ -1,9 +1,9 @@
-import {Validator} from "@chainsafe/lodestar-types";
+import {Validator, Slot} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
 export interface ValidatorGeneratorOpts {
-  activation?: number;
-  exit?: number;
+  activation?: Slot;
+  exit?: Slot;
   slashed?: boolean;
   balance?: bigint;
 }
@@ -17,14 +17,14 @@ export interface ValidatorGeneratorOpts {
  */
 export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator {
   const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch = (opts.activation || opts.activation === 0) ? opts.activation : FAR_FUTURE_EPOCH;
+  const activationEpoch = (opts.activation || opts.activation === 0n) ? opts.activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
-    exitEpoch: opts.exit || randNum(),
-    withdrawableEpoch: randNum(),
+    exitEpoch: opts.exit || BigInt(randNum()),
+    withdrawableEpoch: BigInt(randNum()),
     slashed: opts.slashed || false,
     effectiveBalance: opts.balance || 0n
   };

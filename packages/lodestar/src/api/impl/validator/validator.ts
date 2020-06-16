@@ -115,7 +115,7 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const state = await this.chain.getHeadState();
-    assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2);
+    assert(epoch >= 0 && epoch <= computeEpochAtSlot(this.config, state.slot) + 2n);
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
@@ -129,7 +129,7 @@ export class ValidatorApi implements IValidatorApi {
     return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
+  public async getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const state = await this.chain.getHeadState();
 
     const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
@@ -155,7 +155,7 @@ export class ValidatorApi implements IValidatorApi {
     ]);
   }
 
-  public async getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
+  public async getWireAttestations(epoch: Epoch, committeeIndex: number): Promise<Attestation[]> {
     return await this.db.attestation.getCommiteeAttestations(epoch, committeeIndex);
   }
 

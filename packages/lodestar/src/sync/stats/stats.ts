@@ -30,7 +30,7 @@ export class SyncStats implements ISyncStats {
     }
     const slotsToSync = targetSlot - headSlot;
     if(slotsToSync > 0) {
-      return Math.round(slotsToSync / rate);
+      return Math.round(Number(slotsToSync) / rate);
     }
     return 0;
   }

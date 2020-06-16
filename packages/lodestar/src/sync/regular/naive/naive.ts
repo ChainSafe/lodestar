@@ -67,7 +67,7 @@ export class NaiveRegularSync implements IRegularSync {
   private async getNewTarget(): Promise<Slot> {
     return getHighestCommonSlot(
       (await this.getSyncPeers(
-        0
+        0n
       )).map((peer) => this.reps.getFromPeerInfo(peer))
     );
   }
@@ -75,8 +75,8 @@ export class NaiveRegularSync implements IRegularSync {
   private setTarget = async (newTarget?: Slot, triggerSync = true): Promise<void> => {
     newTarget = newTarget || await this.getNewTarget();
     if(triggerSync && newTarget > this.currentTarget) {
-      this.logger.info(`Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
-      this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
+      this.logger.info(`Requesting blocks from slot ${this.currentTarget + 1n} to slot ${newTarget}`);
+      this.targetSlotRangeSource.push({start: this.currentTarget + 1n, end: newTarget});
     }
     this.currentTarget = newTarget;
   };

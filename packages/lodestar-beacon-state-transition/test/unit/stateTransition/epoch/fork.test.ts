@@ -12,7 +12,7 @@ describe("processForkChanged", () => {
     state = generateState();
     state.fork = {
       currentVersion: Buffer.from([1, 0, 0, 0]),
-      epoch: 100,
+      epoch: 100n,
       previousVersion: Buffer.alloc(4),
     };
   });
@@ -33,7 +33,7 @@ describe("processForkChanged", () => {
       {
         previousVersion: bytesToInt(Buffer.from([1, 0, 0, 0])),
         currentVersion: bytesToInt(Buffer.from([2, 0, 0, 0])),
-        epoch: 200,
+        epoch: 200n,
       },
     ];
     const preFork = state.fork;
@@ -46,11 +46,11 @@ describe("processForkChanged", () => {
       {
         previousVersion: bytesToInt(Buffer.from([1, 0, 0, 0])),
         currentVersion: bytesToInt(Buffer.from([2, 0, 0, 0])),
-        epoch: 200,
+        epoch: 200n,
       },
     ];
     const preFork = state.fork;
-    state.slot = 200 * config.params.SLOTS_PER_EPOCH - 1;
+    state.slot = 200n * config.params.SLOTS_PER_EPOCH - 1n;
     processForkChanged(config, state);
     expect(config.types.Fork.equals(preFork, state.fork)).to.be.false;
     expect(config.types.Version.equals(preFork.currentVersion, state.fork.previousVersion));

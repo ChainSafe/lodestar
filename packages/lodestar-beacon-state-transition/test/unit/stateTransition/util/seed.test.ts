@@ -26,10 +26,10 @@ describe("getRandaoMix", () => {
   it("should return second randao mix for GENESIS_EPOCH + 1", () => {
     // Empty state in 2nd epoch
     const state = generateState({
-      slot: GENESIS_SLOT + config.params.SLOTS_PER_EPOCH * 2,
+      slot: GENESIS_SLOT + config.params.SLOTS_PER_EPOCH * 2n,
       randaoMixes: [Buffer.from([0xAB]), Buffer.from([0xCD]), Buffer.from([0xEF])]
     });
-    const res = getRandaoMix(config, state, GENESIS_EPOCH + 1);
+    const res = getRandaoMix(config, state, GENESIS_EPOCH + 1n);
     assert(Buffer.from(res as Uint8Array).equals(Uint8Array.from([0xCD])));
   });
 });

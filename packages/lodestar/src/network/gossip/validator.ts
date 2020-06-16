@@ -64,8 +64,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     // block is not in the future
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
-    if (signedBlock.message.slot * milliSecPerSlot >
-      getCurrentSlot(this.config, state.genesisTime) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
+    if (Number(signedBlock.message.slot) * milliSecPerSlot >
+      Number(getCurrentSlot(this.config, state.genesisTime)) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
       return false;
     }
 
@@ -148,9 +148,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
-    const currentSlotTime = currentSlot * milliSecPerSlot;
-    if (!((slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
-      >= currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+    const currentSlotTime = Number(currentSlot) * milliSecPerSlot;
+    if (!(Number(slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
+      >= currentSlotTime && currentSlotTime >= Number(slot) * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
       return false;
     }
 

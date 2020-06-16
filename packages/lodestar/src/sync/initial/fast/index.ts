@@ -38,7 +38,7 @@ export class FastSync
   /**
    * Target slot for block import, we won't download blocks past that point.
    */
-  private blockImportTarget: Slot = 0;
+  private blockImportTarget: Slot = 0n;
 
   /**
    * Trigger for block import
@@ -116,10 +116,10 @@ export class FastSync
     const lastTarget = fromSlot || this.blockImportTarget;
     const newTarget = this.getNewBlockImportTarget(this.blockImportTarget);
     this.logger.info(
-      `Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`
+      `Fetching blocks for ${lastTarget + 1n}...${newTarget} slot range`
     );
     this.syncTriggerSource.push(
-      {start: lastTarget + 1, end: newTarget}
+      {start: lastTarget + 1n, end: newTarget}
     );
     this.updateBlockImportTarget(newTarget);
   };

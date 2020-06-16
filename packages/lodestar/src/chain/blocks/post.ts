@@ -26,7 +26,7 @@ export function postProcess(
         if(!finalized) {
           await attestationProcessor.receiveBlock(block);
         }
-        metrics.currentSlot.set(block.message.slot);
+        metrics.currentSlot.set(Number(block.message.slot));
         eventBus.emit("processedBlock", block);
         const preSlot = preState.slot;
         const preFinalizedEpoch = preState.finalizedCheckpoint.epoch;
@@ -62,8 +62,8 @@ function newJustifiedEpoch(
   state: BeaconState
 ): void {
   logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified!`);
-  metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
-  metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
+  metrics.previousJustifiedEpoch.set(Number(state.previousJustifiedCheckpoint.epoch));
+  metrics.currentJustifiedEpoch.set(Number(state.currentJustifiedCheckpoint.epoch));
   eventBus.emit("justifiedCheckpoint", state.currentJustifiedCheckpoint);
 }
 
@@ -74,6 +74,6 @@ function newFinalizedEpoch(
   state: BeaconState
 ): void {
   logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized!`);
-  metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+  metrics.currentFinalizedEpoch.set(Number(state.finalizedCheckpoint.epoch));
   eventBus.emit("finalizedCheckpoint", state.finalizedCheckpoint);
 }

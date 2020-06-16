@@ -53,8 +53,8 @@ describe("process block - attester slashings", function () {
   it("should fail to process slashings - data2 incorrect", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
-    attesterSlashing.attestation1.data.source.epoch = 2;
-    attesterSlashing.attestation2.data.source.epoch = 3;
+    attesterSlashing.attestation1.data.source.epoch = 2n;
+    attesterSlashing.attestation2.data.source.epoch = 3n;
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation1).returns(true);
     validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation2).returns(false);
@@ -70,8 +70,8 @@ describe("process block - attester slashings", function () {
   it("should fail to process slashings - nothing slashed", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
-    attesterSlashing.attestation1.data.source.epoch = 2;
-    attesterSlashing.attestation2.data.source.epoch = 3;
+    attesterSlashing.attestation1.data.source.epoch = 2n;
+    attesterSlashing.attestation2.data.source.epoch = 3n;
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(true);
     try {

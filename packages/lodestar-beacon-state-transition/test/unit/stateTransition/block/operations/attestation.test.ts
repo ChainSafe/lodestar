@@ -29,36 +29,36 @@ describe("process block - attestation", function () {
   });
 
   it("fail to process attestation - exceeds inclusion delay", function () {
-    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1});
+    const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1n});
     const attestation = generateEmptyAttestation();
     expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it("fail to process attestation - future epoch", function () {
-    const state = generateState({slot: 0});
+    const state = generateState({slot: 0n});
     const attestation = generateEmptyAttestation();
     expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it("fail to process attestation - crosslink not zerohash", function () {
-    const state = generateState({slot: 0});
+    const state = generateState({slot: 0n});
     const attestation = generateEmptyAttestation();
     expect(() => processAttestation(config, state, attestation)).to.throw;
   });
 
   it("should process attestation - currentEpoch === data.targetEpoch", function () {
     const state = generateState({
-      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
-      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}
+      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1n,
+      currentJustifiedCheckpoint: {epoch: 1n, root: ZERO_HASH}
     });
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
-    attestation.data.slot = config.params.SLOTS_PER_EPOCH + 1;
-    attestation.data.target.epoch = 1;
-    attestation.data.source.epoch = 1;
+    attestation.data.slot = config.params.SLOTS_PER_EPOCH + 1n;
+    attestation.data.target.epoch = 1n;
+    attestation.data.source.epoch = 1n;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;
     getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
     expect(processAttestation(config, state, attestation)).to.not.throw;
@@ -68,16 +68,16 @@ describe("process block - attestation", function () {
 
   it("should process attestation - previousEpoch === data.targetEpoch", function () {
     const state = generateState({
-      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
-      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}
+      slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1n,
+      currentJustifiedCheckpoint: {epoch: 1n, root: ZERO_HASH}
     });
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
     validateIndexedAttestationStub.returns(true);
     getBeaconProposerIndexStub.returns(2);
     const attestation = generateEmptyAttestation();
-    attestation.data.target.epoch = 0;
-    attestation.data.source.epoch = 0;
+    attestation.data.target.epoch = 0n;
+    attestation.data.source.epoch = 0n;
     attestation.data.source.root = state.previousJustifiedCheckpoint.root;
     getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
     expect(processAttestation(config, state, attestation)).to.not.throw;

@@ -39,7 +39,7 @@ export const registerBlockProductionEndpoint: LodestarRestApiEndpoint = (fastify
     opts,
     async (request, reply) => {
       const block = await api.validator.produceBlock(
-        request.query.slot,
+        BigInt(request.query.slot),
         fromHex(request.query.proposer_pubkey),
         fromHex(request.query.randao_reveal)
       );

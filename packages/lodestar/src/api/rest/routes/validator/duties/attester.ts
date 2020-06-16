@@ -47,7 +47,7 @@ export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
     opts,
     async (request, reply) => {
       const responseValue = await api.validator.getAttesterDuties(
-        request.params.epoch,
+        BigInt(request.params.epoch),
         request.query.validator_pubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
       );
       reply

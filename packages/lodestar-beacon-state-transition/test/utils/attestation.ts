@@ -13,7 +13,7 @@ import {
 
 export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): AttestationData {
   return {
-    slot: 0,
+    slot: 0n,
     index: 0,
     beaconBlockRoot: Buffer.alloc(32),
     source: {
@@ -31,15 +31,15 @@ export function generateEmptyAttestation(): Attestation {
   return {
     aggregationBits: Array.from({length: 64}, () => false),
     data: {
-      slot: 1,
+      slot: 1n,
       index: 0,
       beaconBlockRoot: Buffer.alloc(32),
       source: {
-        epoch: 0,
+        epoch: 0n,
         root: Buffer.alloc(32),
       },
       target: {
-        epoch: 0,
+        epoch: 0n,
         root: Buffer.alloc(32),
       },
     },

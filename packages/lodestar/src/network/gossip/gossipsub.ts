@@ -36,7 +36,7 @@ export class LodestarGossipsub extends Gossipsub {
     this.config = config;
     this.validator = validator;
     // This can be epoch/daily/hourly ...
-    this.timeToLive = this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000;
+    this.timeToLive = Number(this.config.params.SLOTS_PER_EPOCH) * this.config.params.SECONDS_PER_SLOT * 1000;
     this.logger = logger;
   }
 

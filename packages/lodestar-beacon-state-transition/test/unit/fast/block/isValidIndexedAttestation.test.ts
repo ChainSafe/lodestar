@@ -9,7 +9,7 @@ import {EMPTY_SIGNATURE} from "../../../../src";
 describe("validate indexed attestation", () => {
   const epochCtx = new EpochContext(config);
   it("should return invalid indexed attestation - empty participants", () => {
-    const attestationData = generateAttestationData(0, 1);
+    const attestationData = generateAttestationData(0n, 1n);
 
     const indexedAttestation: IndexedAttestation = {
       attestingIndices: [],
@@ -20,7 +20,7 @@ describe("validate indexed attestation", () => {
   });
 
   it("should return invalid indexed attestation - indexes not sorted", () => {
-    const attestationData = generateAttestationData(0, 1);
+    const attestationData = generateAttestationData(0n, 1n);
 
     const indexedAttestation: IndexedAttestation = {
       attestingIndices: [1, 0],
@@ -31,7 +31,7 @@ describe("validate indexed attestation", () => {
   });
 
   it("should return valid indexed attestation", () => {
-    const attestationData = generateAttestationData(0, 1);
+    const attestationData = generateAttestationData(0n, 1n);
 
     const indexedAttestation: IndexedAttestation = {
       attestingIndices: [0, 1, 2, 3],

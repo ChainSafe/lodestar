@@ -36,7 +36,7 @@ export class BeaconSync implements IBeaconSync {
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
 
-  private startingBlock: Slot = 0;
+  private startingBlock: Slot = 0n;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -86,7 +86,7 @@ export class BeaconSync implements IBeaconSync {
     if(this.isSynced()) {
       return null;
     }
-    let target: Slot = 0;
+    let target: Slot = 0n;
     if(this.mode === SyncMode.INITIAL_SYNCING) {
       target = await this.initialSync.getHighestBlock();
     } else {

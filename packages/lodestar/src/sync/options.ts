@@ -4,7 +4,7 @@ export interface ISyncOptions {
    * max slots to import before waiting for
    * chain to process them
    */
-  maxSlotImport: number;
+  maxSlotImport: bigint;
   minPeers: number;
 }
 
@@ -12,7 +12,7 @@ export interface ISyncOptions {
 const config: ISyncOptions = {
   minPeers: 2,
   //2 epochs
-  maxSlotImport: 64,
+  maxSlotImport: 64n,
   blockPerChunk: 20
 };
 

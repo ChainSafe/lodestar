@@ -81,7 +81,7 @@ export class InteropSubnetsJoiningTask implements ITask {
     this.timers.push(setTimeout(
       this.handleChangeSubnets,
       subscriptionLifetime
-            * this.config.params.SLOTS_PER_EPOCH
+            * Number(this.config.params.SLOTS_PER_EPOCH)
             * this.config.params.SECONDS_PER_SLOT
             * 1000,
       forkDigest,

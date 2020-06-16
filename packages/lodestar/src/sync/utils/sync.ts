@@ -24,7 +24,7 @@ export function getHighestCommonSlot(peers: IReputation[]): Slot {
       .sort((a, b) => b[1] - a[1]);
     return best[0][0];
   } else {
-    return 0;
+    return 0n;
   }
 }
 
@@ -67,7 +67,7 @@ export function targetSlotToBlockChunks(
     return (async function*() {
       for await (const targetSlot of source) {
         await getInitialSyncPeers(targetSlot);
-        yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1, targetSlot);
+        yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1n, targetSlot);
       }
     })();
   };

@@ -21,7 +21,7 @@ import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lo
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
-import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
+import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
@@ -201,7 +201,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return {
       forkDigest: this.currentForkDigest,
       nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : MAX_VERSION,
-      nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
+      nextForkEpoch: nextVersion? nextVersion.epoch : FAR_FUTURE_EPOCH,
     };
   }
 
@@ -318,10 +318,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       });
     }
     // set metrics based on beacon state
-    this.metrics.currentSlot.set(state.slot);
-    this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
-    this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+    this.metrics.currentSlot.set(Number(state.slot));
+    this.metrics.previousJustifiedEpoch.set(Number(state.previousJustifiedCheckpoint.epoch));
+    this.metrics.currentJustifiedEpoch.set(Number(state.currentJustifiedCheckpoint.epoch));
+    this.metrics.currentFinalizedEpoch.set(Number(state.finalizedCheckpoint.epoch));
     return state;
   }
 

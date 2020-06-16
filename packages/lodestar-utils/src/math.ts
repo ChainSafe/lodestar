@@ -18,6 +18,13 @@ export function bigIntMax(a: bigint, b: bigint): bigint {
 }
 
 /**
+ * Return the min number between many big numbers.
+ */
+export function bigIntArrayMin(...bigints: bigint[]): bigint {
+  return bigints.reduce(bigIntMin, bigints[0]);
+}
+
+/**
  * Return the max number between many big numbers.
  */
 export function bigIntArrayMax(...bigints: bigint[]): bigint {

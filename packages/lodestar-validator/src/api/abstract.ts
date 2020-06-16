@@ -14,8 +14,8 @@ export abstract class AbstractApiClient
 
   protected config: IBeaconConfig;
 
-  private currentSlot: Slot = 0;
-  private currentEpoch: Epoch = 0;
+  private currentSlot: Slot = 0n;
+  private currentEpoch: Epoch = 0n;
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;

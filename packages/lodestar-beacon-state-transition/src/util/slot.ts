@@ -13,9 +13,9 @@ export function getCurrentSlot(config: IBeaconConfig, genesisTime: Number64): Sl
   return GENESIS_SLOT + getSlotsSinceGenesis(config, genesisTime);
 }
 
-export function computeSlotsSinceEpochStart(config: IBeaconConfig, slot: Slot, epoch?: Epoch): number {
+export function computeSlotsSinceEpochStart(config: IBeaconConfig, slot: Slot, epoch?: Epoch): Slot {
   const computeEpoch = epoch ? epoch : computeEpochAtSlot(config, slot);
-  return Number(slot - computeStartSlotAtEpoch(config, computeEpoch));
+  return slot - computeStartSlotAtEpoch(config, computeEpoch);
 }
 
 export function computeTimeAtSlot(config: IBeaconConfig, slot: Slot, genesisTime: Number64): Number64 {

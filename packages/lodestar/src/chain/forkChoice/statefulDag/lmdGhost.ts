@@ -472,14 +472,14 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
 
   public getJustified(): Checkpoint {
     if (!this.justified) {
-      return {epoch: 0, root: ZERO_HASH};
+      return {epoch: 0n, root: ZERO_HASH};
     }
     return this.head().justifiedCheckpoint;
   }
 
   public getFinalized(): Checkpoint {
     if (!this.finalized) {
-      return {epoch: 0, root: ZERO_HASH};
+      return {epoch: 0n, root: ZERO_HASH};
     }
     return this.head().finalizedCheckpoint;
   }

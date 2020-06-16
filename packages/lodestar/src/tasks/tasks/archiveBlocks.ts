@@ -6,6 +6,7 @@ import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {bigIntArrayMax, bigIntArrayMin} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
@@ -37,8 +38,8 @@ export class ArchiveBlocksTask implements ITask {
       (block) =>
         computeEpochAtSlot(this.config, block.message.slot) < this.finalizedCheckpoint.epoch
     );
-    const fromSlot = blocks.length > 0? Math.min(...blocks.map(block => block.message.slot)) : undefined;
-    const toSlot = blocks.length > 0? Math.max(...blocks.map(block => block.message.slot)) : undefined;
+    const fromSlot = blocks.length > 0? bigIntArrayMin(...blocks.map(block => block.message.slot)) : undefined;
+    const toSlot = blocks.length > 0? bigIntArrayMax(...blocks.map(block => block.message.slot)) : undefined;
     this.logger.info(`Started archiving ${blocks.length} blocks from slot ${fromSlot} to ${toSlot}`
         +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`
     );

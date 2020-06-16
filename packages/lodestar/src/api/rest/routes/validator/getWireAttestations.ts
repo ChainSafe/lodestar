@@ -34,7 +34,7 @@ export const registerGetWireAttestationEndpoint: LodestarRestApiEndpoint = (fast
     opts,
     async (request, reply) => {
       const responseValue = await api.validator.getWireAttestations(
-        request.query.epoch,
+        BigInt(request.query.epoch),
         request.query.committee_index
       );
       reply

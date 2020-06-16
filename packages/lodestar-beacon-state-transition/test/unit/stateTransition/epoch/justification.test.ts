@@ -2,6 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {Epoch} from "@chainsafe/lodestar-types";
 import * as utils1 from "../../../../src/util";
 import * as utils2 from "../../../../src/epoch/util";
 import {generateState} from "../../../utils/state";
@@ -35,8 +36,8 @@ describe('process epoch - justification and finalization', function () {
 
   it('should make required justification and finalization', function () {
     const state = generateState();
-    let previousJustifiedEpoch;
-    let currentJustifiedEpoch;
+    let previousJustifiedEpoch: Epoch;
+    let currentJustifiedEpoch: Epoch;
     getTotalActiveBalanceStub.returns(10n);
     getAttestingBalanceStub.returns(10n);
     state.justificationBits = Array.from({length: 64}, () => false);
@@ -46,7 +47,7 @@ describe('process epoch - justification and finalization', function () {
     expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
 
     // hit 1st if condition of finalization
-    state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0;
+    state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0n;
     getBlockRootStub.returns(Buffer.alloc(32));
     getCurrentEpochStub.returns(3);
     getPreviousEpochStub.returns(1);
@@ -55,20 +56,20 @@ describe('process epoch - justification and finalization', function () {
 
     // hit 2nd if condition of finalization
     getCurrentEpochStub.returns(2);
-    state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0;
+    state.previousJustifiedCheckpoint.epoch = previousJustifiedEpoch = 0n;
     processJustificationAndFinalization(config, state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(previousJustifiedEpoch);
 
     // hit 3rd if condition of finalization
-    state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 0;
+    state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 0n;
     getCurrentEpochStub.returns(2);
     processJustificationAndFinalization(config, state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(currentJustifiedEpoch);
 
     // hit 4th if condition of finalization
     getCurrentEpochStub.returns(2);
-    state.previousJustifiedCheckpoint.epoch = 1;
-    state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 1;
+    state.previousJustifiedCheckpoint.epoch = 1n;
+    state.currentJustifiedCheckpoint.epoch = currentJustifiedEpoch = 1n;
     processJustificationAndFinalization(config, state);
     expect(state.finalizedCheckpoint.epoch).to.be.equal(currentJustifiedEpoch);
 

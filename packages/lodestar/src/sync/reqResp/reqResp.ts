@@ -178,7 +178,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     try {
       const archiveBlocksStream = this.db.blockArchive.valuesStream({
         gte: request.startSlot,
-        lt: request.startSlot + request.count * request.step,
+        lt: request.startSlot + BigInt(request.count) * BigInt(request.step),
         step: request.step,
       });
       const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.chain, request);
@@ -236,19 +236,19 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     chain: IBeaconChain,
     request: BeaconBlocksByRangeRequest
   ): AsyncGenerator<SignedBeaconBlock> {
-    let slot = -1;
+    let slot = -1n;
     for await(const archiveBlock of archiveStream) {
       yield archiveBlock;
       slot = archiveBlock.message.slot;
     }
-    slot = (slot === -1)? request.startSlot : slot + request.step;
-    const upperSlot = request.startSlot + request.count * request.step;
+    slot = (slot === -1n)? request.startSlot : slot + BigInt(request.step);
+    const upperSlot = request.startSlot + BigInt(request.count) * BigInt(request.step);
     while (slot < upperSlot) {
       const block = await chain.getBlockAtSlot(slot);
       if(block) {
         yield block;
       }
-      slot += request.step;
+      slot += BigInt(request.step);
     }
   };
 }

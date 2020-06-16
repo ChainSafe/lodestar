@@ -1,6 +1,6 @@
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToInt} from "@chainsafe/lodestar-utils";
+import {bytesToBigInt} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController, IFilterOptions} from "../../../controller";
 import {Bucket} from "../../schema";
@@ -22,8 +22,8 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
   }
 
-  public decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+  public decodeKey(data: Buffer): bigint {
+    return bytesToBigInt(super.decodeKey(data) as unknown as Uint8Array, "be");
   }
 
   public getId(value: SignedBeaconBlock): Slot {
@@ -41,13 +41,13 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt ?
-      this.decodeKey(dbFilterOpts.gt) + 1 :
+      this.decodeKey(dbFilterOpts.gt) + 1n :
       this.decodeKey(dbFilterOpts.gte);
     const valuesStream = super.valuesStream(opts);
     const step = opts && opts.step || 1;
     return (async function* () {
       for await (const value of valuesStream) {
-        if ((value.message.slot - firstSlot) % step === 0) {
+        if (Number(value.message.slot - firstSlot) % step === 0) {
           yield value;
         }
       }

@@ -16,14 +16,14 @@ import {generateState} from "../../../utils/state";
 
 describe("computeEpochAtSlot", () => {
   const pairs = [
-    {test: 0, expected: 0},
-    {test: 1, expected: 0},
-    {test: 10, expected: 0},
-    {test: 100, expected: 3},
-    {test: 1000, expected: 31},
-    {test: 10000, expected: 312},
-    {test: 100000, expected: 3125},
-    {test: 1000000, expected: 31250},
+    {test: 0n, expected: 0n},
+    {test: 1n, expected: 0n},
+    {test: 10n, expected: 0n},
+    {test: 100n, expected: 3n},
+    {test: 1000n, expected: 31n},
+    {test: 10000n, expected: 312n},
+    {test: 100000n, expected: 3125n},
+    {test: 1000000n, expected: 31250n},
   ];
   for (const pair of pairs) {
     it(`Slot ${pair.test} should map to epoch ${pair.expected}`, () => {
@@ -35,14 +35,14 @@ describe("computeEpochAtSlot", () => {
 
 describe("computeStartSlotAtEpoch", () => {
   const pairs = [
-    {test: 0, expected: 0},
-    {test: 1, expected: 32},
-    {test: 10, expected: 320},
-    {test: 100, expected: 3200},
-    {test: 1000, expected: 32000},
-    {test: 10000, expected: 320000},
-    {test: 100000, expected: 3200000},
-    {test: 1000000, expected: 32000000},
+    {test: 0n, expected: 0n},
+    {test: 1n, expected: 32n},
+    {test: 10n, expected: 320n},
+    {test: 100n, expected: 3200n},
+    {test: 1000n, expected: 32000n},
+    {test: 10000n, expected: 320000n},
+    {test: 100000n, expected: 3200000n},
+    {test: 1000000n, expected: 32000000n},
   ];
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
@@ -55,15 +55,15 @@ describe("computeStartSlotAtEpoch", () => {
 describe("getPreviousEpoch", () => {
 
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({slot: 512});
-    const expected: Epoch = 15;
+    const state: BeaconState = generateState({slot: 512n});
+    const expected: Epoch = 15n;
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
 
   it("epoch should return previous epoch", () => {
-    const state: BeaconState = generateState({slot: 256});
-    const expected: Epoch = 7;
+    const state: BeaconState = generateState({slot: 256n});
+    const expected: Epoch = 7n;
     const result = getPreviousEpoch(config, state);
     assert.equal(result, expected);
   });
@@ -78,8 +78,8 @@ describe("getPreviousEpoch", () => {
 
 describe("computeActivationExitEpoch", () => {
   it("epoch is always equal to the epoch after the exit delay", () => {
-    for (let e: Epoch = 0; e < 1000; e++) {
-      assert.equal(computeActivationExitEpoch(config, e), e + 1 + config.params.MAX_SEED_LOOKAHEAD);
+    for (let e: Epoch = 0n; e < 1000n; e++) {
+      assert.equal(computeActivationExitEpoch(config, e), e + 1n + config.params.MAX_SEED_LOOKAHEAD);
     }
   });
 });

@@ -33,7 +33,7 @@ describe('process epoch - slashings', function () {
     const validatorEligble = generateValidator();
     validatorEligble.effectiveBalance = BigInt(config.params.MAX_EFFECTIVE_BALANCE);
 
-    const validatorToExit = generateValidator({activation: 1});
+    const validatorToExit = generateValidator({activation: 1n});
     validatorToExit.effectiveBalance = 1n;
     isActiveValidatorStub.withArgs(sinon.match.any, sinon.match.any).returns(true);
     const state = generateState({validators: [validatorEligble, validatorToExit]});

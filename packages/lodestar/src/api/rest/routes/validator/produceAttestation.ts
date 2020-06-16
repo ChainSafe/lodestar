@@ -42,7 +42,7 @@ export const registerAttestationProductionEndpoint: LodestarRestApiEndpoint = (f
       const responseValue = await api.validator.produceAttestation(
         fromHexString(request.query.validator_pubkey),
         request.query.attestation_committee_index,
-        request.query.slot
+        BigInt(request.query.slot)
       );
       reply
         .code(200)

@@ -25,9 +25,9 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - invalid slot", function () {
-    const state = generateState({slot: 5});
+    const state = generateState({slot: 5n});
     const block = generateEmptyBlock();
-    block.slot = 4;
+    block.slot = 4n;
     try {
       processBlockHeader(config, state, block);
       expect.fail();
@@ -36,9 +36,9 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - invalid parent header", function () {
-    const state = generateState({slot: 5});
+    const state = generateState({slot: 5n});
     const block = generateEmptyBlock();
-    block.slot = 5;
+    block.slot = 5n;
     block.parentRoot = Buffer.alloc(10, 1);
     try {
       processBlockHeader(config, state, block);
@@ -47,10 +47,10 @@ describe("process block - block header", function () {
   });
 
   it("fail to process header - proposerSlashed", function () {
-    const state = generateState({slot: 5});
-    state.validators.push(generateValidator({activation: 0, exit: 10, slashed: true}));
+    const state = generateState({slot: 5n});
+    state.validators.push(generateValidator({activation: 0n, exit: 10n, slashed: true}));
     const block = generateEmptyBlock();
-    block.slot = 5;
+    block.slot = 5n;
     block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     try {
       processBlockHeader(config, state, block);
@@ -60,10 +60,10 @@ describe("process block - block header", function () {
   });
 
   it("should process block", function () {
-    const state = generateState({slot: 5});
-    state.validators.push(generateValidator({activation: 0, exit: 10}));
+    const state = generateState({slot: 5n});
+    state.validators.push(generateValidator({activation: 0n, exit: 10n}));
     const block = generateEmptyBlock();
-    block.slot = 5;
+    block.slot = 5n;
     block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getBeaconProposeIndexStub.returns(0);
     try {

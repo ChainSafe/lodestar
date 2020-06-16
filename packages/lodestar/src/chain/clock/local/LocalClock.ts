@@ -1,5 +1,6 @@
 import {IBeaconClock, NewEpochCallback, NewSlotCallback} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EventEmitter} from "events";
 
@@ -7,7 +8,7 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
 
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
-  private currentSlot: number;
+  private currentSlot: Slot;
   private isRunning: boolean;
   private timeoutId: NodeJS.Timeout;
 
@@ -32,7 +33,7 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
     clearTimeout(this.timeoutId);
   }
 
-  public getCurrentSlot(): number {
+  public getCurrentSlot(): Slot {
     return this.currentSlot;
   }
 

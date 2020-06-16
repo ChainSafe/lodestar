@@ -43,7 +43,9 @@ describe("process block - randao", function () {
     try {
       processRandao(config, state, block.body, false);
       expect(getBeaconProposerStub.calledOnce).to.be.true;
-      expect(state.randaoMixes[getCurrentEpoch(config, state) % config.params.EPOCHS_PER_HISTORICAL_VECTOR]).to.not.be.null;
+      expect(state.randaoMixes[
+        Number(getCurrentEpoch(config, state) % config.params.EPOCHS_PER_HISTORICAL_VECTOR)
+      ]).to.not.be.null;
     } catch (e) {
       expect.fail(e.stack);
     }

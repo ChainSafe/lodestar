@@ -98,7 +98,8 @@ export function getGenesisBeaconState(
   latestBlockHeader: BeaconBlockHeader
 ): BeaconState {
   // Seed RANDAO with Eth1 entropy
-  const randaoMixes = Array<Bytes32>(config.params.EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
+  const randaoMixes = Array<Bytes32>(Number(config.params.EPOCHS_PER_HISTORICAL_VECTOR))
+    .fill(genesisEth1Data.blockHash);
 
   const state: BeaconState = config.types.BeaconState.tree.defaultValue();
   // MISC

@@ -13,13 +13,13 @@ import {sleep} from "../../util/sleep";
  * @param currentSlot
  * @param targetSlot
  */
-export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
+export function chunkify(blocksPerChunk: bigint, currentSlot: Slot, targetSlot: Slot): ISlotRange[] {
   if(blocksPerChunk < 5) {
-    blocksPerChunk = 5;
+    blocksPerChunk = 5n;
   }
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk + 1) {
+  for(let i = currentSlot; i < targetSlot; i  = i + blocksPerChunk + 1n) {
     if(i + blocksPerChunk > targetSlot) {
       chunks.push({
         start: i,
@@ -45,7 +45,7 @@ export async function getBlockRangeFromPeer(
     {
       startSlot: chunk.start,
       step: 1,
-      count: chunk.end - chunk.start + 1
+      count: Number(chunk.end - chunk.start) + 1
     }
   ) as SignedBeaconBlock[];
 }
@@ -55,11 +55,11 @@ export async function getBlockRange(
   rpc: IReqResp,
   peers: PeerInfo[],
   range: ISlotRange,
-  blocksPerChunk?: number,
+  blocksPerChunk?: bigint,
   maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
   const totalBlocks = range.end - range.start;
-  blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks/peers.length);
+  blocksPerChunk = blocksPerChunk || totalBlocks / BigInt(peers.length);
   if(blocksPerChunk < 5) {
     blocksPerChunk = totalBlocks;
   }
@@ -95,7 +95,7 @@ export async function getBlockRange(
 }
 
 export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
-  return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
+  return blocks.sort((b1, b2) => Number(b1.message.slot - b2.message.slot));
 }
 
 

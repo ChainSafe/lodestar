@@ -37,7 +37,7 @@ export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fast
     opts,
     async (request, reply) => {
       await api.validator.subscribeCommitteeSubnet(
-        Number(request.body.slot),
+        BigInt(request.body.slot),
         fromHexString(request.body.slot_signature),
         Number(request.body.attestation_committee_index),
         fromHexString(request.body.aggregator_pubkey)

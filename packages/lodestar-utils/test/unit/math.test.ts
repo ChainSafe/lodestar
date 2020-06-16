@@ -1,5 +1,5 @@
 import {assert} from "chai";
-import {bigIntMin, bigIntMax, bigIntArrayMax, intDiv, intSqrt, bigIntSqrt} from "../../src";
+import {bigIntMin, bigIntMax, bigIntArrayMin, bigIntArrayMax, intDiv, intSqrt, bigIntSqrt} from "../../src";
 
 
 describe("util/maths", function() {
@@ -31,6 +31,23 @@ describe("util/maths", function() {
       const b = 3n;
       const result = bigIntMax(a, b);
       assert.equal(result, b, "Should have returned b!");
+    });
+  });
+  
+  describe("bigIntArrayMin", () => {
+    it("if a is lt should return a", () => {
+      const a = 1n;
+      const b = 2n;
+      const c = 3n;
+      const result = bigIntArrayMin(a, b, c);
+      assert.equal(result, a, "Should have returned a!");
+    });
+    it("if c is lt should return c", () => {
+      const a = 3n;
+      const b = 2n;
+      const c = 1n;
+      const result = bigIntArrayMin(a, b, c);
+      assert.equal(result, c, "Should have returned c!");
     });
   });
 

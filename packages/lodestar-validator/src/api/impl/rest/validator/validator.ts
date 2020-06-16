@@ -65,8 +65,8 @@ export class RestValidatorApi implements IValidatorApi {
 
   public async produceAttestation(
     validatorPubKey: BLSPubkey,
+    committeeIndex: CommitteeIndex,
     slot: Slot,
-    committeeIndex: CommitteeIndex
   ): Promise<Attestation> {
     const url = "/attestation"
         +`?slot=${slot}&committee_index=${committeeIndex}&validator_pubkey=${toHexString(validatorPubKey)}`;

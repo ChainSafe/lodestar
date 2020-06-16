@@ -68,7 +68,7 @@ export class BeaconApi implements IBeaconApi {
     const fork = state? state.fork : {
       previousVersion: Buffer.alloc(4),
       currentVersion: Buffer.alloc(4),
-      epoch: 0
+      epoch: 0n
     };
     return {
       fork,

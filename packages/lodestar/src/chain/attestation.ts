@@ -109,9 +109,9 @@ export class AttestationProcessor implements IAttestationProcessor {
       }
     } else {
       // should be genesis state
-      checkpointState = await this.db.stateArchive.get(0);
+      checkpointState = await this.db.stateArchive.get(0n);
     }
-    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
+    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1n : GENESIS_EPOCH;
     const target = attestation.data.target;
     assert([previousEpoch, currentEpoch].includes(target.epoch),
       `attestation is targeting too old epoch ${target.epoch}, current=${currentEpoch}`

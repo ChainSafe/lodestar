@@ -6,7 +6,6 @@ import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {processSlashings} from "../../../../src/epoch/slashings";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
-import {intDiv} from "@chainsafe/lodestar-utils";
 
 describe('process epoch - slashings', function () {
 
@@ -31,11 +30,11 @@ describe('process epoch - slashings', function () {
   it('should decrease validator balances with penalty', function () {
     getCurrentEpochStub.returns(1);
     getTotalBalanceStub.returns(2n);
-    const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
-    const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
+    const validator1 = generateValidator({activation: 0n, exit: FAR_FUTURE_EPOCH, slashed: false});
+    const validator2 = generateValidator({activation: 0n, exit: FAR_FUTURE_EPOCH, slashed: true});
     validator2.withdrawableEpoch = config.params.EPOCHS_PER_SLASHINGS_VECTOR;
-    const validator3 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
-    validator3.withdrawableEpoch = intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) + 1;
+    const validator3 = generateValidator({activation: 0n, exit: FAR_FUTURE_EPOCH, slashed: true});
+    validator3.withdrawableEpoch = config.params.EPOCHS_PER_SLASHINGS_VECTOR / 2n + 1n;
     const state = generateState({
       validators: [
         validator1,
