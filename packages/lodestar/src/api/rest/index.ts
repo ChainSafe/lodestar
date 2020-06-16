@@ -5,7 +5,6 @@ import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
-import qs from "qs";
 import {ApiNamespace} from "../index";
 import {IRestApiModules} from "./interface";
 import {FastifySSEPlugin} from "fastify-sse-v2";
