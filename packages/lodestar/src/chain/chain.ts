@@ -98,6 +98,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(this.forkChoice.headBlockRoot());
   }
 
+  public getEpochContext(): EpochContext {
+    return this.epochCtx.copy();
+  }
+
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
     const finalizedCheckpoint = this.forkChoice.getFinalized();
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
