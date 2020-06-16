@@ -2,13 +2,12 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../constants";
 import {computeDomain, increaseBalance} from "../../util";
-import {bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot} from "../../util/signingRoot";
 
 /**

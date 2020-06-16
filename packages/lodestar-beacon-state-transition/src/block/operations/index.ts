@@ -1,4 +1,3 @@
-import assert from "assert";
 import {List} from "@chainsafe/ssz";
 import {
   Attestation,
@@ -10,6 +9,7 @@ import {
   SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";
@@ -34,7 +34,7 @@ export function processOperations(
   verifySignatures = true,
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert.equal(body.deposits.length, Math.min(
+  assert(body.deposits.length === Math.min(
     config.params.MAX_DEPOSITS,
     state.eth1Data.depositCount - state.eth1DepositIndex));
   [{

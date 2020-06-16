@@ -2,14 +2,13 @@
  * @module chain/forkChoice
  */
 
-import assert from "assert";
-
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeSlotsSinceEpochStart,
   getCurrentSlot,
   computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {ILMDGHOST, BlockSummary, NO_NODE} from "../interface";
 
@@ -220,9 +219,8 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       assert(node.slot > finalizedSlot,
         `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
-      assert.equal(
-        this.getAncestor(blockRootHex, finalizedSlot),
-        this.finalized.node.blockRoot,
+      assert(
+        this.getAncestor(blockRootHex, finalizedSlot) === this.finalized.node.blockRoot,
         `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
     }
 
@@ -325,7 +323,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headNode(): Node {
-    assert(this.justified);
+    assert(Boolean(this.justified));
     if (!this.synced) {
       this.syncChanges();
     }
@@ -343,7 +341,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headStateRoot(): Uint8Array {
-    assert(this.justified);
+    assert(Boolean(this.justified));
     if (!this.synced) {
       this.syncChanges();
     }

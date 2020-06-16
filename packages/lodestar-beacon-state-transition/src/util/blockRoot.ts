@@ -2,7 +2,6 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
 import {
   BeaconBlock,
   BeaconBlockHeader,
@@ -14,6 +13,7 @@ import {
   SignedBeaconBlockHeader,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   ZERO_HASH,

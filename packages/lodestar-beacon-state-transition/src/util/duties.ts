@@ -2,9 +2,9 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
 import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch,} from "./epoch";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
