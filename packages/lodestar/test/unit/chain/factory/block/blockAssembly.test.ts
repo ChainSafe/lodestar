@@ -37,7 +37,7 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     chainStub.getHeadState.resolves(generateState({slot: 1}));
-    chainStub.epochCtx = new EpochContext(config);
+    chainStub.getEpochContext.returns(new EpochContext(config));
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     stateTransitionStub.returns(generateState());

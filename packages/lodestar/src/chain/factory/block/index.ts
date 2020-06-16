@@ -41,7 +41,7 @@ export async function assembleBlock(
 
 function computeNewStateRoot(config: IBeaconConfig, state: BeaconState, block: BeaconBlock, chain: IBeaconChain): Root {
   // state is cloned from the cache already
-  const epochContext = chain.epochCtx.copy();
+  const epochContext = chain.getEpochContext();
   const signedBlock = {
     message: block,
     signature: EMPTY_SIGNATURE,

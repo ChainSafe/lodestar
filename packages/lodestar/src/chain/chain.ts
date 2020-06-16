@@ -59,7 +59,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chainId: Uint16;
   public networkId: Uint64;
   public clock: IBeaconClock;
-  public epochCtx: EpochContext;
+  private epochCtx: EpochContext;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
@@ -108,6 +108,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return null;
     }
     return this.db.block.get(summary.blockRoot);
+  }
+
+  public getEpochContext(): EpochContext {
+    return this.epochCtx.copy();
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {

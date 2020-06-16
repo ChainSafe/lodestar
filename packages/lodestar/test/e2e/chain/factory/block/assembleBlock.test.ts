@@ -54,8 +54,9 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     chainStub.getHeadState.resolves(config.types.BeaconState.clone(state));
     chainStub.getHeadBlock.resolves(parentBlock);
-    chainStub.epochCtx = new EpochContext(config);
-    chainStub.epochCtx.loadState(state);
+    const epochCtx = new EpochContext(config);
+    epochCtx.loadState(state);
+    chainStub.getEpochContext.returns(epochCtx);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);
@@ -74,7 +75,7 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
-    expect(() => fastStateTransition(chainStub.epochCtx, state, block, false)).to.not.throw();
+    expect(() => fastStateTransition(chainStub.getEpochContext(), state, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
