@@ -51,6 +51,13 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return this.epochCtx.copy();
   }
 
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<(SignedBeaconBlock|null)[]> {
+    if (!slots) {
+      return [];
+    }
+    return await Promise.all(slots.map(this.getBlockAtSlot));
+  }
+
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.state.finalizedCheckpoint;
   }

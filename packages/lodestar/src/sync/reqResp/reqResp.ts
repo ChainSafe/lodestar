@@ -266,8 +266,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     slot = (slot === -1)? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
     const headRoot = await chain.forkChoice.head().blockRoot;
+    const slots = [];
     while (slot < upperSlot) {
-      const block = await chain.getBlockAtSlot(slot);
+      slots.push(slot);
+      slot += request.step;
+    }
+    const blocks = await chain.getUnfinalizedBlocksAtSlots(slots);
+    for (const block of blocks) {
       if(block) {
         // make sure block is on the same chain to head
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
@@ -276,7 +281,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           yield block;
         }
       }
-      slot += request.step;
     }
   };
 }

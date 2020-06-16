@@ -199,16 +199,14 @@ describe("sync req resp", function () {
         yield block;
       }
     }());
-    // block 6 does not exist
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
-    chainStub.getBlockAtSlot.onFirstCall().resolves(null);
-    chainStub.getBlockAtSlot.onSecondCall().resolves(block8);
-    // block8 exists but not on same chain to head
-    forkChoiceStub.getAncestor.onFirstCall().returns(null);
     const block10 = generateEmptySignedBlock();
     block10.message.slot = 10;
-    chainStub.getBlockAtSlot.onThirdCall().resolves(block10);
+    // block 6 does not exist
+    chainStub.getUnfinalizedBlocksAtSlots.resolves([null, block8, block10]);
+    // block8 exists but not on same chain to head
+    forkChoiceStub.getAncestor.onFirstCall().returns(null);
     // block10 is good
     forkChoiceStub.getAncestor.onSecondCall().returns(config.types.BeaconBlock.hashTreeRoot(block10.message));
     let blockStream: AsyncIterable<ResponseBody>;
