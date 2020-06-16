@@ -4,7 +4,6 @@
 
 import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
-import {Block} from "ethers/providers";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
@@ -38,7 +37,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
 
   private opts: IEthersEth1Options;
 
-  private provider: ethers.providers.BaseProvider;
+  private provider: ethers.providers.Provider;
   private contract: ethers.Contract;
 
   private config: IBeaconConfig;
@@ -220,18 +219,15 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   }
 
   public async getDepositEvents(fromBlockTag: string | number, toBLockTag?: string | number): Promise<IDepositEvent[]> {
-    return (await this.provider.getLogs({
-      fromBlock: fromBlockTag,
-      toBlock: toBLockTag || fromBlockTag,
-      address: this.contract.address,
-      topics: [this.contract.interface.events.DepositEvent.topic],
-    })).map((log) => this.parseDepositEvent(log));
+    const filter = this.contract.filters.DepositEvent();
+    const logs = await this.contract.queryFilter(filter, fromBlockTag, toBLockTag || fromBlockTag);
+    return logs.map((log) => this.parseDepositEvent(log));
   }
 
-  public async getBlock(blockTag: string | number): Promise<Block> {
+  public async getBlock(blockTag: string | number): Promise<ethers.providers.Block> {
     try {
       // without await we can't catch error
-      return await this.provider.getBlock(blockTag, false);
+      return await this.provider.getBlock(blockTag);
     } catch (e) {
       this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
       return null;
@@ -259,9 +255,8 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   /**
    * Parse DepositEvent log
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private parseDepositEvent(log: any): IDepositEvent {
-    const values = this.contract.interface.parseLog(log).values;
+  private parseDepositEvent(log: ethers.Event): IDepositEvent {
+    const values = log.args;
     return {
       blockNumber: log.blockNumber,
       index: this.config.types.Number64.deserialize(fromHexString(values.index)),

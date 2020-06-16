@@ -6,9 +6,8 @@
 //@ts-ignore
 import ganache from "ganache-core";
 import {promisify} from "util";
-import * as utils from "ethers/utils";
 import deepmerge from "deepmerge";
-import * as ethers from "ethers/ethers";
+import {ethers} from "ethers";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import devEth1Options from "./options";
 
@@ -65,7 +64,7 @@ export class PrivateEth1Network {
     this.logger.info("List of accounts with eth balance (<address>:<privateKey>-<balance>):");
     Object.keys(this.blockchain.accounts).forEach((address) => {
       const privateKey = this.blockchain.accounts[address].secretKey.toString("hex");
-      const balance = utils.formatEther(this.blockchain.accounts[address].account.balance);
+      const balance = ethers.utils.formatEther(this.blockchain.accounts[address].account.balance);
       this.logger.info(`${address}:0x${privateKey} - ${balance} ETH`);
     });
     return await this.deployDepositContract();
@@ -93,7 +92,7 @@ export class PrivateEth1Network {
   }
 
   public async deployDepositContract(): Promise<string> {
-    const deployKey = this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString("hex");
+    const deployKey = "0x" + this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString("hex");
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
     const factory = new ethers.ContractFactory(
