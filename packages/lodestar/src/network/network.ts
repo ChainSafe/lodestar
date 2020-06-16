@@ -62,7 +62,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
         const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
         this.metadata = new MetadataController({enr}, {config, chain, logger});
-        this.gossip = (new Gossip(opts, this.metadata,
+        this.gossip = (new Gossip(opts,
           {config, libp2p, logger, validator, chain})) as unknown as IGossip;
         resolve();
       });

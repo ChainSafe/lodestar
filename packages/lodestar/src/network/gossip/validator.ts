@@ -24,7 +24,6 @@ import {
   getDomain,
   computeEpochAtSlot,
   computeSigningRoot,
-  isUnaggregatedAttestation,
   computeSubnetForAttestation
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

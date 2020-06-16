@@ -34,7 +34,6 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
-import {MetadataController} from "../metadata";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
 
@@ -50,17 +49,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, GossipHandlerFn>;
-  private metadata: MetadataController;
   //TODO: make this configurable
   private supportedEncodings = [GossipEncoding.SSZ_SNAPPY, GossipEncoding.SSZ];
 
   public constructor(
     opts: INetworkOptions,
-    metadata: MetadataController,
     {config, libp2p, logger, validator, chain, pubsub}: IGossipModules) {
     super();
     this.opts = opts;
-    this.metadata = metadata;
     this.config = config;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
     this.pubsub = pubsub || new LodestarGossipsub(config, validator, this.logger,
@@ -124,13 +120,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
     this.subscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
       new Map([["subnet", subnet.toString()]]));
-
-    // Metadata
-    const attnets = this.metadata.attnets;
-    if (!attnets[subnetNum]) {
-      attnets[subnetNum] = true;
-      this.metadata.attnets = attnets;
-    }
   }
 
   public unsubscribeFromAttestationSubnet(
@@ -141,12 +130,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
     this.unsubscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
       new Map([["subnet", subnet.toString()]]));
-    // Metadata
-    const attnets = this.metadata.attnets;
-    if (attnets[subnetNum]) {
-      attnets[subnetNum] = false;
-      this.metadata.attnets = attnets;
-    }
   }
 
   public unsubscribe(

@@ -63,7 +63,7 @@ describe("BeaconChain", function() {
     });
   });
 
-  describe("forkDigestChanged event", () => {
+  describe("forkVersion event", () => {
     it("should should receive forkDigest event", async () => {
       const spy = sinon.spy();
       const received = new Promise((resolve) => {
@@ -72,7 +72,7 @@ describe("BeaconChain", function() {
           resolve();
         });
       });
-      chain.emit("forkDigestChanged");
+      chain.emit("forkVersion");
       await received;
       expect(spy.callCount).to.be.equal(1);
     });
