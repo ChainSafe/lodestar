@@ -8,7 +8,6 @@ import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSe
 import {IEpochShuffling, computeEpochShuffling} from "./epochShuffling";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
-
   get(key: ByteVector): ValidatorIndex | undefined {
     return super.get(toHexString(key) as unknown as ByteVector);
   }
@@ -57,7 +56,6 @@ export class EpochContext {
   public copy(): EpochContext {
     const ctx = new EpochContext(this.config);
     // full copy of pubkeys, this can mutate
-    // ctx.pubkey2index = new PubkeyIndexMap(this.pubkey2index.entries());
     ctx.pubkey2index = new PubkeyIndexMap();
     for(const entry of this.pubkey2index.entries()) {
       ctx.pubkey2index.set(fromHexString(entry[0] as unknown as string), entry[1]);
