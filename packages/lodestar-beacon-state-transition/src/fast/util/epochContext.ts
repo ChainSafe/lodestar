@@ -1,4 +1,4 @@
-import {ByteVector, toHexString, hash} from "@chainsafe/ssz";
+import {ByteVector, toHexString, hash, fromHexString} from "@chainsafe/ssz";
 import {ValidatorIndex, Epoch, BeaconState, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
@@ -8,6 +8,7 @@ import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSe
 import {IEpochShuffling, computeEpochShuffling} from "./epochShuffling";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
+
   get(key: ByteVector): ValidatorIndex | undefined {
     return super.get(toHexString(key) as unknown as ByteVector);
   }
@@ -56,7 +57,11 @@ export class EpochContext {
   public copy(): EpochContext {
     const ctx = new EpochContext(this.config);
     // full copy of pubkeys, this can mutate
-    ctx.pubkey2index = new PubkeyIndexMap(this.pubkey2index.entries());
+    // ctx.pubkey2index = new PubkeyIndexMap(this.pubkey2index.entries());
+    ctx.pubkey2index = new PubkeyIndexMap();
+    for(const entry of this.pubkey2index.entries()) {
+      ctx.pubkey2index.set(fromHexString(entry[0] as unknown as string), entry[1]);
+    }
     ctx.index2pubkey = [...this.index2pubkey];
     // shallow copy the other data, it doesn't mutate (only completely replaced on rotation)
     ctx.proposers = this.proposers;
@@ -73,7 +78,6 @@ export class EpochContext {
     if (!this.index2pubkey) {
       this.index2pubkey = [];
     }
-
     const currentCount = this.pubkey2index.size;
     if (currentCount !== this.index2pubkey.length) {
       throw new Error("Pubkey indices have fallen out of sync");
