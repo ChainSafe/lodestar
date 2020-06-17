@@ -51,7 +51,6 @@ export interface IBlockProcessJob {
   reprocess: boolean;
 }
 
-const MAX_VERSION = Buffer.from([255, 255, 255, 255]);
 export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) implements IBeaconChain {
 
   public readonly chain: string;
@@ -204,7 +203,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       fork => this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4)));
     return {
       forkDigest: this.currentForkDigest,
-      nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : MAX_VERSION,
+      nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : currentVersion.valueOf() as Uint8Array,
       nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
     };
   }
