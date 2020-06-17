@@ -15,9 +15,9 @@ import rimraf from "rimraf";
 import {join} from "path";
 import {IDevOptions} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
-import {ApiClientOverInstance, Validator} from "@chainsafe/lodestar-validator/lib";
-import {BeaconApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
+import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
+import {getValidatorApiClient} from "./utils/validator";
 
 /**
  * Run a beacon node
