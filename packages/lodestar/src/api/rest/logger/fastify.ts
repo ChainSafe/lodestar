@@ -28,7 +28,7 @@ export class FastifyLogger {
     chunk: string
   ): void =>  {
     const log: {
-      msg: string; responseTime: number; reqId: number; req?: {msg: string}; res?: {statusCode: number};
+      level: number; msg: string; responseTime: number; reqId: number; req?: {msg: string}; res?: {statusCode: number};
     } = JSON.parse(chunk);
     if(log.req) {
       this.winston.debug(log.req.msg);
@@ -37,7 +37,11 @@ export class FastifyLogger {
       this.winston.debug(`Response: StatusCode: ${log.res.statusCode}\tResponseTime:`
           +` ${log.responseTime} ms\tRequestId: ${log.reqId}`);
     } else {
-      this.winston.warn(log.msg);
+      if(log.level === 50) {
+        this.winston.error(log.msg);
+      } else {
+        this.winston.warn(log.msg);
+      }
     }
 
   };
