@@ -64,7 +64,11 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async getENRForkID(): Promise<ENRForkID> {
-    return undefined;
+    return {
+      forkDigest: Buffer.alloc(4),
+      nextForkEpoch: 100,
+      nextForkVersion: Buffer.alloc(4),
+    };
   }
 
   receiveAttestation(): Promise<void> {
