@@ -8,6 +8,8 @@ import {Attestation} from "@chainsafe/lodestar-types";
 import {computeDomain, computeSigningRoot, DomainType, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 import {IBeaconChain, BeaconChain} from "../../../../../src/chain";
+import {generateState} from "../../../../utils/state";
+import {generateValidator} from "../../../../utils/validator";
 
 
 describe("produce aggregate and proof api implementation", function () {
@@ -35,9 +37,16 @@ describe("produce aggregate and proof api implementation", function () {
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
     ]);
+    const state = generateState({
+      validators: [
+        generateValidator({
+          pubkey: Buffer.alloc(48, 0)
+        })
+      ]
+    });
     const epochCtx = new EpochContext(config);
+    epochCtx.syncPubkeys(state);
     chainStub.getEpochContext.returns(epochCtx);
-    epochCtx.pubkey2index.set(Buffer.alloc(48), 0);
 
     const result = await api.produceAggregateAndProof(generateEmptyAttestation().data, Buffer.alloc(48));
     expect(result.aggregate.signature).to.not.be.null;
