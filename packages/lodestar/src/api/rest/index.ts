@@ -10,6 +10,7 @@ import {IRestApiModules} from "./interface";
 import {FastifySSEPlugin} from "fastify-sse-v2";
 import * as querystring from "querystring";
 import {FastifyLogger} from "./logger/fastify";
+import {errorHandler} from "./routes/error";
 
 export class RestApi implements IService {
 
@@ -51,9 +52,7 @@ export class RestApi implements IService {
       },
       querystringParser: querystring.parse
     });
-    server.setErrorHandler((e, req) => {
-      this.logger.error(`Unexpected error on request ${req.id} ${req.raw.method}:${req.raw.url}`, e);
-    });
+    server.setErrorHandler(errorHandler);
     if(this.opts.cors) {
       const corsArr = this.opts.cors.split(",");
       server.register(fastifyCors, {
