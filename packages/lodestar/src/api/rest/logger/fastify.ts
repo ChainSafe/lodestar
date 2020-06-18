@@ -1,4 +1,4 @@
-import {Stream, Transform} from "stream";
+import {Stream} from "stream";
 import {IncomingMessage} from "http";
 import {FastifyRequest} from "fastify";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -9,36 +9,35 @@ export class FastifyLogger {
 
   public readonly serializers = {
     req: (request: IncomingMessage&FastifyRequest) => {
-      return {msg: `${request.ip} -> ${request.hostname}\t${request.method}:${request.url}\tRequestId: ${request.id}`};
+      return {
+        msg: `Request: ${request.ip} -> ${request.hostname}\t${request.method}:${request.url}\tRequestId: ${request.id}`
+      };
     },
   };
 
+  private winston: ILogger;
+
   constructor(logger: ILogger) {
-    this.stream = new Transform({
-      objectMode: true,
-      transform: this.transform
-    });
-    this.stream.pipe(logger.stream());
+    this.winston = logger;
+    this.stream = {
+      write: this.handle,
+    } as unknown as Stream;
   }
 
-  private transform = (
-    chunk: string, encoding: string, callback: (error?: (Error | null), data?: {level: string; message: string}) => void
+  private handle = (
+    chunk: string
   ): void =>  {
     const log: {
       msg: string; responseTime: number; reqId: number; req?: {msg: string}; res?: {statusCode: number};
     } = JSON.parse(chunk);
     if(log.req) {
-      callback(null, {level: "debug", message: log.req.msg});
+      this.winston.debug(log.req.msg);
     } else if(log.res) {
-      callback(
-        null,
-        {
-          level: "debug",
-          message: `RequestId: ${log.reqId}\tStatusCode: ${log.res.statusCode}\tResponseTime: ${log.responseTime} ms`
-        }
-      );
+
+      this.winston.debug(`Response: StatusCode: ${log.res.statusCode}\tResponseTime:`
+          +` ${log.responseTime} ms\tRequestId: ${log.reqId}`);
     } else {
-      callback(null, {level: "info", message: log.msg});
+      this.winston.warn(log.msg);
     }
 
   };

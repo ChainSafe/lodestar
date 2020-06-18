@@ -9,6 +9,7 @@ import {ApiNamespace} from "../index";
 import {IRestApiModules} from "./interface";
 import {FastifySSEPlugin} from "fastify-sse-v2";
 import * as querystring from "querystring";
+import {FastifyLogger} from "./logger/fastify";
 
 export class RestApi implements IService {
 
@@ -42,8 +43,7 @@ export class RestApi implements IService {
 
   private  setupServer(modules: IRestApiModules): FastifyInstance {
     const server = fastify.default({
-      //TODO: somehow pass winston here
-      logger: false,
+      logger: new FastifyLogger(this.logger),
       ajv: {
         customOptions: {
           coerceTypes: "array",
