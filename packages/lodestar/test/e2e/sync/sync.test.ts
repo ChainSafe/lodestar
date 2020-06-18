@@ -5,7 +5,7 @@ import * as assert from "assert";
 import {getDevValidators} from "../../utils/node/validator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
-describe("beacon node", function () {
+describe("syncing", function () {
 
   it("should sync from other BN", async function () {
     this.timeout(0);

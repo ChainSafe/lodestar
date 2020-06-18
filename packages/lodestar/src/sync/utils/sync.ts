@@ -183,30 +183,29 @@ export function processSyncBlocks(
     for await (const blocks of source) {
       logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
       blockBuffer.push(...blocks);
-      blockBuffer = sortBlocks(blockBuffer);
-
-      while(blockBuffer.length > 0) {
-        const block = blockBuffer.shift();
-        if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
-          await chain.receiveBlock(block, trusted);
-          headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
-          if(block.message.slot > lastProcessedSlot) {
-            lastProcessedSlot = block.message.slot;
-          }
-        } else {
-          logger.warn(
-            "Received block parent root doesn't match our head",
-            {
-              head: toHexString(headRoot),
-              headSlot: chain.forkChoice.headBlockSlot(),
-              blockParent: toHexString(block.message.parentRoot),
-              blockSlot: block.message.slot
-            }
-          );
-          //this will trigger sync to retry to fetch this chunk again
-          lastProcessedSlot = chain.forkChoice.headBlockSlot();
-          break;
+    }
+    blockBuffer = sortBlocks(blockBuffer);
+    while(blockBuffer.length > 0) {
+      const block = blockBuffer.shift();
+      if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
+        await chain.receiveBlock(block, trusted);
+        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
+        if(block.message.slot > lastProcessedSlot) {
+          lastProcessedSlot = block.message.slot;
         }
+      } else {
+        logger.warn(
+          "Received block parent root doesn't match our head",
+          {
+            head: toHexString(headRoot),
+            headSlot: chain.forkChoice.headBlockSlot(),
+            blockParent: toHexString(block.message.parentRoot),
+            blockSlot: block.message.slot
+          }
+        );
+        //this will trigger sync to retry to fetch this chunk again
+        lastProcessedSlot = lastProcessedSlot || chain.forkChoice.headBlockSlot();
+        break;
       }
     }
     return lastProcessedSlot;
