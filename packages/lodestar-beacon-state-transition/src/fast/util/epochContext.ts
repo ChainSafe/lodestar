@@ -1,4 +1,4 @@
-import {ByteVector, toHexString, hash, fromHexString} from "@chainsafe/ssz";
+import {hash} from "@chainsafe/ssz";
 import {ValidatorIndex, Epoch, BeaconState, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
@@ -6,30 +6,26 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 import {GENESIS_EPOCH, DomainType} from "../../constants";
 import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSeed} from "../../util";
 import {IEpochShuffling, computeEpochShuffling} from "./epochShuffling";
-
-class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
-  get(key: ByteVector): ValidatorIndex | undefined {
-    return super.get(toHexString(key) as unknown as ByteVector);
-  }
-  set(key: ByteVector, value: ValidatorIndex): this {
-    return super.set(toHexString(key) as unknown as ByteVector, value);
-  }
-}
+import {PubkeyIndexMap, IPubkeyIndexGetter, pubkey2indexProxyHandler} from "./pubkeyIndexMap";
 
 export class EpochContext {
-  public pubkey2index: PubkeyIndexMap;
   public index2pubkey: Uint8Array[];
   public proposers: number[];
   public previousShuffling?: IEpochShuffling;
   public currentShuffling?: IEpochShuffling;
   public nextShuffling?: IEpochShuffling;
   public config: IBeaconConfig;
+  private _pubkey2index: PubkeyIndexMap;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
-    this.pubkey2index = new PubkeyIndexMap();
+    this._pubkey2index = new PubkeyIndexMap();
     this.index2pubkey = [];
     this.proposers = [];
+  }
+
+  public get pubkey2index(): IPubkeyIndexGetter {
+    return new Proxy(this._pubkey2index, pubkey2indexProxyHandler);
   }
 
   public loadState(state: BeaconState): void {
@@ -55,11 +51,8 @@ export class EpochContext {
 
   public copy(): EpochContext {
     const ctx = new EpochContext(this.config);
-    // full copy of pubkeys, this can mutate
-    ctx.pubkey2index = new PubkeyIndexMap();
-    for(const entry of this.pubkey2index.entries()) {
-      ctx.pubkey2index.set(fromHexString(entry[0] as unknown as string), entry[1]);
-    }
+    // _pubkey2index is shared to all copies but they cannot mutate
+    ctx._pubkey2index = this._pubkey2index;
     ctx.index2pubkey = [...this.index2pubkey];
     // shallow copy the other data, it doesn't mutate (only completely replaced on rotation)
     ctx.proposers = this.proposers;
@@ -70,20 +63,20 @@ export class EpochContext {
   }
 
   public syncPubkeys(state: BeaconState): void {
-    if (!this.pubkey2index) {
-      this.pubkey2index = new PubkeyIndexMap();
+    if (!this._pubkey2index) {
+      this._pubkey2index = new PubkeyIndexMap();
     }
     if (!this.index2pubkey) {
       this.index2pubkey = [];
     }
-    const currentCount = this.pubkey2index.size;
+    const currentCount = this._pubkey2index.size;
     if (currentCount !== this.index2pubkey.length) {
       throw new Error("Pubkey indices have fallen out of sync");
     }
     const newCount = state.validators.length;
     for (let i = currentCount; i < newCount; i++) {
       const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
-      this.pubkey2index.set(pubkey, i);
+      this._pubkey2index.set(pubkey, i);
       this.index2pubkey.push(pubkey);
     }
   }
