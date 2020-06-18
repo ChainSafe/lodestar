@@ -51,6 +51,9 @@ export class RestApi implements IService {
       },
       querystringParser: querystring.parse
     });
+    server.setErrorHandler((e, req) => {
+      this.logger.error(`Unexpected error on request ${req.id} ${req.raw.method}:${req.raw.url}`, e);
+    });
     if(this.opts.cors) {
       const corsArr = this.opts.cors.split(",");
       server.register(fastifyCors, {
