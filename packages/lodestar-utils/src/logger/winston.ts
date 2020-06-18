@@ -7,6 +7,7 @@ import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./int
 import chalk from "chalk";
 import {defaultLogFormat} from "./format";
 import TransportStream from "winston-transport";
+import {Writable} from "stream";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -69,6 +70,10 @@ export class WinstonLogger implements ILogger {
 
   public profile(message: string, option?: {level: string; message: string}): void {
     this.winston.profile(message, option);
+  }
+
+  public stream(): Writable {
+    return this.winston;
   }
 
   public set level(level: LogLevel) {
