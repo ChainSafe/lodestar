@@ -23,6 +23,7 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import pipe from "it-pipe";
+import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -214,9 +215,20 @@ describe("[sync] rpc", function () {
       [Buffer.from(encode(99999999999999999999999))],
       stream,
       async (source: AsyncIterable<Buffer>) => {
+        let i = 0;
+        // 1 chunk of status and 1 chunk of error
         for await (const val of source) {
-          const status = val.slice()[0];
-          expect(status).to.be.equal(RpcResponseStatus.ERR_INVALID_REQ);
+          if (i === 0) {
+            const status = val.slice()[0];
+            expect(status).to.be.equal(RpcResponseStatus.ERR_INVALID_REQ);
+          } else {
+            // i should be 1
+            const errBuf = val.slice();
+            const err = config.types.P2pErrorMessage.deserialize(errBuf);
+            // message from the server side
+            expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid Request");
+          }
+          i++;
         }
       }
     );

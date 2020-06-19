@@ -11,6 +11,7 @@ import {
   RequestBody,
   SignedBeaconBlock,
   Status,
+  MAX_REQUEST_BLOCKS,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH, Method, RequestId} from "../../constants";
@@ -176,6 +177,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
     try {
+      if (request.count > MAX_REQUEST_BLOCKS) {
+        this.logger.warn(`Request id ${id} asked for ${request.count} blocks, ` +
+          `just return ${MAX_REQUEST_BLOCKS} maximum`);
+        request.count = MAX_REQUEST_BLOCKS;
+      }
       const archiveBlocksStream = this.db.blockArchive.valuesStream({
         gte: request.startSlot,
         lt: request.startSlot + request.count * request.step,
