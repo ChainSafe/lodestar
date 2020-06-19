@@ -93,9 +93,8 @@ export class BeaconApi implements IBeaconApi {
 
   public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
     return new EventIterator<SignedBeaconBlock>((push) => {
-      this.chain.on("processedBlock", (block) => {
-        push(block);
-      });
+      this.chain.on("processedBlock", push);
+      return () => this.chain.off("processedBlock", push);
     });
   }
 }
