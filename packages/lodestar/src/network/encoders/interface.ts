@@ -11,8 +11,7 @@ export interface IResponseChunk {
 
   status: RpcResponseStatus;
 
-  //missing body if status !== 0
-  body?: ResponseBody;
+  body: ResponseBody;
 
 }
 

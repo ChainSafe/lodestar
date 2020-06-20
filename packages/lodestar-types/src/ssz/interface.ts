@@ -82,6 +82,7 @@ export interface IBeaconSSZTypes {
   Metadata: ContainerType<t.Metadata>;
   BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
+  P2pErrorMessage: ListType<t.P2pErrorMessage>;
   //api
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
   ForkResponse: ContainerType<t.ForkResponse>;
@@ -157,6 +158,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Metadata",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
+  "P2pErrorMessage",
   //api
   "SubscribeToCommitteeSubnetPayload",
   "ForkResponse",

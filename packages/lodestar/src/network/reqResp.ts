@@ -24,7 +24,7 @@ import {
   eth2ResponseTimer,
   isRequestOnly,
   isRequestSingleChunk,
-  randomRequestId
+  randomRequestId,
 } from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -32,7 +32,7 @@ import PeerId from "peer-id";
 import PeerInfo from "peer-info";
 import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
-import {eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
+import {eth2ResponseDecode, eth2ResponseEncode, encodeP2pErrorMessage} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IReputationStore} from "../sync/IReputation";
 
@@ -52,14 +52,15 @@ interface IReqRespModules {
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
-  public waitForResponse(requestId: string, responseListener: ResponseCallbackFn): NodeJS.Timeout {
+  public waitForResponse(
+    config: IBeaconConfig, requestId: string, responseListener: ResponseCallbackFn): NodeJS.Timeout {
     const responseEvent = createResponseEvent(requestId);
     this.once(responseEvent, responseListener);
-
     return setTimeout(() => {
       this.removeListener(responseEvent, responseListener);
       const errorGenerator: AsyncGenerator<IResponseChunk> = async function* () {
-        yield {status: RpcResponseStatus.ERR_RESP_TIMEOUT};
+        yield {status: RpcResponseStatus.ERR_RESP_TIMEOUT,
+          body: encodeP2pErrorMessage(config, "Timeout processing request")};
       }();
       responseListener(errorGenerator);
     }, RESP_TIMEOUT);
@@ -120,8 +121,9 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   public sendResponseStream(id: RequestId, err: RpcError|null, chunkIter: AsyncIterable<ResponseBody>): void {
     if(err) {
+      const config = this.config;
       this.responseListener.emit(createResponseEvent(id), async function* () {
-        yield {status: err.status};
+        yield {status: err.status, body: encodeP2pErrorMessage(config, err.message || "")};
       }());
       this.logger.verbose("Sent response with error for request " + id);
     } else {
@@ -182,11 +184,12 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId, method: Method
   ): ((source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IResponseChunk>) {
     const getResponse = this.getResponse;
+    const config = this.config;
     return (source) => {
       return (async function * () {
         for await (const request of source) {
           if (!request.isValid) {
-            yield {status: RpcResponseStatus.ERR_INVALID_REQ};
+            yield {status: RpcResponseStatus.ERR_INVALID_REQ, body: encodeP2pErrorMessage(config, "Invalid Request")};
           } else {
             yield* getResponse(peerId, method, request.body);
           }
@@ -210,7 +213,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         clearTimeout(responseTimer);
         resolve(responseIter);
       };
-      responseTimer = this.responseListener.waitForResponse(requestId, responseListenerFn);
+      responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
       this.emit("request", new PeerInfo(peerId), method, requestId, request);
     });
 

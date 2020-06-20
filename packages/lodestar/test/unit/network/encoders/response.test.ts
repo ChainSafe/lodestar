@@ -1,5 +1,5 @@
 import pipe from "it-pipe";
-import {eth2ResponseDecode, eth2ResponseEncode} from "../../../../src/network/encoders/response";
+import {eth2ResponseDecode, eth2ResponseEncode, encodeP2pErrorMessage, decodeP2pErrorMessage} from "../../../../src/network/encoders/response";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -164,6 +164,7 @@ describe("response decoders", function () {
   it("should work - response stream with error - ssz", async function () {
     const chunks = generateBlockChunks(10);
     chunks[4].status = RpcResponseStatus.ERR_INVALID_REQ;
+    chunks[4].body = encodeP2pErrorMessage(config, "Invalid request");
     const responses = await pipe(
       chunks,
       eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
@@ -171,6 +172,7 @@ describe("response decoders", function () {
       collect
     ) as ResponseBody[];
     expect(responses.length).to.be.equal(4);
+    expect(loggerStub.warn.calledWith("eth2ResponseDecode: Received err status '1' with message 'Invalid request' for method beacon_blocks_by_range")).to.be.true;
   });
 
   it("should work - response stream with error - ssz_snappy", async function () {
@@ -255,6 +257,13 @@ describe("response decoders", function () {
       expect(response).to.be.deep.equal([status]);
     });
 
+  });
+
+  describe("encodeP2pErrorMessage", () => {
+    it("should encode and decode error message correctly", () => {
+      const err = encodeP2pErrorMessage(config, "Invalid request");
+      expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid request");
+    });
   });
 
 });
