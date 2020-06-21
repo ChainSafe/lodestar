@@ -7,8 +7,14 @@
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 
-Welcome to the ChainSafe lodestar monorepo!
-This repository contains a suite of Ethereum 2.0 packages.
+Lodestar is a Typescript implementation of the Ethereum 2.0 specification developed by ChainSafe.
+
+## Getting started
+
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
+- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
+- If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [discord](https://discord.gg/yjyvFRP)!
 
 ## Index
 
@@ -19,37 +25,6 @@ This repository contains a suite of Ethereum 2.0 packages.
 - [Meeting Notes](#meeting-notes)
 - [Donations](#donations)
 - [Packages](#packages)
-
-## Tl;Dr:
-
-Lodestar is a Typescript implementation of the Eth 2 Beacon chain spec.
-
-## Prerequisites
-
-- [Lerna](https://github.com/lerna/lerna)
-- [Yarn](https://yarnpkg.com/)
-
-## Getting Started
-
-To get an instance of Lodestar up & running, start a terminal from the root of the this repo:
-
-1. Install dependencies accross all packages:
-
-```
-yarn install
-```
-
-2. Run the build script:
-
-```
-yarn run build
-```
-
-3. Lodestar should now be ready for use:
-
-```
-yarn run cli --help
-```
 
 ## Contributors
 
@@ -65,6 +40,8 @@ We are a local group of Toronto open source developers. As such, all of our open
 If you want to donate, you can send us ETH at the following address: **lodestar.chainsafe.eth**
 
 ## Packages
+
+This monorepo repository contains a suite of Ethereum 2.0 packages.
 
 | Package                                                                                                                                    | Version                                                                                                                                                       | License                                                                                                               | Docs                                                                                                                                                      | Description                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |

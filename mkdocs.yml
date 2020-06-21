@@ -46,3 +46,4 @@ nav:
       - Local testnet: usage/local.md
       - Witti testnet: usage/witti.md
   - Packages: packages.md
+  - Contributing: contributing.md
