@@ -2,13 +2,11 @@
 
 DOCS_DIR=docs
 
-# exit when any command fails
-set -e
-
 # Move typedoc documentation to the packages dir
 rm -rf $DOCS_DIR/packages
 mkdir -p $DOCS_DIR/packages
 for PACKAGE_DIR in packages/* ; do
+    echo "Copying $PACKAGE_DIR docs"
     cp -r $PACKAGE_DIR/docs $DOCS_DIR/$PACKAGE_DIR
 done
 

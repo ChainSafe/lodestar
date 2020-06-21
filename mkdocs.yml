@@ -29,13 +29,13 @@ extra_css:
 # Socials
 extra:
   social:
-    - type: github
+    - icon: fontawesome/brands/github-alt
       link: https://github.com/ChainSafe/lodestar
-    - type: twitter
+    - icon: fontawesome/brands/twitter
       link: https://twitter.com/ChainSafe
-    - type: comments
+    - icon: fontawesome/brands/discord
       link: https://discord.gg/yjyvFRP
-    - type: medium
+    - icon: fontawesome/brands/medium
       link: https://medium.com/ChainSafe
 
 # Customize left navigation menu
