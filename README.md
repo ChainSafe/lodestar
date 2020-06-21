@@ -1,4 +1,4 @@
-![lodestar logo](./assets/300ppi/FullMark-BLACK.png)
+![lodestar logo](/assets/300ppi/FullMark-BLACK.png)
 
 # Lodestar Monorepo
 
