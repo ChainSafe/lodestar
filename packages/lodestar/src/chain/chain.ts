@@ -25,7 +25,7 @@ import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
-import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
+import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState, GenesisBuilder} from "./genesis/genesis";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
@@ -130,6 +130,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
     await this.restoreHeadState(state);
+    await this.eth1.startProcessEth1Blocks();
   }
 
   public async stop(): Promise<void> {
@@ -309,16 +310,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     let state: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      state = await new Promise((resolve) => {
-        const genesisListener = async (timestamp: number, eth1Data: Eth1Data): Promise<void> => {
-          const state = await this.checkGenesis(timestamp, eth1Data);
-          if (state) {
-            this.eth1.removeListener("eth1Data", genesisListener);
-            resolve(state);
-          }
-        };
-        this.eth1.on("eth1Data", genesisListener);
-      });
+      const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});
+      state = await builder.waitForGenesis();
+      await this.initializeBeaconChain(state);
+      this.logger.info(`Genesis state is ready with ${state.validators.length} validators`);
     }
     // set metrics based on beacon state
     this.metrics.currentSlot.set(state.slot);
