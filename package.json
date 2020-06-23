@@ -49,6 +49,6 @@
     "webpack": "^4.42.0"
   },
   "optionalDependencies": {
-    "@chainsafe/eth2-spec-tests": "0.12.0"
+    "@chainsafe/eth2-spec-tests": "0.12.1"
   }
 }

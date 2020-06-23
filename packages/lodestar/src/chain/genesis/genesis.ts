@@ -37,7 +37,7 @@ export function initializeBeaconStateFromEth1(
   deposits: Deposit[]): TreeBacked<BeaconState> {
   const state = getGenesisBeaconState(
     config,
-    eth1Timestamp - eth1Timestamp % config.params.MIN_GENESIS_DELAY + 2 * config.params.MIN_GENESIS_DELAY,
+    eth1Timestamp + config.params.GENESIS_DELAY,
     {
       depositCount: deposits.length,
       depositRoot: new Uint8Array(32),
