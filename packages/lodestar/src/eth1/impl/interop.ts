@@ -19,7 +19,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   Promise<Pushable<[IDepositEvent[], ethers.providers.Block]>> {
     return null;
   }
-  public unsubscribeEth1Blocks(): void {}
+  public async unsubscribeEth1Blocks(): Promise<void> {}
 
   public async getDepositRoot(): Promise<Uint8Array> {
     return Buffer.alloc(32);

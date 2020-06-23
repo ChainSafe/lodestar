@@ -24,7 +24,7 @@ export interface IEth1Notifier {
   start(): Promise<void>;
   stop(): Promise<void>;
   startProcessEth1Blocks(subscribe?: boolean): Promise<Pushable<[IDepositEvent[], ethers.providers.Block]>>;
-  unsubscribeEth1Blocks(): void;
+  unsubscribeEth1Blocks(): Promise<void>;
 
   /**
    * Returns block by block hash or number

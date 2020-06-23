@@ -70,22 +70,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.verbose("Eth1 notifier is disabled" );
       return;
     }
-    if (this.startedProcessEth1) {
-      this.logger.verbose("Eth1 notifier already started" );
-      return;
-    }
-    if(!this.contract) {
-      await this.initContract();
-    }
-    const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
-    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-    this.logger.info(
-      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
-    );
-    this.logger.verbose(
-      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
-    );
-
+    await this.doStart();
   }
 
   public async stop(): Promise<void> {
@@ -105,6 +90,15 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.info("Started processing eth1 blocks already");
       return;
     }
+    if (!this.opts.enabled) {
+      if (subscribe) {
+        this.logger.info("Eth1 notifider is disabled but starting it to build genesis state");
+        await this.doStart();
+      } else {
+        this.logger.warn("Eth1 notifider is disabled, no need to process eth1 for proposing data");
+        return;
+      }
+    }
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
     // then start listening for incoming blocks
@@ -123,11 +117,16 @@ export class EthersEth1Notifier implements IEth1Notifier {
   /**
    * Unsubscribe to eth1 events + blocks
    */
-  public unsubscribeEth1Blocks(): void {
+  public async unsubscribeEth1Blocks(): Promise<void> {
     if (this.eth1Source) {
       this.eth1Source.end();
       this.eth1Source = null;
     }
+    if (!this.opts.enabled) {
+      this.logger.info("Genesis builder is done and eth1 disabled, stopping eth1");
+      await this.stop();
+    }
+    this.logger.info("Unsubscribed eth1 blocks & depoosit events");
   }
 
   public async getLastProcessedBlockTag(): Promise<string | number> {
@@ -270,6 +269,20 @@ export class EthersEth1Notifier implements IEth1Notifier {
     } catch (e) {
       throw new Error("Eth1 deposit contract not found! Probably wrong eth1 rpc url");
     }
+  }
+
+  private async doStart(): Promise<void> {
+    if(!this.contract) {
+      await this.initContract();
+    }
+    const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
+    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+    this.logger.info(
+      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
+    );
+    this.logger.verbose(
+      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
+    );
   }
 
   private async contractExists(address: string): Promise<boolean> {
