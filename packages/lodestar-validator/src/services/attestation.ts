@@ -195,7 +195,7 @@ export class AttestationService {
         `Published signed aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
       );
     } catch (e) {
-      this.logger.error("Failed to publish signed aggregate and proof");
+      this.logger.error("Failed to publish signed aggregate and proof", e);
     }
   };
 

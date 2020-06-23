@@ -15,10 +15,10 @@ export class FastifyLogger {
     },
   };
 
-  private winston: ILogger;
+  private log: ILogger;
 
   constructor(logger: ILogger) {
-    this.winston = logger;
+    this.log = logger;
     this.stream = {
       write: this.handle,
     } as unknown as Stream;
@@ -31,16 +31,16 @@ export class FastifyLogger {
       level: number; msg: string; responseTime: number; reqId: number; req?: {msg: string}; res?: {statusCode: number};
     } = JSON.parse(chunk);
     if(log.req) {
-      this.winston.debug(log.req.msg);
+      this.log.debug(log.req.msg);
     } else if(log.res) {
 
-      this.winston.debug(`Response: StatusCode: ${log.res.statusCode}\tResponseTime:`
+      this.log.debug(`Response: StatusCode: ${log.res.statusCode}\tResponseTime:`
           +` ${log.responseTime} ms\tRequestId: ${log.reqId}`);
     } else {
       if(log.level === 50) {
-        this.winston.error(log.msg);
+        this.log.error(log.msg);
       } else {
-        this.winston.warn(log.msg);
+        this.log.warn(log.msg);
       }
     }
 
