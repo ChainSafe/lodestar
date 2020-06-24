@@ -23,14 +23,14 @@ export interface IDepositEvent extends DepositData {
 export interface IEth1Notifier {
   start(): Promise<void>;
   stop(): Promise<void>;
-  startProcessEth1Blocks(subscribe?: boolean): Promise<Pushable<[IDepositEvent[], ethers.providers.Block]>>;
-  unsubscribeEth1Blocks(): Promise<void>;
+  getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>>;
+  endEth1BlockAndDepositEventsSource(): Promise<void>;
 
   /**
    * Returns block by block hash or number
    * @param blockTag
    */
-  getBlock(blockTag: string | number): Promise<ethers.providers.Block>;
+  getBlock(blockTag: string | number): Promise<Eth1Block>;
 
   /**
    * Return deposit events at a block
@@ -44,4 +44,17 @@ export interface IEth1Notifier {
 export interface Eth1BlockRange {
   fromNumber: number;
   toNumber: number;
+}
+
+/**
+ * Eth1 block.
+ */
+export type Eth1Block = ethers.providers.Block;
+
+/**
+ * Eth1 Deposit Events and Block.
+ */
+export interface Eth1EventsBlock {
+  events: IDepositEvent[];
+  block?: Eth1Block;
 }

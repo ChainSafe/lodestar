@@ -3,7 +3,7 @@ import {ethers} from "ethers";
 import sinon from "sinon";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EthersEth1Notifier, IEth1Notifier, IDepositEvent} from "../../../src/eth1";
+import {EthersEth1Notifier, IEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconDb, LevelDbController} from "../../../src/db";
@@ -96,15 +96,15 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   });
 
   async function waitForEth1Block(targetBlockNumber: number): Promise<void> {
-    const eth1DataStream = await eth1Notifier.startProcessEth1Blocks(true);
-    await pipe(eth1DataStream, async function(source: AsyncIterable<[IDepositEvent[], ethers.providers.Block]>) {
-      for await (const data of source) {
-        if (data[1] && data[1].number === targetBlockNumber) {
+    const eth1DataStream = await eth1Notifier.getEth1BlockAndDepositEventsSource();
+    await pipe(eth1DataStream, async function(source: AsyncIterable<Eth1EventsBlock>) {
+      for await (const {block} of source) {
+        if (block && block.number === targetBlockNumber) {
           return;
         }
       }
     });
-    eth1Notifier.unsubscribeEth1Blocks();
+    await eth1Notifier.endEth1BlockAndDepositEventsSource();
   }
 
 });

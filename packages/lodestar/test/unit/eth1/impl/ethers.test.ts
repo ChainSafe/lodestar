@@ -80,9 +80,8 @@ describe("Eth1Notifier", () => {
     await eth1.start();
     expect(provider.getBlock.called).to.be.false;
     // cannot start if subscribe=false
-    let eth1Source = await eth1.startProcessEth1Blocks(false);
+    await eth1.start();
     expect(provider.getBlock.called).to.be.false;
-    expect(eth1Source).to.be.undefined;
     // should start if subscribe=true
     const lastProcessedEth1Data = {
       blockHash: Buffer.alloc(32, 1),
@@ -96,11 +95,17 @@ describe("Eth1Notifier", () => {
     db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
     provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
     provider.getBlockNumber.resolves(currentBlockNumber);
-    eth1Source = await eth1.startProcessEth1Blocks(true);
+    const eth1Source = await eth1.getEth1BlockAndDepositEventsSource();
     expect(eth1Source).not.to.be.undefined;
+    await new Promise((resolve) => {
+      provider.getBlockNumber.callsFake(async () => {
+        resolve();
+        return 0;
+      });
+    });
     expect(provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).calledOnce).to.be.true;
 
-    await eth1.unsubscribeEth1Blocks();
+    await eth1.endEth1BlockAndDepositEventsSource();
     // make sure stop() is called
     expect(provider.removeAllListeners.calledOnce).to.be.true;
   });

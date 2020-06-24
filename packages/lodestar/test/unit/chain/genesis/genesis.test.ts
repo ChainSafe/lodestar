@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {EthersEth1Notifier, IDepositEvent} from "../../../../src/eth1";
+import {EthersEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../../src/eth1";
 import {ethers} from "ethers";
 import pushable from "it-pushable";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
@@ -53,12 +53,12 @@ describe("genesis builder", function () {
   });
 
   it("should build genesis state", async () => {
-    const eth1Source = pushable<[IDepositEvent[], ethers.providers.Block]>();
-    eth1Stub.startProcessEth1Blocks.resolves(eth1Source);
+    const eth1Source = pushable<Eth1EventsBlock>();
+    eth1Stub.getEth1BlockAndDepositEventsSource.resolves(eth1Source);
 
     const statePromise = genesisBuilder.waitForGenesis();
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1; i++) {
-      eth1Source.push([[events[i]], null]);
+      eth1Source.push({events: [events[i]]});
     }
     const lastEventIndex = schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1;
     const block = {
@@ -66,7 +66,8 @@ describe("genesis builder", function () {
       timestamp: Math.floor(Date.now()/1000),
       hash: "0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8"
     } as ethers.providers.Block;
-    eth1Source.push([[events[lastEventIndex]], block]);
+    eth1Source.push({events: [events[lastEventIndex]], block});
+
     const state = await statePromise;
     expect(state.validators.length).to.be.equal(4);
 

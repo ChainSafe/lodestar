@@ -4,7 +4,7 @@ import {ethers} from "ethers";
 
 import {Eth1Data} from "@chainsafe/lodestar-types";
 
-import {IEth1Notifier, IDepositEvent} from "../interface";
+import {IEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../interface";
 import {Pushable} from "it-pushable";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
@@ -15,11 +15,10 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async start(): Promise<void> {}
   public async stop(): Promise<void> {}
 
-  public async startProcessEth1Blocks(subscribe?: boolean):
-  Promise<Pushable<[IDepositEvent[], ethers.providers.Block]>> {
+  public async getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>> {
     return null;
   }
-  public async unsubscribeEth1Blocks(): Promise<void> {}
+  public async endEth1BlockAndDepositEventsSource(): Promise<void> {}
 
   public async getDepositRoot(): Promise<Uint8Array> {
     return Buffer.alloc(32);
