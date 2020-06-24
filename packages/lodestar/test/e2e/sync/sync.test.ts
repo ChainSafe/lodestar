@@ -9,7 +9,7 @@ describe("syncing", function () {
 
   it("should sync from other BN", async function () {
     this.timeout(0);
-    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8}, 8);
+    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 4, SLOTS_PER_EPOCH: 8}, 8);
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 50000);
     const validators = getDevValidators(bn, 8);
     await bn.start();
@@ -20,7 +20,7 @@ describe("syncing", function () {
       assert.fail("Failed to reach finalization");
     }
     const bn2 = await getDevBeaconNode(
-      {SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8},
+      {SECONDS_PER_SLOT: 4, SLOTS_PER_EPOCH: 8},
       8,
       (await bn.chain.getHeadState()).genesisTime
     );
