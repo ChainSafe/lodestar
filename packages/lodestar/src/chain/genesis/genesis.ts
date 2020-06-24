@@ -133,11 +133,7 @@ export function initializeBeaconStateFromEth1(
   deposits: Deposit[]): TreeBacked<BeaconState> {
   const state = getGenesisBeaconState(
     config,
-    {
-      depositCount: deposits.length,
-      depositRoot: new Uint8Array(32),
-      blockHash: eth1BlockHash
-    },
+    config.types.Eth1Data.defaultValue(),
     getTemporaryBlockHeader(
       config,
       getEmptyBlock()
@@ -145,6 +141,7 @@ export function initializeBeaconStateFromEth1(
   );
 
   applyTimestamp(config, state, eth1Timestamp);
+  applyEth1BlockHash(config, state, eth1BlockHash);
 
   // Process deposits
   applyDeposits(config, state, deposits);
