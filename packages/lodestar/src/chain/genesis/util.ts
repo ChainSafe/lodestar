@@ -67,15 +67,14 @@ export function applyDeposits(
   newDeposits: Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): void {
-  let depositDatas: DepositData[];
+
   const depositDataRootList: Root[] = [];
   if (fullDepositDataRootList) {
     for (let index = 0; index < state.eth1Data.depositCount; index++) {
       depositDataRootList.push(fullDepositDataRootList[index]);
     }
-  } else {
-    depositDatas = newDeposits.map((deposit) => deposit.data);
   }
+  const depositDatas: DepositData[] = fullDepositDataRootList? null : newDeposits.map((deposit) => deposit.data);
   newDeposits.forEach((deposit, index) => {
     if (fullDepositDataRootList) {
       depositDataRootList.push(fullDepositDataRootList[index + depositDataRootList.length]);
@@ -93,10 +92,8 @@ export function applyDeposits(
   // Process activations
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    validator.effectiveBalance = bigIntMin(
-      balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
-      config.params.MAX_EFFECTIVE_BALANCE
-    );
+    validator.effectiveBalance = bigIntMin(balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
+      config.params.MAX_EFFECTIVE_BALANCE);
     if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
