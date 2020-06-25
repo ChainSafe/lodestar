@@ -10,9 +10,9 @@ Command line tool for Lodestar
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
 - View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
-### Lodecli
+### Lodestar
 
-We have an experimental new CLI called `lodecli` which currently provides a subset of the `lodestar` CLI functionality.
+We have an experimental new CLI called `lodestar` which currently provides a subset of the `lodestar` CLI functionality.
 
-`./bin/lodecli beacon init` - this will write a configuration and network identity to disk, by default `./.lodecli`
-`./bin/lodecli beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodecli`
+`./bin/lodestar beacon init` - this will write a configuration and network identity to disk, by default `./.lodestar`
+`./bin/lodestar beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodestar`

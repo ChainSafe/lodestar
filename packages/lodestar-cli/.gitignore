@@ -16,4 +16,4 @@ package-lock.json
 LodestarValidatorDB/
 benchmark-reports/
 validators/
-.lodecli
+.lodestar
