@@ -33,7 +33,7 @@ docs/assets
 /site
 
 # Testnet artifacts
-.lodecli
+.lodestar
 .witti
 genesis.ssz
 witti.json

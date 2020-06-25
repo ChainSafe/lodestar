@@ -69,14 +69,14 @@ wget https://github.com/goerli/witti/raw/master/lighthouse/genesis.ssz
 
 Make sure that the downloaded genesis file is at the expected path and matches the path in the command below.
 
-We recommend initializing lodecli into a specific directory, which is helpful for running multiple nodes. Declare a root dir so all data will be installed/fetched by either:
+We recommend initializing lodestar into a specific directory, which is helpful for running multiple nodes. Declare a root dir so all data will be installed/fetched by either:
 
 - set `root-dir` cli flag or
-- set `LODECLI_ROOT_DIR` env variable
+- set `LODESTAR_ROOT_DIR` env variable
 
 <!-- prettier-ignore-start -->
 !!! info
-    All paths are relative to the working directory when running `lodecli`
+    All paths are relative to the working directory when running `lodestar`
 <!-- prettier-ignore-end -->
 
 To initialize the Lodestar configuration, run the command:
