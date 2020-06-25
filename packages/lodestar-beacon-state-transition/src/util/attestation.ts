@@ -51,13 +51,11 @@ export function isValidIndexedAttestation(
   const indices = Array.from(indexedAttestation.attestingIndices);
 
   if (indices.length === 0) {
-    console.log("indices length 0");
     return false;
   }
 
   //  Verify indices are sorted and unique
   if (!isSorted([...new Set(indices).values()])) {
-    console.log("indices not sorted");
     return false;
   }
   const pubKeys = indices.map((i) => state.validators[i].pubkey.valueOf() as Uint8Array);
@@ -69,7 +67,6 @@ export function isValidIndexedAttestation(
     signingRoot,
     indexedAttestation.signature.valueOf() as Uint8Array,
   )) {
-    console.log("Invalid signature");
     return false;
   }
   return true;
