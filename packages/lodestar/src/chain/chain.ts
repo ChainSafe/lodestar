@@ -114,6 +114,19 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.epochCtx.copy();
   }
 
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
+    if (!slots) {
+      return null;
+    }
+    const blockRoots = slots.map((slot) => {
+      const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+      return summary? summary.blockRoot : null;
+    }).filter((blockRoot) => !!blockRoot);
+    // these blocks are on the same chain to head
+    return await Promise.all(blockRoots.map(
+      (blockRoot) => this.db.block.get(blockRoot)));
+  }
+
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.forkChoice.getFinalized();
   }

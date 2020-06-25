@@ -14,15 +14,16 @@ import {
   MAX_REQUEST_BLOCKS,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_EPOCH, Method, RequestId} from "../../constants";
+import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {IReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
+import {RpcError} from "../../network/error";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -176,6 +177,19 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     id: RequestId,
     request: BeaconBlocksByRangeRequest
   ): Promise<void> {
+    if (request.step < 1 || request.startSlot < GENESIS_SLOT || request.count < 1) {
+      this.logger.error(`Invalid request id ${id} start: ${request.startSlot} step: ${request.step}` +
+      ` count: ${request.count}`);
+      this.network.reqResp.sendResponse(
+        id,
+        new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"),
+        null);
+      return;
+    }
+    if (request.count > 1000) {
+      this.logger.warn(`Request id ${id} asked for ${request.count} blocks, just return 1000 maximum`);
+      request.count = 1000;
+    }
     try {
       if (request.count > MAX_REQUEST_BLOCKS) {
         this.logger.warn(`Request id ${id} asked for ${request.count} blocks, ` +
@@ -187,10 +201,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         lt: request.startSlot + request.count * request.step,
         step: request.step,
       });
-      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.chain, request);
+      const responseStream = this.injectRecentBlocks(this.config, archiveBlocksStream, this.chain, request);
       this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
-      this.network.reqResp.sendResponse(id, e, null);
+      this.logger.error(`Error processing request id ${id}: ${e.message}`);
+      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.SERVER_ERROR, e.message), null);
     }
   }
 
@@ -238,6 +253,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   };
 
   private injectRecentBlocks = async function* (
+    config: IBeaconConfig,
     archiveStream: AsyncIterable<SignedBeaconBlock>,
     chain: IBeaconChain,
     request: BeaconBlocksByRangeRequest
@@ -249,12 +265,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     slot = (slot === -1)? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
+    const slots = [];
     while (slot < upperSlot) {
-      const block = await chain.getBlockAtSlot(slot);
+      slots.push(slot);
+      slot += request.step;
+    }
+    const blocks = await chain.getUnfinalizedBlocksAtSlots(slots) || [];
+    for (const block of blocks) {
       if(block) {
         yield block;
       }
-      slot += request.step;
     }
   };
 }
+
+
