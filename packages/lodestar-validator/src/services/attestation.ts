@@ -178,7 +178,13 @@ export class AttestationService {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
-    const aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    let aggregateAndProof: AggregateAndProof;
+    try {
+      aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    } catch (e) {
+      this.logger.error("Failed to produce aggregate and proof", e);
+      return;
+    }
     aggregateAndProof.selectionProof = this.getSlotSignature(
       duty.attestationSlot,
       fork,

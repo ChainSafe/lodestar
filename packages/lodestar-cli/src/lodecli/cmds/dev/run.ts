@@ -28,7 +28,6 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   options = deepmerge(defaultOptions, options) as Arguments<IDevOptions>;
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
-
   const config = createIBeaconConfig({
     ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
   });

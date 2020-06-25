@@ -118,7 +118,7 @@ export class BeaconNode {
       this.conf.api,
       {
         config,
-        logger: this.logger,
+        logger: this.logger.child(this.conf.logger.api),
         db: this.db,
         sync: this.sync,
         network: this.network,
