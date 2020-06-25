@@ -61,6 +61,7 @@ export class FastSync
   }
 
   public async start(): Promise<void> {
+    this.logger.info("Starting initial syncing");
     this.chain.on("processedCheckpoint", this.checkSyncCompleted);
     this.chain.on("processedBlock", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
@@ -81,7 +82,6 @@ export class FastSync
     this.setBlockImportTarget();
     await this.stats.start();
     await this.sync();
-    this.logger.info("Started initial syncing");
   }
 
   public async stop(): Promise<void> {
@@ -145,12 +145,13 @@ export class FastSync
               ),
               processSyncBlocks(config, chain, logger, true)
             );
-            logger.debug("last fetched slot=" + lastSlot);
+            logger.verbose("last fetched slot=" + lastSlot);
             if(lastSlot) {
               //set new target from last block we've received
               // it will trigger new sync once last block is processed
               updateBlockImportTarget(lastSlot);
             } else {
+              logger.warn("Didn't receive any valid block in given range");
               //we didn't receive any block, set target from last requested slot
               setBlockImportTarget(slotRange.end);
             }
