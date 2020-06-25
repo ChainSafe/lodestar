@@ -16,7 +16,7 @@ import {
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -62,7 +62,7 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
-  getEpochContext(): EpochContext;
+  getEpochContext(): ReadonlyEpochContext;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
 

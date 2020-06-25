@@ -4,6 +4,7 @@ import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint, Slot, Signe
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
 
@@ -41,7 +42,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return this.state;
   }
 
-  public getEpochContext(): EpochContext {
+  public getEpochContext(): ReadonlyEpochContext {
     return this.epochCtx;
   }
 
