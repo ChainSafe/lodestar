@@ -84,6 +84,17 @@ export const logMetrics: Options = {
   default: LogLevel.info,
   group: "log",
 };
+export const logApi: Options = {
+  alias: [
+    "log.api.level",
+    "logger.api.level",
+  ],
+  hidden: true,
+  type: "string",
+  choices: LogLevels,
+  default: LogLevel.info,
+  group: "log",
+};
 
 export const logChores: Options = {
   alias: [
