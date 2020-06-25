@@ -31,7 +31,7 @@ export async function getDevBeaconNode(
     },
     {
       config,
-      logger: new WinstonLogger({level: LogLevel.error}),
+      logger: new WinstonLogger({level: LogLevel.verbose}),
       eth1: new InteropEth1Notifier(),
       libp2p: await createNodeJsLibp2p(
         peerId,
