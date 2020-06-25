@@ -51,7 +51,7 @@ export function isValidIndexedAttestation(
   const indices = Array.from(indexedAttestation.attestingIndices);
 
   if (indices.length === 0) {
-    console.log("indices length 0")
+    console.log("indices length 0");
     return false;
   }
 
