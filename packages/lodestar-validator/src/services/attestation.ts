@@ -14,7 +14,7 @@ import {
   Root,
   SignedBeaconBlock,
   AggregateAndProof,
-  SignedAggregateAndProof
+  SignedAggregateAndProof, AttesterDuty
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
@@ -67,7 +67,12 @@ export class AttestationService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
+    let attesterDuties: AttesterDuty[];
+    try {
+      attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
+    } catch (e) {
+      this.logger.error("Failed to obtain attester duties", e);
+    }
     if (
       attesterDuties && attesterDuties.length === 1 &&
             this.config.types.BLSPubkey.equals(attesterDuties[0].validatorPubkey, this.publicKey)
@@ -102,12 +107,17 @@ export class AttestationService {
     if(duty) {
       await this.waitForAttestationBlock(slot);
       const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
-      const attestation = await this.createAttestation(
-        duty.attestationSlot,
-        duty.committeeIndex,
-        fork,
-        genesisValidatorsRoot
-      );
+      let attestation: Attestation;
+      try {
+        attestation = await this.createAttestation(
+          duty.attestationSlot,
+          duty.committeeIndex,
+          fork,
+          genesisValidatorsRoot
+        );
+      } catch (e) {
+        this.logger.error("Failed to obtain attestation", e);
+      }
       if(!attestation) {
         return;
       }
@@ -118,11 +128,15 @@ export class AttestationService {
           duty, attestation, fork
         );
       }
-      await this.provider.validator.publishAttestation(attestation);
-      this.logger.info(
-        `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
-                `and committee ${duty.committeeIndex} at slot ${slot}`
-      );
+      try {
+        await this.provider.validator.publishAttestation(attestation);
+        this.logger.info(
+          `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
+           `and committee ${duty.committeeIndex} at slot ${slot}`
+        );
+      } catch (e) {
+        this.logger.error("Failed to publish attestation", e);
+      }
     }
   };
 
@@ -159,7 +173,13 @@ export class AttestationService {
     this.logger.info(
       `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
     );
-    const aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    let aggregateAndProof: AggregateAndProof;
+    try {
+      aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, this.publicKey);
+    } catch (e) {
+      this.logger.error("Failed to produce aggregate and proof", e);
+      return;
+    }
     aggregateAndProof.selectionProof = this.getSlotSignature(
       duty.attestationSlot,
       fork,
@@ -169,10 +189,14 @@ export class AttestationService {
       message: aggregateAndProof,
       signature: this.getAggregateAndProofSignature(fork, genesisValidatorsRoot, aggregateAndProof),
     };
-    await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
-    this.logger.info(
-      `Published signed aggregatte and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
-    );
+    try {
+      await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
+      this.logger.info(
+        `Published signed aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
+      );
+    } catch (e) {
+      this.logger.error("Failed to publish signed aggregate and proof", e);
+    }
   };
 
   private getAggregateAndProofSignature(

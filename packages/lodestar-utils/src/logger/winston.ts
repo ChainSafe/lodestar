@@ -7,6 +7,7 @@ import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./int
 import chalk from "chalk";
 import {defaultLogFormat} from "./format";
 import TransportStream from "winston-transport";
+import {Writable} from "stream";
 
 export class WinstonLogger implements ILogger {
   private winston: Logger;
@@ -27,6 +28,8 @@ export class WinstonLogger implements ILogger {
       format: defaultLogFormat,
       transports: transports || [
         new winstonTransports.Console({
+          debugStdout: true,
+          level: "silly",
           handleExceptions: true
         })
       ],
@@ -71,6 +74,10 @@ export class WinstonLogger implements ILogger {
     this.winston.profile(message, option);
   }
 
+  public stream(): Writable {
+    return null;
+  }
+
   public set level(level: LogLevel) {
     this.winston.level = LogLevel[level];
     this._level = level;
@@ -100,10 +107,10 @@ export class WinstonLogger implements ILogger {
   }
 
   private createLogEntry(level: LogLevel, message: string, context: Context|Error): void {
-    if (this.silent || this.winston.levels[level] > this.winston.levels[this.winston.level]) {
+    if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
-    this.winston.log(level, message, {context});
+    this.winston[level](message, {context});
   }
 
 }

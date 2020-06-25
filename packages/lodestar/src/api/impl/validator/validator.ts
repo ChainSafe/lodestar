@@ -130,7 +130,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    const validatorIndexes = validatorPubKeys.map(this.chain.getEpochContext().pubkey2index.get);
+    const validatorIndexes = validatorPubKeys.map((key) => this.chain.getEpochContext().pubkey2index.get(key));
     const state = await this.chain.getHeadState();
 
     return validatorIndexes.map((validatorIndex) => {

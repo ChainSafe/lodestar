@@ -3,6 +3,7 @@
  */
 
 import {ArrayLike} from "@chainsafe/ssz";
+import {Writable} from "stream";
 
 export enum LogLevel {
   error = "error",
@@ -47,7 +48,7 @@ export interface ILogger {
   debug(message: string, context?: Context): void;
   silly(message: string, context?: Context): void;
   profile(message: string, option?: {level: string; message: string}): void;
-
+  stream(): Writable;
   // custom
   child(options: ILoggerOptions): ILogger;
 }
