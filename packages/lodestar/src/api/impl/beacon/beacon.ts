@@ -11,17 +11,17 @@ import {
   Number64,
   SignedBeaconBlock,
   SyncingStatus,
-  ValidatorResponse,
-  Uint64
+  Uint64,
+  ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
-import EventIterator from "event-iterator";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {LodestarEventIterator} from "../../../util/events";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -91,11 +91,15 @@ export class BeaconApi implements IBeaconApi {
     return status;
   }
 
-  public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
-    return new EventIterator<SignedBeaconBlock>((push) => {
-      this.chain.on("processedBlock", (block) => {
+  public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
+    return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
+      const callback: (block: SignedBeaconBlock) => void = (block) => {
         push(block);
-      });
+      };
+      this.chain.on("processedBlock", callback);
+      return () => {
+        this.chain.removeListener("processedBlock", callback);
+      };
     });
   }
 }
