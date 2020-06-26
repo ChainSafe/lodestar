@@ -72,8 +72,8 @@ describe("BeaconChain", function() {
   });
 
   after(async () => {
-    await db.stop();
     await eth1Notifier.stop();
+    await db.stop();
     await fs.promises.rmdir(dbPath, {recursive: true});
   });
 

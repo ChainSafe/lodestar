@@ -2,7 +2,6 @@
  * @module eth1
  */
 
-import {EventEmitter} from "events";
 import {Contract, ethers} from "ethers";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -12,8 +11,9 @@ import {isValidAddress} from "../../util/address";
 import {IBeaconDb} from "../../db";
 import {RetryProvider} from "./retryProvider";
 import {IEth1Options} from "../options";
-import {Eth1EventEmitter, IEth1Notifier, IDepositEvent} from "../interface";
+import {IEth1Notifier, IDepositEvent, Eth1Block, Eth1EventsBlock} from "../interface";
 import {groupDepositEventsByBlock} from "./util";
+import pushable, {Pushable} from "it-pushable";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -33,7 +33,7 @@ const ETH1_BLOCK_RETRY = 3;
  * It proceses eth1 blocks, starting from block number `depositContract.deployedAt`, maintaining a follow distance.
  * It stores deposit events and eth1 data in a IBeaconDb resumes processing from the last stored eth1 data
  */
-export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitter }) implements IEth1Notifier {
+export class EthersEth1Notifier implements IEth1Notifier {
 
   private opts: IEthersEth1Options;
 
@@ -44,11 +44,11 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
   private db: IBeaconDb;
   private logger: ILogger;
 
-  private started: boolean;
+  private startedProcessEth1: boolean;
   private lastProcessedEth1BlockNumber: number;
+  private eth1Source: Pushable<Eth1EventsBlock>;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
-    super();
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -65,45 +65,50 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     this.contract = opts.contract;
   }
 
+  /**
+   * Chain calls this after found genesis.
+   */
   public async start(): Promise<void> {
     if (!this.opts.enabled) {
-      this.logger.verbose("Eth1 notifier is disabled" );
+      this.logger.verbose("Eth1 notifier is disabled, no need to process eth1 for proposing data");
       return;
     }
-    if (this.started) {
-      this.logger.verbose("Eth1 notifier already started" );
-      return;
-    }
-    this.started = true;
-    if(!this.contract) {
-      await this.initContract();
-    }
-    const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
-    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-    this.logger.info(
-      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
-    );
-    this.logger.verbose(
-      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
-    );
-    const headBlockNumber = await this.provider.getBlockNumber();
-    // process historical unprocessed blocks up to curent head
-    // then start listening for incoming blocks
-    this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE).then(() => {
-      if(this.started) {
-        this.provider.on("block", this.onNewEth1Block.bind(this));
-      }
-    });
+    await this.startProcessEth1Blocks();
   }
 
   public async stop(): Promise<void> {
-    if (!this.started) {
-      this.logger.verbose("Eth1 notifier already stopped");
-      return;
-    }
     this.provider.removeAllListeners("block");
-    this.started = false;
+    // stop processing eth1
+    this.startedProcessEth1 = false;
     this.logger.verbose("Eth1 notifier stopped");
+  }
+
+  /**
+   * Genesis builder calls this at pregenesis time.
+   */
+  public async getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>> {
+    if (!this.opts.enabled) {
+      this.logger.info("Eth1 notifier is disabled but starting it to build genesis state");
+    }
+    this.eth1Source = pushable<Eth1EventsBlock>();
+    // no need await
+    this.startProcessEth1Blocks();
+    return this.eth1Source;
+  }
+
+  /**
+   * Unsubscribe to eth1 events + blocks
+   */
+  public async endEth1BlockAndDepositEventsSource(): Promise<void> {
+    if (this.eth1Source) {
+      this.eth1Source.end();
+      this.eth1Source = null;
+    }
+    if (!this.opts.enabled) {
+      this.logger.info("Genesis builder is done and eth1 disabled, stopping eth1");
+      await this.stop();
+    }
+    this.logger.info("Unsubscribed eth1 blocks & depoosit events");
   }
 
   public async getLastProcessedBlockTag(): Promise<string | number> {
@@ -128,7 +133,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    */
   public async processBlocks(toNumber: number): Promise<void> {
     let rangeBlockNumber = this.lastProcessedEth1BlockNumber;
-    while (rangeBlockNumber < toNumber && this.started) {
+    while (rangeBlockNumber < toNumber && this.startedProcessEth1) {
       const blockNumber = Math.min(this.lastProcessedEth1BlockNumber + 100, toNumber);
       let rangeDepositEvents;
       try {
@@ -161,7 +166,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    * Returns true if processing was successful
    */
   public async processDepositEvents(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
-    if (!this.started) {
+    if (!this.startedProcessEth1) {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
@@ -181,7 +186,15 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     ]);
     const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
-      return await this.processEth1Data(blockNumber, blockDepositEvents);
+      const block = await this.getBlock(blockNumber);
+      if (!block) {
+        this.logger.verbose(`eth1 block ${blockNumber} not found`);
+        return false;
+      }
+      this.eth1Source && this.eth1Source.push({events: blockDepositEvents, block});
+      return await this.processEth1Data(block, blockDepositEvents);
+    } else {
+      this.eth1Source && this.eth1Source.push({events: blockDepositEvents});
     }
     return true;
   }
@@ -192,14 +205,12 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
    * @param blockDepositEvents
    * @returns true if success
    */
-  public async processEth1Data(blockNumber: number, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
-    this.logger.verbose(`Processing proposing data of eth1 block ${blockNumber}`);
-    const block = await this.getBlock(blockNumber);
-
-    if (!block) {
-      this.logger.verbose(`eth1 block ${blockNumber} not found`);
+  public async processEth1Data(block: Eth1Block, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+    if (!this.startedProcessEth1) {
+      this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
+    this.logger.verbose(`Processing proposing data of eth1 block ${block.number}`);
     const depositTree = await this.db.depositDataRoot.getTreeBacked(blockDepositEvents[0].index - 1);
     const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     const eth1Data = {
@@ -209,12 +220,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     };
     // eth1 data
     await this.db.eth1Data.put(block.timestamp, eth1Data);
-    this.lastProcessedEth1BlockNumber = blockNumber;
-    // emit events
-    blockDepositEvents.forEach((depositEvent) => {
-      this.emit("deposit", depositEvent.index, depositEvent);
-    });
-    this.emit("eth1Data", block.timestamp, eth1Data, blockNumber);
+    this.lastProcessedEth1BlockNumber = block.number;
     return true;
   }
 
@@ -224,7 +230,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     return logs.map((log) => this.parseDepositEvent(log));
   }
 
-  public async getBlock(blockTag: string | number): Promise<ethers.providers.Block> {
+  public async getBlock(blockTag: string | number): Promise<Eth1Block> {
     try {
       // without await we can't catch error
       return await this.provider.getBlock(blockTag);
@@ -234,7 +240,7 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     }
   }
 
-  public async initContract(): Promise<void> {
+  private async initContract(): Promise<void> {
     const address = this.opts.depositContract.address;
     const abi = this.opts.depositContract.abi;
     if (!(await this.contractExists(address))) {
@@ -245,6 +251,36 @@ export class EthersEth1Notifier extends (EventEmitter as { new(): Eth1EventEmitt
     } catch (e) {
       throw new Error("Eth1 deposit contract not found! Probably wrong eth1 rpc url");
     }
+  }
+
+  /**
+   * This is triggered when building genesis or after chain gets started.
+   */
+  private async startProcessEth1Blocks(): Promise<void> {
+    if (this.startedProcessEth1) {
+      this.logger.info("Started processing eth1 blocks already");
+      return;
+    }
+    if(!this.contract) {
+      await this.initContract();
+    }
+    const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
+    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+    this.logger.info(
+      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
+    );
+    this.logger.verbose(
+      `Last processed block number: ${this.lastProcessedEth1BlockNumber}`
+    );
+    const headBlockNumber = await this.provider.getBlockNumber();
+    // process historical unprocessed blocks up to curent head
+    // then start listening for incoming blocks
+    this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE).then(() => {
+      if(this.startedProcessEth1) {
+        this.provider.on("block", this.onNewEth1Block.bind(this));
+      }
+    });
+    this.startedProcessEth1 = true;
   }
 
   private async contractExists(address: string): Promise<boolean> {

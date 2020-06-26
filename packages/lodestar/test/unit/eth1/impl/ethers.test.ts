@@ -65,6 +65,51 @@ describe("Eth1Notifier", () => {
     await eth1.stop();
   });
 
+  it("should start eth1 to build genesis even it's disabled", async () => {
+    eth1 = new EthersEth1Notifier({
+      ...defaults,
+      enabled: false,
+      contract: contract as any,
+      providerInstance: provider as any,
+    },
+    {
+      config,
+      db,
+      logger,
+    });
+    await eth1.start();
+    expect(provider.getBlock.called).to.be.false;
+    // cannot start if subscribe=false
+    await eth1.start();
+    expect(provider.getBlock.called).to.be.false;
+    // should start if subscribe=true
+    const lastProcessedEth1Data = {
+      blockHash: Buffer.alloc(32, 1),
+      depositRoot: Buffer.alloc(32, 2),
+      depositCount: 5,
+    };
+    const lastProcessedBlock = {
+      number: 5000000,
+    } as ethers.providers.Block;
+    const currentBlockNumber = lastProcessedBlock.number;
+    db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
+    provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
+    provider.getBlockNumber.resolves(currentBlockNumber);
+    const eth1Source = await eth1.getEth1BlockAndDepositEventsSource();
+    expect(eth1Source).not.to.be.undefined;
+    await new Promise((resolve) => {
+      provider.getBlockNumber.callsFake(async () => {
+        resolve();
+        return 0;
+      });
+    });
+    expect(provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).calledOnce).to.be.true;
+
+    await eth1.endEth1BlockAndDepositEventsSource();
+    // make sure stop() is called
+    expect(provider.removeAllListeners.calledOnce).to.be.true;
+  });
+
   it("should fail to start because there isn't contract at given address", async function (): Promise<void> {
     eth1 = new EthersEth1Notifier({
       ...defaults,

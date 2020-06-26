@@ -1,15 +1,15 @@
-import * as fs from "fs";
 import {expect} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EthersEth1Notifier, IEth1Notifier} from "../../../src/eth1";
+import {EthersEth1Notifier, IEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {IEth1Options} from "../../../src/eth1/options";
 import rimraf from "rimraf";
+import pipe from "it-pipe";
 
 describe("Eth1Notifier - using goerli known deployed contract", () => {
 
@@ -55,6 +55,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
         logger,
       });
     await db.start();
+    await eth1Notifier.start();
   });
 
   afterEach(async () => {
@@ -69,14 +70,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // process 2 blocks, should be 1 deposit
     const targetBlockNumber = opts.depositContract.deployedAt + 1;
     provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
-    const blockPromise = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
-      if(blockNumber === targetBlockNumber) {
-        eth1Notifier.removeAllListeners("eth1Data");
-        resolve();
-      }
-    }));
-    await eth1Notifier.start();
-    await blockPromise;
+    await waitForEth1Block(targetBlockNumber);
     const tree = await db.depositDataRoot.getTreeBacked(0);
     expect(tree.length).to.be.equal(1);
   });
@@ -87,32 +81,30 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // there should be one deposit to process
     const target1BlockNumber = opts.depositContract.deployedAt + 3;
     provider.getBlockNumber = sinon.stub().resolves(target1BlockNumber);
-    const blockPromise1 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
-      // 1 event at deployedAt + 1
-      if(blockNumber === opts.depositContract.deployedAt + 1) {
-        eth1Notifier.removeAllListeners("eth1Data");
-        resolve();
-      }
-    }));
-    await eth1Notifier.start();
-    await blockPromise1;
+    await waitForEth1Block(opts.depositContract.deployedAt + 1);
     await eth1Notifier.stop();
     const tree = await db.depositDataRoot.getTreeBacked(0);
     expect(tree.length).to.be.equal(1);
     const target2BlockNumber = opts.depositContract.deployedAt + 10;
     // process 7 more blocks, it should start from where it left off
     provider.getBlockNumber = sinon.stub().resolves(target2BlockNumber);
-    const blockPromise2 = new Promise(resolve => eth1Notifier.on("eth1Data", (_, __, blockNumber) => {
-      // 1 more event at deployedAt + 9
-      if(blockNumber === opts.depositContract.deployedAt + 9) {
-        eth1Notifier.removeAllListeners("eth1Data");
-        resolve();
-      }
-    }));
     await eth1Notifier.start();
-    await blockPromise2;
+    // await blockPromise2;
+    await waitForEth1Block(opts.depositContract.deployedAt + 9);
     const tree2 = await db.depositDataRoot.getTreeBacked(1);
     expect(tree2.length).to.be.equal(2);
   });
+
+  async function waitForEth1Block(targetBlockNumber: number): Promise<void> {
+    const eth1DataStream = await eth1Notifier.getEth1BlockAndDepositEventsSource();
+    await pipe(eth1DataStream, async function(source: AsyncIterable<Eth1EventsBlock>) {
+      for await (const {block} of source) {
+        if (block && block.number === targetBlockNumber) {
+          return;
+        }
+      }
+    });
+    await eth1Notifier.endEth1BlockAndDepositEventsSource();
+  }
 
 });

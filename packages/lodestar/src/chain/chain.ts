@@ -9,7 +9,6 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  Eth1Data,
   ForkDigest,
   SignedBeaconBlock,
   Uint16,
@@ -26,7 +25,7 @@ import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
-import {getEmptyBlock, initializeBeaconStateFromEth1, isValidGenesisState} from "./genesis/genesis";
+import {GenesisBuilder} from "./genesis/genesis";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
@@ -36,6 +35,7 @@ import {IBeaconClock} from "./clock/interface";
 import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
+import {getEmptyBlock} from "./genesis/util";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -131,6 +131,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkDigestChanged", this.handleForkDigestChanged);
     await this.restoreHeadState(state);
+    await this.eth1.start();
   }
 
   public async stop(): Promise<void> {
@@ -168,7 +169,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(genesisBlock);
     this.logger.info(`Initializing beacon chain with state root ${toHexString(stateRoot)}`
-            + ` and genesis block root ${toHexString(blockRoot)}`
+            + ` and block root ${toHexString(blockRoot)}, number of validator: ${genesisState.validators.length}`
     );
     const justifiedFinalizedCheckpoint = {
       root: blockRoot,
@@ -310,16 +311,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     let state: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      state = await new Promise((resolve) => {
-        const genesisListener = async (timestamp: number, eth1Data: Eth1Data): Promise<void> => {
-          const state = await this.checkGenesis(timestamp, eth1Data);
-          if (state) {
-            this.eth1.removeListener("eth1Data", genesisListener);
-            resolve(state);
-          }
-        };
-        this.eth1.on("eth1Data", genesisListener);
-      });
+      const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});
+      state = await builder.waitForGenesis();
+      await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state
     this.metrics.currentSlot.set(state.slot);
@@ -328,41 +322,5 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
-
-  /**
-   * Create a candidate BeaconState from the deposits at a certain time and eth1 state
-   *
-   * Returns the BeaconState if it is valid else null
-   */
-  private checkGenesis = async (timestamp: number, eth1Data: Eth1Data): Promise<TreeBacked<BeaconState> | null> => {
-    const blockHashHex = toHexString(eth1Data.blockHash);
-    this.logger.info(`Checking if block ${blockHashHex} will form valid genesis state`);
-    const depositDatas = await this.db.depositData.values({lt: eth1Data.depositCount});
-    const depositDataRoots = await this.db.depositDataRoot.values({lt: eth1Data.depositCount});
-    this.logger.info(`Found ${depositDatas.length} deposits`);
-    const depositDataRootList = this.config.types.DepositDataRootList.tree.defaultValue();
-    const tree = depositDataRootList.tree();
-
-    const genesisState = initializeBeaconStateFromEth1(
-      this.config,
-      eth1Data.blockHash,
-      timestamp,
-      depositDatas.map((data, index) => {
-        depositDataRootList.push(depositDataRoots[index]);
-        return {
-          proof: tree.getSingleProof(depositDataRootList.gindexOfProperty(index)),
-          data,
-        };
-      })
-    );
-    if (!isValidGenesisState(this.config, genesisState)) {
-      this.logger.info(`Eth1 block ${blockHashHex} is NOT forming valid genesis state`);
-      return null;
-    }
-    this.logger.info(`Initializing beacon chain with eth1 block ${blockHashHex}`);
-    await this.initializeBeaconChain(genesisState as TreeBacked<BeaconState>);
-    this.logger.info(`Genesis state is ready with ${genesisState.validators.length} validators`);
-    return genesisState;
-  };
 
 }
