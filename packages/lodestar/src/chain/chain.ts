@@ -236,8 +236,8 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return;
     }
     const sortedBlocks = sortBlocks(allBlocks);
-    const firstBlock = allBlocks[0];
-    const lastBlock = allBlocks[allBlocks.length - 1];
+    const firstBlock = sortedBlocks[0];
+    const lastBlock = sortedBlocks[sortedBlocks.length - 1];
     let firstSlot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
     this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`);
