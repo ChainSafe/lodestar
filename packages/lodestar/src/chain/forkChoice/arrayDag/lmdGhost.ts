@@ -3,18 +3,19 @@
  */
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, Epoch, Gwei, Number64, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSlotsSinceEpochStart,
-  getCurrentSlot,
-  computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeSlotsSinceEpochStart,
+  computeStartSlotAtEpoch,
+  getCurrentSlot
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {ILMDGHOST, BlockSummary, NO_NODE} from "../interface";
+import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex} from "../interface";
 
 import {NodeInfo} from "./interface";
-import {RootHex, HexCheckpoint} from "../interface";
-import {GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT} from "../../../constants";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 
@@ -349,9 +350,8 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     return bestTarget.stateRoot.valueOf() as Uint8Array;
   }
 
-  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
-    const head = this.headNode();
-    let node = head;
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+    let node = this.headNode();
     if (!node) {
       return null;
     }
@@ -363,6 +363,12 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       node = this.nodes[node.parent];
     }
     return this.toBlockSummary(node);
+  }
+
+  public getBlockSummariesAtSlot(slot: Slot): BlockSummary[] {
+    return this.nodes
+      .filter((node) => this.config.types.Slot.equals(node.slot, slot))
+      .map((node) => this.toBlockSummary(node));
   }
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
