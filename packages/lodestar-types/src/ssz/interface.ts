@@ -83,6 +83,7 @@ export interface IBeaconSSZTypes {
   BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
   //api
+  SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
   ForkResponse: ContainerType<t.ForkResponse>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
@@ -158,6 +159,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
   //api
+  "SignedBeaconHeaderResponse",
   "SubscribeToCommitteeSubnetPayload",
   "ForkResponse",
   "SyncingStatus",

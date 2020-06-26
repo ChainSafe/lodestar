@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 import {BLSPubkey, BLSSignature, CommitteeIndex, Gwei, Number64, Slot, Uint64, ValidatorIndex, Root} from "./primitive";
-import {Fork, Validator} from "./misc";
+import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
+
+export interface SignedBeaconHeaderResponse {
+  root: Root;
+  canonical: boolean;
+  header: SignedBeaconBlockHeader;
+}
 
 export interface SubscribeToCommitteeSubnetPayload {
   slot: Slot;

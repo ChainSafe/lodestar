@@ -5,7 +5,10 @@ import {registerSyncingEndpoint} from "./syncing";
 import {LodestarApiPlugin} from "../../interface";
 import {registerBlockStreamEndpoint} from "./blockStream";
 import {registerGetValidatorEndpoint} from "./validator";
+import {FastifyInstance} from "fastify";
+import {getBlockHeaders} from "../../controllers/beacon/getBlockHeaders";
 
+//old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
   registerVersionEndpoint(fastify, opts);
   registerGenesisTimeEndpoint(fastify, opts);
@@ -15,3 +18,8 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
   registerBlockStreamEndpoint(fastify, opts);
   done();
 };
+
+//new
+export function registerBeaconRoutes(server: FastifyInstance): void {
+  server.get("/v1/beacon/headers", getBlockHeaders.opts, getBlockHeaders.handler);
+}
