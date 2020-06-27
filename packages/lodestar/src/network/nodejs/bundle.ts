@@ -65,7 +65,6 @@ export class NodejsNode extends LibP2p {
         }
       }
     };
-    // @ts-ignore
     super(defaults);
   }
 }
