@@ -24,8 +24,13 @@ export class HttpMetricsServer implements IMetricsServer {
   public async start(): Promise<void> {
     if (this.opts.enabled) {
       this.logger.info(`Starting metrics HTTP server on port ${this.opts.serverPort}`);
-      // @ts-ignore
-      await promisify<void, number>(this.http.listen.bind(this.http))(this.opts.serverPort);
+      const listen = this.http.listen.bind(this.http);
+      const port = this.opts.serverPort;
+      return new Promise((resolve, reject) => {
+        listen(port)
+          .once("listening", resolve)
+          .once("error", reject);
+      });
     }
   }
   public async stop(): Promise<void> {
