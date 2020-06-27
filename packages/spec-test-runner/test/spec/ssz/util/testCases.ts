@@ -32,7 +32,6 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
       (testcase) => {
         const tree = testcase.serialized;
         //debugger;
-        // @ts-ignore
         const serialized = Type.serialize(testcase.serialized);
         const root = Type.hashTreeRoot(testcase.serialized);
         return {
@@ -41,19 +40,16 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
         };
       },
       {
-        // @ts-ignore
         inputTypes: {
           roots: InputType.YAML,
           serialized: InputType.SSZ
         },
-        // @ts-ignore
         sszTypes: {
           serialized: Type,
         },
         getExpected: (testCase => {
           return {
             root: Buffer.from(testCase.roots.root.replace("0x", ""), "hex"),
-            // @ts-ignore
             serialized: testCase.serialized_raw
           };
         }),
@@ -64,10 +60,8 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
             console.log("serialize actual  ", Buffer.from(actual.serialized).toString('hex'))
             console.log("hashTreeRoot expected", expected.root.toString('hex'))
             console.log("hashTreeRoot actual  ", Buffer.from(actual.root).toString('hex'))
-            // @ts-ignore
             const structural = Type.deserialize(testCase.serialized_raw)
             const tree = testCase.serialized
-            // @ts-ignore
               /*
             const bbroot = Type.fields[2][1]
             console.log("s bbroot hash", bbroot.hashTreeRoot(structural.beaconBlockRoot))
@@ -75,7 +69,6 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
                */
             debugger;
           }
-          // @ts-ignore
           const structural = Type.deserialize(testCase.serialized_raw)
           expect(expected.serialized.equals(Type.serialize(structural)))
           expect(expected.root.equals(Type.hashTreeRoot(structural)))
