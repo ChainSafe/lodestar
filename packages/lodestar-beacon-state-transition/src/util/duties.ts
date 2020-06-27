@@ -26,7 +26,7 @@ export function getCommitteeAssignment(
 ): CommitteeAssignment {
 
   const next2Epoch = getCurrentEpoch(config, state) + 2;
-  assert.lte(epoch, next2Epoch, "cannot get committee assignment for epoch more than two ahead");
+  assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
 
   const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
@@ -57,7 +57,7 @@ export function isProposerAtSlot(
 
   state = {...state, slot};
   const currentEpoch = getCurrentEpoch(config, state);
-  assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "must request for current epoch");
+  assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "Must request for current epoch");
 
   return getBeaconProposerIndex(config, state) === validatorIndex;
 }

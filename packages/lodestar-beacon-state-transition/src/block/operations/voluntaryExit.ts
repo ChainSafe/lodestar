@@ -19,7 +19,7 @@ export function processVoluntaryExit(
   signedExit: SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  assert.true(isValidVoluntaryExit(config, state, signedExit, verifySignature), "invalid voluntary exit");
+  assert.true(isValidVoluntaryExit(config, state, signedExit, verifySignature), "Invalid voluntary exit");
   // Initiate exit
   initiateValidatorExit(config, state, signedExit.message.validatorIndex);
 }

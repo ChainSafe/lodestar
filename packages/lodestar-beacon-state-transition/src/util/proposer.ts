@@ -40,7 +40,7 @@ export function computeProposerIndex(
   indices: ValidatorIndex[], 
   seed: Uint8Array
 ): ValidatorIndex {
-  assert.gt(indices.length, 0, "validator indices must not be empty");
+  assert.gt(indices.length, 0, "Validator indices must not be empty");
   const MAX_RANDOM_BYTE = BigInt(2**8 - 1);
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */

@@ -25,7 +25,7 @@ export function processDeposit(
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
     state.eth1Data.depositRoot.valueOf() as Uint8Array,
-  ), "invalid deposit merkle branch");
+  ), "Invalid deposit merkle branch");
 
   // Deposits must be processed in order
   state.eth1DepositIndex += 1;

@@ -38,7 +38,7 @@ export function processOperations(
     body.deposits.length === Math.min(
       config.params.MAX_DEPOSITS,
       state.eth1Data.depositCount - state.eth1DepositIndex),
-    "outstanding deposits are not processed"
+    "Outstanding deposits are not processed"
   );
 
   [{
@@ -78,7 +78,7 @@ export function processOperations(
     func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
     verifySignatures: boolean;
   }) => {
-    assert.lte(operations.length, maxOperations, "too many operations");
+    assert.lte(operations.length, maxOperations, "Too many operations");
     operations.forEach((operation) => {
       func(config, state, operation, verifySignatures);
     });

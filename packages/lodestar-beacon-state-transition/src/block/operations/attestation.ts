@@ -26,15 +26,15 @@ export function processAttestation(
   const currentEpoch = getCurrentEpoch(config, state);
   const previousEpoch = getPreviousEpoch(config, state);
   const data = attestation.data;
-  assert.lt(data.index, getCommitteeCountAtSlot(config, state, data.slot), "attestation index out of bounds");
+  assert.lt(data.index, getCommitteeCountAtSlot(config, state, data.slot), "Attestation index out of bounds");
   assert.true(
     data.target.epoch === previousEpoch || data.target.epoch === currentEpoch,
-    `attestation is targeting too old epoch ${data.target.epoch}, current=${currentEpoch}`
+    `Attestation is targeting too old epoch ${data.target.epoch}, current=${currentEpoch}`
   );
-  assert.equal(data.target.epoch, computeEpochAtSlot(config, data.slot), "attestation is not targeting current epoch");
+  assert.equal(data.target.epoch, computeEpochAtSlot(config, data.slot), "Attestation is not targeting current epoch");
 
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
-  assert.equal(attestation.aggregationBits.length, committee.length, "attestation invalid aggregationBits length");
+  assert.equal(attestation.aggregationBits.length, committee.length, "Attestation invalid aggregationBits length");
 
   // Cache pending attestation
   const pendingAttestation: PendingAttestation = {
@@ -47,13 +47,13 @@ export function processAttestation(
   if (data.target.epoch === currentEpoch) {
     assert.true(
       config.types.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint),
-      "attestation invalid source"
+      "Attestation invalid source"
     );
     state.currentEpochAttestations.push(pendingAttestation);
   } else {
     assert.true(
       config.types.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint),
-      "attestation invalid source"
+      "Attestation invalid source"
     );
     state.previousEpochAttestations.push(pendingAttestation);
   }
@@ -61,6 +61,6 @@ export function processAttestation(
   // Check signature
   assert.true(
     isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation), verifySignature),
-    "attestation invalid signature"
+    "Attestation invalid signature"
   );
 }

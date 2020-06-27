@@ -30,7 +30,7 @@ export function getMatchingSourceAttestations(
   const currentEpoch = getCurrentEpoch(config, state);
   assert.true(
     epoch === currentEpoch || epoch === getPreviousEpoch(config, state), 
-    `too old epoch ${epoch}, current=${currentEpoch}`
+    `Too old epoch ${epoch}, current=${currentEpoch}`
   );
   return Array.from(
     epoch === currentEpoch
