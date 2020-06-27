@@ -5,7 +5,7 @@ import {IApiModules} from "../../../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
-import {toBeaconHeaderResponse} from "./utils";
+import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 
 export * from "./interface";
 
@@ -55,6 +55,15 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
         })
     );
     return result;
+  }
+
+  public async getBlockHeader(blockId: string): Promise<SignedBeaconHeaderResponse | null> {
+    const blockRoot = await resolveBlockId(this.config, this.chain.forkChoice, blockId);
+    if(!blockRoot) {
+      return null;
+    }
+    //TODO: handle when root points to finalized block
+    return toBeaconHeaderResponse(this.config, await this.db.block.get(blockRoot.valueOf() as Uint8Array));
   }
 
 }

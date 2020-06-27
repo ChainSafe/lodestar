@@ -1,5 +1,5 @@
-import {ApiController} from "../types";
 import {Root, Slot} from "@chainsafe/lodestar-types";
+import {ApiController} from "../../types";
 
 export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string}> = {
 

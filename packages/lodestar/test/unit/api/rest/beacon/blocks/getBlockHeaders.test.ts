@@ -6,10 +6,10 @@ import sinon from "sinon";
 import {ApiNamespace} from "../../../../../../src/api";
 import {StubbedBeaconApi} from "../../../../../utils/stub/beaconApi";
 import supertest from "supertest";
-import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/getBlockHeaders";
 import {expect} from "chai";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {toHexString} from "@chainsafe/ssz";
+import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 
 describe("rest - beacon - getBlockHeaders", function () {
 
