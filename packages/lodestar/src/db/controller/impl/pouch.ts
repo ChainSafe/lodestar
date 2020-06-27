@@ -2,9 +2,7 @@
  * @module db/controller/impl
  */
 
-// @ts-ignore
 import PouchDB from "pouchdb-core";
-// @ts-ignore
 import MemoryAdapter from "pouchdb-adapter-memory";
 import {toHexString} from "@chainsafe/ssz";
 
