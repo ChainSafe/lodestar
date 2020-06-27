@@ -45,5 +45,5 @@ export function processAttesterSlashing(
     }
   });
 
-  assert.true(slashedAny, "should slash any");
+  assert.true(slashedAny, "no slashable validators for attester slashing found");
 }

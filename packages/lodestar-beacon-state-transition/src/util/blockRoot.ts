@@ -25,8 +25,12 @@ import {computeStartSlotAtEpoch} from "./epoch";
  * Return the block root at a recent [[slot]].
  */
 export function getBlockRootAtSlot(config: IBeaconConfig, state: BeaconState, slot: Slot): Root {
-  assert.lt(slot, state.slot, "cannot get future epochs");
-  assert.lte(state.slot, slot + config.params.SLOTS_PER_HISTORICAL_ROOT);
+  assert.lt(slot, state.slot, "cannot get block root for slot in the future");
+  assert.lte(
+    state.slot,
+    slot + config.params.SLOTS_PER_HISTORICAL_ROOT,
+    `cannot get block root from slot more than ${config.params.SLOTS_PER_HISTORICAL_ROOT} in the past`
+  );
   return state.blockRoots[slot % config.params.SLOTS_PER_HISTORICAL_ROOT];
 }
 

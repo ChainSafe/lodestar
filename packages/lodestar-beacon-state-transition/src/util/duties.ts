@@ -26,7 +26,7 @@ export function getCommitteeAssignment(
 ): CommitteeAssignment {
 
   const next2Epoch = getCurrentEpoch(config, state) + 2;
-  assert.lte(epoch, next2Epoch, "too future epoch");
+  assert.lte(epoch, next2Epoch, "cannot get committee assignment for epoch more than two ahead");
 
   const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {

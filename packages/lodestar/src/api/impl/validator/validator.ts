@@ -116,7 +116,7 @@ export class ValidatorApi implements IValidatorApi {
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const state = await this.chain.getHeadState();
     assert.gte(epoch, 0, "Epoch must be positive");
-    assert.lte(epoch, computeEpochAtSlot(this.config, state.slot) + 2, "Epoch too future");
+    assert.lte(epoch, computeEpochAtSlot(this.config, state.slot) + 2, "Cannot get duties for epoch more than two ahead");
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
