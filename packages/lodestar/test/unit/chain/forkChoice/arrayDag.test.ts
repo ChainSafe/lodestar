@@ -3,18 +3,12 @@ import {assert, expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT, GENESIS_EPOCH} from "../../../../src/constants";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {sleep} from "../../../../src/util/sleep";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {generateEmptySignedBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
 import {toHexString} from "@chainsafe/ssz";
-import {NO_NODE, BeaconChain} from "../../../../src/chain";
-import chainOpts from "../../../../src/chain/options";
-import {InteropEth1Notifier} from "../../../../src/eth1/impl/interop";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {BeaconMetrics} from "../../../../src/metrics";
+import {NO_NODE} from "../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
 
 describe("ArrayDagLMDGHOST", () => {

@@ -1,8 +1,6 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
-import {SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST} from "../../../../../../src/chain";
-import {BeaconDb, IBeaconDb} from "../../../../../../src/db/api";
-import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {Libp2pNetwork} from "../../../../../../src/network";
@@ -57,7 +55,6 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
     expect(chainStub.getBlockAtSlot.calledOnce).to.be.true;
     expect(forkChoiceStub.getBlockSummariesAtSlot.calledOnce).to.be.true;
-    expect(dbStub.blockArchive.get.calledOnce).to.be.true;
     expect(dbStub.block.get.calledOnce).to.be.true;
   });
 
@@ -84,4 +81,15 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(blockHeaders.length).to.be.equal(0);
   });
 
+  it.skip("parent root filter", async function() {
+
+  });
+
+  it.skip("parent root - block not found", async function() {
+
+  });
+
+  it.skip("parent root + slot filter", async function() {
+
+  });
 });
