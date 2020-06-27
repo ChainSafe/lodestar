@@ -34,9 +34,13 @@ export function processOperations(
   verifySignatures = true,
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert(body.deposits.length === Math.min(
-    config.params.MAX_DEPOSITS,
-    state.eth1Data.depositCount - state.eth1DepositIndex));
+  assert.true(
+    body.deposits.length === Math.min(
+      config.params.MAX_DEPOSITS,
+      state.eth1Data.depositCount - state.eth1DepositIndex),
+    "outstanding deposits are not processed"
+  );
+
   [{
     operations: body.proposerSlashings,
     maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
@@ -74,7 +78,7 @@ export function processOperations(
     func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
     verifySignatures: boolean;
   }) => {
-    assert(operations.length <= maxOperations);
+    assert.lte(operations.length, maxOperations, "too many operations");
     operations.forEach((operation) => {
       func(config, state, operation, verifySignatures);
     });

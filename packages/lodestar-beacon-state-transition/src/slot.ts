@@ -15,7 +15,7 @@ export function processSlots(
   state: BeaconState,
   slot: Slot,
 ): void{
-  assert(state.slot <= slot);
+  assert.lte(state.slot, slot, `Too old epoch ${slot}, current=${state.slot}`);
 
   while (state.slot < slot){
     processSlot(config, state);

@@ -84,7 +84,7 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
   // as we do a lot of bit math on it, which cannot be done as fast on more bits.
   const listSize = input.length >>> 0;
   // check if list size fits in uint32
-  assert(listSize == input.length);
+  assert.equal(listSize, input.length, "list size do not fit uint32");
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
