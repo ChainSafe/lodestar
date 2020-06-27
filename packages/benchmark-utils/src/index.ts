@@ -1,7 +1,6 @@
 import fs, {writeFile} from "fs";
 import {BENCH_DIR} from "./constant";
 import Benchmark from "benchmark";
-//@ts-ignore
 import profiler from "v8-profiler-next";
 import {dirname} from "path";
 
