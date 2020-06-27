@@ -2,7 +2,9 @@
  * @module db/controller/impl
  */
 
+// @ts-ignore
 import PouchDB from "pouchdb-core";
+// @ts-ignore
 import MemoryAdapter from "pouchdb-adapter-memory";
 import {toHexString} from "@chainsafe/ssz";
 
@@ -64,7 +66,7 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
   public async put(key: Buffer, value: Buffer): Promise<void> {
     const existingDoc = await this._get(key);
     value = Buffer.from(value);
-    this.db.put({
+    return this.db.put({
       _id: toHexString(key),
       _rev: existingDoc ? existingDoc._rev : BASE_REVISION,
       value,
@@ -101,7 +103,7 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async keys(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
     const data = await this.db.allDocs(this.toPouchOptions(opts));
-    return data.rows.map((item) => Buffer.from(item.doc._id));
+    return data.rows.map((item: IPouchResult) => Buffer.from(item.doc._id));
   }
 
   public keysStream(opts?: IFilterOptions<Buffer>): AsyncIterable<Buffer> {
@@ -113,7 +115,7 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
     const data = await this.db.allDocs(this.toPouchOptions(opts));
-    return data.rows.map((item) => Buffer.from(item.doc.value.data));
+    return data.rows.map((item: IPouchResult) => Buffer.from(item.doc.value.data));
   }
 
   public valuesStream(opts?: IFilterOptions<Buffer>): AsyncIterable<Buffer> {
@@ -125,7 +127,7 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
     const data = await this.db.allDocs(this.toPouchOptions(opts));
-    return data.rows.map((item) => ({
+    return data.rows.map((item: IPouchResult) => ({
       key: Buffer.from(item.doc._id),
       value: Buffer.from(item.doc.value.data),
     }));
