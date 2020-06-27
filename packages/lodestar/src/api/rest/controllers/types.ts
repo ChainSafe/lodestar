@@ -10,4 +10,5 @@ export interface ApiController<
 > {
   opts: RouteShorthandOptions<Server, IncomingMessage, ServerResponse, Query, Params, Headers, Body>;
   handler: ApiHandler<Query, Params, Body, Headers>;
+  url: string;
 }

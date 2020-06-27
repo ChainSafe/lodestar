@@ -29,16 +29,23 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       //TODO: figure out how to filter and return blocks with given parent root
       return result;
     }
+    const headSlot = this.chain.forkChoice.headBlockSlot();
     if(!filters.parentRoot && !filters.slot && filters.slot !== 0) {
-      filters.slot = this.chain.forkChoice.headBlockSlot();
+      filters.slot = headSlot;
     }
-    if(filters.slot > this.chain.forkChoice.headBlockSlot()) {
+    //future slot
+    if(filters.slot > headSlot) {
       return [];
     }
     const canonicalBlock = await this.chain.getBlockAtSlot(filters.slot);
+    //skip slot
+    if(!canonicalBlock) {
+      return [];
+    }
     const canonicalRoot = this.config.types.BeaconBlock.hashTreeRoot(canonicalBlock.message);
     result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
+    //fork blocks
     await Promise.all(
       this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot)
         //remove canonical block

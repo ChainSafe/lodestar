@@ -2,6 +2,9 @@ import {ApiController} from "../types";
 import {Root, Slot} from "@chainsafe/lodestar-types";
 
 export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string}> = {
+
+  url: "/v1/beacon/block/headers",
+
   handler: async function (req, resp) {
     let slot: Slot|undefined;
     if(req.query.slot) {
@@ -16,6 +19,7 @@ export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string
       data: data.map((item) => this.config.types.SignedBeaconHeaderResponse.toJson(item, {case: "snake"}))
     });
   },
+
   opts: {
     schema: {
       querystring: {

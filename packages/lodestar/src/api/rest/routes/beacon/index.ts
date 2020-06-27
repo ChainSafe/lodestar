@@ -21,5 +21,5 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
 
 //new
 export function registerBeaconRoutes(server: FastifyInstance): void {
-  server.get("/v1/beacon/headers", getBlockHeaders.opts, getBlockHeaders.handler);
+  server.get(getBlockHeaders.url, getBlockHeaders.opts, getBlockHeaders.handler);
 }
