@@ -30,6 +30,7 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
         `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}`
           +`subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
       );
+      // attestation subnet event is dynamic, so it is not typed and declared in IGossipEvents
       // @ts-ignore
       this.emit(getAttestationSubnetEvent(subnet), {attestation, subnet});
     } catch (e) {
