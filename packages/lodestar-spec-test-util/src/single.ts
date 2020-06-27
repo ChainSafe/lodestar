@@ -67,7 +67,6 @@ export function describeDirectorySpecTest<TestCase, Result>(
   testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
-  // @ts-ignore
   options = {...defaultOptions, ...options};
   if(!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);
