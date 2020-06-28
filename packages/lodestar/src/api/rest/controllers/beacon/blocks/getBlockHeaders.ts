@@ -3,7 +3,7 @@ import {ApiController} from "../../types";
 
 export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string}> = {
 
-  url: "/v1/beacon/block/headers",
+  url: "/v1/beacon/headers",
 
   handler: async function (req, resp) {
     let slot: Slot|undefined;

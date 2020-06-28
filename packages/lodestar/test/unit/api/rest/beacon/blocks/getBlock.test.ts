@@ -7,11 +7,10 @@ import {ApiNamespace} from "../../../../../../src/api";
 import {StubbedBeaconApi} from "../../../../../utils/stub/beaconApi";
 import supertest from "supertest";
 import {expect} from "chai";
-import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
-import {toHexString} from "@chainsafe/ssz";
-import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {generateEmptySignedBlock} from "../../../../../utils/block";
 
-describe("rest - beacon - getBlockHeader", function () {
+describe("rest - beacon - getBlock", function () {
 
   let api: RestApi;
   let beaconApiStub: StubbedBeaconApi;
@@ -38,25 +37,25 @@ describe("rest - beacon - getBlockHeader", function () {
   });
 
   it("should succeed", async function () {
-    beaconApiStub.blocks.getBlockHeader.withArgs("head").resolves(generateSignedBeaconHeaderResponse());
+    beaconApiStub.blocks.getBlock.withArgs("head").resolves(generateEmptySignedBlock());
     const response = await supertest(api.server.server)
-      .get(getBlockHeader.url.replace(":blockId", "head"))
+      .get(getBlock.url.replace(":blockId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
   });
 
   it("should not found block header", async function () {
-    beaconApiStub.blocks.getBlockHeader.withArgs("4").resolves(null);
+    beaconApiStub.blocks.getBlock.withArgs("4").resolves(null);
     await supertest(api.server.server)
-      .get(getBlockHeader.url.replace(":blockId", "4"))
+      .get(getBlock.url.replace(":blockId", "4"))
       .expect(404);
   });
 
   it("should fail validation", async function () {
-    beaconApiStub.blocks.getBlockHeader.throws(new Error("Invalid block id"));
+    beaconApiStub.blocks.getBlock.throws(new Error("Invalid block id"));
     await supertest(api.server.server)
-      .get(getBlockHeader.url.replace(":blockId", "abc"))
+      .get(getBlock.url.replace(":blockId", "abc"))
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });

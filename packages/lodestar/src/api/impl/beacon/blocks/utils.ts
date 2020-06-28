@@ -2,6 +2,7 @@ import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse} from "@chainsafe/lo
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILMDGHOST} from "../../../../chain/forkChoice";
+import {BlockId} from "./interface";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig, block: SignedBeaconBlock, canonical= false
@@ -18,7 +19,7 @@ export function toBeaconHeaderResponse(
 
 // this will need async once we wan't to resolve archive slot
 export async function resolveBlockId(
-  config: IBeaconConfig, forkChoice: ILMDGHOST, blockId: string
+  config: IBeaconConfig, forkChoice: ILMDGHOST, blockId: BlockId
 ): Promise<Root|null> {
   blockId = blockId.toLowerCase();
   if(blockId === "head") {

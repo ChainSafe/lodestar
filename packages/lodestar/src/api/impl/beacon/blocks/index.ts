@@ -1,5 +1,5 @@
-import {IBeaconBlocksApi} from "./interface";
-import {Root, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
+import {BlockId, IBeaconBlocksApi} from "./interface";
+import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
 import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -57,13 +57,22 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return result;
   }
 
-  public async getBlockHeader(blockId: string): Promise<SignedBeaconHeaderResponse | null> {
+  public async getBlockHeader(blockId: BlockId): Promise<SignedBeaconHeaderResponse | null> {
     const blockRoot = await resolveBlockId(this.config, this.chain.forkChoice, blockId);
     if(!blockRoot) {
       return null;
     }
     //TODO: handle when root points to finalized block
     return toBeaconHeaderResponse(this.config, await this.db.block.get(blockRoot.valueOf() as Uint8Array));
+  }
+
+  public async getBlock(blockId: BlockId): Promise<SignedBeaconBlock | null> {
+    const blockRoot = await resolveBlockId(this.config, this.chain.forkChoice, blockId);
+    if(!blockRoot) {
+      return null;
+    }
+    //TODO: handle when root points to finalized block
+    return await this.db.block.get(blockRoot.valueOf() as Uint8Array);
   }
 
 }

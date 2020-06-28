@@ -13,7 +13,7 @@ import {generateEmptySignedBlock} from "../../../../../utils/block";
 
 use(chaiAsPromised);
 
-describe("api - beacon - getBlockHeader", function () {
+describe("api - beacon - getBlock", function () {
 
   const sandbox = sinon.createSandbox();
 
@@ -45,26 +45,26 @@ describe("api - beacon - getBlockHeader", function () {
 
   it("block not found", async function () {
     resolveBlockIdStub.withArgs(config, sinon.match.any, "1").resolves(null);
-    const result = await blockApi.getBlockHeader("1");
+    const result = await blockApi.getBlock("1");
     expect(result).to.be.null;
   });
 
   it("invalid block id", async function () {
     resolveBlockIdStub.withArgs(config, sinon.match.any,"abc").throwsException();
-    await expect(blockApi.getBlockHeader("abc")).to.eventually.be.rejected;
+    await expect(blockApi.getBlock("abc")).to.eventually.be.rejected;
   });
 
   it("success for non finalized block", async function () {
     resolveBlockIdStub.withArgs(config, sinon.match.any,"head").resolves(Buffer.alloc(1));
     dbStub.block.get.withArgs(Buffer.alloc(1)).resolves(generateEmptySignedBlock());
-    const result = await blockApi.getBlockHeader("head");
+    const result = await blockApi.getBlock("head");
     expect(result).to.not.be.null;
-    expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
+    expect(() => config.types.SignedBeaconBlock.assertValidValue(result)).to.not.throw();
   });
 
   it.skip("success for finalized block", async function () {
     resolveBlockIdStub.withArgs(config, sinon.match.any,"0").resolves(Buffer.alloc(1));
-    const result = await blockApi.getBlockHeader("0");
+    const result = await blockApi.getBlock("0");
     expect(result).to.not.be.null;
   });
 

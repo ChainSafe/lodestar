@@ -2,19 +2,19 @@ import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
-export const getBlockHeader: ApiController<DefaultQuery, {blockId: string}> = {
+export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
 
-  url: "/v1/beacon/headers/:blockId",
+  url: "/v1/beacon/blocks/:blockId",
 
   handler: async function (req, resp) {
     try {
-      const data = await this.api.beacon.blocks.getBlockHeader(req.params.blockId);
+      const data = await this.api.beacon.blocks.getBlock(req.params.blockId);
       if(!data) {
         return resp.status(404).send();
       }
       return resp.status(200)
         .send({
-          data: this.config.types.SignedBeaconHeaderResponse.toJson(data, {case: "snake"})
+          data: this.config.types.SignedBeaconBlock.toJson(data, {case: "snake"})
         });
     } catch (e) {
       if(e.message === "Invalid block id") {
