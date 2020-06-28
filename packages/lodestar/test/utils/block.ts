@@ -1,6 +1,9 @@
 import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import {BlockSummary} from "../../src/chain";
+import deepmerge from "deepmerge";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {DeepPartial} from "./misc";
 
 
 export function generateEmptyBlock(): BeaconBlock {
@@ -31,6 +34,14 @@ export function generateEmptySignedBlock(): SignedBeaconBlock {
     message: generateEmptyBlock(),
     signature: EMPTY_SIGNATURE,
   };
+}
+
+export function generateSignedBlock(override: DeepPartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
+  return deepmerge<SignedBeaconBlock, DeepPartial<SignedBeaconBlock>>(
+    generateEmptySignedBlock(),
+    override,
+    {isMergeableObject: isPlainObject}
+  );
 }
 
 export function generateEmptyBlockSummary(): BlockSummary {
