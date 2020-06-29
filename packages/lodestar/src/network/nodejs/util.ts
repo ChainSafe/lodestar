@@ -30,6 +30,7 @@ export async function loadPeerIdFromJsonFile(path: string): Promise<PeerId> {
  *
  * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
  * @param network
+ * @param autoDial
  */
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,

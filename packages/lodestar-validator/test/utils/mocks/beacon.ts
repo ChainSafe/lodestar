@@ -30,7 +30,7 @@ export class MockBeaconApi implements IBeaconApi {
     this.fork = opts && opts.fork
       || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = opts && opts.head || generateEmptyBlock();
-    this.genesisTime = opts && opts.genesisTime || Date.now();
+    this.genesisTime = (opts && opts.genesisTime) || (Date.now() / 1000);
   }
 
   public async getValidator(): Promise<any> {

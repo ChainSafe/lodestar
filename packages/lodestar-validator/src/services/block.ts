@@ -2,7 +2,16 @@
  * @module validator
  */
 
-import {BeaconState, BLSPubkey, Epoch, Fork, Slot, SignedBeaconBlock, Root} from "@chainsafe/lodestar-types";
+import {
+  BeaconState,
+  BLSPubkey,
+  Epoch,
+  Fork,
+  Slot,
+  SignedBeaconBlock,
+  Root,
+  ProposerDuty
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -49,7 +58,12 @@ export default class BlockProposingService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
+    let proposerDuties: ProposerDuty[];
+    try {
+      proposerDuties = await this.provider.validator.getProposerDuties(epoch, [this.publicKey]);
+    } catch (e) {
+      this.logger.error("Failed to obtain proposer duties", e);
+    }
     if(!proposerDuties) {
       return;
     }
@@ -83,13 +97,18 @@ export default class BlockProposingService {
       epoch
     );
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
-    const block = await this.provider.validator.produceBlock(
-      slot,
-      this.publicKey,
-      this.privateKey.signMessage(
-        randaoSigningRoot
-      ).toBytesCompressed()
-    );
+    let block;
+    try {
+      block = await this.provider.validator.produceBlock(
+        slot,
+        this.publicKey,
+        this.privateKey.signMessage(
+          randaoSigningRoot
+        ).toBytesCompressed()
+      );
+    } catch (e) {
+      this.logger.error(`Failed to produce block for slot ${slot}`, e);
+    }
     if(!block) {
       return null;
     }
@@ -106,10 +125,14 @@ export default class BlockProposingService {
       signature: this.privateKey.signMessage(blockSigningRoot).toBytesCompressed(),
     };
     await this.storeBlock(signedBlock);
-    await this.provider.validator.publishBlock(signedBlock);
-    this.logger.info(
-      `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
-    );
+    try {
+      await this.provider.validator.publishBlock(signedBlock);
+      this.logger.info(
+        `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
+      );
+    } catch (e) {
+      this.logger.error(`Failed to publish block for slot ${slot}`, e);
+    }
     return signedBlock;
   }
 

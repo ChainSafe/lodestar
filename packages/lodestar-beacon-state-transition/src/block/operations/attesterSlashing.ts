@@ -2,13 +2,13 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
 import {
   BeaconState,
   AttesterSlashing,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   getCurrentEpoch,

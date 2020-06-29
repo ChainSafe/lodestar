@@ -18,6 +18,12 @@ describe("log format", function () {
           +" buffer=0x0000, string=test, bigint=10"
         );
     });
+
+    it("should serialize string context", function () {
+      const context = "Error as a string" as any;
+      const serialized = serializeContext(context);
+      expect(serialized).to.equal(context);
+    });
   });
 
 });

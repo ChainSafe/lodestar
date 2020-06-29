@@ -12,61 +12,12 @@
 ## What you need
 You will need to go over the [specification](https://github.com/ethereum/eth2.0-specs). You will also need to have a [basic understanding of sharding](https://github.com/ethereum/wiki/wiki/Sharding-FAQs). 
 
-## Getting Started
+## Getting started
 
-To get an instance of Lodestar up & running, start a terminal from the root of the this repo:
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
+- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
-1. Install dependencies accross all packages:
-```
-yarn install
-```
+## Contributors
 
-2. Run the build script:
-```
-yarn run build
-```
-
-
-3. Lodestar should now be ready for use:
-```
-yarn run cli --help
-```
-
-Note:
-
-Spec test cases are optional dependency which can be skipped by adding `--ignore-optional` when installing dependencies.
-You can always download spec test cases by running `yarn install --force`.
-
-### Development
-
-#### Connect two beacon nodes
-
-`cd packages/lodestar-cli`
-
-Terminal 1:
-`bin/lodestar dev -r -c 8` - It will run beacon node and 8 validators with all the default settings. State will be written to .tmp/state.ssz
-
-Terminal 2:
-`bin/lodestar dev --bootnodes "/ip4/127.0.0.1/tcp/30606" --multiaddrs "/ip4/127.0.0.1/tcp/30607" --bindAddr "/ip4/0.0.0.0/udp/5502" -v 0 -r --minPeers 1` - Will connect to bootnode (node 1 default multiaddrs) and won't start validators.
-
-<!---
-### Starting private eth1 chain
-
-`./bin/lodestar eth1:dev -m "vast thought differ pull jewel broom cook wrist tribe word before omit"`
-
-This will start ganache server on `http://127.0.0.1:8545`. For more configuration check `./bin/lodestar eth1:dev --help`
-
-### Starting lodestar beacon chain
-
-`./bin/lodestar beacon --db test-db --eth1RpcUrl http://127.0.0.1:8545 --depositContract <depositContractAddress>`
-
-You will see deposit contract address in console if you used `./bin/lodestar eth1:dev`.  
-
-### Making validator deposit
-
-`./bin/lodestar deposit -m "vast thought differ pull jewel broom cook wrist tribe word before omit" -n http://127.0.0.1:8545 -c <depositContractAddress>>`
-
-This will trigger 10 deposits to deposit contract which will trigger beacon chain initialization. Make sure to use same mnemonic which you used to start eth1 network.  
-
-**NOTE:** If you'd like to silence the client's logs, set the `LODESTAR_SILENCE` environment variable to `true`.
--->
+Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!

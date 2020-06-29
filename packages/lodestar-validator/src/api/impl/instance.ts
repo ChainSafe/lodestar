@@ -18,10 +18,9 @@ export class ApiClientOverInstance extends AbstractApiClient {
   public validator: IValidatorApi;
 
   public constructor(opts: IApiClientOverInstanceOpts) {
-    super();
+    super(opts.config);
     this.beacon = opts.beacon;
     this.validator = opts.validator;
-    this.config = opts.config;
   }
 
   public async connect(): Promise<void> {

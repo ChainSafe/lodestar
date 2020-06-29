@@ -1,14 +1,13 @@
 /**
  * @module util/objects
  */
-import assert from "assert";
 import {hash} from "@chainsafe/ssz";
 import {
   ValidatorIndex,
   Bytes32,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToBigInt} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt} from "@chainsafe/lodestar-utils";
 
 
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.

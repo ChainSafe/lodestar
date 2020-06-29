@@ -19,6 +19,7 @@ import {
   Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 import {IValidatorApi} from "./interface";
@@ -39,7 +40,6 @@ import {
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
-import assert from "assert";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 
@@ -68,7 +68,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const validatorIndex = await this.db.getValidatorIndex(validatorPubkey);
+    const validatorIndex = this.chain.getEpochContext().pubkey2index.get(validatorPubkey);
     return await assembleBlock(
       this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
@@ -83,7 +83,7 @@ export class ValidatorApi implements IValidatorApi {
       const [headBlock, headState, validatorIndex] = await Promise.all([
         this.chain.getHeadBlock(),
         this.chain.getHeadState(),
-        this.db.getValidatorIndex(validatorPubKey)
+        this.chain.getEpochContext().pubkey2index.get(validatorPubKey)
       ]);
       if (slot > headState.slot) {
         processSlots(this.config, headState, slot);
@@ -132,11 +132,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
+    const validatorIndexes = validatorPubKeys.map((key) => this.chain.getEpochContext().pubkey2index.get(key));
     const state = await this.chain.getHeadState();
-
-    const validatorIndexes = await Promise.all(validatorPubKeys.map(async publicKey => {
-      return  state.validators.findIndex((v) => this.config.types.BLSPubkey.equals(v.pubkey, publicKey));
-    }));
 
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(
@@ -191,7 +188,7 @@ export class ValidatorApi implements IValidatorApi {
     });
     return {
       aggregate,
-      aggregatorIndex: await this.db.getValidatorIndex(aggregator),
+      aggregatorIndex: this.chain.getEpochContext().pubkey2index.get(aggregator),
       selectionProof: EMPTY_SIGNATURE
     };
   }

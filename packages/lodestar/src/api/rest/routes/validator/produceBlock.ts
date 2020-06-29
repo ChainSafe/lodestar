@@ -46,7 +46,7 @@ export const registerBlockProductionEndpoint: LodestarRestApiEndpoint = (fastify
       reply
         .code(200)
         .type("application/json")
-        .send(config.types.BeaconBlock.toJson(block));
+        .send(config.types.BeaconBlock.toJson(block, {case: "snake"}));
     }
   );
 };

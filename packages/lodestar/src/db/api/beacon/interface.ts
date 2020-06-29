@@ -3,8 +3,6 @@
  */
 
 import {
-  BLSPubkey,
-  ValidatorIndex,
   SignedBeaconBlock,
 } from "@chainsafe/lodestar-types";
 
@@ -59,12 +57,6 @@ export interface IBeaconDb {
   // all deposit data roots and merkle tree
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
-  /**
-   * Returns validator index coresponding to validator
-   * public key in registry,
-   * @param publicKey
-   */
-  getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

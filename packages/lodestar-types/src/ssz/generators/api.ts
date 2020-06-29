@@ -5,7 +5,7 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
   fields: {
     slot: ssz.Slot,
     slotSignature: ssz.BLSSignature,
-    committeeIndex: ssz.CommitteeIndex,
+    attestationCommitteeIndex: ssz.CommitteeIndex,
     aggregatorPubkey: ssz.BLSPubkey
   },
 });

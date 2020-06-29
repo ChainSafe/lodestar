@@ -18,7 +18,7 @@ import {
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 
-const clock = sinon.useFakeTimers({shouldAdvanceTime: true, toFake: ["setTimeout"]});
+const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
 
 describe("validator attestation service", function () {
@@ -42,7 +42,7 @@ describe("validator attestation service", function () {
   after(function () {
     clock.restore();
   });
-  
+
   it("on new epoch - no duty", async function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.validator = {
@@ -91,7 +91,7 @@ describe("validator attestation service", function () {
     ).to.be.true;
     expect(rpcClientStub.beacon.getFork.calledOnce).to.be.true;
   });
-  
+
   it("on  new slot - without duty", async function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     const service = new AttestationService(
@@ -103,7 +103,7 @@ describe("validator attestation service", function () {
     );
     await service.onNewSlot(0);
   });
-  
+
   it("on  new slot - with duty - not aggregator", async function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
@@ -154,7 +154,7 @@ describe("validator attestation service", function () {
       dbStub.setAttestation.calledOnce
     ).to.be.true;
   });
-  
+
   it("on  new slot - with duty - conflicting attestation", async function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
@@ -208,7 +208,7 @@ describe("validator attestation service", function () {
     ).to.be.true;
   });
 
-  it("on  new slot - with duty - SSE message comes before 1/3 slot time", async function () {
+  it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub()
@@ -242,7 +242,7 @@ describe("validator attestation service", function () {
       signedBlock.message.slot = 10;
       const eventSource = eventSourceSpy.thisValues[0] as EventSource;
       eventSource.onmessage({
-        data: JSON.stringify(config.types.SignedBeaconBlock.toJson(signedBlock)),
+        data: JSON.stringify(config.types.SignedBeaconBlock.toJson(signedBlock, {case: "snake"})),
         lastEventId: "10",
         origin: ""
       } as MessageEvent);

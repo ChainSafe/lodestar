@@ -32,7 +32,7 @@ export const registerGetValidatorEndpoint: LodestarRestApiEndpoint = (server, {a
         .type("application/json")
         .send(
           config.types.ValidatorResponse.toJson(
-            validator
+            validator, {case: "snake"}
           )
         );
     });

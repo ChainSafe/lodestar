@@ -118,7 +118,7 @@ export class BeaconNode {
       this.conf.api,
       {
         config,
-        logger: this.logger,
+        logger: this.logger.child(this.conf.logger.api),
         db: this.db,
         sync: this.sync,
         network: this.network,
@@ -145,7 +145,7 @@ export class BeaconNode {
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
-    await this.eth1.start();
+    // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
     this.sync.start();

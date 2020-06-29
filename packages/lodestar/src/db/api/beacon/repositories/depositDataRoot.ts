@@ -51,12 +51,13 @@ export class DepositDataRootRepository extends Repository<number, Root> {
       await this.initTree();
     }
     const tree = this.depositRootTree.clone();
-    const maxIndex = tree.length - 1;
+    let maxIndex = tree.length - 1;
     if (depositIndex > maxIndex) {
       throw new Error(`Cannot get tree for unseen deposits: requested ${depositIndex}, last seen ${maxIndex}`);
     }
     while (maxIndex > depositIndex) {
       tree.pop();
+      maxIndex = tree.length - 1;
     }
     return tree;
   }

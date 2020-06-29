@@ -59,11 +59,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
         this.peerInfo = libp2p.peerInfo;
         this.libp2p = libp2p;
         this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
-        const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
-        const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
-        this.metadata = new MetadataController({enr}, {config, chain, logger});
-        this.gossip = (new Gossip(opts,
-          {config, libp2p, logger, validator, chain})) as unknown as IGossip;
+        this.metadata = new MetadataController({}, {config, chain, logger});
+        this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain})) as unknown as IGossip;
         resolve();
       });
     });
@@ -74,7 +71,9 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     await this.reqResp.start();
     await this.gossip.start();
-    await this.metadata.start();
+    const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
+    await this.metadata.start(enr);
     this.libp2p.on("peer:connect", this.emitPeerConnect);
     this.libp2p.on("peer:disconnect", this.emitPeerDisconnect);
     const multiaddresses = this.libp2p.peerInfo.multiaddrs.toArray().map((m) => m.toString()).join(",");
@@ -124,9 +123,9 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     if (peerIds.length < 3) {
       // If an insufficient number of current peers are subscribed to the topic,
       // the validator must discover new peers on this topic
-      this.logger.info(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
+      this.logger.verbose(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
       const count = await this.connectToNewPeersBySubnet(parseInt(subnet), peerIds);
-      this.logger.info(`Connected to ${count} new peers for subnet ${subnet}`);
+      this.logger.verbose(`Connected to ${count} new peers for subnet ${subnet}`);
     }
   }
 

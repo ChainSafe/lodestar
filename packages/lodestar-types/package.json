@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.8.0",
+  "version": "0.9.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -33,7 +33,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/lodestar-params": "^0.8.0",
+    "@chainsafe/lodestar-params": "^0.9.0",
     "@chainsafe/ssz": "^0.6.7"
   },
   "devDependencies": {

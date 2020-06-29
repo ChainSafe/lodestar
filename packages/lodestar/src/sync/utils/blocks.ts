@@ -73,16 +73,13 @@ export async function getBlockRange(
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
         const peer = peerBalancer.next();
-        try {
-          const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
-          if(chunkBlocks && chunkBlocks.length > 0) {
-            blocks = blocks.concat(chunkBlocks);
-          }
+        const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+        if(chunkBlocks) {
+          blocks = blocks.concat(chunkBlocks);
           return null;
-        } catch (e) {
-          logger.debug(`Failed to obtain chunk ${JSON.stringify(chunk)} `
-              +`from peer ${peer.id.toB58String()}. Error: ${e.message}`
-          );
+        } else {
+          logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} `
+            +`from peer ${peer.id.toB58String()}`);
           await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;

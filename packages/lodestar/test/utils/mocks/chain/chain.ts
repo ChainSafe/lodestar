@@ -41,14 +41,14 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return this.state;
   }
 
+  public getEpochContext(): EpochContext {
+    return this.epochCtx;
+  }
+
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
-  }
-
-  public getEpochContext(): EpochContext {
-    return this.epochCtx.copy();
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
@@ -71,7 +71,11 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async getENRForkID(): Promise<ENRForkID> {
-    return undefined;
+    return {
+      forkDigest: Buffer.alloc(4),
+      nextForkEpoch: 100,
+      nextForkVersion: Buffer.alloc(4),
+    };
   }
 
   receiveAttestation(): Promise<void> {

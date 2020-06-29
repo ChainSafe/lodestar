@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {Number64} from "@chainsafe/lodestar-types";
-import {BaseProvider} from "ethers/providers";
-import {EventFragment, FunctionFragment, Interface, ParamType} from "ethers/utils";
+import {ethers} from "ethers";
+import {IEthersAbi} from "./interface";
 
 export interface IEth1Options {
   enabled: boolean;
@@ -9,11 +9,11 @@ export interface IEth1Options {
     url: string;
     network: Number64;
   };
-  providerInstance?: BaseProvider;
+  providerInstance?: ethers.providers.Provider;
   depositContract: {
     deployedAt: Number64;
     address: string;
-    abi: (string | ParamType | EventFragment | FunctionFragment)[] | string | Interface;
+    abi: IEthersAbi;
     bytecode: string;
   };
 }

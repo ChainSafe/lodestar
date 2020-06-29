@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/no-empty-function */
 import {EventEmitter} from "events";
-import {Block} from "ethers/providers";
+import {ethers} from "ethers";
 
-import {hash} from "@chainsafe/ssz";
-import {Eth1Data, DepositData} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Eth1Data} from "@chainsafe/lodestar-types";
 
-import {IEth1Notifier, IDepositEvent} from "../interface";
+import {IEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../interface";
+import {Pushable} from "it-pushable";
 
 export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {
@@ -15,6 +14,11 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
 
   public async start(): Promise<void> {}
   public async stop(): Promise<void> {}
+
+  public async getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>> {
+    return null;
+  }
+  public async endEth1BlockAndDepositEventsSource(): Promise<void> {}
 
   public async getDepositRoot(): Promise<Uint8Array> {
     return Buffer.alloc(32);
@@ -28,7 +32,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
     return [];
   }
-  public async getBlock(blockTag: string | number): Promise<Block> {
-    return null as unknown as Block;
+  public async getBlock(blockTag: string | number): Promise<ethers.providers.Block> {
+    return null as unknown as ethers.providers.Block;
   }
 }

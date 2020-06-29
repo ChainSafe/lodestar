@@ -2,13 +2,12 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {verify} from "@chainsafe/bls";
-
 import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {DomainType} from "../constants";
 import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";

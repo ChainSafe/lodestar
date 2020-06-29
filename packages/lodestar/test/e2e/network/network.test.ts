@@ -160,7 +160,7 @@ describe("[network] network", function () {
       netB.reqResp.sendResponse(requestId, null, netB.metadata.seqNumber);
     });
     const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
-    expect(seqNumber).to.equal(netB.metadata.seqNumber);
+    expect(seqNumber.toString()).to.equal(netB.metadata.seqNumber.toString());
   });
   it("should send/receive metadata messages", async function () {
     const connected = Promise.all([
