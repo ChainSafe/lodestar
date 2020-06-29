@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig",
   "include": ["src","test"],
-  "compilerOptions": { 
+  "compilerOptions": {
     "typeRoots": [
       "../../node_modules/@types",
       "../../node_modules/libp2p-ts/types",

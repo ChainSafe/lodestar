@@ -2,10 +2,9 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
-
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 
 import {initiateValidatorExit, isValidVoluntaryExit,} from "../../util";

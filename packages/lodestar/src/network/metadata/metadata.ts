@@ -6,7 +6,6 @@ import {IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IMetadataOpts {
-  enr?: ENR;
   metadata?: Metadata;
 }
 
@@ -17,22 +16,21 @@ export interface IMetadataModules {
 }
 
 export class MetadataController {
-  public enr?: ENR;
-
+  private enr?: ENR;
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private _metadata: Metadata;
   private logger: ILogger;
 
   constructor(opts: IMetadataOpts, modules: IMetadataModules) {
-    this.enr = opts.enr;
     this.config = modules.config;
     this.chain = modules.chain;
     this.logger = modules.logger;
     this._metadata = opts.metadata || this.config.types.Metadata.defaultValue();
   }
 
-  public async start(): Promise<void> {
+  public async start(enr: ENR): Promise<void> {
+    this.enr = enr;
     if (this.enr) {
       this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));

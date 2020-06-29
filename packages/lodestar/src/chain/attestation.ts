@@ -1,4 +1,3 @@
-import assert from "assert";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   Attestation,
@@ -16,6 +15,7 @@ import {
   getAttestingIndices
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";

@@ -2,7 +2,6 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
 import {hash} from "@chainsafe/ssz";
 import {
   Epoch,
@@ -10,7 +9,7 @@ import {
   Bytes32,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
 
 

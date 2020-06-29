@@ -1,8 +1,8 @@
-import assert from "assert";
 import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {assert} from "@chainsafe/lodestar-utils";
 import {compress, uncompress} from "snappyjs";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";

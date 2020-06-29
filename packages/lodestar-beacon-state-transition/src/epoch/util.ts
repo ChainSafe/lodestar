@@ -2,8 +2,6 @@
  * @module chain/stateTransition/epoch/util
  */
 
-import assert from "assert";
-
 import {
   BeaconState,
   Epoch,
@@ -12,6 +10,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   getAttestingIndices,

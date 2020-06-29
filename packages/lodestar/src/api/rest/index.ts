@@ -5,10 +5,12 @@ import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
-import qs from "qs";
 import {ApiNamespace} from "../index";
 import {IRestApiModules} from "./interface";
 import {FastifySSEPlugin} from "fastify-sse-v2";
+import * as querystring from "querystring";
+import {FastifyLogger} from "./logger/fastify";
+import {errorHandler} from "./routes/error";
 
 export class RestApi implements IService {
 
@@ -18,7 +20,7 @@ export class RestApi implements IService {
   private logger: ILogger;
 
   public constructor(
-    opts: IRestApiOptions, 
+    opts: IRestApiOptions,
     modules: IRestApiModules
   ) {
     this.opts = opts;
@@ -42,11 +44,15 @@ export class RestApi implements IService {
 
   private  setupServer(modules: IRestApiModules): FastifyInstance {
     const server = fastify.default({
-      //TODO: somehow pass winston here
-      logger: false,
-      querystringParser: qs.parse
+      logger: new FastifyLogger(this.logger),
+      ajv: {
+        customOptions: {
+          coerceTypes: "array",
+        }
+      },
+      querystringParser: querystring.parse
     });
-
+    server.setErrorHandler(errorHandler);
     if(this.opts.cors) {
       const corsArr = this.opts.cors.split(",");
       server.register(fastifyCors, {

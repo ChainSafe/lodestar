@@ -4,6 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {getBeaconCommittee} from "@chainsafe/lodestar-beacon-state-transition";
+import {EMPTY_SIGNATURE} from "../../../constants";
 
 export async function assembleAttestation(
   {config, db}: {config: IBeaconConfig; db: IBeaconDb},
@@ -18,7 +19,7 @@ export async function assembleAttestation(
   return {
     aggregationBits,
     data,
-    signature: undefined
+    signature: EMPTY_SIGNATURE
   };
 }
 

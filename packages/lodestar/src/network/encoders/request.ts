@@ -9,13 +9,13 @@ import {IValidatedRequestBody} from "./interface";
 
 export function eth2RequestEncode(
   config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
-): (source: AsyncIterable<RequestBody>) => AsyncGenerator<Buffer> {
+): (source: AsyncIterable<RequestBody|null>) => AsyncGenerator<Buffer> {
   return (source => {
     return (async function*() {
       const type = Methods[method].requestSSZType(config);
       let compressor = getCompressor(encoding);
       for await (const request of source) {
-        if(!type || !request) continue;
+        if(!type || request === null) continue;
         let serialized: Uint8Array;
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,10 +38,15 @@ export function eth2RequestDecode(
 ): (source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<IValidatedRequestBody> {
   return (source) => {
     return (async function*() {
+      const type = Methods[method].requestSSZType(config);
+      if(!type) {
+        //method has no body, emit null to trigger response
+        yield null;
+        return;
+      }
       let sszDataLength: number = null;
       const decompressor = getDecompressor(encoding);
       const buffer = new BufferList();
-      const type = Methods[method].requestSSZType(config);
       for await (let chunk of source) {
         if(!chunk || chunk.length === 0) {
           continue;

@@ -1,6 +1,6 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/committee";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";

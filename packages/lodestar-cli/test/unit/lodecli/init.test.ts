@@ -3,7 +3,7 @@ import yargs from "yargs/yargs";
 import {expect} from "chai";
 import rimraf from "rimraf";
 
-import * as beacon from "../../../src/lodecli/cmds/beacon";
+import * as beacon from "../../../src/cmds/beacon";
 
 describe("beacon cli", function() {
   this.timeout(0);
@@ -16,8 +16,7 @@ describe("beacon cli", function() {
 
   it("should init beacon configuration", async function() {
     // initialize beacon node configured to talk to testnet
-    // @ts-ignore
-    await new Promise(resolve => yargs().defaults({
+    await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
     }).command(beacon as any).help().parse(["beacon", "init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));

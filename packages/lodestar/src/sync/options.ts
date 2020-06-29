@@ -1,11 +1,11 @@
 export interface ISyncOptions {
-  blockPerChunk: number;
+  blockPerChunk?: number;
   /**
    * max slots to import before waiting for
    * chain to process them
    */
-  maxSlotImport: number;
-  minPeers: number;
+  maxSlotImport?: number;
+  minPeers?: number;
 }
 
 

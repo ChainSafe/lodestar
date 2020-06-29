@@ -26,6 +26,11 @@ export abstract class AbstractApiClient
   abstract beacon: IBeaconApi;
   abstract validator: IValidatorApi;
 
+  protected constructor(config: IBeaconConfig) {
+    super();
+    this.config = config;
+  }
+
   public onNewEpoch(cb: INewEpochCallback): void {
     if (cb) {
       this.newEpochCallbacks.push(cb);
@@ -39,8 +44,11 @@ export abstract class AbstractApiClient
   }
 
   public async connect(): Promise<void> {
-    await this.startSlotCounting();
-    this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
+    if(!this.beaconNodeInterval) {
+      this.running = true;
+      await this.pollBeaconNode();
+      this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
+    }
   }
 
   public async disconnect(): Promise<void> {
@@ -62,15 +70,14 @@ export abstract class AbstractApiClient
       return;
     }
     const genesisTime =  await this.beacon.getGenesisTime();
-    if (genesisTime && (Date.now() / 1000) > genesisTime) {
+    if (genesisTime && Math.floor(Date.now() / 1000) >= genesisTime) {
       this.emit("beaconChainStarted");
       clearInterval(this.beaconNodeInterval);
+      this.startSlotCounting(genesisTime);
     }
   }
 
-  private async startSlotCounting(): Promise<void> {
-    this.running = true;
-    const genesisTime = await this.beacon.getGenesisTime();
+  private startSlotCounting(genesisTime: number): void {
     const diffInSeconds = (Math.floor(Date.now() / 1000)) - genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
     //update slot after remaining seconds until next slot
@@ -78,10 +85,12 @@ export abstract class AbstractApiClient
         (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch);
-    this.slotCountingTimeout = setTimeout(
-      this.updateSlot,
-      diffTillNextSlot
-    );
+    if(!this.slotCountingTimeout) {
+      this.slotCountingTimeout = setTimeout(
+        this.updateSlot,
+        diffTillNextSlot
+      );
+    }
   }
 
   private updateSlot = (): void => {

@@ -1,7 +1,6 @@
 .__testdb
 node_modules/
 lib
-docs
 .nyc_output/
 coverage/**
 .DS_Store
@@ -25,3 +24,16 @@ validators
 **/.nyc_output
 .tmp
 .vscode
+
+# Docs, only ignore typedoc generated
+packages/**/docs
+docs/packages
+docs/contributing.md
+docs/assets
+/site
+
+# Testnet artifacts
+.lodestar
+.witti
+genesis.ssz
+witti.json

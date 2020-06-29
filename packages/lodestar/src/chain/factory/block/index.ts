@@ -22,8 +22,10 @@ export async function assembleBlock(
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH,
 ): Promise<BeaconBlock | null> {
-  const parentBlock = await chain.getHeadBlock();
-  const currentState = await chain.getHeadState();
+  const [parentBlock, currentState] = await Promise.all([
+    chain.getHeadBlock(),
+    chain.getHeadState()
+  ]);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {
     slot,

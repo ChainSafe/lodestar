@@ -2,38 +2,46 @@ name: Deploy docs
 
 on:
   push:
-    branches:
-      master
+    branches: master
 
 jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-    - name: Free disk space
-      run: |
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt clean
-        df -h
-    - uses: actions/checkout@v1
-    - name: Restore dependencies
-      uses: actions/cache@master
-      id: cache-deps
-      with:
-        path: |
-          node_modules
-          packages/*/node_modules
-        key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-    - name: Bootstrap
-      if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: yarn install --frozen-lockfile
-    - name: Build
-      run: node_modules/.bin/lerna run build:release
-    - name: Build docs
-      run: node scripts/collect-docs.js
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v2
-      env:
-        PERSONAL_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
-        PUBLISH_BRANCH: gh-pages
-        PUBLISH_DIR: ./docs
+      - name: Free disk space
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          df -h
+      - uses: actions/checkout@v1
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build typedocs
+        run: node_modules/.bin/lerna run build:release
+      - name: Prepare docs
+        run: ./scripts/prepare-docs.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r docs/requirements.txt
+      - name: Build docs
+        run: mkdocs build --site-dir site -v --clean
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site

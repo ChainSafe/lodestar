@@ -2,10 +2,9 @@
  * @module chain/stateTransition
  */
 
-import assert from "assert";
-
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {verifyBlockSignature} from "./util/block";
 import {processBlock} from "./block";

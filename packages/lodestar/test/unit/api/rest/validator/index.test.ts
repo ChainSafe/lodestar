@@ -13,7 +13,12 @@ import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
-import {generateAttestation, generateAttestationData, generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../../../utils/attestation";
+import {
+  generateAttestation,
+  generateAttestationData,
+  generateEmptyAttestation,
+  generateEmptySignedAggregateAndProof
+} from "../../../../utils/attestation";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 
@@ -53,7 +58,7 @@ describe("Test validator rest API", function () {
       )
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[0].proposerPubkey).to.be.equal(toHexString(Buffer.alloc(48)));
+    expect(response.body[0].proposer_pubkey).to.be.equal(toHexString(Buffer.alloc(48)));
     expect(validatorApi.getProposerDuties.withArgs(2).calledOnce).to.be.true;
   });
 
@@ -64,7 +69,7 @@ describe("Test validator rest API", function () {
       .get(
         "/validator/duties/2/attester",
       )
-      .query({"validator_pubkeys[]": [toHexString(publicKey1)]})
+      .query({"validator_pubkeys": [toHexString(publicKey1)]})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
@@ -79,7 +84,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/aggregate_and_proof",
       )
-      .send([config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof) as object])
+      .send([config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof, {case: "snake"}) as object])
       .expect(200);
     expect(validatorApi.publishAggregateAndProof.calledOnce).to.be.true;
   });
@@ -114,9 +119,7 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/block",
       )
-      .send({
-        "beacon_block": config.types.SignedBeaconBlock.toJson(block)
-      })
+      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as object)
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(validatorApi.publishBlock.calledOnce).to.be.true;
@@ -148,19 +151,19 @@ describe("Test validator rest API", function () {
       .post(
         "/validator/attestation",
       )
-      .send([config.types.Attestation.toJson(attestation) as object])
+      .send([config.types.Attestation.toJson(attestation, {case: "snake"}) as object])
       .expect(200)
       .expect("Content-Type", "application/json");
     expect(validatorApi.publishAttestation.calledOnce).to.be.true;
   });
-  
+
   it("should get wire attestations", async function() {
 
     const attestation = generateAttestation({
       data: generateAttestationData(1, 1, 1, 1)
     });
     validatorApi.getWireAttestations.resolves([attestation]);
-    
+
     const response = await supertest(restApi.server.server)
       .get("/validator/wire_attestations")
       .query({
@@ -172,7 +175,7 @@ describe("Test validator rest API", function () {
 
     expect(response.body.length).to.be.equal(1);
     expect(validatorApi.getWireAttestations.withArgs(0, 1).calledOnce).to.be.true;
-    
+
   });
 
 });

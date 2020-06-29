@@ -3,6 +3,7 @@
  */
 
 import {ArrayLike} from "@chainsafe/ssz";
+import {Writable} from "stream";
 
 export enum LogLevel {
   error = "error",
@@ -29,8 +30,8 @@ export const customColors = {
 export const defaultLogLevel = LogLevel.info;
 
 export interface ILoggerOptions {
-  level: LogLevel;
-  module: string;
+  level?: LogLevel;
+  module?: string;
 }
 
 export type Context = {[k: string]: string|number|BigInt|ArrayLike<number>};
@@ -47,7 +48,7 @@ export interface ILogger {
   debug(message: string, context?: Context): void;
   silly(message: string, context?: Context): void;
   profile(message: string, option?: {level: string; message: string}): void;
-
+  stream(): Writable;
   // custom
   child(options: ILoggerOptions): ILogger;
 }

@@ -1,7 +1,7 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {SignedBeaconBlock, BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {
@@ -39,10 +39,6 @@ export class StubbedBeaconDb extends BeaconDb {
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  public getValidatorIndex:
-  SinonStubbedInstance<(publicKey: BLSPubkey) => Promise<ValidatorIndex>>
-  &
-  ((publicKey: BLSPubkey) => Promise<ValidatorIndex>);
 
   public processBlockOperations:
   SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>>
@@ -70,7 +66,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
 
-    this.getValidatorIndex = sinon.stub(this, "getValidatorIndex") as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
   }
 }

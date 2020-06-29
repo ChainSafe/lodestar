@@ -1,16 +1,14 @@
-import {JsonRpcProvider} from "ethers/providers";
-import {Networkish} from "ethers/utils";
-import {ConnectionInfo, poll} from "ethers/utils/web";
+import {ethers} from "ethers";
 
 // https://github.com/ethers-io/ethers.js/issues/427#issuecomment-465329448
 
-export class RetryProvider extends JsonRpcProvider {
+export class RetryProvider extends ethers.providers.JsonRpcProvider {
   public attempts: number;
 
   constructor(
     attempts: number,
-    url?: ConnectionInfo | string,
-    network?: Networkish
+    url?: ethers.utils.ConnectionInfo | string,
+    network?: ethers.providers.Networkish
   ) {
     super(url, network);
     this.attempts = attempts;
@@ -19,7 +17,7 @@ export class RetryProvider extends JsonRpcProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public perform(method: string, params: any): any {
     let attempts = 0;
-    return poll(() => {
+    return ethers.utils.poll(() => {
       attempts++;
       return super.perform(method, params).then(
         result => {

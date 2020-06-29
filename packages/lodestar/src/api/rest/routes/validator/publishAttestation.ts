@@ -21,11 +21,11 @@ export const registerAttestationPublishEndpoint: LodestarRestApiEndpoint = (fast
         await Promise.all([
           request.body.map((payload) => {
             return api.validator.publishAttestation(
-              config.types.Attestation.fromJson(payload)
+              config.types.Attestation.fromJson(payload, {case: "snake"})
             );
           })
         ]);
-        
+
       } catch (e) {
         reply.code(500).send();
         return;

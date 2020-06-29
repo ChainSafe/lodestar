@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/benchmark-utils",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Utils for assembling of benchmark suites",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",

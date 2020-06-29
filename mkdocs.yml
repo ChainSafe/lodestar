@@ -1,0 +1,49 @@
+site_name: Lodestar documentation
+site_description: Lodestar documentation - Typescript Eth2.0 client
+site_url: https://chainsafe.github.io/lodestar
+
+repo_name: chainsafe/lodestar
+repo_url: https://github.com/chainsafe/lodestar
+
+# Configuration
+theme:
+  name: material
+  logo: assets/300ppi/short-LS-hookS-WHITE.png
+  favicon: images/favicon.ico
+  palette:
+    scheme: preference
+    primary: black
+    accent: black
+  nav_style: dark
+
+markdown_extensions:
+  - meta
+  - codehilite:
+      guess_lang: false
+  - admonition
+  - toc:
+      permalink: true
+extra_css:
+  - stylesheets/extras.css
+
+# Socials
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/ChainSafe/lodestar
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ChainSafe
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/yjyvFRP
+    - icon: fontawesome/brands/medium
+      link: https://medium.com/ChainSafe
+
+# Customize left navigation menu
+nav:
+  - Getting started: index.md
+  - Installation: installation.md
+  - Usage:
+      - Local testnet: usage/local.md
+      - Witti testnet: usage/witti.md
+  - Packages: packages.md
+  - Contributing: contributing.md

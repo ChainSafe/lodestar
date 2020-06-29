@@ -2,10 +2,9 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
-
 import {Attestation, BeaconState, PendingAttestation,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   computeEpochAtSlot,
