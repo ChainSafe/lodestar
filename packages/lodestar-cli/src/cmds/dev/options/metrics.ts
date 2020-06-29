@@ -17,3 +17,30 @@ export const metricsServerPort: Options = {
   default: 5000,
   group: "metrics",
 };
+
+export const metricsTimeout: Options = {
+  alias: [
+    "metrics.timeout",
+  ],
+  type: "number",
+  default: 5000,
+  group: "metrics",
+};
+
+export const metricsPushGateway: Options = {
+  alias: [
+    "metrics.pushGateway",
+  ],
+  type: "boolean",
+  default: false,
+  group: "metrics",
+};
+
+export const metricsGatewayUrl: Options = {
+  alias: [
+    "metrics.gatewayUrl",
+  ],
+  type: "string",
+  default: "",
+  group: "metrics",
+};
