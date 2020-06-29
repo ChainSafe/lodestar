@@ -4,7 +4,7 @@ import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
-import {createEnr} from "@chainsafe/lodestar-cli/src/lodecli/network";
+import {createEnr} from "@chainsafe/lodestar-cli/src/network";
 import tmp from "tmp";
 import {initDevChain} from "../../../src/node/utils/state";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
