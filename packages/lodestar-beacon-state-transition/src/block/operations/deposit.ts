@@ -19,13 +19,13 @@ export function processDeposit(
   deposit: Deposit
 ): void {
   // Verify the Merkle branch
-  assert(verifyMerkleBranch(
+  assert.true(verifyMerkleBranch(
     config.types.DepositData.hashTreeRoot(deposit.data),
     Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
     state.eth1Data.depositRoot.valueOf() as Uint8Array,
-  ));
+  ), "Invalid deposit merkle branch");
 
   // Deposits must be processed in order
   state.eth1DepositIndex += 1;

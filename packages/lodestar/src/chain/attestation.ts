@@ -113,20 +113,20 @@ export class AttestationProcessor implements IAttestationProcessor {
     }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
-    assert([previousEpoch, currentEpoch].includes(target.epoch),
+    assert.true([previousEpoch, currentEpoch].includes(target.epoch),
       `attestation is targeting too old epoch ${target.epoch}, current=${currentEpoch}`
     );
-    assert(
-      target.epoch === computeEpochAtSlot(this.config, attestation.data.slot),
+    assert.equal(
+      target.epoch, computeEpochAtSlot(this.config, attestation.data.slot),
       "attestation is not targeting current epoch"
     );
-    assert(
-      currentSlot >= computeStartSlotAtEpoch(this.config, target.epoch)
-      , "Current slot less than this target epoch's start slot"
+    assert.gte(
+      currentSlot, computeStartSlotAtEpoch(this.config, target.epoch),
+      "Current slot less than this target epoch's start slot"
     );
     const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
-    assert(!!block, `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
-    assert(block.slot <= attestation.data.slot, "Attestation is for past block");
+    assert.true(!!block, `Block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
+    assert.lte(block.slot, attestation.data.slot, "Attestation is for past block");
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);
