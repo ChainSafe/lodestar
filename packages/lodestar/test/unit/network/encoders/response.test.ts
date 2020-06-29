@@ -14,7 +14,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
 import {encode} from "varint";
 import {fail} from "assert";
-import {randomRequestId} from "../../../network";
+import {randomRequestId} from "../../../../src/network";
 
 describe("response decoders", function () {
 
