@@ -97,7 +97,7 @@ export class Node {
   }
 
   public shiftIndex(n: number): void {
-    assert(n >= 0, "invalid value to shift index: " + n);
+    assert.gte(n, 0, "Shift index must be positive");
     if (this.hasBestChild()) {
       this.bestChild = this.bestChild - n;
     }
@@ -216,12 +216,13 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     if (this.finalized && this.finalized.node) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-      assert(node.slot > finalizedSlot,
-        `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
+      assert.gt(node.slot, finalizedSlot, "Fork choice: node slot should be bigger than finalized slot");
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
-      assert(
-        this.getAncestorHex(blockRootHex, finalizedSlot) === this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
+      assert.equal(
+        this.getAncestorHex(blockRootHex, finalizedSlot),
+        this.finalized.node.blockRoot,
+        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`,
+      );
     }
 
     let shouldCheckBestTarget = false;
@@ -323,7 +324,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headNode(): Node {
-    assert(Boolean(this.justified));
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -341,7 +342,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headStateRoot(): Uint8Array {
-    assert(Boolean(this.justified));
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }

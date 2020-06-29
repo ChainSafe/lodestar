@@ -52,7 +52,7 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 }
 
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
-  assert(isAttestationSubnetTopic(topic), "should be an attestation topic");
+  assert.true(isAttestationSubnetTopic(topic), "Should be an attestation topic");
   const groups = topic.match(AttestationSubnetRegExp);
   const subnetStr = groups[4];
   return parseInt(subnetStr);

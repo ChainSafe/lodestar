@@ -29,8 +29,8 @@ export function computeShuffledIndex(
   seed: Bytes32
 ): number {
   let permuted = index;
-  assert(index < indexCount);
-  assert(indexCount <= 2 ** 40);
+  assert.lt(index, indexCount, "indexCount must be less than index");
+  assert.lte(indexCount, 2 ** 40, "indexCount too big");
   const _seed = seed.valueOf() as Uint8Array;
   for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
     const pivot = Number(bytesToBigInt(

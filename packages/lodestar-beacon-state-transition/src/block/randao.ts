@@ -24,11 +24,11 @@ export function processRandao(
   const domain = getDomain(config, state, DomainType.RANDAO);
   const signingRoot = computeSigningRoot(config, config.types.Epoch, currentEpoch, domain);
   // Verify RANDAO reveal
-  assert(!verifySignature || verify(
+  assert.true(!verifySignature || verify(
     proposer.pubkey.valueOf() as Uint8Array,
     signingRoot,
     body.randaoReveal.valueOf() as Uint8Array,
-  ));
+  ), "Invalid RANDAO reveal");
   // Mix it in
   state.randaoMixes[currentEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
     Buffer.from(getRandaoMix(config, state, currentEpoch) as Uint8Array),

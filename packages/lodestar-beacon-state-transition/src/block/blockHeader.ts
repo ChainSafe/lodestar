@@ -14,19 +14,19 @@ export function processBlockHeader(
   block: BeaconBlock,
 ): void {
   // Verify that the slots match
-  assert(block.slot === state.slot);
+  assert.equal(block.slot, state.slot, "Slots do not match");
   // Verify that the block is newer than latest block header
-  assert(block.slot > state.latestBlockHeader.slot);
+  assert.gt(block.slot, state.latestBlockHeader.slot, "Block is not newer than latest block header");
   // Verify that proposer index is the correct index
-  assert(block.proposerIndex === getBeaconProposerIndex(config, state));
+  assert.equal(block.proposerIndex, getBeaconProposerIndex(config, state), "Incorrect proposer index");
   // Verify that the parent matches
-  assert(config.types.Root.equals(
+  assert.true(config.types.Root.equals(
     block.parentRoot,
-    config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))
-  );
+    config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
+  ), "Parent block roots do not match");
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(config, block);
 
   // Verify proposer is not slashed
-  assert(!state.validators[block.proposerIndex].slashed);
+  assert.true(!state.validators[block.proposerIndex].slashed, "Proposer must not be slashed");
 }
