@@ -177,11 +177,13 @@ export class FastSync
         +`, estimateTillComplete=${Math.round((estimate/3600) * 10)/10} hours`
     );
     if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
-      if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
-        this.logger.error("Different finalized root. Something fishy is going on: "
-        + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
-        throw new Error("Should delete chain and start again. Invalid blocks synced");
-      }
+      //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
+      // while our processed checkpoint has root of last slot of that epoch
+      // if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
+      //   this.logger.error("Different finalized root. Something fishy is going on: "
+      //   + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
+      //   throw new Error("Should delete chain and start again. Invalid blocks synced");
+      // }
       const newTarget = getCommonFinalizedCheckpoint(
         this.config,
         this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))

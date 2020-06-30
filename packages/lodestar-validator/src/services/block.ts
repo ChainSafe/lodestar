@@ -18,12 +18,13 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
-  computeSigningRoot,
+  computeSigningRoot, computeStartSlotAtEpoch,
   DomainType,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar/lib/constants";
 
 export default class BlockProposingService {
 
@@ -72,14 +73,18 @@ export default class BlockProposingService {
         return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
       }).map((duty) => duty.slot)
     );
+    //because on new slot will execute before duties are fetched
+    if(epoch != GENESIS_EPOCH) {
+      await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
+    }
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
     if(this.nextProposalSlots.includes(slot)) {
+      this.nextProposalSlots = this.nextProposalSlots.filter(s => s > slot);
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
     }
-    this.nextProposalSlots = this.nextProposalSlots.filter(s => s > slot);
   };
 
   /**

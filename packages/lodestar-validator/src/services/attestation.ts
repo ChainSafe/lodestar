@@ -25,7 +25,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   computeEpochAtSlot,
-  computeSigningRoot,
+  computeSigningRoot, computeStartSlotAtEpoch,
   DomainType,
   getDomain,
   isSlashableAttestationData,
@@ -33,6 +33,7 @@ import {
 
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar/lib/constants";
 
 export class AttestationService {
 
@@ -99,6 +100,9 @@ export class AttestationService {
           this.logger.error("Failed to subscribe to committee subnet", e);
         }
       }
+    }
+    if(epoch != GENESIS_EPOCH) {
+      await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
     }
   };
 
