@@ -78,8 +78,8 @@ export default class BlockProposingService {
     if(this.nextProposalSlots.includes(slot)) {
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
-      this.nextProposalSlots = this.nextProposalSlots.filter(s => s != slot);
     }
+    this.nextProposalSlots = this.nextProposalSlots.filter(s => s > slot);
   };
 
   /**

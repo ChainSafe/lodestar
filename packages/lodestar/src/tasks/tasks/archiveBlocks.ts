@@ -44,12 +44,12 @@ export class ArchiveBlocksTask implements ITask {
     });
     const blocks = allBlocks.filter(
       (block) =>
-        computeEpochAtSlot(this.config, block.message.slot) < this.finalizedCheckpoint.epoch
+        block.message.slot <= finalizedBlock.message.slot
     );
     const blocksByRoot = new Map<string, SignedBeaconBlock>();
     blocks.forEach((block) =>
       blocksByRoot.set(toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message)), block));
-    const archivedBlocks = [];
+    const archivedBlocks = [finalizedBlock];
     let lastBlock = finalizedBlock;
     while (lastBlock) {
       lastBlock = blocksByRoot.get(toHexString(lastBlock.message.parentRoot));
