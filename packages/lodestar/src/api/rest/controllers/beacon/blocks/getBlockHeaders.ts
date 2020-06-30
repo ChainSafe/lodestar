@@ -7,7 +7,7 @@ export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string
 
   handler: async function (req, resp) {
     let slot: Slot|undefined;
-    if(req.query.slot) {
+    if(req.query.slot || req.query.slot == "0") {
       slot = this.config.types.Slot.fromJson(req.query.slot);
     }
     let parentRoot: Root|undefined;
