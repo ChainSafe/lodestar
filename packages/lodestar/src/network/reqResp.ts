@@ -206,7 +206,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           return;
         }
-        yield* getResponse(peerId, method, encoding);
       })();
     };
   }
