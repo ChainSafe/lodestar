@@ -129,7 +129,7 @@ export class ValidatorApi implements IValidatorApi {
     }
     const duties: ProposerDuty[] = [];
 
-    for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot ++) {
+    for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
       const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
       duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }

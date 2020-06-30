@@ -67,15 +67,18 @@ export default class BlockProposingService {
     if(!proposerDuties) {
       return;
     }
-    this.nextProposalSlots = proposerDuties.filter((proposerDuty) => {
-      return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
-    }).map((duty) => duty.slot);
+    this.nextProposalSlots = this.nextProposalSlots.concat(
+      proposerDuties.filter((proposerDuty) => {
+        return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
+      }).map((duty) => duty.slot)
+    );
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
     if(this.nextProposalSlots.includes(slot)) {
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
+      this.nextProposalSlots = this.nextProposalSlots.filter(s => s != slot);
     }
   };
 
