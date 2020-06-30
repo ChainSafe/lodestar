@@ -75,6 +75,8 @@ export function eth2ResponseDecode(
           } catch (e) {
             logger.warn(`Failed to get error message from other node, method ${method}, error ${e.message}`);
           }
+          logger.warn(`eth2ResponseDecode: Received err status '${status}' with message ` +
+          `'${errorMessage}' for method ${method} and request ${requestId}`);
           break;
         }
         if(sszLength === null) {
@@ -124,10 +126,6 @@ export function eth2ResponseDecode(
             }
           }
         }
-      }
-      if(status !== RpcResponseStatus.SUCCESS) {
-        logger.warn(`eth2ResponseDecode: Received err status '${status}' with message ` +
-          `'${errorMessage}' for method ${method}`);
       }
       if (buffer.length > 0) {
         throw new Error(`There is remaining data not deserialized for method ${method}`);
