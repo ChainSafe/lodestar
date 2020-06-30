@@ -7,10 +7,10 @@ import {
   BLSPubkey,
   Epoch,
   Fork,
-  Slot,
-  SignedBeaconBlock,
+  ProposerDuty,
   Root,
-  ProposerDuty
+  SignedBeaconBlock,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
@@ -18,13 +18,13 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
-  computeSigningRoot, computeStartSlotAtEpoch,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
   DomainType,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
-import {GENESIS_EPOCH} from "@chainsafe/lodestar/lib/constants";
 
 export default class BlockProposingService {
 
@@ -74,7 +74,7 @@ export default class BlockProposingService {
       }).map((duty) => duty.slot)
     );
     //because on new slot will execute before duties are fetched
-    if(epoch != GENESIS_EPOCH) {
+    if(epoch != 0) {
       await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
     }
   };

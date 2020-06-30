@@ -2,19 +2,20 @@
  * @module validator/attestation
  */
 import {
+  AggregateAndProof,
   Attestation,
   AttestationData,
+  AttesterDuty,
   BeaconState,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
   Epoch,
   Fork,
-  Slot,
   Root,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
-  AggregateAndProof,
-  SignedAggregateAndProof, AttesterDuty
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
@@ -25,7 +26,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   computeEpochAtSlot,
-  computeSigningRoot, computeStartSlotAtEpoch,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
   DomainType,
   getDomain,
   isSlashableAttestationData,
@@ -33,7 +35,6 @@ import {
 
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
-import {GENESIS_EPOCH} from "@chainsafe/lodestar/lib/constants";
 
 export class AttestationService {
 
@@ -101,7 +102,7 @@ export class AttestationService {
         }
       }
     }
-    if(epoch != GENESIS_EPOCH) {
+    if(epoch != 0) {
       await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
     }
   };
