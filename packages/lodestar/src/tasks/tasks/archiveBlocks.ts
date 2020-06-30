@@ -5,9 +5,8 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 
 export interface IArchiveBlockModules {

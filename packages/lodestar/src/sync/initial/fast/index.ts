@@ -13,7 +13,6 @@ import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
-import {toHexString} from "@chainsafe/ssz";
 import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
 import {GENESIS_EPOCH} from "../../../constants";
