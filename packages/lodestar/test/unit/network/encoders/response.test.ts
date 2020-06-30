@@ -173,7 +173,6 @@ describe("response decoders", function () {
       collect
     ) as ResponseBody[];
     expect(responses.length).to.be.equal(4);
-    expect(loggerStub.warn.calledWith("eth2ResponseDecode: Received err status '1' with message 'Invalid request' for method beacon_blocks_by_range")).to.be.true;
   });
 
   it("should work - response stream with error - ssz_snappy", async function () {
