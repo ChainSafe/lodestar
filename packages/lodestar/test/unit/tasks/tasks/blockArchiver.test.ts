@@ -65,9 +65,9 @@ describe("block archiver task", function () {
     await archiverTask.run();
 
     expect(dbStub.blockArchive.batchAdd.calledOnce).to.be.true;
-    expect(blockArchieveSpy.args[0][0]).to.be.deep.equal([blockD, blockB, blockA]);
+    expect(blockArchieveSpy.args[0][0]).to.be.deep.equal([finalizedBlock, blockD, blockB, blockA]);
     expect(dbStub.block.batchRemove.calledOnce).to.be.true;
-    expect(blockSpy.args[0][0]).to.be.deep.equal([blockA, blockB, blockC, blockD]);
+    expect(blockSpy.args[0][0]).to.be.deep.equal([blockA, blockB, blockC, blockD, finalizedBlock]);
   });
 
 });
