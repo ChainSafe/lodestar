@@ -110,7 +110,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public getEpochContext(): EpochContext {
-    return this.epochCtx;
+    return this.epochCtx.copy();
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {

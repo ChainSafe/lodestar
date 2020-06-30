@@ -1,6 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BlockRepository} from "../../../../../../src/db/api/beacon/repositories";
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
 import {expect} from "chai";
@@ -15,7 +14,7 @@ describe("get proposers api impl", function () {
   const sandbox = sinon.createSandbox();
 
   let dbStub: StubbedBeaconDb, chainStub: SinonStubbedInstance<IBeaconChain>;
-  
+
   let api: IValidatorApi;
 
   beforeEach(function () {

@@ -2,19 +2,20 @@
  * @module validator/attestation
  */
 import {
+  AggregateAndProof,
   Attestation,
   AttestationData,
+  AttesterDuty,
   BeaconState,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
   Epoch,
   Fork,
-  Slot,
   Root,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
-  AggregateAndProof,
-  SignedAggregateAndProof, AttesterDuty
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
@@ -26,6 +27,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
+  computeStartSlotAtEpoch,
   DomainType,
   getDomain,
   isSlashableAttestationData,
@@ -99,6 +101,9 @@ export class AttestationService {
           this.logger.error("Failed to subscribe to committee subnet", e);
         }
       }
+    }
+    if(epoch != 0) {
+      await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
     }
   };
 

@@ -48,7 +48,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public getEpochContext(): EpochContext {
-    return this.epochCtx;
+    return this.epochCtx.copy();
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
