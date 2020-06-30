@@ -41,7 +41,7 @@ export function eth2RequestDecode(
       const type = Methods[method].requestSSZType(config);
       if(!type) {
         //method has no body, emit null to trigger response
-        yield null;
+        yield {isValid: true, body: null};
         return;
       }
       let sszDataLength: number = null;
