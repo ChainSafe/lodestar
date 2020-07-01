@@ -1,8 +1,7 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/committee";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
@@ -24,18 +23,18 @@ import {
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
-import {getCurrentSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../../../src/db";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 
-describe("GossipMessageValidator", () => {
+describe.only("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
   let verifyBlockSignatureStub: any, dbStub: StubbedBeaconDb, logger: any, isValidIndexedAttestationStub: any,
     isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
     isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain,
     getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: SinonStub,
-    getIndexedAttestationStub: SinonStub, epochCtxStub: SinonStubbedInstance<EpochContext>;
+    getIndexedAttestationStub: SinonStub, getBeaconProposerIndexStub: SinonStub;
 
   beforeEach(() => {
     verifyBlockSignatureStub = sandbox.stub(blockUtils, "verifyBlockSignature");
@@ -48,9 +47,8 @@ describe("GossipMessageValidator", () => {
     getIndexedAttestationStub = sandbox.stub(attestationUtils, "getIndexedAttestation");
     chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    epochCtxStub = sinon.createStubInstance(EpochContext);
-    chainStub.getEpochContext.returns(epochCtxStub as unknown as EpochContext);
     isBlsVerifyStub = sandbox.stub(bls, "verify");
+    getBeaconProposerIndexStub = sandbox.stub(proposerUtils, "getBeaconProposerIndex");
 
     dbStub = new StubbedBeaconDb(sandbox);
     logger = new WinstonLogger();
@@ -120,7 +118,7 @@ describe("GossipMessageValidator", () => {
       verifyBlockSignatureStub.returns(false);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(verifyBlockSignatureStub.calledOnce).to.be.true;
-      expect(epochCtxStub.getBeaconProposer.calledOnce).to.be.false;
+      expect(getBeaconProposerIndexStub.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - invalid proposer index", async () => {
@@ -131,9 +129,9 @@ describe("GossipMessageValidator", () => {
       chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
-      epochCtxStub.getBeaconProposer.returns(1000);
+      getBeaconProposerIndexStub.returns(1000);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(epochCtxStub.getBeaconProposer.calledOnce).to.be.true;
+      expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
     });
 
     it("should return valid incoming block", async () => {
@@ -144,9 +142,10 @@ describe("GossipMessageValidator", () => {
       chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
-      epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+      getBeaconProposerIndexStub.returns(block.message.proposerIndex);
       expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
-      expect(epochCtxStub.getBeaconProposer.calledOnce).to.be.true;
+      expect(getBeaconProposerIndexStub.calledOnce).to.be.true;
+
     });
 
     it("should return valid incoming block - block in previous epoch", async () => {
@@ -160,7 +159,7 @@ describe("GossipMessageValidator", () => {
       state.genesisTime = (state.slot) * config.params.SECONDS_PER_SLOT;
       chainStub.getHeadState.resolves(state);
       verifyBlockSignatureStub.returns(true);
-      epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+      getBeaconProposerIndexStub.returns(block.message.proposerIndex);
       expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
     });
   });
@@ -340,21 +339,19 @@ describe("GossipMessageValidator", () => {
       isAggregatorStub.returns(false);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
       expect(isAggregatorStub.calledOnce).to.be.true;
-      expect(epochCtxStub.getBeaconCommittee.calledOnce).to.be.false;
     });
 
-    it("should return invalid signed aggregation and proof - not beacon committee", async () => {
+    it("should return invalid signed aggregation and proof - invalid attestor", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
-      getAttestingIndicesStub.returns([0,1]);
+      getAttestingIndicesStub.returns([10,11]);
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
       chainStub.getHeadState.resolves(state);
       isAggregatorStub.returns(true);
-      epochCtxStub.getBeaconCommittee.returns([1000]);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
-      expect(epochCtxStub.getBeaconCommittee.called).to.be.true;
+      expect(getAttestingIndicesStub.calledOnce).to.be.true;
       expect(isBlsVerifyStub.calledOnce).to.be.false;
     });
 
@@ -368,7 +365,6 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       state.validators = generateValidators(1);
       chainStub.getHeadState.resolves(state);
-      epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.returns(false);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
@@ -385,7 +381,6 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       state.validators = generateValidators(1);
       chainStub.getHeadState.resolves(state);
-      epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.onFirstCall().returns(true);
       isBlsVerifyStub.onSecondCall().returns(false);
@@ -404,7 +399,6 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       state.validators = generateValidators(1);
       chainStub.getHeadState.resolves(state);
-      epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.onFirstCall().returns(true);
       isBlsVerifyStub.onSecondCall().returns(true);
@@ -423,7 +417,6 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       state.validators = generateValidators(1);
       chainStub.getHeadState.resolves(state);
-      epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.returns(true);
       isValidIndexedAttestationStub.returns(true);
