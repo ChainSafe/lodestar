@@ -8,7 +8,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {blockToHeader, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 
@@ -36,18 +36,17 @@ export async function assembleBlock(
   };
 
 
-  block.stateRoot = computeNewStateRoot(config, currentState, block, chain);
+  block.stateRoot = computeNewStateRoot(config, currentState, block);
 
   return block;
 }
 
-function computeNewStateRoot(config: IBeaconConfig, state: BeaconState, block: BeaconBlock, chain: IBeaconChain): Root {
+function computeNewStateRoot(config: IBeaconConfig, state: BeaconState, block: BeaconBlock): Root {
   // state is cloned from the cache already
-  const epochContext = chain.getEpochContext();
   const signedBlock = {
     message: block,
     signature: EMPTY_SIGNATURE,
   };
-  const newState = fastStateTransition(epochContext, state, signedBlock, false, false, true);
+  const newState = stateTransition(config, state, signedBlock, false, false, true);
   return config.types.BeaconState.hashTreeRoot(newState);
 }

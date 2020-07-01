@@ -35,6 +35,7 @@ import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
+import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -109,7 +110,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(summary.blockRoot);
   }
 
-  public getEpochContext(): EpochContext {
+  public getEpochContext(): ReadonlyEpochContext {
     return this.epochCtx.copy();
   }
 

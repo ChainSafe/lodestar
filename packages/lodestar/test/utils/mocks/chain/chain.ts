@@ -6,6 +6,7 @@ import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
+import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -47,7 +48,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return block;
   }
 
-  public getEpochContext(): EpochContext {
+  public getEpochContext(): ReadonlyEpochContext {
     return this.epochCtx.copy();
   }
 
