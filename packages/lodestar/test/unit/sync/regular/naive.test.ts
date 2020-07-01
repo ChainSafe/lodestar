@@ -6,7 +6,6 @@ import * as syncUtils from "../../../../src/sync/utils";
 import {NaiveRegularSync} from "../../../../src/sync/regular/naive";
 import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {generateEmptySignedBlock} from "../../../utils/block";
 
 describe("fast regular sync", function () {
   const sandbox = sinon.createSandbox();
@@ -16,7 +15,6 @@ describe("fast regular sync", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
-  let targetSlotToBlockChunksStub: SinonStub;
 
   beforeEach(function () {
     forkChoiceStub  = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -25,14 +23,6 @@ describe("fast regular sync", function () {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getHighestCommonSlot");
-    targetSlotToBlockChunksStub = sandbox.stub(syncUtils, "targetSlotToBlockChunks");
-    targetSlotToBlockChunksStub.returns((source: any) => {
-      return (async function* () {
-        for await (const data of source) {
-          if(data === 0) yield data;
-        }
-      })();
-    });
     networkStub.getPeers.returns([]);
   });
 

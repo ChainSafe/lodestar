@@ -21,7 +21,6 @@ describe("fast sync", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
-  let targetSlotToBlockChunksStub: SinonStub;
 
   beforeEach(function () {
     forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -30,7 +29,6 @@ describe("fast sync", function () {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
-    targetSlotToBlockChunksStub = sandbox.stub(syncUtils, "targetSlotToBlockChunks");
   });
 
   afterEach(function () {
@@ -85,13 +83,6 @@ describe("fast sync", function () {
     };
     getTargetStub.returns(target);
     networkStub.getPeers.returns([]);
-    targetSlotToBlockChunksStub.returns((source: any) => {
-      return (async function* () {
-        for await (const data of source) {
-          if(data === 0) yield data;
-        }
-      })();
-    });
     const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
     endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {
@@ -136,13 +127,6 @@ describe("fast sync", function () {
     };
     getTargetStub.onFirstCall().returns(target1).onSecondCall().returns(target2).onThirdCall().returns(target2);
     networkStub.getPeers.returns([]);
-    targetSlotToBlockChunksStub.returns((source: any) => {
-      return (async function* () {
-        for await (const data of source) {
-          if(data === 0) yield data;
-        }
-      })();
-    });
     const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
     // @ts-ignore
     endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {

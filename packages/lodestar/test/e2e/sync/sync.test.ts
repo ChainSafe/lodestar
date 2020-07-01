@@ -32,7 +32,7 @@ describe("syncing", function () {
       100000,
       (block) => config.types.SignedBeaconBlock.equals(block, head)
     );
-    await bn2.network.connect(bn.network.peerInfo);
+    await bn2.network.connect(bn.network.peerId, bn.network.multiaddrs);
     try {
       await waitForSynced;
     } catch (e) {

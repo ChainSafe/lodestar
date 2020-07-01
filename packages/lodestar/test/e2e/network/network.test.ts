@@ -72,10 +72,6 @@ describe("[network] network", function () {
       netA.start(),
       netB.start(),
     ]);
-    // @ts-ignore
-    netA.libp2p.peerStore.peers.clear();
-    // @ts-ignore
-    netB.libp2p.peerStore.peers.clear();
   });
   afterEach(async () => {
     await Promise.all([
@@ -96,7 +92,7 @@ describe("[network] network", function () {
         connectBCount++;
         resolve();
       })),
-      netA.connect(netB.peerInfo)
+      netA.connect(netB.peerId, netB.multiaddrs)
     ]);
     expect(connectACount).to.be.equal(1);
     expect(connectBCount).to.be.equal(1);
@@ -108,7 +104,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     const disconnection = Promise.all([
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
@@ -116,7 +112,7 @@ describe("[network] network", function () {
     ]);
     await sleep(100);
 
-    await netA.disconnect(netB.peerInfo);
+    await netA.disconnect(netB.peerId);
     await disconnection;
     await sleep(200);
     expect(netA.getPeers().length).to.equal(0);
@@ -136,7 +132,7 @@ describe("[network] network", function () {
       });
       setTimeout(resolve, 2000);
     });
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(true);
@@ -153,13 +149,13 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
       netB.reqResp.sendResponse(requestId, null, netB.metadata.seqNumber);
     });
-    const seqNumber = await netA.reqResp.ping(netB.peerInfo, netA.metadata.seqNumber);
+    const seqNumber = await netA.reqResp.ping(netB.peerId, netA.metadata.seqNumber);
     expect(seqNumber.toString()).to.equal(netB.metadata.seqNumber.toString());
   });
   it("should send/receive metadata messages", async function () {
@@ -167,13 +163,13 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
       netB.reqResp.sendResponse(requestId, null, netB.metadata);
     });
-    const metadata = await netA.reqResp.metadata(netB.peerInfo);
+    const metadata = await netA.reqResp.metadata(netB.peerId);
     expect(metadata).to.deep.equal(netB.metadata.metadata);
   });
   it("should receive blocks on subscription", async function () {
@@ -181,7 +177,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
@@ -203,7 +199,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
@@ -220,7 +216,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     let callback: (attestation:  {attestation: Attestation; subnet: number}) => void;
@@ -253,7 +249,7 @@ describe("[network] network", function () {
     const enrB = ENR.createFromPeerId(peerIdB);
     enrB.set("attnets", Buffer.from(config.types.AttestationSubnets.serialize(netB.metadata.attnets)));
     enrB.multiaddrUDP = (libP2pB._discovery.get("discv5") as Discv5Discovery).discv5.bindAddress;
-    enrB.multiaddrTCP = libP2pB.peerInfo.multiaddrs.toArray()[0];
+    enrB.multiaddrTCP = libP2pB.multiaddrs[0];
     // let discv5 of A know enr of B
     const discovery: Discv5Discovery = libP2pA._discovery.get("discv5") as Discv5Discovery;
     discovery.discv5.addEnr(enrB);

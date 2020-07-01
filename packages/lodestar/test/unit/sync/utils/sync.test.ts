@@ -7,7 +7,6 @@ import {
   getHighestCommonSlot,
   getStatusFinalizedCheckpoint,
   processSyncBlocks,
-  targetSlotToBlockChunks
 } from "../../../../src/sync/utils";
 import {expect} from "chai";
 import deepmerge from "deepmerge";
@@ -18,11 +17,9 @@ import pipe from "it-pipe";
 import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {collect} from "../../chain/blocks/utils";
-import {generateState} from "../../../utils/state";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import PeerInfo from "peer-info";
 
 describe("sync utils", function () {
 
@@ -144,35 +141,6 @@ describe("sync utils", function () {
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
 
-  });
-
-  describe("targetSlotToBlockChunks process", function () {
-
-    let chainStub: SinonStubbedInstance<IBeaconChain>;
-
-    beforeEach(function () {
-      chainStub = sinon.createStubInstance(BeaconChain);
-    });
-
-    it("should work target less than epoch slots", async function () {
-      chainStub.getHeadState.resolves(generateState({slot: 0}));
-      const chunks = await pipe(
-        [5],
-        targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
-        collect
-      );
-      expect(chunks.length).to.be.equal(1);
-    });
-
-    it("should work target greater than epoch slots", async function () {
-      chainStub.getHeadState.resolves(generateState({slot: 0}));
-      const chunks = await pipe(
-        [config.params.SLOTS_PER_EPOCH + 2],
-        targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
-        collect
-      );
-      expect(chunks.length).to.be.equal(1);
-    });
   });
 
   describe("fetchBlockChunk process", function () {

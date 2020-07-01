@@ -1,6 +1,7 @@
 /**
  * @module sync/initial
  */
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {IReputationStore} from "../../IReputation";
@@ -67,7 +68,7 @@ export class FastSync
     this.blockImportTarget = this.chain.forkChoice.headBlockSlot();
     this.targetCheckpoint = getCommonFinalizedCheckpoint(
       this.config,
-      this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+      this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
     );
     if(
       !this.targetCheckpoint
@@ -185,7 +186,7 @@ export class FastSync
       // }
       const newTarget = getCommonFinalizedCheckpoint(
         this.config,
-        this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+        this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
       );
       if(newTarget.epoch > this.targetCheckpoint.epoch) {
         this.targetCheckpoint = newTarget;
@@ -200,13 +201,13 @@ export class FastSync
   /**
    * Returns peers which has same finalized Checkpoint
    */
-  private getInitialSyncPeers = async (): Promise<PeerInfo[]> => {
-    return this.network.getPeers().reduce( (validPeers: PeerInfo[], peer: PeerInfo) => {
-      const rep = this.reps.getFromPeerInfo(peer);
+  private getInitialSyncPeers = async (): Promise<PeerId[]> => {
+    return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
+      const rep = this.reps.getFromPeerId(peer);
       if(rep && rep.latestStatus) {
         validPeers.push(peer);
       }
       return validPeers;
-    }, [] as PeerInfo[]);
+    }, [] as PeerId[]);
   };
 }

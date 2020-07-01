@@ -59,8 +59,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.opts = opts;
     this.config = config;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
+    // need to improve Gossipsub type to implement EventEmitter to avoid this cast
     this.pubsub = pubsub || new LodestarGossipsub(config, validator, this.logger,
-      libp2p.peerInfo, libp2p.registrar, {gossipIncoming: true});
+      libp2p.peerId, libp2p.registrar, {gossipIncoming: true}) as unknown as IGossipSub;
     this.chain = chain;
   }
 

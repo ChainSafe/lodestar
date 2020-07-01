@@ -5,7 +5,7 @@
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
-import {IGossipMessage} from "libp2p-gossipsub";
+import {Message} from "libp2p-gossipsub/src/message";
 import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
@@ -58,14 +58,14 @@ export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   return parseInt(subnetStr);
 }
 
-export function normalizeInRpcMessage(rawMessage: IGossipMessage): ILodestarGossipMessage {
-  const message: IGossipMessage = utils.normalizeInRpcMessage(rawMessage);
+export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessage {
+  const message: Message = utils.normalizeInRpcMessage(rawMessage);
   return {
     ...message,
     messageId: getMessageId(message)
   };
 }
 
-export function getMessageId(rawMessage: IGossipMessage): string {
+export function getMessageId(rawMessage: Message): string {
   return Buffer.from(hash(rawMessage.data)).toString("base64");
 }

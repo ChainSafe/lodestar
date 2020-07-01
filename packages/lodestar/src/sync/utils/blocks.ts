@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {BeaconBlockHeader, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
@@ -37,7 +38,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
 
 export async function getBlockRangeFromPeer(
   rpc: IReqResp,
-  peer: PeerInfo,
+  peer: PeerId,
   chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]|null> {
   return await rpc.beaconBlocksByRange(
@@ -53,7 +54,7 @@ export async function getBlockRangeFromPeer(
 export async function getBlockRange(
   logger: ILogger,
   rpc: IReqResp,
-  peers: PeerInfo[],
+  peers: PeerId[],
   range: ISlotRange,
   blocksPerChunk?: number,
   maxRetry = 6
@@ -79,7 +80,7 @@ export async function getBlockRange(
           return null;
         } else {
           logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} `
-            +`from peer ${peer.id.toB58String()}`);
+            +`from peer ${peer.toB58String()}`);
           await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
