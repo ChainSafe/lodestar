@@ -25,7 +25,7 @@ export class StateContextCache {
     }
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx ? item.epochCtx.copy() : null
+      epochCtx: item.epochCtx?.copy()
     };
   }
 

@@ -60,7 +60,7 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   }
 
   private incrementPubKey(pubKey: BLSPubkey): BLSPubkey {
-    return bigIntToBytes(bytesToBigInt(pubKey.valueOf() as Uint8Array) + 1n, this.config.types.BLSPubkey.length);
+    return bigIntToBytes(bytesToBigInt(pubKey.valueOf() as Uint8Array) + BigInt(1), this.config.types.BLSPubkey.length);
   }
 
 }
