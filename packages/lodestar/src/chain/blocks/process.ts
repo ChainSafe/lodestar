@@ -14,7 +14,6 @@ export function processBlock(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
-  epochCtx: EpochContext,
   forkChoice: ILMDGHOST,
   pool: BlockPool,
   eventBus: ChainEventEmitter,

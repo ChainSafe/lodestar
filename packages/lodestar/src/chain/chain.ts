@@ -35,7 +35,6 @@ import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
-import {IStateCacheItem} from "../../lib/db/api/beacon/stateCache";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IBeaconChainModules {
@@ -82,7 +81,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.metrics = metrics;
     this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
-    this.networkId = 0n; // TODO make this real
+    this.networkId = BigInt(0); // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
       config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,

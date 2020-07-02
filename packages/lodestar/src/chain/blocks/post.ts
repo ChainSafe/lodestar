@@ -12,7 +12,6 @@ export function postProcess(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
-  epochCtx: EpochContext,
   forkChoice: ILMDGHOST,
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
@@ -32,7 +31,7 @@ export function postProcess(
         const preSlot = preState.state.slot;
         const preFinalizedEpoch = preState.state.finalizedCheckpoint.epoch;
         const preJustifiedEpoch = preState.state.currentJustifiedCheckpoint.epoch;
-        const currentEpoch = computeEpochAtSlot(config, preState.state.slot);
+        const currentEpoch = computeEpochAtSlot(config, postState.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           eventBus.emit(
             "processedCheckpoint",
@@ -47,7 +46,7 @@ export function postProcess(
             newFinalizedEpoch(logger, metrics, eventBus, postState.state);
           }
           metrics.currentEpochLiveValidators.set(
-            epochCtx.currentShuffling.activeIndices.length
+            postState.epochCtx.currentShuffling.activeIndices.length
           );
         }
       }
