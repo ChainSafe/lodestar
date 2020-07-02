@@ -25,14 +25,14 @@ export class StateContextCache {
     }
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx?.copy()
+      epochCtx: item.epochCtx ? item.epochCtx.copy() : null
     };
   }
 
   public async add(state: TreeBacked<BeaconState>, epochContext?: EpochContext): Promise<void> {
     this.cache[toHexString(state.hashTreeRoot())] = {
       state: state.clone(),
-      epochCtx: epochContext?.copy()
+      epochCtx: epochContext.copy()
     };
   }
 

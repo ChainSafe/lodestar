@@ -51,7 +51,7 @@ export function processBlock(
           logger.info("Processed new chain head",
             {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
           );
-          if(!config.types.Fork.equals(newState.fork, newState.fork)) {
+          if(!config.types.Fork.equals(stateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
             logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
@@ -68,7 +68,7 @@ export function processBlock(
 
 export async function getPreState(
   config: IBeaconConfig, db: IBeaconDb, forkChoice: ILMDGHOST, pool: BlockPool, logger: ILogger, job: IBlockProcessJob
-): Promise<Required<IStateContext>|null> {
+): Promise<IStateContext|null> {
   const parentBlock =
     forkChoice.getBlockSummaryByBlockRoot(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
@@ -84,7 +84,7 @@ export async function getPreState(
     context.epochCtx = new EpochContext(config);
     context.epochCtx.loadState(context.state);
   }
-  return context as Required<IStateContext>;
+  return context as IStateContext;
 }
 
 /**

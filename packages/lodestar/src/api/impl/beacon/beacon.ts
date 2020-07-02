@@ -46,7 +46,7 @@ export class BeaconApi implements IBeaconApi {
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
     const {epochCtx, state} = await this.chain.getHeadContext();
-    const index = epochCtx?.pubkey2index.get(pubkey);
+    const index = epochCtx.pubkey2index.get(pubkey);
     if(index) {
       return {
         validator: state.validators[index],
