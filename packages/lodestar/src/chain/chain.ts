@@ -107,7 +107,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);
     }
-    const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+    const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
     if (!summary) {
       return null;
     }

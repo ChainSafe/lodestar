@@ -428,7 +428,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return this.head().slot;
   }
 
-  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
     const head = this.headNode();
     let node = head;
     // navigate from the head node, up the chain until either the slot is found or the slot is passed
@@ -439,6 +439,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       node = node.parent;
     }
     return node.toBlockSummary();
+  }
+
+  public getBlockSummariesAtSlot(slot: Slot): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter((node) => this.config.types.Slot.equals(slot, node.slot))
+      .map((node) => node.toBlockSummary());
   }
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {

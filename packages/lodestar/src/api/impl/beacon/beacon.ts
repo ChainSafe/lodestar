@@ -11,8 +11,8 @@ import {
   Number64,
   SignedBeaconBlock,
   SyncingStatus,
-  ValidatorResponse,
-  Uint64
+  Uint64,
+  ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
@@ -22,10 +22,12 @@ import {ApiNamespace} from "../../index";
 import EventIterator from "event-iterator";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
+  public blocks: IBeaconBlocksApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
@@ -38,6 +40,7 @@ export class BeaconApi implements IBeaconApi {
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.blocks = new BeaconBlockApi(opts, modules);
   }
 
   public async getClientVersion(): Promise<Bytes32> {

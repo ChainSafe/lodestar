@@ -41,7 +41,7 @@ describe("post block process stream", function () {
     metricsStub.previousJustifiedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
     eventBusStub = sinon.createStubInstance(BeaconChain);
     attestationProcessorStub = sinon.createStubInstance(AttestationProcessor);
-    forkChoiceStub.getBlockSummaryAtSlot.returns({
+    forkChoiceStub.getCanonicalBlockSummaryAtSlot.returns({
       blockRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
       parentRoot: Buffer.alloc(32),
