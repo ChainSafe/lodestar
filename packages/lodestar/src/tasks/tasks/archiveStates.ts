@@ -40,12 +40,14 @@ export class ArchiveStatesTask implements ITask {
     );
     // store the state of finalized checkpoint
     const finalizedState = (await this.db.stateCache.values())
+      .map(({state}) => state)
       .filter((state) => computeEpochAtSlot(this.config, state.slot) === this.finalizedCheckpoint.epoch)
       .sort((a, b) => a.slot - b.slot)[0];
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
     await this.db.stateCache.batchDelete(
       (await this.db.stateCache.values())
+        .map(({state}) => state)
         .filter((state) => state.slot < finalizedState.slot)
         .map((state) => state.hashTreeRoot())
     );

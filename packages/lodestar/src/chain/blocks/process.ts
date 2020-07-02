@@ -8,6 +8,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "..";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -18,26 +19,29 @@ export function processBlock(
   pool: BlockPool,
   eventBus: ChainEventEmitter,
 ): (source: AsyncIterable<IBlockProcessJob>) =>
-  AsyncGenerator<{preState: BeaconState; block: SignedBeaconBlock; postState: BeaconState; finalized: boolean}> {
+  AsyncGenerator<{
+    preState: IStateContext; block: SignedBeaconBlock; postState: Required<IStateContext>; finalized: boolean;
+  }> {
   return (source) => {
     return (async function*() {
       for await(const job of source) {
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        const preState = await getPreState(config, db, forkChoice, pool, logger, job);
-        if(!preState) {
+        const stateContext = await getPreState(config, db, forkChoice, pool, logger, job);
+        if(!stateContext) {
           continue;
         }
         // Run the state transition
-        const newState = await runStateTransition(config, db, logger, epochCtx, preState, job);
-        if(!newState) {
+        const newStateContext = await runStateTransition(config, db, logger, stateContext, job);
+        if(!newStateContext) {
           continue;
         }
+        const newState = newStateContext.state;
         // On successful transition, update system state
         if (job.reprocess) {
-          await db.stateCache.add(newState as TreeBacked<BeaconState>);
+          await db.stateCache.add(newState as TreeBacked<BeaconState>, newStateContext.epochCtx);
         } else {
           await Promise.all([
-            db.stateCache.add(newState as TreeBacked<BeaconState>),
+            db.stateCache.add(newState as TreeBacked<BeaconState>, newStateContext.epochCtx),
             db.block.put(blockRoot, job.signedBlock),
           ]);
         }
@@ -47,7 +51,7 @@ export function processBlock(
           logger.info("Processed new chain head",
             {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
           );
-          if(!config.types.Fork.equals(preState.fork, newState.fork)) {
+          if(!config.types.Fork.equals(newState.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
             logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
@@ -55,7 +59,7 @@ export function processBlock(
           }
         }
         pool.onProcessedBlock(job.signedBlock);
-        yield {preState, postState: newState, block: job.signedBlock, finalized: job.trusted};
+        yield {preState: stateContext, postState: newStateContext, block: job.signedBlock, finalized: job.trusted};
       }
     })();
   };
@@ -64,7 +68,7 @@ export function processBlock(
 
 export async function getPreState(
   config: IBeaconConfig, db: IBeaconDb, forkChoice: ILMDGHOST, pool: BlockPool, logger: ILogger, job: IBlockProcessJob
-): Promise<BeaconState|null> {
+): Promise<Required<IStateContext>|null> {
   const parentBlock =
     forkChoice.getBlockSummaryByBlockRoot(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
@@ -75,7 +79,12 @@ export async function getPreState(
     pool.addPendingBlock(job);
     return null;
   }
-  return await db.stateCache.get(parentBlock.stateRoot as Uint8Array);
+  const context = await db.stateCache.get(parentBlock.stateRoot as Uint8Array);
+  if(!context.epochCtx) {
+    context.epochCtx = new EpochContext(config);
+    context.epochCtx.loadState(context.state);
+  }
+  return context as Required<IStateContext>;
 }
 
 /**
@@ -101,12 +110,11 @@ export function updateForkChoice(
 
 export async function runStateTransition(
   config: IBeaconConfig, db: IBeaconDb, logger: ILogger,
-  epochCtx: EpochContext,
-  preState: BeaconState, job: IBlockProcessJob
-): Promise<BeaconState|null> {
+  stateContext: Required<IStateContext>, job: IBlockProcessJob
+): Promise<IStateContext|null> {
   try {
     // if block is trusted don't verify state roots, proposer or signature
-    return fastStateTransition(epochCtx, preState, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
+    return fastStateTransition(stateContext, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate

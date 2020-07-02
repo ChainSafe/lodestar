@@ -43,7 +43,7 @@ describe("sync req resp", function () {
     chainStub.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(getBlockSummary({}));
     forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
-    chainStub.getHeadState.resolves(generateState());
+    chainStub.getHeadContext.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));

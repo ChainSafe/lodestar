@@ -37,7 +37,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return undefined;
   }
 
-  public async getHeadState(): Promise<BeaconState| null> {
+  public async getHeadContext(): Promise<BeaconState| null> {
     return this.state;
   }
 

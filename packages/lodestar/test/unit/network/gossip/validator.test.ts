@@ -71,7 +71,7 @@ describe("GossipMessageValidator", () => {
       const block = generateEmptySignedBlock();
       block.message.slot = 3;
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(chainStub.getBlockAtSlot.calledOnce).to.be.false;
     });
@@ -82,14 +82,14 @@ describe("GossipMessageValidator", () => {
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
       state.finalizedCheckpoint.epoch = 1000;
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(chainStub.getBlockAtSlot.calledOnce).to.be.false;
     });
 
     it("should return invalid incoming block - prevent DOS", async () => {
       const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(block);
@@ -100,7 +100,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid incoming block - bad block", async () => {
       const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -112,7 +112,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid incoming block - invalid signature", async () => {
       const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -125,7 +125,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid incoming block - invalid proposer index", async () => {
       const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -138,7 +138,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return valid incoming block", async () => {
       const state = generateState({genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT});
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -158,7 +158,7 @@ describe("GossipMessageValidator", () => {
       const state = generateState();
       state.slot = epoch * config.params.SLOTS_PER_EPOCH + 1;
       state.genesisTime = (state.slot) * config.params.SECONDS_PER_SLOT;
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       verifyBlockSignatureStub.returns(true);
       epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
       expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
@@ -168,7 +168,7 @@ describe("GossipMessageValidator", () => {
   describe("validate committee attestation", () => {
     it("should return invalid committee attestation - invalid subnet", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const attestation = generateEmptyAttestation();
       const invalidSubnet = 2000;
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, invalidSubnet)).to.be.false;
@@ -178,16 +178,16 @@ describe("GossipMessageValidator", () => {
       const attestation = generateEmptyAttestation();
       const state = generateState();
       state.genesisTime = Math.floor(new Date("2000-01-01").getTime()) / 1000;
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(chainStub.getHeadState.calledOnce).to.be.true;
+      expect(chainStub.getHeadContext.calledOnce).to.be.true;
     });
 
     it("should return invalid committee attestation - invalid unaggregated attestation", async () => {
       const attestation = generateEmptyAttestation();
       // aggregationBits are all false
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       getAttestingIndicesStub.returns([]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.false;
@@ -197,7 +197,7 @@ describe("GossipMessageValidator", () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([attestation]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -211,7 +211,7 @@ describe("GossipMessageValidator", () => {
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -226,7 +226,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(true);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -240,7 +240,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
@@ -255,7 +255,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
@@ -270,13 +270,13 @@ describe("GossipMessageValidator", () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       const state = generateState();
       state.genesisTime = Math.floor(new Date("2000-01-01").getTime()) / 1000;
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
     });
 
     it("should return invalid signed aggregation and proof - existed", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.hasAttestation.resolves(true);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
@@ -285,7 +285,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid signed aggregation and proof - prevent DOS", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.hasAttestation.resolves(false);
       dbStub.aggregateAndProof.getByAggregatorAndEpoch.resolves([generateEmptyAttestation()]);
@@ -296,7 +296,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid signed aggregation and proof - incorrect number of participants", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       getAttestingIndicesStub.returns([]);
@@ -306,7 +306,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid signed aggregation and proof - block not existed", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       getAttestingIndicesStub.returns([0,1]);
@@ -318,7 +318,7 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid signed aggregation and proof - invalid block", async () => {
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
       getAttestingIndicesStub.returns([0,1]);
@@ -336,7 +336,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isAggregatorStub.returns(false);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
       expect(isAggregatorStub.calledOnce).to.be.true;
@@ -350,7 +350,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isAggregatorStub.returns(true);
       epochCtxStub.getBeaconCommittee.returns([1000]);
       expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.false;
@@ -367,7 +367,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.returns(false);
@@ -384,7 +384,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.onFirstCall().returns(true);
@@ -403,7 +403,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.onFirstCall().returns(true);
@@ -422,7 +422,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const state = generateState();
       state.validators = generateValidators(1);
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       epochCtxStub.getBeaconCommittee.returns([0]);
       isAggregatorStub.returns(true);
       isBlsVerifyStub.returns(true);
@@ -445,7 +445,7 @@ describe("GossipMessageValidator", () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingVoluntaryExitStub.returns(false);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
       expect(isValidIncomingVoluntaryExitStub.called).to.be.true;
@@ -455,7 +455,7 @@ describe("GossipMessageValidator", () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingVoluntaryExitStub.returns(true);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(true);
     });
@@ -473,7 +473,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingProposerSlashingStub.returns(false);
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.false;
       expect(isValidIncomingProposerSlashingStub.called).to.be.true;
@@ -483,7 +483,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyProposerSlashing();
       dbStub.proposerSlashing.has.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingProposerSlashingStub.returns(true);
       expect(await validator.isValidIncomingProposerSlashing(slashing)).to.be.equal(true);
     });
@@ -501,7 +501,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(false);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.false;
       expect(isValidIncomingAttesterSlashingStub.called).to.be.true;
@@ -511,7 +511,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadContext.resolves(state);
       isValidIncomingAttesterSlashingStub.returns(true);
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.equal(true);
     });

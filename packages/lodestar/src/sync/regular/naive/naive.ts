@@ -128,7 +128,7 @@ export class NaiveRegularSync implements IRegularSync {
 
   private getSyncPeers = async (minSlot: Slot): Promise<PeerInfo[]> => {
     //not sure how to check this since we need to sync two epoch before we will have finalized like others
-    // const chainFinalizedCheckpoint = (await this.chain.getHeadState()).finalizedCheckpoint;
+    // const chainFinalizedCheckpoint = (await this.chain.getHeadContext()).finalizedCheckpoint;
     return this.network.getPeers().filter((peer) => {
       const latestStatus = this.reps.getFromPeerInfo(peer).latestStatus;
       return latestStatus

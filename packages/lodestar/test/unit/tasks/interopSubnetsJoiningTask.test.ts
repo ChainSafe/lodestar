@@ -96,7 +96,7 @@ describe("interopSubnetsJoiningTask", () => {
 
   it("should prepare for a hard fork", async () => {
     // scheduleNextForkSubscription already get called after start
-    const state = await chain.getHeadState();
+    const state = await chain.getHeadContext();
     const nextForkDigest =
       computeForkDigest(config, intToBytes(ALL_FORKS[0].currentVersion, 4), state.genesisValidatorsRoot);
     const spy = sandbox.spy();

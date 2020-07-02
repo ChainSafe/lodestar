@@ -102,7 +102,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       const justifiedBlock =
         this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
       if (justifiedBlock) {
-        checkpointState = await this.db.stateCache.get(justifiedBlock.stateRoot);
+        checkpointState = (await this.db.stateCache.get(justifiedBlock.stateRoot)).state;
       } else {
         // should not happen
         throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);

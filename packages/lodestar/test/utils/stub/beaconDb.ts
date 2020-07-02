@@ -18,14 +18,14 @@ import {
   Eth1DataRepository,
   StateArchiveRepository,
 } from "../../../src/db/api/beacon/repositories";
-import {StateCache} from "../../../src/db/api/beacon/stateCache";
+import {StateContextCache} from "../../../src/db/api/beacon/stateContextCache";
 
 export class StubbedBeaconDb extends BeaconDb {
   public db: SinonStubbedInstance<LevelDbController>;
 
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
-  public stateCache: SinonStubbedInstance<StateCache> & StateCache;
+  public stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
   public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -52,7 +52,7 @@ export class StubbedBeaconDb extends BeaconDb {
     });
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
-    this.stateCache = sinon.createStubInstance(StateCache) as any;
+    this.stateCache = sinon.createStubInstance(StateContextCache) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
     this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;
 

@@ -68,7 +68,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const validatorIndex = this.chain.getEpochContext().pubkey2index.get(validatorPubkey);
+    const validatorIndex = (await this.chain.getHeadContext()).epochCtx?.pubkey2index.get(validatorPubkey);
     return await assembleBlock(
       this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
@@ -80,10 +80,9 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
-      const [headBlock, headState, validatorIndex] = await Promise.all([
+      const [headBlock, {state: headState, epochCtx}] = await Promise.all([
         this.chain.getHeadBlock(),
-        this.chain.getHeadState(),
-        this.chain.getEpochContext().pubkey2index.get(validatorPubKey)
+        this.chain.getHeadContext(),
       ]);
       if (slot > headState.slot) {
         processSlots(this.config, headState, slot);
@@ -92,7 +91,7 @@ export class ValidatorApi implements IValidatorApi {
         {config: this.config, db: this.db},
         headState,
         headBlock.message,
-        validatorIndex,
+        epochCtx?.pubkey2index.get(validatorPubKey),
         index,
         slot
       );
@@ -116,7 +115,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const state = await this.chain.getHeadState();
+    const {state} = await this.chain.getHeadContext();
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(
       epoch,
@@ -137,8 +136,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    const validatorIndexes = validatorPubKeys.map((key) => this.chain.getEpochContext().pubkey2index.get(key));
-    const state = await this.chain.getHeadState();
+    const {epochCtx, state} = await this.chain.getHeadContext();
+    const validatorIndexes = validatorPubKeys.map((key) => epochCtx?.pubkey2index.get(key));
 
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(
@@ -171,6 +170,7 @@ export class ValidatorApi implements IValidatorApi {
       attestationData.index
     )
     );
+    const {epochCtx} = await this.chain.getHeadContext();
     const aggregate = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     }).reduce((current, attestation) => {
@@ -191,9 +191,10 @@ export class ValidatorApi implements IValidatorApi {
       }
       return current;
     });
+
     return {
       aggregate,
-      aggregatorIndex: this.chain.getEpochContext().pubkey2index.get(aggregator),
+      aggregatorIndex: epochCtx?.pubkey2index.get(aggregator),
       selectionProof: EMPTY_SIGNATURE
     };
   }
@@ -201,9 +202,10 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
+    const {state} = await this.chain.getHeadContext();
     const domain = getDomain(
       this.config,
-      await this.chain.getHeadState(),
+      state,
       DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
@@ -219,8 +221,7 @@ export class ValidatorApi implements IValidatorApi {
       slot,
       committeeIndex
     );
-    const headState = await this.chain.getHeadState();
-    const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+    const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
     await this.network.searchSubnetPeers(String(subnet));
   }
 

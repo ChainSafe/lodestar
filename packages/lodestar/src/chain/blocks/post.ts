@@ -6,6 +6,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
 import {ILMDGHOST} from "../forkChoice";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export function postProcess(
   config: IBeaconConfig,
@@ -17,7 +18,7 @@ export function postProcess(
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
 ): (source: AsyncIterable<{
-    preState: BeaconState; postState: BeaconState; block: SignedBeaconBlock; finalized: boolean;
+    preState: IStateContext; postState: IStateContext; block: SignedBeaconBlock; finalized: boolean;
   }>) => Promise<void> {
   return async (source) => {
     return (async function() {
@@ -28,22 +29,22 @@ export function postProcess(
         }
         metrics.currentSlot.set(block.message.slot);
         eventBus.emit("processedBlock", block);
-        const preSlot = preState.slot;
-        const preFinalizedEpoch = preState.finalizedCheckpoint.epoch;
-        const preJustifiedEpoch = preState.currentJustifiedCheckpoint.epoch;
-        const currentEpoch = computeEpochAtSlot(config, postState.slot);
+        const preSlot = preState.state.slot;
+        const preFinalizedEpoch = preState.state.finalizedCheckpoint.epoch;
+        const preJustifiedEpoch = preState.state.currentJustifiedCheckpoint.epoch;
+        const currentEpoch = computeEpochAtSlot(config, preState.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           eventBus.emit(
             "processedCheckpoint",
             {epoch: currentEpoch, root: forkChoice.getBlockSummaryAtSlot(preSlot).blockRoot},
           );
           // newly justified epoch
-          if (preJustifiedEpoch < postState.currentJustifiedCheckpoint.epoch) {
-            newJustifiedEpoch(logger, metrics, eventBus, postState);
+          if (preJustifiedEpoch < postState.state.currentJustifiedCheckpoint.epoch) {
+            newJustifiedEpoch(logger, metrics, eventBus, postState.state);
           }
           // newly finalized epoch
-          if (preFinalizedEpoch < postState.finalizedCheckpoint.epoch) {
-            newFinalizedEpoch(logger, metrics, eventBus, postState);
+          if (preFinalizedEpoch < postState.state.finalizedCheckpoint.epoch) {
+            newFinalizedEpoch(logger, metrics, eventBus, postState.state);
           }
           metrics.currentEpochLiveValidators.set(
             epochCtx.currentShuffling.activeIndices.length

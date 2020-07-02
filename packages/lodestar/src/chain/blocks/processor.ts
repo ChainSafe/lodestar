@@ -42,7 +42,6 @@ export class BlockProcessor implements IService {
     config: IBeaconConfig,
     logger: ILogger,
     db: IBeaconDb,
-    epochCtx: EpochContext,
     forkChoice: ILMDGHOST,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
@@ -51,7 +50,6 @@ export class BlockProcessor implements IService {
     this.config = config;
     this.logger = logger;
     this.db = db;
-    this.epochCtx = epochCtx;
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
