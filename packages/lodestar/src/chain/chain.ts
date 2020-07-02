@@ -36,6 +36,7 @@ import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {IStateCacheItem} from "../../lib/db/api/beacon/stateCache";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -88,8 +89,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
   }
 
-  public async getHeadContext(): Promise<IStateCacheItem|null> {
-    return this.db.stateCache.get(this.forkChoice.headStateRoot());
+  public async getHeadContext(): Promise<IStateContext|null> {
+    //head state should always have epoch ctx
+    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())) as IStateContext;
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
@@ -139,7 +141,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkVersion", this.handleForkVersionChanged);
-    await this.restoreHeadState(state);
+    await this.restoreHeadState(state, epochCtx);
     await this.eth1.start();
   }
 
@@ -192,7 +194,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });
-    await this.db.stateCache.add(genesisState);
+    const epochCtx = new EpochContext(this.config);
+    epochCtx.loadState(genesisState);
+    await this.db.stateCache.add(genesisState, epochCtx);
     // Determine whether a genesis state already in
     // the database matches what we were provided
     const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
@@ -233,13 +237,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   /**
    * Restore state cache and forkchoice from last finalized state.
    */
-  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>): Promise<void> {
+  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>, epochCtx: EpochContext): Promise<void> {
     const finalizedCheckpoint = lastKnownState.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const finalizedRoot = finalizedCheckpoint.root;
     this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
-    this.db.stateCache.add(lastKnownState);
+    this.db.stateCache.add(lastKnownState, epochCtx);
     // the block respective to finalized epoch is still in block db
     const allBlocks = await this.db.block.values();
     if (!allBlocks || allBlocks.length === 0) {
@@ -286,8 +290,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.currentJustifiedCheckpoint : blockCheckpoint,
       finalizedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.finalizedCheckpoint : blockCheckpoint
     });
-    // init state cache
-    this.db.stateCache.add(lastKnownState);
     // no need to process the finalized block
     const processedBlocks = sortedBlocks.filter((block) => block.message.slot > finalizedBlock.message.slot);
     if (!processedBlocks.length) {
