@@ -71,7 +71,7 @@ export class Node {
     this.justifiedCheckpoint = justifiedCheckpoint;
     this.finalizedCheckpoint = finalizedCheckpoint;
 
-    this.weight = 0n;
+    this.weight = BigInt(0);
     this.bestChild = null;
     this.bestTarget = null;
     this.children = {};
@@ -267,7 +267,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     if (!parent.hasBestChild()) {
       // propagate itself as best target as far as necessary
       parent.bestChild = childIndex;
-      this.propagateWeightChange(childIndex, 0n);
+      this.propagateWeightChange(childIndex, BigInt(0));
     }
   }
 
@@ -291,7 +291,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       .map(n => this.nodeIndices.get(n.blockRoot));
     const incorrectBestTargets = leafNodeIdxs.filter(idx => !this.isCandidateForBestTarget(idx));
     // step down as best targets
-    incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, 0n));
+    incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, BigInt(0)));
   }
 
   public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {

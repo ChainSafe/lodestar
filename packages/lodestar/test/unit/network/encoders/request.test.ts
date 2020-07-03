@@ -21,24 +21,24 @@ describe("request encoders", function () {
 
   it("should work - basic request - ssz", async function () {
     const requests = await pipe(
-      [0n],
+      [BigInt(0)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, 0n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body,BigInt(0))).to.be.true;
   });
 
   it("should work - basic request - ssz_snappy", async function () {
     const requests = await pipe(
-      [0n],
+      [BigInt(0)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, 0n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body,BigInt(0))).to.be.true;
   });
 
   it("should work - container request - ssz", async function () {
@@ -67,24 +67,24 @@ describe("request encoders", function () {
 
   it("should work - multiple request - ssz", async function () {
     const requests = await pipe(
-      [1n, 2n],
+      [BigInt(1),BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, 1n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body,BigInt(1))).to.be.true;
   });
 
   it("should work - multiple request - ssz_snappy", async function () {
     const requests = await pipe(
-      [1n, 2n],
+      [BigInt(1),BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, 1n)).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body,BigInt(1))).to.be.true;
   });
 
   it("should work - no request body - ssz", async function () {
@@ -107,7 +107,7 @@ describe("request encoders", function () {
 
   it("should warn user if failed to encode request", async function () {
     await pipe(
-      [1n],
+      [BigInt(1)],
       eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       collect

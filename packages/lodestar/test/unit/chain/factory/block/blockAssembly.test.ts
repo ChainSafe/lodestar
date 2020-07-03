@@ -16,7 +16,8 @@ describe("block assembly", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any, chainStub: StubbedChain, forkChoiceStub: any, stateTransitionStub: any, beaconDB: StubbedBeaconDb;
+  let assembleBodyStub: any, chainStub: StubbedChain,
+    forkChoiceStub: any, stateTransitionStub: any, beaconDB: StubbedBeaconDb;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
@@ -36,18 +37,19 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
-    chainStub.getHeadState.resolves(generateState({slot: 1}));
-    chainStub.getEpochContext.returns(new EpochContext(config));
+    chainStub.getHeadStateContext.resolves({
+      state: generateState({slot: 1}), epochCtx: new EpochContext(config)
+    });
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
-    stateTransitionStub.returns(generateState());
+    stateTransitionStub.returns({state: generateState()});
     try {
       const result = await assembleBlock(config, chainStub, beaconDB, 1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(chainStub.getHeadState.calledOnce).to.be.true;
+      expect(chainStub.getHeadStateContext.calledOnce).to.be.true;
       expect(chainStub.getHeadBlock.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {

@@ -47,7 +47,7 @@ describe("syncing", function () {
     const attnets: AttestationSubnets = config.types.AttestationSubnets.defaultValue();
     attnets[10] = true;
     const rep1 = reps.add("lodestar");
-    rep1.latestMetadata = {attnets, seqNumber: 0n};
+    rep1.latestMetadata = {attnets, seqNumber:BigInt(0)};
     const peerIds = reps.getPeerIdsBySubnet("10");
     expect(peerIds.length).to.be.equal(1);
     expect(peerIds[0]).to.be.equal("lodestar");

@@ -1,9 +1,19 @@
 import {EventEmitter} from "events";
 
-import {Number64, Uint16, Uint64, ForkDigest, ENRForkID, Checkpoint, Slot, SignedBeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
+import {
+  BeaconState,
+  Checkpoint,
+  ENRForkID,
+  ForkDigest,
+  Number64,
+  SignedBeaconBlock,
+  Slot,
+  Uint16,
+  Uint64
+} from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
-import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest, EpochContext, IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
 
@@ -21,14 +31,13 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public networkId: Uint64;
   public clock: IBeaconClock;
 
-  private epochCtx: EpochContext;
   private state: BeaconState|null;
   private config: IBeaconConfig;
 
-  public constructor({genesisTime, chainId, networkId, state, config}: Partial<IMockChainParams>) {
+  public constructor({chainId, networkId, state, config}: Partial<IMockChainParams>) {
     super();
     this.chainId = chainId || 0;
-    this.networkId = networkId || 0n;
+    this.networkId = networkId ||BigInt(0);
     this.state = state;
     this.config = config;
   }
@@ -37,8 +46,11 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return undefined;
   }
 
-  public async getHeadState(): Promise<BeaconState| null> {
-    return this.state;
+  public async getHeadStateContext(): Promise<IStateContext| null> {
+    return {
+      state: this.state,
+      epochCtx: new EpochContext(this.config)
+    };
   }
 
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
@@ -47,8 +59,12 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return block;
   }
 
-  public getEpochContext(): EpochContext {
-    return this.epochCtx.copy();
+  public async getHeadEpochContext(): Promise<EpochContext> {
+    return (await this.getHeadStateContext()).epochCtx;
+  }
+
+  public async getHeadState(): Promise<BeaconState> {
+    return (await this.getHeadStateContext()).state;
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
@@ -93,4 +109,5 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   stop(): Promise<void> {
     return undefined;
   }
+
 }

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {EthersEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../../src/eth1";
 import {ethers} from "ethers";

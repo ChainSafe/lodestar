@@ -84,8 +84,8 @@ export class AttestationAggregator {
     if (!this.latestAggregates[target]) {
       this.latestAggregates[target] = {
         target,
-        weight: 0n,
-        prevWeight: 0n,
+        weight: BigInt(0),
+        prevWeight: BigInt(0),
       };
     }
     return this.latestAggregates[target];

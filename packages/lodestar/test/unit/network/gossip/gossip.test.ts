@@ -41,7 +41,7 @@ describe("Network Gossip", function() {
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: 0n,
+      networkId:BigInt(0),
       state,
       config
     });

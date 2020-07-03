@@ -117,15 +117,15 @@ describe("StatefulDagLMDGHOST", () => {
     addBlock(lmd, 3, blockE, stateE, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 4, blockF, stateF, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     // add vote to e
-    lmd.addAttestation(blockE, 1, 3n);
+    lmd.addAttestation(blockE, 1,BigInt(3));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockE, "head should be e");
     // recast e vote to f
-    lmd.addAttestation(blockF, 1, 3n);
+    lmd.addAttestation(blockF, 1,BigInt(3));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockF, "head should be f");
     // add vote to d
-    lmd.addAttestation(blockD, 2, 5n);
+    lmd.addAttestation(blockD, 2,BigInt(5));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockD, "head should be d");
     // add g block
@@ -133,15 +133,15 @@ describe("StatefulDagLMDGHOST", () => {
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockG, "head should be g");
     // add vote to c
-    lmd.addAttestation(blockC, 3, 2n);
+    lmd.addAttestation(blockC, 3,BigInt(2));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockG, "head should be g");
     // add vote to c
-    lmd.addAttestation(blockC, 4, 1n);
+    lmd.addAttestation(blockC, 4,BigInt(1));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockF, "head should be f");
     // recast co vote to g
-    lmd.addAttestation(blockG, 3, 1n);
+    lmd.addAttestation(blockG, 3,BigInt(1));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockG, "head should be g");
     const headStateRoot = lmd.headStateRoot();
@@ -167,10 +167,10 @@ describe("StatefulDagLMDGHOST", () => {
     addBlock(lmd, 5, blockE, stateE, blockD, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockF, stateF, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockG, stateG, blockF, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
-    lmd.addAttestation(blockE, 1, 3n);
+    lmd.addAttestation(blockE, 1,BigInt(3));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockE, "head should be e");
-    lmd.addAttestation(blockG, 2, 4n);
+    lmd.addAttestation(blockG, 2,BigInt(4));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockG, "head should be g");
     const headStateRoot = lmd.headStateRoot();
@@ -202,12 +202,12 @@ describe("StatefulDagLMDGHOST", () => {
     addBlock(lmd, 5, blockE, stateE, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockF, stateF, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockG, stateG, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
-    lmd.addAttestation(blockE, 1, 3n);
+    lmd.addAttestation(blockE, 1,BigInt(3));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockE, "head should be e");
     const headStateRoot = lmd.headStateRoot();
     assert.deepEqual(headStateRoot, stateE);
-    lmd.addAttestation(blockG, 2, 4n);
+    lmd.addAttestation(blockG, 2,BigInt(4));
     head = lmd.head().blockRoot;
     assert.deepEqual(head, blockG, "head should be g");
   });
@@ -339,7 +339,7 @@ describe("StatefulDagLMDGHOST", () => {
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       // add vote for d
-      lmd.addAttestation(blockD, 1, 3n);
+      lmd.addAttestation(blockD, 1,BigInt(3));
       assert(lmd.getNode(blockD).bestTarget === lmd.getNode(blockE), "e should be best target of d");
       assert(lmd.getNode(blockC).bestTarget === lmd.getNode(blockE), "e should be best target of c too");
       assert(lmd.getNode(blockB).bestTarget === lmd.getNode(blockE), "e should be best target of b too");
@@ -363,7 +363,7 @@ describe("StatefulDagLMDGHOST", () => {
       const slotH = 8 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotH, blockH, stateH, blockE, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
       // make e has more votes than g
-      lmd.addAttestation(blockE, 2, 3n);
+      lmd.addAttestation(blockE, 2,BigInt(3));
       // e branch is used to be not eligible for bestTarget but now it's good thanks for h
       assert.deepEqual(lmd.head().blockRoot, blockH, "h should be the head because e has more votes");
       const headStateRoot = lmd.headStateRoot();
@@ -397,7 +397,7 @@ describe("StatefulDagLMDGHOST", () => {
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotF, blockF, stateF, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       // add vote for e
-      lmd.addAttestation(blockE, 1, 3n);
+      lmd.addAttestation(blockE, 1,BigInt(3));
       assert.deepEqual(lmd.head().blockRoot, blockE, "e should be the head initially");
 
       // g is added with conflict epochs
@@ -442,7 +442,7 @@ describe("StatefulDagLMDGHOST", () => {
       const slotG = 7 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotG, blockG, stateG, blockC, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       // add vote for g
-      lmd.addAttestation(blockG, 1, 3n);
+      lmd.addAttestation(blockG, 1,BigInt(3));
       assert.deepEqual(lmd.head().blockRoot, blockG, "g should be the head initially");
 
       // h is added with conflict epochs
@@ -454,7 +454,7 @@ describe("StatefulDagLMDGHOST", () => {
       const slotI = 9 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotI, blockI, stateI, blockE, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
       // add vote for e
-      lmd.addAttestation(blockE, 2, 6n);
+      lmd.addAttestation(blockE, 2,BigInt(6));
       assert.deepEqual(lmd.head().blockRoot, blockI, "i should be the head");
       const headStateRoot = lmd.headStateRoot();
       assert.deepEqual(headStateRoot, stateI);

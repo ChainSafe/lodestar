@@ -2,7 +2,7 @@ import {verifyAggregate} from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
-import {getDomain, computeSigningRoot} from "../../util";
+import {computeSigningRoot, getDomain} from "../../util";
 import {EpochContext} from "../util";
 
 

@@ -74,13 +74,11 @@ export default class BlockProposingService {
       }).map((duty) => duty.slot)
     );
     //because on new slot will execute before duties are fetched
-    if(epoch != 0) {
-      await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
-    }
+    await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
-    if(this.nextProposalSlots.includes(slot)) {
+    if(this.nextProposalSlots.includes(slot) && slot !== 0) {
       this.nextProposalSlots = this.nextProposalSlots.filter(s => s > slot);
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);

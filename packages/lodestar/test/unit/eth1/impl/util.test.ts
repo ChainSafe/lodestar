@@ -9,7 +9,7 @@ describe("utils of eth1", function() {
   });
 
   it("should return deposit events by block", () => {
-    const depositData = {amount: 0n, signature: Buffer.alloc(96), withdrawalCredentials: Buffer.alloc(32), pubkey: Buffer.alloc(48)};
+    const depositData = {amount:BigInt(0), signature: Buffer.alloc(96), withdrawalCredentials: Buffer.alloc(32), pubkey: Buffer.alloc(48)};
     const depositEvents: IDepositEvent[] = [
       {blockNumber: 1000, index: 0, ...depositData},
       {blockNumber: 2000, index: 2, ...depositData},

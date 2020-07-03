@@ -3,7 +3,6 @@ import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IBlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -18,7 +17,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     epochCtx.loadState(state);
     const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
     for(let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = fastStateTransition(epochCtx, state, testcase[`blocks_${i}`] as SignedBeaconBlock, verify);
+      ({state} = fastStateTransition({epochCtx, state}, testcase[`blocks_${i}`] as SignedBeaconBlock, verify));
     }
     return state;
   },
@@ -43,7 +42,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
 );
 
 function generateBlocksSZZTypeMapping(n: number, config: IBeaconConfig): object {
-  const blocksMapping:any = {};
+  const blocksMapping: any = {};
   for(let i = 0; i<n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.SignedBeaconBlock;
   }

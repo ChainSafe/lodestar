@@ -5,18 +5,18 @@ import {
   Attestation,
   BeaconState,
   Checkpoint,
+  ENRForkID,
+  ForkDigest,
   Root,
   SignedBeaconBlock,
+  Slot,
   Uint16,
   Uint64,
-  ForkDigest,
-  ENRForkID,
-  Slot,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {IStateContext, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -56,13 +56,13 @@ export interface IBeaconChain extends ChainEventEmitter {
    */
   getENRForkID(): Promise<ENRForkID>;
 
-  getHeadState(): Promise<BeaconState|null>;
+  getHeadStateContext(): Promise<IStateContext>;
+  getHeadState(): Promise<BeaconState>;
+  getHeadEpochContext(): Promise<EpochContext>;
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
-
-  getEpochContext(): EpochContext;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
 

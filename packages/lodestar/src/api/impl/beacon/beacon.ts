@@ -4,15 +4,14 @@
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  BeaconState,
   BLSPubkey,
   Bytes32,
   ForkResponse,
   Number64,
   SignedBeaconBlock,
   SyncingStatus,
-  ValidatorResponse,
-  Uint64
+  Uint64,
+  ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
@@ -46,9 +45,9 @@ export class BeaconApi implements IBeaconApi {
 
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
-    const index = this.chain.getEpochContext().pubkey2index.get(pubkey);
+    const {epochCtx, state} = await this.chain.getHeadStateContext();
+    const index = epochCtx.pubkey2index.get(pubkey);
     if(index) {
-      const state = await this.chain.getHeadState();
       return {
         validator: state.validators[index],
         balance: state.balances[index],
@@ -61,7 +60,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<ForkResponse> {
-    const state: BeaconState = await this.chain.getHeadState();
+    const state = await this.chain.getHeadState();
     const networkId: Uint64 = this.chain.networkId;
     const fork = state? state.fork : {
       previousVersion: Buffer.alloc(4),

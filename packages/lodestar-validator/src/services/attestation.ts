@@ -102,9 +102,7 @@ export class AttestationService {
         }
       }
     }
-    if(epoch != 0) {
-      await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
-    }
+    await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
   };
 
   public onNewSlot = async (slot: Slot): Promise<void> => {

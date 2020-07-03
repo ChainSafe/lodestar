@@ -19,13 +19,13 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {StateCache} from "./stateCache";
+import {StateContextCache} from "./stateContextCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
-  public stateCache: StateCache;
+  public stateCache: StateContextCache;
   public blockArchive: BlockArchiveRepository;
   public stateArchive: StateArchiveRepository;
 
@@ -43,7 +43,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     super(opts);
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
-    this.stateCache = new StateCache();
+    this.stateCache = new StateContextCache();
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
