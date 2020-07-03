@@ -29,7 +29,7 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const forkDigestValue = await this.getForkDigest(attestation.data.slot);
-  const {state: headState} = await this.chain.getHeadStateContext();
+  const headState = await this.chain.getHeadState();
   const subnet = computeSubnetForAttestation(this.config, headState, attestation);
   await this.pubsub.publish(
     getGossipTopic(

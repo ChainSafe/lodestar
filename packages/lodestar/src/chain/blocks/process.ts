@@ -9,7 +9,7 @@ import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "..";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {IStateContextCacheItem} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -38,10 +38,10 @@ export function processBlock(
         const newState = postStateContext.state;
         // On successful transition, update system state
         if (job.reprocess) {
-          await db.stateCache.add(postStateContext as IStateContextCacheItem);
+          await db.stateCache.add(postStateContext as ITreeStateContext);
         } else {
           await Promise.all([
-            db.stateCache.add(postStateContext as IStateContextCacheItem),
+            db.stateCache.add(postStateContext as ITreeStateContext),
             db.block.put(blockRoot, job.signedBlock),
           ]);
         }

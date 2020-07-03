@@ -60,7 +60,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<ForkResponse> {
-    const {state} = await this.chain.getHeadStateContext();
+    const state = await this.chain.getHeadState();
     const networkId: Uint64 = this.chain.networkId;
     const fork = state? state.fork : {
       previousVersion: Buffer.alloc(4),
@@ -75,7 +75,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getGenesisTime(): Promise<Number64> {
-    const {state} = await this.chain.getHeadStateContext();
+    const state = await this.chain.getHeadState();
     if(state) {
       return state.genesisTime;
     }

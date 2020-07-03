@@ -12,7 +12,6 @@ import {generateValidators} from "../../utils/validator";
 import {fail} from "assert";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -73,26 +72,6 @@ describe("AttestationProcessor", function () {
       await attestationProcessor.processAttestation(attestation, attestationHash);
       fail("expect an AssertionError");
     } catch (err) {
-      expect(getAttestingIndicesStub.called).to.be.false;
-      expect(forkChoiceStub.addAttestation.called).to.be.false;
-    }
-  });
-
-  it("processAttestation - should not call forkChoice - invalid block slot", async () => {
-    try {
-      const attestation = generateEmptyAttestation();
-      const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
-      const block = generateEmptyBlockSummary();
-      block.slot = 1;
-      forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-      const state = generateState();
-      dbStub.stateCache.get.resolves(state);
-      forkChoiceStub.getJustified.returns({} as Checkpoint);
-
-      await attestationProcessor.processAttestation(attestation, attestationHash);
-      fail("expect an AssertionError");
-    } catch (err) {
-      expect(forkChoiceStub.getAncestor.called).to.be.false;
       expect(getAttestingIndicesStub.called).to.be.false;
       expect(forkChoiceStub.addAttestation.called).to.be.false;
     }

@@ -2,7 +2,7 @@ import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
-export interface IStateContextCacheItem {
+export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
   epochCtx: EpochContext;
 }
@@ -13,12 +13,12 @@ export interface IStateContextCacheItem {
  * Similar API to Repository
  */
 export class StateContextCache {
-  private cache: Record<string, IStateContextCacheItem>;
+  private cache: Record<string, ITreeStateContext>;
   constructor() {
     this.cache = {};
   }
 
-  public async get(root: ByteVector): Promise<IStateContextCacheItem | null> {
+  public async get(root: ByteVector): Promise<ITreeStateContext | null> {
     const item = this.cache[toHexString(root)];
     if (!item) {
       return null;
@@ -26,7 +26,7 @@ export class StateContextCache {
     return this.clone(item);
   }
 
-  public async add(item: IStateContextCacheItem): Promise<void> {
+  public async add(item: ITreeStateContext): Promise<void> {
     this.cache[toHexString(item.state.hashTreeRoot())] = this.clone(item);
   }
 
@@ -42,11 +42,11 @@ export class StateContextCache {
     this.cache = {};
   }
 
-  public async values(): Promise<IStateContextCacheItem[]> {
+  public async values(): Promise<ITreeStateContext[]> {
     return Object.values(this.cache).map(item => this.clone(item));
   }
 
-  private clone(item: IStateContextCacheItem): IStateContextCacheItem {
+  private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
       epochCtx: item.epochCtx.copy()

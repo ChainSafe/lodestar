@@ -68,7 +68,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const validatorIndex = (await this.chain.getHeadStateContext()).epochCtx.pubkey2index.get(validatorPubkey);
+    const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
     return await assembleBlock(
       this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
@@ -202,7 +202,7 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
-    const {state} = await this.chain.getHeadStateContext();
+    const state = await this.chain.getHeadState();
     const domain = getDomain(
       this.config,
       state,

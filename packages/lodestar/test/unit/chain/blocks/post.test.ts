@@ -49,15 +49,15 @@ describe("post block process stream", function () {
   });
 
   it("no epoch transition", async function () {
-    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
-    const postState = {
+    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postStateContext = {
       state: generateState(),
       epochCtx: epochCtxStub as unknown as EpochContext
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
     const item = {
-      preState,
-      postState,
+      preStateContext,
+      postStateContext,
       block
     };
     await pipe(
@@ -76,16 +76,16 @@ describe("post block process stream", function () {
   });
 
   it("epoch transition", async function () {
-    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
-    const postState = {
+    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postStateContext = {
       state: generateState({slot: config.params.SLOTS_PER_EPOCH}),
       epochCtx: epochCtxStub as unknown as EpochContext
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
-      preState,
-      postState,
+      preStateContext,
+      postStateContext,
       block
     };
     await pipe(
@@ -109,8 +109,8 @@ describe("post block process stream", function () {
   });
 
   it("epoch transition - justified and finalized", async function () {
-    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
-    const postState = {
+    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postStateContext = {
       state: generateState({
         slot: config.params.SLOTS_PER_EPOCH,
         currentJustifiedCheckpoint: {epoch: 1, root: Buffer.alloc(1)},
@@ -121,8 +121,8 @@ describe("post block process stream", function () {
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
-      preState,
-      postState,
+      preStateContext,
+      postStateContext,
       block
     };
     dbStub.block.get.resolves(block);
