@@ -39,7 +39,7 @@ export class AttestationCollector implements IService {
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
     const forkDigest = this.chain.currentForkDigest;
-    const {state: headState} = await this.chain.getHeadContext();
+    const {state: headState} = await this.chain.getHeadStateContext();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
     this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
     if(this.aggregationDuties.has(slot)) {
@@ -52,7 +52,7 @@ export class AttestationCollector implements IService {
   private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.currentForkDigest;
-    const {state: headState} = await this.chain.getHeadContext();
+    const {state: headState} = await this.chain.getHeadStateContext();
     this.timers = [];
     committees.forEach((committeeIndex) => {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);

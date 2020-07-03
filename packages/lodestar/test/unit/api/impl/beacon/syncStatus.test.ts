@@ -34,9 +34,9 @@ describe("get validator details api", function () {
 
   it("should return sync status", async function () {
     const status: SyncingStatus = {
-      currentBlock: 1n,
-      highestBlock: 10n,
-      startingBlock: 0n
+      currentBlock:BigInt(1),
+      highestBlock:BigInt(10),
+      startingBlock:BigInt(0)
     };
     syncStub.getSyncStatus.resolves(status);
     const result = await api.getSyncingStatus();

@@ -7,6 +7,7 @@ import {processBlock} from "./block";
 
 
 export {
+  IStateContext,
   EpochContext,
 };
 

@@ -153,7 +153,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   public async getForkDigestByEpoch(epoch: Epoch): Promise<ForkDigest> {
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     const forkVersion = epoch < state.fork.epoch
       ? state.fork.previousVersion
       : state.fork.currentVersion;

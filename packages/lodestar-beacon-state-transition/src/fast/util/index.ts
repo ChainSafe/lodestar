@@ -1,5 +1,5 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "../index";
+import {EpochContext} from "./epochContext";
 
 export * from "./attesterStatus";
 export * from "./epochContext";

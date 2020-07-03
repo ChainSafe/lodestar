@@ -39,7 +39,7 @@ describe("beacon db - post block processing", function () {
     // Add to state
     dbStub.stateArchive.lastValue.resolves(generateState(
       {
-        validators: generateValidators(100, {activationEpoch: 0, effectiveBalance: 2n ** 5n * BigInt(1e9)})
+        validators: generateValidators(100, {activationEpoch: 0, effectiveBalance:BigInt(2) **BigInt(5) * BigInt(1e9)})
       }
     ) as any);
   });

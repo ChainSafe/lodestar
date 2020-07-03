@@ -43,7 +43,7 @@ describe("sync req resp", function () {
     chainStub.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(getBlockSummary({}));
     forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
-    chainStub.getHeadContext.resolves(generateState());
+    chainStub.getHeadStateContext.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
@@ -166,7 +166,7 @@ describe("sync req resp", function () {
 
   it("should handle request - onGoodbye", async function () {
     const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
-    const goodbye: Goodbye = 1n;
+    const goodbye: Goodbye =BigInt(1);
     networkStub.disconnect.resolves();
     try {
       await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);

@@ -24,7 +24,7 @@ export async function assembleBlock(
 ): Promise<BeaconBlock | null> {
   const [parentBlock, stateContext] = await Promise.all([
     chain.getHeadBlock(),
-    chain.getHeadContext()
+    chain.getHeadStateContext()
   ]);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const block: BeaconBlock = {

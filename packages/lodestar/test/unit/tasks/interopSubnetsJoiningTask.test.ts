@@ -46,7 +46,7 @@ describe("interopSubnetsJoiningTask", () => {
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: 0n,
+      networkId:BigInt(0),
       state,
       config
     });
@@ -96,7 +96,7 @@ describe("interopSubnetsJoiningTask", () => {
 
   it("should prepare for a hard fork", async () => {
     // scheduleNextForkSubscription already get called after start
-    const state = await chain.getHeadContext();
+    const state = await chain.getHeadStateContext();
     const nextForkDigest =
       computeForkDigest(config, intToBytes(ALL_FORKS[0].currentVersion, 4), state.genesisValidatorsRoot);
     const spy = sandbox.spy();

@@ -22,9 +22,9 @@ const block: BeaconBlock = {
   ...
 };
 
-let postState: BeaconState;
+let postStateContext: BeaconState;
 try {
-  postState = stateTransition(mainnetConfig, state, block);
+  postStateContext = stateTransition(mainnetConfig, state, block);
 } catch (e) {
   console.log(e);
 }

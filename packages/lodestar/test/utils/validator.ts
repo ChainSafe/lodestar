@@ -17,7 +17,7 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
     exitEpoch: opts.exitEpoch || randNum(),
     withdrawableEpoch: randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.effectiveBalance || 0n
+    effectiveBalance: opts.effectiveBalance ||BigInt(0)
   };
 }
 

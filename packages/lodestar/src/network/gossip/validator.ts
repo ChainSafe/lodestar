@@ -103,7 +103,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   public isValidIncomingCommitteeAttestation = async (attestation: Attestation, subnet: number): Promise<boolean> => {
     const attestationData = attestation.data;
     const slot = attestationData.slot;
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot && currentSlot >= slot)) {
       return false;
@@ -142,7 +142,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const aggregate = aggregateAndProof.aggregate;
     const attestationData = aggregate.data;
     const slot = attestationData.slot;
-    const {state, epochCtx} = await this.chain.getHeadContext();
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
     const currentSlotTime = currentSlot * milliSecPerSlot;
@@ -225,7 +225,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return false;
     }
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
     if (state.slot < startSlot) {
       processSlots(this.config, state, startSlot);
@@ -238,7 +238,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
       return false;
     }
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     return isValidProposerSlashing(this.config, state, proposerSlashing);
   };
 
@@ -252,7 +252,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
 
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     return isValidAttesterSlashing(this.config, state, attesterSlashing);
   };
 }

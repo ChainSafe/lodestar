@@ -62,7 +62,7 @@ export class InteropSubnetsJoiningTask {
    * Prepare for EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
    */
   private scheduleNextForkSubscription = async(): Promise <void> => {
-    const {state} = await this.chain.getHeadContext();
+    const {state} = await this.chain.getHeadStateContext();
     const currentForkVersion = state.fork.currentVersion;
     const nextFork = this.config.params.ALL_FORKS && this.config.params.ALL_FORKS.find(
       (fork) => this.config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4)));

@@ -9,7 +9,7 @@ describe("encodeKey", () => {
     {input: {bucket: Bucket.attestation, key: Buffer.from([0,0,0,1])}, type: "Buffer"},
     {input: {bucket: Bucket.attestation, key: Buffer.from([0,1,0,1])}, type: "Buffer"},
     {input: {bucket: Bucket.attestation, key: 5}, type: "number"},
-    {input: {bucket: Bucket.attestation, key: 5n}, type: "number"},
+    {input: {bucket: Bucket.attestation, key:BigInt(5)}, type: "number"},
     {input: {bucket: Bucket.attestation, key: "test"}, type: "string"},
   ];
   for (const {input: {bucket, key}, type} of testCases) {

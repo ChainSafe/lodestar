@@ -155,7 +155,7 @@ describe("sync utils", function () {
     });
 
     it("should work target less than epoch slots", async function () {
-      chainStub.getHeadContext.resolves(generateState({slot: 0}));
+      chainStub.getHeadStateContext.resolves(generateState({slot: 0}));
       const chunks = await pipe(
         [5],
         targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),
@@ -165,7 +165,7 @@ describe("sync utils", function () {
     });
 
     it("should work target greater than epoch slots", async function () {
-      chainStub.getHeadContext.resolves(generateState({slot: 0}));
+      chainStub.getHeadStateContext.resolves(generateState({slot: 0}));
       const chunks = await pipe(
         [config.params.SLOTS_PER_EPOCH + 2],
         targetSlotToBlockChunks(config, chainStub, async () => [{id: 2} as unknown as PeerInfo]),

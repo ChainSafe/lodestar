@@ -22,7 +22,7 @@ describe("syncing", function () {
     const bn2 = await getDevBeaconNode(
       {SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8},
       8,
-      (await bn.chain.getHeadContext()).genesisTime
+      (await bn.chain.getHeadStateContext()).genesisTime
     );
     await bn2.start();
     const head = await bn.chain.getHeadBlock();

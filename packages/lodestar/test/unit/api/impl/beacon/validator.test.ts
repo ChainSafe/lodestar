@@ -41,7 +41,7 @@ describe("get validator details api", function () {
     const epochCtx = new EpochContext(config);
     epochCtx.syncPubkeys(state);
     chainStub.getEpochContext.returns(epochCtx);
-    chainStub.getHeadContext.resolves(state);
+    chainStub.getHeadStateContext.resolves(state);
     const result = await api.getValidator(Buffer.alloc(48, 2));
     expect(result.validator.slashed).to.be.true;
     expect(result.index).to.be.equal(1);
@@ -49,7 +49,7 @@ describe("get validator details api", function () {
 
   it("validators not found", async function () {
     chainStub.getEpochContext.returns(new EpochContext(config));
-    chainStub.getHeadContext.resolves(
+    chainStub.getHeadStateContext.resolves(
       generateState({
         validators: [
           generateValidator({

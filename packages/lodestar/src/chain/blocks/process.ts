@@ -1,7 +1,7 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {fastStateTransition, computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {computeEpochAtSlot, EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -9,6 +9,7 @@ import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "..";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IStateContextCacheItem} from "../../db/api/beacon/stateContextCache";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -19,28 +20,28 @@ export function processBlock(
   eventBus: ChainEventEmitter,
 ): (source: AsyncIterable<IBlockProcessJob>) =>
   AsyncGenerator<{
-    preState: IStateContext; block: SignedBeaconBlock; postState: Required<IStateContext>; finalized: boolean;
+    preStateContext: IStateContext; block: SignedBeaconBlock; postStateContext: IStateContext; finalized: boolean;
   }> {
   return (source) => {
     return (async function*() {
       for await(const job of source) {
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        const stateContext = await getPreState(config, db, forkChoice, pool, logger, job);
-        if(!stateContext) {
+        const preStateContext = await getPreState(config, db, forkChoice, pool, logger, job);
+        if(!preStateContext) {
           continue;
         }
         // Run the state transition
-        const newStateContext = await runStateTransition(config, db, logger, stateContext, job);
-        if(!newStateContext) {
+        const postStateContext = await runStateTransition(config, db, logger, preStateContext, job);
+        if(!postStateContext) {
           continue;
         }
-        const newState = newStateContext.state;
+        const newState = postStateContext.state;
         // On successful transition, update system state
         if (job.reprocess) {
-          await db.stateCache.add(newState as TreeBacked<BeaconState>, newStateContext.epochCtx);
+          await db.stateCache.add(postStateContext as IStateContextCacheItem);
         } else {
           await Promise.all([
-            db.stateCache.add(newState as TreeBacked<BeaconState>, newStateContext.epochCtx),
+            db.stateCache.add(postStateContext as IStateContextCacheItem),
             db.block.put(blockRoot, job.signedBlock),
           ]);
         }
@@ -50,7 +51,7 @@ export function processBlock(
           logger.info("Processed new chain head",
             {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
           );
-          if(!config.types.Fork.equals(stateContext.state.fork, newState.fork)) {
+          if(!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
             logger.important(`Fork version changed to ${currentVersion} at slot ${newState.slot} and epoch ${epoch}`);
@@ -58,7 +59,12 @@ export function processBlock(
           }
         }
         pool.onProcessedBlock(job.signedBlock);
-        yield {preState: stateContext, postState: newStateContext, block: job.signedBlock, finalized: job.trusted};
+        yield {
+          preStateContext,
+          postStateContext,
+          block: job.signedBlock,
+          finalized: job.trusted
+        };
       }
     })();
   };

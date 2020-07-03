@@ -64,7 +64,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple- ssz", async function () {
     const responses = await pipe(
-      [{status: 0, body: 1n}],
+      [{status: 0, body:BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc"),
       collect
@@ -75,7 +75,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple - ssz_snappy", async function () {
     const responses = await pipe(
-      [{status: 0, body: 1n}],
+      [{status: 0, body:BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc"),
       collect
@@ -86,7 +86,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple (sent multiple)- ssz", async function () {
     const responses = await pipe(
-      [{status: 0, body: 1n}, {status: 0, body: 1n}],
+      [{status: 0, body:BigInt(1)}, {status: 0, body:BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc"),
       collect
@@ -97,7 +97,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
     const responses = await pipe(
-      [{status: 0, body: 1n}, {status: 0, body: 1n}],
+      [{status: 0, body:BigInt(1)}, {status: 0, body:BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc"),
       collect

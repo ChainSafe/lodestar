@@ -36,7 +36,7 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
-    chainStub.getHeadContext.resolves(generateState({slot: 1}));
+    chainStub.getHeadStateContext.resolves(generateState({slot: 1}));
     chainStub.getEpochContext.returns(new EpochContext(config));
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
@@ -47,7 +47,7 @@ describe("block assembly", function () {
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(chainStub.getHeadContext.calledOnce).to.be.true;
+      expect(chainStub.getHeadStateContext.calledOnce).to.be.true;
       expect(chainStub.getHeadBlock.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {
