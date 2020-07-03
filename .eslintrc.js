@@ -18,7 +18,8 @@ module.exports = {
   },
   plugins: [
     "@typescript-eslint",
-    "eslint-plugin-import"
+    "eslint-plugin-import",
+    "eslint-plugin-node"
   ],
   extends: [
     "eslint:recommended",
@@ -67,6 +68,7 @@ module.exports = {
     }],
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
+    "node/no-deprecated-api": "error",
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",

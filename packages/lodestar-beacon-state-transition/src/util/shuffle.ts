@@ -96,7 +96,7 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
   const _seed = seed.valueOf() as Uint8Array;
-  new Buffer(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
+  Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
 
   function setPositionUint32(value: number): void {
     // Little endian, optimized version

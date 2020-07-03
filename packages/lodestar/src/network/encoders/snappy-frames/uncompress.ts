@@ -2,7 +2,7 @@ import BufferList from "bl";
 import {uncompress} from "snappyjs";
 import {IDecompressor} from "../interface";
 
-const IDENTIFIER = new Buffer([
+const IDENTIFIER = Buffer.from([
   0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
 ]);
 
