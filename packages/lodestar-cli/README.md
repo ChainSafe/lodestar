@@ -1,6 +1,8 @@
 # Command Line Interface for Lodestar
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 ![ETH2.0_Spec_Version 0.11.1](https://img.shields.io/badge/ETH2.0_Spec_Version-0.11.1-2e86c1.svg)
+![ES Version](https://img.shields.io/badge/ES-2020-yellow)
+![Node Version](https://img.shields.io/badge/node-12.x-green)
 
 Command line tool for Lodestar
 

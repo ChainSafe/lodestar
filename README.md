@@ -6,6 +6,8 @@
 [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
+![ES Version](https://img.shields.io/badge/ES-2020-yellow)
+![Node Version](https://img.shields.io/badge/node-12.x-green)
 
 Lodestar is a Typescript implementation of the Ethereum 2.0 specification developed by ChainSafe.
 
