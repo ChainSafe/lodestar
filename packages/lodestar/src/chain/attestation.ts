@@ -125,7 +125,6 @@ export class AttestationProcessor implements IAttestationProcessor {
       !!block,
       `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`
     );
-    assert.lte(block.slot, attestation.data.slot, "Attestation is for past block");
     const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
     const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot as Uint8Array, targetSlot);
     assert.true(

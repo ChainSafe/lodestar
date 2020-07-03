@@ -1,6 +1,6 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";

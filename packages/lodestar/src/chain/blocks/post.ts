@@ -1,4 +1,4 @@
-import {computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
@@ -17,36 +17,36 @@ export function postProcess(
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
 ): (source: AsyncIterable<{
-    preState: IStateContext; postState: IStateContext; block: SignedBeaconBlock; finalized: boolean;
+    preStateContext: IStateContext; postStateContext: IStateContext; block: SignedBeaconBlock; finalized: boolean;
   }>) => Promise<void> {
   return async (source) => {
     return (async function() {
-      for await(const {block, preState, postState, finalized} of source) {
+      for await(const {block, preStateContext, postStateContext, finalized} of source) {
         await db.processBlockOperations(block);
         if(!finalized) {
           await attestationProcessor.receiveBlock(block);
         }
         metrics.currentSlot.set(block.message.slot);
         eventBus.emit("processedBlock", block);
-        const preSlot = preState.state.slot;
-        const preFinalizedEpoch = preState.state.finalizedCheckpoint.epoch;
-        const preJustifiedEpoch = preState.state.currentJustifiedCheckpoint.epoch;
-        const currentEpoch = computeEpochAtSlot(config, postState.state.slot);
+        const preSlot = preStateContext.state.slot;
+        const preFinalizedEpoch = preStateContext.state.finalizedCheckpoint.epoch;
+        const preJustifiedEpoch = preStateContext.state.currentJustifiedCheckpoint.epoch;
+        const currentEpoch = computeEpochAtSlot(config, postStateContext.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           eventBus.emit(
             "processedCheckpoint",
             {epoch: currentEpoch, root: forkChoice.getBlockSummaryAtSlot(preSlot).blockRoot},
           );
           // newly justified epoch
-          if (preJustifiedEpoch < postState.state.currentJustifiedCheckpoint.epoch) {
-            newJustifiedEpoch(logger, metrics, eventBus, postState.state);
+          if (preJustifiedEpoch < postStateContext.state.currentJustifiedCheckpoint.epoch) {
+            newJustifiedEpoch(logger, metrics, eventBus, postStateContext.state);
           }
           // newly finalized epoch
-          if (preFinalizedEpoch < postState.state.finalizedCheckpoint.epoch) {
-            newFinalizedEpoch(logger, metrics, eventBus, postState.state);
+          if (preFinalizedEpoch < postStateContext.state.finalizedCheckpoint.epoch) {
+            newFinalizedEpoch(logger, metrics, eventBus, postStateContext.state);
           }
           metrics.currentEpochLiveValidators.set(
-            postState.epochCtx.currentShuffling.activeIndices.length
+            postStateContext.epochCtx.currentShuffling.activeIndices.length
           );
         }
       }

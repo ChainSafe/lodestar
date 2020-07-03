@@ -3,28 +3,28 @@ import {
   Attestation,
   AttesterSlashing,
   ProposerSlashing,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   SignedVoluntaryExit,
-  SignedAggregateAndProof,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+  computeSubnetForAttestation,
+  getAttestingIndices,
   getCurrentSlot,
+  getDomain,
   getIndexedAttestation,
+  isAggregator,
   isValidAttesterSlashing,
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
-  verifyBlockSignature,
-  computeStartSlotAtEpoch,
   processSlots,
-  getAttestingIndices,
-  isAggregator,
-  getDomain,
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeSubnetForAttestation, getBeaconProposerIndex, getBeaconCommittee
+  verifyBlockSignature
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
