@@ -5,7 +5,7 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/labeler@v2
-        if: github.repository == 'ChainSafe/lodestar'
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
