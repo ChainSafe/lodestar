@@ -3,18 +3,19 @@
  */
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, Epoch, Gwei, Number64, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSlotsSinceEpochStart,
-  getCurrentSlot,
-  computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeSlotsSinceEpochStart,
+  computeStartSlotAtEpoch,
+  getCurrentSlot
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {ILMDGHOST, BlockSummary, NO_NODE} from "../interface";
+import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex} from "../interface";
 
 import {NodeInfo} from "./interface";
-import {RootHex, HexCheckpoint} from "../interface";
-import {GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT} from "../../../constants";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 
@@ -97,7 +98,7 @@ export class Node {
   }
 
   public shiftIndex(n: number): void {
-    assert(n >= 0, "invalid value to shift index: " + n);
+    assert.gte(n, 0, "Shift index must be positive");
     if (this.hasBestChild()) {
       this.bestChild = this.bestChild - n;
     }
@@ -216,12 +217,13 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     if (this.finalized && this.finalized.node) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-      assert(node.slot > finalizedSlot,
-        `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
+      assert.gt(node.slot, finalizedSlot, "Fork choice: node slot should be bigger than finalized slot");
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
-      assert(
-        this.getAncestor(blockRootHex, finalizedSlot) === this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
+      assert.equal(
+        this.getAncestor(blockRootHex, finalizedSlot), 
+        this.finalized.node.blockRoot,
+        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`
+      );
     }
 
     let shouldCheckBestTarget = false;
@@ -323,7 +325,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headNode(): Node {
-    assert(Boolean(this.justified));
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -341,7 +343,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headStateRoot(): Uint8Array {
-    assert(Boolean(this.justified));
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -349,9 +351,8 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     return bestTarget.stateRoot.valueOf() as Uint8Array;
   }
 
-  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
-    const head = this.headNode();
-    let node = head;
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+    let node = this.headNode();
     if (!node) {
       return null;
     }
@@ -363,6 +364,12 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       node = this.nodes[node.parent];
     }
     return this.toBlockSummary(node);
+  }
+
+  public getBlockSummariesAtSlot(slot: Slot): BlockSummary[] {
+    return this.nodes
+      .filter((node) => this.config.types.Slot.equals(node.slot, slot))
+      .map((node) => this.toBlockSummary(node));
   }
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {

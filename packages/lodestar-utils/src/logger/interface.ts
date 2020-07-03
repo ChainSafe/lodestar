@@ -30,8 +30,8 @@ export const customColors = {
 export const defaultLogLevel = LogLevel.info;
 
 export interface ILoggerOptions {
-  level: LogLevel;
-  module: string;
+  level?: LogLevel;
+  module?: string;
 }
 
 export type Context = {[k: string]: string|number|BigInt|ArrayLike<number>};

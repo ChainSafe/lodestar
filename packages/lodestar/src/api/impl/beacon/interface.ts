@@ -13,8 +13,11 @@ import {
   ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "../../../util/events";
+import {IBeaconBlocksApi} from "./blocks";
 
 export interface IBeaconApi extends IApi {
+
+  blocks: IBeaconBlocksApi;
 
   /**
    * Requests that the BeaconNode identify information about its

@@ -21,11 +21,13 @@ import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
+  public blocks: IBeaconBlocksApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
@@ -38,6 +40,7 @@ export class BeaconApi implements IBeaconApi {
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.blocks = new BeaconBlockApi(opts, modules);
   }
 
   public async getClientVersion(): Promise<Bytes32> {

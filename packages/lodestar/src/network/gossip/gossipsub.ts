@@ -64,8 +64,9 @@ export class LodestarGossipsub extends Gossipsub {
 
   public async validate(rawMessage: IGossipMessage): Promise<boolean> {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
-    assert(message.topicIDs && message.topicIDs.length === 1, `Invalid topicIDs: ${message.topicIDs}`);
-    assert(message.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
+    assert.true(Boolean(message.topicIDs), "topicIds is not defined");
+    assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
+    assert.lte(message.data.length, GOSSIP_MAX_SIZE, "Message exceeds byte size limit");
     const topic = message.topicIDs[0];
     // avoid duplicate
     if (this.transformedObjects.get(message.messageId)) {

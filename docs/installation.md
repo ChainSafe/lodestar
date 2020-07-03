@@ -43,12 +43,12 @@ yarn global add @chainsafe/lodestar-cli
 Lodestar should now be ready to use:
 
 ```
-lodecli --help
+lodestar --help
 ```
 
 ## Install with docker
 
-The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is mantained actively. It contains all lodestar components, accessible via the `lodecli`.
+The [`chainsafe/lodestar`](https://hub.docker.com/r/chainsafe/lodestar) Docker Hub repository is mantained actively. It contains all lodestar components, accessible via the `lodestar`.
 
 <!-- prettier-ignore-start -->
 !!! info

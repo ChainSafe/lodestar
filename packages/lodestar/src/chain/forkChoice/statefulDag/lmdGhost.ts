@@ -323,12 +323,13 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     if (this.finalized) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-      assert(node.slot > finalizedSlot,
-        `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
+      assert.gt(node.slot, finalizedSlot, "Fork choice: node slot should be bigger than finalized slot");
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
-      assert(
-        this.getAncestor(blockRootHex, finalizedSlot) === this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain`);
+      assert.equal(
+        this.getAncestor(blockRootHex, finalizedSlot),
+        this.finalized.node.blockRoot,
+        `Fork choice: Block slot ${node.slot} is not on the same chain`
+      );
     }
 
     let shouldCheckBestTarget = false;
@@ -408,7 +409,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return this.headNode().toBlockSummary();
   }
   public headNode(): Node {
-    assert(Boolean(this.justified));
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -427,7 +428,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     return this.head().slot;
   }
 
-  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
     const head = this.headNode();
     let node = head;
     // navigate from the head node, up the chain until either the slot is found or the slot is passed
@@ -438,6 +439,12 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       node = node.parent;
     }
     return node.toBlockSummary();
+  }
+
+  public getBlockSummariesAtSlot(slot: Slot): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter((node) => this.config.types.Slot.equals(slot, node.slot))
+      .map((node) => node.toBlockSummary());
   }
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {

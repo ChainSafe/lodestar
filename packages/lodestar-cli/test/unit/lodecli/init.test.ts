@@ -3,7 +3,7 @@ import yargs from "yargs/yargs";
 import {expect} from "chai";
 import rimraf from "rimraf";
 
-import * as beacon from "../../../src/lodecli/cmds/beacon";
+import * as beacon from "../../../src/cmds/beacon";
 
 describe("beacon cli", function() {
   this.timeout(0);
