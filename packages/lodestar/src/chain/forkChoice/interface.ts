@@ -19,7 +19,8 @@ export interface ILMDGHOST {
   getJustified(): Checkpoint;
   getFinalized(): Checkpoint;
   getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null;
-  getBlockSummaryAtSlot(slot: Slot): BlockSummary;
+  getBlockSummariesAtSlot(slot: Slot): BlockSummary[];
+  getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary;
   getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary;
   hasBlock(blockRoot: Uint8Array): boolean;
 }

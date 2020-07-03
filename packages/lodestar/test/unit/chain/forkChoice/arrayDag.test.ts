@@ -3,7 +3,7 @@ import {assert, expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT, GENESIS_EPOCH} from "../../../../src/constants";
+import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {sleep} from "../../../../src/util/sleep";
 import {StubbedBeaconDb} from "../../../utils/stub";

@@ -110,7 +110,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);
     }
-    const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+    const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
     if (!summary) {
       return null;
     }
@@ -122,7 +122,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return null;
     }
     const blockRoots = slots.map((slot) => {
-      const summary = this.forkChoice.getBlockSummaryAtSlot(slot);
+      const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
       return summary? summary.blockRoot : null;
     }).filter((blockRoot) => !!blockRoot);
     // these blocks are on the same chain to head
@@ -232,7 +232,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async waitForBlockProcessed(blockRoot: Uint8Array): Promise<void> {
     await new Promise((resolve) => {
-      this.on("processedBlock", (signedBlock) => {
+      this.once("processedBlock", (signedBlock) => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
           resolve();
