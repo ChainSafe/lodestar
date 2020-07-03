@@ -3,6 +3,7 @@ import * as yargs from "yargs";
 import * as beaconCmd from "./cmds/beacon";
 
 import {devCommandModule} from "./cmds/dev";
+import {validatorCommandModule} from "./cmds/validator";
 import {globalOptions} from "./options";
 
 yargs
@@ -11,6 +12,7 @@ yargs
   .command(devCommandModule)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   .command(beaconCmd as any)
+  .command(validatorCommandModule)
   .demandCommand()
   .showHelpOnFail(false)
   .help()
