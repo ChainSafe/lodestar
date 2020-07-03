@@ -2,30 +2,38 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IValidatorApi, ValidatorApi} from "../../../../../src/api/impl/validator";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {AttestationRepository} from "../../../../../src/db/api/beacon/repositories";
 import {PrivateKey, verifyAggregate} from "@chainsafe/bls";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {computeDomain, computeSigningRoot, DomainType, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
-import {IBeaconChain, BeaconChain} from "../../../../../src/chain";
+import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
+import {StubbedBeaconDb} from "../../../../utils/stub";
 
 
 describe("produce aggregate and proof api implementation", function () {
 
   const sandbox = sinon.createSandbox();
 
-  let attestationStub: SinonStubbedInstance<AttestationRepository>;
+  let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
 
   let api: IValidatorApi;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    attestationStub = sinon.createStubInstance(AttestationRepository);
-    // @ts-ignore
-    api = new ValidatorApi({}, {chain: chainStub, db: {attestation: attestationStub, getValidatorIndex: () => 1}, config});
+    dbStub = new StubbedBeaconDb(sinon, config);
+
+    api = new ValidatorApi(
+      {},
+      // @ts-ignore
+      {
+        chain: chainStub,
+        db: dbStub,
+        config
+      }
+    );
   });
 
   afterEach(function () {
@@ -33,7 +41,7 @@ describe("produce aggregate and proof api implementation", function () {
   });
 
   it("should get aggregated attestation", async function () {
-    attestationStub.getCommiteeAttestations.resolves([
+    dbStub.attestation.getCommiteeAttestations.resolves([
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
     ]);
@@ -46,7 +54,7 @@ describe("produce aggregate and proof api implementation", function () {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.syncPubkeys(state);
-    chainStub.getEpochContext.returns(epochCtx);
+    chainStub.getHeadEpochContext.resolves(epochCtx);
 
     const result = await api.produceAggregateAndProof(generateEmptyAttestation().data, Buffer.alloc(48));
     expect(result.aggregate.signature).to.not.be.null;

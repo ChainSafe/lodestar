@@ -60,7 +60,7 @@ describe("beacon db api", function () {
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
     await validatorDB.getAttestations(pubKey, {gt: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(bigIntToBytes(bytesToBigInt(pubKey)+1n, 48)) + "3").calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(bigIntToBytes(bytesToBigInt(pubKey)+BigInt(1), 48)) + "3").calledOnce).to.be.true;
     expect(dbStub.values.calledOnce).to.be.true;
   });
 
@@ -70,7 +70,7 @@ describe("beacon db api", function () {
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
     await validatorDB.getAttestations(pubKey, {gt: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(bigIntToBytes(bytesToBigInt(pubKey)+1n, 48)) + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(bigIntToBytes(bytesToBigInt(pubKey)+BigInt(1), 48)) + Number.MAX_SAFE_INTEGER).calledOnce).to.be.true;
     expect(dbStub.values.calledOnce).to.be.true;
   });
 

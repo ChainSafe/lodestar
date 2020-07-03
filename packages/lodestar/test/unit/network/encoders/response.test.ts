@@ -70,7 +70,7 @@ describe("response decoders", function () {
       collect
     );
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(1n, responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response simple - ssz_snappy", async function () {
@@ -81,7 +81,7 @@ describe("response decoders", function () {
       collect
     );
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(1n, responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response simple (sent multiple)- ssz", async function () {
@@ -92,7 +92,7 @@ describe("response decoders", function () {
       collect
     );
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(1n, responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
@@ -103,7 +103,7 @@ describe("response decoders", function () {
       collect
     );
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(1n, responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response complex- ssz", async function () {

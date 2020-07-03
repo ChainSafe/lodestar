@@ -76,7 +76,8 @@ describe("interopSubnetsJoiningTask", () => {
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
     chain.emit("forkDigest", chain.currentForkDigest);
     await unSubscribePromise;
-    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount)
+      .to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
@@ -96,7 +97,7 @@ describe("interopSubnetsJoiningTask", () => {
 
   it("should prepare for a hard fork", async () => {
     // scheduleNextForkSubscription already get called after start
-    const state = await chain.getHeadStateContext();
+    const state = await chain.getHeadState();
     const nextForkDigest =
       computeForkDigest(config, intToBytes(ALL_FORKS[0].currentVersion, 4), state.genesisValidatorsRoot);
     const spy = sandbox.spy();

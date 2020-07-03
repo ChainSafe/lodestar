@@ -30,7 +30,7 @@ describe("get proposers api impl", function () {
 
   it("should get proposers", async function () {
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
-    chainStub.getHeadStateContext.resolves(
+    chainStub.getHeadState.resolves(
       generateState(
         {
           slot: 0,
@@ -47,7 +47,7 @@ describe("get proposers api impl", function () {
   });
 
   it("should get future proposers", async function () {
-    chainStub.getHeadStateContext.resolves(
+    chainStub.getHeadState.resolves(
       generateState(
         {
           slot: config.params.SLOTS_PER_EPOCH - 3,

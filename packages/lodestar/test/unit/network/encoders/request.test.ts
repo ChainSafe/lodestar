@@ -21,7 +21,7 @@ describe("request encoders", function () {
 
   it("should work - basic request - ssz", async function () {
     const requests = await pipe(
-      [0n],
+      [BigInt(0)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
@@ -32,7 +32,7 @@ describe("request encoders", function () {
 
   it("should work - basic request - ssz_snappy", async function () {
     const requests = await pipe(
-      [0n],
+      [BigInt(0)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
@@ -67,7 +67,7 @@ describe("request encoders", function () {
 
   it("should work - multiple request - ssz", async function () {
     const requests = await pipe(
-      [1n,BigInt(2)],
+      [BigInt(1),BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
@@ -78,7 +78,7 @@ describe("request encoders", function () {
 
   it("should work - multiple request - ssz_snappy", async function () {
     const requests = await pipe(
-      [1n,BigInt(2)],
+      [BigInt(1),BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
@@ -107,7 +107,7 @@ describe("request encoders", function () {
 
   it("should warn user if failed to encode request", async function () {
     await pipe(
-      [1n],
+      [BigInt(1)],
       eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       collect

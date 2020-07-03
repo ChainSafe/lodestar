@@ -219,7 +219,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async getENRForkID(): Promise<ENRForkID> {
-    const {state} = await this.getHeadStateContext();
+    const state = await this.getHeadState();
     const currentVersion = state.fork.currentVersion;
     const nextVersion = this.config.params.ALL_FORKS && this.config.params.ALL_FORKS.find(
       fork => this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4)));

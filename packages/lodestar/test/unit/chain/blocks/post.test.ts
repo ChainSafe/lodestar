@@ -49,8 +49,11 @@ describe("post block process stream", function () {
   });
 
   it("no epoch transition", async function () {
-    const preState = generateState();
-    const postState = generateState();
+    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postState = {
+      state: generateState(),
+      epochCtx: epochCtxStub as unknown as EpochContext
+    };
     const block = config.types.SignedBeaconBlock.defaultValue();
     const item = {
       preState,
@@ -63,7 +66,6 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,
@@ -74,8 +76,11 @@ describe("post block process stream", function () {
   });
 
   it("epoch transition", async function () {
-    const preState = generateState();
-    const postState = generateState({slot: config.params.SLOTS_PER_EPOCH});
+    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postState = {
+      state: generateState({slot: config.params.SLOTS_PER_EPOCH}),
+      epochCtx: epochCtxStub as unknown as EpochContext
+    };
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
@@ -89,7 +94,6 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,
@@ -105,12 +109,15 @@ describe("post block process stream", function () {
   });
 
   it("epoch transition - justified and finalized", async function () {
-    const preState = generateState();
-    const postState = generateState({
-      slot: config.params.SLOTS_PER_EPOCH,
-      currentJustifiedCheckpoint: {epoch: 1, root: Buffer.alloc(1)},
-      finalizedCheckpoint: {epoch: 1, root: Buffer.alloc(1)}
-    });
+    const preState = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const postState = {
+      state: generateState({
+        slot: config.params.SLOTS_PER_EPOCH,
+        currentJustifiedCheckpoint: {epoch: 1, root: Buffer.alloc(1)},
+        finalizedCheckpoint: {epoch: 1, root: Buffer.alloc(1)}
+      }),
+      epochCtx: epochCtxStub as unknown as EpochContext
+    };
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
@@ -125,7 +132,6 @@ describe("post block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        epochCtxStub as unknown as EpochContext,
         forkChoiceStub,
         metricsStub,
         eventBusStub,

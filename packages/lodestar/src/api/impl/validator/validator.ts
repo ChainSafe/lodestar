@@ -115,7 +115,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const {state} = await this.chain.getHeadStateContext();
+    const state = await this.chain.getHeadState();
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(
       epoch,
@@ -170,7 +170,7 @@ export class ValidatorApi implements IValidatorApi {
       attestationData.index
     )
     );
-    const {epochCtx} = await this.chain.getHeadStateContext();
+    const epochCtx = await this.chain.getHeadEpochContext();
     const aggregate = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     }).reduce((current, attestation) => {

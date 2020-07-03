@@ -84,12 +84,7 @@ export async function getPreState(
     pool.addPendingBlock(job);
     return null;
   }
-  const context = await db.stateCache.get(parentBlock.stateRoot as Uint8Array);
-  if(!context.epochCtx) {
-    context.epochCtx = new EpochContext(config);
-    context.epochCtx.loadState(context.state);
-  }
-  return context as IStateContext;
+  return await db.stateCache.get(parentBlock.stateRoot as Uint8Array);
 }
 
 /**

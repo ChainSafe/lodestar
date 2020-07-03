@@ -26,7 +26,7 @@ describe("Attestation collector",function() {
         // @ts-ignore
         chain: {
           clock: realClock,
-          getHeadStateContext: () => Promise.resolve(generateState()),
+          getHeadState: () => Promise.resolve(generateState()),
         },
         // @ts-ignore
         network: {
@@ -70,7 +70,8 @@ describe("Attestation collector",function() {
       {
         // @ts-ignore
         chain: {
-          clock: realClock
+          clock: realClock,
+          getHeadState: () => Promise.resolve(generateState())
         },
         // @ts-ignore
         network: {

@@ -47,11 +47,9 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async getHeadStateContext(): Promise<IStateContext| null> {
-    const epochCtx= new EpochContext(this.config);
-    epochCtx.loadState(this.state);
     return {
       state: this.state,
-      epochCtx
+      epochCtx: new EpochContext(this.config)
     };
   }
 
