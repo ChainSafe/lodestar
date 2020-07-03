@@ -6645,10 +6645,10 @@ ethjs-util@0.1.6, ethjs-util@^0.1.3:
     is-hex-prefixed "1.0.0"
     strip-hex-prefix "1.0.0"
 
-event-iterator@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/event-iterator/-/event-iterator-1.2.0.tgz#2e71dc6ca56f1cf8ebcb2b9be7fdfd10acabbb76"
-  integrity sha512-Daq7YUl0Mv1i4QEgzGQlz0jrx7hUFNyLGbiF+Ap7NCMCjDLCCnolyj6s0TAc6HmrBziO5rNVHsPwGMp7KdRPvw==
+event-iterator@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/event-iterator/-/event-iterator-2.0.0.tgz#10f06740cc1e9fd6bc575f334c2bc1ae9d2dbf62"
+  integrity sha512-KGft0ldl31BZVV//jj+IAIGCxkvvUkkON+ScH6zfoX+l+omX6001ggyRSpI0Io2Hlro0ThXotswCtfzS8UkIiQ==
 
 event-target-shim@^5.0.0:
   version "5.0.1"
@@ -6909,10 +6909,10 @@ fastify-plugin@^1.6.0, fastify-plugin@^1.6.1:
   dependencies:
     semver "^6.3.0"
 
-fastify-sse-v2@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/fastify-sse-v2/-/fastify-sse-v2-1.0.3.tgz#1546d732f91447de98ecd92991b52f32a5577de1"
-  integrity sha512-7ByrlLZEo2xCr55kj2HIduvqveNuhOQHpyUuryNurmEeVkt0QHlolR235wiqcONGl/srnpYzxtQNogs0Mlk8yg==
+fastify-sse-v2@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/fastify-sse-v2/-/fastify-sse-v2-1.0.4.tgz#a2a6d4e04d30cc288675c72330923d39ac484295"
+  integrity sha512-w/fO4V9uzZSuuZ3bMZKirM9g7WBHYuZwj4Y/xPLVoFxcQuDPZ20Dv01lSd6PiHqZVMPQpn/LdIiY5k+3F1jMDg==
   dependencies:
     fastify-plugin "^1.6.1"
     it-to-stream "^0.1.1"

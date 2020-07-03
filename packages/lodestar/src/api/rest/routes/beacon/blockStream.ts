@@ -9,6 +9,9 @@ export const registerBlockStreamEndpoint: LodestarRestApiEndpoint = (server, {ap
     {},
     async (request, reply) => {
       const source = api.beacon.getBlockStream();
+      request.raw.on("close", () => {
+        source.stop();
+      });
       const transform = (source: AsyncIterable<SignedBeaconBlock>): AsyncIterable<EventMessage> => (async function*() {
         for await (const block of source) {
           const msg: EventMessage = {

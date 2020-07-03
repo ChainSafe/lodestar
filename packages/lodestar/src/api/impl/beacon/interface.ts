@@ -12,6 +12,7 @@ import {
   SyncingStatus,
   ValidatorResponse
 } from "@chainsafe/lodestar-types";
+import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
 
 export interface IBeaconApi extends IApi {
@@ -50,5 +51,5 @@ export interface IBeaconApi extends IApi {
    */
   getSyncingStatus(): Promise<boolean | SyncingStatus>;
 
-  getBlockStream(): AsyncIterable<SignedBeaconBlock>;
+  getBlockStream(): LodestarEventIterator<SignedBeaconBlock>;
 }

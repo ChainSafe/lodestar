@@ -19,10 +19,10 @@ import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
-import EventIterator from "event-iterator";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
+import {LodestarEventIterator} from "../../../util/events";
 
 export class BeaconApi implements IBeaconApi {
 
@@ -94,11 +94,12 @@ export class BeaconApi implements IBeaconApi {
     return status;
   }
 
-  public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
-    return new EventIterator<SignedBeaconBlock>((push) => {
-      this.chain.on("processedBlock", (block) => {
-        push(block);
-      });
+  public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
+    return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
+      this.chain.on("processedBlock", push);
+      return () => {
+        this.chain.off("processedBlock", push);
+      };
     });
   }
 }

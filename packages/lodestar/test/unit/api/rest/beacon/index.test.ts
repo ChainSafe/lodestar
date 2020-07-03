@@ -8,10 +8,11 @@ import supertest from "supertest";
 import {expect} from "chai";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
-import pushable from "it-pushable";
+import pushable, {Pushable} from "it-pushable";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import EventSource from "eventsource";
+import {LodestarEventIterator} from "../../../../../src/util/events";
 
 describe("Test beacon rest api", function () {
   this.timeout(10000);
@@ -71,7 +72,9 @@ describe("Test beacon rest api", function () {
 
   it("should get block stream",  function (done) {
     const server = restApi.server.server.address();
-    const source = pushable<SignedBeaconBlock>();
+    const source
+        = pushable<SignedBeaconBlock>() as LodestarEventIterator<SignedBeaconBlock>&Pushable<SignedBeaconBlock>;
+    source.stop = sinon.stub();
     beaconApi.getBlockStream.returns(source);
     const eventSource = new EventSource(
       `http://${server.address}:${server.port}/node/blocks/stream`,
