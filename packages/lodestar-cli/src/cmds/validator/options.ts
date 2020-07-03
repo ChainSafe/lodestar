@@ -17,7 +17,7 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   },
 
   server: {
-    default: "http://localhost:5052/",
+    default: "http://127.0.0.1:9596",
     alias: ["server"],
     description: "Address to connect to BeaconNode",
     type: "string"

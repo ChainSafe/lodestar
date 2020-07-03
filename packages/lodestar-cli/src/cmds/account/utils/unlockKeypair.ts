@@ -6,10 +6,21 @@ import {Keystore} from "@chainsafe/bls-keystore";
 /**
  * Name mapping of keystore to password file
  * Note: to be defined in EIP-2334
- * @param keystore 
+ * @param keystore Encrypted keystore object
+ * @param secretsDir Directory containing keystore passwords
  */
-function secretFilenameGetter(keystore: Keystore): string {
-  return `0x${keystore.pubkey}`;
+function readPasswordFile(keystore: Keystore, secretsDir: string): string {
+  const passwordPath = path.join(secretsDir, `0x${keystore.pubkey}`);
+  try {
+    // Data may end with '\n', trim it
+    return fs.readFileSync(passwordPath, "utf8").trim();
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      throw Error(`password file not found at expected path ${passwordPath}`);
+    } else {
+      throw e;
+    }
+  }
 }
 
 /**
@@ -24,11 +35,15 @@ export function unlockKeypair({
   keystorePath: string;
   secretsDir: string;
 }): Keypair {
-  const keystore = Keystore.fromJSON(keystorePath);
-  const passwordPath = path.join(secretsDir, secretFilenameGetter(keystore));
-  const password = fs.readFileSync(passwordPath, "utf8");
-  const privKey = keystore.decrypt(password);
-  return new Keypair(PrivateKey.fromBytes(privKey));
+  try {
+    const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
+    const password = readPasswordFile(keystore, secretsDir);
+    const privKey = keystore.decrypt(password);
+    return new Keypair(PrivateKey.fromBytes(privKey));
+  } catch (e) {
+    e.message = `Error unlocking keystore ${keystorePath}: ${e.message}`;
+    throw e;
+  }
 }
 
 /**

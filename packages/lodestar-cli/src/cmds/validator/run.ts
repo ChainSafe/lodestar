@@ -11,12 +11,18 @@ import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {unlockDirKeypairs} from "../account/utils/unlockKeypair";
 import {getBeaconConfig} from "../../util/config";
+import {YargsError} from "../../util/errors";
+import {resolveTildePath} from "../../util/paths";
 
 /**
  * Run a validator client
  */
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
-  const {datadir, server, spec, validatorsDir, secretsDir} = options;
+  const datadir = options.datadir;
+  const server = options.server;
+  const spec = options.spec;
+  const validatorsDir = resolveTildePath(options.validatorsDir);
+  const secretsDir = resolveTildePath(options.secretsDir);
   
   await initBLS();
 
@@ -24,16 +30,23 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
 
   const logger = new WinstonLogger();
 
+  if (!fs.existsSync(validatorsDir))
+    throw new YargsError(`validatorsDir ${validatorsDir} does not exist`);
+  if (!fs.existsSync(secretsDir))
+    throw new YargsError(`secretsDir ${secretsDir} does not exist`);
+
   const validatorKeypairs = unlockDirKeypairs({keystoresDir: validatorsDir, secretsDir});
+  if (validatorKeypairs.length === 0)
+    throw new YargsError(`There are no validator keystores in ${validatorsDir}`);
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
   const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {
-    const pubKey = keypair.publicKey.toHexString();
-    const dbPath = join(datadir, "validators", pubKey);
+    const id = keypair.publicKey.toHexString().slice(0, 10);
+    const dbPath = join(datadir, "validators", id);
     fs.mkdirSync(dbPath, {recursive: true});
     
     const api = new ApiClientOverRest(config, server, logger);
-    const childLogger = logger.child({module: `Validator ${pubKey}`, level: logger.level}) as ILogger;
+    const childLogger = logger.child({module: `Validator ${id}`, level: logger.level}) as ILogger;
 
     return new Validator({
       config,

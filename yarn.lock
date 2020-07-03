@@ -2445,6 +2445,11 @@
   resolved "https://registry.yarnpkg.com/@types/eventsource/-/eventsource-1.1.2.tgz#079ab4213e844e56f7384aec620e1163dab692b3"
   integrity sha512-4AKWJ6tvEU4fk0770oAK4Z0lQUuSnc5ljHTcYZhQtdP7XMDKKvegGUC6xGD8+4+F+svZKAzlxbKnuGWfgMtgVA==
 
+"@types/expand-tilde@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/expand-tilde/-/expand-tilde-2.0.0.tgz#c01a706675b9d60931bf6a7dc7dfa45d63540c97"
+  integrity sha512-17h/6MRHoetV2QVUVnUfrmaFCXNIFJ3uDJmXlklX2xDtlEb1W0OXLgP+qwND2Ibg/PtQfQi0vx19KGuPayjLiw==
+
 "@types/glob@*", "@types/glob@^7.1.1":
   version "7.1.1"
   resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.1.1.tgz#aa59a1c6e3fbc421e07ccd31a944c30eba521575"
