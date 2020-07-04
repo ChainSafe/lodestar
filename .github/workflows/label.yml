@@ -4,8 +4,8 @@ on: [pull_request]
 jobs:
   label:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: actions/labeler@v2
-        if: github.repository == 'ChainSafe/lodestar'
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
