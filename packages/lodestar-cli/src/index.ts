@@ -14,7 +14,8 @@ yargs
   .command(devCommandModule)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   .command(beaconCmd as any)
-  .command(validatorCommandModule)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .command(validatorCommandModule as any)
   .demandCommand()
   .showHelpOnFail(false)
   .help()

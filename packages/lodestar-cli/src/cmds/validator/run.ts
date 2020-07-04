@@ -1,10 +1,10 @@
 import fs from "fs";
+import path from "path";
 import process from "process";
 import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {join} from "path";
-import {IValidatorCliOptions} from "./options";
+import {IValidatorCliArgs} from "./options";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
@@ -17,11 +17,11 @@ import {resolveTildePath} from "../../util/paths";
 /**
  * Run a validator client
  */
-export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
-  const datadir = options.datadir;
+export async function run(options: Arguments<IValidatorCliArgs>): Promise<void> {
+  const dbDir = options.dbDir;
   const server = options.server;
-  const spec = options.spec;
-  const validatorsDir = resolveTildePath(options.validatorsDir);
+  const spec = options.chain.name;
+  const keystoresDir = resolveTildePath(options.keystoresDir);
   const secretsDir = resolveTildePath(options.secretsDir);
   
   await initBLS();
@@ -30,23 +30,24 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
 
   const logger = new WinstonLogger();
 
-  if (!fs.existsSync(validatorsDir))
-    throw new YargsError(`validatorsDir ${validatorsDir} does not exist`);
+  if (!fs.existsSync(keystoresDir))
+    throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
   if (!fs.existsSync(secretsDir))
     throw new YargsError(`secretsDir ${secretsDir} does not exist`);
 
-  const validatorKeypairs = unlockDirKeypairs({keystoresDir: validatorsDir, secretsDir});
+  const validatorKeypairs = unlockDirKeypairs({keystoresDir: keystoresDir, secretsDir});
   if (validatorKeypairs.length === 0)
-    throw new YargsError(`There are no validator keystores in ${validatorsDir}`);
+    throw new YargsError(`There are no validator keystores in ${keystoresDir}`);
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
   const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {
-    const id = keypair.publicKey.toHexString().slice(0, 10);
-    const dbPath = join(datadir, "validators", id);
+    const pubkey = keypair.publicKey.toHexString();
+    const loggerId = `Validator ${pubkey.slice(0, 10)}`;
+    const dbPath = path.join(dbDir, pubkey);
     fs.mkdirSync(dbPath, {recursive: true});
     
     const api = new ApiClientOverRest(config, server, logger);
-    const childLogger = logger.child({module: `Validator ${id}`, level: logger.level}) as ILogger;
+    const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
 
     return new Validator({
       config,
