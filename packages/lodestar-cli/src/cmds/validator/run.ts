@@ -4,7 +4,6 @@ import process from "process";
 import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {IValidatorCliArgs} from "./options";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
@@ -12,17 +11,16 @@ import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {unlockDirKeypairs} from "../account/utils/unlockKeypair";
 import {getBeaconConfig} from "../../util/config";
 import {YargsError} from "../../util/errors";
-import {resolveTildePath} from "../../util/paths";
+import {IValidatorCliOptions} from "./options";
+import {processValidatorPaths} from "./paths";
 
 /**
  * Run a validator client
  */
-export async function run(options: Arguments<IValidatorCliArgs>): Promise<void> {
-  const dbDir = options.dbDir;
+export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
   const spec = options.chain.name;
-  const keystoresDir = resolveTildePath(options.keystoresDir);
-  const secretsDir = resolveTildePath(options.secretsDir);
+  const {dbDir, keystoresDir, secretsDir} = processValidatorPaths(options);
   
   await initBLS();
 
