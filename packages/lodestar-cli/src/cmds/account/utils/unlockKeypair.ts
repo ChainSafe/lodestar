@@ -12,8 +12,8 @@ import {Keystore} from "@chainsafe/bls-keystore";
 function readPasswordFile(keystore: Keystore, secretsDir: string): string {
   const passwordPath = path.join(secretsDir, `0x${keystore.pubkey}`);
   try {
-    // Data may end with '\n', trim it
-    return fs.readFileSync(passwordPath, "utf8").trim();
+    // Remove trailing new lines '\n' (unix) or '\r' (legacy mac) if any
+    return fs.readFileSync(passwordPath, "utf8").replace(/[\n|\r]+$/g, "");
   } catch (e) {
     if (e.code === "ENOENT") {
       throw Error(`password file not found at expected path ${passwordPath}`);
