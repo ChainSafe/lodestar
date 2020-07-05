@@ -21,16 +21,16 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
     alias: ["server"],
     type: "string"
   },
+  
+  validatorDir:  {
+    description: `Data directory for keys and secrets.\n[default: ${defaultPaths.validatorDir}]`,
+    normalize: true,
+    type: "string",
+  },
 
   dbDir: {
     description: `Data directory for validator databases.\n[default: ${defaultPaths.dbDir}]`,
     alias: ["dbDir", "db.dir", "db.name"],
-    normalize: true,
-    type: "string",
-  },
-  
-  validatorDir:  {
-    description: `Data directory for keys and secrets.\n[default: ${defaultPaths.validatorDir}]`,
     normalize: true,
     type: "string",
   },
