@@ -14,6 +14,8 @@ import {IEth1Options} from "../options";
 import {IEth1Notifier, IDepositEvent, Eth1Block, Eth1EventsBlock} from "../interface";
 import {groupDepositEventsByBlock} from "./util";
 import pushable, {Pushable} from "it-pushable";
+import {calculateStateTime} from "../../chain/genesis/util";
+import {Eth1Data} from "@chainsafe/lodestar-types";
 
 export interface IEthersEth1Options extends IEth1Options {
   contract?: Contract;
@@ -46,6 +48,12 @@ export class EthersEth1Notifier implements IEth1Notifier {
 
   private startedProcessEth1: boolean;
   private lastProcessedEth1BlockNumber: number;
+  private lastDepositCount: number;
+  /**
+   * Pregenesis block number to check remaining time/block to form genesis.
+   * This helps avoid calling too many unnecessary getBlock() calls before genesis.
+   */
+  private preGenesisCheckpoint: number;
   private eth1Source: Pushable<Eth1EventsBlock>;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
@@ -63,6 +71,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
       );
     }
     this.contract = opts.contract;
+    this.preGenesisCheckpoint = undefined;
   }
 
   /**
@@ -111,9 +120,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
     this.logger.info("Unsubscribed eth1 blocks & depoosit events");
   }
 
-  public async getLastProcessedBlockTag(): Promise<string | number> {
-    const lastEth1Data = await this.db.eth1Data.lastValue();
-    return lastEth1Data ? toHexString(lastEth1Data.blockHash) : this.opts.depositContract.deployedAt;
+  public async getLastProcessedBlockTag(lastEth1Data: Eth1Data): Promise<string | number> {
+    return lastEth1Data? toHexString(lastEth1Data.blockHash) : this.opts.depositContract.deployedAt;
   }
   public async getLastProcessedDepositIndex(): Promise<number> {
     const lastStoredIndex = await this.db.depositDataRoot.lastKey();
@@ -132,30 +140,38 @@ export class EthersEth1Notifier implements IEth1Notifier {
    * @param toNumber
    */
   public async processBlocks(toNumber: number): Promise<void> {
+    this.logger.info(`Processing eth1 blocks from ${this.lastProcessedEth1BlockNumber + 1} to ${toNumber}`);
     let rangeBlockNumber = this.lastProcessedEth1BlockNumber;
     while (rangeBlockNumber < toNumber && this.startedProcessEth1) {
-      const blockNumber = Math.min(this.lastProcessedEth1BlockNumber + 100, toNumber);
+      const endRangeBlockNumber = Math.min(this.lastProcessedEth1BlockNumber + 1000, toNumber);
       let rangeDepositEvents;
       try {
-        rangeDepositEvents = await this.getDepositEvents(this.lastProcessedEth1BlockNumber + 1, blockNumber);
+        rangeDepositEvents = await this.getDepositEvents(this.lastProcessedEth1BlockNumber + 1, endRangeBlockNumber);
+        this.logger.verbose(`Found ${rangeDepositEvents.length} events from block ` +
+          `${this.lastProcessedEth1BlockNumber + 1} to ${endRangeBlockNumber}`);
       } catch (ex) {
         this.logger.warn(`eth1: failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
-          + ` to ${blockNumber}`);
+          + ` to ${endRangeBlockNumber}`);
         continue;
       }
       let success = true;
-      for (const [blockNumber, blockDepositEvents] of groupDepositEventsByBlock(rangeDepositEvents)) {
+      for (const [blockNumber, blockDepositEvents] of
+        groupDepositEventsByBlock(rangeDepositEvents, this.lastProcessedEth1BlockNumber + 1, endRangeBlockNumber)) {
         if (!await this.processDepositEvents(blockNumber, blockDepositEvents)) {
+          this.logger.warn(`Failed to process events for block ${blockNumber}`);
           success = false;
-          break;
+          break;// break for, should continue while
+        } else {
+          this.lastProcessedEth1BlockNumber = blockNumber;
         }
       }
-      // no error, it's safe to update rangeBlockNumber
       if (success) {
-        rangeBlockNumber = blockNumber;
-        this.lastProcessedEth1BlockNumber = blockNumber;
+        rangeBlockNumber = endRangeBlockNumber;
+        // This is to make sure we update lastProcessedEth1BlockNumber even 0 events found
+        this.lastProcessedEth1BlockNumber = endRangeBlockNumber;
       }
     }
+    this.logger.info(`Done procesing up to block ${toNumber}`);
   }
 
   /**
@@ -170,7 +186,6 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
-    this.logger.verbose(`Processing deposit events of eth1 block ${blockNumber}`);
     // update state
     await Promise.all([
       // op pool depositData
@@ -184,19 +199,67 @@ export class EthersEth1Notifier implements IEth1Notifier {
         value: this.config.types.DepositData.hashTreeRoot(depositEvent),
       }))),
     ]);
-    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
-    if (depositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT) {
+    if (blockDepositEvents.length > 0) {
+      this.logger.verbose(`Processing ${blockDepositEvents.length} deposit events of eth1 block ${blockNumber}`);
+      this.lastDepositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
+    }
+    const shouldGetBlock = this.lastDepositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT &&
+      this.passCheckpoint(blockNumber);
+    // preGenesis: avoid calling getBlock() frequently if we are too far away from genesis time
+    // postGenesis: always call getBlock to store eth1Data
+    if (shouldGetBlock) {
       const block = await this.getBlock(blockNumber);
       if (!block) {
         this.logger.verbose(`eth1 block ${blockNumber} not found`);
         return false;
       }
-      this.eth1Source && this.eth1Source.push({events: blockDepositEvents, block});
-      return await this.processEth1Data(block, blockDepositEvents);
+      const beforeGenesis = this.setCheckpoint(block);
+      if (beforeGenesis) {
+        this.eth1Source && blockDepositEvents.length > 0 && this.eth1Source.push({events: blockDepositEvents});
+        return true;
+      } else {
+        // maybe no deposit events for this block, still need to push to form genesis
+        this.eth1Source && this.eth1Source.push({events: blockDepositEvents, block});
+        return await this.processEth1Data(block);
+      }
     } else {
-      this.eth1Source && this.eth1Source.push({events: blockDepositEvents});
+      this.eth1Source && blockDepositEvents.length > 0 && this.eth1Source.push({events: blockDepositEvents});
     }
     return true;
+  }
+
+  /**
+   * Before genesis: return blockNumber >= checkpoint
+   * After genesis: true
+   */
+  public passCheckpoint(blockNumber: number): boolean {
+    return (!this.preGenesisCheckpoint || blockNumber >= this.preGenesisCheckpoint);
+  }
+
+  /**
+   * Before genesis: set the next checkpoint from the current checkpoint.
+   * Ideally it's 1024 blocks to genesis, then 512 -> 256 -> ... 2 -> 1 -> 0
+   * @returns true of before genesis, false otherwise
+   */
+  public setCheckpoint(block: Eth1Block): boolean {
+    const estimatedStateTime = calculateStateTime(this.config, block.timestamp);
+    if (estimatedStateTime < this.config.params.MIN_GENESIS_TIME) {
+      const numBlocksToGenesis = Math.floor(
+        (this.config.params.MIN_GENESIS_TIME - estimatedStateTime) / this.config.params.SECONDS_PER_ETH1_BLOCK);
+      if (numBlocksToGenesis <= 2) {
+        this.logger.info(`At block ${block.number}, probably ${numBlocksToGenesis} blocks` +
+          " to genesis time if there is enough validators");
+        // if it's too close to genesis time then always getBlock()
+        this.preGenesisCheckpoint = undefined;
+      } else {
+        this.preGenesisCheckpoint = block.number + Math.floor(numBlocksToGenesis / 2);
+        this.logger.info(`Set checkpoint to ${this.preGenesisCheckpoint}`);
+      }
+      return true;
+    } else {
+      this.preGenesisCheckpoint = undefined;
+      return false;
+    }
   }
 
   /**
@@ -205,18 +268,17 @@ export class EthersEth1Notifier implements IEth1Notifier {
    * @param blockDepositEvents
    * @returns true if success
    */
-  public async processEth1Data(block: Eth1Block, blockDepositEvents: IDepositEvent[]): Promise<boolean> {
+  public async processEth1Data(block: Eth1Block): Promise<boolean> {
     if (!this.startedProcessEth1) {
       this.logger.verbose("Eth1 notifier must be started to process a block");
       return false;
     }
     this.logger.verbose(`Processing proposing data of eth1 block ${block.number}`);
-    const depositTree = await this.db.depositDataRoot.getTreeBacked(blockDepositEvents[0].index - 1);
-    const depositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
+    const depositTree = await this.db.depositDataRoot.getTreeBacked(this.lastDepositCount - 1);
     const eth1Data = {
       blockHash: fromHexString(block.hash),
       depositRoot: depositTree.tree().root,
-      depositCount,
+      depositCount: this.lastDepositCount,
     };
     // eth1 data
     await this.db.eth1Data.put(block.timestamp, eth1Data);
@@ -261,11 +323,14 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.info("Started processing eth1 blocks already");
       return;
     }
+    this.startedProcessEth1 = true;
     if(!this.contract) {
       await this.initContract();
     }
-    const lastProcessedBlockTag = await this.getLastProcessedBlockTag();
+    const lastEth1Data = await this.db.eth1Data.lastValue();
+    const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
     this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+    this.lastDepositCount = lastEth1Data? lastEth1Data.depositCount : 0;
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
     );
@@ -275,12 +340,10 @@ export class EthersEth1Notifier implements IEth1Notifier {
     const headBlockNumber = await this.provider.getBlockNumber();
     // process historical unprocessed blocks up to curent head
     // then start listening for incoming blocks
-    this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE).then(() => {
-      if(this.startedProcessEth1) {
-        this.provider.on("block", this.onNewEth1Block.bind(this));
-      }
-    });
-    this.startedProcessEth1 = true;
+    await this.processBlocks(headBlockNumber - this.config.params.ETH1_FOLLOW_DISTANCE);
+    if(this.startedProcessEth1) {
+      this.provider.on("block", this.onNewEth1Block.bind(this));
+    }
   }
 
   private async contractExists(address: string): Promise<boolean> {
