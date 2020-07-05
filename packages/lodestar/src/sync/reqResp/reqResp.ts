@@ -14,7 +14,7 @@ import {
   MAX_REQUEST_BLOCKS,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus} from "../../constants";
+import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
@@ -234,7 +234,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     const head = this.chain.forkChoice.head();
     return {
       forkDigest: this.chain.currentForkDigest,
-      finalizedRoot: head.finalizedCheckpoint.root,
+      finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
       finalizedEpoch: head.finalizedCheckpoint.epoch,
       headRoot: head.blockRoot,
       headSlot: head.slot,
