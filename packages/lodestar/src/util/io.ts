@@ -1,7 +1,4 @@
 import readline from "readline";
-import {Keypair,PrivateKey} from "@chainsafe/bls";
-import keystore from "./keystore";
-import fs from "fs";
 
 
 interface IHiddenReadlineInterface extends readline.Interface {
@@ -29,22 +26,3 @@ export function promptPassword(passwordPrompt: string): Promise<string>{
     });
   });
 }
-
-// This returns a promise
-export async function getKeyFromFileOrKeystore(key: string): Promise<Keypair> {
-  if (fs.existsSync(key)) {
-    const password = await promptPassword("Enter password to decrypt the keystore: ");
-    return keystore.getKeyFromKeyStore(key, password);
-  } else {
-    return new Keypair(PrivateKey.fromHexString(key));
-  }
-}
-
-export function getKeyFromFileOrKeystoreWithPassword(key: string, password: string): Keypair {
-  if (fs.existsSync(key)) {
-    return keystore.getKeyFromKeyStore(key, password);
-  } else {
-    return new Keypair(PrivateKey.fromHexString(key));
-  }
-}
-
