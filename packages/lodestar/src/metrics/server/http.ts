@@ -2,11 +2,10 @@
  * @module metrics/server
  */
 import http from "http";
-import url from "url";
 import {promisify} from "es6-promisify";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 export class HttpMetricsServer implements IMetricsServer {
   public http: http.Server;
