@@ -1,4 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
   AttestationRootHex,
@@ -97,7 +97,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
-    let checkpointState: BeaconState;
+    let checkpointState: TreeBacked<BeaconState>;
     if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
       const justifiedBlock =
         this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);

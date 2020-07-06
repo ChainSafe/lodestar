@@ -10,7 +10,7 @@ import {IBeaconDb} from "../../../db";
 export async function generateDeposits(
   config: IBeaconConfig,
   db: IBeaconDb,
-  state: BeaconState,
+  state: TreeBacked<BeaconState>,
   eth1Data: Eth1Data,
   depositDataRootList: TreeBacked<List<Root>>,
 ): Promise<Deposit[]> {

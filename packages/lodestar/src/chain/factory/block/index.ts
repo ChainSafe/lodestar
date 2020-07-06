@@ -27,12 +27,14 @@ export async function assembleBlock(
     chain.getHeadStateContext()
   ]);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
+  const headState = stateContext.state.clone();
+  headState.slot = slot;
   const block: BeaconBlock = {
     slot,
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
-    body: await assembleBody(config, db, {...stateContext.state, slot}, randaoReveal, graffiti),
+    body: await assembleBody(config, db, headState, randaoReveal, graffiti),
   };
 
   let epochCtx: EpochContext;

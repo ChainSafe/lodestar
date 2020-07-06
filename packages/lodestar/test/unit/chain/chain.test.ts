@@ -25,7 +25,7 @@ describe("BeaconChain", function() {
     eth1 = new InteropEth1Notifier();
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    const state = generateState();
+    const state: BeaconState = generateState();
     state.validators = Array.from({length: 5}, () => generateValidator({activationEpoch: 0}));
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);

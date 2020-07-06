@@ -48,12 +48,17 @@ describe("[network] network", function () {
   let chain: IBeaconChain;
 
   beforeEach(async () => {
-    const state = generateState();
     const block = generateEmptySignedBlock();
-    state.finalizedCheckpoint = {
-      epoch: 0,
-      root: config.types.BeaconBlock.hashTreeRoot(block.message),
-    };
+    const state = generateState({
+      finalizedCheckpoint: {
+        epoch: 0,
+        root: config.types.BeaconBlock.hashTreeRoot(block.message),
+      }
+    });
+    // state.finalizedCheckpoint = {
+    //   epoch: 0,
+    //   root: config.types.BeaconBlock.hashTreeRoot(block.message),
+    // };
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,

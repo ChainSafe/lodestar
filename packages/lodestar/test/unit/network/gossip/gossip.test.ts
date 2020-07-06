@@ -16,6 +16,7 @@ import {generateState} from "../../../utils/state";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {BeaconState} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("Network Gossip", function() {
   let gossip: Gossip;
@@ -42,7 +43,7 @@ describe("Network Gossip", function() {
       genesisTime: 0,
       chainId: 0,
       networkId:BigInt(0),
-      state,
+      state: state as TreeBacked<BeaconState>,
       config
     });
     pubsub = new MockGossipSub();

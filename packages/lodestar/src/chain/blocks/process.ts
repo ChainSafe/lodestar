@@ -1,7 +1,7 @@
 import {IBlockProcessJob} from "../chain";
 import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -20,7 +20,10 @@ export function processBlock(
   eventBus: ChainEventEmitter,
 ): (source: AsyncIterable<IBlockProcessJob>) =>
   AsyncGenerator<{
-    preStateContext: IStateContext; block: SignedBeaconBlock; postStateContext: IStateContext; finalized: boolean;
+    preStateContext: ITreeStateContext;
+    block: SignedBeaconBlock;
+    postStateContext: ITreeStateContext;
+    finalized: boolean;
   }> {
   return (source) => {
     return (async function*() {
@@ -35,13 +38,14 @@ export function processBlock(
         if(!postStateContext) {
           continue;
         }
-        const newState = postStateContext.state;
+        const postTreeStateContext = postStateContext as ITreeStateContext;
+        const newState = postTreeStateContext.state;
         // On successful transition, update system state
         if (job.reprocess) {
-          await db.stateCache.add(postStateContext as ITreeStateContext);
+          await db.stateCache.add(postTreeStateContext);
         } else {
           await Promise.all([
-            db.stateCache.add(postStateContext as ITreeStateContext),
+            db.stateCache.add(postTreeStateContext),
             db.block.put(blockRoot, job.signedBlock),
           ]);
         }
@@ -61,7 +65,7 @@ export function processBlock(
         pool.onProcessedBlock(job.signedBlock);
         yield {
           preStateContext,
-          postStateContext,
+          postStateContext: postTreeStateContext,
           block: job.signedBlock,
           finalized: job.trusted
         };
@@ -73,7 +77,7 @@ export function processBlock(
 
 export async function getPreState(
   config: IBeaconConfig, db: IBeaconDb, forkChoice: ILMDGHOST, pool: BlockPool, logger: ILogger, job: IBlockProcessJob
-): Promise<IStateContext|null> {
+): Promise<ITreeStateContext|null> {
   const parentBlock =
     forkChoice.getBlockSummaryByBlockRoot(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
@@ -95,7 +99,7 @@ export async function getPreState(
  * @param newState
  */
 export function updateForkChoice(
-  config: IBeaconConfig, forkChoice: ILMDGHOST, block: SignedBeaconBlock, newState: BeaconState
+  config: IBeaconConfig, forkChoice: ILMDGHOST, block: SignedBeaconBlock, newState: TreeBacked<BeaconState>
 ): Root {
   forkChoice.addBlock({
     slot: block.message.slot,

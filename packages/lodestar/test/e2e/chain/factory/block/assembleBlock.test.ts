@@ -54,7 +54,7 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves({state: config.types.BeaconState.clone(state), epochCtx});
+    chainStub.getHeadStateContext.resolves({state: state.clone(), epochCtx});
     chainStub.getHeadBlock.resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);

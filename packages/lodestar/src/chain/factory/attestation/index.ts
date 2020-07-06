@@ -5,10 +5,11 @@ import {IBeaconDb} from "../../../db/api";
 import {assembleAttestationData} from "./data";
 import {getBeaconCommittee} from "@chainsafe/lodestar-beacon-state-transition";
 import {EMPTY_SIGNATURE} from "../../../constants";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export async function assembleAttestation(
   {config, db}: {config: IBeaconConfig; db: IBeaconDb},
-  state: BeaconState,
+  state: TreeBacked<BeaconState>,
   headBlock: BeaconBlock,
   validatorIndex: ValidatorIndex,
   index: CommitteeIndex,

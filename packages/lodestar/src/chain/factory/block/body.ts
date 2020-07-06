@@ -8,11 +8,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
 import {generateDeposits} from "./deposits";
 import {getEth1Vote} from "./eth1Vote";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export async function assembleBody(
   config: IBeaconConfig,
   db: IBeaconDb,
-  currentState: BeaconState,
+  currentState: TreeBacked<BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32,
 ): Promise<BeaconBlockBody> {

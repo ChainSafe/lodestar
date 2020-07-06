@@ -148,7 +148,7 @@ export function initializeBeaconStateFromEth1(
   // Process deposits
   applyDeposits(config, state, deposits);
 
-  return state as TreeBacked<BeaconState>;
+  return state;
 }
 
 

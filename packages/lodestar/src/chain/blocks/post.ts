@@ -6,7 +6,8 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
 import {ILMDGHOST} from "../forkChoice";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export function postProcess(
   config: IBeaconConfig,
@@ -17,7 +18,10 @@ export function postProcess(
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
 ): (source: AsyncIterable<{
-    preStateContext: IStateContext; postStateContext: IStateContext; block: SignedBeaconBlock; finalized: boolean;
+    preStateContext: ITreeStateContext;
+    postStateContext: ITreeStateContext;
+    block: SignedBeaconBlock;
+    finalized: boolean;
   }>) => Promise<void> {
   return async (source) => {
     return (async function() {
@@ -59,7 +63,7 @@ function newJustifiedEpoch(
   logger: ILogger,
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
-  state: BeaconState
+  state: TreeBacked<BeaconState>
 ): void {
   logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified!`);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
@@ -71,7 +75,7 @@ function newFinalizedEpoch(
   logger: ILogger,
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
-  state: BeaconState
+  state: TreeBacked<BeaconState>
 ): void {
   logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized!`);
   metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);

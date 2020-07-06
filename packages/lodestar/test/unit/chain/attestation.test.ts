@@ -11,7 +11,7 @@ import {generateState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
 import {fail} from "assert";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {Checkpoint, BeaconState} from "@chainsafe/lodestar-types";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -83,7 +83,7 @@ describe("AttestationProcessor", function () {
       const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
       const block = generateEmptyBlockSummary();
       forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-      const state = generateState();
+      const state: BeaconState = generateState();
       state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
       dbStub.stateArchive.get.withArgs(0).resolves(state);
       forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
@@ -107,7 +107,7 @@ describe("AttestationProcessor", function () {
     const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
     const block = generateEmptyBlockSummary();
     forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-    const state = generateState();
+    const state: BeaconState = generateState();
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
     dbStub.stateArchive.get.withArgs(0).resolves(state);
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());

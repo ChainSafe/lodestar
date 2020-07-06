@@ -14,6 +14,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("interopSubnetsJoiningTask", () => {
   const sandbox = sinon.createSandbox();
@@ -37,7 +38,7 @@ describe("interopSubnetsJoiningTask", () => {
   const params = Object.assign({}, mainnetConfig.params, {ALL_FORKS});
   const config: IBeaconConfig = Object.assign({}, mainnetConfig, {params});
 
-  beforeEach(async () => {
+  beforeEach(async function () {
     clock = sandbox.useFakeTimers();
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     gossipStub = sandbox.createStubInstance(Gossip);
@@ -47,7 +48,7 @@ describe("interopSubnetsJoiningTask", () => {
       genesisTime: 0,
       chainId: 0,
       networkId:BigInt(0),
-      state,
+      state: state as TreeBacked<BeaconState>,
       config
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});
@@ -95,7 +96,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(Number(networkStub.metadata.seqNumber)).to.be.gt(Number(seqNumber));
   });
 
-  it("should prepare for a hard fork", async () => {
+  it("should prepare for a hard fork", async function () {
     // scheduleNextForkSubscription already get called after start
     const state = await chain.getHeadState();
     const nextForkDigest =
@@ -109,6 +110,13 @@ describe("interopSubnetsJoiningTask", () => {
     // at least 1 run right after start, 1 run in scheduleNextForkSubscription
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // subscribe to next fork digest subnet
-    expect(spy.args[spy.args.length - 1][0]).to.be.deep.equal(nextForkDigest);
+    const forkDigestArgs = spy.args.map((callTimeArgs) => callTimeArgs[0]);
+    let callNextForkDigest = false;
+    for (const forkDigest of forkDigestArgs) {
+      if (config.types.ForkDigest.equals(forkDigest, nextForkDigest)) {
+        callNextForkDigest = true;
+      }
+    }
+    expect(callNextForkDigest).to.be.true;
   });
 });

@@ -7,7 +7,8 @@ import {
   RequestId,
   ResponseBody,
   SignedBeaconBlock,
-  Status
+  Status,
+  BeaconState
 } from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
@@ -155,7 +156,7 @@ describe("sync req resp", function () {
     };
 
     dbStub.blockArchive.get.resolves(generateEmptySignedBlock());
-    const state = generateState();
+    const state: BeaconState = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
     dbStub.stateCache.get.resolves(state as any);
