@@ -909,10 +909,10 @@
     js-sha256 "^0.9.0"
     secure-random "^1.1.1"
 
-"@chainsafe/discv5@0.1.3":
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.1.3.tgz#90b9fb6021e2ba158e62291a78b60e99abd79466"
-  integrity sha512-nB4T7Bybi5HGneL0/Tl2DPwR4klhh1TwKvMOOwwK0sbsDjo7B2cLIbut/3RFUBn8ig9omP9nzgqp5NjiC7DgaQ==
+"@chainsafe/discv5@0.2.4", "@chainsafe/discv5@^0.2.4":
+  version "0.2.4"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.4.tgz#5153463a89f46b37ca8a21414aba2b6460af20a3"
+  integrity sha512-Y/13eVEIEpGdWRa3sh1fsYISoHy8/2Y1E6OtzCNt/E2oAUpYVY3Xg4F7HBLnakndD39nl1Y19cruZb3CDx+lYQ==
   dependencies:
     base64url "^3.0.1"
     bcrypto "^4.2.8"
