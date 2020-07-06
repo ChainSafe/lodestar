@@ -7,7 +7,7 @@ export const chainPreset: Options = {
     "chain.preset",
     "chain.name",
   ],
-  description: "Chain configuration",
+  description: "Specifies the default eth2 spec type",
   type: "string",
   choices: ["mainnet", "minimal"],
   default: "minimal",
