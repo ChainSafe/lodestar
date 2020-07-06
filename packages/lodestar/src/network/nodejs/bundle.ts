@@ -14,7 +14,11 @@ import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
 
 export interface ILibp2pOptions {
   peerId: PeerId;
-  listenAddrs: string[];
+  addresses: {
+    listen: string[];
+    announce?: string[];
+    noAnnounce?: string[];
+  };
   autoDial: boolean;
   discv5: {
     bindAddr: string;
@@ -30,7 +34,9 @@ export class NodejsNode extends LibP2p {
     const defaults = {
       peerId: options.peerId,
       addresses: {
-        listen: options.listenAddrs
+        listen: options.addresses.listen,
+        announce: options.addresses.announce || [],
+        noAnnounce: options.addresses.noAnnounce || []
       },
       modules: {
         connEncryption: [NOISE],

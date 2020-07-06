@@ -55,17 +55,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.logger = logger;
     this.metrics = metrics;
     this.peerReputations = reps;
-    // `libp2p` can be a promise as well as a libp2p object
-    this.inited = new Promise((resolve) => {
-      Promise.resolve(libp2p).then((libp2p) => {
-        this.peerId = libp2p.peerId;
-        this.libp2p = libp2p;
-        this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
-        this.metadata = new MetadataController({}, {config, chain, logger});
-        this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain})) as unknown as IGossip;
-        resolve();
-      });
-    });
+    this.peerId = libp2p.peerId;
+    this.libp2p = libp2p;
+    this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
+    this.metadata = new MetadataController({}, {config, chain, logger});
+    this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain})) as unknown as IGossip;
   }
 
   public async start(): Promise<void> {
