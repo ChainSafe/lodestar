@@ -8,12 +8,17 @@ import Mplex from "libp2p-mplex";
 import {NOISE} from "libp2p-noise";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
-import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
 
 
 export interface ILibp2pOptions {
-  peerInfo: PeerInfo;
+  peerId: PeerId;
+  addresses: {
+    listen: string[];
+    announce?: string[];
+    noAnnounce?: string[];
+  };
   autoDial: boolean;
   discv5: {
     bindAddr: string;
@@ -27,7 +32,12 @@ export interface ILibp2pOptions {
 export class NodejsNode extends LibP2p {
   public constructor(options: ILibp2pOptions) {
     const defaults = {
-      peerInfo: options.peerInfo,
+      peerId: options.peerId,
+      addresses: {
+        listen: options.addresses.listen,
+        announce: options.addresses.announce || [],
+        noAnnounce: options.addresses.noAnnounce || []
+      },
       modules: {
         connEncryption: [NOISE],
         transport: [TCP],
@@ -49,7 +59,7 @@ export class NodejsNode extends LibP2p {
         peerDiscovery: {
           autoDial: options.autoDial,
           mdns: {
-            peerInfo: options.peerInfo
+            peerId: options.peerId
           },
           bootstrap: {
             enabled: !!(options.bootnodes && options.bootnodes.length),
@@ -64,7 +74,6 @@ export class NodejsNode extends LibP2p {
         }
       }
     };
-    // @ts-ignore
     super(defaults);
   }
 }

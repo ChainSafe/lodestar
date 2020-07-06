@@ -1,6 +1,7 @@
 /**
  * @module sync
  */
+import PeerId from "peer-id";
 import {Status, Metadata} from "@chainsafe/lodestar-types";
 import {ATTESTATION_SUBNET_COUNT, ReqRespEncoding} from "../constants";
 
@@ -15,7 +16,7 @@ export interface IReputationStore {
   add(peerId: string): IReputation;
   remove(peerId: string): void;
   get(peerId: string): IReputation;
-  getFromPeerInfo(peer: PeerInfo): IReputation;
+  getFromPeerId(peer: PeerId): IReputation;
   getPeerIdsBySubnet(subnetStr: string): string[];
 }
 
@@ -41,8 +42,8 @@ export class ReputationStore implements IReputationStore {
     return this.reputations.get(peerId) || this.add(peerId);
   }
 
-  public getFromPeerInfo(peer: PeerInfo): IReputation {
-    return this.get(peer.id.toB58String());
+  public getFromPeerId(peerId: PeerId): IReputation {
+    return this.get(peerId.toB58String());
   }
 
   public getPeerIdsBySubnet(subnetStr: string): string[] {

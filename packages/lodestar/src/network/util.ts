@@ -4,7 +4,6 @@
  */
 
 import PeerId from "peer-id";
-import PeerInfo from "peer-info";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
@@ -36,23 +35,10 @@ export function createRpcProtocol(method: string, encoding: string, version = 1)
 // peers
 
 /**
- * Return a fresh PeerInfo instance
- */
-export async function createPeerInfo(peerId: PeerId): Promise<PeerInfo> {
-  return new PeerInfo(peerId);
-}
-
-/**
  * Return a fresh PeerId instance
  */
 export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
-}
-
-export async function initializePeerInfo(peerId: PeerId, multiaddrs: string[]): Promise<PeerInfo> {
-  const peerInfo = await createPeerInfo(peerId);
-  multiaddrs.forEach((ma) => peerInfo.multiaddrs.add(ma));
-  return peerInfo;
 }
 
 export function getRequestMethodSSZType(

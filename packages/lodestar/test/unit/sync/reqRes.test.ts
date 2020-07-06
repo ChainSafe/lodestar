@@ -1,6 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
-import PeerInfo from "peer-info";
 import PeerId from "peer-id";
 import {
   BeaconBlocksByRangeRequest,
@@ -72,9 +71,9 @@ describe("sync req resp", function () {
 
 
   it("should start and stop sync rpc", async function () {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     networkStub.hasPeer.returns(true);
-    networkStub.getPeers.returns([peerInfo, peerInfo]);
+    networkStub.getPeers.returns([peerId, peerId]);
     repsStub.get.returns({
       latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
     });
@@ -91,7 +90,7 @@ describe("sync req resp", function () {
   });
 
   it("should handle request  - onStatus(success)", async function () {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     const body: Status = {
       forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -105,7 +104,7 @@ describe("sync req resp", function () {
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
     try {
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
+      await syncRpc.onRequest(peerId, Method.Status, "status", body);
       expect(reqRespStub.sendResponse.calledOnce).to.be.true;
       expect(reqRespStub.goodbye.called).to.be.false;
     }catch (e) {
@@ -114,7 +113,7 @@ describe("sync req resp", function () {
   });
 
   it("should handle request  - onStatus(error)", async function () {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     const body: Status = {
       forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -127,7 +126,7 @@ describe("sync req resp", function () {
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
-      await syncRpc.onRequest(peerInfo, Method.Status, "status", body);
+      await syncRpc.onRequest(peerId, Method.Status, "status", body);
     }catch (e) {
       expect(reqRespStub.sendResponse.called).to.be.true;
     }
@@ -165,11 +164,11 @@ describe("sync req resp", function () {
   });
 
   it("should handle request - onGoodbye", async function () {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     const goodbye: Goodbye =BigInt(1);
     networkStub.disconnect.resolves();
     try {
-      await syncRpc.onRequest(peerInfo, Method.Goodbye, "goodBye", goodbye);
+      await syncRpc.onRequest(peerId, Method.Goodbye, "goodBye", goodbye);
       // expect(networkStub.disconnect.calledOnce).to.be.true;
     }catch (e) {
       expect.fail(e.stack);
@@ -177,16 +176,16 @@ describe("sync req resp", function () {
   });
 
   it("should fail to handle request ", async function () {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     try {
-      await syncRpc.onRequest(peerInfo, null, "null", null);
+      await syncRpc.onRequest(peerId, null, "null", null);
     }catch (e) {
       expect.fail(e.stack);
     }
   });
 
   it("should handle request - onBeaconBlocksByRange", async function() {
-    const peerInfo: PeerInfo = new PeerInfo(new PeerId(Buffer.from("lodestar")));
+    const peerId = new PeerId(Buffer.from("lodestar"));
     const body: BeaconBlocksByRangeRequest = {
       startSlot: 2,
       count: 4,
@@ -207,7 +206,7 @@ describe("sync req resp", function () {
     reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
       blockStream = chunkIter;
     });
-    await syncRpc.onRequest(peerInfo, Method.BeaconBlocksByRange, "range", body);
+    await syncRpc.onRequest(peerId, Method.BeaconBlocksByRange, "range", body);
     const slots = [];
     for await(const body of blockStream) {
       slots.push((body as SignedBeaconBlock).message.slot);

@@ -29,7 +29,6 @@ import {
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
-import PeerInfo from "peer-info";
 import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {eth2ResponseDecode, eth2ResponseEncode, encodeP2pErrorMessage} from "./encoders/response";
@@ -143,34 +142,34 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     }
   }
 
-  public async status(peerInfo: PeerInfo, request: Status): Promise<Status|null> {
-    return await this.sendRequest<Status>(peerInfo, Method.Status, request);
+  public async status(peerId: PeerId, request: Status): Promise<Status|null> {
+    return await this.sendRequest<Status>(peerId, Method.Status, request);
   }
 
-  public async goodbye(peerInfo: PeerInfo, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerInfo, Method.Goodbye, request);
+  public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
+    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
   }
 
-  public async ping(peerInfo: PeerInfo, request: Ping): Promise<Ping|null> {
-    return await this.sendRequest<Ping>(peerInfo, Method.Ping, request);
+  public async ping(peerId: PeerId, request: Ping): Promise<Ping|null> {
+    return await this.sendRequest<Ping>(peerId, Method.Ping, request);
   }
 
-  public async metadata(peerInfo: PeerInfo): Promise<Metadata|null> {
-    return await this.sendRequest<Metadata>(peerInfo, Method.Metadata);
+  public async metadata(peerId: PeerId): Promise<Metadata|null> {
+    return await this.sendRequest<Metadata>(peerId, Method.Metadata);
   }
 
   public async beaconBlocksByRange(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[]|null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRange, request);
+    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
   }
 
   public async beaconBlocksByRoot(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     request: BeaconBlocksByRootRequest
   ): Promise<SignedBeaconBlock[]|null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerInfo, Method.BeaconBlocksByRoot, request);
+    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
   }
 
   private storePeerEncodingPreference(
@@ -225,7 +224,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
-      this.emit("request", new PeerInfo(peerId), method, requestId, request);
+      this.emit("request", peerId, method, requestId, request);
     });
 
     return (async function * () {
@@ -234,18 +233,18 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   };
 
   private async sendRequest<T extends ResponseBody|ResponseBody[]>(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     method: Method,
     body?: RequestBody,
   ): Promise<T|null> {
-    const reputaton = this.peerReputations.getFromPeerInfo(peerInfo);
+    const reputaton = this.peerReputations.getFromPeerId(peerId);
     const encoding = reputaton.encoding || ReqRespEncoding.SSZ_SNAPPY;
     const requestOnly = isRequestOnly(method);
     const requestSingleChunk = isRequestSingleChunk(method);
     const requestId = randomRequestId();
     try {
       return await pipe(
-        this.sendRequestStream(peerInfo, method, encoding, requestId, body),
+        this.sendRequestStream(peerId, method, encoding, requestId, body),
         eth2ResponseTimer(),
         async (source: AsyncIterable<T>): Promise<T | null> => {
           const responses: Array<T> = [];
@@ -257,19 +256,19 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             throw `No response returned for method ${method}. request=${requestId}`;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
-          this.logger.verbose(`receive ${method} response from ${peerInfo.id.toB58String()}`,{requestId, encoding});
+          this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`,{requestId, encoding});
           return requestOnly ? null : finalResponse as T;
         }
       );
     } catch (e) {
       this.logger.error(
-        `failed to send request ${requestId} to peer ${peerInfo.id.toB58String()}`, e
+        `failed to send request ${requestId} to peer ${peerId.toB58String()}`, e
       );
     }
   }
 
   private sendRequestStream<T extends ResponseBody>(
-    peerInfo: PeerInfo,
+    peerId: PeerId,
     method: Method,
     encoding: ReqRespEncoding,
     requestId: RequestId,
@@ -279,8 +278,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
-      const {stream} = await libp2p.dialProtocol(peerInfo, protocol) as {stream: Stream};
-      logger.verbose(`sending ${method} request to ${peerInfo.id.toB58String()}`, {requestId, encoding});
+      const {stream} = await libp2p.dialProtocol(peerId, protocol) as {stream: Stream};
+      logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),

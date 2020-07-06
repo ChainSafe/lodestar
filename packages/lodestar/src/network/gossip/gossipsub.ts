@@ -1,4 +1,7 @@
-import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
+import PeerId from "peer-id";
+import Gossipsub from "libp2p-gossipsub";
+import {Registrar} from "libp2p-gossipsub/src/peer";
+import {Message} from "libp2p-gossipsub/src/message";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -29,9 +32,9 @@ export class LodestarGossipsub extends Gossipsub {
   private timeToLive: number;
   private readonly  logger: ILogger;
 
-  constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerInfo: PeerInfo,
-    registrar: Registrar, options: Options = {}) {
-    super(peerInfo, registrar, Object.assign(options, {msgIdFn: getMessageId}));
+  constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerId: PeerId,
+    registrar: Registrar, options = {}) {
+    super(peerId, registrar, Object.assign(options, {msgIdFn: getMessageId}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -62,7 +65,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
   }
 
-  public async validate(rawMessage: IGossipMessage): Promise<boolean> {
+  public async validate(rawMessage: Message): Promise<boolean> {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
     assert.true(Boolean(message.topicIDs), "topicIds is not defined");
     assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
@@ -90,7 +93,7 @@ export class LodestarGossipsub extends Gossipsub {
     return isValid;
   }
 
-  public _emitMessage(topics: string[], message: IGossipMessage): void {
+  public _emitMessage(topics: string[], message: Message): void {
     const subscribedTopics = super.getTopics();
     topics.forEach((topic) => {
       if (subscribedTopics.includes(topic)) {
@@ -102,7 +105,7 @@ export class LodestarGossipsub extends Gossipsub {
     });
   }
 
-  publish(topic: string, data: Buffer): Promise<void> {
+  publish(topic: string, data: Buffer): void {
     const encoding = getTopicEncoding(topic);
     if(encoding === GossipEncoding.SSZ_SNAPPY) {
       data = compress(data);
@@ -139,7 +142,7 @@ export class LodestarGossipsub extends Gossipsub {
     return result as GossipMessageValidatorFn;
   }
 
-  private deserializeGossipMessage(topic: string, message: IGossipMessage): { object: GossipObject; subnet?: number} {
+  private deserializeGossipMessage(topic: string, message: Message): { object: GossipObject; subnet?: number} {
     if(getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
       message.data = uncompress(message.data);
     }
