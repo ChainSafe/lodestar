@@ -1,4 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import * as fs from "fs";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {EthersEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../../src/eth1";
 import {ethers} from "ethers";
@@ -6,7 +7,7 @@ import pushable from "it-pushable";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {PrivateKey, Keypair, initBLS} from "@chainsafe/bls";
 import {computeDomain, DomainType, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {DepositData, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -57,7 +58,9 @@ describe("genesis builder", function () {
     eth1Stub.getEth1BlockAndDepositEventsSource.resolves(eth1Source);
 
     const statePromise = genesisBuilder.waitForGenesis();
-    for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1; i++) {
+    // push 2 first events at the same time first
+    eth1Source.push({events: [events[0], events[1]]});
+    for (let i = 2; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1; i++) {
       eth1Source.push({events: [events[i]]});
     }
     const lastEventIndex = schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1;

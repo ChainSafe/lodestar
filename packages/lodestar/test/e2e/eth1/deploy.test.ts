@@ -3,13 +3,14 @@ import {ethers} from "ethers";
 import sinon from "sinon";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EthersEth1Notifier, IEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../src/eth1";
+import {EthersEth1Notifier, IEth1Notifier, Eth1EventsBlock} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";
 import {ILogger, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {IEth1Options} from "../../../src/eth1/options";
 import rimraf from "rimraf";
 import pipe from "it-pipe";
+import {sleep} from "../../../src/util/sleep";
 
 describe("Eth1Notifier - using goerli known deployed contract", () => {
 
@@ -38,7 +39,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   testConfig.params = Object.assign({}, config.params,
     {MIN_GENESIS_TIME: 1586833385, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1, ETH1_FOLLOW_DISTANCE: 0});
   beforeEach(async function () {
-    this.timeout(0);
+    this.timeout(10000);
     rimraf.sync(dbPath);
     logger.silent = true;
     logger.level = LogLevel.verbose;
@@ -55,18 +56,16 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
         logger,
       });
     await db.start();
-    await eth1Notifier.start();
   });
 
   afterEach(async () => {
-    await eth1Notifier.stop();
     await db.stop();
     rimraf.sync(dbPath);
     logger.silent = false;
   });
 
   it("should process blocks", async function () {
-    this.timeout(0);
+    this.timeout(10000);
     // process 2 blocks, should be 1 deposit
     const targetBlockNumber = opts.depositContract.deployedAt + 1;
     provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
@@ -81,6 +80,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     // there should be one deposit to process
     const target1BlockNumber = opts.depositContract.deployedAt + 3;
     provider.getBlockNumber = sinon.stub().resolves(target1BlockNumber);
+
     await waitForEth1Block(opts.depositContract.deployedAt + 1);
     await eth1Notifier.stop();
     const tree = await db.depositDataRoot.getTreeBacked(0);
@@ -88,11 +88,10 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     const target2BlockNumber = opts.depositContract.deployedAt + 10;
     // process 7 more blocks, it should start from where it left off
     provider.getBlockNumber = sinon.stub().resolves(target2BlockNumber);
-    await eth1Notifier.start();
-    // await blockPromise2;
     await waitForEth1Block(opts.depositContract.deployedAt + 9);
     const tree2 = await db.depositDataRoot.getTreeBacked(1);
     expect(tree2.length).to.be.equal(2);
+    await sleep(200);
   });
 
   async function waitForEth1Block(targetBlockNumber: number): Promise<void> {
@@ -105,6 +104,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
       }
     });
     await eth1Notifier.endEth1BlockAndDepositEventsSource();
+    await eth1Notifier.stop();
   }
 
 });

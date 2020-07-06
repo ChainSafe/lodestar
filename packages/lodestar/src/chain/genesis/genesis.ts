@@ -63,7 +63,7 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.processDepositEvents(),
       this.assembleGenesisState()
     );
-    this.eth1.endEth1BlockAndDepositEventsSource();
+    await this.eth1.endEth1BlockAndDepositEventsSource();
     return state;
   }
 
@@ -72,6 +72,8 @@ export class GenesisBuilder implements IGenesisBuilder {
     return async (source) => {
       for await (const [deposits, block] of source) {
         applyDeposits(this.config, this.state, deposits, this.depositTree);
+        this.logger.verbose(`Found ${this.depositTree.length} deposits and ` +
+          `${this.state.validators.length} validators so far`);
         if (!block) {
           continue;
         }
