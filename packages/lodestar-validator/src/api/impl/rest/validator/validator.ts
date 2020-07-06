@@ -15,7 +15,7 @@ import {
   SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../interface/validators";
-import {HttpClient} from "../../../../util";
+import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
@@ -27,7 +27,7 @@ export class RestValidatorApi implements IValidatorApi {
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
+    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "validator")}, {logger});
     this.config = config;
   }
 
