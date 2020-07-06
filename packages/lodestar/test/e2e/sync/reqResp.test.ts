@@ -86,7 +86,7 @@ describe("[sync] rpc", function () {
     netB = new Libp2pNetwork(
       opts,
       repsB,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+      {config, libp2p: (await createNode(multiaddr) as unknown as Libp2p), logger, metrics, validator, chain}
     );
     await Promise.all([
       netA.start(),

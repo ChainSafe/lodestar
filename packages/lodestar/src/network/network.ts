@@ -42,7 +42,6 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private opts: INetworkOptions;
   private config: IBeaconConfig;
   private libp2p: LibP2p;
-  private inited: Promise<void>;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private peerReputations: IReputationStore;
@@ -63,7 +62,6 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public async start(): Promise<void> {
-    await this.inited;
     await this.libp2p.start();
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
