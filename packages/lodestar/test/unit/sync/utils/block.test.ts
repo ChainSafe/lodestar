@@ -2,7 +2,6 @@ import {afterEach, beforeEach, describe, it} from "mocha";
 import {ReqResp} from "../../../../src/network/reqResp";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks} from "../../../../src/sync/utils";
-import PeerInfo from "peer-info";
 import {expect} from "chai";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -30,8 +29,8 @@ describe("sync - block utils", function () {
     });
 
     it("happy path", async function () {
-      const peer1 = new PeerInfo(await PeerId.create());
-      const peer2 = new PeerInfo(await PeerId.create());
+      const peer1 = await PeerId.create();
+      const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match(peers[0]).or(sinon.match(peers[1])), sinon.match.any)
@@ -42,8 +41,8 @@ describe("sync - block utils", function () {
 
     it("refetch failed chunks", async function () {
       const timer = sinon.useFakeTimers();
-      const peer1 = new PeerInfo(await PeerId.create());
-      const peer2 = new PeerInfo(await PeerId.create());
+      const peer1 = await PeerId.create();
+      const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange
         .onFirstCall()
@@ -59,8 +58,8 @@ describe("sync - block utils", function () {
     });
 
     it("no chunks", async function () {
-      const peer1 = {id: 1} as unknown as PeerInfo;
-      const peers: PeerInfo[] = [peer1];
+      const peer1 = new PeerId(Buffer.from("lodestar"));
+      const peers: PeerId[] = [peer1];
       rpcStub.beaconBlocksByRange.resolves([]);
       const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 4, end: 4}, 2);
       expect(blocks.length).to.be.equal(0);
@@ -131,7 +130,7 @@ describe("sync - block utils", function () {
         .resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(
         rpcStub,
-        {id: sinon.createStubInstance(PeerId)} as unknown as PeerInfo,
+        sinon.createStubInstance(PeerId),
         {start: 1, end: 4}
       );
       expect(result.length).to.be.greaterThan(0);

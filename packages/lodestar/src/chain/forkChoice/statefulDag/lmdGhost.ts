@@ -73,7 +73,7 @@ export class Node {
     this.justifiedCheckpoint = justifiedCheckpoint;
     this.finalizedCheckpoint = finalizedCheckpoint;
 
-    this.weight = 0n;
+    this.weight = BigInt(0);
     this.bestChild = null;
     this.bestTarget = null;
     this.children = {};
@@ -148,7 +148,7 @@ export class Node {
     if (!this.bestChild) {
       // propagate itself as best target as far as necessary
       this.bestChild = child;
-      child.propagateWeightChange(0n, justifiedCheckpoint, finalizedCheckpoint);
+      child.propagateWeightChange(BigInt(0), justifiedCheckpoint, finalizedCheckpoint);
     }
   }
 
@@ -326,9 +326,9 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       assert.gt(node.slot, finalizedSlot, "Fork choice: node slot should be bigger than finalized slot");
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
       assert.equal(
-        this.getAncestor(blockRootHex, finalizedSlot),
+        this.getAncestorHex(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain`
+        `Fork choice: Block slot ${node.slot} is not on the same chain`,
       );
     }
 
@@ -349,7 +349,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       // Update justified if new justified is later than store justified
       // or if store justified is not in chain with finalized checkpoint
       if (justifiedCheckpoint.epoch > this.justified.epoch ||
-        this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot) {
+        this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot) {
         this.setJustified(justifiedCheckpoint);
       }
     }
@@ -377,7 +377,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       leaf => !leaf.isCandidateForBestTarget(this.getJustifiedCheckpoint(), this.getFinalizedCheckpoint()));
     // step down as best targets
     incorrectBestTargets.forEach(
-      node => node.propagateWeightChange(0n, this.getJustifiedCheckpoint(), this.getFinalizedCheckpoint()));
+      node => node.propagateWeightChange(BigInt(0), this.getJustifiedCheckpoint(), this.getFinalizedCheckpoint()));
   }
 
   public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {
@@ -468,7 +468,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     }
     const hexBlockRoot = toHexString(blockRoot);
     const justifiedSlot = computeStartSlotAtEpoch(this.config, this.justified.epoch);
-    if (this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
+    if (this.getAncestorHex(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
       return false;
     }
 
@@ -487,6 +487,16 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
       return {epoch: 0, root: ZERO_HASH};
     }
     return this.head().finalizedCheckpoint;
+  }
+
+  /**
+   * Get ancestor of a root until a slot
+   * @param root the starting root to look for ancestor
+   * @param slot target slot - normally slot < slotOf(root)
+   */
+  public getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null {
+    const ancestor = this.getAncestorHex(toHexString(root), slot);
+    return ancestor? fromHexString(ancestor) : null;
   }
 
   /**
@@ -529,13 +539,13 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
     this.justified = {node: this.nodes[rootHex], epoch};
   }
 
-  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
+  private getAncestorHex(root: RootHex, slot: Slot): RootHex | null {
     const node = this.nodes[root];
     if (!node) {
       return null;
     }
     if (node.slot > slot) {
-      return (node.parent)? this.getAncestor(node.parent.blockRoot, slot) : null;
+      return (node.parent)? this.getAncestorHex(node.parent.blockRoot, slot) : null;
     } else if (node.slot === slot) {
       return node.blockRoot;
     } else {

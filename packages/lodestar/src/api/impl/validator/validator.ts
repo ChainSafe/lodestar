@@ -34,14 +34,14 @@ import {
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   getDomain,
-  processSlots
+  processSlots,
+  computeSubnetForSlot
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
-import {getCommitteeIndexSubnet} from "../../../network/gossip/utils";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -68,7 +68,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
-    const validatorIndex = this.chain.getEpochContext().pubkey2index.get(validatorPubkey);
+    const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
     return await assembleBlock(
       this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
     );
@@ -80,17 +80,18 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
-      const [headBlock, headState, validatorIndex] = await Promise.all([
+      const [headBlock, {state: headState, epochCtx}] = await Promise.all([
         this.chain.getHeadBlock(),
-        this.chain.getHeadState(),
-        this.chain.getEpochContext().pubkey2index.get(validatorPubKey)
+        this.chain.getHeadStateContext(),
       ]);
-      processSlots(this.config, headState, slot);
+      if (slot > headState.slot) {
+        processSlots(this.config, headState, slot);
+      }
       return await assembleAttestation(
         {config: this.config, db: this.db},
         headState,
         headBlock.message,
-        validatorIndex,
+        epochCtx.pubkey2index.get(validatorPubKey),
         index,
         slot
       );
@@ -127,7 +128,7 @@ export class ValidatorApi implements IValidatorApi {
     }
     const duties: ProposerDuty[] = [];
 
-    for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot ++) {
+    for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
       const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
       duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }
@@ -135,8 +136,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    const validatorIndexes = validatorPubKeys.map((key) => this.chain.getEpochContext().pubkey2index.get(key));
-    const state = await this.chain.getHeadState();
+    const {epochCtx, state} = await this.chain.getHeadStateContext();
+    const validatorIndexes = validatorPubKeys.map((key) => epochCtx.pubkey2index.get(key));
 
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(
@@ -169,6 +170,7 @@ export class ValidatorApi implements IValidatorApi {
       attestationData.index
     )
     );
+    const epochCtx = await this.chain.getHeadEpochContext();
     const aggregate = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     }).reduce((current, attestation) => {
@@ -189,9 +191,10 @@ export class ValidatorApi implements IValidatorApi {
       }
       return current;
     });
+
     return {
       aggregate,
-      aggregatorIndex: this.chain.getEpochContext().pubkey2index.get(aggregator),
+      aggregatorIndex: epochCtx.pubkey2index.get(aggregator),
       selectionProof: EMPTY_SIGNATURE
     };
   }
@@ -199,9 +202,10 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
+    const state = await this.chain.getHeadState();
     const domain = getDomain(
       this.config,
-      await this.chain.getHeadState(),
+      state,
       DomainType.SELECTION_PROOF,
       computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
@@ -213,12 +217,12 @@ export class ValidatorApi implements IValidatorApi {
     if(!valid) {
       throw new Error("Invalid slot signature");
     }
-    this.sync.collectAttestations(
+    await this.sync.collectAttestations(
       slot,
       committeeIndex
     );
-    const subnet = getCommitteeIndexSubnet(committeeIndex);
-    await this.network.searchSubnetPeers(subnet);
+    const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
+    await this.network.searchSubnetPeers(String(subnet));
   }
 
 }

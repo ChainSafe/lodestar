@@ -1,7 +1,6 @@
 import pushable from "it-pushable";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
 import abortable from "abortable-iterator";
 import {AbortController} from "abort-controller";
@@ -23,7 +22,6 @@ export class BlockProcessor implements IService {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
-  private readonly epochCtx: EpochContext;
   private readonly forkChoice: ILMDGHOST;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
@@ -42,7 +40,6 @@ export class BlockProcessor implements IService {
     config: IBeaconConfig,
     logger: ILogger,
     db: IBeaconDb,
-    epochCtx: EpochContext,
     forkChoice: ILMDGHOST,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
@@ -51,7 +48,6 @@ export class BlockProcessor implements IService {
     this.config = config;
     this.logger = logger;
     this.db = db;
-    this.epochCtx = epochCtx;
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
@@ -74,7 +70,6 @@ export class BlockProcessor implements IService {
         this.config,
         this.logger,
         this.db,
-        this.epochCtx,
         this.forkChoice,
         this.pendingBlocks,
         this.eventBus
@@ -83,7 +78,6 @@ export class BlockProcessor implements IService {
         this.config,
         this.logger,
         this.db,
-        this.epochCtx,
         this.forkChoice,
         this.metrics,
         this.eventBus,

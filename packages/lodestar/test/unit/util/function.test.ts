@@ -18,7 +18,7 @@ describe("retryable", () => {
     expect(spy.callCount).to.be.equal(10);
   });
 
-  it("should retry multiple times with function - return on 2nd call", async function() {
+  it("should retry multiple times with function - return onBigInt(2)d call", async function() {
     const stub = sinon.stub();
     stub.onSecondCall().returns(3);
     const func = (): Promise<string | null> => {

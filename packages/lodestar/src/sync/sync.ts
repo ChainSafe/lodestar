@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
@@ -132,10 +133,10 @@ export class BeaconSync implements IBeaconSync {
     }
   }
 
-  private getPeers(): PeerInfo[] {
+  private getPeers(): PeerId[] {
     return this.network.getPeers()
       .filter((peer) => {
-        return !!this.peerReputations.getFromPeerInfo(peer).latestStatus;
+        return !!this.peerReputations.getFromPeerId(peer).latestStatus;
       });
   }
 

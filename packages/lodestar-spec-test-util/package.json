@@ -41,7 +41,7 @@
   ],
   "dependencies": {
     "@chainsafe/lodestar-utils": "^0.9.0",
-    "@chainsafe/ssz": "^0.6.5",
+    "@chainsafe/ssz": "^0.6.7",
     "camelcase": "^5.3.1",
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",

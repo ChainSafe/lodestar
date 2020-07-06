@@ -7,10 +7,10 @@ import {
   BLSPubkey,
   Epoch,
   Fork,
-  Slot,
-  SignedBeaconBlock,
+  ProposerDuty,
   Root,
-  ProposerDuty
+  SignedBeaconBlock,
+  Slot
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
@@ -19,6 +19,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
+  computeStartSlotAtEpoch,
   DomainType,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -67,13 +68,18 @@ export default class BlockProposingService {
     if(!proposerDuties) {
       return;
     }
-    this.nextProposalSlots = proposerDuties.filter((proposerDuty) => {
-      return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
-    }).map((duty) => duty.slot);
+    this.nextProposalSlots = this.nextProposalSlots.concat(
+      proposerDuties.filter((proposerDuty) => {
+        return this.config.types.BLSPubkey.equals(proposerDuty.proposerPubkey, this.publicKey);
+      }).map((duty) => duty.slot)
+    );
+    //because on new slot will execute before duties are fetched
+    await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
-    if(this.nextProposalSlots.includes(slot)) {
+    if(this.nextProposalSlots.includes(slot) && slot !== 0) {
+      this.nextProposalSlots = this.nextProposalSlots.filter(s => s > slot);
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(slot, fork, genesisValidatorsRoot);
     }

@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IRegularSync, IRegularSyncModules} from "../interface";
 import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
@@ -69,7 +70,7 @@ export class NaiveRegularSync implements IRegularSync {
     return getHighestCommonSlot(
       (await this.getSyncPeers(
         0
-      )).map((peer) => this.reps.getFromPeerInfo(peer))
+      )).map((peer) => this.reps.getFromPeerId(peer))
     );
   }
 
@@ -126,11 +127,11 @@ export class NaiveRegularSync implements IRegularSync {
     );
   }
 
-  private getSyncPeers = async (minSlot: Slot): Promise<PeerInfo[]> => {
+  private getSyncPeers = async (minSlot: Slot): Promise<PeerId[]> => {
     //not sure how to check this since we need to sync two epoch before we will have finalized like others
-    // const chainFinalizedCheckpoint = (await this.chain.getHeadState()).finalizedCheckpoint;
+    // const chainFinalizedCheckpoint = (await this.chain.getHeadStateContext()).finalizedCheckpoint;
     return this.network.getPeers().filter((peer) => {
-      const latestStatus = this.reps.getFromPeerInfo(peer).latestStatus;
+      const latestStatus = this.reps.getFromPeerId(peer).latestStatus;
       return latestStatus
           && latestStatus.headSlot >= minSlot;
     });

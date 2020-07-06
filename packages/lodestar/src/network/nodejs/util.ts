@@ -7,7 +7,6 @@ import PeerId from "peer-id";
 import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import {NodejsNode} from ".";
-import {initializePeerInfo} from "../util";
 import {INetworkOptions} from "../options";
 import defaults from "../defaults";
 
@@ -40,6 +39,11 @@ export async function createNodeJsLibp2p(
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
-  const peerInfo = await initializePeerInfo(peerId, multiaddrs);
-  return new NodejsNode({peerInfo, autoDial, bootnodes: bootnodes, discv5: network.discv5});
+  return new NodejsNode({
+    peerId,
+    addresses: {listen: multiaddrs},
+    autoDial,
+    bootnodes: bootnodes,
+    discv5: network.discv5
+  });
 }

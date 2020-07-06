@@ -44,15 +44,17 @@ export class Eth1Wallet {
    * Will deposit 32 ETH to eth2.0 deposit contract.
    * @param address address of deposit contract
    * @param value amount to wei to deposit on contract
+   * @param signingKey
+   * @param withdrawalKey
    */
 
   public async submitValidatorDeposit(
-    address: string, 
-    value: ethers.BigNumber, 
-    signingKey: PrivateKey, 
+    address: string,
+    value: ethers.BigNumber,
+    signingKey: PrivateKey,
     withdrawalKey: PrivateKey
   ): Promise<string> {
-    const amount = BigInt(value.toString()) / 1000000000n;
+    const amount = BigInt(value.toString()) / BigInt(1000000000);
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
     const pubkey = signingKey.toPublicKey().toBytesCompressed();

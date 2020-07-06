@@ -48,8 +48,7 @@ export function applyEth1BlockHash(config: IBeaconConfig, state: BeaconState, et
  * @param eth1Timestamp eth1 block timestamp
  */
 export function applyTimestamp(config: IBeaconConfig, state: BeaconState, eth1Timestamp: number): void {
-  state.genesisTime =
-    eth1Timestamp - eth1Timestamp % config.params.MIN_GENESIS_DELAY + 2 * config.params.MIN_GENESIS_DELAY;
+  state.genesisTime = calculateStateTime(config, eth1Timestamp);
 }
 
 /**
@@ -74,10 +73,11 @@ export function applyDeposits(
       depositDataRootList.push(fullDepositDataRootList[index]);
     }
   }
+  const initDepositCount = depositDataRootList.length;
   const depositDatas: DepositData[] = fullDepositDataRootList? null : newDeposits.map((deposit) => deposit.data);
   newDeposits.forEach((deposit, index) => {
     if (fullDepositDataRootList) {
-      depositDataRootList.push(fullDepositDataRootList[index + depositDataRootList.length]);
+      depositDataRootList.push(fullDepositDataRootList[index + initDepositCount]);
       state.eth1Data.depositRoot = config.types.DepositDataRootList.hashTreeRoot(depositDataRootList);
     } else {
       const depositDataList = depositDatas.slice(0, index + 1);
@@ -104,6 +104,19 @@ export function applyDeposits(
   state.genesisValidatorsRoot = config.types.BeaconState.fields.validators.hashTreeRoot(state.validators);
 }
 
+/**
+ *
+ * This is used to either calculate genesis timestamp or estimate eth1 block forming genesis state.
+ */
+export function calculateStateTime(config: IBeaconConfig, eth1Timestamp: number): number {
+  return eth1Timestamp + config.params.GENESIS_DELAY;
+}
+
+/**
+ * Check if it's valid genesis state.
+ * @param config
+ * @param state
+ */
 export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;

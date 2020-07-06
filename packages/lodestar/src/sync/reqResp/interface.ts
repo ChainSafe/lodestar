@@ -2,7 +2,7 @@
  * @module sync
  */
 
-import PeerInfo from "peer-info";
+import PeerId from "peer-id";
 import {RequestBody} from "@chainsafe/lodestar-types";
 
 import {Method, RequestId} from "../../constants";
@@ -15,5 +15,5 @@ export interface IReqRespHandler {
   start: () => Promise<void>;
   stop: () => Promise<void>;
 
-  onRequest: (peerInfo: PeerInfo, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
+  onRequest: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => Promise<void>;
 }

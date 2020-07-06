@@ -65,8 +65,9 @@ export enum ReqRespEncoding {
 export enum RpcResponseStatus {
   SUCCESS = 0,
   ERR_INVALID_REQ = 1,
-  ERR_RESP_TIMEOUT = 2,
+  SERVER_ERROR = 2,
 }
+
 
 export const GOSSIP_MAX_SIZE = 2**20;
 export const MAX_CHUNK_SIZE = 2**20;

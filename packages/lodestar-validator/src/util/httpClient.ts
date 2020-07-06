@@ -51,6 +51,9 @@ const handleError = (error: AxiosError): AxiosError => {
   if (error.response) {
     if(error.response.status === 404) {
       error.message = "Endpoint not found";
+      if (error.request && error.request.path) {
+        error.message += `: ${error.request.path}`;
+      }
     } else {
       error.message = error.response.data.message || "Request failed with response status " + error.response.status;
     }

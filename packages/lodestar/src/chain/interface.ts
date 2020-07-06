@@ -5,18 +5,18 @@ import {
   Attestation,
   BeaconState,
   Checkpoint,
+  ENRForkID,
+  ForkDigest,
   Root,
   SignedBeaconBlock,
+  Slot,
   Uint16,
   Uint64,
-  ForkDigest,
-  ENRForkID,
-  Slot,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
-import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IStateContext, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -25,7 +25,7 @@ export interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
-  forkDigestChanged: () => void;
+  forkVersion: () => void;
   forkDigest: (forkDigest: ForkDigest) => void;
 }
 
@@ -56,15 +56,17 @@ export interface IBeaconChain extends ChainEventEmitter {
    */
   getENRForkID(): Promise<ENRForkID>;
 
-  getHeadState(): Promise<BeaconState|null>;
+  getHeadStateContext(): Promise<IStateContext>;
+  getHeadState(): Promise<BeaconState>;
+  getHeadEpochContext(): Promise<EpochContext>;
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
-  getEpochContext(): ReadonlyEpochContext;
-
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
+
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null>;
 
   /**
    * Add attestation to the fork-choice rule

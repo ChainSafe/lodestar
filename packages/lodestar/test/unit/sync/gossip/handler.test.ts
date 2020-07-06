@@ -51,7 +51,7 @@ describe("gossip handler", function () {
     });
     const handler = new BeaconGossipHandler(chainStub, networkStub, dbStub, logger);
     await handler.start();
-    expect(chainStub.receiveAttestation.withArgs(aggregateAndProof.message.aggregate).calledOnce).to.be.true;
+    expect(dbStub.aggregateAndProof.add.withArgs(aggregateAndProof.message).calledOnce).to.be.true;
   });
 
   it("should handle new attester slashing", async function () {
@@ -87,7 +87,7 @@ describe("gossip handler", function () {
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: 0n,
+      networkId:BigInt(0),
       state,
       config
     });

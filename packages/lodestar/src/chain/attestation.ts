@@ -102,7 +102,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       const justifiedBlock =
         this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
       if (justifiedBlock) {
-        checkpointState = await this.db.stateCache.get(justifiedBlock.stateRoot);
+        checkpointState = (await this.db.stateCache.get(justifiedBlock.stateRoot)).state;
       } else {
         // should not happen
         throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
@@ -120,13 +120,16 @@ export class AttestationProcessor implements IAttestationProcessor {
       target.epoch, computeEpochAtSlot(this.config, attestation.data.slot),
       "attestation is not targeting current epoch"
     );
-    assert.gte(
-      currentSlot, computeStartSlotAtEpoch(this.config, target.epoch),
-      "Current slot less than this target epoch's start slot"
-    );
     const block = this.forkChoice.getBlockSummaryByBlockRoot(attestation.data.beaconBlockRoot.valueOf() as Uint8Array);
-    assert.true(!!block, `Block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`);
-    assert.lte(block.slot, attestation.data.slot, "Attestation is for past block");
+    assert.true(
+      !!block,
+      `The block of attestation data ${toHexString(attestation.data.beaconBlockRoot)} does not exist`
+    );
+    const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
+    const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot as Uint8Array, targetSlot);
+    assert.true(
+      ancestor && this.config.types.Root.equals(target.root, ancestor),
+      "FFG and LMD vote must be consistent with each other");
 
     const validators = getAttestingIndices(
       this.config, checkpointState, attestation.data, attestation.aggregationBits);

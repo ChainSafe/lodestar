@@ -36,7 +36,7 @@ export function processVoluntaryExit(
     );
   }
   // verify the validator had been active long enough
-  if (!(currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD)) {
+  if (!(currentEpoch >= validator.activationEpoch + config.params.SHARD_COMMITTEE_PERIOD)) {
     throw new Error("VoluntaryExit validator has not been active for long enough");
   }
   // verify signature

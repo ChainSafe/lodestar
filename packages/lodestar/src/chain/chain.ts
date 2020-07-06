@@ -11,13 +11,12 @@ import {
   ENRForkID,
   ForkDigest,
   SignedBeaconBlock,
+  Slot,
   Uint16,
   Uint64,
-  Slot,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ReadonlyEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -26,7 +25,7 @@ import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
-import {ILMDGHOST, ArrayDagLMDGHOST} from "./forkChoice";
+import {ArrayDagLMDGHOST, ILMDGHOST} from "./forkChoice";
 
 import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
@@ -36,6 +35,7 @@ import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -59,7 +59,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public chainId: Uint16;
   public networkId: Uint64;
   public clock: IBeaconClock;
-  private epochCtx: EpochContext;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
@@ -76,30 +75,34 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.opts = opts;
     this.chain = opts.name;
     this.config = config;
-    this.epochCtx = new EpochContext(config);
     this.db = db;
     this.eth1 = eth1;
     this.logger = logger;
     this.metrics = metrics;
     this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
-    this.networkId = 0n; // TODO make this real
+    this.networkId = BigInt(0); // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
-      config, logger, db, this.epochCtx, this.forkChoice, metrics, this, this.attestationProcessor,
+      config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
     );
   }
 
-  public async getHeadState(): Promise<BeaconState|null> {
-    return this.db.stateCache.get(this.forkChoice.headStateRoot());
+  public async getHeadStateContext(): Promise<IStateContext> {
+    //head state should always exist
+    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())) as IStateContext;
+  }
+  public async getHeadState(): Promise<BeaconState> {
+    //head state should always have epoch ctx
+    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).state;
+  }
+  public async getHeadEpochContext(): Promise<EpochContext> {
+    //head should always have epoch ctx
+    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).epochCtx;
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
     return this.db.block.get(this.forkChoice.headBlockRoot());
-  }
-
-  public getEpochContext(): ReadonlyEpochContext {
-    return this.epochCtx;
   }
 
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
@@ -114,6 +117,19 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(summary.blockRoot);
   }
 
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
+    if (!slots) {
+      return null;
+    }
+    const blockRoots = slots.map((slot) => {
+      const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
+      return summary? summary.blockRoot : null;
+    }).filter((blockRoot) => !!blockRoot);
+    // these blocks are on the same chain to head
+    return await Promise.all(blockRoots.map(
+      (blockRoot) => this.db.block.get(blockRoot)));
+  }
+
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.forkChoice.getFinalized();
   }
@@ -122,15 +138,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.verbose("Starting chain");
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
-    this.epochCtx.loadState(state);
+    const epochCtx = new EpochContext(this.config);
+    epochCtx.loadState(state);
+    await this.db.stateCache.add({state, epochCtx});
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    this.on("forkDigestChanged", this.handleForkDigestChanged);
-    await this.restoreHeadState(state);
+    this.on("forkVersion", this.handleForkVersionChanged);
+    await this.restoreHeadState(state, epochCtx);
     await this.eth1.start();
   }
 
@@ -142,7 +160,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
 
     await this.blockProcessor.stop();
-    this.removeListener("forkDigestChanged", this.handleForkDigestChanged);
+    this.removeListener("forkVersion", this.handleForkVersionChanged);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -183,7 +201,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: justifiedFinalizedCheckpoint,
       finalizedCheckpoint: justifiedFinalizedCheckpoint,
     });
-    await this.db.stateCache.add(genesisState);
+    const epochCtx = new EpochContext(this.config);
+    epochCtx.loadState(genesisState);
+    await this.db.stateCache.add({state: genesisState, epochCtx});
     // Determine whether a genesis state already in
     // the database matches what we were provided
     const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
@@ -224,13 +244,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   /**
    * Restore state cache and forkchoice from last finalized state.
    */
-  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>): Promise<void> {
+  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>, epochCtx: EpochContext): Promise<void> {
     const finalizedCheckpoint = lastKnownState.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const finalizedRoot = finalizedCheckpoint.root;
     this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
-    this.db.stateCache.add(lastKnownState);
+    this.db.stateCache.add({state: lastKnownState, epochCtx});
     // the block respective to finalized epoch is still in block db
     const allBlocks = await this.db.block.values();
     if (!allBlocks || allBlocks.length === 0) {
@@ -277,8 +297,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       justifiedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.currentJustifiedCheckpoint : blockCheckpoint,
       finalizedCheckpoint: (isCheckpointNotGenesis)? lastKnownState.finalizedCheckpoint : blockCheckpoint
     });
-    // init state cache
-    this.db.stateCache.add(lastKnownState);
     // no need to process the finalized block
     const processedBlocks = sortedBlocks.filter((block) => block.message.slot > finalizedBlock.message.slot);
     if (!processedBlocks.length) {
@@ -296,13 +314,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.profile("restoreHeadState");
   }
 
-  private async handleForkDigestChanged(): Promise<void> {
+  private async handleForkVersionChanged(): Promise<void> {
     this._currentForkDigest = await this.getCurrentForkDigest();
     this.emit("forkDigest", this._currentForkDigest);
   }
 
   private async getCurrentForkDigest(): Promise<ForkDigest> {
-    const state = await this.getHeadState();
+    const {state} = await this.getHeadStateContext();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
   }
 

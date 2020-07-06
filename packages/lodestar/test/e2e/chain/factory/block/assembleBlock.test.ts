@@ -10,7 +10,8 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {
   getBeaconProposerIndex,
   signedBlockToSignedHeader,
-  stateTransition
+  EpochContext,
+  fastStateTransition
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -51,7 +52,9 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    chainStub.getHeadState.resolves(config.types.BeaconState.clone(state));
+    const epochCtx = new EpochContext(config);
+    epochCtx.loadState(state);
+    chainStub.getHeadStateContext.resolves({state: config.types.BeaconState.clone(state), epochCtx});
     chainStub.getHeadBlock.resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
@@ -71,7 +74,7 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
-    expect(() => stateTransition(config, state, block, false)).to.not.throw();
+    expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {

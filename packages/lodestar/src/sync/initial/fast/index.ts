@@ -1,6 +1,7 @@
 /**
  * @module sync/initial
  */
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {IReputationStore} from "../../IReputation";
@@ -13,7 +14,6 @@ import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
-import {toHexString} from "@chainsafe/ssz";
 import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
 import {GENESIS_EPOCH} from "../../../constants";
@@ -68,7 +68,7 @@ export class FastSync
     this.blockImportTarget = this.chain.forkChoice.headBlockSlot();
     this.targetCheckpoint = getCommonFinalizedCheckpoint(
       this.config,
-      this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+      this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
     );
     if(
       !this.targetCheckpoint
@@ -177,14 +177,16 @@ export class FastSync
         +`, estimateTillComplete=${Math.round((estimate/3600) * 10)/10} hours`
     );
     if(processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
-      if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
-        this.logger.error("Different finalized root. Something fishy is going on: "
-        + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
-        throw new Error("Should delete chain and start again. Invalid blocks synced");
-      }
+      //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
+      // while our processed checkpoint has root of last slot of that epoch
+      // if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
+      //   this.logger.error("Different finalized root. Something fishy is going on: "
+      //   + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
+      //   throw new Error("Should delete chain and start again. Invalid blocks synced");
+      // }
       const newTarget = getCommonFinalizedCheckpoint(
         this.config,
-        this.network.getPeers().map((peer) => this.reps.getFromPeerInfo(peer))
+        this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
       );
       if(newTarget.epoch > this.targetCheckpoint.epoch) {
         this.targetCheckpoint = newTarget;
@@ -199,13 +201,13 @@ export class FastSync
   /**
    * Returns peers which has same finalized Checkpoint
    */
-  private getInitialSyncPeers = async (): Promise<PeerInfo[]> => {
-    return this.network.getPeers().reduce( (validPeers: PeerInfo[], peer: PeerInfo) => {
-      const rep = this.reps.getFromPeerInfo(peer);
+  private getInitialSyncPeers = async (): Promise<PeerId[]> => {
+    return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
+      const rep = this.reps.getFromPeerId(peer);
       if(rep && rep.latestStatus) {
         validPeers.push(peer);
       }
       return validPeers;
-    }, [] as PeerInfo[]);
+    }, [] as PeerId[]);
   };
 }

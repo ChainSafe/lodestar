@@ -1,10 +1,11 @@
+import PeerId from "peer-id";
 import {IReputation} from "../IReputation";
 import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
-import {chunkify, getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
+import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -71,28 +72,11 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
   }
 }
 
-
-
-export function targetSlotToBlockChunks(
-  config: IBeaconConfig, chain: IBeaconChain, getInitialSyncPeers: (minSlot: Slot) => Promise<PeerInfo[]>
-): (source: AsyncIterable<Slot>) => AsyncGenerator<ISlotRange> {
-  return (source) => {
-    return (async function*() {
-      for await (const targetSlot of source) {
-        await getInitialSyncPeers(targetSlot);
-        yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1, targetSlot);
-      }
-    })();
-  };
-}
-
-
-
 export function fetchBlockChunks(
   logger: ILogger,
   chain: IBeaconChain,
   reqResp: IReqResp,
-  getPeers: (minSlot: Slot) => Promise<PeerInfo[]>,
+  getPeers: (minSlot: Slot) => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   maxBlocksPerChunk?: number
 ): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {

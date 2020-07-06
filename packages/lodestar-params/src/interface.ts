@@ -36,7 +36,7 @@ export interface IBeaconParams {
   GENESIS_START_SHARD: number;
 
   // Time parameters
-  MIN_GENESIS_DELAY: number;
+  GENESIS_DELAY: number;
   SECONDS_PER_SLOT: number;
   MIN_ATTESTATION_INCLUSION_DELAY: number;
   SLOTS_PER_EPOCH: number;
@@ -46,7 +46,7 @@ export interface IBeaconParams {
   ETH1_FOLLOW_DISTANCE: number;
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
-  PERSISTENT_COMMITTEE_PERIOD: number;
+  SHARD_COMMITTEE_PERIOD: number;
 
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 

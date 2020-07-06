@@ -18,10 +18,10 @@ export async function getEth1Vote(
   state: BeaconState,
 ): Promise<Eth1Data> {
   const periodStart = votingPeriodStartTime(config, state);
-  const validEth1Data = await db.eth1Data.values({
+  const validEth1Data = (await db.eth1Data.values({
     gte: periodStart - config. params.SECONDS_PER_ETH1_BLOCK * config.params.ETH1_FOLLOW_DISTANCE,
     lte: periodStart - config. params.SECONDS_PER_ETH1_BLOCK * config.params.ETH1_FOLLOW_DISTANCE * 2,
-  });
+  })).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
   const votesToConsider: Record<string, boolean> = {};
   validEth1Data.forEach((eth1Data) => votesToConsider[toHexString(eth1Data.blockHash)] = true);
 

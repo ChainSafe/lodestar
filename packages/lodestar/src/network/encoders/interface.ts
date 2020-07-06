@@ -1,5 +1,5 @@
 import {RequestId, RpcResponseStatus} from "../../constants";
-import {ResponseBody} from "@chainsafe/lodestar-types";
+import {ResponseBody, RequestBody} from "@chainsafe/lodestar-types";
 
 export interface IDecompressor {
   uncompress(chunk: Buffer): Buffer|null;
@@ -8,12 +8,13 @@ export interface IDecompressor {
 }
 
 export interface IResponseChunk {
-
-  status: RpcResponseStatus;
-
   requestId: RequestId;
+  status: RpcResponseStatus;
+  body: ResponseBody;
+}
 
-  //missing body if status !== 0
-  body?: ResponseBody;
-
+export interface IValidatedRequestBody {
+  isValid: boolean;
+  // missing body if isValid=false
+  body?: RequestBody;
 }

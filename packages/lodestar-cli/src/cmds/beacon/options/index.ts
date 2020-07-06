@@ -16,5 +16,10 @@ export interface IBeaconArgs extends IBeaconFileArgs {
 }
 
 export function mergeBeaconOptions(yargs: Argv<IGlobalArgs>): Argv<IBeaconArgs> {
-  return mergeOptions(mergeOptions(mergeOptions(yargs, beaconDir), beaconConfig), beaconFile);
+  return mergeOptions(
+    mergeOptions(
+      mergeOptions(yargs, beaconDir),
+      beaconConfig),
+    beaconFile
+  );
 }

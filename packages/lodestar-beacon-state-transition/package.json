@@ -33,10 +33,10 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/bls": "1.0.0",
+    "@chainsafe/bls": "2.0.0",
     "@chainsafe/lodestar-config": "^0.9.0",
     "@chainsafe/lodestar-utils": "^0.9.0",
-    "@chainsafe/ssz": "^0.6.5",
+    "@chainsafe/ssz": "^0.6.7",
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },

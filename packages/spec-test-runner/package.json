@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
-    "@chainsafe/bls": "1.0.0",
+    "@chainsafe/bls": "2.0.0",
     "@chainsafe/lodestar": "^0.9.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.9.0",
     "@chainsafe/lodestar-config": "^0.9.0",
@@ -40,7 +40,7 @@
     "@chainsafe/lodestar-types": "^0.9.0",
     "@chainsafe/lodestar-utils": "^0.9.0",
     "@chainsafe/lodestar-validator": "^0.9.0",
-    "@chainsafe/ssz": "0.6.5",
+    "@chainsafe/ssz": "^0.6.7",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.1",
     "@types/mocha": "^5.2.7",

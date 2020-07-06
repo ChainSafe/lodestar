@@ -8,7 +8,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
-import {EthersEth1Notifier} from "../../../../src/eth1";
+import {EthersEth1Notifier, Eth1Block} from "../../../../src/eth1";
 import defaults from "../../../../src/eth1/dev/options";
 import {StubbedBeaconDb} from "../../../utils/stub";
 
@@ -129,6 +129,85 @@ describe("Eth1Notifier", () => {
     let block = await eth1.getBlock(0);
     block = await eth1.getBlock(block.hash);
     expect(block).to.not.be.null;
+  });
+
+  it("should set checkpoints correctly - correct SECONDS_PER_ETH1_BLOCK", () => {
+    // initially preGenesisCheckpoint is undefined
+    expect(eth1.passCheckpoint(3001)).to.be.true;
+    const setCheckpoint = (blockNumber: number): void => {
+      // assuming 3000 is genesis, this is 1000 blocks to genesis
+      eth1.setCheckpoint({number: blockNumber, timestamp:
+        (config.params.MIN_GENESIS_TIME - config.params.GENESIS_DELAY) - (3000 - blockNumber) * config.params.SECONDS_PER_ETH1_BLOCK} as Eth1Block);
+    };
+    const expectCheckpoint = (blockNumber: number): void => {
+      expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
+      expect(eth1.passCheckpoint(blockNumber)).to.be.true;
+    };
+    // assuming 3000 is genesis, this is 1000 blocks to genesis
+    setCheckpoint(2000);
+    expectCheckpoint(2500);
+    setCheckpoint(2500);
+    expectCheckpoint(2750);
+    setCheckpoint(2750);
+    expectCheckpoint(2875);
+    setCheckpoint(2875);
+    expectCheckpoint(2937);
+    setCheckpoint(2937);
+    expectCheckpoint(2968);
+    setCheckpoint(2968);
+    expectCheckpoint(2984);
+    setCheckpoint(2984);
+    expectCheckpoint(2992);
+    setCheckpoint(2992);
+    expectCheckpoint(2996);
+    setCheckpoint(2996);
+    // checkpoint 2996 + 2 = 2998 -> set undefined
+    expect(eth1.passCheckpoint(2997)).to.be.false;
+    // <= 2 blocks to genesis
+    expect(eth1.passCheckpoint(2998)).to.be.true;
+    expect(eth1.passCheckpoint(2999)).to.be.true;
+    expect(eth1.passCheckpoint(3000)).to.be.true;
+  });
+
+  it("should set checkpoints correctly - eth1 runs faster than expected", () => {
+    const secPerBlock = config.params.SECONDS_PER_ETH1_BLOCK - 2;
+    // initially preGenesisCheckpoint is undefined
+    expect(eth1.passCheckpoint(3001)).to.be.true;
+    const setCheckpoint = (blockNumber: number): void => {
+      // assuming 3000 is genesis, this is 1000 blocks to genesis
+      eth1.setCheckpoint({number: blockNumber, timestamp:
+        (config.params.MIN_GENESIS_TIME - config.params.GENESIS_DELAY) - (3000 - blockNumber) * secPerBlock} as Eth1Block);
+    };
+    const expectCheckpoint = (blockNumber: number): void => {
+      expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
+      expect(eth1.passCheckpoint(blockNumber)).to.be.true;
+    };
+    setCheckpoint(2000);
+    expectCheckpoint(2428);
+    setCheckpoint(2428);
+    expectCheckpoint(2673);
+    setCheckpoint(2673);
+    expectCheckpoint(2813);
+    setCheckpoint(2813);
+    expectCheckpoint(2893);
+    setCheckpoint(2893);
+    expectCheckpoint(2938);
+    setCheckpoint(2938);
+    expectCheckpoint(2964);
+    setCheckpoint(2964);
+    expectCheckpoint(2979);
+    setCheckpoint(2979);
+    expectCheckpoint(2988);
+    setCheckpoint(2988);
+    expectCheckpoint(2993);
+    setCheckpoint(2993);
+    expectCheckpoint(2996);
+    setCheckpoint(2996);
+    expectCheckpoint(2997);
+    setCheckpoint(2997);
+    expect(eth1.passCheckpoint(2998)).to.be.true;
+    expect(eth1.passCheckpoint(2999)).to.be.true;
+    expect(eth1.passCheckpoint(3000)).to.be.true;
   });
 
   it.skip("should get deposit events from a block", async () => {

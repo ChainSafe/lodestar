@@ -7,7 +7,7 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
+import {generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("block archiver task", function () {
@@ -21,7 +21,29 @@ describe("block archiver task", function () {
     loggerStub = sandbox.createStubInstance(WinstonLogger);
   });
 
-  it("should archive finalized blocks", async function () {
+  /**
+   * A - B - D - finalized - E
+   *      \
+   *       C
+   */
+  it("should archive finalized blocks on same chain", async function () {
+    const blockA = generateEmptySignedBlock();
+    const blockB = generateEmptySignedBlock();
+    blockB.message.slot = 1;
+    blockB.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(blockA.message);
+    // blockC is not archieved because not on the same chain
+    const blockC = generateEmptySignedBlock();
+    blockC.message.slot = 2;
+    blockC.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(blockB.message);
+    const blockD = generateEmptySignedBlock();
+    blockD.message.slot = 3;
+    blockD.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(blockB.message);
+    const finalizedBlock = generateEmptySignedBlock();
+    finalizedBlock.message.slot = computeStartSlotAtEpoch(config, 3);
+    finalizedBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(blockD.message);
+    // blockE is not archieved due to its epoch
+    const blockE = generateEmptySignedBlock();
+    blockE.message.slot = finalizedBlock.message.slot + 1;
     const archiverTask = new ArchiveBlocksTask(
       config,
       {
@@ -29,27 +51,23 @@ describe("block archiver task", function () {
         logger: loggerStub
       }, {
         epoch: 3,
-        root: Buffer.alloc(32)
+        root: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message)
       }
     );
     dbStub.block.values.resolves([
-      generateEmptySignedBlock(),
-      generateEmptySignedBlock(),
-      {
-        message: {
-          ...generateEmptyBlock(),
-          slot: computeStartSlotAtEpoch(config, 4)
-        },
-        signature: Buffer.alloc(96),
-      },
+      blockA, blockB, blockC, blockD, finalizedBlock, blockE
     ]);
+    const blockArchieveSpy = sinon.spy();
+    dbStub.blockArchive.batchAdd.callsFake(blockArchieveSpy);
+    const blockSpy = sinon.spy();
+    dbStub.block.batchRemove.callsFake(blockSpy);
+
     await archiverTask.run();
-    expect(
-      dbStub.blockArchive.batchAdd.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
-    ).to.be.true;
-    expect(
-      dbStub.block.batchRemove.calledOnceWith(sinon.match((criteria) => criteria.length === 2))
-    ).to.be.true;
+
+    expect(dbStub.blockArchive.batchAdd.calledOnce).to.be.true;
+    expect(blockArchieveSpy.args[0][0]).to.be.deep.equal([finalizedBlock, blockD, blockB, blockA]);
+    expect(dbStub.block.batchRemove.calledOnce).to.be.true;
+    expect(blockSpy.args[0][0]).to.be.deep.equal([blockA, blockB, blockC, blockD, finalizedBlock]);
   });
 
 });

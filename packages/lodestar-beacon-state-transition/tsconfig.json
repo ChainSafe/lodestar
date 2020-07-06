@@ -9,5 +9,5 @@
     /* Redirect output structure to the directory. */
     "rootDirs": ["./src","./test"]
     /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
-  },
+  }
 }

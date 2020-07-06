@@ -16,7 +16,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
     const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
-    processAttesterSlashing(epochCtx, state, testcase.attester_slashing);
+    processAttesterSlashing(epochCtx, state, testcase.attester_slashing, verify);
     return state;
   },
   {

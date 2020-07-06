@@ -10,7 +10,7 @@ export {
 };
 
 export function processSlots(epochCtx: EpochContext, state: BeaconState, slot: Slot): void {
-  if (!(state.slot <= slot)) {
+  if (!(state.slot < slot)) {
     throw new Error(
       "State slot must transition to a future slot: " +
       `stateSlot=${state.slot} slot=${slot}`

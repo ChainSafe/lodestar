@@ -20,7 +20,7 @@ import {
   BadBlockRepository,
   Eth1DataRepository,
 } from "./repositories";
-import {StateCache} from "./stateCache";
+import {StateContextCache} from "./stateContextCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -36,7 +36,7 @@ export interface IBeaconDb {
   block: BlockRepository;
 
   // unfinalized states
-  stateCache: StateCache;
+  stateCache: StateContextCache;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;

@@ -1,10 +1,11 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {encode} from "varint";
 
-import {Method, ReqRespEncoding} from "../../../src/constants";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {ReputationStore} from "../../../src/sync/IReputation";
-import {Libp2pNetwork} from "../../../src/network";
+import {Libp2pNetwork, createRpcProtocol} from "../../../src/network";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
@@ -21,6 +22,8 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
 import {getBlockSummary} from "../../utils/headBlockInfo";
+import pipe from "it-pipe";
+import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -47,6 +50,7 @@ describe("[sync] rpc", function () {
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
   let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
+  let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = {} as unknown as IGossipMessageValidator;
 
   beforeEach(async () => {
@@ -54,7 +58,7 @@ describe("[sync] rpc", function () {
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId: 0n,
+      networkId:BigInt(0),
       state,
       config
     });
@@ -73,15 +77,16 @@ describe("[sync] rpc", function () {
     });
     repsA = new ReputationStore();
     repsB = new ReputationStore();
+    libP2pA = (await createNode(multiaddr)) as unknown as Libp2p;
     netA = new Libp2pNetwork(
       opts,
       repsA,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+      {config, libp2p: libP2pA, logger, metrics, validator, chain}
     );
     netB = new Libp2pNetwork(
       opts,
       repsB,
-      {config, libp2p: createNode(multiaddr) as unknown as Libp2p, logger, metrics, validator, chain}
+      {config, libp2p: (await createNode(multiaddr) as unknown as Libp2p), logger, metrics, validator, chain}
     );
     await Promise.all([
       netA.start(),
@@ -135,16 +140,16 @@ describe("[sync] rpc", function () {
 
   it("hello handshake on peer connect with correct encoding", async function () {
     // A sends status request to B with ssz encoding
-    repsA.get(netB.peerInfo.id.toB58String()).encoding = ReqRespEncoding.SSZ;
-    expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.be.equal(null);
+    repsA.get(netB.peerId.toB58String()).encoding = ReqRespEncoding.SSZ;
+    expect(repsB.get(netA.peerId.toB58String()).latestStatus).to.be.equal(null);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
-    expect(netA.hasPeer(netB.peerInfo)).to.equal(true);
-    expect(netB.hasPeer(netA.peerInfo)).to.equal(true);
+    expect(netA.hasPeer(netB.peerId)).to.equal(true);
+    expect(netB.hasPeer(netA.peerId)).to.equal(true);
     await new Promise((resolve) => {
       netB.reqResp.once("request", resolve);
     });
@@ -153,11 +158,11 @@ describe("[sync] rpc", function () {
       netA.reqResp.once("request", (a, b, c) => reject([a, b, c]));
       setTimeout(resolve, 2000);
     });
-    expect(repsA.get(netB.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
-    expect(repsB.get(netA.peerInfo.id.toB58String()).latestStatus).to.not.equal(null);
+    expect(repsA.get(netB.peerId.toB58String()).latestStatus).to.not.equal(null);
+    expect(repsB.get(netA.peerId.toB58String()).latestStatus).to.not.equal(null);
     // B should store A with ssz as preferred encoding
-    expect(repsA.get(netB.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
-    expect(repsB.get(netA.peerInfo.id.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
+    expect(repsA.get(netB.peerId.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
+    expect(repsB.get(netA.peerId.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
   });
 
   it("goodbye on rpc stop", async function () {
@@ -165,7 +170,7 @@ describe("[sync] rpc", function () {
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerInfo);
+    await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     await new Promise((resolve) => {
       netA.reqResp.once("request", resolve);
@@ -182,7 +187,8 @@ describe("[sync] rpc", function () {
 
   it("beacon block by root", async function () {
     const request: BeaconBlocksByRootRequest = [Buffer.alloc(32)];
-    const response = await netA.reqResp.beaconBlocksByRoot(netB.peerInfo, request);
+    await netA.connect(netB.peerId, netB.multiaddrs);
+    const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
     expect(response.length).to.equal(1);
     const block = response[0];
     expect(block.message.slot).to.equal(BLOCK_SLOT);
@@ -195,11 +201,39 @@ describe("[sync] rpc", function () {
       step: 1,
     };
 
-    const response = await netA.reqResp.beaconBlocksByRange(netB.peerInfo, request);
+    await netA.connect(netB.peerId, netB.multiaddrs);
+    const response = await netA.reqResp.beaconBlocksByRange(netB.peerId, request);
     expect(response.length).to.equal(2);
     const block = response[0];
     expect(block.message.slot).to.equal(BLOCK_SLOT);
     const block2 = response[1];
     expect(block2.message.slot).to.equal(BLOCK_SLOT + 1);
+  });
+
+  it("should return invalid request status code", async () => {
+    const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
+    await netA.connect(netB.peerId, netB.multiaddrs);
+    const {stream} = await libP2pA.dialProtocol(netB.peerId, protocol) as {stream: Stream};
+    await pipe(
+      [Buffer.from(encode(99999999999999999999999))],
+      stream,
+      async (source: AsyncIterable<Buffer>) => {
+        let i = 0;
+        // 1 chunk of status and 1 chunk of error
+        for await (const val of source) {
+          if (i === 0) {
+            const status = val.slice()[0];
+            expect(status).to.be.equal(RpcResponseStatus.ERR_INVALID_REQ);
+          } else {
+            // i should be 1
+            const errBuf = val.slice();
+            const err = config.types.P2pErrorMessage.deserialize(errBuf);
+            // message from the server side
+            expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid Request");
+          }
+          i++;
+        }
+      }
+    );
   });
 });

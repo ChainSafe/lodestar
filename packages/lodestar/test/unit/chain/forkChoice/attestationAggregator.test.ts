@@ -16,7 +16,7 @@ describe("AttestationAggregator", () => {
   it("should add attestations to the same target", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target = "a";
-    const weightPerAttestation = 1n;
+    const weightPerAttestation =BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -32,7 +32,7 @@ describe("AttestationAggregator", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target1= "a";
     const target2= "d";
-    const weightPerAttestation = 1n;
+    const weightPerAttestation =BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -56,9 +56,9 @@ describe("AttestationAggregator", () => {
   it("should track attestations from one attester with different weights", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target= "a";
-    const weightPerAttestation1 = 1n;
-    const weightPerAttestation2 = 10n;
-    const weightPerAttestation3 = 5n;
+    const weightPerAttestation1 =BigInt(1);
+    const weightPerAttestation2 =BigInt(10);
+    const weightPerAttestation3 =BigInt(5);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -91,7 +91,7 @@ describe("AttestationAggregator", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target1 = "d"; // slot 2
     const target2 = "a"; // slot 1
-    const weightPerAttestation = 1n;
+    const weightPerAttestation =BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -123,7 +123,7 @@ describe("AttestationAggregator", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target1= "a";
     const target2= "d";
-    const weightPerAttestation = 1n;
+    const weightPerAttestation =BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({

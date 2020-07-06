@@ -34,7 +34,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.6.5",
+    "@chainsafe/ssz": "^0.6.7",
     "bigint-buffer": "^1.1.5",
     "camelcase": "^5.3.1",
     "chalk": "^2.4.2",

@@ -9,7 +9,10 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
-import { generateValidator } from "../../utils/validator";
+import {generateValidator} from "../../utils/validator";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
+import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("BeaconChain", function() {
   const sandbox = sinon.createSandbox();
@@ -24,7 +27,7 @@ describe("BeaconChain", function() {
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state = generateState();
     state.validators = Array.from({length: 5}, () => generateValidator({activationEpoch: 0}));
-    dbStub.stateCache.get.resolves(state as any);
+    dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
     await chain.start();
@@ -63,7 +66,7 @@ describe("BeaconChain", function() {
     });
   });
 
-  describe("forkDigestChanged event", () => {
+  describe("forkVersion event", () => {
     it("should should receive forkDigest event", async () => {
       const spy = sinon.spy();
       const received = new Promise((resolve) => {
@@ -72,7 +75,7 @@ describe("BeaconChain", function() {
           resolve();
         });
       });
-      chain.emit("forkDigestChanged");
+      chain.emit("forkVersion");
       await received;
       expect(spy.callCount).to.be.equal(1);
     });
