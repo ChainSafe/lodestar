@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {stripOffNewlines} from "./stripOffNewlines";
 
 /**
  * Name mapping of keystore to password file
@@ -12,8 +13,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 function readPasswordFile(keystore: Keystore, secretsDir: string): string {
   const passwordPath = path.join(secretsDir, `0x${keystore.pubkey}`);
   try {
-    // Remove trailing new lines '\n' (unix) or '\r' (legacy mac) if any
-    return fs.readFileSync(passwordPath, "utf8").replace(/[\n|\r]+$/g, "");
+    return stripOffNewlines(fs.readFileSync(passwordPath, "utf8"));
   } catch (e) {
     if (e.code === "ENOENT") {
       throw Error(`password file not found at expected path ${passwordPath}`);
