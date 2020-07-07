@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";

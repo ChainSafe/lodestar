@@ -1,14 +1,14 @@
 import sinon, { SinonStub } from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {BeaconDb, IBeaconDb} from "../../../../../src/db/api";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
-import { IBeaconConfig } from "@chainsafe/lodestar-config";
-import { BeaconState, BeaconBlock, AttestationData } from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState, BeaconBlock, AttestationData} from "@chainsafe/lodestar-types";
 
 describe("assemble attestation", function () {
 
@@ -18,7 +18,7 @@ describe("assemble attestation", function () {
   beforeEach(() => {
     assembleAttestationDataStub = sandbox.stub(
       attestationDataProduction,
-      'assembleAttestationData'
+      "assembleAttestationData"
     );
     dbStub = sandbox.createStubInstance(BeaconDb);
   });
@@ -27,7 +27,7 @@ describe("assemble attestation", function () {
     sandbox.restore();
   });
 
-  it('should produce attestation', async function () {
+  it("should produce attestation", async function () {
     const state = generateState({slot: 1});
     const attestationData = generateAttestationData(1, 3);
     assembleAttestationDataStub.resolves(attestationData);

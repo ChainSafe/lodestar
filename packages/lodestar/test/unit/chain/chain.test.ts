@@ -1,5 +1,5 @@
 import chainOpts from "../../../src/chain/options";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {expect} from "chai";
 import {IEth1Notifier} from "../../../src/eth1";

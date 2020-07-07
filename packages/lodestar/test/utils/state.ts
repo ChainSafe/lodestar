@@ -1,7 +1,7 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {TreeBacked} from "@chainsafe/ssz";
 
 /**
@@ -20,7 +20,7 @@ let treeBackedState: TreeBacked<BeaconState>;
  * @param config
  * @returns {BeaconState}
  */
-export function generateState(opts: TestBeaconState = {}, config = mainnetConfig): TreeBacked<BeaconState> {
+export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconState> {
   const defaultState: BeaconState = {
     genesisTime: Math.floor(Date.now() / 1000),
     genesisValidatorsRoot: ZERO_HASH,

@@ -1,7 +1,7 @@
 import {SinonStubbedInstance, SinonFakeTimers} from "sinon";
 import {INetwork, Libp2pNetwork} from "../../../src/network";
 import {IGossip} from "../../../src/network/gossip/interface";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {IBeaconChain} from "../../../src/chain";
 import {Gossip} from "../../../src/network/gossip/gossip";
@@ -32,11 +32,11 @@ describe("interopSubnetsJoiningTask", () => {
       currentVersion: 2,
       epoch: 1000,
       // GENESIS_FORK_VERSION is <Buffer 00 00 00 01> but previousVersion = 16777216 not 1 due to bytesToInt
-      previousVersion: bytesToInt(mainnetConfig.params.GENESIS_FORK_VERSION)
+      previousVersion: bytesToInt(minimalConfig.params.GENESIS_FORK_VERSION)
     },
   ];
-  const params = Object.assign({}, mainnetConfig.params, {ALL_FORKS});
-  const config: IBeaconConfig = Object.assign({}, mainnetConfig, {params});
+  const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
+  const config: IBeaconConfig = Object.assign({}, minimalConfig, {params});
 
   beforeEach(async function () {
     clock = sandbox.useFakeTimers();
