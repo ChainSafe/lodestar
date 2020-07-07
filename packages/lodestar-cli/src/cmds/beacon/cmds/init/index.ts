@@ -5,7 +5,6 @@ import {readBeaconConfig} from "../../config";
 import {IBeaconArgs} from "../../options";
 import {beaconInitOptions, IBeaconInitArgs} from "./options";
 import {init} from "./init";
-import fs from "fs";
 
 export const command = "init";
 
