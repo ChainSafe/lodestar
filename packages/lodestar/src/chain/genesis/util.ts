@@ -117,7 +117,7 @@ export function calculateStateTime(config: IBeaconConfig, eth1Timestamp: number)
  * @param config
  * @param state
  */
-export function isValidGenesisState(config: IBeaconConfig, state: TreeBacked<BeaconState>): boolean {
+export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
   if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;
   }
