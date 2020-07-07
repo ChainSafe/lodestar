@@ -12,8 +12,9 @@ import {generateEmptySignedAggregateAndProof, generateEmptySignedVoluntaryExit} 
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
-import { AttesterSlashingRepository, VoluntaryExitRepository, ProposerSlashingRepository } from "../../../../lib/db/api/beacon/repositories";
-import { StubbedBeaconDb } from "../../../utils/stub";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("gossip handler", function () {
 
@@ -83,12 +84,12 @@ describe("gossip handler", function () {
 
   it("should handle fork digest changed", async function () {
     // handler is started and fork digest changed after that
-    const state = generateState();
+    const state: BeaconState = generateState();
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId:BigInt(0),
-      state,
+      state: state as TreeBacked<BeaconState>,
       config
     });
     const oldForkDigest = chain.currentForkDigest;

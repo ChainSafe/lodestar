@@ -5,11 +5,12 @@ import {IBeaconDb} from "../../../db/api";
 import {
   computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,
   db: IBeaconDb,
-  headState: BeaconState,
+  headState: TreeBacked<BeaconState>,
   headBlock: BeaconBlock,
   slot: Slot,
   index: CommitteeIndex): Promise<AttestationData> {

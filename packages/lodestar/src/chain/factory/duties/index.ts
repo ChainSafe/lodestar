@@ -2,12 +2,13 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AttesterDuty, BeaconState, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {getCommitteeAssignment} from "@chainsafe/lodestar-beacon-state-transition";
 import {intDiv} from "@chainsafe/lodestar-utils";
+import {TreeBacked} from "@chainsafe/ssz";
 
 
 export function assembleAttesterDuty(
   config: IBeaconConfig,
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
-  state: BeaconState,
+  state: TreeBacked<BeaconState>,
   epoch: Epoch
 ): AttesterDuty  {
   let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);

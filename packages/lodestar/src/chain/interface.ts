@@ -16,7 +16,9 @@ import {
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
-import {IStateContext, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
+import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -56,8 +58,8 @@ export interface IBeaconChain extends ChainEventEmitter {
    */
   getENRForkID(): Promise<ENRForkID>;
 
-  getHeadStateContext(): Promise<IStateContext>;
-  getHeadState(): Promise<BeaconState>;
+  getHeadStateContext(): Promise<ITreeStateContext>;
+  getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
@@ -81,7 +83,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Initialize the chain with a genesis state
    */
-  initializeBeaconChain(genesisState: BeaconState): Promise<void>;
+  initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void>;
 }
 
 export interface IAttestationProcessor {

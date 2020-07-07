@@ -65,7 +65,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   });
 
   it("should process blocks", async function () {
-    this.timeout(10000);
+    this.timeout(20000);
     // process 2 blocks, should be 1 deposit
     const targetBlockNumber = opts.depositContract.deployedAt + 1;
     provider.getBlockNumber = sinon.stub().resolves(targetBlockNumber);
@@ -75,7 +75,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   });
 
   it("should resume processing blocks after restart", async function () {
-    this.timeout(0);
+    this.timeout(40000);
     // process 3 blocks, starting from depositContract.deployedAt
     // there should be one deposit to process
     const target1BlockNumber = opts.depositContract.deployedAt + 3;

@@ -35,7 +35,7 @@ import {LocalClock} from "./clock/local/LocalClock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -88,11 +88,11 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
   }
 
-  public async getHeadStateContext(): Promise<IStateContext> {
+  public async getHeadStateContext(): Promise<ITreeStateContext> {
     //head state should always exist
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())) as IStateContext;
+    return (await this.db.stateCache.get(this.forkChoice.headStateRoot()));
   }
-  public async getHeadState(): Promise<BeaconState> {
+  public async getHeadState(): Promise<TreeBacked<BeaconState>> {
     //head state should always have epoch ctx
     return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).state;
   }

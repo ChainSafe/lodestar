@@ -11,7 +11,7 @@ export function getInteropState(
   depositDataRootList: TreeBacked<List<Root>>,
   genesisTime: number,
   deposits: Deposit[],
-): BeaconState {
+): TreeBacked<BeaconState> {
   const state = initializeBeaconStateFromEth1(
     config,
     INTEROP_BLOCK_HASH,

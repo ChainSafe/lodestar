@@ -47,8 +47,8 @@ export function applyEth1BlockHash(config: IBeaconConfig, state: BeaconState, et
  * @param state BeaconState
  * @param eth1Timestamp eth1 block timestamp
  */
-export function applyTimestamp(config: IBeaconConfig, state: BeaconState, eth1Timestamp: number): void {
-  state.genesisTime = calculateStateTime(config, eth1Timestamp);
+export function applyTimestamp(config: IBeaconConfig, state: TreeBacked<BeaconState>, eth1Timestamp: number): void {
+  state.genesisTime = eth1Timestamp + config.params.GENESIS_DELAY;
 }
 
 /**

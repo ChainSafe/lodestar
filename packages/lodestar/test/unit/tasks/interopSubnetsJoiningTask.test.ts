@@ -1,7 +1,7 @@
 import {SinonStubbedInstance, SinonFakeTimers} from "sinon";
 import {INetwork, Libp2pNetwork} from "../../../src/network";
 import {IGossip} from "../../../src/network/gossip/interface";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {IBeaconChain} from "../../../src/chain";
 import {Gossip} from "../../../src/network/gossip/gossip";
@@ -14,6 +14,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {MetadataController} from "../../../src/network/metadata";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("interopSubnetsJoiningTask", () => {
   const sandbox = sinon.createSandbox();
@@ -31,13 +32,13 @@ describe("interopSubnetsJoiningTask", () => {
       currentVersion: 2,
       epoch: 1000,
       // GENESIS_FORK_VERSION is <Buffer 00 00 00 01> but previousVersion = 16777216 not 1 due to bytesToInt
-      previousVersion: bytesToInt(mainnetConfig.params.GENESIS_FORK_VERSION)
+      previousVersion: bytesToInt(minimalConfig.params.GENESIS_FORK_VERSION)
     },
   ];
-  const params = Object.assign({}, mainnetConfig.params, {ALL_FORKS});
-  const config: IBeaconConfig = Object.assign({}, mainnetConfig, {params});
+  const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
+  const config: IBeaconConfig = Object.assign({}, minimalConfig, {params});
 
-  beforeEach(async () => {
+  beforeEach(async function () {
     clock = sandbox.useFakeTimers();
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     gossipStub = sandbox.createStubInstance(Gossip);
@@ -47,7 +48,7 @@ describe("interopSubnetsJoiningTask", () => {
       genesisTime: 0,
       chainId: 0,
       networkId:BigInt(0),
-      state,
+      state: state as TreeBacked<BeaconState>,
       config
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});
@@ -95,7 +96,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(Number(networkStub.metadata.seqNumber)).to.be.gt(Number(seqNumber));
   });
 
-  it("should prepare for a hard fork", async () => {
+  it("should prepare for a hard fork", async function () {
     // scheduleNextForkSubscription already get called after start
     const state = await chain.getHeadState();
     const nextForkDigest =
@@ -109,6 +110,13 @@ describe("interopSubnetsJoiningTask", () => {
     // at least 1 run right after start, 1 run in scheduleNextForkSubscription
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // subscribe to next fork digest subnet
-    expect(spy.args[spy.args.length - 1][0]).to.be.deep.equal(nextForkDigest);
+    const forkDigestArgs = spy.args.map((callTimeArgs) => callTimeArgs[0]);
+    let callNextForkDigest = false;
+    for (const forkDigest of forkDigestArgs) {
+      if (config.types.ForkDigest.equals(forkDigest, nextForkDigest)) {
+        callNextForkDigest = true;
+      }
+    }
+    expect(callNextForkDigest).to.be.true;
   });
 });

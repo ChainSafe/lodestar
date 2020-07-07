@@ -6,10 +6,11 @@ import {mkdirSync, writeFileSync} from "fs";
 import {dirname} from "path";
 import {BeaconNode} from "../nodejs";
 import {IBeaconDb} from "../../db/api";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export async function initDevChain(
   node: BeaconNode, validatorCount: number, genesisTime?: number
-): Promise<BeaconState> {
+): Promise<TreeBacked<BeaconState>> {
   const deposits = interopDeposits(
     node.config,
     node.config.types.DepositDataRootList.tree.defaultValue(),
@@ -26,7 +27,7 @@ export async function initDevChain(
   return state;
 }
 
-export function storeSSZState(config: IBeaconConfig, state: BeaconState, path: string): void {
+export function storeSSZState(config: IBeaconConfig, state: TreeBacked<BeaconState>, path: string): void {
   mkdirSync(dirname(path), {recursive: true});
   writeFileSync(path, config.types.BeaconState.serialize(state));
 }

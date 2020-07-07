@@ -1,9 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain} from "../../../../../src/chain";
 import {BeaconApi, IBeaconApi} from "../../../../../src/api/impl/beacon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {generateState} from "../../../../utils/state";
-import {generateValidator} from "../../../../utils/validator";
 import {expect} from "chai";
 import {BeaconSync} from "../../../../../src/sync";
 import { SyncingStatus } from "@chainsafe/lodestar-types";

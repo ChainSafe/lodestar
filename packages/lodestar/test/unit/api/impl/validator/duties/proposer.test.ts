@@ -39,7 +39,7 @@ describe("get proposers api impl", function () {
             {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
-        }, config),
+        }),
 
     );
     const result = await api.getProposerDuties(1);
@@ -56,7 +56,7 @@ describe("get proposers api impl", function () {
             {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
           ),
           balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
-        }, config),
+        }),
 
     );
     const result = await api.getProposerDuties(2);

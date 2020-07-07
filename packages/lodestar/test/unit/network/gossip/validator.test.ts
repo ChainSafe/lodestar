@@ -98,7 +98,7 @@ describe("GossipMessageValidator", () => {
       const block = generateEmptySignedBlock();
       block.message.slot = 10000;
       dbStub.badBlock.has.resolves(false);
-      const state = generateState() as TreeBacked<BeaconState>;
+      const state = generateState();
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
       expect(chainStub.getBlockAtSlot.notCalled).to.be.true;
@@ -112,7 +112,7 @@ describe("GossipMessageValidator", () => {
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-      }) as TreeBacked<BeaconState>;
+      });
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
@@ -130,7 +130,7 @@ describe("GossipMessageValidator", () => {
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-      }) as TreeBacked<BeaconState>;
+      });
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
@@ -150,7 +150,7 @@ describe("GossipMessageValidator", () => {
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-      }) as TreeBacked<BeaconState>;
+      });
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
@@ -170,7 +170,7 @@ describe("GossipMessageValidator", () => {
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-      }) as TreeBacked<BeaconState>;
+      });
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
@@ -190,7 +190,7 @@ describe("GossipMessageValidator", () => {
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-      }) as TreeBacked<BeaconState>;
+      });
       dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
@@ -447,7 +447,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      const state = generateState();
+      const state: BeaconState = generateState();
       state.validators = generateValidators(1);
       epochCtxStub.getBeaconCommittee.returns([0]);
       chainStub.getHeadStateContext.resolves({
@@ -467,7 +467,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      const state = generateState();
+      const state: BeaconState = generateState();
       state.validators = generateValidators(1);
       epochCtxStub.getBeaconCommittee.returns([0]);
       chainStub.getHeadStateContext.resolves({
@@ -489,7 +489,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      const state = generateState();
+      const state: BeaconState = generateState();
       state.validators = generateValidators(1);
       epochCtxStub.getBeaconCommittee.returns([0]);
       chainStub.getHeadStateContext.resolves({
@@ -511,7 +511,7 @@ describe("GossipMessageValidator", () => {
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
       chainStub.forkChoice.headStateRoot.returns(Buffer.alloc(0));
-      const state = generateState();
+      const state: BeaconState = generateState();
       state.validators = generateValidators(1);
       epochCtxStub.getBeaconCommittee.returns([0]);
       chainStub.getHeadStateContext.resolves({

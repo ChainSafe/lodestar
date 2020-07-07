@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
@@ -54,7 +54,7 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves({state: config.types.BeaconState.clone(state), epochCtx});
+    chainStub.getHeadStateContext.resolves({state: state.clone(), epochCtx});
     chainStub.getHeadBlock.resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
