@@ -892,17 +892,6 @@
     "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
 
-"@chainsafe/bls@^0.1.7":
-  version "0.1.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-0.1.7.tgz#de3e5a4220f6a5051e09d696d6654b12aa9fa967"
-  integrity sha512-AMd7gHT9Fl1Qv29zLKxlZqHFsyUn/YeKXNvGPhhpbNG8kCh+BnbQtXyxWo/ReiEKM5DzG9sLKDJgDgMqKp7KwA==
-  dependencies:
-    "@chainsafe/eth2.0-types" "^0.1.0"
-    "@chainsafe/milagro-crypto-js" "0.1.3"
-    assert "^1.4.1"
-    js-sha256 "^0.9.0"
-    secure-random "^1.1.1"
-
 "@chainsafe/discv5@0.2.5", "@chainsafe/discv5@^0.2.5":
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.5.tgz#30d05d2098117e4e2d452b6c8d942f06ffeb8081"

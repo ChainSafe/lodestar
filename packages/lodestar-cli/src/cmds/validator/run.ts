@@ -10,7 +10,7 @@ import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {getBeaconConfig, YargsError} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
-import {getValidatorPaths} from "./paths"
+import {getValidatorPaths} from "./paths";
 import {IValidatorCliOptions} from "./options";
 
 /**
