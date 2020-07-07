@@ -9,7 +9,7 @@ export const description = "Lists the names of all wallets";
 
 export const builder: CommandBuilder<{}, IAccountWalletOptions> = {};
 
-export function handler(options: IAccountWalletOptions): void {
+export async function handler(options: IAccountWalletOptions): Promise<void> {
   const accountPaths = getAccountPaths(options);
 
   const walletManager = new WalletManager(accountPaths);

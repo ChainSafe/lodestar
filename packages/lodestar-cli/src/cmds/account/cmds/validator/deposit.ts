@@ -17,7 +17,7 @@ node, a file will be saved in the validator directory with the transaction hash.
 The application does not wait for confirmations so there is not guarantee that
 the transaction is included in the Eth1 chain; use a block explorer and the
 transaction hash to check for confirmations. The deposit contract address will
-be determined by the --testnet-dir flag on the primary Lighthouse binary.`;
+be determined by the spec config flag.`;
 
 interface IAccountValidatorDepositOptions extends IAccountValidatorOptions {
   keystoresDir: string;
@@ -30,11 +30,12 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
     description: "The name of the validator directory in $keystoresDir for which to deposit. \
     Set to 'all' to deposit all validators in the $keystoresDir.",
     normalize: true,
+    demandOption: true,
     type: "string",
   },
 
   eth1Http: {
-    description: "URL to an Eth1 JSON-RPC endpoint",
+    description: "URL to an Eth1 JSON-RPC endpoint with an unlock account to sign",
     demandOption: true,
     type: "string"
   }
@@ -67,12 +68,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
   // eslint-disable-next-line no-console
   console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 
-  // ### TODO:
-  const eth1PrivateKey = "";
-  
-  const provider = new ethers.providers.JsonRpcProvider(eth1Http);
-  const eth1Wallet = new ethers.Wallet(eth1PrivateKey, provider);
-  eth1Wallet.connect(provider);
+  const eth1Wallet = new ethers.providers.JsonRpcProvider(eth1Http).getSigner();
 
   for (const validatorDir of validatorDirsToSubmit) {
     const {rlp, depositData} = validatorDir.eth1DepositData(config);

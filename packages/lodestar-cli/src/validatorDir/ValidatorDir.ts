@@ -114,7 +114,7 @@ export class ValidatorDir {
   */
   unlockKeypair(keystorePath: string, secretsDir: string): Keypair {
     const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
-    const passwordPath = path.join(secretsDir, `0x${keystore.pubkey}`);
+    const passwordPath = path.join(secretsDir, keystore.pubkey);
     const password = stripOffNewlines(fs.readFileSync(passwordPath, "utf8"));
     const privKey = keystore.decrypt(password);
     return new Keypair(PrivateKey.fromBytes(privKey));

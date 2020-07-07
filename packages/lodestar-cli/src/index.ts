@@ -13,7 +13,6 @@ const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the 
 const bottomBanner = "for more information, checks the docs https://chainsafe.github.io/lodestar";
 
 yargs
- 
   .env("LODESTAR")
   .options(globalOptions)
   .command(devCommandModule)

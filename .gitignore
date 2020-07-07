@@ -37,3 +37,6 @@ docs/assets
 .witti
 genesis.ssz
 witti.json
+
+# Wallet CLI artifacts
+.pass

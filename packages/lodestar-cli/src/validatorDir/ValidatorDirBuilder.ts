@@ -65,6 +65,7 @@ export class ValidatorDirBuilder {
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
+    if (!votingKeystore.pubkey) throw Error("votingKeystore has no pubkey");
     const dir = path.join(this.keystoresDir, votingKeystore.pubkey);
     if (fs.existsSync(dir)) throw Error(`validator dir ${dir} already exists`);
     fs.mkdirSync(dir, {recursive: true});
@@ -81,38 +82,22 @@ export class ValidatorDirBuilder {
       votingPrivateKey,
       config
     );
-    fs.writeFileSync(ETH1_DEPOSIT_DATA_FILE, depositDataRlp);
+    fs.writeFileSync(path.join(dir, ETH1_DEPOSIT_DATA_FILE), depositDataRlp);
 
     // Save `ETH1_DEPOSIT_AMOUNT_FILE` to file.
     // This allows us to know the intended deposit amount at a later date.
-    fs.writeFileSync(ETH1_DEPOSIT_AMOUNT_FILE, depositGwei.toString());
+    fs.writeFileSync(path.join(dir, ETH1_DEPOSIT_AMOUNT_FILE), depositGwei.toString());
 
     // Only the withdrawal keystore if explicitly required.
     if (storeWithdrawalKeystore) {
-      this.writePasswordToFile(withdrawalKeystore.pubkey, withdrawalPassword);
-      this.writeKeystoreToFile(withdrawalKeystore, WITHDRAWAL_KEYSTORE_FILE);
+      writeFile600Perm(path.join(this.secretsDir, withdrawalKeystore.pubkey), withdrawalPassword);
+      fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), withdrawalKeystore.toJSON());
     }
 
     // Always store voting credentials
-    this.writePasswordToFile(votingKeystore.pubkey, votingPassword);
-    this.writeKeystoreToFile(votingKeystore, VOTING_KEYSTORE_FILE);
+    writeFile600Perm(path.join(this.secretsDir, votingKeystore.pubkey), votingPassword);
+    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), votingKeystore.toJSON());
 
     return new ValidatorDir(this.keystoresDir, votingKeystore.pubkey);
-  }
-
-  /**
-   * Creates a file with `600 (-rw-------)` permissions.
-   */
-  private writePasswordToFile(pubkey: string, password: string): void {
-    const filepath = path.join(this.secretsDir, pubkey);
-    writeFile600Perm(filepath, password);
-  }
-
-  /**
-   * Writes a JSON keystore to file.
-   */
-  private writeKeystoreToFile(keystore: Keystore, filename: string): void {
-    const filepath = path.join(this.keystoresDir, filename);
-    fs.writeFileSync(filepath, keystore);
   }
 }

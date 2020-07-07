@@ -36,15 +36,6 @@ export class WalletManager {
   }
 
   /**
-   * Iterate the nodes in `this.walletsDir`, returning only child directories.
-   */
-  iterDir(): string[] {
-    return fs.readdirSync(this.walletsDir)
-      .map(file => path.join(this.walletsDir, file))
-      .filter(dirPath => fs.statSync(dirPath).isDirectory());
-  }
-
-  /**
    * Iterates all wallets in `this.walletsDir` and returns a mapping of their name to their UUID.
    *
    * Ignores any items in `this.walletsDir` that:
@@ -57,18 +48,18 @@ export class WalletManager {
    * keystore with the same UUID).
    */
   wallets(): IWalletKeystoreJson[] {
-    return this.iterDir().map(walletDir => {
-      const walletUuid = walletDir;
-      if (!isUuid(walletUuid))
-        throw Error(`Validator dir ${walletDir} name must be a UUID`);
-    
-      const walletInfoPath = path.join(walletDir, walletUuid);
-      const walletInfo = JSON.parse(fs.readFileSync(walletInfoPath, "utf8"));
-      if (walletInfo.uuid !== walletUuid)
-        throw Error(`Wallet UUID mismatch, ${walletInfo.uuid} !== ${walletUuid}`);
+    return fs.readdirSync(this.walletsDir)
+      .filter(file => 
+        isUuid(file) && 
+        fs.statSync(path.join(this.walletsDir, file)).isDirectory()
+      ).map(walletUuid => {
+        const walletInfoPath = path.join(this.walletsDir, walletUuid, walletUuid);
+        const walletInfo = JSON.parse(fs.readFileSync(walletInfoPath, "utf8"));
+        if (walletInfo.uuid !== walletUuid)
+          throw Error(`Wallet UUID mismatch, ${walletInfo.uuid} !== ${walletUuid}`);
 
-      return walletInfo;
-    });
+        return walletInfo;
+      });
   }
 
   /**

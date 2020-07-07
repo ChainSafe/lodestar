@@ -1,9 +1,10 @@
 import fs from "fs";
 import {CommandBuilder} from "yargs";
+import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines, randomPassword, getBeaconConfig} from "../../../../util";
+import {stripOffNewlines, randomPassword, getBeaconConfig, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 export const command = "create";
@@ -61,9 +62,7 @@ reach the given count. Never deletes an existing validator.",
   }
 };
 
-export function handler(options: IValidatorCreateOptions): void {
-  // Make sure baseDir exists
-
+export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const name = options.name;
   const passphraseFile = options.passphraseFile;
   const spec = options.chain.name;
@@ -75,8 +74,11 @@ export function handler(options: IValidatorCreateOptions): void {
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
 
+  // To compute the publicKey of the validator keystores
+  await initBLS();
+
   if (depositGwei > maxEffectiveBalance) {
-    throw Error(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
+    throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
   }
 
   // Makes sure account paths exist
@@ -84,10 +86,10 @@ export function handler(options: IValidatorCreateOptions): void {
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
 
-  if (count && atMost) throw Error("cannot supply --count and --atMost");
-  if (!count && !atMost) throw Error("must supply --count or --atMost");
+  if (count && atMost) throw new YargsError("cannot supply --count and --atMost");
+  if (!count && !atMost) throw new YargsError("must supply --count or --atMost");
   const n = count || atMost - wallet.nextaccount;
-  if (n <= 0) throw Error("No validator to create");
+  if (n <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = stripOffNewlines(fs.readFileSync(passphraseFile, "utf8"));
 
@@ -99,7 +101,6 @@ export function handler(options: IValidatorCreateOptions): void {
     const keystores = wallet.nextValidator(walletPassword, passwords);
     const votingPubkey = keystores.signing.pubkey;
 
-    
     validatorDirBuilder.build({
       votingKeystore: keystores.signing,
       votingPassword: passwords.signing,
