@@ -1,9 +1,10 @@
+import * as bip39 from "bip39";
+import {mapValues} from "lodash";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
   deriveEth2ValidatorKeys,
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
-import {mapValues} from "lodash";
 
 export interface IWalletKeystoreJson {
   crypto: object;
@@ -53,7 +54,7 @@ export class Wallet extends Keystore {
    * Returns `Error::EmptyPassword` if `password == ""`.
    */
   static fromMnemonic(mnemonic: string, password: string, name: string): Wallet {
-    const seed = Bip39Seed(mnemonic);
+    const seed = bip39.mnemonicToSeedSync(mnemonic);
     const wallet = this.encrypt(seed, password) as Wallet;
     wallet.name = name;
     return wallet;
@@ -78,37 +79,6 @@ export class Wallet extends Keystore {
    */
   toWalletJSON(): string {
     return JSON.stringify(this.toWalletObject());
-  }
-
-  /**
-   * Instantiates `Self`, encrypting the `seed` using `password` (via `kdf` and `cipher`).
-   * The `uuid`, `name` and `nextaccount` are carried through into the created wallet.
-   */
-  encrypt2({
-    seed,
-    password,
-    kdf,
-    cipher,
-    uuid,
-    name,
-    nextaccount,
-  }: {
-    seed: Buffer;
-    password: string;
-    uuid: string;
-    name: string;
-    nextaccount: number;
-  }): IWalletKeystore {
-    const keystore = Keystore.encrypt(seed, password);
-
-    return {
-      crypto: keystore.crypto.toObject(),
-      name,
-      nextaccount,
-      uuid,
-      version: Version.one(),
-      type: TypeField.Hd,
-    };
   }
 
   /**

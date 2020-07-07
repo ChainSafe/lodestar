@@ -18,16 +18,18 @@ import {Keypair} from "@chainsafe/bls";
  * ```
  */
 export class ValidatorDirManager {
-  dir: string;
+  validatorsDir: string;
 
   /**
    * Open a directory containing multiple validators.
    *
    * Pass the `validators` director as `dir` (see struct-level example).
    */
-  constructor(dir: string) {
-    if (!fs.existsSync(dir)) throw Error(`directory ${dir} does not exist`);
-    this.dir = dir;
+  constructor(validatorsDir: string) {
+    if (!fs.existsSync(validatorsDir))
+      throw Error(`validatorsDir ${validatorsDir} does not exist`);
+
+    this.validatorsDir = validatorsDir;
   }
 
   /**
@@ -35,9 +37,9 @@ export class ValidatorDirManager {
    * a validator directory.
    */
   iterDir(): string[] {
-    return fs.readdirSync(this.dir)
+    return fs.readdirSync(this.validatorsDir)
       .filter(pubkey => 
-        fs.statSync(path.join(this.dir, pubkey)).isDirectory()
+        fs.statSync(path.join(this.validatorsDir, pubkey)).isDirectory()
       );
   }
 
@@ -46,7 +48,7 @@ export class ValidatorDirManager {
    * *Note*: It is not enforced that `path` is contained in `this.dir`.
    */
   openValidator(pubkey: string, options?: IValidatorDirOptions): ValidatorDir {
-    return new ValidatorDir(this.dir, pubkey, options);
+    return new ValidatorDir(this.validatorsDir, pubkey, options);
   }
 
   /**

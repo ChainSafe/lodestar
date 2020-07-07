@@ -5,11 +5,10 @@ import {processValidatorPaths, IValidatorPaths} from "./paths";
 
 export interface IValidatorCliOptions extends IGlobalArgs, IValidatorPaths, IChainArgs {
   server: string;
+  force: boolean;
 }
 
-/**
- * Constructs representations of the path structure to show in command's description
- */
+// Constructs representations of the path structure to show in command's description
 const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
 
 export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
@@ -28,6 +27,11 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
     type: "string",
   },
 
+  force: {
+    description: "Open validators even if there's a lockfile. Use with caution",
+    type: "boolean"
+  },
+
   dbDir: {
     description: `Data directory for validator databases.\n[default: ${defaultPaths.dbDir}]`,
     alias: ["dbDir", "db.dir", "db.name"],
@@ -36,7 +40,7 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   },
 
   keystoresDir: {
-    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.keystoresDir}]`,
+    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.validatorsDir}]`,
     normalize: true,
     type: "string",
   },

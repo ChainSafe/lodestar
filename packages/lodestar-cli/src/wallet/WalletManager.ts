@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {Keypair} from "@chainsafe/bls";
-import {ValidatorWallet, IValidatorDirOptions} from "./ValidatorDir";
+import {isUuid} from "uuidv4";
 import {Wallet, IWalletKeystoreJson} from "./Wallet";
 
 /**
@@ -24,7 +23,6 @@ import {Wallet, IWalletKeystoreJson} from "./Wallet";
  *     ├── 747ad9dc-e1a1-4804-ada4-0dc124e46c49
  * ```
  */
-
 export class WalletManager {
   dir: string;
 
@@ -61,7 +59,7 @@ export class WalletManager {
   wallets(): IWalletKeystoreJson[] {
     return this.iterDir().map(walletDir => {
       const walletUuid = walletDir;
-      if (uuid.parse(walletUuid))
+      if (!isUuid(walletUuid))
         throw Error(`Validator dir ${walletDir} name must be a UUID`);
     
       const walletInfoPath = path.join(walletDir, walletUuid);
@@ -98,8 +96,8 @@ export class WalletManager {
    */
   createWallet(
     name: string,
-    walletType: WalletType,
-    mnemonic: Mnemonic,
+    walletType: string,
+    mnemonic: string,
     password: string
   ): Wallet {
     if (this.wallets().some(wallet => wallet.name === name))

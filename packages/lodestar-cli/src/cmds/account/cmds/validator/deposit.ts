@@ -14,7 +14,7 @@ interface IValidatorDepositOptions extends IGlobalArgs, IChainArgs {
   eth1Http?: string;
 }
 
-export const command = "create";
+export const command = "deposit";
 
 export const description = `Submits a deposit to an Eth1 validator registration contract via an IPC endpoint
 of an Eth1 client (e.g., Geth, OpenEthereum, etc.). The validators must already
@@ -26,12 +26,10 @@ the transaction is included in the Eth1 chain; use a block explorer and the
 transaction hash to check for confirmations. The deposit contract address will
 be determined by the --testnet-dir flag on the primary Lighthouse binary.`;
 
-/**
- * Constructs representations of the path structure to show in command's description
- */
+// Constructs representations of the path structure to show in command's description
 const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
 
-export const createOptions: CommandBuilder<{}, IValidatorDepositOptions> = {
+export const builder: CommandBuilder<{}, IValidatorDepositOptions> = {
   validatorsDir:  {
     description: `The path where the validator directories will be created.\n[default: ${defaultPaths.validatorsDir}]`,
     normalize: true,
@@ -51,8 +49,6 @@ export const createOptions: CommandBuilder<{}, IValidatorDepositOptions> = {
     type: "string"
   }
 };
-
-export const builder = createOptions;
 
 export async function handler(options: IValidatorDepositOptions): Promise<void> {
   const spec = options.chain.name;
@@ -80,6 +76,9 @@ export async function handler(options: IValidatorDepositOptions): Promise<void> 
     throw Error("No validators to deposit");
   // eslint-disable-next-line no-console
   console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
+
+  // ### TODO:
+  const eth1PrivateKey = "";
   
   const provider = new ethers.providers.JsonRpcProvider(eth1Http);
   const eth1Wallet = new ethers.Wallet(eth1PrivateKey, provider);

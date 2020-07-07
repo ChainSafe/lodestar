@@ -6,7 +6,7 @@ export const command = "list";
 
 export const description = "Lists the names of all wallets";
 
-export const walletListOptions: CommandBuilder<{}, IGlobalArgs> = {};
+export const builder: CommandBuilder<{}, IGlobalArgs> = {};
 
 export function handler(options: IGlobalArgs): void {
   const baseDir = options.rootDir;

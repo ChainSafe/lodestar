@@ -8,11 +8,11 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-import {unlockDirKeypairs} from "../account/utils/unlockKeypair";
 import {getBeaconConfig} from "../../util/config";
 import {YargsError} from "../../util/errors";
 import {IValidatorCliOptions} from "./options";
 import {processValidatorPaths} from "./paths";
+import {ValidatorDirManager} from "../../validatorDir";
 
 /**
  * Run a validator client
@@ -20,7 +20,8 @@ import {processValidatorPaths} from "./paths";
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
   const spec = options.chain.name;
-  const {dbDir, keystoresDir, secretsDir} = processValidatorPaths(options);
+  const force = options.force;
+  const {dbDir, validatorsDir, secretsDir} = processValidatorPaths(options);
   
   await initBLS();
 
@@ -28,14 +29,16 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
 
   const logger = new WinstonLogger();
 
-  if (!fs.existsSync(keystoresDir))
-    throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
+  if (!fs.existsSync(validatorsDir))
+    throw new YargsError(`validatorsDir ${validatorsDir} does not exist`);
   if (!fs.existsSync(secretsDir))
     throw new YargsError(`secretsDir ${secretsDir} does not exist`);
 
-  const validatorKeypairs = unlockDirKeypairs({keystoresDir: keystoresDir, secretsDir});
+  const validatorDirManager = new ValidatorDirManager(validatorsDir);
+  const validatorKeypairs = validatorDirManager.decryptAllValidators(secretsDir, {force});
+
   if (validatorKeypairs.length === 0)
-    throw new YargsError(`There are no validator keystores in ${keystoresDir}`);
+    throw new YargsError(`There are no validator keystores in ${validatorsDir}`);
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
   const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {

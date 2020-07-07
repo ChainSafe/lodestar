@@ -4,8 +4,8 @@ import {processValidatorPaths} from "../../../validator/paths";
 import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines} from "../../utils/stripOffNewlines";
-import {randomPassword} from "../../utils/randomPassword";
+import {stripOffNewlines} from "../../../../util/stripOffNewlines";
+import {randomPassword} from "../../../../util/randomPassword";
 import {IChainArgs} from "../../../dev/options/chain";
 import {getBeaconConfig} from "../../../../util/config";
 
@@ -26,12 +26,10 @@ export const command = "create";
 export const description = "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \
   derivation scheme.";
 
-/**
- * Constructs representations of the path structure to show in command's description
- */
+// Constructs representations of the path structure to show in command's description
 const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
 
-export const createOptions: CommandBuilder<{}, IValidatorCreateOptions> = {
+export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
   name: {
     description: "Use the wallet identified by this name",
     alias: ["n"],
@@ -83,8 +81,6 @@ reach the given count. Never deletes an existing validator.",
     type: "number"
   }
 };
-
-export const builder = createOptions;
 
 export function handler(options: IValidatorCreateOptions): void {
   // Make sure baseDir exists

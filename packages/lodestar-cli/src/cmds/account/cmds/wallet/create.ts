@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import {CommandBuilder} from "yargs";
-import bip39 from "bip39";
-import {randomPassword} from "../../utils/randomPassword";
+import * as bip39 from "bip39";
+import {randomPassword} from "../../../../util/randomPassword";
 import {writeFile600Perm} from "../../../../util/fs";
 import {YargsError} from "../../../../util/errors";
 import {IGlobalArgs} from "../../../../options";
@@ -19,7 +19,7 @@ interface IWalletCreateOptions extends IGlobalArgs {
   mnemonicOutputPath?: string;
 }
 
-export const walletCreateOptions: CommandBuilder<{}, IWalletCreateOptions> = {
+export const builder: CommandBuilder<{}, IWalletCreateOptions> = {
   name: {
     description: "The wallet will be created with this name. It is not allowed to \
 create two wallets with the same name for the same --base-dir.",

@@ -1,10 +1,11 @@
 import fs from "fs";
 import path from "path";
 import lockFile from "lockfile";
-import {Keypair} from "@chainsafe/bls";
+import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {unlockKeypair} from "../cmds/account/utils/unlockKeypair";
+import {stripOffNewlines} from "../util/stripOffNewlines";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {
   VOTING_KEYSTORE_FILE,
@@ -62,7 +63,7 @@ export class ValidatorDir {
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
     if (!fs.existsSync(this.dir))
-      throw Error(`Directory ${this.dir} does not exists`);
+      throw Error(`Validator directory ${this.dir} does not exists`);
 
     try {
       lockFile.lockSync(this.lockfilePath);
@@ -91,7 +92,7 @@ export class ValidatorDir {
    */
   votingKeypair(secretsDir: string): Keypair {
     const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
-    return unlockKeypair({keystorePath, secretsDir});
+    return this.unlockKeypair(keystorePath, secretsDir);
   }
 
   /**
@@ -103,7 +104,20 @@ export class ValidatorDir {
    */
   withdrawalKeypair(secretsDir: string): Keypair {
     const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
-    return unlockKeypair({keystorePath, secretsDir});
+    return this.unlockKeypair(keystorePath, secretsDir);
+  }
+
+  /**
+  * Decrypts a keystore in the validator's dir
+  * @param keystorePath Path to a EIP-2335 keystore
+  * @param secretsDir Directory containing keystore passwords
+  */
+  unlockKeypair(keystorePath: string, secretsDir: string): Keypair {
+    const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
+    const passwordPath = path.join(secretsDir, `0x${keystore.pubkey}`);
+    const password = stripOffNewlines(fs.readFileSync(passwordPath, "utf8"));
+    const privKey = keystore.decrypt(password);
+    return new Keypair(PrivateKey.fromBytes(privKey));
   }
 
   /**
