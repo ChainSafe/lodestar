@@ -1,19 +1,18 @@
 import fs from "fs";
 import {CommandBuilder} from "yargs";
-import {processValidatorPaths} from "../../../validator/paths";
+import {defaultPaths, getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {stripOffNewlines, randomPassword, getBeaconConfig} from "../../../../util";
-import {IChainArgs} from "../../../dev/options/chain";
+import {chainPreset, IChainArgs} from "../../../dev/options/chain";
 
 interface IValidatorCreateOptions extends IGlobalArgs, IChainArgs {
   name: string;
   passphraseFile: string;
-  validatorDir: string;
-  keystoresDir: string;
-  secretsDir: string;
-  depositGwei: string;
+  validatorsDir?: string;
+  secretsDir?: string;
+  depositGwei?: string;
   storeWithdrawalKeystore?: boolean;
   count?: number;
   atMost?: number;
@@ -24,10 +23,9 @@ export const command = "create";
 export const description = "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \
   derivation scheme.";
 
-// Constructs representations of the path structure to show in command's description
-const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
-
 export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
+  chainPreset,
+
   name: {
     description: "Use the wallet identified by this name",
     alias: ["n"],
@@ -43,8 +41,8 @@ export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
     type: "string"
   },
 
-  validatorsDir:  {
-    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.validatorsDir}]`,
+  keystoresDir:  {
+    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.keystoresDir}]`,
     normalize: true,
     type: "string",
   },
@@ -89,22 +87,18 @@ export function handler(options: IValidatorCreateOptions): void {
   const storeWithdrawalKeystore = options.storeWithdrawalKeystore;
   const count = options.count;
   const atMost = options.atMost;
-  const rootDir = options.rootDir;
-  const {validatorsDir, secretsDir} = processValidatorPaths(options);
+  const accountPaths = getAccountPaths(options);
   const config = getBeaconConfig(spec);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
-  const depositGwei = BigInt(options.depositGwei) || maxEffectiveBalance;
+  const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
 
   if (depositGwei > maxEffectiveBalance) {
     throw Error(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
   }
 
-  if (!fs.existsSync(validatorsDir))
-    throw Error(`validatorsDir ${validatorsDir} does not exist`);
-  if (!fs.existsSync(secretsDir))
-    throw Error(`secretsDir ${secretsDir} does not exist`);
-
-  const walletManager = new WalletManager(rootDir);
+  // Makes sure account paths exist
+  const validatorDirBuilder = new ValidatorDirBuilder(accountPaths);
+  const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
 
   if (count && atMost) throw Error("cannot supply --count and --atMost");
@@ -122,7 +116,7 @@ export function handler(options: IValidatorCreateOptions): void {
     const keystores = wallet.nextValidator(walletPassword, passwords);
     const votingPubkey = keystores.signing.pubkey;
 
-    const validatorDirBuilder = new ValidatorDirBuilder(validatorsDir, secretsDir);
+    
     validatorDirBuilder.build({
       votingKeystore: keystores.signing,
       votingPassword: passwords.signing,

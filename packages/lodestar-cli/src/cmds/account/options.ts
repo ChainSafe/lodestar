@@ -1,22 +1,19 @@
 import {CommandBuilder} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {IChainArgs} from "../dev/options/chain";
-import {processValidatorPaths, IValidatorPaths} from "../validator/paths";
+import {defaultPaths, IAccountPaths} from "./paths";
 
-export interface IValidatorCliOptions extends IGlobalArgs, IValidatorPaths, IChainArgs {
+export interface IValidatorCliOptions extends IGlobalArgs, IAccountPaths, IChainArgs {
   server: string;
 }
 
-// Constructs representations of the path structure to show in command's description
-const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
-
 export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
-  baseDir: {
-    description: `A path containing Eth2 EIP-2386 wallets.\n[default: ${defaultPaths.rootDir}]`
+  walletsDir: {
+    description: `A path containing Eth2 EIP-2386 wallets.\n[default: ${defaultPaths.walletsDir}]`
   },
 
-  validatorsDir: {
-    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.validatorsDir}]`,
+  keystoresDir: {
+    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.keystoresDir}]`,
     normalize: true,
     type: "string",
   },

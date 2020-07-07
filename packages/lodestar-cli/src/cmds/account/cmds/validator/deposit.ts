@@ -1,15 +1,15 @@
 import {ethers} from "ethers";
 import {CommandBuilder} from "yargs";
 import {ValidatorDirManager} from "../../../../validatorDir";
-import {processValidatorPaths} from "../../../validator/paths";
+import {getAccountPaths, defaultPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
-import {IChainArgs} from "../../../dev/options/chain";
+import {chainPreset, IChainArgs} from "../../../dev/options/chain";
 import {getBeaconConfig} from "../../../../util";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
 interface IValidatorDepositOptions extends IGlobalArgs, IChainArgs {
-  validatorsDir: string;
+  keystoresDir: string;
   validator: string;
   eth1Http?: string;
 }
@@ -26,19 +26,18 @@ the transaction is included in the Eth1 chain; use a block explorer and the
 transaction hash to check for confirmations. The deposit contract address will
 be determined by the --testnet-dir flag on the primary Lighthouse binary.`;
 
-// Constructs representations of the path structure to show in command's description
-const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
-
 export const builder: CommandBuilder<{}, IValidatorDepositOptions> = {
-  validatorsDir:  {
-    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.validatorsDir}]`,
+  chainPreset,
+
+  keystoresDir:  {
+    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.keystoresDir}]`,
     normalize: true,
     type: "string",
   },
 
   validator: {
-    description: "The name of the validator directory in $validatorsDir for which to deposit. \
-    Set to 'all' to deposit all validators in the $validatorsDir.",
+    description: "The name of the validator directory in $keystoresDir for which to deposit. \
+    Set to 'all' to deposit all validators in the $keystoresDir.",
     normalize: true,
     type: "string",
   },
@@ -54,7 +53,7 @@ export async function handler(options: IValidatorDepositOptions): Promise<void> 
   const spec = options.chain.name;
   const validatorName = options.validator;
   const eth1Http = options.eth1Http;
-  const {validatorsDir} = processValidatorPaths(options);
+  const accountPaths = getAccountPaths(options);
   const config = getBeaconConfig(spec);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
@@ -63,7 +62,7 @@ export async function handler(options: IValidatorDepositOptions): Promise<void> 
 
   // Load validators to deposit
   // depositData is already generated when building / creating the validator dir
-  const validatorDirManager = new ValidatorDirManager(validatorsDir);
+  const validatorDirManager = new ValidatorDirManager(accountPaths);
   const validatorDirs = validatorName === "all"
     ? validatorDirManager.openAllValidators()
     : [validatorDirManager.openValidator(validatorName)];

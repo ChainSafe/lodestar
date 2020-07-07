@@ -1,15 +1,12 @@
 import {CommandBuilder} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {chainPreset, IChainArgs} from "../dev/options/chain";
-import {processValidatorPaths, IValidatorPaths} from "./paths";
+import {defaultPaths, IAccountPaths, IValidatorPaths} from "../account/paths";
 
-export interface IValidatorCliOptions extends IGlobalArgs, IValidatorPaths, IChainArgs {
+export interface IValidatorCliOptions extends IGlobalArgs, IAccountPaths, IValidatorPaths, IChainArgs {
   server: string;
   force: boolean;
 }
-
-// Constructs representations of the path structure to show in command's description
-const defaultPaths = processValidatorPaths({rootDir: "$rootDir"});
 
 export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   chainPreset,
@@ -32,15 +29,15 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
     type: "boolean"
   },
 
-  dbDir: {
-    description: `Data directory for validator databases.\n[default: ${defaultPaths.dbDir}]`,
+  validatorsDbDir: {
+    description: `Data directory for validator databases.\n[default: ${defaultPaths.validatorsDbDir}]`,
     alias: ["dbDir", "db.dir", "db.name"],
     normalize: true,
     type: "string",
   },
 
   keystoresDir: {
-    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.validatorsDir}]`,
+    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.keystoresDir}]`,
     normalize: true,
     type: "string",
   },

@@ -5,6 +5,7 @@ import * as bip39 from "bip39";
 import {randomPassword, writeFile600Perm,YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
+import {getAccountPaths} from "../../paths";
 
 export const command = "create";
 
@@ -56,7 +57,7 @@ export async function handler(options: IWalletCreateOptions): Promise<void> {
   const type = options.type;
   const passphraseFile = options.passphraseFile;
   const mnemonicOutputPath = options.mnemonicOutputPath;
-  const baseDir = options.rootDir;
+  const accountPaths = getAccountPaths(options);
 
   // Create a new random mnemonic.
   const mnemonic = bip39.generateMnemonic();
@@ -70,7 +71,7 @@ export async function handler(options: IWalletCreateOptions): Promise<void> {
   }
   const password = fs.readFileSync(passphraseFile, "utf8");
 
-  const walletManager = new WalletManager(baseDir);
+  const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.createWallet(name, type, mnemonic, password);
 
   if (mnemonicOutputPath) {

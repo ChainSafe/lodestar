@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import process from "process";
 import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
@@ -10,7 +9,7 @@ import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {getBeaconConfig, YargsError} from "../../util";
 import {IValidatorCliOptions} from "./options";
-import {processValidatorPaths} from "./paths";
+import {getAccountPaths, getValidatorPaths} from "../account/paths";
 import {ValidatorDirManager} from "../../validatorDir";
 
 /**
@@ -20,7 +19,8 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
   const server = options.server;
   const spec = options.chain.name;
   const force = options.force;
-  const {dbDir, validatorsDir, secretsDir} = processValidatorPaths(options);
+  const accountPaths = getAccountPaths(options);
+  const validatorPaths = getValidatorPaths(options);
   
   await initBLS();
 
@@ -28,22 +28,17 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
 
   const logger = new WinstonLogger();
 
-  if (!fs.existsSync(validatorsDir))
-    throw new YargsError(`validatorsDir ${validatorsDir} does not exist`);
-  if (!fs.existsSync(secretsDir))
-    throw new YargsError(`secretsDir ${secretsDir} does not exist`);
-
-  const validatorDirManager = new ValidatorDirManager(validatorsDir);
-  const validatorKeypairs = validatorDirManager.decryptAllValidators(secretsDir, {force});
+  const validatorDirManager = new ValidatorDirManager(accountPaths);
+  const validatorKeypairs = validatorDirManager.decryptAllValidators({force});
 
   if (validatorKeypairs.length === 0)
-    throw new YargsError(`There are no validator keystores in ${validatorsDir}`);
+    throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
   const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {
     const pubkey = keypair.publicKey.toHexString();
     const loggerId = `Validator ${pubkey.slice(0, 10)}`;
-    const dbPath = path.join(dbDir, pubkey);
+    const dbPath = validatorPaths.validatorDbDir(pubkey);
     fs.mkdirSync(dbPath, {recursive: true});
     
     const api = new ApiClientOverRest(config, server, logger);

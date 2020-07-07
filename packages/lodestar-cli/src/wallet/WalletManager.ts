@@ -24,30 +24,30 @@ import {Wallet, IWalletKeystoreJson} from "./Wallet";
  * ```
  */
 export class WalletManager {
-  dir: string;
+  walletsDir: string;
 
   /**
    * Open a directory containing multiple validators.
    * @param dir 
    */
-  constructor(dir: string) {
-    if (!fs.existsSync(dir)) throw Error(`directory ${dir} does not exist`);
-    this.dir = dir;
+  constructor({walletsDir}: {walletsDir: string}) {
+    if (!fs.existsSync(walletsDir)) throw Error(`walletsDir ${walletsDir} does not exist`);
+    this.walletsDir = walletsDir;
   }
 
   /**
    * Iterate the nodes in `self.dir`, returning only child directories.
    */
   iterDir(): string[] {
-    return fs.readdirSync(this.dir)
-      .map(file => path.join(this.dir, file))
+    return fs.readdirSync(this.walletsDir)
+      .map(file => path.join(this.walletsDir, file))
       .filter(dirPath => fs.statSync(dirPath).isDirectory());
   }
 
   /**
-   * Iterates all wallets in `this.dir` and returns a mapping of their name to their UUID.
+   * Iterates all wallets in `this.walletsDir` and returns a mapping of their name to their UUID.
    *
-   * Ignores any items in `this.dir` that:
+   * Ignores any items in `this.walletsDir` that:
    *
    * - Are files.
    * - Are directories, but their file-name does not parse as a UUID.
@@ -105,7 +105,7 @@ export class WalletManager {
 
       
     const wallet = Wallet.fromMnemonic(mnemonic, password, name);
-    const walletDir = path.join(this.dir, wallet.uuid);
+    const walletDir = path.join(this.walletsDir, wallet.uuid);
 
     if (fs.existsSync(walletDir))
       throw Error(`Wallet dir ${walletDir} already exists`);

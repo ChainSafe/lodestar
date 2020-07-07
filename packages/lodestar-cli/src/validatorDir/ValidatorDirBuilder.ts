@@ -43,16 +43,19 @@ interface IValidatorDirBuildOptions {
  * A builder for creating a `ValidatorDir`.
  */
 export class ValidatorDirBuilder {
-  validatorsDir: string;
+  keystoresDir: string;
   secretsDir: string;
 
   /**
    * Instantiate a new builder.
-   * @param base_validators_dir 
-   * @param password_dir 
    */
-  constructor (validatorsDir: string, secretsDir: string) {
-    this.validatorsDir = validatorsDir;
+  constructor ({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
+    if (!fs.existsSync(keystoresDir))
+      throw Error(`keystoresDir ${keystoresDir} does not exist`);
+    if (!fs.existsSync(secretsDir))
+      throw Error(`secretsDir ${secretsDir} does not exist`);
+
+    this.keystoresDir = keystoresDir;
     this.secretsDir = secretsDir;
   }
 
@@ -65,7 +68,7 @@ export class ValidatorDirBuilder {
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
-    const dir = path.join(this.validatorsDir, votingKeystore.pubkey);
+    const dir = path.join(this.keystoresDir, votingKeystore.pubkey);
     if (fs.existsSync(dir)) throw Error(`validator dir ${dir} already exists`);
     fs.mkdirSync(dir, {recursive: true});
 
@@ -97,7 +100,7 @@ export class ValidatorDirBuilder {
     this.writePasswordToFile(votingKeystore.pubkey, votingPassword);
     this.writeKeystoreToFile(votingKeystore, VOTING_KEYSTORE_FILE);
 
-    return new ValidatorDir(this.validatorsDir, votingKeystore.pubkey);
+    return new ValidatorDir(this.keystoresDir, votingKeystore.pubkey);
   }
 
   /**
@@ -112,7 +115,7 @@ export class ValidatorDirBuilder {
    * Writes a JSON keystore to file.
    */
   private writeKeystoreToFile(keystore: Keystore, filename: string): void {
-    const filepath = path.join(this.validatorsDir, filename);
+    const filepath = path.join(this.keystoresDir, filename);
     fs.writeFileSync(filepath, keystore);
   }
 }

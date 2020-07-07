@@ -18,18 +18,22 @@ import {Keypair} from "@chainsafe/bls";
  * ```
  */
 export class ValidatorDirManager {
-  validatorsDir: string;
+  keystoresDir: string;
+  secretsDir: string;
 
   /**
    * Open a directory containing multiple validators.
    *
    * Pass the `validators` director as `dir` (see struct-level example).
    */
-  constructor(validatorsDir: string) {
-    if (!fs.existsSync(validatorsDir))
-      throw Error(`validatorsDir ${validatorsDir} does not exist`);
+  constructor({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
+    if (!fs.existsSync(keystoresDir))
+      throw Error(`keystoresDir ${keystoresDir} does not exist`);
+    if (!fs.existsSync(secretsDir))
+      throw Error(`secretsDir ${secretsDir} does not exist`);
 
-    this.validatorsDir = validatorsDir;
+    this.keystoresDir = keystoresDir;
+    this.secretsDir = secretsDir;
   }
 
   /**
@@ -37,9 +41,9 @@ export class ValidatorDirManager {
    * a validator directory.
    */
   iterDir(): string[] {
-    return fs.readdirSync(this.validatorsDir)
+    return fs.readdirSync(this.keystoresDir)
       .filter(pubkey => 
-        fs.statSync(path.join(this.validatorsDir, pubkey)).isDirectory()
+        fs.statSync(path.join(this.keystoresDir, pubkey)).isDirectory()
       );
   }
 
@@ -48,7 +52,7 @@ export class ValidatorDirManager {
    * *Note*: It is not enforced that `path` is contained in `this.dir`.
    */
   openValidator(pubkey: string, options?: IValidatorDirOptions): ValidatorDir {
-    return new ValidatorDir(this.validatorsDir, pubkey, options);
+    return new ValidatorDir(this.keystoresDir, pubkey, options);
   }
 
   /**
@@ -64,8 +68,8 @@ export class ValidatorDirManager {
   /**
    * Opens all the validator directories in `this` and decrypts the validator keypairs.
    */
-  decryptAllValidators(secretsDir: string, options?: IValidatorDirOptions): Keypair[] {
+  decryptAllValidators(options?: IValidatorDirOptions): Keypair[] {
     const validators = this.openAllValidators(options);
-    return validators.map(validator => validator.votingKeypair(secretsDir));
+    return validators.map(validator => validator.votingKeypair(this.secretsDir));
   }
 }
