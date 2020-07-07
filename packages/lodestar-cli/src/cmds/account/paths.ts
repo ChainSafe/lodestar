@@ -1,16 +1,6 @@
 import path from "path";
 import {IGlobalArgs} from "../../options";
 
-export const VOTING_KEYSTORE_FILE = "voting-keystore.json";
-export const WITHDRAWAL_KEYSTORE_FILE = "withdrawal-keystore.json";
-export const ETH1_DEPOSIT_DATA_FILE = "eth1-deposit-data.rlp";
-export const ETH1_DEPOSIT_AMOUNT_FILE = "eth1-deposit-gwei.txt";
-/**
- * The file used for indicating if a directory is in-use by another process.
- */
-export const LOCK_FILE_EXT = ".lock";
-
-
 export interface IAccountPaths {
   keystoresDir: string;
   secretsDir: string;

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {isUuid} from "uuidv4";
 import {Wallet, IWalletKeystoreJson} from "./Wallet";
+import {ensureDirExists} from "../util";
 
 /**
  * Manages a directory containing EIP-2386 wallets.
@@ -28,15 +29,14 @@ export class WalletManager {
 
   /**
    * Open a directory containing multiple validators.
-   * @param dir 
    */
   constructor({walletsDir}: {walletsDir: string}) {
-    if (!fs.existsSync(walletsDir)) throw Error(`walletsDir ${walletsDir} does not exist`);
+    ensureDirExists(walletsDir);
     this.walletsDir = walletsDir;
   }
 
   /**
-   * Iterate the nodes in `self.dir`, returning only child directories.
+   * Iterate the nodes in `this.walletsDir`, returning only child directories.
    */
   iterDir(): string[] {
     return fs.readdirSync(this.walletsDir)
@@ -73,11 +73,6 @@ export class WalletManager {
 
   /**
    * Opens and searches all wallets in `self.dir` and returns the wallet with this name.
-   *
-   * ## Errors
-   *
-   * - If there is no wallet with this name.
-   * - If there is a file-system or parsing error.
    */
   openByName(name: string): Wallet {
     const wallets = this.wallets();
@@ -89,10 +84,6 @@ export class WalletManager {
   /**  
    * Creates a new wallet with the given `name` in `self.dir` with the given `mnemonic` as a
    * seed, encrypted with `password`.
-   *  
-   * Errors
-   *  - If a wallet with this name already exists.
-   *  - If there is a file-system or parsing error.
    */
   createWallet(
     name: string,

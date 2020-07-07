@@ -1,31 +1,26 @@
 import fs from "fs";
 import {CommandBuilder} from "yargs";
-import {defaultPaths, getAccountPaths} from "../../paths";
-import {IGlobalArgs} from "../../../../options";
+import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {stripOffNewlines, randomPassword, getBeaconConfig} from "../../../../util";
-import {chainPreset, IChainArgs} from "../../../dev/options/chain";
-
-interface IValidatorCreateOptions extends IGlobalArgs, IChainArgs {
-  name: string;
-  passphraseFile: string;
-  validatorsDir?: string;
-  secretsDir?: string;
-  depositGwei?: string;
-  storeWithdrawalKeystore?: boolean;
-  count?: number;
-  atMost?: number;
-}
+import {IAccountValidatorOptions} from "./options";
 
 export const command = "create";
 
 export const description = "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \
   derivation scheme.";
 
-export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
-  chainPreset,
+interface IValidatorCreateOptions extends IAccountValidatorOptions {
+  name: string;
+  passphraseFile: string;
+  depositGwei?: string;
+  storeWithdrawalKeystore?: boolean;
+  count?: number;
+  atMost?: number;
+}
 
+export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
   name: {
     description: "Use the wallet identified by this name",
     alias: ["n"],
@@ -39,18 +34,6 @@ export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
     demandOption: true,
     normalize: true,
     type: "string"
-  },
-
-  keystoresDir:  {
-    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.keystoresDir}]`,
-    normalize: true,
-    type: "string",
-  },
-
-  secretsDir: {
-    description: `The directory for storing validator keystore secrets.\n[default: ${defaultPaths.secretsDir}]`,
-    normalize: true,
-    type: "string",
   },
 
   depositGwei: {

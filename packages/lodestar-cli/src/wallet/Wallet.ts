@@ -30,28 +30,9 @@ export class Wallet extends Keystore {
     this.type = keystore.type;
   }
 
-  // /**
-  //  * Creates a new builder from a `seed` specified as a byte slice.
-  //  *
-  //  * ## Errors
-  //  *
-  //  * Returns `Error::EmptyPassword` if `password == ""`.
-  //  */
-  // constructor(seed: Buffer, password: string, name: string) {
-  //   if (!password) throw Error("Empty password");
-  //   if (seed.length === 0) throw Error("Empty seed");
-
-  //   this.keystore = Keystore.encrypt(seed, password);
-  //   this.name = name;
-  // }
-
   /**
    * Creates a new builder for a seed specified as a BIP-39 `Mnemonic` (where the nmemonic itself does
    * not have a passphrase).
-   *
-   * ## Errors
-   *
-   * Returns `Error::EmptyPassword` if `password == ""`.
    */
   static fromMnemonic(mnemonic: string, password: string, name: string): Wallet {
     const seed = bip39.mnemonicToSeedSync(mnemonic);
@@ -87,13 +68,7 @@ export class Wallet extends Keystore {
    * generated.
    *
    * Uses the default encryption settings of `KeystoreBuilder`, not necessarily those that were
-   * used to encrypt `self`.
-   *
-   * ## Errors
-   *
-   * - If `walletPassword` is unable to decrypt `self`.
-   * - If `keystore_password.is_empty()`.
-   * - If `self.nextaccount == u32::max_value()`.
+   * used to encrypt `this`.
    */
   nextValidator(
     walletPassword: string,

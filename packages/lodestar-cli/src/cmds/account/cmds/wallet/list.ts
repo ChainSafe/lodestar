@@ -1,15 +1,15 @@
 import {CommandBuilder} from "yargs";
 import {WalletManager} from "../../../../wallet";
-import {IGlobalArgs} from "../../../../options";
 import {getAccountPaths} from "../../paths";
+import {IAccountWalletOptions} from "./options";
 
 export const command = "list";
 
 export const description = "Lists the names of all wallets";
 
-export const builder: CommandBuilder<{}, IGlobalArgs> = {};
+export const builder: CommandBuilder<{}, IAccountWalletOptions> = {};
 
-export function handler(options: IGlobalArgs): void {
+export function handler(options: IAccountWalletOptions): void {
   const accountPaths = getAccountPaths(options);
 
   const walletManager = new WalletManager(accountPaths);

@@ -16,6 +16,5 @@ export function builder(yargs: Argv<IGlobalArgs>): Argv {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function handler(): void {
-}
+export function handler(): void {}
 

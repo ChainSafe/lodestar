@@ -1,18 +1,11 @@
 import {ethers} from "ethers";
 import {CommandBuilder} from "yargs";
 import {ValidatorDirManager} from "../../../../validatorDir";
-import {getAccountPaths, defaultPaths} from "../../paths";
-import {IGlobalArgs} from "../../../../options";
-import {chainPreset, IChainArgs} from "../../../dev/options/chain";
+import {getAccountPaths} from "../../paths";
 import {getBeaconConfig} from "../../../../util";
+import {IAccountValidatorOptions} from "./options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
-
-interface IValidatorDepositOptions extends IGlobalArgs, IChainArgs {
-  keystoresDir: string;
-  validator: string;
-  eth1Http?: string;
-}
 
 export const command = "deposit";
 
@@ -26,15 +19,13 @@ the transaction is included in the Eth1 chain; use a block explorer and the
 transaction hash to check for confirmations. The deposit contract address will
 be determined by the --testnet-dir flag on the primary Lighthouse binary.`;
 
-export const builder: CommandBuilder<{}, IValidatorDepositOptions> = {
-  chainPreset,
+interface IAccountValidatorDepositOptions extends IAccountValidatorOptions {
+  keystoresDir: string;
+  validator: string;
+  eth1Http?: string;
+}
 
-  keystoresDir:  {
-    description: `The path where the validator directories will be created.\n[default: ${defaultPaths.keystoresDir}]`,
-    normalize: true,
-    type: "string",
-  },
-
+export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
   validator: {
     description: "The name of the validator directory in $keystoresDir for which to deposit. \
     Set to 'all' to deposit all validators in the $keystoresDir.",
@@ -49,7 +40,7 @@ export const builder: CommandBuilder<{}, IValidatorDepositOptions> = {
   }
 };
 
-export async function handler(options: IValidatorDepositOptions): Promise<void> {
+export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
   const spec = options.chain.name;
   const validatorName = options.validator;
   const eth1Http = options.eth1Http;

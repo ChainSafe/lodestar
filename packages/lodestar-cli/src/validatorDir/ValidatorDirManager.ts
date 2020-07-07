@@ -23,8 +23,6 @@ export class ValidatorDirManager {
 
   /**
    * Open a directory containing multiple validators.
-   *
-   * Pass the `validators` director as `dir` (see struct-level example).
    */
   constructor({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
     if (!fs.existsSync(keystoresDir))
@@ -37,7 +35,7 @@ export class ValidatorDirManager {
   }
 
   /**
-   * Iterate the nodes in `self.dir`, filtering out things that are unlikely to be
+   * Iterate the nodes in `this.keystoresDir`, filtering out things that are unlikely to be
    * a validator directory.
    */
   iterDir(): string[] {

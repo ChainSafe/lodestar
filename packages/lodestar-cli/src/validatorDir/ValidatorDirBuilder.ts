@@ -5,7 +5,7 @@ import {PublicKey, PrivateKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
 import {encodeDepositData} from "../depositContract/depositData";
-import {writeFile600Perm} from "../util";
+import {writeFile600Perm, ensureDirExists} from "../util";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
@@ -50,11 +50,8 @@ export class ValidatorDirBuilder {
    * Instantiate a new builder.
    */
   constructor ({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
-    if (!fs.existsSync(keystoresDir))
-      throw Error(`keystoresDir ${keystoresDir} does not exist`);
-    if (!fs.existsSync(secretsDir))
-      throw Error(`secretsDir ${secretsDir} does not exist`);
-
+    ensureDirExists(keystoresDir);
+    ensureDirExists(secretsDir);
     this.keystoresDir = keystoresDir;
     this.secretsDir = secretsDir;
   }

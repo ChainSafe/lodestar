@@ -3,15 +3,15 @@ import path from "path";
 import {CommandBuilder} from "yargs";
 import * as bip39 from "bip39";
 import {randomPassword, writeFile600Perm,YargsError} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
+import {IAccountWalletOptions} from "./options";
 
 export const command = "create";
 
 export const description = "Creates a new HD (hierarchical-deterministic) EIP-2386 wallet";
 
-interface IWalletCreateOptions extends IGlobalArgs {
+interface IWalletCreateOptions extends IAccountWalletOptions {
   name: string;
   passphraseFile: string;
   type: string;

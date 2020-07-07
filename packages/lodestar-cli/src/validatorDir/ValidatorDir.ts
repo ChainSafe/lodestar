@@ -132,11 +132,7 @@ export class ValidatorDir {
   }
 
   /**
-   * Saves the `tx_hash` to a file in `self.dir`.
-   *
-   * Errors
-   * If there is a file-system error, or if there is already a transaction hash stored in
-   * `self.dir`.
+   * Saves the `tx_hash` to a file in `this.dir`.
    */
   saveEth1DepositTxHash(txHash: string): void {
     const filepath = path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE);
@@ -148,12 +144,8 @@ export class ValidatorDir {
   }
 
   /**
-   * Attempts to read files in `self.dir` and return an `Eth1DepositData` that can be used for
+   * Attempts to read files in `this.dir` and return an `Eth1DepositData` that can be used for
    * submitting an Eth1 deposit.
-   *
-   * Errors
-   * If there is a file-system error, not all required files exist or the files are
-   * inconsistent.
    */
   eth1DepositData(config: IBeaconConfig): IEth1DepositData {
     const depositDataPath = path.join(this.dir, ETH1_DEPOSIT_DATA_FILE);
