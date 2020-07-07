@@ -454,6 +454,12 @@ export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEve
     return (node)? node.toBlockSummary() : null;
   }
 
+  public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter(node => this.config.types.Root.equals(fromHexString(node.parent.blockRoot), blockRoot))
+      .map(node => node.toBlockSummary());
+  }
+
   public hasBlock(blockRoot: Uint8Array): boolean {
     return !!this.getNode(blockRoot);
   }
