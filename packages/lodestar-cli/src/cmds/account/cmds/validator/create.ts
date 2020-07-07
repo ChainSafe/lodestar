@@ -111,6 +111,9 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
       config
     });
 
+    // Persist the nextaccount index after successfully creating the validator directory
+    walletManager.writeWallet(wallet);
+
     // eslint-disable-next-line no-console
     console.log(`${i}/${count}\t${votingPubkey}`);
   }

@@ -72,6 +72,15 @@ export class WalletManager {
     return new Wallet(walletKeystore);
   }
 
+  /**
+   * Persist wallet info to disk
+   */
+  writeWallet(wallet: Wallet): void {
+    if (!wallet.uuid) throw Error("Wallet UUID is not defined");
+    const walletInfoPath = path.join(this.walletsDir, wallet.uuid, wallet.uuid);
+    fs.writeFileSync(walletInfoPath, wallet.toWalletJSON());
+  }
+
   /**  
    * Creates a new wallet with the given `name` in `self.dir` with the given `mnemonic` as a
    * seed, encrypted with `password`.
@@ -91,10 +100,9 @@ export class WalletManager {
 
     if (fs.existsSync(walletDir))
       throw Error(`Wallet dir ${walletDir} already exists`);
-
     fs.mkdirSync(walletDir, {recursive: true});
-    const walletInfoPath = path.join(walletDir, wallet.uuid);
-    fs.writeFileSync(walletInfoPath, wallet.toWalletJSON());
+    
+    this.writeWallet(wallet);
 
     return wallet;
   }
