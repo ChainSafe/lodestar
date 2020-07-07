@@ -37,3 +37,5 @@ docs/assets
 .witti
 genesis.ssz
 witti.json
+.altona
+altona.json
