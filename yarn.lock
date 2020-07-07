@@ -909,27 +909,10 @@
     js-sha256 "^0.9.0"
     secure-random "^1.1.1"
 
-"@chainsafe/discv5@0.2.5":
+"@chainsafe/discv5@0.2.5", "@chainsafe/discv5@^0.2.5":
   version "0.2.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.5.tgz#30d05d2098117e4e2d452b6c8d942f06ffeb8081"
   integrity sha512-iE/VAUzHGLUVI5F2+yavcKHGf+hpOAgKEp7n7VpTId7OnNeHrxUqovMedIBOoNteGb/FqRaojBW382RjnGYEdA==
-  dependencies:
-    base64url "^3.0.1"
-    bcrypto "^4.2.8"
-    bigint-buffer "^1.1.5"
-    debug "^4.1.1"
-    dgram "^1.0.1"
-    is-ip "^3.1.0"
-    libp2p-crypto "^0.17.5"
-    multiaddr "^7.4.2"
-    peer-id "^0.13.11"
-    rlp "^2.2.4"
-    strict-event-emitter-types "^2.0.0"
-
-"@chainsafe/discv5@^0.2.4":
-  version "0.2.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.4.tgz#5153463a89f46b37ca8a21414aba2b6460af20a3"
-  integrity sha512-Y/13eVEIEpGdWRa3sh1fsYISoHy8/2Y1E6OtzCNt/E2oAUpYVY3Xg4F7HBLnakndD39nl1Y19cruZb3CDx+lYQ==
   dependencies:
     base64url "^3.0.1"
     bcrypto "^4.2.8"
@@ -9736,9 +9719,9 @@ libp2p-tcp@^0.14.5:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#23a74d502d7b9a1395423e3f26372e7884f0838e"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#fbc56be8111f9e39be1a0e838b28c00045a9d63f"
   dependencies:
-    "@chainsafe/discv5" "^0.2.4"
+    "@chainsafe/discv5" "^0.2.5"
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"
     libp2p-gossipsub "^0.4.5"
