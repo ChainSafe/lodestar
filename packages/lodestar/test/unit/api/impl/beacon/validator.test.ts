@@ -27,8 +27,6 @@ describe("get validator details api", function () {
   });
 
   it("should get validator details", async function () {
-    // allow 1st test calling generateState more time
-    this.timeout(10000);
     const state = generateState({
       validators: [
         generateValidator({
