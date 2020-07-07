@@ -1,15 +1,15 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../../../options";
-import {defaultPaths} from "../../paths";
+import {defaultAccountPaths} from "../../paths";
 
 export interface IAccountWalletOptions extends IGlobalArgs {
   walletsDir?: string;
 }
 
-export const accountWalletsOptions: {[key: string]: Options} = {
+export const accountWalletsOptions = {
   walletsDir: {
-    description: `The directory for storing wallets.\n[default: ${defaultPaths.walletsDir}]`,
+    description: `The directory for storing wallets.\n[default: ${defaultAccountPaths.walletsDir}]`,
     normalize: true,
     type: "string",
-  }
+  } as Options
 };

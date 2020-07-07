@@ -8,9 +8,10 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {getBeaconConfig, YargsError} from "../../util";
-import {IValidatorCliOptions} from "./options";
-import {getAccountPaths, getValidatorPaths} from "../account/paths";
 import {ValidatorDirManager} from "../../validatorDir";
+import {getAccountPaths} from "../account/paths";
+import {getValidatorPaths} from "./paths"
+import {IValidatorCliOptions} from "./options";
 
 /**
  * Run a validator client

@@ -1,6 +1,6 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../../../options";
-import {defaultPaths} from "../../paths";
+import {defaultAccountPaths} from "../../paths";
 import {chainPreset, IChainArgs} from "../../../dev/options/chain";
 
 export interface IAccountValidatorOptions extends IGlobalArgs, IChainArgs {
@@ -8,18 +8,18 @@ export interface IAccountValidatorOptions extends IGlobalArgs, IChainArgs {
   secretsDir?: string;
 }
 
-export const accountValidatorOptions: {[key: string]: Options} = {
+export const accountValidatorOptions = {
   chainPreset,
 
   keystoresDir: {
-    description: `The directory for storing validator keystores.\n[default: ${defaultPaths.keystoresDir}]`,
+    description: `The directory for storing validator keystores.\n[default: ${defaultAccountPaths.keystoresDir}]`,
     normalize: true,
     type: "string",
-  },
+  } as Options,
 
   secretsDir: {
-    description: `The directory for storing validator keystore secrets.\n[default: ${defaultPaths.secretsDir}]`,
+    description: `The directory for storing validator keystore secrets.\n[default: ${defaultAccountPaths.secretsDir}]`,
     normalize: true,
     type: "string",
-  },
+  } as Options,
 };
