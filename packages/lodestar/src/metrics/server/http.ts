@@ -2,11 +2,10 @@
  * @module metrics/server
  */
 import http from "http";
-import url from "url";
 import {promisify} from "es6-promisify";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 export class HttpMetricsServer implements IMetricsServer {
   public http: http.Server;
@@ -39,7 +38,7 @@ export class HttpMetricsServer implements IMetricsServer {
   }
 
   private onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    if (req.method === "GET" && url.parse(req.url as string, true).pathname === "/metrics") {
+    if (req.method === "GET" && req.url.includes("/metrics")) {
       res.writeHead(200, {"content-type": this.metrics.registry.contentType});
       res.end(this.metrics.registry.metrics());
     } else {

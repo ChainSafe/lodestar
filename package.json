@@ -10,7 +10,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
-    "cli": "./packages/lodestar-cli/bin/lodestar"
+    "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.3",
@@ -35,6 +35,7 @@
     "codecov": "^3.6.5",
     "eslint": "^6.8.0",
     "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-node": "^11.1.0",
     "lerna": "^3.20.2",
     "mocha": "^6.2.2",
     "nyc": "^14.1.1",
