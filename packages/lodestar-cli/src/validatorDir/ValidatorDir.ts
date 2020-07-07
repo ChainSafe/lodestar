@@ -5,7 +5,7 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {stripOffNewlines} from "../util/stripOffNewlines";
+import {stripOffNewlines} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {
   VOTING_KEYSTORE_FILE,

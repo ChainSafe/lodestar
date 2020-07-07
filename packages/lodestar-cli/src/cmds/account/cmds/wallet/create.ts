@@ -2,9 +2,7 @@ import fs from "fs";
 import path from "path";
 import {CommandBuilder} from "yargs";
 import * as bip39 from "bip39";
-import {randomPassword} from "../../../../util/randomPassword";
-import {writeFile600Perm} from "../../../../util/fs";
-import {YargsError} from "../../../../util/errors";
+import {randomPassword, writeFile600Perm,YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
 

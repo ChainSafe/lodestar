@@ -7,7 +7,7 @@ import {devCommandModule} from "./cmds/dev";
 import {validatorCommandModule} from "./cmds/validator";
 import * as accountCommandModule from "./cmds/account";
 import {globalOptions} from "./options";
-import {YargsError} from "./util/errors";
+import {YargsError} from "./util";
 
 const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
 const bottomBanner = "for more information, checks the docs https://chainsafe.github.io/lodestar";

@@ -4,7 +4,7 @@ import {ValidatorDirManager} from "../../../../validatorDir";
 import {processValidatorPaths} from "../../../validator/paths";
 import {IGlobalArgs} from "../../../../options";
 import {IChainArgs} from "../../../dev/options/chain";
-import {getBeaconConfig} from "../../../../util/config";
+import {getBeaconConfig} from "../../../../util";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 

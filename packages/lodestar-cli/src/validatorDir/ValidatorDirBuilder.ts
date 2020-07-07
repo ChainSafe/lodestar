@@ -5,7 +5,7 @@ import {PublicKey, PrivateKey} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
 import {encodeDepositData} from "../depositContract/depositData";
-import {writeFile600Perm} from "../util/fs";
+import {writeFile600Perm} from "../util";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,

@@ -8,8 +8,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-import {getBeaconConfig} from "../../util/config";
-import {YargsError} from "../../util/errors";
+import {getBeaconConfig, YargsError} from "../../util";
 import {IValidatorCliOptions} from "./options";
 import {processValidatorPaths} from "./paths";
 import {ValidatorDirManager} from "../../validatorDir";

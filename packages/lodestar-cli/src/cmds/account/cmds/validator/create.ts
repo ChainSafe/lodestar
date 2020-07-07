@@ -4,10 +4,8 @@ import {processValidatorPaths} from "../../../validator/paths";
 import {IGlobalArgs} from "../../../../options";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines} from "../../../../util/stripOffNewlines";
-import {randomPassword} from "../../../../util/randomPassword";
+import {stripOffNewlines, randomPassword, getBeaconConfig} from "../../../../util";
 import {IChainArgs} from "../../../dev/options/chain";
-import {getBeaconConfig} from "../../../../util/config";
 
 interface IValidatorCreateOptions extends IGlobalArgs, IChainArgs {
   name: string;
