@@ -44,29 +44,21 @@ describe("api - beacon - getBlockHeader", function () {
   });
 
   it("block not found", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, "1").resolves(null);
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "1").resolves(null);
     const result = await blockApi.getBlockHeader("1");
     expect(result).to.be.null;
   });
 
   it("invalid block id", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any,"abc").throwsException();
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"abc").throwsException();
     await expect(blockApi.getBlockHeader("abc")).to.eventually.be.rejected;
   });
 
-  it("success for non finalized block", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any,"head").resolves(Buffer.alloc(1));
-    dbStub.block.get.withArgs(Buffer.alloc(1)).resolves(generateEmptySignedBlock());
+  it("success for block", async function () {
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"head").resolves(generateEmptySignedBlock());
     const result = await blockApi.getBlockHeader("head");
     expect(result).to.not.be.null;
     expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
   });
-
-  it.skip("success for finalized block", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any,"0").resolves(Buffer.alloc(1));
-    const result = await blockApi.getBlockHeader("0");
-    expect(result).to.not.be.null;
-  });
-
 
 });
