@@ -20,7 +20,6 @@ export function toBeaconHeaderResponse(
   };
 }
 
-// this will need async once we wan't to resolve archive slot
 export async function resolveBlockId(
   config: IBeaconConfig, forkChoice: ILMDGHOST, db: IBeaconDb, blockId: BlockId
 ): Promise<SignedBeaconBlock|null> {

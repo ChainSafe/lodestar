@@ -32,7 +32,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public async getByRoot(root: Root): Promise<SignedBeaconBlock|null> {
     const slot = await this.getSlotByRoot(root);
-    if(slot && slot !== 0) {
+    if(slot || slot === 0) {
       return this.get(slot);
     }
     return null;
