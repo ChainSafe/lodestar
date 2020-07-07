@@ -7,14 +7,10 @@ import {validatorCommandModule} from "./cmds/validator";
 import {globalOptions} from "./options";
 import {YargsError} from "./util/errors";
 
-
 yargs
   .env("LODESTAR")
   .options(globalOptions)
   .command(devCommandModule)
-  .coerce("template-config-file", function (arg) {
-    return require("fs").readFileSync(arg, "utf8")
-  }).fail(err => console.log(err))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   .command(beaconCmd as any)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

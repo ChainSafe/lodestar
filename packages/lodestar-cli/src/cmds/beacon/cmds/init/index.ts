@@ -13,7 +13,9 @@ export const description = "Initialize lodestar beacon node";
 export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs> {
   yargs.options(beaconInitOptions);
   const args = parseArgs(yargs) as IBeaconInitArgs;
+
   if (args.templateConfigFile) {
+    require("fs").readFileSync(args.templateConfigFile, "utf8");
     yargs.config(readBeaconConfig(args.templateConfigFile));
   }
   return yargs as unknown as Argv<IBeaconArgs>;
