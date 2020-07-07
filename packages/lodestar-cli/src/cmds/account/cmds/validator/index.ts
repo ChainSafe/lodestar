@@ -1,5 +1,4 @@
 import {CommandBuilder} from "yargs";
-
 import {accountValidatorOptions, IAccountValidatorOptions} from "./options";
 import * as create from "./create";
 import * as deposit from "./deposit";

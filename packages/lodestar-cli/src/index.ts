@@ -1,11 +1,10 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 
-import * as beaconCmd from "./cmds/beacon";
-
-import {devCommandModule} from "./cmds/dev";
-import {validatorCommandModule} from "./cmds/validator";
-import * as accountCommandModule from "./cmds/account";
+import * as dev from "./cmds/dev";
+import * as beacon from "./cmds/beacon";
+import * as validator from "./cmds/validator";
+import * as account from "./cmds/account";
 import {globalOptions} from "./options";
 import {YargsError} from "./util";
 
@@ -15,13 +14,10 @@ const bottomBanner = "for more information, checks the docs https://chainsafe.gi
 yargs
   .env("LODESTAR")
   .options(globalOptions)
-  .command(devCommandModule)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .command(beaconCmd as any)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .command(validatorCommandModule as any)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .command(accountCommandModule as any)
+  .command(dev)
+  .command(beacon)
+  .command(validator)
+  .command(account)
   // blank scriptName so that help text doesn't display the cli name before each command
   .scriptName("")
   .demandCommand(1)

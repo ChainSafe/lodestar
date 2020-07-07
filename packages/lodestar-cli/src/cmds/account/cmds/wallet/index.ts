@@ -1,5 +1,4 @@
 import {CommandBuilder} from "yargs";
-
 import {accountWalletsOptions, IAccountWalletOptions} from "./options";
 import * as create from "./create";
 import * as list from "./list";

@@ -1,11 +1,10 @@
-import {CommandModule} from "yargs";
 import {run} from "./run";
-import {validatorOptions, IValidatorCliOptions} from "./options";
-import {IGlobalArgs} from "../../options";
+import {validatorOptions} from "./options";
 
-export const validatorCommandModule: CommandModule<IGlobalArgs, IValidatorCliOptions> = {
-  command: "validator",
-  describe: "Run one or multiple validator clients",
-  builder: validatorOptions,
-  handler: run,
-};
+export const command = "validator";
+
+export const description = "Run one or multiple validator clients";
+
+export const builder = validatorOptions;
+
+export const handler = run;

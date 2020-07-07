@@ -1,7 +1,5 @@
 import {Argv} from "yargs";
-
 import {IGlobalArgs} from "../../options";
-
 import {mergeBeaconOptions} from "./options";
 import * as init from "./cmds/init";
 import * as run from "./cmds/run";
@@ -18,5 +16,4 @@ export function builder(yargs: Argv<IGlobalArgs>): Argv {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
-export function handler(): void {
-}
+export function handler(): void {}
