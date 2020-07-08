@@ -251,19 +251,23 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
     this.db.stateCache.add({state: lastKnownState, epochCtx});
-    // the block respective to finalized epoch is still in block db
-    const allBlocks = await this.db.block.values();
-    if (!allBlocks || allBlocks.length === 0) {
+    // there might be blocks in the archive we need to reprocess
+    const finalizedBlocks = await this.db.blockArchive.values({gte: lastKnownState.slot});
+    // the block respective to finalized epoch still in block db
+    const unfinalizedBlocks = await this.db.block.values();
+    if (!unfinalizedBlocks || unfinalizedBlocks.length === 0) {
       return;
     }
-    const sortedBlocks = sortBlocks(allBlocks);
+    const sortedBlocks = finalizedBlocks.concat(sortBlocks(unfinalizedBlocks));
     const firstBlock = sortedBlocks[0];
     const lastBlock = sortedBlocks[sortedBlocks.length - 1];
     let firstSlot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
-    this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`);
+    this.logger.info(
+      `Found ${sortedBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`
+    );
     // initially we initialize database with genesis block
-    if (allBlocks.length === 1) {
+    if (sortedBlocks.length === 1) {
       // start from scratch
       const blockHash = this.config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
       if (this.config.types.Root.equals(blockHash, this.forkChoice.headBlockRoot())) {
@@ -310,7 +314,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       ...processedBlocks.map(block => this.receiveBlock(block, true, true)),
       this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message))
     ]);
-    this.logger.important(`Finish restoring chain head from ${allBlocks.length} blocks`);
+    this.logger.important(`Finish restoring chain head from ${sortedBlocks.length} blocks`);
     this.logger.profile("restoreHeadState");
   }
 
