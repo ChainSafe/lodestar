@@ -113,6 +113,8 @@ export class ValidatorApi implements IValidatorApi {
       await validateAttestation(this.config, this.db, await this.chain.getHeadState(), attestation);
     } catch (e) {
       console.log(e);
+      console.log(attestation);
+      console.log(this.config.types.Attestation.toJson(attestation));
     }
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),

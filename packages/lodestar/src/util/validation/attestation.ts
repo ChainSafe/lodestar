@@ -59,7 +59,7 @@ export async function validateAttestation(
     processSlots(config, state, attestation.data.slot);
   }
   // Make sure this is unaggregated attestation
-  assert.true(isUnaggregatedAttestation(config, state, attestation), "Attestation is aggregated");
+  assert.true(isUnaggregatedAttestation(config, state, attestation), "Attestation is aggregated or doesn't have aggregation bits");
   assert.true(
     await hasValidatorAttestedForThatTargetEpoch(config, db, state, attestation),
     "Validator already attested for that target epoch"
