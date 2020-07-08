@@ -42,6 +42,8 @@ import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
+import {validateAttestation} from "../../../util/validation/attestation";
+import {ValidationError} from "../errors/validation";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -108,6 +110,11 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
+    try {
+      await validateAttestation(this.config, this.db, await this.chain.getHeadState(), attestation);
+    } catch (e) {
+      console.log(e);
+    }
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation)

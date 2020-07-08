@@ -32,6 +32,12 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
+import {
+  hasValidatorAttestedForThatTargetEpoch,
+  hasValidAttestationSlot,
+  isAttestingToValidBlock,
+  isUnaggregatedAttestation, validateAttestation
+} from "../../util/validation/attestation";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -99,39 +105,22 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   };
 
   public isValidIncomingCommitteeAttestation = async (attestation: Attestation, subnet: number): Promise<boolean> => {
-    const attestationData = attestation.data;
-    const slot = attestationData.slot;
     const state = await this.chain.getHeadState();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    if (!(slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot && currentSlot >= slot)) {
+    if(!hasValidAttestationSlot(this.config, state.genesisTime, attestation)) {
       return false;
     }
-    if (state.slot < slot) {
-      processSlots(this.config, state, slot);
+    if (state.slot < attestation.data.slot) {
+      processSlots(this.config, state, attestation.data.slot);
     }
     if (subnet !== computeSubnetForAttestation(this.config, state, attestation)) {
       return false;
     }
-    // Make sure this is unaggregated attestation
-    if (getAttestingIndices(this.config, state, attestationData, attestation.aggregationBits).length !== 1) {
+    try {
+      await validateAttestation(this.config, this.db, state, attestation);
+      return true;
+    } catch (e) {
       return false;
     }
-    const existingAttestations = await this.db.attestation.geAttestationsByTargetEpoch(
-      attestationData.target.epoch
-    );
-    // each attestation has only 1 validator index
-    const existingValidatorIndexes = existingAttestations.map(
-      item => getAttestingIndices(this.config, state, item.data, item.aggregationBits)[0]);
-    // attestation is unaggregated attestation as validated above
-    const validatorIndex = getAttestingIndices(this.config, state, attestationData, attestation.aggregationBits)[0];
-    if (existingValidatorIndexes.includes(validatorIndex)) {
-      return false;
-    }
-    const blockRoot = attestationData.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
-      return false;
-    }
-    return isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation));
   };
 
   public isValidIncomingAggregateAndProof =
