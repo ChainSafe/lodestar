@@ -32,12 +32,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
-import {
-  hasValidatorAttestedForThatTargetEpoch,
-  hasValidAttestationSlot,
-  isAttestingToValidBlock,
-  isUnaggregatedAttestation, validateAttestation
-} from "../../util/validation/attestation";
+import {hasValidAttestationSlot, validateAttestation} from "../../util/validation/attestation";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {

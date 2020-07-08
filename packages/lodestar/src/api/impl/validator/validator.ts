@@ -32,10 +32,10 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
+  computeSubnetForSlot,
   getBeaconProposerIndex,
   getDomain,
-  processSlots,
-  computeSubnetForSlot
+  processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
@@ -43,7 +43,6 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {validateAttestation} from "../../../util/validation/attestation";
-import {ValidationError} from "../errors/validation";
 
 export class ValidatorApi implements IValidatorApi {
 

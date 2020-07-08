@@ -1,7 +1,8 @@
 import {
-  computeSubnetForAttestation,
   getAttestingIndices,
-  getCurrentSlot, getIndexedAttestation, isValidIndexedAttestation,
+  getCurrentSlot,
+  getIndexedAttestation,
+  isValidIndexedAttestation,
   processSlots
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -16,7 +17,7 @@ import {assert} from "@chainsafe/lodestar-utils";
 export function hasValidAttestationSlot(config: IBeaconConfig, genesisTime: number, attestation: Attestation): boolean {
   const currentSlot = getCurrentSlot(config, genesisTime);
   return attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot
-      && currentSlot >= attestation.data.slot;
+        && currentSlot >= attestation.data.slot;
 }
 
 export function isUnaggregatedAttestation(
