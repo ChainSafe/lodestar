@@ -1,13 +1,13 @@
 import {Root, Slot} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
-export const getBlockHeaders: ApiController<{slot?: string; parent_root?: string}> = {
+export const getBlockHeaders: ApiController<{slot?: string|number; parent_root?: string}> = {
 
   url: "/v1/beacon/headers",
 
   handler: async function (req, resp) {
     let slot: Slot|undefined;
-    if(req.query.slot || req.query.slot == "0") {
+    if(req.query.slot || req.query.slot === 0) {
       slot = this.config.types.Slot.fromJson(req.query.slot);
     }
     let parentRoot: Root|undefined;
