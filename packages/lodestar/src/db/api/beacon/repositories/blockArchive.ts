@@ -4,8 +4,8 @@ import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
 import {Bucket, encodeKey} from "../../schema";
-import {Repository} from "./abstract";
 import {ArrayLike} from "@chainsafe/ssz";
+import {Id, Repository} from "./abstract";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
@@ -121,5 +121,9 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
         this.config.types.BeaconBlock.hashTreeRoot(block.message)
       )
     );
+  }
+
+  private getParentIndexKey(parentRoot: Root): Id {
+    return encodeKey(Bucket.blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
   }
 }
