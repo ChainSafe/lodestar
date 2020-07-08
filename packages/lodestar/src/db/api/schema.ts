@@ -13,7 +13,7 @@ export enum Bucket {
   // finalized blocks
   blockArchive, // Slot -> SignedBeaconBlock
   blockArchiveParentRootIndex, // parent Root -> Slot
-  blockArchiveRootRef, // Root -> Slot
+  blockArchiveRootIndex, // Root -> Slot
   // known bad block
   invalidBlock, // Root -> boolean
   // finalized chain

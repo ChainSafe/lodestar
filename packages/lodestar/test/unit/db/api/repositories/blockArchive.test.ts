@@ -112,30 +112,48 @@ describe("block archive repository", function () {
     }
   });
 
-  it("should store block root ref when adding single block", async function () {
+  it("should store indexes when adding single block", async function () {
     const spy = sinon.spy(controller, "put");
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     expect(
       spy.withArgs(
         encodeKey(
-          Bucket.blockArchiveRootRef,
+          Bucket.blockArchiveRootIndex,
           config.types.BeaconBlock.hashTreeRoot(block.message)
+        ),
+        intToBytes(block.message.slot, 64, "be")
+      ).calledOnce
+    ).to.be.true;
+    expect(
+      spy.withArgs(
+        encodeKey(
+          Bucket.blockArchiveParentRootIndex,
+          block.message.parentRoot.valueOf() as Uint8Array
         ),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
   });
 
-  it("should store block root ref when block batch", async function () {
+  it("should store indexes when block batch", async function () {
     const spy = sinon.spy(controller, "put");
     const blocks = [generateEmptySignedBlock(), generateEmptySignedBlock()];
     await blockArchive.batchAdd(blocks);
     expect(
       spy.withArgs(
         encodeKey(
-          Bucket.blockArchiveRootRef,
+          Bucket.blockArchiveRootIndex,
           config.types.BeaconBlock.hashTreeRoot(blocks[0].message)
+        ),
+        intToBytes(blocks[0].message.slot, 64, "be")
+      ).calledTwice
+    ).to.be.true;
+    expect(
+      spy.withArgs(
+        encodeKey(
+          Bucket.blockArchiveParentRootIndex,
+          blocks[0].message.parentRoot.valueOf() as Uint8Array
         ),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
@@ -153,6 +171,20 @@ describe("block archive repository", function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+  });
+
+  it("should get slot by parent root", async function () {
+    const block = generateEmptySignedBlock();
+    await blockArchive.add(block);
+    const slot = await blockArchive.getSlotByParenRoot(block.message.parentRoot);
+    expect(slot).to.equal(block.message.slot);
+  });
+
+  it("should get block by parent root", async function () {
+    const block = generateEmptySignedBlock();
+    await blockArchive.add(block);
+    const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
     expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 });
