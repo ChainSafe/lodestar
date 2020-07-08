@@ -149,9 +149,17 @@ describe("GossipMessageValidator", () => {
       });
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
       });
-      dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      dbStub.stateCache.get.resolves({state, epochCtx});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -169,9 +177,17 @@ describe("GossipMessageValidator", () => {
       });
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
       });
-      dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      dbStub.stateCache.get.resolves({state, epochCtx});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
@@ -179,7 +195,6 @@ describe("GossipMessageValidator", () => {
       verifyBlockSignatureStub.returns(true);
       epochCtxStub.getBeaconProposer.returns(1000);
       expect(await validator.isValidIncomingBlock(block)).to.be.false;
-      expect(epochCtxStub.getBeaconProposer.calledOnce).to.be.true;
     });
 
     it("should return valid incoming block", async () => {
@@ -189,17 +204,25 @@ describe("GossipMessageValidator", () => {
       });
       dbStub.block.get.resolves(generateEmptySignedBlock());
       const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
       });
-      dbStub.stateCache.get.resolves({state, epochCtx: epochCtxStub as unknown as EpochContext});
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      dbStub.stateCache.get.resolves({state, epochCtx});
       const block = generateEmptySignedBlock();
       block.message.slot = getCurrentSlot(config, state.genesisTime);
       chainStub.getBlockAtSlot.resolves(null);
       dbStub.badBlock.has.resolves(false);
       verifyBlockSignatureStub.returns(true);
-      epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+      sandbox.stub(epochCtx);
+      (epochCtx.getBeaconProposer as any).returns(block.message.proposerIndex);
       expect(await validator.isValidIncomingBlock(block)).to.be.equal(true);
-      expect(epochCtxStub.getBeaconProposer.calledOnce).to.be.true;
     });
 
     it("should return valid incoming block - block in previous epoch", async () => {
@@ -225,8 +248,18 @@ describe("GossipMessageValidator", () => {
 
   describe("validate committee attestation", () => {
     it("should return invalid committee attestation - invalid subnet", async () => {
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       const attestation = generateEmptyAttestation();
       const invalidSubnet = 2000;
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, invalidSubnet)).to.be.false;
@@ -234,18 +267,37 @@ describe("GossipMessageValidator", () => {
 
     it("should return invalid committee attestation - invalid slot", async () => {
       const attestation = generateEmptyAttestation();
-      const state = generateState();
-      state.genesisTime = Math.floor(new Date("2000-01-01").getTime()) / 1000;
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(new Date("2000-01-01").getTime()) / 1000,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(chainStub.getHeadState.calledOnce).to.be.true;
+      expect(chainStub.getHeadStateContext.calledOnce).to.be.true;
     });
 
     it("should return invalid committee attestation - invalid unaggregated attestation", async () => {
       const attestation = generateEmptyAttestation();
       // aggregationBits are all false
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       getAttestingIndicesStub.returns([]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.false;
@@ -254,8 +306,18 @@ describe("GossipMessageValidator", () => {
     it("should return invalid committee attestation - prevent DOS", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([attestation]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -268,8 +330,18 @@ describe("GossipMessageValidator", () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(false);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -283,8 +355,18 @@ describe("GossipMessageValidator", () => {
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(true);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -297,8 +379,18 @@ describe("GossipMessageValidator", () => {
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
@@ -312,8 +404,18 @@ describe("GossipMessageValidator", () => {
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(false);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
       getAttestingIndicesStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
@@ -531,6 +633,18 @@ describe("GossipMessageValidator", () => {
     it("should return invalid Voluntary Exit - existing", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(true);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
       expect(isValidIncomingVoluntaryExitStub.called).to.be.false;
     });
@@ -538,8 +652,18 @@ describe("GossipMessageValidator", () => {
     it("should return invalid Voluntary Exit - invalid", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       isValidIncomingVoluntaryExitStub.returns(false);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.false;
       expect(isValidIncomingVoluntaryExitStub.called).to.be.true;
@@ -548,8 +672,18 @@ describe("GossipMessageValidator", () => {
     it("should return valid Voluntary Exit", async () => {
       const voluntaryExit = generateEmptySignedVoluntaryExit();
       dbStub.voluntaryExit.has.resolves(false);
-      const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      const state = generateState({
+        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      chainStub.getHeadStateContext.resolves({state, epochCtx});
       isValidIncomingVoluntaryExitStub.returns(true);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(true);
     });
