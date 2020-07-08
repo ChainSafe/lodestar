@@ -66,12 +66,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   }
 
   public async start(): Promise<void> {
+    this.logger.verbose("Gossip starting");
     await this.pubsub.start();
     this.registerHandlers(this.chain.currentForkDigest);
     this.chain.on("forkDigest", this.handleForkDigest);
   }
 
   public async stop(): Promise<void> {
+    this.logger.verbose("Gossip stopping");
     this.unregisterHandlers();
     this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();
@@ -138,6 +140,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
+    this.logger.verbose("Unsubscribe to gossip", {event, forkDigest: toHexString(forkDigest)});
     if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
       this.supportedEncodings.forEach((encoding) => {
         this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
@@ -166,6 +169,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
+    this.logger.verbose("Subscribe to gossip", {event, forkDigest: toHexString(forkDigest)});
     if(this.listenerCount(event.toString()) === 0 && !event.toString().startsWith("gossipsub")) {
       this.supportedEncodings.forEach((encoding) => {
         this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
