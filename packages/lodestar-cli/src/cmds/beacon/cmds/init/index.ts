@@ -14,9 +14,8 @@ export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs> {
   yargs.options(beaconInitOptions);
   const args = parseArgs(yargs) as IBeaconInitArgs;
 
-  const {templateConfigFile} = args;
-  if (templateConfigFile) {
-    yargs.config(readBeaconConfig(templateConfigFile));
+  if (args.templateConfigFile) {
+    yargs.config(readBeaconConfig(args.templateConfigFile));
   }
   return yargs as unknown as Argv<IBeaconArgs>;
 }
