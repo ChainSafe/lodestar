@@ -1,18 +1,16 @@
-import {CommandBuilder} from "yargs";
+import {CommandModule} from "yargs";
+import {IGlobalArgs} from "../../../../options";
 import {accountWalletsOptions, IAccountWalletOptions} from "./options";
 import * as create from "./create";
 import * as list from "./list";
 
-export const command = "wallet <command>";
-
-export const description = "Provides commands for managing Eth2 wallets.";
-
-export const builder: CommandBuilder<{}, IAccountWalletOptions> = (yargs) => {
-  return yargs
+export const wallet: CommandModule<IGlobalArgs, IAccountWalletOptions> = {
+  command: "wallet <command>",
+  describe: "Provides commands for managing Eth2 wallets.",
+  builder: (yargs) => yargs
     .options(accountWalletsOptions)
     .command(create)
-    .command(list);
+    .command(list),
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  handler: () => {}
 };
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export function handler(): void {}

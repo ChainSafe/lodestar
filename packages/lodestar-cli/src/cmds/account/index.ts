@@ -1,17 +1,14 @@
-import {CommandBuilder} from "yargs";
+import {CommandModule} from "yargs";
 import {IGlobalArgs} from "../../options";
-import * as wallet from "./cmds/wallet";
-import * as validator from "./cmds/validator";
+import {validator} from "./cmds/validator";
+import {wallet} from "./cmds/wallet";
 
-export const command = ["account <command>", "am", "a"];
-
-export const description = "Utilities for generating and managing Ethereum 2.0 accounts";
-
-export const builder: CommandBuilder<{}, IGlobalArgs> = (yargs) => {
-  return yargs
+export const account: CommandModule<IGlobalArgs, IGlobalArgs> = {
+  command: ["account <command>", "am", "a"],
+  describe: "Utilities for generating and managing Ethereum 2.0 accounts",
+  builder: (yargs) => yargs
     .command(validator)
-    .command(wallet);
+    .command(wallet),
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  handler: () => {}
 };
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export function handler(): void {}

@@ -1,10 +1,10 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 
-import * as dev from "./cmds/dev";
-import * as beacon from "./cmds/beacon";
-import * as validator from "./cmds/validator";
-import * as account from "./cmds/account";
+import {dev} from "./cmds/dev";
+import {beacon} from "./cmds/beacon";
+import {validator} from "./cmds/validator";
+import {account} from "./cmds/account";
 import {globalOptions} from "./options";
 import {YargsError} from "./util";
 
