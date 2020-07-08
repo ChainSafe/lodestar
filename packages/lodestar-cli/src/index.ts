@@ -7,6 +7,7 @@ import {validatorCommandModule} from "./cmds/validator";
 import {globalOptions} from "./options";
 import {YargsError} from "./util/errors";
 
+
 yargs
   .env("LODESTAR")
   .options(globalOptions)
