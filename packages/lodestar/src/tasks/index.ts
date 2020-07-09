@@ -5,8 +5,7 @@
 import {IService} from "../node";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
-import {IBeaconChain} from "../chain";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {IBeaconChain, BlockSummary} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -49,7 +48,7 @@ export class TasksService implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.on("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    this.chain.forkChoice.on("prune", this.handleFinalizedCheckpointChores);
     await this.interopSubnetsTask.start();
   }
 
@@ -58,9 +57,9 @@ export class TasksService implements IService {
     await this.interopSubnetsTask.stop();
   }
 
-  private handleFinalizedCheckpointChores = async (finalizedCheckpoint: Checkpoint): Promise<void> => {
-    new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
-    new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalizedCheckpoint).run();
+  private handleFinalizedCheckpointChores = async (finalized: BlockSummary, pruned: BlockSummary[]): Promise<void> => {
+    new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
+    new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
   };
 
 }
