@@ -28,7 +28,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  DomainType,
+  DomainType, getCurrentSlot,
   getDomain,
   isSlashableAttestationData,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -69,11 +69,13 @@ export class AttestationService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
+    console.log({currentEpoch: epoch});
     let attesterDuties: AttesterDuty[] | undefined;
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
     } catch (e) {
       this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
+      return;
     }
     if (
       attesterDuties && attesterDuties.length === 1 &&
@@ -108,6 +110,7 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
+      this.nextAttesterDuties.delete(slot);
       await this.waitForAttestationBlock(slot);
       let attestation: Attestation|undefined;
       let fork, genesisValidatorsRoot;

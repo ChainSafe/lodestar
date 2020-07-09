@@ -145,6 +145,7 @@ export class ValidatorApi implements IValidatorApi {
     if(state.slot < currentSlot) {
       processSlots(epochCtx, state, currentSlot);
     }
+    console.log({currentSlot, stateSlot: state.slot});
     const validatorIndexes = validatorPubKeys.map((key) => epochCtx.pubkey2index.get(key));
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(

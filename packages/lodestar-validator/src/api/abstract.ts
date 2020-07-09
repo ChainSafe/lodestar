@@ -88,7 +88,8 @@ export abstract class AbstractApiClient
     if(!this.slotCountingTimeout) {
       this.slotCountingTimeout = setTimeout(
         this.updateSlot,
-        diffTillNextSlot
+        //delay to prevent validator requesting duties too early since we don't account for millis diff
+        diffTillNextSlot + 500
       );
     }
   }
@@ -98,6 +99,7 @@ export abstract class AbstractApiClient
       return;
     }
     this.currentSlot++;
+    console.log({vCurrentSlot: this.currentSlot});
     this.newSlotCallbacks.forEach((cb) => {
       cb(this.currentSlot);
     });
