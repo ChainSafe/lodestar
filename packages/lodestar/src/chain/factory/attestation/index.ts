@@ -21,11 +21,6 @@ export async function assembleAttestation(
   }
   const aggregationBits = getAggregationBits(committee, validatorIndex);
   const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
-  console.log("produced attestation", {
-    aggregationBits,
-    data,
-    signature: EMPTY_SIGNATURE
-  });
   return {
     aggregationBits,
     data,

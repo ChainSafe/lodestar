@@ -32,7 +32,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  computeSubnetForSlot,
+  computeSubnetForSlot, getCurrentSlot,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
@@ -84,9 +84,6 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadBlock(),
         this.chain.getHeadStateContext(),
       ]);
-      if (slot > headState.slot) {
-        processSlots(epochCtx, headState, slot);
-      }
       return await assembleAttestation(
         {config: this.config, db: this.db},
         headState,
@@ -144,16 +141,16 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const {epochCtx, state} = await this.chain.getHeadStateContext();
-    if (state.slot < computeStartSlotAtEpoch(this.config, epoch)) {
-      processSlots(epochCtx, state, computeStartSlotAtEpoch(this.config, epoch));
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    if(state.slot < currentSlot) {
+      processSlots(epochCtx, state, currentSlot);
     }
     const validatorIndexes = validatorPubKeys.map((key) => epochCtx.pubkey2index.get(key));
-
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(
         this.config,
         {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
-        state,
+        epochCtx,
         epoch
       );
     });
