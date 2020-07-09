@@ -41,7 +41,7 @@ export class ArchiveBlocksTask implements ITask {
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
   public async run(): Promise<void> {
-    this.logger.profile("Archieve Blocks");
+    this.logger.profile("Archive Blocks");
     const allBlocks = await this.db.block.values();
     const blocks = allBlocks.filter(
       (block) => block.message.slot <= this.finalized.slot
@@ -69,7 +69,7 @@ export class ArchiveBlocksTask implements ITask {
       this.db.blockArchive.batchAdd(archivedBlocks),
       this.db.block.batchRemove(blocks)
     ]);
-    this.logger.profile("Archieve Blocks");
+    this.logger.profile("Archive Blocks");
     this.logger.info(`Archiving of ${archivedBlocks.length} finalized blocks from slot ${fromSlot} to ${toSlot}`
         + ` completed (finalized epoch #${epoch})`);
   }

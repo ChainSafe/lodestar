@@ -42,7 +42,7 @@ export class ArchiveStatesTask implements ITask {
     this.logger.info(
       `Started archiving states (finalized epoch #${epoch})...`
     );
-    this.logger.profile("Archieve States");
+    this.logger.profile("Archive States");
     // store the state of finalized checkpoint
     const finalizedState = (await this.db.stateCache.get(this.finalized.stateRoot)).state;
     await this.db.stateArchive.add(finalizedState);
@@ -51,6 +51,6 @@ export class ArchiveStatesTask implements ITask {
     this.db.stateCache.batchDelete(prunedStates);
     this.logger.info(
       `Archiving of finalized states completed (finalized epoch #${epoch})`);
-    this.logger.profile("Archieve States");
+    this.logger.profile("Archive States");
   }
 }
