@@ -20,11 +20,17 @@ export function isValidIndexedAttestation(
   if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
     return false;
   }
-  // verify indices are sorted and unique
-  if (!config.types.CommitteeIndices.equals(
-    indices,
-    [...(new Set(indices)).values()].sort((a, b) => a - b))
-  ) {
+  // verify indices are sorted and unique.
+  // Just check if they are monotonically increasing,
+  // instead of creating a set and sorting it. Should be (O(n)) instead of O(n log(n))
+  let prev = -1;
+  for (const index of indices) {
+    if (index <= prev)
+      return false;
+    prev = index;
+  }
+  // check if indices are out of bounds, by checking the highest index (since it is sorted)
+  if (indices[indices.length-1] >= state.validators.length) {
     return false;
   }
   // verify aggregate signature

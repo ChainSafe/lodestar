@@ -16,6 +16,7 @@ import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
+import {convertBlock} from "./convertBlock";
 
 export class BlockProcessor implements IService {
 
@@ -65,6 +66,7 @@ export class BlockProcessor implements IService {
         //use onAbort to collect and save pending blocks
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
+      convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice),
       processBlock(
         this.config,

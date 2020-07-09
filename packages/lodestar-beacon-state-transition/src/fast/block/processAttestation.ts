@@ -3,6 +3,7 @@ import {Attestation, BeaconState, IndexedAttestation} from "@chainsafe/lodestar-
 import {computeEpochAtSlot} from "../../util";
 import {EpochContext} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
+import {ValidatorIndex} from "@chainsafe/lodestar-types/lib/types/primitive";
 
 
 export function processAttestation(
@@ -84,15 +85,17 @@ export function processAttestation(
   const getIndexedAttestation = (attestation: Attestation): IndexedAttestation => {
     const bits = Array.from(attestation.aggregationBits);
     const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = new Set<number>();
+    // No need for a Set, the indices in the committee are already unique.
+    const attestingIndices: ValidatorIndex[] = [];
     committee.forEach((index, i) => {
       if (bits[i]) {
-        attestingIndices.add(index);
+        attestingIndices.push(index);
       }
     });
-
+    // sort in-place
+    attestingIndices.sort((a, b) => a - b);
     return {
-      attestingIndices: [...attestingIndices.values()].sort((a, b) => a - b),
+      attestingIndices: attestingIndices,
       data: data,
       signature: attestation.signature,
     };
