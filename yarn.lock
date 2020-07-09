@@ -992,10 +992,10 @@
     assert "^2.0.0"
     bn.js "^4.11.8"
 
-"@chainsafe/ssz@^0.6.7":
-  version "0.6.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.7.tgz#472683c2d553fbfdb950b7805596f85c0bf46991"
-  integrity sha512-1r6yGc0fa7GMik7xEYKpYm7bTLgSeaLnbER9maS/9PLrpWz794njrwvrREpcUu/yks7SWuKSNJX1b+cAE6x0bA==
+"@chainsafe/ssz@^0.6.8":
+  version "0.6.8"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.8.tgz#e99f508a3ce9d110cc7c63a4f844d3a860c38c03"
+  integrity sha512-Vuvg2ZVN4ynHct1Eimmkno4RSisdddA9FMtCw4YzB6nMpP+xpJug6u3+T2hvpH0CdDeFfxGFImDD3g0cUl0s6A==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
     "@chainsafe/persistent-merkle-tree" "^0.1.3"
