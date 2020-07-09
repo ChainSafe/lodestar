@@ -1,4 +1,4 @@
-import {ByteVector, toHexString, hash, fromHexString} from "@chainsafe/ssz";
+import {ByteVector, toHexString, hash} from "@chainsafe/ssz";
 import {ValidatorIndex, Epoch, BeaconState, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
