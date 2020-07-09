@@ -97,6 +97,7 @@ export class ValidatorApi implements IValidatorApi {
       );
     } catch (e) {
       this.logger.warn(`Failed to produce attestation because: ${e.message}`);
+      throw e;
     }
   }
 
