@@ -11,6 +11,7 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
   getGenesisTime: Sinon.SinonStubbedMember<IBeaconApi["getGenesisTime"]>;
   getSyncingStatus: Sinon.SinonStubbedMember<IBeaconApi["getSyncingStatus"]>;
   getValidator: Sinon.SinonStubbedMember<IBeaconApi["getValidator"]>;
+  getHead: Sinon.SinonStubbedMember<IBeaconApi["getHead"]>;
   namespace: ApiNamespace.BEACON;
 
   constructor(sandbox: SinonSandbox = Sinon) {
@@ -21,6 +22,7 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
     this.getGenesisTime = sandbox.stub();
     this.getSyncingStatus = sandbox.stub();
     this.getValidator = sandbox.stub();
+    this.getHead = sandbox.stub();
   }
 
 }

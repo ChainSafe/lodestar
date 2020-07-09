@@ -4,7 +4,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest,
+  ForkDigest, HeadResponse,
   Number64,
   SignedBeaconBlock,
   Slot,
@@ -13,7 +13,8 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
-import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ZERO_HASH} from "../../../../src/constants";
+import {computeForkDigest, computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
 import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
@@ -78,6 +79,17 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.state.finalizedCheckpoint;
+  }
+
+  public async getHead(): Promise<HeadResponse> {
+    return {
+      headSlot: 0,
+      headBlockRoot: ZERO_HASH,
+      finalizedSlot: 0,
+      finalizedBlockRoot: ZERO_HASH,
+      justifiedSlot: 0,
+      justifiedBlockRoot: ZERO_HASH,
+    };
   }
 
   public get currentForkDigest(): ForkDigest {
