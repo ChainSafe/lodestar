@@ -17,7 +17,11 @@ class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
 }
 
 export class EpochContext {
+  // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
+  // or handle non finalized data differently, or use an immutable.js structure for cheap copies
+  // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
   public pubkey2index: PubkeyIndexMap;
+  // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
   public index2pubkey: Uint8Array[];
   public proposers: number[];
   public previousShuffling?: IEpochShuffling;
@@ -55,12 +59,9 @@ export class EpochContext {
 
   public copy(): EpochContext {
     const ctx = new EpochContext(this.config);
-    // full copy of pubkeys, this can mutate
-    ctx.pubkey2index = new PubkeyIndexMap();
-    for(const entry of this.pubkey2index.entries()) {
-      ctx.pubkey2index.set(fromHexString(entry[0] as unknown as string), entry[1]);
-    }
-    ctx.index2pubkey = [...this.index2pubkey];
+    // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
+    ctx.pubkey2index = this.pubkey2index;
+    ctx.index2pubkey = this.index2pubkey;
     // shallow copy the other data, it doesn't mutate (only completely replaced on rotation)
     ctx.proposers = this.proposers;
     ctx.previousShuffling = this.previousShuffling;
