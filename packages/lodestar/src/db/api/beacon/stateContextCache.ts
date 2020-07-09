@@ -1,6 +1,7 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconState, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {EpochContext, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
@@ -13,8 +14,11 @@ export interface ITreeStateContext {
  * Similar API to Repository
  */
 export class StateContextCache {
+  private config: IBeaconConfig;
+
   private cache: Record<string, ITreeStateContext>;
-  constructor() {
+  constructor(config: IBeaconConfig) {
+    this.config = config;
     this.cache = {};
   }
 
@@ -42,8 +46,26 @@ export class StateContextCache {
     this.cache = {};
   }
 
-  public async values(): Promise<ITreeStateContext[]> {
-    return Object.values(this.cache).map(item => this.clone(item));
+  /**
+   * Should only use this with care as this is expensive.
+   * @param epoch
+   */
+  // public async values(): Promise<ITreeStateContext[]> {
+  //   return Object.values(this.cache).map(item => this.clone(item));
+  // }
+
+  public async firstStateOfEpoch(epoch: Epoch): Promise<ITreeStateContext | null> {
+    const items = Object.values(this.cache).filter(item => computeEpochAtSlot(this.config, item.state.slot) === epoch);
+    if (!items || items.length === 0) {
+      return null;
+    }
+    return this.clone(items.sort((a, b) => a.state.slot - b.state.slot)[0]);
+  }
+
+  public prune(slot: Slot): void {
+    const rootsToDelete =
+      Object.values(this.cache).filter(item => item.state.slot < slot).map(item => item.state.hashTreeRoot());
+    this.batchDelete(rootsToDelete);
   }
 
   private clone(item: ITreeStateContext): ITreeStateContext {

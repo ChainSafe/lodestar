@@ -5,7 +5,6 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 
@@ -38,20 +37,14 @@ export class ArchiveStatesTask implements ITask {
     this.logger.info(
       `Started archiving states (finalized epoch #${this.finalizedCheckpoint.epoch})...`
     );
+    this.logger.profile("Archieve States");
     // store the state of finalized checkpoint
-    const finalizedState = (await this.db.stateCache.values())
-      .map(({state}) => state)
-      .filter((state) => computeEpochAtSlot(this.config, state.slot) === this.finalizedCheckpoint.epoch)
-      .sort((a, b) => a.slot - b.slot)[0];
+    const finalizedState = (await this.db.stateCache.firstStateOfEpoch(this.finalizedCheckpoint.epoch)).state;
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
-    await this.db.stateCache.batchDelete(
-      (await this.db.stateCache.values())
-        .map(({state}) => state)
-        .filter((state) => state.slot < finalizedState.slot)
-        .map((state) => state.hashTreeRoot())
-    );
+    this.db.stateCache.prune(finalizedState.slot);
     this.logger.info(
       `Archiving of finalized states completed (finalized epoch #${this.finalizedCheckpoint.epoch})`);
+    this.logger.profile("Archieve States");
   }
 }
