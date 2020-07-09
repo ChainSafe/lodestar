@@ -10,13 +10,19 @@ import {
   Checkpoint,
   ENRForkID,
   ForkDigest,
+  HeadResponse,
   SignedBeaconBlock,
   Slot,
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeForkDigest,
+  computeStartSlotAtEpoch,
+  EpochContext
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -132,6 +138,18 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.forkChoice.getFinalized();
+  }
+
+  public async getHead(): Promise<HeadResponse> {
+    const head = this.forkChoice.head();
+    return {
+      headSlot: head.slot,
+      headBlockRoot: head.blockRoot,
+      finalizedSlot: computeStartSlotAtEpoch(this.config, head.finalizedCheckpoint.epoch),
+      finalizedBlockRoot: head.finalizedCheckpoint.root,
+      justifiedSlot: computeStartSlotAtEpoch(this.config, head.justifiedCheckpoint.epoch),
+      justifiedBlockRoot: head.justifiedCheckpoint.root,
+    };
   }
 
   public async start(): Promise<void> {

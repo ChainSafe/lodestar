@@ -53,3 +53,12 @@ export interface ValidatorResponse {
   balance: Gwei;
   validator: Validator;
 }
+
+export interface HeadResponse {
+  headSlot: Slot;
+  headBlockRoot: Root;
+  finalizedSlot: Slot;
+  finalizedBlockRoot: Root;
+  justifiedSlot: Slot;
+  justifiedBlockRoot: Root;
+}

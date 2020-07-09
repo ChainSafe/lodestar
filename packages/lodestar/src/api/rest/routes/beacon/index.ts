@@ -13,6 +13,7 @@ import {
   getBlockHeaders,
   getBlockRoot
 } from "../../controllers/beacon/blocks";
+import {registerHeadEndpoint} from "./head";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
@@ -22,6 +23,7 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
   registerSyncingEndpoint(fastify, opts);
   registerGetValidatorEndpoint(fastify, opts);
   registerBlockStreamEndpoint(fastify, opts);
+  registerHeadEndpoint(fastify, opts);
   done();
 };
 
