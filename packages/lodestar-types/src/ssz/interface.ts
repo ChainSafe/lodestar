@@ -168,5 +168,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
-  "ValidatorResponse"
+  "ValidatorResponse",
+  "HeadResponse",
 ];

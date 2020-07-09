@@ -59,3 +59,13 @@ export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType => new Co
   },
 });
 
+export const HeadResponse = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    headSlot: ssz.Slot,
+    headBlockRoot: ssz.Root,
+    finalizedSlot: ssz.Slot,
+    finalizedBlockRoot: ssz.Root,
+    justifiedSlot: ssz.Slot,
+    justifiedBlockRoot: ssz.Root
+  },
+});

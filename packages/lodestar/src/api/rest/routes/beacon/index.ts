@@ -5,6 +5,7 @@ import {registerSyncingEndpoint} from "./syncing";
 import {LodestarApiPlugin} from "../../interface";
 import {registerBlockStreamEndpoint} from "./blockStream";
 import {registerGetValidatorEndpoint} from "./validator";
+import {registerHeadEndpoint} from "./head";
 import {FastifyInstance} from "fastify";
 import {
   getBlock,
@@ -13,7 +14,6 @@ import {
   getBlockHeaders,
   getBlockRoot
 } from "../../controllers/beacon/blocks";
-import {registerHeadEndpoint} from "./head";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
