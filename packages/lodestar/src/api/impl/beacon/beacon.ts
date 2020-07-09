@@ -44,7 +44,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getClientVersion(): Promise<Bytes32> {
-    return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
+    return Buffer.from(`Lodestar/${process.env.npm_package_version || "dev"}`, "utf-8");
   }
 
 
