@@ -10,6 +10,6 @@ export const registerPeersEndpoint: LodestarRestApiEndpoint = (server, {api}): v
       reply
         .code(200)
         .type("application/json")
-        .send(responseValue.map((id) => id.toString()));
+        .send(responseValue.map((id) => id.toB58String()));
     });
 };
