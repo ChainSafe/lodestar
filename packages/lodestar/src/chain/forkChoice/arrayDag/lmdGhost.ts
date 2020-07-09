@@ -12,12 +12,13 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex} from "../interface";
+import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex, ForkChoiceEventEmitter} from "../interface";
 
 import {NodeInfo} from "./interface";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
+import {EventEmitter} from "events";
 
 /**
  * A block root with additional metadata required to form a DAG
@@ -119,7 +120,7 @@ export class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#array-based-stateful-dag-proto_array
  */
-export class ArrayDagLMDGHOST implements ILMDGHOST {
+export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventEmitter }) implements ILMDGHOST {
   private readonly config: IBeaconConfig;
   private genesisTime: Number64;
 
@@ -156,6 +157,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   private clock: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
+    super();
     const slotFinder = (hex: string): Slot | null =>
       this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
@@ -597,18 +599,21 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
 
   private prune(): void {
     if (this.finalized && this.finalized.node) {
-      const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot).map(node => node.blockRoot);
+      const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot);
+      const blockSummariesToDel = nodesToDel.map(node => this.toBlockSummary(node));
+      const blockRootsToDel = nodesToDel.map(node => node.blockRoot);
       const numDelete = nodesToDel.length;
       this.nodes = this.nodes.slice(numDelete);
       // Update indexes in node
       this.nodes.forEach(node => node.shiftIndex(numDelete));
-      nodesToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
+      blockRootsToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
       // Update indexes in nodeIndices
       for (const key of this.nodeIndices.keys()) {
         const value = this.nodeIndices.get(key);
         this.nodeIndices.set(key, value - numDelete);
       }
       this.finalized.node.parent = NO_NODE;
+      this.emit("prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
     }
   }
 

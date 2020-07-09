@@ -232,7 +232,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async waitForBlockProcessed(blockRoot: Uint8Array): Promise<void> {
     await new Promise((resolve) => {
-      this.once("processedBlock", (signedBlock) => {
+      this.on("processedBlock", (signedBlock) => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
           resolve();

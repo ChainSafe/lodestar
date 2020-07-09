@@ -12,13 +12,14 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {BlockSummary, ILMDGHOST} from "../interface";
+import {BlockSummary, ILMDGHOST, ForkChoiceEventEmitter} from "../interface";
 
 import {NodeInfo} from "./interface";
 import {HexCheckpoint, RootHex} from "../interface";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
+import {EventEmitter} from "events";
 
 /**
  * A block root with additional metadata required to form a DAG
@@ -236,7 +237,7 @@ export class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#state-ful-dag
  */
-export class StatefulDagLMDGHOST implements ILMDGHOST {
+export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventEmitter }) implements ILMDGHOST {
   private readonly config: IBeaconConfig;
   private genesisTime: Number64;
 
@@ -267,6 +268,7 @@ export class StatefulDagLMDGHOST implements ILMDGHOST {
   private clock: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
+    super();
     this.aggregator =
       new AttestationAggregator((hex: string) => this.nodes[hex] ? this.nodes[hex].slot : null);
     this.nodes = {};

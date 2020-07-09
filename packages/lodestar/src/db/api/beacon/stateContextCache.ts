@@ -1,6 +1,6 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Epoch, Slot} from "@chainsafe/lodestar-types";
-import {EpochContext, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface ITreeStateContext {
@@ -53,20 +53,6 @@ export class StateContextCache {
   // public async values(): Promise<ITreeStateContext[]> {
   //   return Object.values(this.cache).map(item => this.clone(item));
   // }
-
-  public async firstStateOfEpoch(epoch: Epoch): Promise<ITreeStateContext | null> {
-    const items = Object.values(this.cache).filter(item => computeEpochAtSlot(this.config, item.state.slot) === epoch);
-    if (!items || items.length === 0) {
-      return null;
-    }
-    return this.clone(items.sort((a, b) => a.state.slot - b.state.slot)[0]);
-  }
-
-  public prune(slot: Slot): void {
-    const rootsToDelete =
-      Object.values(this.cache).filter(item => item.state.slot < slot).map(item => item.state.hashTreeRoot());
-    this.batchDelete(rootsToDelete);
-  }
 
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
