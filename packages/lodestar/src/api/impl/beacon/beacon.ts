@@ -3,6 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import PeerId from "peer-id";
 import {
   BLSPubkey,
   Bytes32,
@@ -21,6 +22,7 @@ import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {INetwork} from "../../../network";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
 
@@ -33,6 +35,7 @@ export class BeaconApi implements IBeaconApi {
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
+  private readonly network: INetwork;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.namespace = ApiNamespace.BEACON;
@@ -40,6 +43,7 @@ export class BeaconApi implements IBeaconApi {
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.network = modules.network;
     this.blocks = new BeaconBlockApi(opts, modules);
   }
 
@@ -105,5 +109,9 @@ export class BeaconApi implements IBeaconApi {
 
   public async getHead(): Promise<HeadResponse> {
     return this.chain.getHead();
+  }
+
+  public async getPeers(): Promise<PeerId[]> {
+    return this.network.getPeers();
   }
 }
