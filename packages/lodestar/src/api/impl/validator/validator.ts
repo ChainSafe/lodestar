@@ -114,7 +114,6 @@ export class ValidatorApi implements IValidatorApi {
     } catch (e) {
       console.log(e);
       console.log(attestation);
-      console.log(this.config.types.Attestation.toJson(attestation));
     }
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
