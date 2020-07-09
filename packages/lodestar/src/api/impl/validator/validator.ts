@@ -34,9 +34,11 @@ import {
   computeStartSlotAtEpoch,
   getBeaconProposerIndex,
   getDomain,
-  processSlots,
-  computeSubnetForSlot
+  computeSubnetForSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  processSlots,
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
@@ -85,7 +87,7 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadStateContext(),
       ]);
       if (slot > headState.slot) {
-        processSlots(this.config, headState, slot);
+        processSlots(epochCtx, headState, slot);
       }
       return await assembleAttestation(
         {config: this.config, db: this.db},
@@ -115,7 +117,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const state = await this.chain.getHeadState();
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(
       epoch,
@@ -124,7 +126,7 @@ export class ValidatorApi implements IValidatorApi {
     );
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     if(state.slot < startSlot) {
-      processSlots(this.config, state, startSlot);
+      processSlots(epochCtx, state, startSlot);
     }
     const duties: ProposerDuty[] = [];
 
