@@ -19,13 +19,20 @@ export function fastStateTransition(
   verifySignatures = true,
 ): IStateContext {
   const types = epochCtx.config.types;
-  const block = signedBlock.message;
+
+  // convert to tree-backed block: the root is computed multiple times,
+  // the contents are hash-tree-rooted multiple times, and some of the contents end up in the state as tree-form.
+  const {SignedBeaconBlock} = types;
+  const signedBlockCached = SignedBeaconBlock.tree.asTreeBacked(SignedBeaconBlock.tree.fromStructural(signedBlock));
+
+  const block = signedBlockCached.message;
   const postState = types.BeaconState.clone(state);
   // process slots (including those with no blocks) since block
   processSlots(epochCtx, postState, block.slot);
+
   // verify signature
   if (verifyProposer) {
-    if (!verifyBlockSignature(epochCtx.config, postState, signedBlock)) {
+    if (!verifyBlockSignature(epochCtx.config, postState, signedBlockCached)) {
       throw new Error("Invalid block signature");
     }
   }
