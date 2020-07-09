@@ -50,7 +50,7 @@ describe("block archiver task", function () {
         db: dbStub,
         logger: loggerStub
       }, {
-        slot: 3,
+        slot: finalizedBlock.message.slot,
         blockRoot: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
         parentRoot: finalizedBlock.message.parentRoot as Uint8Array,
         stateRoot: finalizedBlock.message.stateRoot as Uint8Array,

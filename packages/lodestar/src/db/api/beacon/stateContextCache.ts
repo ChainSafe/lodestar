@@ -1,7 +1,6 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
@@ -14,11 +13,8 @@ export interface ITreeStateContext {
  * Similar API to Repository
  */
 export class StateContextCache {
-  private config: IBeaconConfig;
-
   private cache: Record<string, ITreeStateContext>;
-  constructor(config: IBeaconConfig) {
-    this.config = config;
+  constructor() {
     this.cache = {};
   }
 
@@ -50,9 +46,9 @@ export class StateContextCache {
    * Should only use this with care as this is expensive.
    * @param epoch
    */
-  // public async values(): Promise<ITreeStateContext[]> {
-  //   return Object.values(this.cache).map(item => this.clone(item));
-  // }
+  public async valuesUnsafe(): Promise<ITreeStateContext[]> {
+    return Object.values(this.cache).map(item => this.clone(item));
+  }
 
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {

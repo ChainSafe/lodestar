@@ -43,17 +43,13 @@ export class ArchiveBlocksTask implements ITask {
   public async run(): Promise<void> {
     this.logger.profile("Archieve Blocks");
     const allBlocks = await this.db.block.values();
-    const finalizedBlock = allBlocks.find(block => {
-      const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-      return this.config.types.Root.equals(blockRoot, this.finalized.blockRoot);
-    });
     const blocks = allBlocks.filter(
-      (block) =>
-        block.message.slot <= finalizedBlock.message.slot
+      (block) => block.message.slot <= this.finalized.slot
     );
     const blocksByRoot = new Map<string, SignedBeaconBlock>();
     blocks.forEach((block) =>
       blocksByRoot.set(toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message)), block));
+    const finalizedBlock = blocksByRoot.get(toHexString(this.finalized.blockRoot));
     const archivedBlocks = [finalizedBlock];
     let lastBlock = finalizedBlock;
     while (lastBlock) {
