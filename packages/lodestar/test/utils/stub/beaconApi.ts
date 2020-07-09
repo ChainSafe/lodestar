@@ -12,6 +12,8 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
   getSyncingStatus: Sinon.SinonStubbedMember<IBeaconApi["getSyncingStatus"]>;
   getValidator: Sinon.SinonStubbedMember<IBeaconApi["getValidator"]>;
   getHead: Sinon.SinonStubbedMember<IBeaconApi["getHead"]>;
+  getPeers: Sinon.SinonStubbedMember<IBeaconApi["getPeers"]>;
+
   namespace: ApiNamespace.BEACON;
 
   constructor(sandbox: SinonSandbox = Sinon) {

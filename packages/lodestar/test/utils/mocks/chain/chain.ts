@@ -14,11 +14,12 @@ import {
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {ZERO_HASH} from "../../../../src/constants";
-import {computeForkDigest, computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
 import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
 import {TreeBacked} from "@chainsafe/ssz";
+import PeerId from "peer-id";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -106,6 +107,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
       nextForkEpoch: 100,
       nextForkVersion: Buffer.alloc(4),
     };
+  }
+
+  public async getPeers(): Promise<PeerId[]> {
+    return [];
   }
 
   receiveAttestation(): Promise<void> {
