@@ -33,9 +33,7 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   computeSubnetForSlot,
-  getBeaconProposerIndex,
-  getDomain,
-  processSlots
+  getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
@@ -43,6 +41,7 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {validateAttestation} from "../../../util/validation/attestation";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -86,7 +85,7 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadStateContext(),
       ]);
       if (slot > headState.slot) {
-        processSlots(this.config, headState, slot);
+        processSlots(epochCtx, headState, slot);
       }
       return await assembleAttestation(
         {config: this.config, db: this.db},
@@ -122,7 +121,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const state = await this.chain.getHeadState();
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(
       epoch,
@@ -130,13 +129,13 @@ export class ValidatorApi implements IValidatorApi {
       "Cannot get duties for epoch more than two ahead"
     );
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
-    if(state.slot < startSlot) {
-      processSlots(this.config, state, startSlot);
+    if (state.slot < startSlot) {
+      processSlots(epochCtx, state, startSlot);
     }
     const duties: ProposerDuty[] = [];
 
     for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
-      const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
+      const blockProposerIndex = epochCtx.getBeaconProposer(slot);
       duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }
     return duties;
@@ -144,6 +143,9 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const {epochCtx, state} = await this.chain.getHeadStateContext();
+    if (state.slot < computeStartSlotAtEpoch(this.config, epoch)) {
+      processSlots(epochCtx, state, computeStartSlotAtEpoch(this.config, epoch));
+    }
     const validatorIndexes = validatorPubKeys.map((key) => epochCtx.pubkey2index.get(key));
 
     return validatorIndexes.map((validatorIndex) => {

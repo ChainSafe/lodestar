@@ -18,6 +18,7 @@ export function assembleAttesterDuty(
     epoch,
     validator.index
   );
+  console.log({committeeAssignment});
   if (committeeAssignment) {
     duty = {
       ...duty,
