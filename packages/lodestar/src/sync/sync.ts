@@ -122,8 +122,10 @@ export class BeaconSync implements IBeaconSync {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
-    await this.regularSync.start();
-    await this.gossip.start();
+    await Promise.all([
+      this.regularSync.start(),
+      this.gossip.start(),
+    ]);
   }
 
   private async waitForPeers(): Promise<void> {
