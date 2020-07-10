@@ -13,7 +13,6 @@ export function assembleAttesterDuty(
 ): AttesterDuty  {
   let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
   const committeeAssignment = getFastCommitteeAssignment(config, epochCtx, epoch, validator.index);
-  console.log({committeeAssignment, epoch, validator});
   if (committeeAssignment) {
     duty = {
       ...duty,

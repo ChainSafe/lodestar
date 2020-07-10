@@ -15,7 +15,6 @@ export async function assembleAttestation(
   index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
   const committee = getBeaconCommittee(config, state, slot, index);
-  console.log({validatorIndex, slot, committeeIndex: index, committee});
   if(committee.find((c) => c === validatorIndex) === undefined) {
     throw new Error("Validator not in given committee");
   }

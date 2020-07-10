@@ -84,6 +84,10 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadBlock(),
         this.chain.getHeadStateContext(),
       ]);
+      const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
+      if(headState.slot < currentSlot) {
+        processSlots(epochCtx, headState, currentSlot);
+      }
       return await assembleAttestation(
         {config: this.config, db: this.db},
         headState,
@@ -106,12 +110,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    try {
-      await validateAttestation(this.config, this.db, await this.chain.getHeadState(), attestation);
-    } catch (e) {
-      console.log(e);
-      console.log(attestation);
-    }
+    await validateAttestation(this.config, this.db, await this.chain.getHeadState(), attestation);
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation)

@@ -5,6 +5,7 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
+import {sleep} from "../util";
 
 
 export abstract class AbstractApiClient
@@ -21,6 +22,7 @@ export abstract class AbstractApiClient
   private running = false;
   private beaconNodeInterval: NodeJS.Timeout;
   private slotCountingTimeout: NodeJS.Timeout;
+  private genesisTime: number;
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
@@ -78,35 +80,37 @@ export abstract class AbstractApiClient
   }
 
   private startSlotCounting(genesisTime: number): void {
-    const diffInSeconds = (Math.floor(Date.now() / 1000)) - genesisTime;
+    this.genesisTime = genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
-    //update slot after remaining seconds until next slot
-    const diffTillNextSlot =
-        (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
+
+
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch);
     if(!this.slotCountingTimeout) {
       this.slotCountingTimeout = setTimeout(
         this.updateSlot,
         //delay to prevent validator requesting duties too early since we don't account for millis diff
-        diffTillNextSlot + 500
+        this.getDiffTillNextSlot()
       );
     }
   }
 
-  private updateSlot = (): void => {
+  private updateSlot = async(): Promise<void> => {
     if(!this.running) {
       return;
     }
+    //to prevent sometime being updated prematurely
+    if(this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
+      await sleep(this.getDiffTillNextSlot());
+    }
     this.currentSlot++;
-    console.log({vCurrentSlot: this.currentSlot});
     this.newSlotCallbacks.forEach((cb) => {
       cb(this.currentSlot);
     });
     //recursively invoke update slot after SECONDS_PER_SLOT
     this.slotCountingTimeout = setTimeout(
       this.updateSlot,
-      this.config.params.SECONDS_PER_SLOT * 1000
+      this.getDiffTillNextSlot()
     );
   };
 
@@ -120,4 +124,12 @@ export abstract class AbstractApiClient
     }
   };
 
+  /**
+   * Returns milis till next slot
+   */
+  private getDiffTillNextSlot(): number {
+    const diffInSeconds = Math.floor((Date.now() / 1000) - this.genesisTime);
+    //update slot after remaining seconds until next slot
+    return (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
+  }
 }

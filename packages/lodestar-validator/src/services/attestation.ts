@@ -69,7 +69,6 @@ export class AttestationService {
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
-    console.log({currentEpoch: epoch});
     let attesterDuties: AttesterDuty[] | undefined;
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
