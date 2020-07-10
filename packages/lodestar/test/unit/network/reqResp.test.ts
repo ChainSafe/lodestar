@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
 
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -10,17 +10,19 @@ import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {TTFB_TIMEOUT} from "../../../src/constants";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
-
-  let nodeA: NodejsNode, nodeB: NodejsNode,
-    rpcA: ReqResp, rpcB: ReqResp;
-  const logger: ILogger = new WinstonLogger();
+  const sandbox = sinon.createSandbox();
+  let nodeA: NodejsNode, nodeB: NodejsNode, rpcA: ReqResp, rpcB: ReqResp;
+  let loggerStub: SinonStubbedInstance<ILogger>;
 
   beforeEach(async function() {
     this.timeout(10000);
+    loggerStub = sandbox.createStubInstance(WinstonLogger);
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
@@ -36,8 +38,8 @@ describe("[network] rpc", () => {
       connectTimeout: 5000,
       disconnectTimeout: 5000,
     };
-    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger, peerReputations: new ReputationStore()});
-    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger, peerReputations: new ReputationStore()});
+    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger: loggerStub, peerReputations: new ReputationStore()});
+    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger: loggerStub, peerReputations: new ReputationStore()});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
@@ -69,10 +71,11 @@ describe("[network] rpc", () => {
       rpcA.stop(),
       rpcB.stop(),
     ]);
+    sandbox.restore();
   });
 
   it("can send/receive status messages from connected peers", async function () {
-    this.timeout(6000);
+    this.timeout(10000);
     // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
@@ -175,4 +178,28 @@ describe("[network] rpc", () => {
     const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
     assert.deepEqual(response, []);
   });
+
+  it("should handle response timeout - TTFB", async function() {
+    this.timeout(12000);
+    const request: BeaconBlocksByRangeRequest = {
+      startSlot: 100,
+      count: 10,
+      step: 1
+    };
+    const spy = sandbox.spy();
+    loggerStub.error.callsFake(spy);
+    rpcB.once("request", (peerInfo, method, id, body) => {
+      setTimeout(() => {
+        rpcB.sendResponse(id, null, []);
+      }, TTFB_TIMEOUT);
+    });
+    const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
+    expect(response).to.be.undefined;
+    expect(spy.calledOnce).to.be.true;
+    const errorMessages: string[] = spy.args[0];
+    expect(errorMessages.length).to.be.equal(2);
+    expect(errorMessages[0].startsWith("failed to send request")).to.be.true;
+    expect(errorMessages[1].toString().startsWith("Error: response timeout")).to.be.true;
+  });
+
 });
