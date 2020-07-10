@@ -47,6 +47,7 @@
     "mocha": "^6.2.2"
   },
   "dependencies": {
+    "@chainsafe/ssz": "^0.6.7",
     "js-yaml": "^3.13.1"
   }
 }
