@@ -12,7 +12,12 @@ export function processEth1Data(
   const {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} = epochCtx.config.params;
   const SLOTS_PER_ETH1_VOTING_PERIOD = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH;
   const newEth1Data = body.eth1Data;
+  // Count it as vote
   state.eth1DataVotes.push(newEth1Data);
+  // If there are not more than 50% votes, then we do not have to count to find a winner.
+  if (state.eth1DataVotes.length * 2 <= SLOTS_PER_ETH1_VOTING_PERIOD) {
+    return;
+  }
   if (Eth1Data.equals(state.eth1Data, newEth1Data)) {
     return; // Nothing to do if the state already has this as eth1data (happens a lot after majority vote is in)
   }

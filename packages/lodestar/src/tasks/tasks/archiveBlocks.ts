@@ -4,10 +4,12 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
+import {BlockSummary} from "../../chain";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;
@@ -23,31 +25,31 @@ export class ArchiveBlocksTask implements ITask {
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
-  private finalizedCheckpoint: Checkpoint;
+  private finalized: BlockSummary;
+  private pruned: BlockSummary[];
 
-  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalizedCheckpoint: Checkpoint) {
+  public constructor(
+    config: IBeaconConfig, modules: IArchiveBlockModules, finalized: BlockSummary, pruned: BlockSummary[]) {
     this.db = modules.db;
     this.logger = modules.logger;
     this.config = config;
-    this.finalizedCheckpoint = finalizedCheckpoint;
+    this.finalized = finalized;
+    this.pruned = pruned;
   }
 
   /**
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
   public async run(): Promise<void> {
+    this.logger.profile("Archive Blocks");
     const allBlocks = await this.db.block.values();
-    const finalizedBlock = allBlocks.find(block => {
-      const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-      return this.config.types.Root.equals(blockRoot, this.finalizedCheckpoint.root);
-    });
     const blocks = allBlocks.filter(
-      (block) =>
-        block.message.slot <= finalizedBlock.message.slot
+      (block) => block.message.slot <= this.finalized.slot
     );
     const blocksByRoot = new Map<string, SignedBeaconBlock>();
     blocks.forEach((block) =>
       blocksByRoot.set(toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message)), block));
+    const finalizedBlock = blocksByRoot.get(toHexString(this.finalized.blockRoot));
     const archivedBlocks = [finalizedBlock];
     let lastBlock = finalizedBlock;
     while (lastBlock) {
@@ -58,14 +60,17 @@ export class ArchiveBlocksTask implements ITask {
     }
     const fromSlot = (archivedBlocks.length > 0)? archivedBlocks[archivedBlocks.length - 1].message.slot : undefined;
     const toSlot = (archivedBlocks.length > 0)? archivedBlocks[0].message.slot : undefined;
+    const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
+
     this.logger.info(`Started archiving ${archivedBlocks.length} blocks from slot ${fromSlot} to ${toSlot}`
-        +`(finalized epoch #${this.finalizedCheckpoint.epoch})...`
+        +`(finalized epoch #${epoch})...`
     );
     await Promise.all([
       this.db.blockArchive.batchAdd(archivedBlocks),
       this.db.block.batchRemove(blocks)
     ]);
+    this.logger.profile("Archive Blocks");
     this.logger.info(`Archiving of ${archivedBlocks.length} finalized blocks from slot ${fromSlot} to ${toSlot}`
-        + ` completed (finalized epoch #${this.finalizedCheckpoint.epoch})`);
+        + ` completed (finalized epoch #${epoch})`);
   }
 }
