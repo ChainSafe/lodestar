@@ -54,11 +54,12 @@ export async function getBlockRangeFromPeer(
 export async function getBlockRange(
   logger: ILogger,
   rpc: IReqResp,
-  peers: PeerId[],
+  inPeers: PeerId[],
   range: ISlotRange,
   blocksPerChunk?: number,
   maxRetry = 6
 ): Promise<SignedBeaconBlock[]> {
+  let peers = [...inPeers];
   const totalBlocks = range.end - range.start;
   blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks/peers.length);
   if(blocksPerChunk < 5) {
@@ -71,7 +72,7 @@ export async function getBlockRange(
   while(chunks.length > 0) {
     //rotate peers
     const peerBalancer = new RoundRobinArray(peers);
-    chunks = (await Promise.all(
+    const chunkPeers = (await Promise.all(
       chunks.map(async (chunk) => {
         const peer = peerBalancer.next();
         const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
@@ -83,12 +84,15 @@ export async function getBlockRange(
             +`from peer ${peer.toB58String()}`);
           await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
-          return chunk;
+          return {chunk, peer};
         }
       })
-    )).filter((chunk) => chunk !== null);
+    )).filter((chunkPeer) => chunkPeer !== null);
+    chunks = chunkPeers.map((chunkPeer) => chunkPeer.chunk);
+    const badPeers = chunkPeers.map((chunkPeer) => chunkPeer.peer);
+    peers = peers.filter((peer) => !badPeers.includes(peer));
     retry++;
-    if(retry > maxRetry || retry > peers.length) {
+    if(retry > maxRetry || retry > inPeers.length || peers.length === 0) {
       logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
     }
   }

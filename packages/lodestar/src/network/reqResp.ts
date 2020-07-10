@@ -21,10 +21,10 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   createResponseEvent,
   createRpcProtocol,
-  eth2ResponseTimer,
   isRequestOnly,
   isRequestSingleChunk,
   randomRequestId,
+  initResponseTimer,
 } from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -245,7 +245,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     try {
       return await pipe(
         this.sendRequestStream(peerId, method, encoding, requestId, body),
-        eth2ResponseTimer(),
         async (source: AsyncIterable<T>): Promise<T | null> => {
           const responses: Array<T> = [];
           for await (const response of source) {
@@ -275,7 +274,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     body?: RequestBody,
   ): AsyncIterable<T> {
     const {libp2p, config, logger} = this;
-
+    const checkTimeout = initResponseTimer();
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
       const {stream} = await libp2p.dialProtocol(peerId, protocol) as {stream: Stream};
@@ -284,6 +283,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
         stream,
+        checkTimeout(),
         eth2ResponseDecode(config, logger, method, encoding, requestId)
       );
     })();
