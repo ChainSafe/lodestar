@@ -1,6 +1,6 @@
 import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {IBeaconParams} from "./interface";
-import {ContainerType, BigIntUintType, NumberUintType, BitVectorType, BitListType} from "@chainsafe/ssz";
+import {ContainerType, BigIntUintType, NumberUintType, BitVectorType, BitListType, Json} from "@chainsafe/ssz";
 
 const beaconParamsType = new ContainerType({
   fields: {
@@ -77,11 +77,11 @@ const beaconParamsType = new ContainerType({
   },
 });
 
-export function createIBeaconParams(input: Record<string, string>): Partial<IBeaconParams> {
+export function createIBeaconParams(input: Record<string, unknown>): Partial<IBeaconParams> {
   const params: Partial<IBeaconParams> = {};
   Object.entries(beaconParamsType.fields).forEach(([fieldName, fieldType]) => {
     if (input[fieldName]) {
-      (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName]);
+      (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as Json;
     }
   });
   return params;
