@@ -3,12 +3,15 @@
  */
 import http from "http";
 import {promisify} from "es6-promisify";
+import {createHttpTerminator, HttpTerminator} from "http-terminator";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+
 
 export class HttpMetricsServer implements IMetricsServer {
   public http: http.Server;
+  private terminator: HttpTerminator;
   private opts: IMetricsOptions;
   private metrics: IMetrics;
   private logger: ILogger;
@@ -18,6 +21,7 @@ export class HttpMetricsServer implements IMetricsServer {
     this.logger = logger;
     this.metrics = metrics;
     this.http = http.createServer(this.onRequest.bind(this));
+    this.terminator = createHttpTerminator({server: this.http});
   }
 
   public async start(): Promise<void> {
@@ -30,7 +34,7 @@ export class HttpMetricsServer implements IMetricsServer {
   public async stop(): Promise<void> {
     if (this.opts.enabled) {
       try {
-        await promisify(this.http.close.bind(this.http))();
+        await this.terminator.terminate();
       } catch (e) {
         this.logger.warn("Failed to stop metrics server. Error: " + e.message);
       }
