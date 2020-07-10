@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, {SinonStub} from "sinon";
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -9,11 +9,18 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, BeaconBlock, AttestationData} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
+import {generateValidator} from "../../../../utils/validator";
+import {getBeaconCommittee} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("assemble attestation", function () {
 
   const sandbox = sinon.createSandbox();
-  let assembleAttestationDataStub: SinonStub<[IBeaconConfig, IBeaconDb, BeaconState, BeaconBlock, number, number], Promise<AttestationData>>, dbStub: IBeaconDb;
+  let assembleAttestationDataStub: SinonStub<[
+      IBeaconConfig, IBeaconDb, TreeBacked<BeaconState>, BeaconBlock, number, number
+    ],
+    Promise<AttestationData>
+    >, dbStub: IBeaconDb;
 
   beforeEach(() => {
     assembleAttestationDataStub = sandbox.stub(
@@ -28,10 +35,15 @@ describe("assemble attestation", function () {
   });
 
   it("should produce attestation", async function () {
-    const state = generateState({slot: 1});
+    const state = generateState({
+      slot: 1,
+      genesisTime: 1594380051,
+      validators: Array.from({length: 16}, () => generateValidator({activationEpoch: 0, slashed: false}))
+    });
     const attestationData = generateAttestationData(1, 3);
     assembleAttestationDataStub.resolves(attestationData);
-    const result = await assembleAttestation({config, db: dbStub}, state, generateEmptyBlock(), 1, 4, 2);
+    const validatorIndex = getBeaconCommittee(config, state, 2, 0)[0];
+    const result = await assembleAttestation({config, db: dbStub}, state, generateEmptyBlock(), validatorIndex, 0, 2);
     //TODO: try to test if validator bit is correctly set
     expect(result).to.not.be.null;
     expect(result.data).to.be.equal(attestationData);

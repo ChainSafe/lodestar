@@ -28,7 +28,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  DomainType, getCurrentSlot,
+  DomainType,
   getDomain,
   isSlashableAttestationData,
 } from "@chainsafe/lodestar-beacon-state-transition";
