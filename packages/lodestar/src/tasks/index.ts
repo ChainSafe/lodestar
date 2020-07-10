@@ -53,7 +53,7 @@ export class TasksService implements IService {
   }
 
   public async stop(): Promise<void> {
-    this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    this.chain.forkChoice.removeListener("prune", this.handleFinalizedCheckpointChores);
     await this.interopSubnetsTask.stop();
   }
 
