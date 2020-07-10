@@ -2,12 +2,18 @@
 /**
  * @module chain/forkChoice
  */
-
+import {EventEmitter} from "events";
+import StrictEventEmitter from "strict-event-emitter-types";
 import {Checkpoint, Gwei, Slot, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconClock} from "../clock/interface";
 
+export interface IForkChoiceEvents {
+  prune: (finalized: BlockSummary, pruned: BlockSummary[]) => void;
+}
 
-export interface ILMDGHOST {
+export type ForkChoiceEventEmitter = StrictEventEmitter<EventEmitter, IForkChoiceEvents>;
+
+export interface ILMDGHOST extends ForkChoiceEventEmitter {
   start(genesisTime: number, clock: IBeaconClock): Promise<void>;
   stop(): Promise<void>;
   addBlock(info: BlockSummary): void;

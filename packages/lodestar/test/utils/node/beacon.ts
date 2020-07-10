@@ -1,16 +1,26 @@
-import {BeaconNode} from "../../../src/node";
+import deepmerge from "deepmerge";
+import tmp from "tmp";
+import {createEnr} from "@chainsafe/lodestar-cli/src/network";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {BeaconNode} from "../../../src/node";
 import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
-import {createEnr} from "@chainsafe/lodestar-cli/src/network";
-import tmp from "tmp";
 import {initDevChain} from "../../../src/node/utils/state";
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import { IBeaconNodeOptions } from "../../../lib/node/options";
+
+type RecursivePartial<T> = {
+  [P in keyof T]?:
+  T[P] extends (infer U)[] ? RecursivePartial<U>[] :
+    T[P] extends object ? RecursivePartial<T[P]> :
+      T[P];
+};
 
 export async function getDevBeaconNode(
   params: Partial<IBeaconParams>,
+  options: RecursivePartial<IBeaconNodeOptions> = {},
   validatorsCount = 8,
   genesisTime?: number
 ): Promise<BeaconNode> {
@@ -21,14 +31,14 @@ export async function getDevBeaconNode(
     ...params
   };
   const bn = new BeaconNode(
-    {
+    deepmerge({
       db: {
         name: tmpDir.name
       },
       sync: {
         minPeers: 1
-      }
-    },
+      },
+    }, options),
     {
       config,
       logger: new WinstonLogger({level: LogLevel.error}),

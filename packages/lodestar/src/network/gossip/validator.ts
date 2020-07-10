@@ -23,9 +23,11 @@ import {
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
-  processSlots,
   verifyBlockSignature
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  processSlots,
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -67,8 +69,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if(!parentBlock) {
       return false;
     }
-    const stateContext = await this.db.stateCache.get(parentBlock.message.stateRoot);
-    const state = stateContext.state;
+    const {state, epochCtx} = await this.db.stateCache.get(parentBlock.message.stateRoot);
     // block is not in the future
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
     if (signedBlock.message.slot * milliSecPerSlot >
@@ -89,13 +90,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     if (state.slot < slot) {
-      processSlots(this.config, state, slot);
+      processSlots(epochCtx, state, slot);
     }
 
     if (!verifyBlockSignature(this.config, state, signedBlock)) {
       return false;
     }
-    const supposedProposerIndex = stateContext.epochCtx.getBeaconProposer(signedBlock.message.slot);
+    const supposedProposerIndex = epochCtx.getBeaconProposer(signedBlock.message.slot);
     return supposedProposerIndex === signedBlock.message.proposerIndex;
   };
 
@@ -133,7 +134,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     if (state.slot < slot) {
-      processSlots(this.config, state, slot);
+      processSlots(epochCtx, state, slot);
     }
 
     if (await this.db.aggregateAndProof.hasAttestation(aggregate)) {
@@ -202,10 +203,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return false;
     }
-    const state = await this.chain.getHeadState();
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
     if (state.slot < startSlot) {
-      processSlots(this.config, state, startSlot);
+      processSlots(epochCtx, state, startSlot);
     }
     return isValidVoluntaryExit(this.config, state, voluntaryExit);
   };

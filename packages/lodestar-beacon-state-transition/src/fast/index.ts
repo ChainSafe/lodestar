@@ -19,10 +19,12 @@ export function fastStateTransition(
   verifySignatures = true,
 ): IStateContext {
   const types = epochCtx.config.types;
+
   const block = signedBlock.message;
   const postState = types.BeaconState.clone(state);
   // process slots (including those with no blocks) since block
   processSlots(epochCtx, postState, block.slot);
+
   // verify signature
   if (verifyProposer) {
     if (!verifyBlockSignature(epochCtx.config, postState, signedBlock)) {
