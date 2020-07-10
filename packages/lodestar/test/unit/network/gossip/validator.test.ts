@@ -329,7 +329,7 @@ describe("GossipMessageValidator", () => {
     it("should return invalid committee attestation - block not exist", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
-      chainStub.forkChoice.hasBlock.returns(false);
+      dbStub.block.has.resolves(false);
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
@@ -346,39 +346,14 @@ describe("GossipMessageValidator", () => {
       getAttestingIndicesStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
-      expect(chainStub.forkChoice.hasBlock.calledOnce).to.be.true;
-      expect(dbStub.badBlock.has.calledOnce).to.be.false;
-    });
-
-    it("should return invalid committee attestation - bad block", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      chainStub.forkChoice.hasBlock.returns(true);
-      dbStub.badBlock.has.resolves(true);
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesStub.returns([0]);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
-      expect(dbStub.badBlock.has.calledOnce).to.be.true;
-      expect(isValidIndexedAttestationStub.calledOnce).to.be.false;
+      expect(dbStub.block.has.calledOnce).to.be.true;
     });
 
     it("should return invalid committee attestation - invalid attestation", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
       chainStub.forkChoice.hasBlock.returns(true);
-      dbStub.badBlock.has.resolves(false);
+      dbStub.block.has.resolves(true);
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
@@ -402,8 +377,7 @@ describe("GossipMessageValidator", () => {
     it("should return valid committee attestation", async () => {
       const attestation = generateEmptyAttestation();
       attestation.aggregationBits[0] = true;
-      chainStub.forkChoice.hasBlock.returns(true);
-      dbStub.badBlock.has.resolves(false);
+      dbStub.block.has.resolves(true);
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
