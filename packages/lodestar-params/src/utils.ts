@@ -81,7 +81,7 @@ export function createIBeaconParams(input: Record<string, unknown>): Partial<IBe
   const params: Partial<IBeaconParams> = {};
   Object.entries(beaconParamsType.fields).forEach(([fieldName, fieldType]) => {
     if (input[fieldName]) {
-      (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as Json;
+      (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as unknown;
     }
   });
   return params;
