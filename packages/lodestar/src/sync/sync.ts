@@ -105,6 +105,9 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
+      throw new Error("Cannot collect attestations before regular sync");
+    }
     this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
