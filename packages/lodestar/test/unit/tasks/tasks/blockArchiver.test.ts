@@ -50,9 +50,14 @@ describe("block archiver task", function () {
         db: dbStub,
         logger: loggerStub
       }, {
-        epoch: 3,
-        root: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message)
-      }
+        slot: finalizedBlock.message.slot,
+        blockRoot: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
+        parentRoot: finalizedBlock.message.parentRoot as Uint8Array,
+        stateRoot: finalizedBlock.message.stateRoot as Uint8Array,
+        justifiedCheckpoint: {epoch: 0, root: Buffer.alloc(32)},
+        finalizedCheckpoint: {epoch: 0, root: Buffer.alloc(32)}
+      },
+      []
     );
     dbStub.block.values.resolves([
       blockA, blockB, blockC, blockD, finalizedBlock, blockE
