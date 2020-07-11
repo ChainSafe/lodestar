@@ -1,15 +1,16 @@
 import {
+  EpochContext,
   getAttestingIndices,
   getCurrentSlot,
   getIndexedAttestation,
-  isValidIndexedAttestation,
-  processSlots
+  isValidIndexedAttestation
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {assert} from "@chainsafe/lodestar-utils";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 /**
  * is ready to be included in block
@@ -21,10 +22,10 @@ export function hasValidAttestationSlot(config: IBeaconConfig, genesisTime: numb
 }
 
 export function isUnaggregatedAttestation(
-  config: IBeaconConfig, state: BeaconState, attestation: Attestation
+  config: IBeaconConfig, state: BeaconState, epochCtx: EpochContext, attestation: Attestation
 ): boolean {
   if (state.slot < attestation.data.slot) {
-    processSlots(config, state, attestation.data.slot);
+    processSlots(epochCtx, state, attestation.data.slot);
   }
   // Make sure this is unaggregated attestation
   return getAttestingIndices(config, state, attestation.data, attestation.aggregationBits).length === 1;
@@ -36,10 +37,10 @@ export async function isAttestingToValidBlock(db: IBeaconDb, attestation: Attest
 }
 
 export async function hasValidatorAttestedForThatTargetEpoch(
-  config: IBeaconConfig, db: IBeaconDb, state: BeaconState, attestation: Attestation
+  config: IBeaconConfig, db: IBeaconDb, state: BeaconState, epochCtx: EpochContext, attestation: Attestation
 ): Promise<boolean> {
   if (state.slot < attestation.data.slot) {
-    processSlots(config, state, attestation.data.slot);
+    processSlots(epochCtx, state, attestation.data.slot);
   }
   const existingAttestations = await db.attestation.geAttestationsByTargetEpoch(
     attestation.data.target.epoch
@@ -53,18 +54,18 @@ export async function hasValidatorAttestedForThatTargetEpoch(
 }
 
 export async function validateAttestation(
-  config: IBeaconConfig, db: IBeaconDb, state: BeaconState, attestation: Attestation
+  config: IBeaconConfig, db: IBeaconDb, state: BeaconState, epochCtx: EpochContext, attestation: Attestation
 ): Promise<void> {
   if (state.slot < attestation.data.slot) {
-    processSlots(config, state, attestation.data.slot);
+    processSlots(epochCtx, state, attestation.data.slot);
   }
   // Make sure this is unaggregated attestation
   assert.true(
-    isUnaggregatedAttestation(config, state, attestation),
+    isUnaggregatedAttestation(config, state, epochCtx, attestation),
     "Attestation is aggregated or doesn't have aggregation bits"
   );
   assert.true(
-    await hasValidatorAttestedForThatTargetEpoch(config, db, state, attestation),
+    await hasValidatorAttestedForThatTargetEpoch(config, db, state, epochCtx, attestation),
     "Validator already attested for that target epoch"
   );
   assert.true(await isAttestingToValidBlock(db, attestation), "Attestation block missing or invalid");
