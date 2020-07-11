@@ -8,8 +8,8 @@ import {StubbedBeaconApi} from "../../../../../utils/stub/beaconApi";
 import supertest from "supertest";
 import {expect} from "chai";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
-import {toHexString} from "@chainsafe/ssz";
 import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockHeader", function () {
 
@@ -28,6 +28,7 @@ describe("rest - beacon - getBlockHeader", function () {
       config,
       logger: sinon.createStubInstance(WinstonLogger),
       validator: sinon.createStubInstance(ValidatorApi),
+      node: new StubbedNodeApi(),
       beacon: beaconApiStub
     });
     await api.start();

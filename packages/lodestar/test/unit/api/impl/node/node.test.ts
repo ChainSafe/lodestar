@@ -186,7 +186,7 @@ describe("node api implementation", function () {
   describe("getVersion", function () {
     it("success", async function () {
       const version = await api.getVersion();
-      expect(version).to.equal("Lodestar/dev");
+      expect(version.startsWith("Lodestar")).to.be.true;
     });
   });
 });

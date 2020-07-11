@@ -14,6 +14,7 @@ import {errorHandler} from "./routes/error";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IValidatorApi} from "../impl/validator";
 import {IBeaconApi} from "../impl/beacon";
+import {INodeApi} from "../impl/node";
 import {registerRoutes} from "./routes";
 
 export class RestApi implements IService {
@@ -66,21 +67,23 @@ export class RestApi implements IService {
     server.register(FastifySSEPlugin);
     const api = {
       beacon: modules.beacon,
+      node: modules.node,
       validator: modules.validator
     };
     server.decorate("config", modules.config);
     server.decorate("api", api);
     //new api
+    const enabledApiNamespaces = this.opts.api;
     server.register(async function (instance) {
-      registerRoutes(instance);
+      registerRoutes(instance, enabledApiNamespaces);
     });
 
 
     //old api, remove once migrated
-    if(this.opts.api.includes(ApiNamespace.BEACON)) {
+    if(enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
       server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
     }
-    if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
+    if(enabledApiNamespaces.includes(ApiNamespace.VALIDATOR)) {
       //TODO: enable when syncing status api working
       // applySyncingMiddleware(server, "/validator/*", modules);
       server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
@@ -98,6 +101,7 @@ declare module "fastify" {
     config: IBeaconConfig;
     api: {
       beacon: IBeaconApi;
+      node: INodeApi;
       validator: IValidatorApi;
     };
   }

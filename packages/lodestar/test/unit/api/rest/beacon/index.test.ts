@@ -13,6 +13,7 @@ import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import EventSource from "eventsource";
 import {LodestarEventIterator} from "../../../../../src/util/events";
+import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("Test beacon rest api", function () {
   this.timeout(10000);
@@ -33,6 +34,7 @@ describe("Test beacon rest api", function () {
       logger: sinon.createStubInstance(WinstonLogger),
       beacon: beaconApi,
       validator: validatorApi,
+      node: new StubbedNodeApi(),
       config
     });
     return await restApi.start();

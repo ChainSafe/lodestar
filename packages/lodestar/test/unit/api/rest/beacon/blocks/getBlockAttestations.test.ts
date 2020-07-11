@@ -10,6 +10,7 @@ import {expect} from "chai";
 import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
+import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockAttestations", function () {
 
@@ -28,6 +29,7 @@ describe("rest - beacon - getBlockAttestations", function () {
       config,
       logger: sinon.createStubInstance(WinstonLogger),
       validator: sinon.createStubInstance(ValidatorApi),
+      node: new StubbedNodeApi(),
       beacon: beaconApiStub
     });
     await api.start();

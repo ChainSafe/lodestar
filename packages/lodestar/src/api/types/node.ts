@@ -2,15 +2,15 @@
 
 import {Metadata} from "@chainsafe/lodestar-types";
 
-export interface NodeIdentity {
+export type NodeIdentity = {
   peerId: string;
   enr: string;
   p2pAddresses: string[];
   discoveryAddresses: string[];
   metadata: Metadata;
-}
+};
 
-export interface NodePeer {
+export type NodePeer = {
   peerId: string;
   enr: string;
   address: string;
