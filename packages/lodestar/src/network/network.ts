@@ -7,10 +7,8 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
-
 import {ReqResp} from "./reqResp";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter,} from "./interface";
@@ -18,7 +16,7 @@ import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
-import {Discv5Discovery, Discv5, ENR} from "@chainsafe/discv5";
+import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IReputationStore} from "../sync/IReputation";
 
 interface ILibp2pModules {
@@ -66,8 +64,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
     await this.gossip.start();
-    const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
-    const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
+    const enr = this.getEnr();
     await this.metadata.start(enr);
     this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
     this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
@@ -84,18 +81,24 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.stop();
   }
 
+
+  public getEnr(): ENR|undefined {
+    const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    return discv5Discovery?.discv5?.enr || undefined;
+  }
+
   public getPeers(): PeerId[] {
     const peers =  Array.from(this.libp2p.peerStore.peers.values())
       .map(peerInfo => peerInfo.id)
-      .filter(peerId => !!this.getConnection(peerId));
+      .filter(peerId => !!this.getPeerConnection(peerId));
     return peers || [];
   }
 
   public hasPeer(peerId: PeerId): boolean {
-    return !!this.getConnection(peerId);
+    return !!this.getPeerConnection(peerId);
   }
 
-  public getConnection(peerId: PeerId): LibP2pConnection|null {
+  public getPeerConnection(peerId: PeerId): LibP2pConnection|null {
     return this.libp2p.connectionManager.get(peerId);
   }
 

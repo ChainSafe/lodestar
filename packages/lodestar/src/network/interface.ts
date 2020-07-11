@@ -21,6 +21,7 @@ import {RpcError} from "./error";
 import {MetadataController} from "./metadata";
 import {IResponseChunk} from "./encoders/interface";
 import Multiaddr from "multiaddr";
+import {ENR} from "@chainsafe/discv5/lib";
 
 
 export type ResponseCallbackFn = ((responseIter: AsyncIterable<IResponseChunk>) => void);
@@ -64,7 +65,9 @@ export interface INetwork extends NetworkEventEmitter {
    */
   peerId: PeerId;
   multiaddrs: Multiaddr[];
+  getEnr(): ENR|undefined;
   getPeers(): PeerId[];
+  getPeerConnection(peerId: PeerId): LibP2pConnection|null;
   hasPeer(peerId: PeerId): boolean;
   connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void>;
   disconnect(peerId: PeerId): Promise<void>;

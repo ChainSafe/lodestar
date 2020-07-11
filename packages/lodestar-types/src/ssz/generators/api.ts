@@ -44,9 +44,8 @@ export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType => new Contain
 
 export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    startingBlock: ssz.Uint64,
-    currentBlock: ssz.Uint64,
-    highestBlock: ssz.Uint64,
+    headSlot: ssz.Uint64,
+    syncingDistance: ssz.Uint64
   },
 });
 
