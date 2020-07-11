@@ -42,15 +42,6 @@ describe("Test beacon rest api", function () {
     return await restApi.stop();
   });
 
-  it("should return version", async function () {
-    beaconApi.getClientVersion.resolves(Buffer.from(`lodestar-${process.env.npm_package_version}`));
-    const response = await supertest(restApi.server.server)
-      .get("/lodestar/version")
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body).to.be.equal(`lodestar-${process.env.npm_package_version}`);
-  });
-
   it("should return genesis time", async function () {
     const genesis = Math.floor(Date.now()/1000);
     beaconApi.getGenesisTime.resolves(genesis);
@@ -61,14 +52,6 @@ describe("Test beacon rest api", function () {
     expect(response.body).to.be.equal(genesis);
   });
 
-  it("should return sync status", async function () {
-    beaconApi.getSyncingStatus.resolves(false);
-    const response = await supertest(restApi.server.server)
-      .get("/lodestar/syncing")
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.is_syncing).to.be.false;
-  });
 
   it("should get block stream",  function (done) {
     const server = restApi.server.server.address();
@@ -77,7 +60,7 @@ describe("Test beacon rest api", function () {
     source.stop = sinon.stub();
     beaconApi.getBlockStream.returns(source);
     const eventSource = new EventSource(
-      `http://${server.address}:${server.port}/node/blocks/stream`,
+      `http://${server.address}:${server.port}/lodestar/blocks/stream`,
       {https: {rejectUnauthorized: false}}
     );
     eventSource.addEventListener("open", function () {

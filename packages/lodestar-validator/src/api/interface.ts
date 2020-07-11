@@ -3,6 +3,7 @@ import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
+import {INodeApi} from "./interface/node";
 
 export interface INewSlotCallback {
   (slot: Slot): void;
@@ -21,6 +22,8 @@ export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientE
 export interface IApiClient extends ApiClientEventEmitter {
 
   beacon: IBeaconApi;
+
+  node: INodeApi;
 
   validator: IValidatorApi;
 

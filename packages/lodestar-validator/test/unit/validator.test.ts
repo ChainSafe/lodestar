@@ -7,8 +7,9 @@ import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";
 import {MockBeaconApi} from "../utils/mocks/beacon";
 import {MockValidatorApi} from "../utils/mocks/validator";
-import {IValidatorOptions,Validator} from "../../src";
+import {IValidatorOptions, Validator} from "../../src";
 import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
+import {MockNodeApi} from "../utils/mocks/node";
 
 describe("Validator", () => {
 
@@ -18,6 +19,7 @@ describe("Validator", () => {
       beacon: new MockBeaconApi({
         genesisTime: Date.now() / 1000
       }),
+      node: new MockNodeApi(),
       validator: new MockValidatorApi(),
     });
 

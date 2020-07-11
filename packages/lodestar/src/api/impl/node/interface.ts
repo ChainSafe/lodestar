@@ -6,7 +6,7 @@ export interface INodeApi extends IApi {
   getNodeIdentity(): Promise<NodeIdentity>;
   getPeers(): Promise<NodePeer[]>;
   getPeer(peerId: string): Promise<NodePeer|null>;
-  getVersion(): string;
+  getVersion(): Promise<string>;
   getSyncingStatus(): Promise<SyncingStatus>;
   getNodeStatus(): Promise<"ready"|"syncing"|"error">;
 }

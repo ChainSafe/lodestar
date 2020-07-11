@@ -5,6 +5,7 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
+import {INodeApi} from "./interface/node";
 
 
 export abstract class AbstractApiClient
@@ -24,6 +25,7 @@ export abstract class AbstractApiClient
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
+  abstract node: INodeApi;
   abstract validator: IValidatorApi;
 
   protected constructor(config: IBeaconConfig) {

@@ -7,6 +7,7 @@ import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import tmp from "tmp";
 import {ValidatorApi} from "../../../src/api/impl/validator";
 import {BeaconApi} from "../../../src/api/impl/beacon";
+import {NodeApi} from "../../../src/api/impl/node/node";
 
 export function getDevValidators(node: BeaconNode, count = 8): Validator[] {
   return Array.from({length: count}, (v, i) => {
@@ -28,6 +29,7 @@ export function getDevValidator(node: BeaconNode, index: number): Validator {
     api: new ApiClientOverInstance({
       config: node.config,
       validator: new ValidatorApi({}, {...node, logger}),
+      node: new NodeApi({}, {...node}),
       beacon: new BeaconApi({}, {...node, logger}),
     }),
     logger: logger,

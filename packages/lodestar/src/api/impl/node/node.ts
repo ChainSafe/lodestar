@@ -56,7 +56,7 @@ export class NodeApi implements INodeApi {
     return this.sync.getSyncStatus();
   }
 
-  public getVersion(): string {
+  public async getVersion(): Promise<string> {
     return `Lodestar/${process.env.npm_package_version || "dev"}`;
   }
 
