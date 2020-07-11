@@ -5,7 +5,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BLSPubkey,
-  Bytes32,
   ForkResponse,
   Number64,
   SignedBeaconBlock,

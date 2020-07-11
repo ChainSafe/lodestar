@@ -16,4 +16,4 @@ export type NodePeer = {
   address: string;
   state: "disconnected"|"connecting"|"connected"|"disconnecting";
   direction: "inbound"|"outbound";
-}
+};
