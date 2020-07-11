@@ -2,7 +2,7 @@ import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 
-import {IDatabaseController, IFilterOptions} from "../../../controller";
+import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
 import {Bucket, encodeKey} from "../../schema";
 import {Repository} from "./abstract";
 import {ArrayLike} from "@chainsafe/ssz";
@@ -23,10 +23,31 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     super(config, db, Bucket.blockArchive, config.types.SignedBeaconBlock);
   }
 
-  public async add(value: SignedBeaconBlock): Promise<void> {
+  public async put(key: Slot, value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
-      super.add(value),
+      super.put(key, value),
       this.storeRootRef(value)
+    ]);
+  }
+
+  public async batchPut(items: ArrayLike<IKeyValue<Slot, SignedBeaconBlock>>): Promise<void> {
+    await Promise.all([
+      super.batchPut(items),
+      Array.from(items).map((item) => this.storeRootRef(item.value))
+    ]);
+  }
+
+  public async remove(value: SignedBeaconBlock): Promise<void> {
+    await Promise.all([
+      super.remove(value),
+      this.deleteRootRef(value)
+    ]);
+  }
+
+  public async batchRemove(values: ArrayLike<SignedBeaconBlock>): Promise<void> {
+    await Promise.all([
+      super.batchRemove(values),
+      Array.from(values).map((value) => this.deleteRootRef(value))
     ]);
   }
 
@@ -49,14 +70,6 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
       return bytesToInt(value, "be");
     }
     return null;
-  }
-
-
-  public async batchAdd(values: ArrayLike<SignedBeaconBlock>): Promise<void> {
-    await Promise.all([
-      super.batchAdd(values),
-      ...Array.from(values).map((block) => this.storeRootRef(block))
-    ]);
   }
 
   public decodeKey(data: Buffer): number {
@@ -98,6 +111,15 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
         this.config.types.BeaconBlock.hashTreeRoot(block.message)
       ),
       intToBytes(block.message.slot, 64, "be")
+    );
+  }
+
+  private async deleteRootRef(block: SignedBeaconBlock): Promise<void> {
+    return this.db.delete(
+      encodeKey(
+        Bucket.blockArchiveRootRef,
+        this.config.types.BeaconBlock.hashTreeRoot(block.message)
+      )
     );
   }
 }
