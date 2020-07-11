@@ -108,6 +108,9 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
+      throw new Error("Cannot collect attestations before regular sync");
+    }
     this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
@@ -123,8 +126,8 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     await Promise.all([
+      this.regularSync.start(),
       this.gossip.start(),
-      this.regularSync.start()
     ]);
   }
 

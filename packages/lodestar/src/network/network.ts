@@ -63,7 +63,6 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
-    await this.gossip.start();
     const enr = this.getEnr();
     await this.metadata.start(enr);
     this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
