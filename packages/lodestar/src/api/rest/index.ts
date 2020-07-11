@@ -78,7 +78,7 @@ export class RestApi implements IService {
 
     //old api, remove once migrated
     if(this.opts.api.includes(ApiNamespace.BEACON)) {
-      server.register(routes.beacon, {prefix: "/node", api, config: modules.config});
+      server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
     }
     if(this.opts.api.includes(ApiNamespace.VALIDATOR)) {
       //TODO: enable when syncing status api working

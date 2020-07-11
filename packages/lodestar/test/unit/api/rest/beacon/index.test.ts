@@ -45,7 +45,7 @@ describe("Test beacon rest api", function () {
   it("should return version", async function () {
     beaconApi.getClientVersion.resolves(Buffer.from(`lodestar-${process.env.npm_package_version}`));
     const response = await supertest(restApi.server.server)
-      .get("/node/version")
+      .get("/lodestar/version")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body).to.be.equal(`lodestar-${process.env.npm_package_version}`);
@@ -55,7 +55,7 @@ describe("Test beacon rest api", function () {
     const genesis = Math.floor(Date.now()/1000);
     beaconApi.getGenesisTime.resolves(genesis);
     const response = await supertest(restApi.server.server)
-      .get("/node/genesis_time")
+      .get("/lodestar/genesis_time")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body).to.be.equal(genesis);
@@ -64,7 +64,7 @@ describe("Test beacon rest api", function () {
   it("should return sync status", async function () {
     beaconApi.getSyncingStatus.resolves(false);
     const response = await supertest(restApi.server.server)
-      .get("/node/syncing")
+      .get("/lodestar/syncing")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.is_syncing).to.be.false;
