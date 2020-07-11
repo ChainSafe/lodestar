@@ -6,6 +6,7 @@ import {SyncingStatus} from "@chainsafe/lodestar-types";
 import {INetwork} from "../../../network";
 import {getPeerState} from "./utils";
 import {IBeaconSync} from "../../../sync";
+import {createKeypairFromPeerId} from "@chainsafe/discv5/lib";
 
 export class NodeApi implements INodeApi {
   public namespace = ApiNamespace.NODE;
@@ -21,21 +22,22 @@ export class NodeApi implements INodeApi {
 
   public async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
+    const keypair = createKeypairFromPeerId(this.network.peerId);
     return {
       peerId: this.network.peerId.toB58String(),
-      enr: enr?.encodeTxt() || "",
-      discoveryAddresses: [enr.multiaddrTCP?.toString(), enr.multiaddrUDP?.toString()].filter(v => !!v),
+      enr: enr?.encodeTxt(keypair.privateKey) || "",
+      discoveryAddresses: [enr?.multiaddrTCP?.toString(), enr?.multiaddrUDP?.toString()].filter(v => !!v),
       p2pAddresses: this.network.multiaddrs.map((m) => m.toString()),
       metadata: this.network.metadata
     };
   }
 
   public async getNodeStatus(): Promise<"ready" | "syncing" | "error"> {
-    return "ready";
+    return (await this.sync.isSynced()) ? "ready" : "syncing";
   }
 
   public async getPeer(peerId: string): Promise<NodePeer|null> {
-    return (await this.getPeers()).find((peer) => peer.peerId === peerId);
+    return (await this.getPeers()).find((peer) => peer.peerId === peerId) || null;
   }
 
   public async getPeers(): Promise<NodePeer[]> {
