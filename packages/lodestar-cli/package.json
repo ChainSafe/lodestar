@@ -60,7 +60,7 @@
     "yargs": "^15.3.1"
   },
   "bin": {
-    "lodestar": "./bin/lodestar"
+    "lodestar": "./lib/index.js"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",
