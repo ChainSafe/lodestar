@@ -3,6 +3,7 @@ import {IGlobalArgs} from "../../options";
 import {chainPreset, IChainArgs} from "../dev/options/chain";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorOptions} from "../account/cmds/validator/options";
+import {withDefaultValue} from "../../util";
 
 export interface IValidatorCliOptions extends IGlobalArgs, IAccountValidatorOptions, IChainArgs {
   validatorsDbDir?: string;
@@ -15,7 +16,7 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   chainPreset,
 
   validatorsDbDir: {
-    description: `Data directory for validator databases.\n[default: ${defaultValidatorPaths.validatorsDbDir}]`,
+    description: withDefaultValue("Data directory for validator databases.", defaultValidatorPaths.validatorsDbDir),
     alias: ["dbDir", "db.dir", "db.name"],
     normalize: true,
     type: "string",
