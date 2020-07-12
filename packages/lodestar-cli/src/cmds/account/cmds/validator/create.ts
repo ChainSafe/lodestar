@@ -10,7 +10,8 @@ import {IAccountValidatorOptions} from "./options";
 export const command = "create";
 
 export const description = "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \
-  derivation scheme.";
+  derivation scheme. Creates a new directory per validator with a voting keystore, withdrawal keystore, \
+  and pre-computed deposit RPL data";
 
 interface IValidatorCreateOptions extends IAccountValidatorOptions {
   name: string;
