@@ -13,9 +13,6 @@
   },
   "version": "0.9.0",
   "main": "lib/index.js",
-  "bin": {
-    "lodestar": "./bin/lodestar"
-  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",

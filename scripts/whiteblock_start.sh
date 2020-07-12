@@ -79,7 +79,7 @@ done
 REAL_VALIDATOR_KEYS=/tmp/keys.yaml
 sed 's/0x/\"0x/g' $VALIDATOR_KEYS | sed 's/$/"/g' > $REAL_VALIDATOR_KEYS
 
-/lodestar/packages/lodestar/bin/lodestar \
+yarn cli \
  	interop \
 	-p minimal \
 	--db l1 \

@@ -41,9 +41,9 @@ START_TIME=$(date +%s)
 BASE_PORT=3060
 
 # The new-session needs to be created externally
-tmux new-session -d -s interop "./bin/lodestar interop -p minimal --db l0 -q $START_TIME,$TOTAL_VALIDATORS --multiaddrs /ip4/127.0.0.1/tcp/${BASE_PORT}0 -v ${VALIDATOR_ARRAY[0]} -r";
+tmux new-session -d -s interop "yarn cli interop -p minimal --db l0 -q $START_TIME,$TOTAL_VALIDATORS --multiaddrs /ip4/127.0.0.1/tcp/${BASE_PORT}0 -v ${VALIDATOR_ARRAY[0]} -r";
 for (( i=1; i<$nodes; i++ )) do
-    tmux split-window -v -t interop "./bin/lodestar interop -p minimal --db l$i -q $START_TIME,$TOTAL_VALIDATORS --multiaddrs /ip4/127.0.0.1/tcp/$BASE_PORT$i -v ${VALIDATOR_ARRAY[$i-1]},${VALIDATOR_ARRAY[$i]} -r"
+    tmux split-window -v -t interop "yarn cli interop -p minimal --db l$i -q $START_TIME,$TOTAL_VALIDATORS --multiaddrs /ip4/127.0.0.1/tcp/$BASE_PORT$i -v ${VALIDATOR_ARRAY[$i-1]},${VALIDATOR_ARRAY[$i]} -r"
 done
 
 # Change the layout

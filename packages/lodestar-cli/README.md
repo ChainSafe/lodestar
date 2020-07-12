@@ -16,5 +16,5 @@ Command line tool for Lodestar
 
 We have an experimental new CLI called `lodestar` which currently provides a subset of the `lodestar` CLI functionality.
 
-`./bin/lodestar beacon init` - this will write a configuration and network identity to disk, by default `./.lodestar`
-`./bin/lodestar beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodestar`
+`yarn cli beacon init` - this will write a configuration and network identity to disk, by default `./.lodestar`
+`yarn cli beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodestar`

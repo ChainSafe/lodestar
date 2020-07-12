@@ -10,7 +10,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
-    "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
+    "cli": "node --trace-deprecation ./packages/lodestar-cli/lib"
   },
   "devDependencies": {
     "@babel/cli": "^7.8.3",
