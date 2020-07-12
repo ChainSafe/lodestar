@@ -1,28 +1,28 @@
-import {ethers} from "ethers";
 import {CommandBuilder} from "yargs";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
-import {getBeaconConfig} from "../../../../util";
+import {getBeaconConfig, getEthersSigner} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
 export const command = "deposit";
 
-export const description = `Submits a deposit to an Eth1 validator registration contract via an IPC endpoint
-of an Eth1 client (e.g., Geth, OpenEthereum, etc.). The validators must already
-have been created and exist on the file-system. The process will exit immediately
-with an error if any error occurs. After each deposit is submitted to the Eth1
-node, a file will be saved in the validator directory with the transaction hash.
-The application does not wait for confirmations so there is not guarantee that
-the transaction is included in the Eth1 chain; use a block explorer and the
-transaction hash to check for confirmations. The deposit contract address will
-be determined by the spec config flag.`;
+export const description = "Submits a deposit to an Eth1 validator registration contract via an IPC endpoint \
+of an Eth1 client (e.g., Geth, OpenEthereum, etc.). The validators must already \
+have been created and exist on the file-system. The process will exit immediately \
+with an error if any error occurs. After each deposit is submitted to the Eth1 \
+node, a file will be saved in the validator directory with the transaction hash. \
+The deposit contract address will be determined by the spec config flag.";
 
 interface IAccountValidatorDepositOptions extends IAccountValidatorOptions {
   keystoresDir: string;
   validator: string;
-  eth1Http?: string;
+  keystorePath?: string;
+  keystorePassword?: string;
+  rpcUrl?: string;
+  rpcPassword?: string;
+  ipcPath?: string;
 }
 
 export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
@@ -34,9 +34,29 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
     type: "string",
   },
 
-  eth1Http: {
-    description: "URL to an Eth1 JSON-RPC endpoint with an unlock account to sign",
-    demandOption: true,
+  keystorePath: {
+    description: "Path to a keystore with an Eth1 account. Must provide its password with keystorePassword",
+    type: "string"
+  },
+
+  keystorePassword: {
+    description: "Password to unlock the Eth1 keystore in keystorePath",
+    type: "string"
+  },
+
+  rpcUrl: {
+    description: "URL to an Eth1 JSON-RPC endpoint. It can have an unlocked account to sign, \
+    use rpcPassword to unlock it, or provide a local keystore and password.",
+    type: "string"
+  },
+
+  rpcPassword: {
+    description: "Password to unlock an Eth1 node's account provided with rpcUrl.",
+    type: "string"
+  },
+
+  ipcPath: {
+    description: "Path to an Eth1 node IPC.",
     type: "string"
   }
 };
@@ -44,7 +64,6 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
   const spec = options.chain.name;
   const validatorName = options.validator;
-  const eth1Http = options.eth1Http;
   const accountPaths = getAccountPaths(options);
   const config = getBeaconConfig(spec);
 
@@ -68,12 +87,12 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
   // eslint-disable-next-line no-console
   console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 
-  const eth1Wallet = new ethers.providers.JsonRpcProvider(eth1Http).getSigner();
+  const eth1Signer = await getEthersSigner(options);
 
   for (const validatorDir of validatorDirsToSubmit) {
     const {rlp, depositData} = validatorDir.eth1DepositData(config);
     const value = depositData.amount * BigInt(1e9);
-    const tx = await eth1Wallet.sendTransaction({
+    const tx = await eth1Signer.sendTransaction({
       to: depositContractAddress,
       gasLimit: DEPOSIT_GAS_LIMIT,
       value: value.toString(),
