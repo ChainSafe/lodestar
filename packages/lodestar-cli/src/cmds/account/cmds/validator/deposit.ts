@@ -98,10 +98,10 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
       value: value.toString(),
       data: rlp
     });
-    const txHash = tx.hash || "";
-    validatorDir.saveEth1DepositTxHash(txHash);
+    if (!tx.hash) throw Error("No transaction hash");
+    validatorDir.saveEth1DepositTxHash(tx.hash);
     // eslint-disable-next-line no-console
-    console.log(`Submitted deposit. txHash: ${txHash}`);
+    console.log(`Submitted deposit. txHash: ${tx.hash}`);
 
     const receipt = await tx.wait();
     // eslint-disable-next-line no-console
