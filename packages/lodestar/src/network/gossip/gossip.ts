@@ -69,9 +69,11 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     await this.pubsub.start();
     this.registerHandlers(this.chain.currentForkDigest);
     this.chain.on("forkDigest", this.handleForkDigest);
+    this.emit("gossip:start");
   }
 
   public async stop(): Promise<void> {
+    this.emit("gossip:stop");
     this.unregisterHandlers();
     this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();

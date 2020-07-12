@@ -65,7 +65,6 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.start();
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
-    await this.gossip.start();
     const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const enr = discv5Discovery && discv5Discovery.discv5 && discv5Discovery.discv5.enr || undefined;
     await this.metadata.start(enr);

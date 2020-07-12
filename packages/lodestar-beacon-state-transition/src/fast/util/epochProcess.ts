@@ -20,8 +20,7 @@ export interface IEpochProcess {
   statuses: IAttesterStatus[];
   totalActiveStake: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
-  prevEpochTargetStake: Gwei;
-  currEpochTargetStake: Gwei;
+  currEpochUnslashedTargetStake: Gwei;
   indicesToSlash: ValidatorIndex[];
   indicesToSetActivationEligibility: ValidatorIndex[];
   // ignores churn, apply churn-limit manually.
@@ -45,8 +44,7 @@ export function createIEpochProcess(): IEpochProcess {
       targetStake: BigInt(0),
       headStake: BigInt(0),
     },
-    prevEpochTargetStake: BigInt(0),
-    currEpochTargetStake: BigInt(0),
+    currEpochUnslashedTargetStake: BigInt(0),
     indicesToSlash: [],
     indicesToSetActivationEligibility: [],
     indicesToMaybeActivate: [],
@@ -236,8 +234,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   let prevTargetUnslStake = BigInt(0);
   let prevHeadUnslStake = BigInt(0);
 
-  let prevTargetStake = BigInt(0);
-  let currTargetStake = BigInt(0);
+  let currTargetUnslStake = BigInt(0);
 
   out.statuses.forEach((status) => {
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
@@ -249,19 +246,23 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
         }
       }
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
-      prevTargetStake += status.validator.effectiveBalance;
-    }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER)) {
-      currTargetStake += status.validator.effectiveBalance;
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+      currTargetUnslStake += status.validator.effectiveBalance;
     }
   });
+  // As per spec of `get_total_balance`:
+  // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
+  // Math safe up to ~10B ETH, afterwhich this overflows uint64.
+  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
+  if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
+  if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
+  if (currTargetUnslStake < increment) currTargetUnslStake = increment;
 
   out.prevEpochUnslashedStake.sourceStake = prevSourceUnslStake;
   out.prevEpochUnslashedStake.targetStake = prevTargetUnslStake;
   out.prevEpochUnslashedStake.headStake = prevHeadUnslStake;
-  out.prevEpochTargetStake = prevTargetStake;
-  out.currEpochTargetStake = currTargetStake;
+  out.currEpochUnslashedTargetStake = currTargetUnslStake;
 
   return out;
 }

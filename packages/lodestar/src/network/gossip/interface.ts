@@ -30,7 +30,8 @@ export interface IGossipEvents {
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
   ["gossipsub:heartbeat"]: () => void;
-
+  ["gossip:start"]: () => void;
+  ["gossip:stop"]: () => void;
 }
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
 

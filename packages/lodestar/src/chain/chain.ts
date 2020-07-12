@@ -20,7 +20,7 @@ import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lo
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
-import {EMPTY_SIGNATURE, GENESIS_SLOT} from "../constants";
+import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
 import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
@@ -226,19 +226,22 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return {
       forkDigest: this.currentForkDigest,
       nextForkVersion: nextVersion? intToBytes(nextVersion.currentVersion, 4) : currentVersion.valueOf() as Uint8Array,
-      nextForkEpoch: nextVersion? nextVersion.epoch : Number.MAX_SAFE_INTEGER,
+      nextForkEpoch: nextVersion? nextVersion.epoch : FAR_FUTURE_EPOCH,
     };
   }
 
   public async waitForBlockProcessed(blockRoot: Uint8Array): Promise<void> {
+    let listener: (signedBlock: SignedBeaconBlock) => void;
     await new Promise((resolve) => {
-      this.once("processedBlock", (signedBlock) => {
+      listener = (signedBlock) => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
           resolve();
         }
-      });
+      };
+      this.on("processedBlock", listener);
     });
+    this.removeListener("processedBlock", listener);
   }
 
   /**
@@ -251,19 +254,23 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
     this.db.stateCache.add({state: lastKnownState, epochCtx});
-    // the block respective to finalized epoch is still in block db
-    const allBlocks = await this.db.block.values();
-    if (!allBlocks || allBlocks.length === 0) {
+    // there might be blocks in the archive we need to reprocess
+    const finalizedBlocks = await this.db.blockArchive.values({gte: lastKnownState.slot});
+    // the block respective to finalized epoch still in block db
+    const unfinalizedBlocks = await this.db.block.values();
+    if (!unfinalizedBlocks || unfinalizedBlocks.length === 0) {
       return;
     }
-    const sortedBlocks = sortBlocks(allBlocks);
+    const sortedBlocks = finalizedBlocks.concat(sortBlocks(unfinalizedBlocks));
     const firstBlock = sortedBlocks[0];
     const lastBlock = sortedBlocks[sortedBlocks.length - 1];
     let firstSlot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
-    this.logger.info(`Found ${allBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`);
+    this.logger.info(
+      `Found ${sortedBlocks.length} nonfinalized blocks in database from slot ${firstSlot} to ${lastSlot}`
+    );
     // initially we initialize database with genesis block
-    if (allBlocks.length === 1) {
+    if (sortedBlocks.length === 1) {
       // start from scratch
       const blockHash = this.config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
       if (this.config.types.Root.equals(blockHash, this.forkChoice.headBlockRoot())) {
@@ -310,7 +317,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       ...processedBlocks.map(block => this.receiveBlock(block, true, true)),
       this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message))
     ]);
-    this.logger.important(`Finish restoring chain head from ${allBlocks.length} blocks`);
+    this.logger.important(`Finish restoring chain head from ${sortedBlocks.length} blocks`);
     this.logger.profile("restoreHeadState");
   }
 

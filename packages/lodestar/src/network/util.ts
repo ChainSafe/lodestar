@@ -62,17 +62,17 @@ export function isRequestSingleChunk(method: Method): boolean {
 }
 
 export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+  const controller = new AbortController();
+  let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
+  const renewTimer = (): void => {
+    clearTimeout(responseTimer);
+    responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
+  };
+  const cancelTimer = (): void => {
+    clearTimeout(responseTimer);
+  };
   return (source) => {
     return (async function*() {
-      const controller = new AbortController();
-      let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
-      const renewTimer = (): void => {
-        clearTimeout(responseTimer);
-        responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
-      };
-      const cancelTimer = (): void => {
-        clearTimeout(responseTimer);
-      };
       for await(const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
         renewTimer();
         yield item;

@@ -30,7 +30,8 @@ export function processDeposit(
 
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
-  if (!Number.isSafeInteger(epochCtx.pubkey2index.get(pubkey))) {
+  const cachedIndex = epochCtx.pubkey2index.get(pubkey);
+  if (!Number.isSafeInteger(cachedIndex) || cachedIndex >= state.validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {
       pubkey: deposit.data.pubkey,
@@ -62,8 +63,7 @@ export function processDeposit(
     state.balances.push(amount);
   } else {
     // increase balance by deposit amount
-    const index = epochCtx.pubkey2index.get(pubkey);
-    increaseBalance(state, index, amount);
+    increaseBalance(state, cachedIndex, amount);
   }
   // now that there is a new validator, update the epoch context with the new pubkey
   epochCtx.syncPubkeys(state);
