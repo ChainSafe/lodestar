@@ -4,7 +4,7 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines, randomPassword, getBeaconConfig, YargsError} from "../../../../util";
+import {stripOffNewlines, getBeaconConfig, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 export const command = "create";
@@ -53,69 +53,47 @@ instead generate them from the wallet seed when required.",
 
   count: {
     description: "The number of validators to create, regardless of how many already exist",
+    conflicts: ["atMost"],
     type: "number"
   },
 
   atMost: {
     description: "Observe the number of validators in --validator-dir, only creating enough to \
 reach the given count. Never deletes an existing validator.",
+    conflicts: ["count"],
     type: "number"
   }
 };
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
-  const name = options.name;
-  const passphraseFile = options.passphraseFile;
-  const spec = options.chain.name;
-  const storeWithdrawalKeystore = options.storeWithdrawalKeystore;
-  const count = options.count;
-  const atMost = options.atMost;
+  const {name, passphraseFile, storeWithdrawalKeystore, count, atMost} = options;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(spec);
+  const config = getBeaconConfig(options.chain.name);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
 
-  // To compute the publicKey of the validator keystores
-  await initBLS();
+  await initBLS(); // Necessary to compute validator pubkey from privKey
 
-  if (depositGwei > maxEffectiveBalance) {
+  if (depositGwei > maxEffectiveBalance)
     throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
-  }
 
-  // Makes sure account paths exist
   const validatorDirBuilder = new ValidatorDirBuilder(accountPaths);
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
-
-  if (count && atMost) throw new YargsError("cannot supply --count and --atMost");
-  if (!count && !atMost) throw new YargsError("must supply --count or --atMost");
   const n = count || atMost - wallet.nextaccount;
   if (n <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = stripOffNewlines(fs.readFileSync(passphraseFile, "utf8"));
 
   for (let i = 0; i < n; i++) {
-    const passwords = {
-      signing: randomPassword(),
-      withdrawal: randomPassword()
-    };
+    const passwords = wallet.randomPasswords();
     const keystores = wallet.nextValidator(walletPassword, passwords);
-    const votingPubkey = keystores.signing.pubkey;
-
-    validatorDirBuilder.build({
-      votingKeystore: keystores.signing,
-      votingPassword: passwords.signing,
-      withdrawalKeystore: keystores.withdrawal,
-      withdrawalPassword: passwords.withdrawal,
-      storeWithdrawalKeystore,
-      depositGwei,
-      config
-    });
+    validatorDirBuilder.build({keystores, passwords, storeWithdrawalKeystore, depositGwei, config});
 
     // Persist the nextaccount index after successfully creating the validator directory
     walletManager.writeWallet(wallet);
 
     // eslint-disable-next-line no-console
-    console.log(`${i}/${count}\t${votingPubkey}`);
+    console.log(`${i}/${count}\t${keystores.signing.pubkey}`);
   }
 }

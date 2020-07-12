@@ -6,6 +6,7 @@ import {
   deriveEth2ValidatorKeys,
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
+import {randomPassword} from "../util";
 
 /**
  * @chainsafe/bls-keystore@1.0.0-beta8 requires a pubKey argument
@@ -109,5 +110,15 @@ export class Wallet extends Keystore {
     this.nextaccount += 1;
 
     return keystores;
+  }
+
+  /**
+   * Utility function to generate passwords for the two eth2 pair keystores
+   */
+  randomPasswords(): { [key in keyof IEth2ValidatorKeys]: string } {
+    return {
+      signing: randomPassword(),
+      withdrawal: randomPassword()
+    };
   }
 }

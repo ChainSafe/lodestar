@@ -53,10 +53,7 @@ wallets are supported presently.`,
 };
 
 export async function handler(options: IWalletCreateOptions): Promise<void> {
-  const name = options.name;
-  const type = options.type;
-  const passphraseFile = options.passphraseFile;
-  const mnemonicOutputPath = options.mnemonicOutputPath;
+  const {name, type, passphraseFile, mnemonicOutputPath} = options;
   const accountPaths = getAccountPaths(options);
 
   // Create a new random mnemonic.
@@ -102,4 +99,3 @@ Your wallet's UUID is:
 You do not need to backup your UUID or keep it secret.
 `);
 }
-

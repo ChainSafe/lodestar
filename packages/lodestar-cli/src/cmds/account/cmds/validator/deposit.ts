@@ -62,10 +62,9 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 };
 
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
-  const spec = options.chain.name;
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(spec);
+  const config = getBeaconConfig(options.chain.name);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
     throw Error("deposit_contract not in configuration");
@@ -91,11 +90,10 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
 
   for (const validatorDir of validatorDirsToSubmit) {
     const {rlp, depositData} = validatorDir.eth1DepositData(config);
-    const value = depositData.amount * BigInt(1e9);
     const tx = await eth1Signer.sendTransaction({
       to: depositContractAddress,
       gasLimit: DEPOSIT_GAS_LIMIT,
-      value: value.toString(),
+      value: (depositData.amount * BigInt(1e9)).toString(),
       data: rlp
     });
     if (!tx.hash) throw Error("No transaction hash");

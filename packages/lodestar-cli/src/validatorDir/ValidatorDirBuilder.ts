@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {PublicKey, PrivateKey} from "@chainsafe/bls";
+import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
 import {encodeDepositData} from "../depositContract/depositData";
@@ -14,10 +15,8 @@ import {
 } from "./paths";
 
 interface IValidatorDirBuildOptions {
-  votingKeystore: Keystore;
-  votingPassword: string;
-  withdrawalKeystore: Keystore;
-  withdrawalPassword: string;
+  keystores: { [key in keyof IEth2ValidatorKeys]: Keystore };
+  passwords: { [key in keyof IEth2ValidatorKeys]: string };
   /**
    * If `should_store == true`, the validator keystore will be saved in the `ValidatorDir` (and
    * the password to it stored in the `password_dir`). If `should_store == false`, the
@@ -57,21 +56,19 @@ export class ValidatorDirBuilder {
   }
 
   build({
-    votingKeystore,
-    votingPassword,
-    withdrawalKeystore,
-    withdrawalPassword,
+    keystores,
+    passwords,
     storeWithdrawalKeystore,
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
-    if (!votingKeystore.pubkey) throw Error("votingKeystore has no pubkey");
-    const dir = path.join(this.keystoresDir, votingKeystore.pubkey);
+    if (!keystores.signing.pubkey) throw Error("signing keystore has no pubkey");
+    const dir = path.join(this.keystoresDir, keystores.signing.pubkey);
     if (fs.existsSync(dir)) throw Error(`validator dir ${dir} already exists`);
     fs.mkdirSync(dir, {recursive: true});
 
-    const withdrawalPublicKey = PublicKey.fromHex(withdrawalKeystore.pubkey);
-    const votingPrivateKey = PrivateKey.fromBytes(votingKeystore.decrypt(votingPassword));
+    const withdrawalPublicKey = PublicKey.fromHex(keystores.withdrawal.pubkey);
+    const votingPrivateKey = PrivateKey.fromBytes(keystores.signing.decrypt(passwords.signing));
 
     // Save `ETH1_DEPOSIT_DATA_FILE` to file.
     // This allows us to know the RLP data for the eth1 transaction without needing to know
@@ -90,14 +87,14 @@ export class ValidatorDirBuilder {
 
     // Only the withdrawal keystore if explicitly required.
     if (storeWithdrawalKeystore) {
-      writeFile600Perm(path.join(this.secretsDir, withdrawalKeystore.pubkey), withdrawalPassword);
-      fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), withdrawalKeystore.toJSON());
+      writeFile600Perm(path.join(this.secretsDir, keystores.withdrawal.pubkey), passwords.withdrawal);
+      fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), keystores.withdrawal.toJSON());
     }
 
     // Always store voting credentials
-    writeFile600Perm(path.join(this.secretsDir, votingKeystore.pubkey), votingPassword);
-    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), votingKeystore.toJSON());
+    writeFile600Perm(path.join(this.secretsDir, keystores.signing.pubkey), passwords.signing);
+    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystores.signing.toJSON());
 
-    return new ValidatorDir(this.keystoresDir, votingKeystore.pubkey);
+    return new ValidatorDir(this.keystoresDir, keystores.signing.pubkey);
   }
 }

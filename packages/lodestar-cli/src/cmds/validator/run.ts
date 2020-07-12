@@ -18,14 +18,12 @@ import {IValidatorCliOptions} from "./options";
  */
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
-  const spec = options.chain.name;
   const force = options.force;
   const accountPaths = getAccountPaths(options);
   const validatorPaths = getValidatorPaths(options);
+  const config = getBeaconConfig(options.chain.name);
   
   await initBLS();
-
-  const config = getBeaconConfig(spec);
 
   const logger = new WinstonLogger();
 
