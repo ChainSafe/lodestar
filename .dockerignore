@@ -1,18 +1,28 @@
-supporting-docs
 .github
-assets
 .idea
-.tmp
 .git
 Dockerfile
 *.log
 **/*.log
-node_modules
 **/.nyc_output
 **/coverage
-**/node_modules
 **/test
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build artifacts
 **/lib
-**/.tmp
 **/dist
+
+# Docs
+supporting-docs
+docs
+audits
+assets
+
+# Data
 **/*-db
+.tmp
+**/.tmp

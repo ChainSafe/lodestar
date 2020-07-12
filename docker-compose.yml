@@ -1,5 +1,9 @@
-version: '2'
+version: "3.4"
 services:
+    lodestar:
+        build: .
+        volumes:
+            - ./:/root/lodestar
     prometheus:
         image: prom/prometheus:v2.9.2
         depends_on:
@@ -8,12 +12,3 @@ services:
             - ./prometheus.yml:/etc/prometheus/prometheus.yml
         ports:
             - '9090:9090'
-    lodestar:
-        build:
-            context: .
-            dockerfile: docker/Dockerfile
-        volumes:
-            - ./:/root/lodestar
-            - node_modules:/root/lodestar/node_modules
-volumes:
-  node_modules:
