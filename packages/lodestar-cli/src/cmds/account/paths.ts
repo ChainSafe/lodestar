@@ -32,7 +32,7 @@ export interface IAccountPaths {
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
 export function getAccountPaths(options: Partial<IAccountPaths> & Pick<IGlobalArgs, "rootDir">): IAccountPaths {
-  const rootDir = options.rootDir || ".lodestart";
+  const rootDir = options.rootDir;
   const keystoresDir = path.join(rootDir, options.keystoresDir || "keystores");
   const secretsDir = path.join(rootDir, options.secretsDir || "secrets");
   const walletsDir = path.join(rootDir, options.walletsDir || "wallets");

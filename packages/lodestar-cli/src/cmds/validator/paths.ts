@@ -17,7 +17,7 @@ export interface IValidatorPaths {
  * ```
  */
 export function getValidatorPaths(options: Partial<IValidatorPaths> & Pick<IGlobalArgs, "rootDir">): IValidatorPaths {
-  const rootDir = options.rootDir || ".lodestart";
+  const rootDir = options.rootDir;
   const validatorsDbDir = path.join(rootDir, options.validatorsDbDir || "validator-db");
   return {
     validatorsDbDir,
