@@ -3,6 +3,7 @@ import {IGlobalArgs} from "../../../../options";
 import {accountValidatorOptions, IAccountValidatorOptions} from "./options";
 import * as create from "./create";
 import * as deposit from "./deposit";
+import * as list from "./list";
 
 export const validator: CommandModule<IGlobalArgs, IAccountValidatorOptions> = {
   command: "validator <command>",
@@ -10,7 +11,8 @@ export const validator: CommandModule<IGlobalArgs, IAccountValidatorOptions> = {
   builder: (yargs) => yargs
     .options(accountValidatorOptions)
     .command(create)
-    .command(deposit),
+    .command(deposit)
+    .command(list),
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   handler: () => {}
 };
