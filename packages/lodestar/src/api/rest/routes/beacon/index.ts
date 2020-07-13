@@ -11,6 +11,7 @@ import {
   getBlockHeaders,
   getBlockRoot
 } from "../../controllers/beacon/blocks";
+import {getGenesis} from "../../controllers/beacon";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
@@ -23,6 +24,7 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
 
 //new
 export function registerBeaconRoutes(server: FastifyInstance): void {
+  server.get(getGenesis.url, getGenesis.opts, getGenesis.handler);
   server.get(getBlockHeaders.url, getBlockHeaders.opts, getBlockHeaders.handler);
   server.get(getBlockHeader.url, getBlockHeader.opts, getBlockHeader.handler);
   server.get(getBlock.url, getBlock.opts, getBlock.handler);

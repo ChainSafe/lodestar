@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BLSPubkey,
   ForkResponse,
-  Number64,
+  Genesis,
   SignedBeaconBlock,
   Uint64,
   ValidatorResponse
@@ -70,12 +70,16 @@ export class BeaconApi implements IBeaconApi {
     };
   }
 
-  public async getGenesisTime(): Promise<Number64> {
+  public async getGenesis(): Promise<Genesis|null> {
     const state = await this.chain.getHeadState();
     if(state) {
-      return state.genesisTime;
+      return {
+        genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
+        genesisTime: BigInt(state.genesisTime),
+        genesisValidatorsRoot: state.genesisValidatorsRoot
+      };
     }
-    return 0;
+    return null;
   }
 
   public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
