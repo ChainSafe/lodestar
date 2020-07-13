@@ -3,7 +3,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Message} from "libp2p-gossipsub/src/message";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
-import {GossipEvent} from "../../../../src/network/gossip/constants";
+import {GossipEvent, ExtendedValidatorResult} from "../../../../src/network/gossip/constants";
 import {IGossipMessageValidator} from "../../../../src/network/gossip/interface";
 import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
@@ -45,22 +45,22 @@ describe("gossipsub", function() {
 
 
   it("should return false because of failed validation", async () => {
-    validator.isValidIncomingBlock = (): Promise<boolean> => Promise.resolve(false);
-    const result = await gossipSub.validate(message);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.reject);
+    const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.false;
   });
 
   it("should return true if pass validator function", async () => {
-    validator.isValidIncomingBlock = (): Promise<boolean> => Promise.resolve(true);
-    const result = await gossipSub.validate(message);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.accept);
+    const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.true;
   });
 
   it("should return false because of duplicate", async () => {
-    validator.isValidIncomingBlock = (): Promise<boolean> => Promise.resolve(true);
-    const result = await gossipSub.validate(message);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.accept);
+    const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.true;
     // receive again => duplicate
-    expect(await gossipSub.validate(message)).to.be.false;
+    expect(await gossipSub.validate(message, undefined)).to.be.false;
   });
 });

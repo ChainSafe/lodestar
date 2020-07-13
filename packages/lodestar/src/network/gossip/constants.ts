@@ -22,3 +22,9 @@ export const GossipTopicRegExp = new RegExp("^(/eth2/)([a-f0-9]{8})/(\\w+)(/[a-z
 export function getCommitteeSubnetEvent(index: CommitteeIndex): string {
   return GossipEvent.ATTESTATION_SUBNET.replace("{subnet}", String(index % ATTESTATION_SUBNET_COUNT));
 }
+
+export const enum ExtendedValidatorResult {
+  accept = "accept",
+  reject = "reject",
+  ignore = "ignore"
+}

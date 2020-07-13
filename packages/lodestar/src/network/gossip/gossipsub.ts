@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import Gossipsub from "libp2p-gossipsub";
-import {Registrar} from "libp2p-gossipsub/src/peer";
+import {Registrar, Peer} from "libp2p-gossipsub/src/peer";
 import {Message} from "libp2p-gossipsub/src/message";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -16,7 +16,7 @@ import {
   normalizeInRpcMessage,
   topicToGossipEvent
 } from "./utils";
-import {GossipEvent} from "./constants";
+import {GossipEvent, ExtendedValidatorResult} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {getTopicEncoding, GossipEncoding} from "./encoding";
 
@@ -65,7 +65,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
   }
 
-  public async validate(rawMessage: Message): Promise<boolean> {
+  public async validate(rawMessage: Message, peer: Peer): Promise<boolean> {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
     assert.true(Boolean(message.topicIDs), "topicIds is not defined");
     assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
@@ -76,21 +76,36 @@ export class LodestarGossipsub extends Gossipsub {
       return false;
     }
 
-    let isValid;
+    let validationResult;
     let transformedObj: GossipObject;
     try {
       const validatorFn = this.getTopicValidator(topic);
       const objSubnet = this.deserializeGossipMessage(topic, message);
       transformedObj = objSubnet.object;
-      isValid = await validatorFn(transformedObj, objSubnet.subnet);
+      validationResult = await validatorFn(transformedObj, objSubnet.subnet);
     } catch (err) {
-      isValid = false;
+      validationResult = ExtendedValidatorResult.reject;
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
+    const isValid = this._processTopicValidatorResult(topic, peer, message, validationResult);
     if (isValid && transformedObj) {
       this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj});
     }
     return isValid;
+  }
+
+  /**
+   * TODO: Should be removed in gossip 1.1
+   * @param topic
+   * @param peer
+   * @param message
+   * @param result
+   */
+  public _processTopicValidatorResult (topic: string, peer: Peer, message: Message, result: unknown): boolean {
+    if (result === ExtendedValidatorResult.accept) {
+      return true;
+    }
+    return false;
   }
 
   public _emitMessage(topics: string[], message: Message): void {

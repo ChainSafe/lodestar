@@ -20,6 +20,7 @@ import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
+import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -145,7 +146,7 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.multiaddrs);
     await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    validator.isValidIncomingBlock.resolves(true);
+    validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
     for (let i = 0; i < 5; i++) {
@@ -197,7 +198,7 @@ describe("[network] network", function () {
       });
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    validator.isValidIncomingBlock.resolves(true);
+    validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
     netB.gossip.publishBlock(block);
@@ -217,7 +218,7 @@ describe("[network] network", function () {
       netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
     });
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
-    validator.isValidIncomingAggregateAndProof.resolves(true);
+    validator.isValidIncomingAggregateAndProof.resolves(ExtendedValidatorResult.accept);
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
@@ -238,7 +239,7 @@ describe("[network] network", function () {
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     const attestation = generateEmptyAttestation();
     attestation.data.index = 0;
-    validator.isValidIncomingCommitteeAttestation.resolves(true);
+    validator.isValidIncomingCommitteeAttestation.resolves(ExtendedValidatorResult.accept);
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
     expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(1);

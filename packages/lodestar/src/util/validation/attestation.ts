@@ -36,7 +36,7 @@ export function isUnaggregatedAttestation(
 
 export async function isAttestingToValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {
   const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
-  return await db.block.has(blockRoot);
+  return (await db.block.has(blockRoot)) && (!await db.badBlock.has(blockRoot));
 }
 
 export async function hasValidatorAttestedForThatTargetEpoch(
