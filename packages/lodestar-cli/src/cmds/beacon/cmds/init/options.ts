@@ -2,7 +2,7 @@ import {Options} from "yargs";
 
 import {canonicalOptions} from "../../../../util";
 import {IBeaconArgs} from "../../options";
-import {paramsOptions} from "../params";
+import {paramsOptions} from "./params";
 
 export interface IBeaconInitArgs extends IBeaconArgs {
   templateConfigFile?: string;
