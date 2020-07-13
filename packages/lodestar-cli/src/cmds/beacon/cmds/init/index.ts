@@ -17,6 +17,7 @@ export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs> {
     const config = readBeaconConfig(args.templateConfigFile);
     yargs.config(config);
   }
+  console.log('config after yargs: ', yargs.argv);
   return yargs as unknown as Argv<IBeaconArgs>;
 }
 
