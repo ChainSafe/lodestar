@@ -1,6 +1,15 @@
 import {Options} from "yargs";
 
-export {chainGenesisStateFile} from "../../beacon/cmds/run/options/chain";
+// if we import from somewhere it'll print out "undefined" help
+export const chainGenesisStateFile: Options = {
+  alias: [
+    "chain.genesisStateFile",
+  ],
+  description: "Genesis state in ssz-encoded format",
+  type: "string",
+  normalize: true,
+  group: "chain"
+};
 
 export const chainPreset: Options = {
   alias: [
@@ -11,6 +20,7 @@ export const chainPreset: Options = {
   type: "string",
   choices: ["mainnet", "minimal"],
   default: "minimal",
+  group: "chain"
 };
 
 export interface IChainArgs {

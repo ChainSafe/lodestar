@@ -9,6 +9,7 @@ export const chainPreset: Options = {
   type: "string",
   choices: ["mainnet", "minimal"],
   default: "mainnet",
+  group: "chain"
 };
 
 export const chainGenesisStateFile: Options = {
@@ -18,4 +19,5 @@ export const chainGenesisStateFile: Options = {
   description: "Genesis state in ssz-encoded format",
   type: "string",
   normalize: true,
+  group: "chain"
 };
