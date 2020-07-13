@@ -1,9 +1,9 @@
 import {load, dump} from "js-yaml";
 import {schema} from "./schema";
-import {objectToCamelCase} from "../misc";
+import {objectToExpectedCase} from "../misc";
 
 export function loadYaml(yaml: string): object {
-  return objectToCamelCase(
+  return objectToExpectedCase(
     load(
       yaml,
       {schema}

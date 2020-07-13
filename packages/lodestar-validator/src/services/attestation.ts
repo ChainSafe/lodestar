@@ -150,7 +150,7 @@ export class AttestationService {
 
   private async waitForAttestationBlock(slot: Slot): Promise<void> {
     const eventSource = new EventSource(
-      `${this.provider.url}/node/blocks/stream`,
+      `${this.provider.url}/lodestar/blocks/stream`,
       {https: {rejectUnauthorized: false}}
     );
     await new Promise((resolve) => {

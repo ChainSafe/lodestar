@@ -4,6 +4,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {describe, it, before, after, beforeEach, afterEach} from "mocha";
 import {ApiClientOverInstance} from "../../../src/api";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
+import {MockNodeApi} from "../../utils/mocks/node";
 
 describe("RpcClientOverInstance test", function() {
 
@@ -31,6 +32,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();
@@ -45,6 +47,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();
@@ -64,6 +67,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();
@@ -81,6 +85,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();
@@ -96,6 +101,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();
@@ -111,6 +117,7 @@ describe("RpcClientOverInstance test", function() {
       beacon: new MockBeaconApi({
         genesisTime: Math.floor(Date.now() / 1000)
       }),
+      node: new MockNodeApi(),
       validator: null
     });
     const cb = sandbox.spy();

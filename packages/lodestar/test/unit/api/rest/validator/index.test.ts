@@ -21,6 +21,7 @@ import {
 } from "../../../../utils/attestation";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
+import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
 
 describe("Test validator rest API", function () {
 
@@ -40,6 +41,7 @@ describe("Test validator rest API", function () {
       logger: sandbox.createStubInstance(WinstonLogger),
       config,
       validator: validatorApi,
+      node: new StubbedNodeApi(),
       beacon: beaconApi
     });
     return await restApi.start();

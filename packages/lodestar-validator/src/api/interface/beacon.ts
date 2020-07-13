@@ -1,15 +1,6 @@
-import {BLSPubkey, Bytes32, Fork, Number64, SyncingStatus, Uint64, Root,
-  ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Fork, Number64, Root, Uint64, ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
-
-  /**
-     * Requests that the BeaconNode identify information about its
-     * implementation in a format similar to a HTTP User-Agent field.
-     * @returns An ASCII-encoded hex string which
-     * uniquely defines the implementation of the BeaconNode and its current software version.
-     */
-  getClientVersion(): Promise<Bytes32>;
 
   /**
      * Requests the BeaconNode to provide which fork version it is currently on.
@@ -29,12 +20,4 @@ export interface IBeaconApi {
      */
   getGenesisTime(): Promise<Number64>;
 
-  /**
-     * Requests the BeaconNode to describe if it's currently syncing or not,
-     * and if it is, what block it is up to.
-     * This is modelled after the Eth1.0 JSON-RPC eth_syncing call.
-     * @returns Either false if the node is not syncing,
-     * or a SyncingStatus object if it is.
-     */
-  getSyncingStatus(): Promise<boolean | SyncingStatus>;
 }

@@ -9,11 +9,12 @@ import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, BeaconBlock, AttestationData} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("assemble attestation", function () {
 
   const sandbox = sinon.createSandbox();
-  let assembleAttestationDataStub: SinonStub<[IBeaconConfig, IBeaconDb, BeaconState, BeaconBlock, number, number], Promise<AttestationData>>, dbStub: IBeaconDb;
+  let assembleAttestationDataStub: SinonStub<[IBeaconConfig, IBeaconDb, TreeBacked<BeaconState>, BeaconBlock, number, number], Promise<AttestationData>>, dbStub: IBeaconDb;
 
   beforeEach(() => {
     assembleAttestationDataStub = sandbox.stub(

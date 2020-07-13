@@ -79,7 +79,7 @@ describe("sync", function () {
     networkStub.getPeers.returns([]);
     await sync.start();
     const status = await sync.getSyncStatus();
-    expect(status).to.be.null;
+    expect(status.syncDistance.toString()).to.be.equal("0");
   });
 
   it("get sync status - regular sync", async function () {
@@ -93,9 +93,8 @@ describe("sync", function () {
     sync.mode = SyncMode.REGULAR_SYNCING;
     regularSyncStub.getHighestBlock.resolves(15);
     const status = await sync.getSyncStatus();
-    expect(status.highestBlock.toString()).to.be.deep.equal("15");
-    expect(status.startingBlock.toString()).to.be.deep.equal("0");
-    expect(status.currentBlock.toString()).to.be.deep.equal("10");
+    expect(status.headSlot.toString()).to.be.deep.equal("15");
+    expect(status.syncDistance.toString()).to.be.deep.equal("5");
   });
 
   it("get sync status - initial sync", async function () {
@@ -109,9 +108,8 @@ describe("sync", function () {
     sync.mode = SyncMode.INITIAL_SYNCING;
     initialSyncStub.getHighestBlock.resolves(15);
     const status = await sync.getSyncStatus();
-    expect(status.highestBlock.toString()).to.be.deep.equal("15");
-    expect(status.startingBlock.toString()).to.be.deep.equal("0");
-    expect(status.currentBlock.toString()).to.be.deep.equal("10");
+    expect(status.headSlot.toString()).to.be.deep.equal("15");
+    expect(status.syncDistance.toString()).to.be.deep.equal("5");
   });
 
 });

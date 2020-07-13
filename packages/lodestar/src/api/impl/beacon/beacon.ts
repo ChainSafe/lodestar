@@ -5,11 +5,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BLSPubkey,
-  Bytes32,
   ForkResponse,
   Number64,
   SignedBeaconBlock,
-  SyncingStatus,
   Uint64,
   ValidatorResponse
 } from "@chainsafe/lodestar-types";
@@ -41,11 +39,6 @@ export class BeaconApi implements IBeaconApi {
     this.sync = modules.sync;
     this.blocks = new BeaconBlockApi(opts, modules);
   }
-
-  public async getClientVersion(): Promise<Bytes32> {
-    return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
-  }
-
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
     const {epochCtx, state} = await this.chain.getHeadStateContext();
@@ -83,14 +76,6 @@ export class BeaconApi implements IBeaconApi {
       return state.genesisTime;
     }
     return 0;
-  }
-
-  public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    const status = await this.sync.getSyncStatus();
-    if(!status) {
-      return false;
-    }
-    return status;
   }
 
   public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
