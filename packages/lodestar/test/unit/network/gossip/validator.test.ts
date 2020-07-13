@@ -3,6 +3,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/block";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
+import {getAttestingIndicesFromCommittee} from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import * as bls from "@chainsafe/bls";
@@ -33,13 +34,16 @@ describe("GossipMessageValidator", () => {
   let verifyBlockSignatureStub: any, dbStub: StubbedBeaconDb, logger: any, isValidIndexedAttestationStub: any,
     isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
     isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain,
-    getAttestingIndicesStub: any, isAggregatorStub: any, isBlsVerifyStub: SinonStub,
+    getAttestingIndicesStub: any,
+    getAttestingIndicesFromCommitteeStub: SinonStub,
+    isAggregatorStub: any, isBlsVerifyStub: SinonStub,
     getIndexedAttestationStub: SinonStub, epochCtxStub: SinonStubbedInstance<EpochContext>;
 
   beforeEach(() => {
     verifyBlockSignatureStub = sandbox.stub(blockUtils, "verifyBlockSignature");
     isValidIndexedAttestationStub = sandbox.stub(attestationUtils, "isValidIndexedAttestation");
     getAttestingIndicesStub = sandbox.stub(attestationUtils, "getAttestingIndices");
+    getAttestingIndicesFromCommitteeStub = sandbox.stub(attestationUtils, "getAttestingIndicesFromCommittee");
     isAggregatorStub = sandbox.stub(validatorUtils, "isAggregator");
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
@@ -298,7 +302,7 @@ describe("GossipMessageValidator", () => {
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
       chainStub.getHeadStateContext.resolves({state, epochCtx});
-      getAttestingIndicesStub.returns([]);
+      getAttestingIndicesFromCommitteeStub.returns([]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.false;
     });
@@ -319,11 +323,11 @@ describe("GossipMessageValidator", () => {
       epochCtx.loadState(state);
       chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([attestation]);
-      getAttestingIndicesStub.returns([0]);
+      getAttestingIndicesFromCommitteeStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
       expect(chainStub.forkChoice.hasBlock.calledOnce).to.be.false;
-      expect(getAttestingIndicesStub.calledOnce).to.be.false;
+      expect(getAttestingIndicesFromCommitteeStub.calledOnce).to.be.false;
     });
 
     it("should return invalid committee attestation - block not exist", async () => {
@@ -343,7 +347,7 @@ describe("GossipMessageValidator", () => {
       epochCtx.loadState(state);
       chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesStub.returns([0]);
+      getAttestingIndicesFromCommitteeStub.returns([0]);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
       expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
       expect(dbStub.block.has.calledOnce).to.be.true;
@@ -367,7 +371,7 @@ describe("GossipMessageValidator", () => {
       epochCtx.loadState(state);
       chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesStub.returns([0]);
+      getAttestingIndicesFromCommitteeStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
       isValidIndexedAttestationStub.returns(false);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.false;
@@ -391,7 +395,7 @@ describe("GossipMessageValidator", () => {
       epochCtx.loadState(state);
       chainStub.getHeadStateContext.resolves({state, epochCtx});
       dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesStub.returns([0]);
+      getAttestingIndicesFromCommitteeStub.returns([0]);
       getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
       isValidIndexedAttestationStub.returns(true);
       expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(true);

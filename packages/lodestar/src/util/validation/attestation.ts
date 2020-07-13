@@ -1,6 +1,5 @@
 import {
   EpochContext,
-  getAttestingIndices,
   getAttestingIndicesFromCommittee,
   getCurrentSlot,
   getIndexedAttestation,
@@ -29,7 +28,10 @@ export function isUnaggregatedAttestation(
     processSlots(epochCtx, state, attestation.data.slot);
   }
   // Make sure this is unaggregated attestation
-  return getAttestingIndices(config, state, attestation.data, attestation.aggregationBits).length === 1;
+  return getAttestingIndicesFromCommittee(
+    epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+    attestation.aggregationBits
+  ).length === 1;
 }
 
 export async function isAttestingToValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {
