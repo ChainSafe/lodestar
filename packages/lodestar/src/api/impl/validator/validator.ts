@@ -32,18 +32,16 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  getBeaconProposerIndex,
-  getDomain,
-  computeSubnetForSlot,
+  computeSubnetForSlot, getCurrentSlot,
+  getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {
-  processSlots,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {Signature, verify} from "@chainsafe/bls";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
+import {validateAttestation} from "../../../util/validation/attestation";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -86,8 +84,9 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadBlock(),
         this.chain.getHeadStateContext(),
       ]);
-      if (slot > headState.slot) {
-        processSlots(epochCtx, headState, slot);
+      const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
+      if(headState.slot < currentSlot) {
+        processSlots(epochCtx, headState, currentSlot);
       }
       return await assembleAttestation(
         {config: this.config, db: this.db},
@@ -99,6 +98,7 @@ export class ValidatorApi implements IValidatorApi {
       );
     } catch (e) {
       this.logger.warn(`Failed to produce attestation because: ${e.message}`);
+      throw e;
     }
   }
 
@@ -110,6 +110,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
+    const headStateContext = await this.chain.getHeadStateContext();
+    await validateAttestation(this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation);
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation)
@@ -125,13 +127,13 @@ export class ValidatorApi implements IValidatorApi {
       "Cannot get duties for epoch more than two ahead"
     );
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
-    if(state.slot < startSlot) {
+    if (state.slot < startSlot) {
       processSlots(epochCtx, state, startSlot);
     }
     const duties: ProposerDuty[] = [];
 
     for(let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
-      const blockProposerIndex = getBeaconProposerIndex(this.config, {...state, slot});
+      const blockProposerIndex = epochCtx.getBeaconProposer(slot);
       duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
     }
     return duties;
@@ -139,13 +141,16 @@ export class ValidatorApi implements IValidatorApi {
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const {epochCtx, state} = await this.chain.getHeadStateContext();
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    if(state.slot < currentSlot) {
+      processSlots(epochCtx, state, currentSlot);
+    }
     const validatorIndexes = validatorPubKeys.map((key) => epochCtx.pubkey2index.get(key));
-
     return validatorIndexes.map((validatorIndex) => {
       return assembleAttesterDuty(
         this.config,
         {publicKey: state.validators[validatorIndex].pubkey, index: validatorIndex},
-        state,
+        epochCtx,
         epoch
       );
     });
