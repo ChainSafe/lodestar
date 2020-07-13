@@ -9,7 +9,7 @@ Object.keys(params).forEach((key) => {
       `chain.params.${key}`,
     ],
     hidden: true,
-    type: 'string',
+    type: "string",
   };
 });
 

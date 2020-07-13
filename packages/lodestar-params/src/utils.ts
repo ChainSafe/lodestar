@@ -1,7 +1,7 @@
 import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {IBeaconParams} from "./interface";
 import {Json} from "@chainsafe/ssz";
-import {BeaconParams} from './beaconParams';
+import {BeaconParams} from "./beaconParams";
 
 export function createIBeaconParams(input: Record<string, unknown>): Partial<IBeaconParams> {
   const params: Partial<IBeaconParams> = {};
