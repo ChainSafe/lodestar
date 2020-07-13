@@ -9,17 +9,8 @@ Object.keys(params).forEach((key) => {
       `chain.params.${key}`,
     ],
     hidden: true,
-    type: yargsOptionType(params[key as keyof typeof params])
+    type: "string"
   };
 });
-
-
-function yargsOptionType(value: unknown): Options["type"] {
-  if (typeof value === "string" || Buffer.isBuffer(value)) return "string";
-  if (typeof value === "boolean") return "boolean";
-  if (typeof value === "number") return "number";
-  if (Array.isArray(value)) return "array";
-  else return undefined;
-}
 
 export const paramsOptions = options;
