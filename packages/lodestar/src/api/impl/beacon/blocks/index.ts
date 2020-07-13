@@ -58,21 +58,15 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
   }
 
   public async getBlockHeader(blockId: BlockId): Promise<SignedBeaconHeaderResponse | null> {
-    const blockRoot = await resolveBlockId(this.config, this.chain.forkChoice, blockId);
-    if(!blockRoot) {
+    const block = await this.getBlock(blockId);
+    if(!block) {
       return null;
     }
-    //TODO: handle when root points to finalized block
-    return toBeaconHeaderResponse(this.config, await this.db.block.get(blockRoot.valueOf() as Uint8Array));
+    return toBeaconHeaderResponse(this.config, block, true);
   }
 
   public async getBlock(blockId: BlockId): Promise<SignedBeaconBlock | null> {
-    const blockRoot = await resolveBlockId(this.config, this.chain.forkChoice, blockId);
-    if(!blockRoot) {
-      return null;
-    }
-    //TODO: handle when root points to finalized block
-    return await this.db.block.get(blockRoot.valueOf() as Uint8Array);
+    return await resolveBlockId(this.config, this.chain.forkChoice, this.db, blockId);
   }
 
 }

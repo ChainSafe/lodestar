@@ -1,12 +1,14 @@
 import {beforeEach, describe, it} from "mocha";
 import {expect} from "chai";
 import rimraf from "rimraf";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {intToBytes, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {LevelDbController} from "../../../../../src/db/controller";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
+import sinon from "sinon";
+import {Bucket, encodeKey} from "../../../../../src/db/api/schema";
 
 describe("block archive repository", function () {
 
@@ -30,8 +32,8 @@ describe("block archive repository", function () {
   });
 
   it("should retrieve blocks in order", async function () {
-    await blockArchive.batchPut(Array.from({length: 1000}, (_, i) => {
-      const slot = i + 1;
+    await blockArchive.batchPut(Array.from({length: 1001}, (_, i) => {
+      const slot = i;
       const block = generateEmptySignedBlock();
       block.message.slot = slot;
       return {
@@ -42,14 +44,14 @@ describe("block archive repository", function () {
     // test keys
     let lastSlot = 0;
     for await (const slot of blockArchive.keysStream()) {
-      expect(slot).to.be.gt(lastSlot);
+      expect(slot).to.be.gte(lastSlot);
       lastSlot = slot;
     }
 
     // test values
     lastSlot = 0;
     for await (const block of blockArchive.valuesStream()) {
-      expect(block.message.slot).to.be.gt(lastSlot);
+      expect(block.message.slot).to.be.gte(lastSlot);
       lastSlot = block.message.slot;
     }
 
@@ -100,13 +102,57 @@ describe("block archive repository", function () {
 
     // test beginning until lt
     blocks = await blockArchive.values({lte: 200});
-    expect(blocks.length).to.be.equal(200);
-    expect(blocks[0].message.slot).to.be.equal(1);
-    expect(blocks[199].message.slot).to.be.equal(200);
+    expect(blocks.length).to.be.equal(201);
+    expect(blocks[0].message.slot).to.be.equal(0);
+    expect(blocks[200].message.slot).to.be.equal(200);
     lastSlot = 0;
     for (const block of blocks) {
-      expect(block.message.slot).to.be.gt(lastSlot);
+      expect(block.message.slot).to.be.gte(lastSlot);
       lastSlot = block.message.slot;
     }
+  });
+
+  it("should store block root ref when adding single block", async function () {
+    const spy = sinon.spy(controller, "put");
+    const block = generateEmptySignedBlock();
+    await blockArchive.add(block);
+    expect(
+      spy.withArgs(
+        encodeKey(
+          Bucket.blockArchiveRootRef,
+          config.types.BeaconBlock.hashTreeRoot(block.message)
+        ),
+        intToBytes(block.message.slot, 64, "be")
+      ).calledOnce
+    ).to.be.true;
+  });
+
+  it("should store block root ref when block batch", async function () {
+    const spy = sinon.spy(controller, "put");
+    const blocks = [generateEmptySignedBlock(), generateEmptySignedBlock()];
+    await blockArchive.batchAdd(blocks);
+    expect(
+      spy.withArgs(
+        encodeKey(
+          Bucket.blockArchiveRootRef,
+          config.types.BeaconBlock.hashTreeRoot(blocks[0].message)
+        ),
+        intToBytes(blocks[0].message.slot, 64, "be")
+      ).calledTwice
+    ).to.be.true;
+  });
+
+  it("should get slot by root", async function () {
+    const block = generateEmptySignedBlock();
+    await blockArchive.add(block);
+    const slot = await blockArchive.getSlotByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    expect(slot).to.equal(block.message.slot);
+  });
+
+  it("should get block by root", async function () {
+    const block = generateEmptySignedBlock();
+    await blockArchive.add(block);
+    const retrieved = await blockArchive.getByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 });
