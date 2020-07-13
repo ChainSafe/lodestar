@@ -12,7 +12,6 @@ import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {assert} from "@chainsafe/lodestar-utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {toHexString} from "@chainsafe/ssz";
 
 /**
  * is ready to be included in block
