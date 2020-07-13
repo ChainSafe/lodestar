@@ -110,9 +110,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return false;
     }
     try {
-      await validateAttestation(this.config, this.db, state, epochCtx, attestation);
+      await validateAttestation(this.config, this.db, epochCtx, state, attestation);
       return true;
     } catch (e) {
+      this.logger.warn("Invalid gossip attestation", e);
       return false;
     }
   };

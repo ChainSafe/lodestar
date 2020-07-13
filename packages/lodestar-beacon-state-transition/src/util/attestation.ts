@@ -6,12 +6,12 @@ import {BitList} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {
   Attestation,
+  ATTESTATION_SUBNET_COUNT,
   AttestationData,
   BeaconState,
   IndexedAttestation,
   Slot,
   ValidatorIndex,
-  ATTESTATION_SUBNET_COUNT,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DomainType,} from "../constants";
@@ -20,7 +20,6 @@ import {getDomain} from "./domain";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
-
 
 
 /**
@@ -84,6 +83,17 @@ export function getAttestingIndices(
   bits: BitList
 ): ValidatorIndex[] {
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
+  // Find the participating attesters in the committee
+  return getAttestingIndicesFromCommittee(committee, bits);
+}
+
+/**
+ * Return the sorted attesting indices corresponding to [[data]] and [[bits]].
+ */
+export function getAttestingIndicesFromCommittee(
+  committee: ValidatorIndex[],
+  bits: BitList
+): ValidatorIndex[] {
   // Find the participating attesters in the committee
   return committee.filter((_, i) => bits[i]).sort((a, b) => a - b);
 }

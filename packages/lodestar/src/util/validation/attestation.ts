@@ -1,6 +1,7 @@
 import {
   EpochContext,
   getAttestingIndices,
+  getAttestingIndicesFromCommittee,
   getCurrentSlot,
   getIndexedAttestation,
   isValidIndexedAttestation
@@ -11,6 +12,7 @@ import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {assert} from "@chainsafe/lodestar-utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * is ready to be included in block
@@ -47,14 +49,24 @@ export async function hasValidatorAttestedForThatTargetEpoch(
   );
     // each attestation has only 1 validator index
   const existingValidatorIndexes = existingAttestations.map(
-    item => getAttestingIndices(config, state, item.data, item.aggregationBits)[0]);
+    item => getAttestingIndicesFromCommittee(
+      epochCtx.getBeaconCommittee(
+        item.data.slot,
+        item.data.index
+      ),
+      item.aggregationBits
+    )[0]);
     // attestation is unaggregated attestation as validated above
-  const validatorIndex = getAttestingIndices(config, state, attestation.data, attestation.aggregationBits)[0];
-  return !existingValidatorIndexes.includes(validatorIndex);
+  const committee = epochCtx.getBeaconCommittee(
+    attestation.data.slot,
+    attestation.data.index
+  );
+  const validatorIndex = getAttestingIndicesFromCommittee(committee, attestation.aggregationBits)[0];
+  return existingValidatorIndexes.includes(validatorIndex);
 }
 
 export async function validateAttestation(
-  config: IBeaconConfig, db: IBeaconDb, state: BeaconState, epochCtx: EpochContext, attestation: Attestation
+  config: IBeaconConfig, db: IBeaconDb, epochCtx: EpochContext, state: BeaconState, attestation: Attestation
 ): Promise<void> {
   if (state.slot < attestation.data.slot) {
     processSlots(epochCtx, state, attestation.data.slot);
@@ -65,7 +77,7 @@ export async function validateAttestation(
     "Attestation is aggregated or doesn't have aggregation bits"
   );
   assert.true(
-    await hasValidatorAttestedForThatTargetEpoch(config, db, state, epochCtx, attestation),
+    !await hasValidatorAttestedForThatTargetEpoch(config, db, state, epochCtx, attestation),
     "Validator already attested for that target epoch"
   );
   assert.true(await isAttestingToValidBlock(db, attestation), "Attestation block missing or invalid");

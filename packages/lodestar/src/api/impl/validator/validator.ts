@@ -111,7 +111,7 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     const headStateContext = await this.chain.getHeadStateContext();
-    await validateAttestation(this.config, this.db, headStateContext.state, headStateContext.epochCtx, attestation);
+    await validateAttestation(this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation);
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation)
