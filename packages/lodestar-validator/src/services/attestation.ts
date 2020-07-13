@@ -74,6 +74,7 @@ export class AttestationService {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, [this.publicKey]);
     } catch (e) {
       this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
+      return;
     }
     if (
       attesterDuties && attesterDuties.length === 1 &&
@@ -108,6 +109,7 @@ export class AttestationService {
   public onNewSlot = async (slot: Slot): Promise<void> => {
     const duty = this.nextAttesterDuties.get(slot);
     if(duty) {
+      this.nextAttesterDuties.delete(slot);
       await this.waitForAttestationBlock(slot);
       let attestation: Attestation|undefined;
       let fork, genesisValidatorsRoot;
@@ -150,7 +152,7 @@ export class AttestationService {
 
   private async waitForAttestationBlock(slot: Slot): Promise<void> {
     const eventSource = new EventSource(
-      `${this.provider.url}/node/blocks/stream`,
+      `${this.provider.url}/lodestar/blocks/stream`,
       {https: {rejectUnauthorized: false}}
     );
     await new Promise((resolve) => {

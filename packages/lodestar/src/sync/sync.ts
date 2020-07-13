@@ -83,9 +83,13 @@ export class BeaconSync implements IBeaconSync {
     await this.gossip.stop();
   }
 
-  public async getSyncStatus(): Promise<SyncingStatus|null> {
+  public async getSyncStatus(): Promise<SyncingStatus> {
+    const headSlot = BigInt((await this.chain.getHeadBlock()).message.slot);
     if(this.isSynced()) {
-      return null;
+      return {
+        headSlot,
+        syncDistance: BigInt(0)
+      };
     }
     let target: Slot = 0;
     if(this.mode === SyncMode.INITIAL_SYNCING) {
@@ -94,9 +98,8 @@ export class BeaconSync implements IBeaconSync {
       target = await this.regularSync.getHighestBlock();
     }
     return {
-      startingBlock: BigInt(this.startingBlock),
-      currentBlock: BigInt((await this.chain.getHeadBlock()).message.slot),
-      highestBlock: BigInt(target)
+      headSlot: BigInt(target),
+      syncDistance: BigInt(target) - headSlot
     };
   }
 
@@ -105,6 +108,9 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
+      throw new Error("Cannot collect attestations before regular sync");
+    }
     this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
@@ -120,8 +126,8 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     await Promise.all([
+      this.regularSync.start(),
       this.gossip.start(),
-      this.regularSync.start()
     ]);
   }
 

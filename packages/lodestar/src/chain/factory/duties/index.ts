@@ -1,23 +1,18 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {AttesterDuty, BeaconState, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {getCommitteeAssignment} from "@chainsafe/lodestar-beacon-state-transition";
+import {AttesterDuty, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
+import {getFastCommitteeAssignment} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/duties";
 
 
 export function assembleAttesterDuty(
   config: IBeaconConfig,
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
-  state: TreeBacked<BeaconState>,
+  epochCtx: EpochContext,
   epoch: Epoch
 ): AttesterDuty  {
   let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
-  const committeeAssignment = getCommitteeAssignment(
-    config,
-    state,
-    epoch,
-    validator.index
-  );
+  const committeeAssignment = getFastCommitteeAssignment(config, epochCtx, epoch, validator.index);
   if (committeeAssignment) {
     duty = {
       ...duty,

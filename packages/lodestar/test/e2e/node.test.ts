@@ -8,7 +8,7 @@ describe("beacon node", function () {
 
   it("should justify block", async function () {
     this.timeout(120000);
-    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8});
+    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8}, {sync: {minPeers: 0}});
     const justificationEventListener = waitForEvent<Checkpoint>(bn.chain, "justifiedCheckpoint", 110000);
     const validators = getDevValidators(bn, 8);
     await bn.start();
@@ -24,7 +24,7 @@ describe("beacon node", function () {
 
   it("should finalize block", async function () {
     this.timeout(120000);
-    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8});
+    const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8}, {sync: {minPeers: 0}});
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 110000);
     const validators = getDevValidators(bn, 8);
     await bn.start();

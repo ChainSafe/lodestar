@@ -1,6 +1,7 @@
 import fastify, {DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {LodestarRestApiEndpoint} from "../../interface";
 import {Json} from "@chainsafe/ssz";
+import {ValidationError} from "../../../impl/errors/validation";
 
 type IBody = Json[];
 
@@ -27,6 +28,9 @@ export const registerAttestationPublishEndpoint: LodestarRestApiEndpoint = (fast
         ]);
 
       } catch (e) {
+        if(e instanceof ValidationError) {
+          reply.code(400).send();
+        }
         reply.code(500).send();
         return;
       }

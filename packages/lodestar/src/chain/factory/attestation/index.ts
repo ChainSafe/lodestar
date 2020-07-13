@@ -15,6 +15,9 @@ export async function assembleAttestation(
   index: CommitteeIndex,
   slot: Slot): Promise<Attestation> {
   const committee = getBeaconCommittee(config, state, slot, index);
+  if(committee.find((c) => c === validatorIndex) === undefined) {
+    throw new Error("Validator not in given committee");
+  }
   const aggregationBits = getAggregationBits(committee, validatorIndex);
   const data = await assembleAttestationData(config, db, state, headBlock, slot, index);
   return {

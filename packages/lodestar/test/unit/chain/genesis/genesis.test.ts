@@ -1,13 +1,12 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import * as fs from "fs";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {EthersEth1Notifier, IDepositEvent, Eth1EventsBlock} from "../../../../src/eth1";
+import {Eth1EventsBlock, EthersEth1Notifier, IDepositEvent} from "../../../../src/eth1";
 import {ethers} from "ethers";
 import pushable from "it-pushable";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
-import {PrivateKey, Keypair, initBLS} from "@chainsafe/bls";
-import {computeDomain, DomainType, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {DepositData, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
+import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
+import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
+import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";

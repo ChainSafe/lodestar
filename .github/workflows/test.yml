@@ -7,63 +7,63 @@ jobs:
     name: Quick tests
     runs-on: ubuntu-latest
     steps:
-    - name: Free disk space
-      run: |
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - uses: actions/checkout@v1
-    - name: Restore dependencies
-      uses: actions/cache@master
-      id: cache-deps
-      with:
-        path: |
-          node_modules
-          packages/*/node_modules
-        key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-    - name: Bootstrap
-      if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: yarn install --frozen-lockfile
-    - name: Build
-      run: node_modules/.bin/lerna run build
-      if: steps.cache-deps.outputs.cache-hit == 'true'
-    - name: Lint
-      run: node_modules/.bin/lerna run lint
-    - name: Unit tests
-      run: node_modules/.bin/lerna run test:unit
-    - name: Coverage
-      run: node_modules/.bin/lerna run coverage
-    - name: E2e tests
-      run: node_modules/.bin/lerna run test:e2e
-    - name: Spec tests
-      run: node_modules/.bin/lerna run test:spec-min
+      - name: Free disk space
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+      - uses: actions/checkout@v1
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      - name: Lint
+        run: node_modules/.bin/lerna run lint
+      - name: Unit tests
+        run: node_modules/.bin/lerna run test:unit
+      - name: Coverage
+        run: node_modules/.bin/lerna run coverage
+      - name: E2e tests
+        run: node_modules/.bin/lerna run test:e2e
+      - name: Spec tests
+        run: node_modules/.bin/lerna run test:spec-min
   specTests:
     name: Spec tests
     runs-on: ubuntu-latest
     steps:
-    - name: Free disk space
-      run: |
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - uses: actions/checkout@v1
-    - name: Restore dependencies
-      uses: actions/cache@master
-      id: cache-deps
-      with:
-        path: |
-          node_modules
-          packages/*/node_modules
-        key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-    - name: Bootstrap
-      if: steps.cache-deps.outputs.cache-hit != 'true'
-      run: yarn install --frozen-lockfile
-    - name: Build
-      run: node_modules/.bin/lerna run build
-      if: steps.cache-deps.outputs.cache-hit == 'true'
-    - name: Fast-implementation Spec tests
-      run: node_modules/.bin/lerna run test:spec-fast
+      - name: Free disk space
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+      - uses: actions/checkout@v1
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      - name: Fast-implementation Spec tests
+        run: node_modules/.bin/lerna run test:spec-fast

@@ -77,6 +77,11 @@ describe("[network] network", function () {
       netA.start(),
       netB.start(),
     ]);
+    // gossip isn't started by default
+    await Promise.all([
+      netA.gossip.start(),
+      netB.gossip.start(),
+    ]);
   });
   afterEach(async () => {
     await Promise.all([
