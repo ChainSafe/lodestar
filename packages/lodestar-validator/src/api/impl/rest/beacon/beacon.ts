@@ -2,12 +2,10 @@ import {
   BeaconBlock,
   BeaconState,
   BLSPubkey,
-  Bytes32,
   Fork,
   Number64,
-  SyncingStatus,
-  Uint64,
   Root,
+  Uint64,
   ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
@@ -25,7 +23,7 @@ export class RestBeaconApi implements IBeaconApi {
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "node")}, {logger});
+    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
     this.logger = logger;
     this.config = config;
   }
@@ -35,10 +33,6 @@ export class RestBeaconApi implements IBeaconApi {
     return this.config.types.ValidatorResponse.fromJson(
       await this.client.get(`/validators/${toHexString(pubkey)}`)
     );
-  }
-
-  public async getClientVersion(): Promise<Bytes32> {
-    return this.client.get<Bytes32>("/version");
   }
 
   public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
@@ -52,10 +46,6 @@ export class RestBeaconApi implements IBeaconApi {
       this.logger.error("Failed to obtain genesis time", e);
       return 0;
     }
-  }
-
-  public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    return this.client.get<boolean | SyncingStatus>("/syncing");
   }
 
   public async getChainHead(): Promise<BeaconBlock> {

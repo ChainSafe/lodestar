@@ -6,6 +6,7 @@ import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {sleep} from "../util";
+import {INodeApi} from "./interface/node";
 
 
 export abstract class AbstractApiClient
@@ -26,6 +27,7 @@ export abstract class AbstractApiClient
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
+  abstract node: INodeApi;
   abstract validator: IValidatorApi;
 
   protected constructor(config: IBeaconConfig) {

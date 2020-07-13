@@ -21,7 +21,7 @@ import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {IReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
 
@@ -124,25 +124,55 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     const currentForkDigest = this.chain.currentForkDigest;
     if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
       this.logger.warn("Fork digest mismatch "
-          + `expected=${toHexString(currentForkDigest)} received ${toHexString(request.forkDigest)}`
+          + `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
       );
       return true;
     }
 
-    const startSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
-    const finalizedCheckpoint = this.chain.forkChoice.getFinalized();
-    // we're on a further (or equal) finalized epoch
-    // but the peer's block root at that epoch doesn't match ours
-    if (finalizedCheckpoint.epoch >= request.finalizedEpoch && request.finalizedEpoch !== GENESIS_EPOCH) {
-      const startBlock = await this.chain.getBlockAtSlot(startSlot);
-      const result = !this.config.types.Root.equals(
-        request.finalizedRoot,
-        this.config.types.BeaconBlock.hashTreeRoot(startBlock.message));
-      if(result) {
-        this.logger.warn("Finalized root mismatch "
-            + `expected=${toHexString(currentForkDigest)} received ${toHexString(request.forkDigest)}`
+    if (request.finalizedEpoch === GENESIS_EPOCH) {
+      if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
+        this.logger.warn("Genesis finalized root must be zeroed "
+          + `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
         );
-        return result;
+        return true;
+      }
+    } else {
+      // we're on a further (or equal) finalized epoch
+      // but the peer's block root at that epoch may not match match ours
+      const headSummary = this.chain.forkChoice.head();
+      const finalizedCheckpoint = headSummary.finalizedCheckpoint;
+      const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
+
+      if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
+        if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
+          this.logger.warn("Status with same finalized epoch has different root "
+            + `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
+          );
+          return true;
+        }
+      } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
+        // If it is within recent history, we can directly check against the block roots in the state
+        if((headSummary.slot - requestFinalizedSlot) < this.config.params.HISTORICAL_ROOTS_LIMIT) {
+          const headState = await this.chain.getHeadState();
+          // This will get the latest known block at the start of the epoch.
+          const expected = getBlockRoot(this.config, headState, request.finalizedEpoch);
+          if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
+            return true;
+          }
+        } else {
+          // finalized checkpoint of status is from an old long-ago epoch.
+          // We need to ask the chain for most recent canonical block at the finalized checkpoint start slot.
+          // The problem is that the slot may be a skip slot.
+          // And the block root may be from multiple epochs back even.
+          // The epoch in the checkpoint is there to checkpoint the tail end of skip slots, even if there is no block.
+
+          // TODO: accepted for now. Need to maintain either a list of finalized block roots,
+          // or inefficiently loop from finalized slot backwards, until we find the block we need to check against.
+        }
+      } else {
+        // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
+        this.logger.verbose("Status with future finalized epoch " +
+          `${request.finalizedEpoch}: ${toHexString(request.finalizedRoot)}`);
       }
     }
     return false;

@@ -10,6 +10,7 @@ import {expect} from "chai";
 import {getBlockRoot} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {toHexString} from "@chainsafe/ssz";
+import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockRoot", function () {
 
@@ -28,12 +29,13 @@ describe("rest - beacon - getBlockRoot", function () {
       config,
       logger: sinon.createStubInstance(WinstonLogger),
       validator: sinon.createStubInstance(ValidatorApi),
+      node: new StubbedNodeApi(),
       beacon: beaconApiStub
     });
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 

@@ -10,6 +10,7 @@ import {expect} from "chai";
 import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {toHexString} from "@chainsafe/ssz";
 import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockHeaders", function () {
 
@@ -28,6 +29,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       config,
       logger: sinon.createStubInstance(WinstonLogger),
       validator: sinon.createStubInstance(ValidatorApi),
+      node: new StubbedNodeApi(),
       beacon: beaconApiStub
     });
     await api.start();

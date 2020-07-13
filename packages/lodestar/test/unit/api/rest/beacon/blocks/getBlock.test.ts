@@ -9,6 +9,7 @@ import supertest from "supertest";
 import {expect} from "chai";
 import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
+import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlock", function () {
 
@@ -27,6 +28,7 @@ describe("rest - beacon - getBlock", function () {
       config,
       logger: sinon.createStubInstance(WinstonLogger),
       validator: sinon.createStubInstance(ValidatorApi),
+      node: new StubbedNodeApi(),
       beacon: beaconApiStub
     });
     await api.start();

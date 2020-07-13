@@ -30,6 +30,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async start(): Promise<void> {
+    await this.network.gossip.start();
     this.currentForkDigest = this.chain.currentForkDigest;
     this.subscribe(this.currentForkDigest);
     this.chain.on("forkDigest", this.handleForkDigest);
@@ -38,6 +39,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
     this.chain.removeListener("forkDigest", this.handleForkDigest);
+    await this.network.gossip.stop();
   }
 
   private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {

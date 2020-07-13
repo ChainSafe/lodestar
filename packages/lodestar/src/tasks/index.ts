@@ -49,13 +49,24 @@ export class TasksService implements IService {
 
   public async start(): Promise<void> {
     this.chain.forkChoice.on("prune", this.handleFinalizedCheckpointChores);
-    await this.interopSubnetsTask.start();
+    this.network.gossip.on("gossip:start", this.handleGossipStart);
+    this.network.gossip.on("gossip:stop", this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
-    this.chain.removeListener("finalizedCheckpoint", this.handleFinalizedCheckpointChores);
+    this.chain.forkChoice.removeListener("prune", this.handleFinalizedCheckpointChores);
+    this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
+    this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
     await this.interopSubnetsTask.stop();
   }
+
+  private handleGossipStart = async (): Promise<void> => {
+    await this.interopSubnetsTask.start();
+  };
+
+  private handleGossipStop = async (): Promise<void> => {
+    await this.interopSubnetsTask.stop();
+  };
 
   private handleFinalizedCheckpointChores = async (finalized: BlockSummary, pruned: BlockSummary[]): Promise<void> => {
     new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();

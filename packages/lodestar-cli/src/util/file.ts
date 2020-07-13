@@ -6,12 +6,8 @@ import {Json} from "@chainsafe/ssz";
 /**
  * Maybe create a directory
  */
-export async function mkdir(filename: string): Promise<void> {
-  try {
-    await fs.promises.readdir(filename);
-  } catch (e) {
-    await fs.promises.mkdir(filename, {recursive: true});
-  }
+export async function mkdir(dirname: string): Promise<void> {
+  await fs.promises.mkdir(dirname, {recursive: true});
 }
 
 export enum FileFormat {

@@ -38,12 +38,10 @@ export interface ProposerDuty {
 }
 
 export interface SyncingStatus {
-  // The block at which syncing started (will only be reset, after the sync reached his head)
-  startingBlock: Uint64;
-  // Current Block
-  currentBlock: Uint64;
-  // The estimated highest block, or current target block number
-  highestBlock: Uint64;
+  // Head slot node is trying to reach
+  headSlot: Uint64;
+  // How many slots node needs to process to reach head. 0 if synced.
+  syncDistance: Uint64;
 }
 
 export interface ValidatorResponse {
