@@ -1,6 +1,6 @@
 import {IBeaconParams} from "./interface";
 import {
-  ContainerType, BigIntUintType, NumberUintType, BitVectorType, ByteVectorType,
+  ContainerType, BigIntUintType, NumberUintType, ByteVectorType,
 } from "@chainsafe/ssz";
 
 const Number64 = new NumberUintType({byteLength: 8});
@@ -9,7 +9,6 @@ const BigInt64 = new BigIntUintType({byteLength: 8});
 const ByteVector1 = new ByteVectorType({length: 1});
 const ByteVector4 = new ByteVectorType({length: 4});
 const ByteVector20 = new ByteVectorType({length: 20});
-const ByteVector32 = new ByteVectorType({length: 32});
 
 export const BeaconParams = new ContainerType<IBeaconParams>({
   fields: {
