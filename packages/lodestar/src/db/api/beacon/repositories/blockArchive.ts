@@ -42,7 +42,8 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   public async remove(value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      this.deleteRootIndex(value)
+      this.deleteRootIndex(value),
+      this.deleteParentRootIndex(value)
     ]);
   }
 
@@ -63,7 +64,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   public async getByParentRoot(root: Root): Promise<SignedBeaconBlock|null> {
-    const slot = await this.getSlotByParenRoot(root);
+    const slot = await this.getSlotByParentRoot(root);
     if(Number.isInteger(slot)) {
       return this.get(slot);
     }
@@ -80,7 +81,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return null;
   }
 
-  public async getSlotByParenRoot(root: Root): Promise<Slot|null> {
+  public async getSlotByParentRoot(root: Root): Promise<Slot|null> {
     const value = await this.db.get(
       this.getParentRootIndexKey(root)
     );
@@ -88,14 +89,6 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
       return bytesToInt(value, "be");
     }
     return null;
-  }
-
-  public async batchAdd(values: ArrayLike<SignedBeaconBlock>): Promise<void> {
-    await Promise.all([
-      super.batchAdd(values),
-      ...Array.from(values).map((block) => this.storeRootIndex(block)),
-      ...Array.from(values).map((block) => this.storeParentRootIndex(block))
-    ]);
   }
 
   public decodeKey(data: Buffer): number {
@@ -146,13 +139,13 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   private async deleteRootIndex(block: SignedBeaconBlock): Promise<void> {
     return this.db.delete(
-        this.getRootIndexKey(this.config.types.BeaconBlock.hashTreeRoot(block.message))
+      this.getRootIndexKey(this.config.types.BeaconBlock.hashTreeRoot(block.message))
     );
   }
 
   private async deleteParentRootIndex(block: SignedBeaconBlock): Promise<void> {
     return this.db.delete(
-        this.getParentRootIndexKey(block.message.parentRoot)
+      this.getParentRootIndexKey(block.message.parentRoot)
     );
   }
 

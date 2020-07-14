@@ -177,7 +177,7 @@ describe("block archive repository", function () {
   it("should get slot by parent root", async function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const slot = await blockArchive.getSlotByParenRoot(block.message.parentRoot);
+    const slot = await blockArchive.getSlotByParentRoot(block.message.parentRoot);
     expect(slot).to.equal(block.message.slot);
   });
 
