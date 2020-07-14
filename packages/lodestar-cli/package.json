@@ -9,7 +9,10 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "main": "lib/index.js",
-  "files": [],
+  "files": [
+    "lib",
+    "bin"
+  ],
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn run build:lib && yarn run build:types",
