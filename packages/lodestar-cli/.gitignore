@@ -17,3 +17,6 @@ LodestarValidatorDB/
 benchmark-reports/
 validators/
 .lodestar
+
+# Wallet CLI artifacts
+.pass

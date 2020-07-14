@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import process from "process";
 import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
@@ -8,40 +7,37 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-import {unlockDirKeypairs} from "../account/utils/unlockKeypair";
-import {getBeaconConfig} from "../../util/config";
-import {YargsError} from "../../util/errors";
+import {getBeaconConfig, YargsError} from "../../util";
+import {ValidatorDirManager} from "../../validatorDir";
+import {getAccountPaths} from "../account/paths";
+import {getValidatorPaths} from "./paths";
 import {IValidatorCliOptions} from "./options";
-import {processValidatorPaths} from "./paths";
 
 /**
  * Run a validator client
  */
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
-  const spec = options.chain.name;
-  const {dbDir, keystoresDir, secretsDir} = processValidatorPaths(options);
+  const force = options.force;
+  const accountPaths = getAccountPaths(options);
+  const validatorPaths = getValidatorPaths(options);
+  const config = getBeaconConfig(options.chain.name);
   
   await initBLS();
 
-  const config = getBeaconConfig(spec);
-
   const logger = new WinstonLogger();
 
-  if (!fs.existsSync(keystoresDir))
-    throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
-  if (!fs.existsSync(secretsDir))
-    throw new YargsError(`secretsDir ${secretsDir} does not exist`);
+  const validatorDirManager = new ValidatorDirManager(accountPaths);
+  const validatorKeypairs = validatorDirManager.decryptAllValidators({force});
 
-  const validatorKeypairs = unlockDirKeypairs({keystoresDir: keystoresDir, secretsDir});
   if (validatorKeypairs.length === 0)
-    throw new YargsError(`There are no validator keystores in ${keystoresDir}`);
+    throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
   const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {
     const pubkey = keypair.publicKey.toHexString();
     const loggerId = `Validator ${pubkey.slice(0, 10)}`;
-    const dbPath = path.join(dbDir, pubkey);
+    const dbPath = validatorPaths.validatorDbDir(pubkey);
     fs.mkdirSync(dbPath, {recursive: true});
     
     const api = new ApiClientOverRest(config, server, logger);
