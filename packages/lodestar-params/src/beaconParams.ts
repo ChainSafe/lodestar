@@ -4,21 +4,31 @@ import {
 } from "@chainsafe/ssz";
 
 const Number64 = new NumberUintType({byteLength: 8});
-const BitVector8 = new BitVectorType({length: 8});
-const ByteVector32 = new ByteVectorType({length: 4});
-const ByteVector256 = new ByteVectorType({length: 32});
 const BigInt64 = new BigIntUintType({byteLength: 8});
-const BigInt256 = new BigIntUintType({byteLength: 32});
+
+const ByteVector1 = new ByteVectorType({length: 1});
+const ByteVector4 = new ByteVectorType({length: 4});
+const ByteVector20 = new ByteVectorType({length: 20});
+const ByteVector32 = new ByteVectorType({length: 32});
 
 export const BeaconParams = new ContainerType<IBeaconParams>({
   fields: {
+    MAX_EPOCHS_PER_CROSSLINK: Number64,
+    DOMAIN_BEACON_PROPOSER: ByteVector4,
+    DOMAIN_BEACON_ATTESTER: ByteVector4,
+    DOMAIN_RANDAO: ByteVector4,
+    DOMAIN_DEPOSIT: ByteVector4,
+    DOMAIN_VOLUNTARY_EXIT: ByteVector4,
+    DOMAIN_SELECTION_PROOF: ByteVector4,
+    DOMAIN_AGGREGATE_AND_PROOF: ByteVector4,
+
     // Misc
     MAX_COMMITTEES_PER_SLOT: Number64,
     TARGET_COMMITTEE_SIZE: Number64,
     MAX_VALIDATORS_PER_COMMITTEE: Number64,
     MIN_PER_EPOCH_CHURN_LIMIT: Number64,
-    CHURN_LIMIT_QUOTIENT: Number64,
     SHUFFLE_ROUND_COUNT: Number64,
+    CHURN_LIMIT_QUOTIENT: Number64,
     MIN_GENESIS_TIME: Number64,
     HYSTERESIS_QUOTIENT: Number64,
     HYSTERESIS_DOWNWARD_MULTIPLIER: Number64,
@@ -30,7 +40,7 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     SECONDS_PER_ETH1_BLOCK: Number64,
 
     // Deposit contract
-    DEPOSIT_CONTRACT_ADDRESS: ByteVector256,
+    DEPOSIT_CONTRACT_ADDRESS: ByteVector20,
 
     // Gwei Values
     MIN_DEPOSIT_AMOUNT: BigInt64,
@@ -40,9 +50,8 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
 
     // Initial values
     SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
-    BLS_WITHDRAWAL_PREFIX: BitVector8,
-    GENESIS_FORK_VERSION: ByteVector32,
-    GENESIS_START_SHARD: Number64,
+    BLS_WITHDRAWAL_PREFIX: ByteVector1,
+    GENESIS_FORK_VERSION: ByteVector4,
 
     // Time parameters
     GENESIS_DELAY: Number64,
@@ -67,10 +76,9 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
 
     // Reward and penalty quotients
     BASE_REWARD_FACTOR: Number64,
-    BASE_REWARDS_PER_EPOCH: Number64,
     WHISTLEBLOWER_REWARD_QUOTIENT: Number64,
     PROPOSER_REWARD_QUOTIENT: Number64,
-    INACTIVITY_PENALTY_QUOTIENT: BigInt256,
+    INACTIVITY_PENALTY_QUOTIENT: BigInt64,
     MIN_SLASHING_PENALTY_QUOTIENT: Number64,
 
     // Max operations per block
@@ -79,8 +87,5 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     MAX_ATTESTATIONS: Number64,
     MAX_DEPOSITS: Number64,
     MAX_VOLUNTARY_EXITS: Number64,
-
-    // Old and future forks
-    // ALL_FORKS: IFork[];
   },
 });

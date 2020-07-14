@@ -3,6 +3,16 @@
  */
 
 export interface IBeaconParams {
+
+  MAX_EPOCHS_PER_CROSSLINK: number;
+  DOMAIN_BEACON_PROPOSER: Buffer;
+  DOMAIN_BEACON_ATTESTER: Buffer;
+  DOMAIN_RANDAO: Buffer;
+  DOMAIN_DEPOSIT: Buffer;
+  DOMAIN_VOLUNTARY_EXIT: Buffer;
+  DOMAIN_SELECTION_PROOF: Buffer;
+  DOMAIN_AGGREGATE_AND_PROOF: Buffer;
+
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
@@ -21,7 +31,7 @@ export interface IBeaconParams {
   SECONDS_PER_ETH1_BLOCK: number;
 
   // Deposit contract
-  DEPOSIT_CONTRACT_ADDRESS: number;
+  DEPOSIT_CONTRACT_ADDRESS: Buffer;
 
   // Gwei Values
   MIN_DEPOSIT_AMOUNT: bigint;
@@ -33,7 +43,6 @@ export interface IBeaconParams {
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
   BLS_WITHDRAWAL_PREFIX: Buffer;
   GENESIS_FORK_VERSION: Buffer;
-  GENESIS_START_SHARD: number;
 
   // Time parameters
   GENESIS_DELAY: number;
@@ -58,7 +67,6 @@ export interface IBeaconParams {
 
   // Reward and penalty quotients
   BASE_REWARD_FACTOR: number;
-  BASE_REWARDS_PER_EPOCH: number;
   WHISTLEBLOWER_REWARD_QUOTIENT: number;
   PROPOSER_REWARD_QUOTIENT: number;
   INACTIVITY_PENALTY_QUOTIENT: bigint;
@@ -70,6 +78,7 @@ export interface IBeaconParams {
   MAX_ATTESTATIONS: number;
   MAX_DEPOSITS: number;
   MAX_VOLUNTARY_EXITS: number;
+
 
   // Old and future forks
   ALL_FORKS: IFork[];
@@ -83,4 +92,3 @@ interface IFork {
   // Fork epoch number
   epoch: number;
 }
-

@@ -1,5 +1,6 @@
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
+import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 
 import {
   EpochContext, IEpochProcess,
@@ -33,7 +34,7 @@ export function getAttestationDeltas(
   totalBalance = totalBalance / increment;
 
   const BASE_REWARD_FACTOR = BigInt(params.BASE_REWARD_FACTOR);
-  const BASE_REWARDS_PER_EPOCH = BigInt(params.BASE_REWARDS_PER_EPOCH);
+  const BASE_REWARDS_PER_EPOCH = BigInt(BASE_REWARDS_PER_EPOCH_CONST);
   const PROPOSER_REWARD_QUOTIENT = BigInt(params.PROPOSER_REWARD_QUOTIENT);
   const MIN_EPOCHS_TO_INACTIVITY_PENALTY = params.MIN_EPOCHS_TO_INACTIVITY_PENALTY;
   const INACTIVITY_PENALTY_QUOTIENT = params.INACTIVITY_PENALTY_QUOTIENT;

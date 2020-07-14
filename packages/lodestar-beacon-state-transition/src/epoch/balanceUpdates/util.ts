@@ -6,6 +6,7 @@ import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getTotalActiveBalance, getPreviousEpoch} from "../../util";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
+import {BASE_REWARDS_PER_EPOCH} from "../../constants";
 
 
 export function getBaseReward(
@@ -18,7 +19,7 @@ export function getBaseReward(
   return effectiveBalance
     * BigInt(config.params.BASE_REWARD_FACTOR)
     / bigIntSqrt(totalBalance)
-    / BigInt(config.params.BASE_REWARDS_PER_EPOCH);
+    / BigInt(BASE_REWARDS_PER_EPOCH);
 }
 
 export function getProposerReward(
