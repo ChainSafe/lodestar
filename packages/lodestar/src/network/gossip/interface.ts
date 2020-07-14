@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {GossipEvent} from "./constants";
+import {GossipEvent, ExtendedValidatorResult} from "./constants";
 import {
   Attestation,
   AttesterSlashing,
@@ -80,18 +80,18 @@ export interface IGossip extends IService, GossipEventEmitter {
 }
 
 export interface IGossipMessageValidator {
-  isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<boolean>;
-  isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<boolean>;
-  isValidIncomingAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<boolean>;
-  isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<boolean>;
-  isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<boolean>;
-  isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<boolean>;
+  isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult>;
+  isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult>;
+  isValidIncomingAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<ExtendedValidatorResult>;
+  isValidIncomingVoluntaryExit(voluntaryExit: SignedVoluntaryExit): Promise<ExtendedValidatorResult>;
+  isValidIncomingProposerSlashing(proposerSlashing: ProposerSlashing): Promise<ExtendedValidatorResult>;
+  isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<ExtendedValidatorResult>;
 }
 
 export type GossipObject = SignedBeaconBlock | Attestation | SignedAggregateAndProof |
 SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
 
-export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<boolean>;
+export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<ExtendedValidatorResult>;
 
 export interface ILodestarGossipMessage extends Message{
   messageId: string;
