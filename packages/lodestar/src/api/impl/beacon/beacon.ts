@@ -20,11 +20,13 @@ import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
+import {IBeaconPoolApi, BeaconPoolApi} from "./pool";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
   public blocks: IBeaconBlocksApi;
+  public pool: IBeaconPoolApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
@@ -38,6 +40,7 @@ export class BeaconApi implements IBeaconApi {
     this.db = modules.db;
     this.sync = modules.sync;
     this.blocks = new BeaconBlockApi(opts, modules);
+    this.pool = new BeaconPoolApi(opts, modules);
   }
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {

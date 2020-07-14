@@ -3,20 +3,15 @@
  */
 
 import {IApi} from "../../interface";
-import {
-  BLSPubkey,
-  ForkResponse,
-  Genesis,
-  Number64,
-  SignedBeaconBlock,
-  ValidatorResponse
-} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
+import {IBeaconPoolApi} from "./pool";
 
 export interface IBeaconApi extends IApi {
 
   blocks: IBeaconBlocksApi;
+  pool: IBeaconPoolApi;
 
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.

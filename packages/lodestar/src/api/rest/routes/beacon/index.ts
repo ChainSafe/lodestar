@@ -8,9 +8,10 @@ import {
   getBlockAttestations,
   getBlockHeader,
   getBlockHeaders,
-  getBlockRoot
-} from "../../controllers/beacon/blocks";
-import {getGenesis} from "../../controllers/beacon";
+  getBlockRoot,
+  getGenesis,
+  getPoolAttestations
+} from "../../controllers/beacon";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
@@ -23,6 +24,11 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
 //new
 export function registerBeaconRoutes(server: FastifyInstance): void {
   server.get(getGenesis.url, getGenesis.opts, getGenesis.handler);
+
+  //pool
+  server.get(getPoolAttestations.url, getPoolAttestations.opts, getPoolAttestations.handler);
+
+  //blocks
   server.get(getBlockHeaders.url, getBlockHeaders.opts, getBlockHeaders.handler);
   server.get(getBlockHeader.url, getBlockHeader.opts, getBlockHeader.handler);
   server.get(getBlock.url, getBlock.opts, getBlock.handler);
