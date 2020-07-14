@@ -1,4 +1,3 @@
-import {registerGenesisTimeEndpoint} from "./genesisTime";
 import {registerForkEndpoint} from "./fork";
 import {LodestarApiPlugin} from "../../interface";
 import {registerBlockStreamEndpoint} from "./blockStream";
@@ -15,7 +14,6 @@ import {getGenesis} from "../../controllers/beacon";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
-  registerGenesisTimeEndpoint(fastify, opts);
   registerForkEndpoint(fastify, opts);
   registerGetValidatorEndpoint(fastify, opts);
   registerBlockStreamEndpoint(fastify, opts);

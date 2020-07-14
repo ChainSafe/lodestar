@@ -31,7 +31,7 @@ export class BeaconApi implements IBeaconApi {
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"chain"|"db"|"sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;

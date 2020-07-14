@@ -15,7 +15,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
 
-  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"chain"|"db">) {
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
