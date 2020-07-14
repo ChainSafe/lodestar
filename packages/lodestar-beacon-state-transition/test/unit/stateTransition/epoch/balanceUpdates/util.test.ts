@@ -7,7 +7,7 @@ import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/util";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
-import {BASE_REWARDS_PER_EPOCH} from "../../../../constants";
+import {BASE_REWARDS_PER_EPOCH} from "../../../../../src/constants";
 
 describe('process epoch - balance updates', function () {
 
