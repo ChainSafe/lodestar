@@ -10,7 +10,7 @@ export type Id = Uint8Array | string | number | bigint;
  * Repository is a high level kv storage
  * managing a Buffer to Buffer kv database
  * It translates typed keys and values to Buffers required by the underlying database
- * 
+ *
  * By default, SSZ-encoded values,
  * indexed by root
  */
@@ -211,16 +211,16 @@ export abstract class Repository<I extends Id, T> {
       lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
     };
     if (opts) {
-      if (opts.lt) {
+      if (opts.lt !== undefined) {
         _opts.lt = this.encodeKey(opts.lt);
-      } else if (opts.lte) {
+      } else if (opts.lte !== undefined) {
         delete _opts.lt;
         _opts.lte = this.encodeKey(opts.lte);
       }
-      if (opts.gt) {
+      if (opts.gt !== undefined) {
         delete _opts.gte;
         _opts.gt = this.encodeKey(opts.gt);
-      } else if (opts.gte) {
+      } else if (opts.gte !== undefined) {
         _opts.gte = this.encodeKey(opts.gte);
       }
       _opts.reverse = opts.reverse;
