@@ -59,20 +59,31 @@ describe("block archiver task", function () {
       },
       []
     );
-    dbStub.block.values.resolves([
-      blockA, blockB, blockC, blockD, finalizedBlock, blockE
+    dbStub.block.entries.resolves([
+      {key: config.types.BeaconBlock.hashTreeRoot(blockA.message), value: blockA},
+      {key: config.types.BeaconBlock.hashTreeRoot(blockB.message), value: blockB},
+      {key: config.types.BeaconBlock.hashTreeRoot(blockC.message), value: blockC},
+      {key: config.types.BeaconBlock.hashTreeRoot(blockD.message), value: blockD},
+      {key: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message), value: finalizedBlock},
+      {key: config.types.BeaconBlock.hashTreeRoot(blockE.message), value: blockE},
     ]);
-    const blockArchieveSpy = sinon.spy();
-    dbStub.blockArchive.batchAdd.callsFake(blockArchieveSpy);
+    const blockArchiveSpy = sinon.spy();
+    dbStub.blockArchive.batchAdd.callsFake(blockArchiveSpy);
     const blockSpy = sinon.spy();
-    dbStub.block.batchRemove.callsFake(blockSpy);
+    dbStub.block.batchDelete.callsFake(blockSpy);
 
     await archiverTask.run();
 
     expect(dbStub.blockArchive.batchAdd.calledOnce).to.be.true;
-    expect(blockArchieveSpy.args[0][0]).to.be.deep.equal([finalizedBlock, blockD, blockB, blockA]);
-    expect(dbStub.block.batchRemove.calledOnce).to.be.true;
-    expect(blockSpy.args[0][0]).to.be.deep.equal([blockA, blockB, blockC, blockD, finalizedBlock]);
+    expect(blockArchiveSpy.args[0][0]).to.be.deep.equal([finalizedBlock, blockD, blockB, blockA]);
+    expect(dbStub.block.batchDelete.calledOnce).to.be.true;
+    expect(blockSpy.args[0][0]).to.be.deep.equal([
+      config.types.BeaconBlock.hashTreeRoot(blockA.message),
+      config.types.BeaconBlock.hashTreeRoot(blockB.message),
+      config.types.BeaconBlock.hashTreeRoot(blockC.message),
+      config.types.BeaconBlock.hashTreeRoot(blockD.message),
+      config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
+    ]);
   });
 
 });
