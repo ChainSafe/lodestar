@@ -5,6 +5,7 @@ import {IBeaconDirArgs}  from "./beaconDir";
 
 export interface IBeaconConfigArgs extends IBeaconDirArgs {
   config: string;
+  altona?: boolean;
 }
 
 export const config = (args: IBeaconDirArgs): Options => ({
@@ -13,4 +14,9 @@ export const config = (args: IBeaconDirArgs): Options => ({
   description: "Beacon node configuration file",
   type: "string",
   normalize: true,
+});
+
+export const altona = (): Options => ({
+  description: "Use Altona testnet configuration and genesis file",
+  type: "boolean",
 });
