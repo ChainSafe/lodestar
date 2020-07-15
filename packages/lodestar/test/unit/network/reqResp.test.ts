@@ -101,20 +101,17 @@ describe("[network] rpc", () => {
         rpcA.sendResponse(id, null, body as Status);
       }, 100);
     });
-    try {
-      const statusExpected: Status = {
-        forkDigest: Buffer.alloc(4),
-        finalizedRoot: Buffer.alloc(32),
-        finalizedEpoch: 0,
-        headRoot: Buffer.alloc(32),
-        headSlot: 0,
-      };
+    const statusExpected: Status = {
+      forkDigest: Buffer.alloc(4),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 0,
+      headRoot: Buffer.alloc(32),
+      headSlot: 0,
+    };
 
-      const statusActual = await rpcB.status(nodeA.peerId, statusExpected);
-      assert.deepEqual(statusActual, statusExpected);
-    } catch (e) {
-      assert.fail("status not received");
-    }
+    const statusActual = await rpcB.status(nodeA.peerId, statusExpected);
+    assert.deepEqual(statusActual, statusExpected);
+    assert(loggerStub.info.calledWith("cancelTimer called"), "cancelTimer not called!!");
   });
 
   it("can handle multiple block requests from connected peers at the same time", async function () {
@@ -155,6 +152,7 @@ describe("[network] rpc", () => {
         }
         reqIndex ++;
       }
+      assert(loggerStub.info.calledWith("cancelTimer called"), "cancelTimer not called!!");
 
     } catch (e) {
       assert.fail(`Cannot receive response, error: ${e.message}`);

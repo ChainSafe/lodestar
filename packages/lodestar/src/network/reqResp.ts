@@ -282,7 +282,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
         stream,
-        eth2ResponseTimer(),
+        eth2ResponseTimer(logger),
         eth2ResponseDecode(config, logger, method, encoding, requestId)
       );
     })();

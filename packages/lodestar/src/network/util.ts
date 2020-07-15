@@ -9,6 +9,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
 import AbortController from "abort-controller";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 // req/resp
 
@@ -61,7 +62,7 @@ export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
 }
 
-export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+export function eth2ResponseTimer<T>(logger: ILogger): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
   let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
   const renewTimer = (): void => {
@@ -69,6 +70,7 @@ export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGener
     responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
   };
   const cancelTimer = (): void => {
+    logger.info("cancelTimer called");
     clearTimeout(responseTimer);
   };
   return (source) => {
