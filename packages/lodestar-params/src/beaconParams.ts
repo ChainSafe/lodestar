@@ -12,15 +12,6 @@ const ByteVector20 = new ByteVectorType({length: 20});
 
 export const BeaconParams = new ContainerType<IBeaconParams>({
   fields: {
-    MAX_EPOCHS_PER_CROSSLINK: Number64,
-    DOMAIN_BEACON_PROPOSER: ByteVector4,
-    DOMAIN_BEACON_ATTESTER: ByteVector4,
-    DOMAIN_RANDAO: ByteVector4,
-    DOMAIN_DEPOSIT: ByteVector4,
-    DOMAIN_VOLUNTARY_EXIT: ByteVector4,
-    DOMAIN_SELECTION_PROOF: ByteVector4,
-    DOMAIN_AGGREGATE_AND_PROOF: ByteVector4,
-
     // Misc
     MAX_COMMITTEES_PER_SLOT: Number64,
     TARGET_COMMITTEE_SIZE: Number64,
@@ -33,6 +24,12 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     HYSTERESIS_DOWNWARD_MULTIPLIER: Number64,
     HYSTERESIS_UPWARD_MULTIPLIER: Number64,
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: Number64,
+
+    // Fork choice
+    SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
+
+    // Validator
+    ETH1_FOLLOW_DISTANCE: Number64,
     TARGET_AGGREGATORS_PER_COMMITTEE: Number64,
     RANDOM_SUBNETS_PER_VALIDATOR: Number64,
     EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION: Number64,
@@ -48,9 +45,8 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     EFFECTIVE_BALANCE_INCREMENT: BigInt64,
 
     // Initial values
-    SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
-    BLS_WITHDRAWAL_PREFIX: ByteVector1,
     GENESIS_FORK_VERSION: ByteVector4,
+    BLS_WITHDRAWAL_PREFIX: ByteVector1,
 
     // Time parameters
     GENESIS_DELAY: Number64,
@@ -60,14 +56,13 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     MIN_SEED_LOOKAHEAD: Number64,
     MAX_SEED_LOOKAHEAD: Number64,
     EPOCHS_PER_ETH1_VOTING_PERIOD: Number64,
-    ETH1_FOLLOW_DISTANCE: Number64,
     SLOTS_PER_HISTORICAL_ROOT: Number64,
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: Number64,
     SHARD_COMMITTEE_PERIOD: Number64,
-
+    MAX_EPOCHS_PER_CROSSLINK: Number64,
     MIN_EPOCHS_TO_INACTIVITY_PENALTY: Number64,
 
-    // State list lengths
+    // State vector lengths
     EPOCHS_PER_HISTORICAL_VECTOR: Number64,
     EPOCHS_PER_SLASHINGS_VECTOR: Number64,
     HISTORICAL_ROOTS_LIMIT: Number64,
@@ -86,5 +81,14 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     MAX_ATTESTATIONS: Number64,
     MAX_DEPOSITS: Number64,
     MAX_VOLUNTARY_EXITS: Number64,
+
+    // Signature domains
+    DOMAIN_BEACON_PROPOSER: ByteVector4,
+    DOMAIN_BEACON_ATTESTER: ByteVector4,
+    DOMAIN_RANDAO: ByteVector4,
+    DOMAIN_DEPOSIT: ByteVector4,
+    DOMAIN_VOLUNTARY_EXIT: ByteVector4,
+    DOMAIN_SELECTION_PROOF: ByteVector4,
+    DOMAIN_AGGREGATE_AND_PROOF: ByteVector4,
   },
 });
