@@ -211,16 +211,16 @@ export abstract class Repository<I extends Id, T> {
       lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
     };
     if (opts) {
-      if (opts.lt !== undefined) {
+      if (opts.lt || opts.lt === 0) {
         _opts.lt = this.encodeKey(opts.lt);
-      } else if (opts.lte !== undefined) {
+      } else if (opts.lte || opts.lte === 0) {
         delete _opts.lt;
         _opts.lte = this.encodeKey(opts.lte);
       }
-      if (opts.gt !== undefined) {
+      if (opts.gt || opts.gt === 0) {
         delete _opts.gte;
         _opts.gt = this.encodeKey(opts.gt);
-      } else if (opts.gte !== undefined) {
+      } else if (opts.gte || opts.gte === 0) {
         _opts.gte = this.encodeKey(opts.gte);
       }
       _opts.reverse = opts.reverse;
