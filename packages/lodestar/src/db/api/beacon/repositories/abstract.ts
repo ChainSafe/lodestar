@@ -137,7 +137,7 @@ export abstract class Repository<I extends Id, T> {
     const data = await this.db.entries(this.dbFilterOptions(opts));
     return (data || []).map((data) => ({
       key: this.decodeKey(data.key),
-      value: this.decodeValue(data.key),
+      value: this.decodeValue(data.value),
     }));
   }
   public entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
