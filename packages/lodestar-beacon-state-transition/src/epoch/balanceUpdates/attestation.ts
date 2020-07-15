@@ -5,6 +5,7 @@
 
 import {BeaconState, Gwei, ValidatorIndex, PendingAttestation} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BASE_REWARDS_PER_EPOCH} from "../../constants";
 
 import {
   getAttestingIndices,
@@ -105,7 +106,7 @@ function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconState): 
     getUnslashedAttestingIndices(config, state, matchingTargetAttestations);
     getEligibleValidatorIndices(config, state).forEach((index) => {
       const baseReward = getBaseReward(config, state, index);
-      penalties[index] += BigInt(config.params.BASE_REWARDS_PER_EPOCH) * baseReward -
+      penalties[index] += BigInt(BASE_REWARDS_PER_EPOCH) * baseReward -
         getProposerReward(config, state, index);
       if (!matchingTargetAttestingIndices.includes(index)) {
         penalties[index] += (

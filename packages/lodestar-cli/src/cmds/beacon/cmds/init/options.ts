@@ -2,6 +2,7 @@ import {Options} from "yargs";
 
 import {canonicalOptions} from "../../../../util";
 import {IBeaconArgs} from "../../options";
+import {paramsOptions} from "./params";
 
 export interface IBeaconInitArgs extends IBeaconArgs {
   templateConfigFile?: string;
@@ -14,4 +15,4 @@ const templateConfig: Options = {
   default: null,
 };
 
-export const beaconInitOptions = canonicalOptions({templateConfig});
+export const beaconInitOptions = canonicalOptions({templateConfig, ...paramsOptions});
