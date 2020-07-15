@@ -44,6 +44,6 @@ nav:
   - Installation: installation.md
   - Usage:
       - Local testnet: usage/local.md
-      - Witti testnet: usage/witti.md
+      - Altona testnet: usage/altona.md
   - Packages: packages.md
   - Contributing: contributing.md
