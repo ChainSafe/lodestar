@@ -10,9 +10,13 @@
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "main": "lib/index.js",
   "files": [
-    "lib",
-    "bin"
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
   ],
+  "bin": {
+    "lodestar": "lib/index.js"
+  },
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn run build:lib && yarn run build:types",
@@ -68,9 +72,6 @@
     "rimraf": "^3.0.0",
     "uuidv4": "^6.1.1",
     "yargs": "^15.3.1"
-  },
-  "bin": {
-    "lodestar": "./bin/lodestar"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",
