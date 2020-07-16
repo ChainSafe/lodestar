@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 
