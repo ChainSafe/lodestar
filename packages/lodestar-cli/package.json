@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-cli",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Command line interface for other packages",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -9,7 +9,14 @@
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
   "main": "lib/index.js",
-  "files": [],
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "bin": {
+    "lodestar": "lib/index.js"
+  },
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn run build:lib && yarn run build:types",
@@ -44,11 +51,11 @@
     "@chainsafe/bls-keygen": "^0.1.0",
     "@chainsafe/bls-keystore": "^1.0.0-beta8",
     "@chainsafe/discv5": "0.2.5",
-    "@chainsafe/lodestar": "^0.10.0",
-    "@chainsafe/lodestar-config": "^0.10.0",
-    "@chainsafe/lodestar-types": "^0.10.0",
-    "@chainsafe/lodestar-utils": "^0.10.0",
-    "@chainsafe/lodestar-validator": "^0.10.0",
+    "@chainsafe/lodestar": "^0.10.1",
+    "@chainsafe/lodestar-config": "^0.10.1",
+    "@chainsafe/lodestar-types": "^0.10.1",
+    "@chainsafe/lodestar-utils": "^0.10.1",
+    "@chainsafe/lodestar-validator": "^0.10.1",
     "@chainsafe/ssz": "^0.6.9",
     "@iarna/toml": "^2.2.3",
     "@types/lockfile": "^1.0.1",
@@ -65,9 +72,6 @@
     "rimraf": "^3.0.0",
     "uuidv4": "^6.1.1",
     "yargs": "^15.3.1"
-  },
-  "bin": {
-    "lodestar": "./bin/lodestar"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",

@@ -7,6 +7,7 @@ import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
 import {getBaseReward} from "../../../../../src/epoch/balanceUpdates/util";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
+import {BASE_REWARDS_PER_EPOCH} from "../../../../../src/constants";
 
 describe('process epoch - balance updates', function () {
 
@@ -31,7 +32,7 @@ describe('process epoch - balance updates', function () {
       const actual = BigInt(index)
         * BigInt(config.params.BASE_REWARD_FACTOR)
         / bigIntSqrt(100n)
-        / BigInt(config.params.BASE_REWARDS_PER_EPOCH)
+        / BigInt(BASE_REWARDS_PER_EPOCH)
       expect(result === actual).to.be.true;
 
 

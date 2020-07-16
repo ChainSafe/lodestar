@@ -1,29 +1,16 @@
 import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
-import {TypeMap, typeMap} from "./types";
 import {IBeaconParams} from "./interface";
-import * as constants from "./constants";
+import {Json} from "@chainsafe/ssz";
+import {BeaconParams} from "./beaconParams";
 
-export function createIBeaconParams(params: Record<string, unknown>): Partial<IBeaconParams> {
-  return convertTypes(params, typeMap);
-}
-
-export function convertTypes(
-  params: Record<string, unknown>,
-  typeMap: TypeMap<string, unknown>,
-): Partial<IBeaconParams> {
-  for(const k in params) {
-    if(params.hasOwnProperty(k)) {
-      if(typeMap[k]) {
-        params[k] = typeMap[k](params[k] as string);
-      } else {
-        params[k] = Number(params[k]);
-      }
+export function createIBeaconParams(input: Record<string, unknown>): Partial<IBeaconParams> {
+  const params: Partial<IBeaconParams> = {};
+  Object.entries(BeaconParams.fields).forEach(([fieldName, fieldType]) => {
+    if (input[fieldName]) {
+      (params as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json) as unknown;
     }
-  }
-  return {
-    ...params,
-    ...constants
-  } as unknown as IBeaconParams;
+  });
+  return params;
 }
 
 export const schema = new Schema({
