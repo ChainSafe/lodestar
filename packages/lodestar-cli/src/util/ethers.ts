@@ -1,5 +1,6 @@
 import fs from "fs";
 import {ethers} from "ethers";
+import {YargsError} from "./errors";
 
 /**
  * Returns a connected ethers signer from a variety of provider options
@@ -39,5 +40,5 @@ export async function getEthersSigner({
     return new ethers.providers.IpcProvider(ipcPath).getSigner();
   }
   
-  throw Error("Must supply either keystorePath, rpcUrl, or ipcPath");
+  throw new YargsError("Must supply either keystorePath, rpcUrl, or ipcPath");
 }

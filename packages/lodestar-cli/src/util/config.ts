@@ -1,6 +1,7 @@
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
+import {YargsError} from "./errors";
 
 export function getBeaconConfig(spec: string): IBeaconConfig {
   switch (spec) {
@@ -9,6 +10,6 @@ export function getBeaconConfig(spec: string): IBeaconConfig {
     case "minimal":
       return createIBeaconConfig(minimalParams);
     default:
-      throw Error(`Unsupported spec: ${spec}`);
+      throw new YargsError(`Unsupported spec: ${spec}`);
   }
 }

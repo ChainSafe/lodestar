@@ -5,6 +5,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls, {PrivateKey, PublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import eth1Options from "@chainsafe/lodestar/lib/eth1/options";
+import {YargsError} from "../util";
 
 
 function getDepositInterface(): ethers.utils.Interface {
@@ -35,7 +36,7 @@ export function decodeEth1TxData(
   // Sanity check
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
   if (depositDataRoot != root)
-    throw Error("deposit data root mismatch");
+    throw new YargsError("deposit data root mismatch");
 
   return {depositData, root};
 }

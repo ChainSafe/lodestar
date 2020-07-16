@@ -14,7 +14,13 @@ export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs> {
   yargs.options(beaconInitOptions);
   const args = parseArgs(yargs) as IBeaconInitArgs;
   if (args.templateConfigFile) {
-    yargs.config(readBeaconConfig(args.templateConfigFile));
+    try {
+      yargs.config(readBeaconConfig(args.templateConfigFile));
+    } catch(error) {
+      // eslint-disable-next-line no-console
+      console.log(` ✖ ${error.message}\n`);
+      process.exit(1);
+    }
   }
   return yargs as unknown as Argv<IBeaconArgs>;
 }

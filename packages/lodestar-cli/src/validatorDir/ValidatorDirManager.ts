@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {ValidatorDir, IValidatorDirOptions} from "./ValidatorDir";
 import {Keypair} from "@chainsafe/bls";
+import {YargsError} from "../util";
 
 /**
  * Manages a directory containing multiple `ValidatorDir` directories.
@@ -26,9 +27,9 @@ export class ValidatorDirManager {
    */
   constructor({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
     if (!fs.existsSync(keystoresDir))
-      throw Error(`keystoresDir ${keystoresDir} does not exist`);
+      throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
     if (!fs.existsSync(secretsDir))
-      throw Error(`secretsDir ${secretsDir} does not exist`);
+      throw new YargsError(`secretsDir ${secretsDir} does not exist`);
 
     this.keystoresDir = keystoresDir;
     this.secretsDir = secretsDir;

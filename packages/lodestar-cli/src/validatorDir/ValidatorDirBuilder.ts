@@ -6,7 +6,7 @@ import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
 import {encodeDepositData} from "../depositContract/depositData";
-import {writeFile600Perm, ensureDirExists} from "../util";
+import {writeFile600Perm, ensureDirExists, YargsError} from "../util";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
@@ -62,9 +62,9 @@ export class ValidatorDirBuilder {
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
-    if (!keystores.signing.pubkey) throw Error("signing keystore has no pubkey");
+    if (!keystores.signing.pubkey) throw new YargsError("signing keystore has no pubkey");
     const dir = path.join(this.keystoresDir, keystores.signing.pubkey);
-    if (fs.existsSync(dir)) throw Error(`validator dir ${dir} already exists`);
+    if (fs.existsSync(dir)) throw new YargsError(`validator dir ${dir} already exists`);
     fs.mkdirSync(dir, {recursive: true});
 
     const withdrawalPublicKey = PublicKey.fromHex(keystores.withdrawal.pubkey);
