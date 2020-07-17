@@ -55,7 +55,8 @@ export default class BlockProposingService {
   public start = async (): Promise<void> => {
     //trigger getting duties for current epoch
     const slot = this.provider.getCurrentSlot();
-    this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    // ### Todo: Unknown promise duration
+    await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {

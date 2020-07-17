@@ -56,15 +56,17 @@ export class Validator {
     this.apiClient.once("beaconChainStarted", this.run);
   }
 
-  public run = (): void => {
+  public async run(): Promise<void> {
     this.logger.info("Chain start has occured!");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
     this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
-    this.blockService.start();
-    this.attestationService.start();
-  };
+    // ### Todo: Unknown promise duration
+    await this.blockService.start();
+    // ### Todo: Unknown promise duration
+    await this.attestationService.start();
+  }
 
   /**
    * Stops all validator functions

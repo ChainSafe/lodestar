@@ -58,7 +58,8 @@ export class BlockProcessor implements IService {
 
   public async start(): Promise<void> {
     const abortSignal = this.controller.signal;
-    pipe(
+    // ### Todo: Unknown promise duration
+    await pipe(
       //source of blocks
       this.blockProcessingSource,
       //middleware to allow to stop block processing

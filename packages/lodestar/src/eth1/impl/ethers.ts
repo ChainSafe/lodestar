@@ -101,7 +101,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
     }
     this.eth1Source = pushable<Eth1EventsBlock>();
     // no need await
-    this.startProcessEth1Blocks();
+    // ### Todo: Unknown promise duration
+    await this.startProcessEth1Blocks();
     return this.eth1Source;
   }
 
