@@ -20,7 +20,8 @@ export function getTestnetConfig(testnet: Testnet): Partial<IBeaconNodeOptions> 
 function getGenesisFileUrl(testnet: Testnet): string {
   switch (testnet) {
     case "altona":
-      return "https://github.com/eth2-clients/eth2-testnets/raw/master/shared/altona/genesis.ssz";
+      // eslint-disable-next-line max-len
+      return "https://github.com/eth2-clients/eth2-testnets/raw/b84d27cc8f161cc6289c91acce6dae9c35096845/shared/altona/genesis.ssz";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
