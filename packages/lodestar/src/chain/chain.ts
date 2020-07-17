@@ -144,7 +144,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
-    this.forkChoice.start(state.genesisTime, this.clock);
+    await this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkVersion", this.handleForkVersionChanged);
