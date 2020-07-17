@@ -1,8 +1,7 @@
-import {fromHexString, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {
   Attestation,
   AttestationRootHex,
-  BeaconState,
   BlockRootHex,
   Root,
   SignedBeaconBlock,
@@ -12,7 +11,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndices
+  getAttestingIndicesFromCommittee,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -21,6 +20,7 @@ import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
 import {GENESIS_EPOCH} from "../constants";
+import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
@@ -97,19 +97,16 @@ export class AttestationProcessor implements IAttestationProcessor {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
-    let checkpointState: TreeBacked<BeaconState>;
-    if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
-      const justifiedBlock =
-        this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
-      if (justifiedBlock) {
-        checkpointState = (await this.db.stateCache.get(justifiedBlock.stateRoot)).state;
-      } else {
-        // should not happen
-        throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
-      }
-    } else {
-      // should be genesis state
-      checkpointState = await this.db.stateArchive.get(0);
+    let stateCtx: ITreeStateContext;
+    const justifiedBlock = this.forkChoice.getBlockSummaryByBlockRoot(
+      justifiedCheckpoint.root.valueOf() as Uint8Array
+    );
+    if (justifiedBlock) {
+      stateCtx = await this.db.stateCache.get(justifiedBlock.stateRoot);
+    }
+    if (!justifiedBlock || !stateCtx) {
+      // should not happen
+      throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
     }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
@@ -131,9 +128,11 @@ export class AttestationProcessor implements IAttestationProcessor {
       ancestor && this.config.types.Root.equals(target.root, ancestor),
       "FFG and LMD vote must be consistent with each other");
 
-    const validators = getAttestingIndices(
-      this.config, checkpointState, attestation.data, attestation.aggregationBits);
-    const balances = validators.map((index) => checkpointState.balances[index]);
+    const validators = getAttestingIndicesFromCommittee(
+      stateCtx.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+      attestation.aggregationBits
+    );
+    const balances = validators.map((index) => stateCtx.state.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(
         attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
