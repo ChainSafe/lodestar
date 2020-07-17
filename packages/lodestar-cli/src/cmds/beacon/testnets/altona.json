@@ -31,16 +31,16 @@
   },
   "logger": {
     "chain": {
-      "level": "verbose"
+      "level": "info"
     },
     "network": {
-      "level": "verbose"
+      "level": "info"
     },
     "eth1": {
-      "level": "verbose"
+      "level": "info"
     },
     "sync": {
-      "level": "verbose"
+      "level": "info"
     }
   },
   "metrics": {
