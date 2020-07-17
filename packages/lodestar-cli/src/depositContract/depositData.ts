@@ -36,7 +36,7 @@ export function decodeEth1TxData(
   // Sanity check
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
   if (depositDataRoot != root)
-    throw new YargsError("deposit data root mismatch");
+    throw Error("deposit data root mismatch");
 
   return {depositData, root};
 }

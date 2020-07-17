@@ -32,7 +32,7 @@ export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
       contents = JSON.stringify(obj, null, 2);
       break;
     default:
-      throw new YargsError("Invalid filetype");
+      throw Error("Invalid filetype");
   }
   return contents;
 }

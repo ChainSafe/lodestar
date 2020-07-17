@@ -19,7 +19,6 @@ export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs> {
     } catch(error) {
       // eslint-disable-next-line no-console
       console.log(` ✖ ${error.message}\n`);
-      process.exit(1);
     }
   }
   return yargs as unknown as Argv<IBeaconArgs>;

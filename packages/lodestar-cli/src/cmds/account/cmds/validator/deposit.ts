@@ -96,7 +96,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
       value: (depositData.amount * BigInt(1e9)).toString(),
       data: rlp
     });
-    if (!tx.hash) throw new YargsError("No transaction hash");
+    if (!tx.hash) throw Error("No transaction hash");
     validatorDir.saveEth1DepositTxHash(tx.hash);
     // eslint-disable-next-line no-console
     console.log(`Submitted deposit. txHash: ${tx.hash}`);
