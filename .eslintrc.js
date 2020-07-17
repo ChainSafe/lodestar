@@ -55,6 +55,7 @@ module.exports = {
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
+    "@typescript-eslint/no-floating-promises": "error",
     //it doesn't recognize module/lib/something (like mainnet & minimal presets)
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": ["error", {
