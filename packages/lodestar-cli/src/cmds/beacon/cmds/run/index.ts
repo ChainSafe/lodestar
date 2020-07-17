@@ -20,10 +20,10 @@ export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs & Partial<IB
     yargsConfig = yargs
       .options(beaconRunOptions)
       .config(readBeaconConfig(args.config)) as unknown as Argv<IBeaconArgs & Partial<IBeaconNodeOptions>>;
-    } catch(error) {
-      // eslint-disable-next-line no-console
-      console.log(` ✖ ${error.message}\n`);
-    }
+  } catch(error) {
+    // eslint-disable-next-line no-console
+    console.log(` ✖ ${error.message}\n`);
+  }
 
   return yargsConfig;
 }
