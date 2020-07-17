@@ -148,7 +148,7 @@ export class BeaconNode {
     // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
-    this.sync.start();
+    await this.sync.start();
     await this.api.start();
     await this.chores.start();
   }
