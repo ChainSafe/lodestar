@@ -32,7 +32,7 @@ function getGenesisFileUrl(testnet: Testnet): string {
  * @param options
  */
 export async function downloadGenesisFile(
-  testnet: "altona",
+  testnet: Testnet,
   options: Partial<IBeaconArgs>
 ): Promise<void> {
   const genesisFileUrl = getGenesisFileUrl(testnet);
