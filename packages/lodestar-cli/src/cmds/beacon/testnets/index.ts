@@ -4,7 +4,6 @@ import stream from "stream";
 import {promisify} from "util";
 import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
-import {IBeaconArgs} from "../options";
 
 type Testnet = "altona";
 
@@ -33,10 +32,9 @@ function getGenesisFileUrl(testnet: Testnet): string {
  */
 export async function downloadGenesisFile(
   testnet: Testnet,
-  options: Partial<IBeaconArgs>
+  genesisFilePath: string
 ): Promise<void> {
   const genesisFileUrl = getGenesisFileUrl(testnet);
-  const genesisFilePath = options.chain.genesisStateFile;
 
   if (!fs.existsSync(genesisFilePath)) {
     fs.mkdirSync(path.parse(genesisFilePath).dir, {recursive: true});

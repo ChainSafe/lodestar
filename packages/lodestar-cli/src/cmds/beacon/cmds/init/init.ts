@@ -1,7 +1,9 @@
+import path from "path";
 import {Arguments} from "yargs";
 import deepmerge from "deepmerge";
 
 import {rootDir} from "../../../../options";
+import {beaconDir} from "../../options/beaconDir";
 import {IBeaconArgs} from "../../options";
 import {mkdir} from "../../../../util";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
@@ -17,8 +19,10 @@ export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
     const altonaConfig = getTestnetConfig("altona");
     // Mutate args so options propagate upstream to the run call
     Object.assign(args, deepmerge(args, altonaConfig));
+    if (args.beaconDir === beaconDir(args).default) args.beaconDir = ".altona/beacon";
     if (args.rootDir === rootDir.default) args.rootDir = ".altona";
-    await downloadGenesisFile("altona", args);
+    args.chain.genesisStateFile = path.join(args.beaconDir, "genesis.ssz");
+    await downloadGenesisFile("altona", args.chain.genesisStateFile);
   }
 
   // initialize root directory
