@@ -48,7 +48,7 @@ export class ArchiveStatesTask implements ITask {
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
     const prunedStates = this.pruned.map(summary => summary.stateRoot);
-    this.db.stateCache.batchDelete(prunedStates);
+    await this.db.stateCache.batchDelete(prunedStates);
     this.logger.info(
       `Archiving of finalized states completed (finalized epoch #${epoch})`);
     this.logger.profile("Archive States");
