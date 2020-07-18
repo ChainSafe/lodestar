@@ -66,14 +66,6 @@ export async function handler(options: IWalletCreateOptions): Promise<void> {
     writeFile600Perm(passphraseFile, randomPassword());
   }
   const password = readPassphraseFile(passphraseFile);
-  // Validate the passphraseFile contents to prevent the user to create a wallet with a password
-  // that is the contents a random unintended file
-  try {
-    if (password.includes("\n")) throw Error("contains multiple lines");
-    if (password.length > 512) throw Error("is really long");
-  } catch (e) {
-    throw new YargsError(`passphraseFile ${passphraseFile} ${e.message}. Is this a well-formated passphraseFile?`);
-  }
 
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.createWallet(name, type, mnemonic, password);
