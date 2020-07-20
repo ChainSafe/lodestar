@@ -96,14 +96,13 @@ export class FastSync
     return computeStartSlotAtEpoch(this.config, this.targetCheckpoint.epoch);
   }
 
-  private getNewBlockImportTarget(fromSlot?: Slot): Slot {
-    const headSlot = fromSlot || this.chain.forkChoice.headBlockSlot();
+  private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    if(headSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
+    if(fromSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
-      return headSlot + this.config.params.SLOTS_PER_EPOCH;
+      return fromSlot + this.config.params.SLOTS_PER_EPOCH;
     } else {
-      return headSlot + this.opts.maxSlotImport;
+      return fromSlot + this.opts.maxSlotImport;
     }
   }
 
@@ -190,9 +189,10 @@ export class FastSync
       );
       if(newTarget.epoch > this.targetCheckpoint.epoch) {
         this.targetCheckpoint = newTarget;
-        this.setBlockImportTarget();
+        this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
         return;
       }
+      this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint.epoch}`);
       //finished initial sync
       await this.stop();
     }
