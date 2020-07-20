@@ -63,3 +63,11 @@ export function generateBlockSummary(overrides: Partial<BlockSummary> = {}): Blo
     {isMergeableObject: isPlainObject}
   );
 }
+
+export function generateBlockSummary(overrides: DeepPartial<BlockSummary> = {}): BlockSummary {
+  return deepmerge<BlockSummary, DeepPartial<BlockSummary>>(
+    generateEmptyBlockSummary(),
+    overrides,
+    {isMergeableObject: isPlainObject}
+  );
+}

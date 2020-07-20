@@ -20,11 +20,14 @@ import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
-import {IBeaconPoolApi, BeaconPoolApi} from "./pool";
+import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
+import {IBeaconStateApi} from "./state/interface";
+import {BeaconStateApi} from "./state/state";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
+  public state: IBeaconStateApi;
   public blocks: IBeaconBlocksApi;
   public pool: IBeaconPoolApi;
 
@@ -39,6 +42,7 @@ export class BeaconApi implements IBeaconApi {
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.state = new BeaconStateApi(opts, modules);
     this.blocks = new BeaconBlockApi(opts, modules);
     this.pool = new BeaconPoolApi(opts, modules);
   }
