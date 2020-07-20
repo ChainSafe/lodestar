@@ -1,10 +1,9 @@
-import fs from "fs";
 import {CommandBuilder} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines, getBeaconConfig, YargsError} from "../../../../util";
+import {getBeaconConfig, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 export const command = "create";
@@ -83,7 +82,7 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const n = count || atMost - wallet.nextaccount;
   if (n <= 0) throw new YargsError("No validators to create");
 
-  const walletPassword = stripOffNewlines(fs.readFileSync(passphraseFile, "utf8"));
+  const walletPassword = readPassphraseFile(passphraseFile);
 
   for (let i = 0; i < n; i++) {
     const passwords = wallet.randomPasswords();

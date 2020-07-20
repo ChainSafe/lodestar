@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import {CommandBuilder} from "yargs";
 import * as bip39 from "bip39";
-import {randomPassword, writeFile600Perm,YargsError} from "../../../../util";
+import {randomPassword, writeFile600Perm,YargsError, readPassphraseFile} from "../../../../util";
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IAccountWalletOptions} from "./options";
@@ -59,14 +59,13 @@ export async function handler(options: IWalletCreateOptions): Promise<void> {
   // Create a new random mnemonic.
   const mnemonic = bip39.generateMnemonic();
 
-  // Create a random password if the file does not exist.
+  if (path.parse(passphraseFile).ext !== ".pass") {
+    throw new YargsError("passphraseFile must end with .pass, make sure to not provide the actual password");
+  }
   if (!fs.existsSync(passphraseFile)) {
-    if (path.parse(passphraseFile).ext !== ".pass") {
-      throw new YargsError("passphraseFile must end with .pass, make sure to not provide the actual password");
-    }
     writeFile600Perm(passphraseFile, randomPassword());
   }
-  const password = fs.readFileSync(passphraseFile, "utf8");
+  const password = readPassphraseFile(passphraseFile);
 
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.createWallet(name, type, mnemonic, password);
