@@ -1,11 +1,11 @@
 import * as path from "path";
 import {Options} from "yargs";
-
+import {TestnetName} from "../testnets";
 import {IBeaconDirArgs}  from "./beaconDir";
 
 export interface IBeaconConfigArgs extends IBeaconDirArgs {
   config: string;
-  altona?: boolean;
+  testnet?: TestnetName;
 }
 
 export const config = (args: IBeaconDirArgs): Options => ({
@@ -16,7 +16,8 @@ export const config = (args: IBeaconDirArgs): Options => ({
   normalize: true,
 });
 
-export const altona = (): Options => ({
-  description: "Use Altona testnet configuration and genesis file",
-  type: "boolean",
+export const testnet = (): Options => ({
+  description: "Use a testnet configuration and genesis file",
+  type: "string",
+  choices: ["altona"] as TestnetName[],
 });

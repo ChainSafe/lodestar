@@ -5,9 +5,9 @@ import {promisify} from "util";
 import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 
-type Testnet = "altona";
+export type TestnetName = "altona";
 
-export function getTestnetConfig(testnet: Testnet): Partial<IBeaconNodeOptions> {
+export function getTestnetConfig(testnet: TestnetName): Partial<IBeaconNodeOptions> {
   switch (testnet) {
     case "altona":
       return JSON.parse(fs.readFileSync(path.join(__dirname, "altona.json"), "utf8"));
@@ -16,7 +16,7 @@ export function getTestnetConfig(testnet: Testnet): Partial<IBeaconNodeOptions> 
   }
 }
 
-function getGenesisFileUrl(testnet: Testnet): string {
+function getGenesisFileUrl(testnet: TestnetName): string {
   switch (testnet) {
     case "altona":
       // eslint-disable-next-line max-len
@@ -31,7 +31,7 @@ function getGenesisFileUrl(testnet: Testnet): string {
  * @param options
  */
 export async function downloadGenesisFile(
-  testnet: Testnet,
+  testnet: TestnetName,
   genesisFilePath: string
 ): Promise<void> {
   const genesisFileUrl = getGenesisFileUrl(testnet);

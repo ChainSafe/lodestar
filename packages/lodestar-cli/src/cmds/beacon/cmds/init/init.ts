@@ -15,14 +15,14 @@ import {getTestnetConfig, downloadGenesisFile} from "../../testnets";
  */
 export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
   // Auto-setup altona
-  if (args.altona) {
-    const altonaConfig = getTestnetConfig("altona");
+  if (args.testnet) {
+    const altonaConfig = getTestnetConfig(args.testnet);
     // Mutate args so options propagate upstream to the run call
     Object.assign(args, deepmerge(args, altonaConfig));
-    if (args.beaconDir === beaconDir(args).default) args.beaconDir = ".altona/beacon";
-    if (args.rootDir === rootDir.default) args.rootDir = ".altona";
+    if (args.beaconDir === beaconDir(args).default) args.beaconDir = `.${args.testnet}/beacon`;
+    if (args.rootDir === rootDir.default) args.rootDir = `.${args.testnet}`;
     args.chain.genesisStateFile = path.join(args.beaconDir, "genesis.ssz");
-    await downloadGenesisFile("altona", args.chain.genesisStateFile);
+    await downloadGenesisFile(args.testnet, args.chain.genesisStateFile);
   }
 
   // initialize root directory
