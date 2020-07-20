@@ -8,7 +8,7 @@ import {IBeaconArgs} from "../../options";
 import {mkdir} from "../../../../util";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
 import {initBeaconConfig} from "../../config";
-import {getTestnetConfig, downloadGenesisFile} from "../../testnets";
+import {getTestnetConfig, downloadGenesisFile, fetchBootnodes} from "../../testnets";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
@@ -17,6 +17,12 @@ export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
   // Auto-setup altona
   if (args.testnet) {
     const altonaConfig = getTestnetConfig(args.testnet);
+    try {
+      altonaConfig.network.discv5.bootEnrs = await fetchBootnodes(args.testnet);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`Error fetching latest bootnodes: ${e.stack}`);
+    }
     // Mutate args so options propagate upstream to the run call
     Object.assign(args, deepmerge(args, altonaConfig));
     if (args.beaconDir === beaconDir(args).default) args.beaconDir = `.${args.testnet}/beacon`;

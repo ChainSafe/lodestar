@@ -26,6 +26,15 @@ function getGenesisFileUrl(testnet: TestnetName): string {
   }
 }
 
+function getBootnodesFileUrl(testnet: TestnetName): string {
+  switch (testnet) {
+    case "altona":
+      return "https://github.com/eth2-clients/eth2-testnets/raw/master/shared/altona/bootstrap_nodes.txt";
+    default:
+      throw Error(`Testnet not supported: ${testnet}`);
+  }
+}
+
 /**
  * Downloads a genesis file per testnet if it does not exist
  * @param options
@@ -43,4 +52,15 @@ export async function downloadGenesisFile(
       fs.createWriteStream(genesisFilePath)
     );
   }
+}
+
+/**
+ * Fetches the latest list of bootnodes for a testnet
+ * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines
+ * @param testnet
+ */
+export async function fetchBootnodes(testnet: TestnetName): Promise<string[]> {
+  const bootnodesFileUrl = getBootnodesFileUrl(testnet);
+  const bootnodesFile = await got.get(bootnodesFileUrl).text();
+  return bootnodesFile.trim().split(/\r?\n/).filter(enr => enr.trim());
 }
