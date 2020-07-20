@@ -10,7 +10,7 @@ import {
   getBlockHeaders,
   getBlockRoot,
   getGenesis,
-  getPoolAttestations
+  getPoolAttestations, getStateFinalityCheckpoints
 } from "../../controllers/beacon";
 
 //old
@@ -24,6 +24,9 @@ export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void =
 //new
 export function registerBeaconRoutes(server: FastifyInstance): void {
   server.get(getGenesis.url, getGenesis.opts, getGenesis.handler);
+
+  //state
+  server.get(getStateFinalityCheckpoints.url, getStateFinalityCheckpoints.opts, getStateFinalityCheckpoints.handler);
 
   //pool
   server.get(getPoolAttestations.url, getPoolAttestations.opts, getPoolAttestations.handler);

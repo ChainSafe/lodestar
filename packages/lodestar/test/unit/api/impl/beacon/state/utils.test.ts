@@ -7,7 +7,7 @@ import {generateState} from "../../../../../utils/state";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import chaiAsPromised from "chai-as-promised";
-import {generateBlockSummary, generateEmptyBlockSummary} from "../../../../../utils/block";
+import {generateBlockSummary} from "../../../../../utils/block";
 
 use(chaiAsPromised);
 

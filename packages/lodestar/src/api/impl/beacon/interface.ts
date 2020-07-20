@@ -7,10 +7,12 @@ import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, ValidatorResponse} 
 import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
 import {IBeaconPoolApi} from "./pool";
+import {IBeaconStateApi} from "./state/interface";
 
 export interface IBeaconApi extends IApi {
 
   blocks: IBeaconBlocksApi;
+  state: IBeaconStateApi;
   pool: IBeaconPoolApi;
 
   /**
