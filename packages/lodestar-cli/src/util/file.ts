@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {Json} from "@chainsafe/ssz";
-import {YargsError} from "./errors";
 
 /**
  * Maybe create a directory
@@ -22,7 +21,7 @@ export function parse<T=Json>(contents: string, fileFormat: FileFormat): T {
     case FileFormat.json:
       return JSON.parse(contents);
     default:
-      throw new YargsError("Invalid filetype");
+      throw Error("Invalid filetype");
   }
 }
 export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {

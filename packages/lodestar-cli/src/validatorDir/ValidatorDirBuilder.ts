@@ -62,7 +62,7 @@ export class ValidatorDirBuilder {
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
-    if (!keystores.signing.pubkey) throw new YargsError("signing keystore has no pubkey");
+    if (!keystores.signing.pubkey) throw Error("signing keystore has no pubkey");
     const dir = path.join(this.keystoresDir, keystores.signing.pubkey);
     if (fs.existsSync(dir)) throw new YargsError(`validator dir ${dir} already exists`);
     fs.mkdirSync(dir, {recursive: true});
