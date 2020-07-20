@@ -37,6 +37,8 @@ docs/assets
 .witti
 genesis.ssz
 witti.json
+altona.json
+.altona
 
 # Wallet CLI artifacts
 .pass
