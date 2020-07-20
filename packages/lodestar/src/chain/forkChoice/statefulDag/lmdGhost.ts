@@ -12,10 +12,9 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {BlockSummary, ILMDGHOST, ForkChoiceEventEmitter} from "../interface";
+import {BlockSummary, ForkChoiceEventEmitter, HexCheckpoint, ILMDGHOST, RootHex} from "../interface";
 
 import {NodeInfo} from "./interface";
-import {HexCheckpoint, RootHex} from "../interface";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
@@ -455,9 +454,7 @@ export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEve
   }
 
   public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
-    return Object.values(this.nodes)
-      .filter(node => this.config.types.Root.equals(fromHexString(node.parent.blockRoot), blockRoot))
-      .map(node => node.toBlockSummary());
+    return Object.values(this.getNode(blockRoot).children).map(node => node.toBlockSummary());
   }
 
   public hasBlock(blockRoot: Uint8Array): boolean {
