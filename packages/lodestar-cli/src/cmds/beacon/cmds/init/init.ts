@@ -14,17 +14,17 @@ import {getTestnetConfig, downloadGenesisFile, fetchBootnodes} from "../../testn
  * Initialize lodestar-cli with an on-disk configuration
  */
 export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
-  // Auto-setup altona
+  // Auto-setup testnet
   if (args.testnet) {
-    const altonaConfig = getTestnetConfig(args.testnet);
+    const testnetConfig = getTestnetConfig(args.testnet);
     try {
-      altonaConfig.network.discv5.bootEnrs = await fetchBootnodes(args.testnet);
+      testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(args.testnet);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${e.stack}`);
     }
     // Mutate args so options propagate upstream to the run call
-    Object.assign(args, deepmerge(args, altonaConfig));
+    Object.assign(args, deepmerge(args, testnetConfig));
     if (args.beaconDir === beaconDir(args).default) args.beaconDir = `.${args.testnet}/beacon`;
     if (args.rootDir === rootDir.default) args.rootDir = `.${args.testnet}`;
     args.chain.genesisStateFile = path.join(args.beaconDir, "genesis.ssz");
