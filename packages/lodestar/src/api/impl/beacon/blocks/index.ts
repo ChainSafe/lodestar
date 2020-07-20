@@ -26,8 +26,29 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
   ): Promise<SignedBeaconHeaderResponse[]> {
     const result: SignedBeaconHeaderResponse[] = [];
     if(filters.parentRoot) {
-      //TODO: figure out how to filter and return blocks with given parent root
-      return result;
+      const finalizedBlock = await this.db.blockArchive.getByParentRoot(filters.parentRoot);
+      if(finalizedBlock) {
+        result.push(toBeaconHeaderResponse(this.config, finalizedBlock, true));
+      }
+      const nonFinalizedBlockSummaries
+          = this.chain.forkChoice.getBlockSummaryByParentBlockRoot(filters.parentRoot.valueOf() as Uint8Array);
+      result.push(... await Promise.all(
+        nonFinalizedBlockSummaries.map(async (summary) => {
+          const block = await this.db.block.get(summary.blockRoot);
+          const cannonical = this.chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
+          return toBeaconHeaderResponse(
+            this.config,
+            block,
+            this.config.types.Root.equals(cannonical.blockRoot, summary.blockRoot)
+          );
+        })
+      ));
+      return result.filter(
+        (item) =>
+        //skip if no slot filter
+          !(filters.slot && filters.slot !== 0) ||
+              item.header.message.slot === filters.slot
+      );
     }
     const headSlot = this.chain.forkChoice.headBlockSlot();
     if(!filters.parentRoot && !filters.slot && filters.slot !== 0) {

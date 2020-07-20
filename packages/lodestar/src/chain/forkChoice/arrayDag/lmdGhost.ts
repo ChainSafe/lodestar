@@ -379,6 +379,18 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     return (node)? this.toBlockSummary(node) : null;
   }
 
+  public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter((node) => {
+        return node.hasParent()
+          && this.config.types.Root.equals(
+            fromHexString(this.nodes[node.parent].blockRoot),
+            blockRoot
+          );
+      })
+      .map(node => this.toBlockSummary(node));
+  }
+
   public hasBlock(blockRoot: Uint8Array): boolean {
     return !!this.getNode(blockRoot);
   }
