@@ -21,7 +21,7 @@ export function parse<T=Json>(contents: string, fileFormat: FileFormat): T {
     case FileFormat.json:
       return JSON.parse(contents);
     default:
-      throw Error("Invalid filetype");
+      throw new Error("Invalid filetype");
   }
 }
 export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
@@ -31,7 +31,7 @@ export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
       contents = JSON.stringify(obj, null, 2);
       break;
     default:
-      throw Error("Invalid filetype");
+      throw new Error("Invalid filetype");
   }
   return contents;
 }
