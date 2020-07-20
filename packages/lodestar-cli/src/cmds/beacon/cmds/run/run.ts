@@ -23,8 +23,8 @@ import {init as initBeacon} from "../init/init";
 export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>): Promise<void> {
   await initBLS();
 
-  // Auto-setup altona
-  if (options.altona) {
+  // Auto-setup testnet
+  if (options.testnet) {
     await initBeacon(options);
   }
 
