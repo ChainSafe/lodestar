@@ -15,17 +15,15 @@ export const description = "Run a lodestar beacon node";
 export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs & Partial<IBeaconNodeOptions>> {
   const args = parseArgs(yargs);
 
-  let yargsConfig;
   try {
-    yargsConfig = yargs
+    const yargsConfig = yargs
       .options(beaconRunOptions)
       .config(readBeaconConfig(args.config)) as unknown as Argv<IBeaconArgs & Partial<IBeaconNodeOptions>>;
+    return yargsConfig;
   } catch(error) {
     // eslint-disable-next-line no-console
     console.log(` ✖ ${error.message}\n`);
   }
-
-  return yargsConfig;
 }
 
 export const handler = run;
