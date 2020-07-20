@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-
 import {Json} from "@chainsafe/ssz";
+import {ensureDirExists} from "./fs";
 
 /**
  * Maybe create a directory
@@ -42,6 +42,7 @@ export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
  * Serialize either to json, yaml, or toml
  */
 export async function writeFile(filename: string, obj: Json): Promise<void> {
+  ensureDirExists(path.parse(filename).dir);
   const fileFormat = path.extname(filename).substr(1);
   await fs.promises.writeFile(filename, stringify(obj, fileFormat as FileFormat), "utf-8");
 }
