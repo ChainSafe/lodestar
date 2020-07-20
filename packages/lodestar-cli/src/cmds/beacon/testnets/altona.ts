@@ -1,4 +1,8 @@
-{
+/* eslint-disable max-len */
+
+// Use a Typescript file instead of JSON so it's automatically included in the built files
+
+export const altonaConfig = {
   "api": {
     "enabled": true,
     "namespaces": ["beacon", "validator"],
@@ -75,4 +79,4 @@
     ],
     "localMultiaddrs": ["/ip4/0.0.0.0/tcp/30607"]
   }
-}
+};

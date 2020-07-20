@@ -4,13 +4,15 @@ import stream from "stream";
 import {promisify} from "util";
 import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {altonaConfig} from "./altona";
 
 export type TestnetName = "altona";
 
 export function getTestnetConfig(testnet: TestnetName): Partial<IBeaconNodeOptions> {
   switch (testnet) {
     case "altona":
-      return JSON.parse(fs.readFileSync(path.join(__dirname, "altona.json"), "utf8"));
+      // Casting type since IBeaconNodeOptions doesn't match this config
+      return altonaConfig as unknown as Partial<IBeaconNodeOptions>;
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
