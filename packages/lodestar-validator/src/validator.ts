@@ -62,10 +62,11 @@ export class Validator {
     this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
-    // ### Todo: Unknown promise duration
-    await this.blockService.start();
-    // ### Todo: Unknown promise duration
-    await this.attestationService.start();
+    // Run both services at once to prevent missing first attestation
+    await Promise.all([
+      this.blockService.start(),
+      this.attestationService.start()
+    ]);
   }
 
   /**

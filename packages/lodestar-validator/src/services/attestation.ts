@@ -65,7 +65,7 @@ export class AttestationService {
   public start = async (): Promise<void> => {
     const slot = this.provider.getCurrentSlot();
     //trigger getting duties for current epoch
-    this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+    await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
