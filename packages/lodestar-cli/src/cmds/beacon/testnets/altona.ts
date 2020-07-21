@@ -49,7 +49,7 @@ export const altonaConfig = {
   },
   "metrics": {
     "enabled": true,
-    "serverPort": 5000
+    "serverPort": 8008
   },
   "network": {
     "discv5": {

@@ -3,4 +3,4 @@ scrape_configs:
   scrape_interval: 5s
   metrics_path: /metrics
   static_configs:
-      - targets: ['127.0.0.1:5000']
+      - targets: ['127.0.0.1:8008']
