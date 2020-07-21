@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import {isUuid} from "uuidv4";
 import {Wallet, IWalletKeystoreJson} from "./Wallet";
-import {ensureDirExists} from "../util";
+import {ensureDirExists, YargsError} from "../util";
 
 /**
  * Manages a directory containing EIP-2386 wallets.
@@ -56,7 +56,7 @@ export class WalletManager {
         const walletInfoPath = path.join(this.walletsDir, walletUuid, walletUuid);
         const walletInfo = JSON.parse(fs.readFileSync(walletInfoPath, "utf8"));
         if (walletInfo.uuid !== walletUuid)
-          throw Error(`Wallet UUID mismatch, ${walletInfo.uuid} !== ${walletUuid}`);
+          throw new YargsError(`Wallet UUID mismatch, ${walletInfo.uuid} !== ${walletUuid}`);
 
         return walletInfo;
       });
@@ -68,7 +68,7 @@ export class WalletManager {
   openByName(name: string): Wallet {
     const wallets = this.wallets();
     const walletKeystore = wallets.find(w => w.name === name);
-    if (!walletKeystore) throw Error(`Wallet ${name} not found`);
+    if (!walletKeystore) throw new YargsError(`Wallet ${name} not found`);
     return new Wallet(walletKeystore);
   }
 
@@ -76,7 +76,7 @@ export class WalletManager {
    * Persist wallet info to disk
    */
   writeWallet(wallet: Wallet): void {
-    if (!wallet.uuid) throw Error("Wallet UUID is not defined");
+    if (!wallet.uuid) throw new YargsError("Wallet UUID is not defined");
     const walletInfoPath = path.join(this.walletsDir, wallet.uuid, wallet.uuid);
     fs.writeFileSync(walletInfoPath, wallet.toWalletJSON());
   }
@@ -92,14 +92,14 @@ export class WalletManager {
     password: string
   ): Wallet {
     if (this.wallets().some(wallet => wallet.name === name))
-      throw Error(`Wallet name ${name} already used`);
+      throw new YargsError(`Wallet name ${name} already used`);
 
       
     const wallet = Wallet.fromMnemonic(mnemonic, password, name);
     const walletDir = path.join(this.walletsDir, wallet.uuid);
 
     if (fs.existsSync(walletDir))
-      throw Error(`Wallet dir ${walletDir} already exists`);
+      throw new YargsError(`Wallet dir ${walletDir} already exists`);
     fs.mkdirSync(walletDir, {recursive: true});
     
     this.writeWallet(wallet);

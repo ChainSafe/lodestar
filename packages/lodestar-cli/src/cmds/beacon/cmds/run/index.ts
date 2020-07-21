@@ -14,6 +14,7 @@ export const description = "Run a lodestar beacon node";
 
 export function builder(yargs: Argv<IBeaconArgs>): Argv<IBeaconArgs & Partial<IBeaconNodeOptions>> {
   const args = parseArgs(yargs);
+
   return yargs
     .options(beaconRunOptions)
     .config(readBeaconConfig(args.config)) as unknown as Argv<IBeaconArgs & Partial<IBeaconNodeOptions>>;
