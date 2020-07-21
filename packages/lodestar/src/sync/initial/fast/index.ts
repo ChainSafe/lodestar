@@ -135,6 +135,7 @@ export class FastSync
         const setBlockImportTarget = this.setBlockImportTarget;
         const updateBlockImportTarget = this.updateBlockImportTarget;
         const getInitialSyncPeers = this.getInitialSyncPeers;
+        const forkChoice = this.chain.forkChoice;
         return (async function() {
           for await (const slotRange of source) {
             const lastSlot = await pipe(
@@ -142,13 +143,19 @@ export class FastSync
               fetchBlockChunks(
                 logger, chain, network.reqResp, getInitialSyncPeers, opts.blockPerChunk
               ),
-              processSyncBlocks(config, chain, logger, true)
+              processSyncBlocks(config, chain, logger, true, true)
             );
-            logger.verbose("last fetched slot=" + lastSlot);
+            logger.verbose("last processed slot=" + lastSlot);
             if(lastSlot) {
-              //set new target from last block we've received
-              // it will trigger new sync once last block is processed
-              updateBlockImportTarget(lastSlot);
+              if (lastSlot === forkChoice.headBlockSlot()) {
+                // failed at start of range
+                logger.warn(`Failed to process range, retry fetching range, lastSlot=${lastSlot}`);
+                setBlockImportTarget(lastSlot);
+              } else {
+                //set new target from last block we've processed
+                // it will trigger new sync once last block is processed
+                updateBlockImportTarget(lastSlot);
+              }
             } else {
               logger.warn("Didn't receive any valid block in given range");
               //we didn't receive any block, set target from last requested slot

@@ -114,7 +114,7 @@ export class NaiveRegularSync implements IRegularSync {
             const lastFetchedSlot = await pipe(
               [range],
               fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
-              processSyncBlocks(config, chain, logger)
+              processSyncBlocks(config, chain, logger, false)
             );
             if(lastFetchedSlot) {
               await setTarget(lastFetchedSlot, false);
