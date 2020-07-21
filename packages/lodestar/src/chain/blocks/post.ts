@@ -7,7 +7,7 @@ import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
 import {ILMDGHOST} from "../forkChoice";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
-import {TreeBacked} from "@chainsafe/ssz";
+import {TreeBacked, toHexString} from "@chainsafe/ssz";
 
 export function postProcess(
   config: IBeaconConfig,
@@ -65,7 +65,8 @@ function newJustifiedEpoch(
   eventBus: ChainEventEmitter,
   state: TreeBacked<BeaconState>
 ): void {
-  logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified!`);
+  logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified at root
+    ${toHexString(state.currentJustifiedCheckpoint.root)}!`);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
   eventBus.emit("justifiedCheckpoint", state.currentJustifiedCheckpoint);
@@ -77,7 +78,8 @@ function newFinalizedEpoch(
   eventBus: ChainEventEmitter,
   state: TreeBacked<BeaconState>
 ): void {
-  logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized!`);
+  logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized at root
+    ${toHexString(state.finalizedCheckpoint.root)}!`);
   metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
   eventBus.emit("finalizedCheckpoint", state.finalizedCheckpoint);
 }

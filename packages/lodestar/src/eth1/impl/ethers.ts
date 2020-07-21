@@ -82,7 +82,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.verbose("Eth1 notifier is disabled, no need to process eth1 for proposing data");
       return;
     }
-    await this.startProcessEth1Blocks();
+    // no need await
+    this.startProcessEth1Blocks();
   }
 
   public async stop(): Promise<void> {

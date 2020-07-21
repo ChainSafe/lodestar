@@ -171,7 +171,7 @@ export function processSyncBlocks(
     blockBuffer = sortBlocks(blockBuffer);
     while(blockBuffer.length > 0) {
       const block = blockBuffer.shift();
-      if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
+      if(!trusted || (trusted && config.types.Root.equals(headRoot, block.message.parentRoot))) {
         await chain.receiveBlock(block, trusted);
         headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
         if(block.message.slot > lastProcessedSlot) {

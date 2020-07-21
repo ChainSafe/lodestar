@@ -181,7 +181,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   }
 
   public async stop(): Promise<void> {
-    this.clock.unsubscribeFromNewEpoch(this.onTick);
+    this.clock && this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {

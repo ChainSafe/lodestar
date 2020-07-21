@@ -61,6 +61,7 @@ describe("Eth1Notifier", () => {
     provider.getBlockNumber.resolves(currentBlockNumber);
 
     await eth1.start();
+    await Promise.resolve();
     expect(provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).calledOnce).to.be.true;
     await eth1.stop();
   });
@@ -120,7 +121,8 @@ describe("Eth1Notifier", () => {
       logger,
     });
     await expect(
-      eth1.start()
+      // @ts-ignore
+      eth1.startProcessEth1Blocks()
     ).to.be.rejectedWith("There is no deposit contract at given address");
   });
 
