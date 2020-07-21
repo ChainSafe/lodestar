@@ -69,8 +69,10 @@ export class TasksService implements IService {
   };
 
   private handleFinalizedCheckpointChores = async (finalized: BlockSummary, pruned: BlockSummary[]): Promise<void> => {
-    await new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
-    await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
+    await Promise.all([
+      new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run(),
+      new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run()
+    ]);
   };
 
 }
