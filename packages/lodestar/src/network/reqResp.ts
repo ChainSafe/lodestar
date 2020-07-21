@@ -256,7 +256,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
           this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`,
-            {requestId, encoding, body: JSON.stringify(body)});
+            {requestId, encoding, body: body && JSON.stringify(body)});
           return requestOnly ? null : finalResponse as T;
         }
       );
