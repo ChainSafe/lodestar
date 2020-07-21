@@ -1,3 +1,4 @@
+import fs from "fs";
 import _yargs from "yargs/yargs";
 import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
@@ -30,9 +31,14 @@ export async function writeBeaconConfig(filename: string, config: Partial<IBeaco
 
 /**
  * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
+ * If the config file is not found, the default values will apply.
  */
 export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> {
-  return readFileSync(filename) as Partial<IBeaconNodeOptions>;
+  if (fs.existsSync(filename)) {
+    return readFileSync(filename) as Partial<IBeaconNodeOptions>;
+  } else {
+    return {};
+  }
 }
 
 export async function initBeaconConfig(filename: string, args: IBeaconArgs): Promise<void> {

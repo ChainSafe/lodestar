@@ -15,12 +15,18 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {IBeaconArgs} from "../../options";
 import {ENR} from "@chainsafe/discv5";
+import {init as initBeacon} from "../init/init";
 
 /**
  * Run a beacon node
  */
 export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>): Promise<void> {
   await initBLS();
+
+  // Auto-setup testnet
+  if (options.testnet) {
+    await initBeacon(options);
+  }
 
   options = deepmerge(defaultOptions, options) as Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>;
 
