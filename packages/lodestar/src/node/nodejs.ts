@@ -148,7 +148,10 @@ export class BeaconNode {
     // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
-    await this.sync.start();
+    // TODO: refactor the sync module to respect the "start should resolve quickly" interface
+    // Now if sync.start() is awaited it will stall the node start process
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.sync.start();
     await this.api.start();
     await this.chores.start();
   }
