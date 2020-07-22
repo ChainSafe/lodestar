@@ -5,11 +5,13 @@ import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
   network: INetwork;
   db: IBeaconDb;
+  logger: ILogger;
 }
 
 export class AttestationCollector implements IService {
@@ -18,6 +20,7 @@ export class AttestationCollector implements IService {
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
+  private readonly logger: ILogger;
   private timers: (NodeJS.Timeout)[] = [];
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
@@ -26,6 +29,7 @@ export class AttestationCollector implements IService {
     this.chain = modules.chain;
     this.network = modules.network;
     this.db = modules.db;
+    this.logger = modules.logger;
   }
 
   public async start(): Promise<void> {
@@ -41,11 +45,15 @@ export class AttestationCollector implements IService {
     const forkDigest = this.chain.currentForkDigest;
     const headState = await this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
-    this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
-    if(this.aggregationDuties.has(slot)) {
-      this.aggregationDuties.get(slot).add(committeeIndex);
-    } else {
-      this.aggregationDuties.set(slot, new Set([committeeIndex]));
+    try {
+      this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
+      if(this.aggregationDuties.has(slot)) {
+        this.aggregationDuties.get(slot).add(committeeIndex);
+      } else {
+        this.aggregationDuties.set(slot, new Set([committeeIndex]));
+      }
+    } catch (e) {
+      this.logger.error("Unable to subscribe to attestation subnet", {subnet});
     }
   }
 
@@ -72,7 +80,11 @@ export class AttestationCollector implements IService {
 
   private unsubscribeSubnet = (subnet: number): void => {
     const forkDigest = this.chain.currentForkDigest;
-    this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
+    try {
+      this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
+    } catch (e) {
+      this.logger.error("Unable to unsubscribe to attestation subnet", {subnet});
+    }
   };
 
   private handleCommitteeAttestation = async ({attestation}: {attestation: Attestation}): Promise<void> => {
