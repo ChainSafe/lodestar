@@ -2,8 +2,8 @@
 * Download Prometheus
     * https://prometheus.io/download/
 * Unzip the downloaded .zip file
-* Run lodestar beacon node with ```--metrics.enabled=true``` and ```metrics.serverPort=5000``` 
-    * *NOTE: 5000 is also the default port specified in the prometheus.yml in the lodestar repo*
+* Run lodestar beacon node with ```--metrics.enabled=true``` and ```metrics.serverPort=8008``` 
+    * *NOTE: 8008 is also the default port specified in the prometheus.yml in the lodestar repo*
 * Run Prometheus from it's installed location with the lodestar prometheus.yml passed in as the config file
     * ```./prometheus --config.file=<lodestar-root-directory>/prometheus.yml```
 * Navigate to http://localhost:9090/ in your browser to verify that Prometheus is monitoring Lodestar
