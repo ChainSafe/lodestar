@@ -45,23 +45,14 @@ export function generateSignedBlock(override: DeepPartial<SignedBeaconBlock> = {
 }
 
 export function generateEmptyBlockSummary(): BlockSummary {
-  return generateBlockSummary();
-}
-
-
-export function generateBlockSummary(overrides: Partial<BlockSummary> = {}): BlockSummary {
-  return deepmerge(
-    {
-      blockRoot: Buffer.alloc(32),
-      parentRoot: Buffer.alloc(32),
-      slot: 0,
-      stateRoot: Buffer.alloc(32),
-      justifiedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
-      finalizedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
-    },
-    overrides,
-    {isMergeableObject: isPlainObject}
-  );
+  return {
+    blockRoot: Buffer.alloc(32),
+    parentRoot: Buffer.alloc(32),
+    slot: 0,
+    stateRoot: Buffer.alloc(32),
+    justifiedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
+    finalizedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
+  };
 }
 
 export function generateBlockSummary(overrides: DeepPartial<BlockSummary> = {}): BlockSummary {

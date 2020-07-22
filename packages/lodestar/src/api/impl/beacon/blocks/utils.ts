@@ -8,8 +8,11 @@ import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
 
 export function toBeaconHeaderResponse(
-  config: IBeaconConfig, block: SignedBeaconBlock, canonical= false
-): SignedBeaconHeaderResponse {
+  config: IBeaconConfig, block: SignedBeaconBlock|null, canonical= false
+): SignedBeaconHeaderResponse|null {
+  if(!block) {
+    return null;
+  }
   return {
     root: config.types.BeaconBlock.hashTreeRoot(block.message),
     canonical,

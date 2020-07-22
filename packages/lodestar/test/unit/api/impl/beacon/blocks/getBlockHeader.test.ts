@@ -3,9 +3,6 @@ import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils"
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {Libp2pNetwork} from "../../../../../../src/network";
-import {BeaconSync} from "../../../../../../src/sync";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -32,10 +29,7 @@ describe("api - beacon - getBlockHeader", function () {
     blockApi = new BeaconBlockApi({}, {
       chain: chainStub,
       config,
-      db: dbStub,
-      logger: sinon.createStubInstance(WinstonLogger),
-      network: sinon.createStubInstance(Libp2pNetwork),
-      sync: sinon.createStubInstance(BeaconSync)
+      db: dbStub
     });
   });
 

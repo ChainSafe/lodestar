@@ -1,4 +1,4 @@
-import {BLSPubkey, Fork, Genesis, Number64, Root, Uint64, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Fork, Genesis, Root, Uint64, ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
 

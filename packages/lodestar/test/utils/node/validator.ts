@@ -30,7 +30,7 @@ export function getDevValidator(node: BeaconNode, index: number): Validator {
       config: node.config,
       validator: new ValidatorApi({}, {...node, logger}),
       node: new NodeApi({}, {...node}),
-      beacon: new BeaconApi({}, {...node, logger}),
+      beacon: new BeaconApi({}, {...node}),
     }),
     logger: logger,
     keypair: new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))

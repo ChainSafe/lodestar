@@ -90,7 +90,7 @@ describe("beacon state api utils", function () {
   it("resolve state by root", async function () {
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
-    expect(state).to.be.null;
+    expect(state).to.not.be.null;
     expect(dbStub.stateCache.get.calledOnce).to.be.true;
   });
 
