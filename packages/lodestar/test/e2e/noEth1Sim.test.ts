@@ -16,13 +16,14 @@ describe.only("no eth1 sim", function () {
     SLOTS_PER_EPOCH: 8
   };
 
-  let nodes: BeaconNode[] = [];
-  let validators: Validator[] = [];
+  let onDoneHandlers: (() => Promise<void>)[] = [];
   
-  for (const nodeCount of [1]) {
-    it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until finalized`, async function () {
+  for (const nodeCount of [1, 2]) {
+    it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until justified`, async function () {
       this.timeout(10 * 60 * 1000);
 
+      const nodes: BeaconNode[] = [];
+      const validators: Validator[] = [];
       const genesisTime = Math.floor(Date.now() / 1000);
       const logger = new WinstonLogger();
 
@@ -45,6 +46,17 @@ describe.only("no eth1 sim", function () {
   
         nodes.push(node);
       }
+
+      onDoneHandlers.push(async () => {
+        for (const node of nodes) {
+          await node.stop();
+        }
+        for (const validator of validators) {
+          await validator.stop();
+        }
+        // Wait a bit for nodes to shutdown
+        await new Promise(r => setTimeout(r, 3000));
+      });
   
       // Start all nodes at once
       await Promise.all(nodes.map(node => node.start()));
@@ -72,19 +84,10 @@ describe.only("no eth1 sim", function () {
   }
 
   afterEach("Stop nodes and validators", async () => {
-    for (const node of nodes) {
-      await node.stop();
+    for (const onDoneHandler of onDoneHandlers) {
+      await onDoneHandler();
     }
-    for (const validator of validators) {
-      await validator.stop();
-    }
-
-    // Clear instance registry
-    nodes = [];
-    validators = [];
-
-    // Wait a bit for nodes to shutdown
-    await new Promise(r => setTimeout(r, 3000));
+    onDoneHandlers = [];
   });
 });
 
