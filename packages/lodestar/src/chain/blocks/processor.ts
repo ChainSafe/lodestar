@@ -58,8 +58,9 @@ export class BlockProcessor implements IService {
 
   public async start(): Promise<void> {
     const abortSignal = this.controller.signal;
-    // ### Todo: Unknown promise duration
-    await pipe(
+    // An error in this pipe should panic the process, so it's not handled
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    pipe(
       //source of blocks
       this.blockProcessingSource,
       //middleware to allow to stop block processing
