@@ -41,6 +41,6 @@ export const metricsServerPort: Options = {
     "metrics.serverPort",
   ],
   type: "number",
-  default: 5000,
+  default: 8008,
   group: "metrics",
 };

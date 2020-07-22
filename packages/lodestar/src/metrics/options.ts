@@ -14,7 +14,7 @@ const config: IMetricsOptions = {
   enabled: false,
   timeout: 5000,
   pushGateway: false,
-  serverPort: 5000,
+  serverPort: 8008,
 };
 
 export default config;
