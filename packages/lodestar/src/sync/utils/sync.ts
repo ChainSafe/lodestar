@@ -155,36 +155,41 @@ export function validateBlocks(
  * @param config
  * @param chain
  * @param logger
+ * @param isInitialSync
  * @param trusted
  */
 export function processSyncBlocks(
-  config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, trusted = false
+  config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, isInitialSync: boolean, trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot|null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
-    let headRoot = chain.forkChoice.headBlockRoot();
     let lastProcessedSlot: Slot|null = null;
     for await (const blocks of source) {
       logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
+    let headRoot = chain.forkChoice.headBlockRoot();
+    let headSlot = chain.forkChoice.headBlockSlot();
     while(blockBuffer.length > 0) {
-      const block = blockBuffer.shift();
-      if(!trusted || (trusted && config.types.Root.equals(headRoot, block.message.parentRoot))) {
-        await chain.receiveBlock(block, trusted);
-        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
-        if(block.message.slot > lastProcessedSlot) {
-          lastProcessedSlot = block.message.slot;
+      const signedBlock = blockBuffer.shift();
+      const block = signedBlock.message;
+      if(!isInitialSync ||
+        (isInitialSync && block.slot > headSlot && config.types.Root.equals(headRoot, block.parentRoot))) {
+        await chain.receiveBlock(signedBlock, trusted);
+        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+        headSlot = block.slot;
+        if(block.slot > lastProcessedSlot) {
+          lastProcessedSlot = block.slot;
         }
       } else {
         logger.warn(
           "Received block parent root doesn't match our head",
           {
             head: toHexString(headRoot),
-            headSlot: chain.forkChoice.headBlockSlot(),
-            blockParent: toHexString(block.message.parentRoot),
-            blockSlot: block.message.slot
+            headSlot,
+            blockParent: toHexString(block.parentRoot),
+            blockSlot: block.slot
           }
         );
         //this will trigger sync to retry to fetch this chunk again

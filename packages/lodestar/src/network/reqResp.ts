@@ -255,7 +255,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             throw `No response returned for method ${method}. request=${requestId}`;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
-          this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`,{requestId, encoding});
+          this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`,
+            {requestId, encoding, body: body && JSON.stringify(body)});
           return requestOnly ? null : finalResponse as T;
         }
       );
