@@ -30,7 +30,7 @@ export async function getEthersSigner({
   if (rpcUrl) {
     const signer = new ethers.providers.JsonRpcProvider(rpcUrl).getSigner();
     if (rpcPassword) {
-      signer.unlock(rpcPassword);
+      await signer.unlock(rpcPassword);
     }
     return signer;
   }

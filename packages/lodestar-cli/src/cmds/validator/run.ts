@@ -57,10 +57,6 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
     });
   });
 
-  for (const validator of validators) {
-    validator.start();
-  }
-
   async function cleanup(): Promise<void> {
     logger.info("Stopping validators");
     await Promise.all(validators.map((v) => v.stop()));
@@ -69,4 +65,6 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
 
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
+
+  await Promise.all(validators.map(validator => validator.start()));
 }
