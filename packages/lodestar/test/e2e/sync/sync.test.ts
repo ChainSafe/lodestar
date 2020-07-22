@@ -8,7 +8,8 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 describe("syncing", function () {
 
   it("should sync from other BN", async function () {
-    this.timeout(0);
+    this.timeout("10 min");
+
     const bn = await getDevBeaconNode({SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8}, {sync: {minPeers: 0}}, 8);
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 240000);
     const validators = getDevValidators(bn, 8);
