@@ -2,6 +2,7 @@ import {describe, it} from "mocha";
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {AttestationCollector} from "../../../../src/sync/utils";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
@@ -16,6 +17,7 @@ describe("Attestation collector",function() {
 
   it("should subscribe and collect attestations", async function () {
     const clock = sandbox.useFakeTimers();
+    const loggerStub = sandbox.createStubInstance(WinstonLogger);
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const dbStub = sandbox.createStubInstance(BeaconDb);
     const computeSubnetStub = sandbox.stub(attestationUtils, "computeSubnetForSlot");
@@ -33,6 +35,7 @@ describe("Attestation collector",function() {
           gossip: fakeGossip
         },
         db: dbStub,
+        logger: loggerStub,
       }
     );
     await realClock.start();
@@ -63,6 +66,7 @@ describe("Attestation collector",function() {
 
   it("should skip if there is no duties", async function () {
     const clock = sandbox.useFakeTimers();
+    const loggerStub = sandbox.createStubInstance(WinstonLogger);
     const realClock = new LocalClock(config, Math.round(new Date().getTime() /1000));
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const collector = new AttestationCollector(
@@ -77,6 +81,7 @@ describe("Attestation collector",function() {
         network: {
           gossip: fakeGossip
         },
+        logger: loggerStub,
       }
     );
     await realClock.start();
