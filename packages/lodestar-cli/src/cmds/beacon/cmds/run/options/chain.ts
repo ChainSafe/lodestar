@@ -13,6 +13,7 @@ export const chainPreset: Options = {
 
 export const chainGenesisStateFile: Options = {
   alias: [
+    "chain.genesisStateFileName",
     "chain.genesisStateFile",
   ],
   description: "Genesis state in ssz-encoded format",
