@@ -39,6 +39,7 @@ genesis.ssz
 witti.json
 altona.json
 .altona
+packages/lodestar/.tmpdb/
 
 # Wallet CLI artifacts
 .pass

@@ -84,6 +84,10 @@ export class AttestationService {
       const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
       const slotSignature = this.getSlotSignature(duty.attestationSlot, fork, genesisValidatorsRoot);
       const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
+      this.logger.info(
+        `Duties for epoch ${epoch.toString()}`,
+        {slot: duty.attestationSlot, isAggregator: String(isAggregator)}
+      );
       this.nextAttesterDuties.set(
         duty.attestationSlot,
         {
