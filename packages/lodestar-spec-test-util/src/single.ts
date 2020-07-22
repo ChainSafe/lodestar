@@ -74,7 +74,7 @@ export function describeDirectorySpecTest<TestCase, Result>(
   }
   describe(name, function () {
     if(options.timeout) {
-      this.timeout(options.timeout);
+      this.timeout(options.timeout || "10 min");
     }
 
     const testCases = readdirSync(testCaseDirectoryPath)
