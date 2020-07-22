@@ -67,7 +67,7 @@ export class Validator {
       this.blockService.start(),
       this.attestationService.start()
     ]);
-  }
+  };
 
   /**
    * Stops all validator functions
