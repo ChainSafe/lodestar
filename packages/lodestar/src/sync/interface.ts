@@ -15,7 +15,7 @@ import {AttestationCollector} from "./utils";
 export interface IBeaconSync extends IService {
   getSyncStatus(): Promise<SyncingStatus>;
   isSynced(): boolean;
-  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void;
+  collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;
 }
 
 export interface ISyncModule {
