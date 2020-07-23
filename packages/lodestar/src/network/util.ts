@@ -61,8 +61,10 @@ export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
 }
 
-export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
+  // @ts-ignore
+  controller.signal.addEventListener("abort", () => stream.close());
   let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
   const renewTimer = (): void => {
     clearTimeout(responseTimer);
