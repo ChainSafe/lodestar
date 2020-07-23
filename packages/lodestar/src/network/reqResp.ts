@@ -16,8 +16,10 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {duplex as abortDuplex} from "abortable-iterator";
+import AbortController from "abort-controller";
 import {
   createResponseEvent,
   createRpcProtocol,
@@ -277,14 +279,23 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {libp2p, config, logger} = this;
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
-      const {stream} = await libp2p.dialProtocol(peerId, protocol) as {stream: Stream};
+      let connectionTimer;
+      const {stream} = await Promise.race([
+        libp2p.dialProtocol(peerId, protocol),
+        new Promise((resolve, reject) => {
+          connectionTimer = setTimeout(() => reject("Cannot dialProtocol"), TTFB_TIMEOUT);
+        })
+      ]) as {stream: Stream};
+      clearTimeout(connectionTimer);
+      const controller = new AbortController();
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
-        stream,
-        eth2ResponseTimer(),
-        eth2ResponseDecode(config, logger, method, encoding, requestId)
+        // @ts-ignore
+        abortDuplex(stream, controller.signal, {returnOnAbort: true}),
+        eth2ResponseTimer(stream),
+        eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
       );
     })();
   }
