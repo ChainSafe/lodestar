@@ -1,15 +1,13 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST} from "../../../../../../src/chain";
+import {BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {Libp2pNetwork} from "../../../../../../src/network";
-import {BeaconSync} from "../../../../../../src/sync";
 import {
   generateBlockSummary,
   generateEmptyBlock,
   generateEmptyBlockSummary,
-  generateEmptySignedBlock, generateSignedBlock
+  generateEmptySignedBlock,
+  generateSignedBlock
 } from "../../../../../utils/block";
 import deepmerge from "deepmerge";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
@@ -23,17 +21,14 @@ describe("api - beacon - getBlockHeaders", function () {
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     blockApi = new BeaconBlockApi({}, {
       chain: chainStub,
       config,
-      db: dbStub,
-      logger: sinon.createStubInstance(WinstonLogger),
-      network: sinon.createStubInstance(Libp2pNetwork),
-      sync: sinon.createStubInstance(BeaconSync)
+      db: dbStub
     });
   });
 

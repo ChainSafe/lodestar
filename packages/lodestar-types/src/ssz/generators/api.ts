@@ -58,3 +58,13 @@ export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType => new Co
   },
 });
 
+
+
+export const Genesis = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    genesisValidatorsRoot: ssz.Root,
+    genesisTime: ssz.Uint64,
+    genesisForkVersion: ssz.Version
+  },
+});
+
