@@ -6,6 +6,7 @@ import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {PrivateKey, PublicKey} from "@chainsafe/bls";
 
 
 describe("get validator details api", function () {
@@ -30,10 +31,10 @@ describe("get validator details api", function () {
     const state = generateState({
       validators: [
         generateValidator({
-          pubkey: Buffer.alloc(48, 1)
+          pubkey: PublicKey.fromPrivateKey(PrivateKey.fromInt(1)).toBytesCompressed()
         }),
         generateValidator({
-          pubkey: Buffer.alloc(48, 2),
+          pubkey: PublicKey.fromPrivateKey(PrivateKey.fromInt(2)).toBytesCompressed(),
           slashed: true
         })
       ]
@@ -44,7 +45,7 @@ describe("get validator details api", function () {
       state,
       epochCtx
     });
-    const result = await api.getValidator(Buffer.alloc(48, 2));
+    const result = await api.getValidator(PublicKey.fromPrivateKey(PrivateKey.fromInt(2)).toBytesCompressed());
     expect(result.validator.slashed).to.be.true;
     expect(result.index).to.be.equal(1);
   });
