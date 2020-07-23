@@ -1,6 +1,10 @@
 import {Options} from "yargs";
 
-export const chainPreset: Options = {
+export interface ICLIOptions extends Options {
+  canonicalAlias?: string;
+}
+
+export const chainPreset: ICLIOptions = {
   alias: [
     "chain.preset",
     "chain.name",
@@ -11,11 +15,9 @@ export const chainPreset: Options = {
   default: "mainnet",
 };
 
-export const chainGenesisStateFile: Options = {
-  alias: [
-    "chain.genesisStateFileName",
-    "chain.genesisStateFile",
-  ],
+export const chainGenesisStateFile: ICLIOptions = {
+  alias: "chain.genesisStateFile",
+  canonicalAlias: "chain.genesisStateFile",
   description: "Genesis state in ssz-encoded format",
   type: "string",
   normalize: true,
