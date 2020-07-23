@@ -27,6 +27,7 @@ import {
   isRequestOnly,
   isRequestSingleChunk,
   randomRequestId,
+  dialProtocol,
 } from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -279,20 +280,12 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {libp2p, config, logger} = this;
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
-      let connectionTimer;
-      const {stream} = await Promise.race([
-        libp2p.dialProtocol(peerId, protocol),
-        new Promise((resolve, reject) => {
-          connectionTimer = setTimeout(() => reject("Cannot dialProtocol"), TTFB_TIMEOUT);
-        })
-      ]) as {stream: Stream};
-      clearTimeout(connectionTimer);
+      const stream = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT);
       const controller = new AbortController();
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
-        // @ts-ignore
         abortDuplex(stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(stream),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)

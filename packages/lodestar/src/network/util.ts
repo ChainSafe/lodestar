@@ -63,7 +63,6 @@ export function isRequestSingleChunk(method: Method): boolean {
 
 export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
-  // @ts-ignore
   controller.signal.addEventListener("abort", () => stream.close());
   let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
   const renewTimer = (): void => {
@@ -82,4 +81,16 @@ export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>)
       cancelTimer();
     })();
   };
+}
+
+export async function dialProtocol(libp2p: LibP2p, peerId: PeerId, protocol: string, timeout: number): Promise<Stream> {
+  let connectionTimer;
+  const {stream} = await Promise.race([
+    libp2p.dialProtocol(peerId, protocol),
+    new Promise((resolve, reject) => {
+      connectionTimer = setTimeout(() => reject("Cannot dialProtocol"), timeout);
+    })
+  ]) as {stream: Stream};
+  clearTimeout(connectionTimer);
+  return stream;
 }
