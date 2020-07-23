@@ -1,7 +1,7 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
-import {verify} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
 
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain, getRandaoMix} from "../../util";
@@ -27,7 +27,7 @@ export function processRandao(
       epoch,
       getDomain(config, state, DomainType.RANDAO)
     );
-    if (!verify(proposerPubkey, signingRoot, randaoReveal)) {
+    if (!proposerPubkey.verifyMessage(Signature.fromCompressedBytes(randaoReveal), signingRoot)) {
       throw new Error("RANDAO reveal is an invalid signature");
     }
   }

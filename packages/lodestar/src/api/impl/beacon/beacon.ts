@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BLSPubkey,
   ForkResponse,
-  Number64,
+  Genesis,
   SignedBeaconBlock,
   Uint64,
   ValidatorResponse
@@ -20,24 +20,31 @@ import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
+import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
+import {IBeaconStateApi} from "./state/interface";
+import {BeaconStateApi} from "./state/state";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
+  public state: IBeaconStateApi;
   public blocks: IBeaconBlocksApi;
+  public pool: IBeaconPoolApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"chain"|"db"|"sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.state = new BeaconStateApi(opts, modules);
     this.blocks = new BeaconBlockApi(opts, modules);
+    this.pool = new BeaconPoolApi(opts, modules);
   }
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
@@ -70,12 +77,16 @@ export class BeaconApi implements IBeaconApi {
     };
   }
 
-  public async getGenesisTime(): Promise<Number64> {
+  public async getGenesis(): Promise<Genesis|null> {
     const state = await this.chain.getHeadState();
     if(state) {
-      return state.genesisTime;
+      return {
+        genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
+        genesisTime: BigInt(state.genesisTime),
+        genesisValidatorsRoot: state.genesisValidatorsRoot
+      };
     }
-    return 0;
+    return null;
   }
 
   public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {

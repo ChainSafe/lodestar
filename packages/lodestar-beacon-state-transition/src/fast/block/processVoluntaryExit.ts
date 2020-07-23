@@ -1,4 +1,4 @@
-import {verify} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 
 import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
@@ -25,14 +25,14 @@ export function processVoluntaryExit(
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
     throw new Error(
       "VoluntaryExit validator exit has already been initiated: " +
-      `exitEpoch=${validator.exitEpoch}`
+            `exitEpoch=${validator.exitEpoch}`
     );
   }
   // exits must specify an epoch when they become valid; they are not valid before then
   if (!(currentEpoch >= voluntaryExit.epoch)) {
     throw new Error(
       "VoluntaryExit epoch is not yet valid: " +
-      `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
+            `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
     );
   }
   // verify the validator had been active long enough
@@ -43,10 +43,10 @@ export function processVoluntaryExit(
   if (verifySignature) {
     const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
     const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
-    if (!verify(
-      validator.pubkey.valueOf() as Uint8Array,
+    const pubkey = epochCtx.index2pubkey[voluntaryExit.validatorIndex];
+    if (!pubkey.verifyMessage(
+      Signature.fromCompressedBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array),
       signingRoot,
-      signedVoluntaryExit.signature.valueOf() as Uint8Array,
     )) {
       throw new Error("VoluntaryExit has an invalid signature");
     }

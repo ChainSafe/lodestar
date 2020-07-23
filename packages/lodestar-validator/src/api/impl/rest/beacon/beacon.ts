@@ -3,7 +3,7 @@ import {
   BeaconState,
   BLSPubkey,
   Fork,
-  Number64,
+  Genesis,
   Root,
   Uint64,
   ValidatorResponse
@@ -17,6 +17,7 @@ import {Json, toHexString} from "@chainsafe/ssz";
 export class RestBeaconApi implements IBeaconApi {
 
   private readonly client: HttpClient;
+  private readonly clientV2: HttpClient;
 
   private readonly logger: ILogger;
 
@@ -24,6 +25,7 @@ export class RestBeaconApi implements IBeaconApi {
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
+    this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/v1/beacon")}, {logger});
     this.logger = logger;
     this.config = config;
   }
@@ -39,12 +41,13 @@ export class RestBeaconApi implements IBeaconApi {
     return this.config.types.ForkResponse.fromJson(await this.client.get<Json>("/fork"), {case: "snake"});
   }
 
-  public async getGenesisTime(): Promise<Number64> {
+  public async getGenesis(): Promise<Genesis|null> {
     try {
-      return await this.client.get<Number64>("/genesis_time");
+      const genesisResponse = await this.clientV2.get<{data: Json}>("/genesis");
+      return this.config.types.Genesis.fromJson(genesisResponse.data, {case: "snake"});
     } catch (e) {
       this.logger.error("Failed to obtain genesis time", e);
-      return 0;
+      return null;
     }
   }
 

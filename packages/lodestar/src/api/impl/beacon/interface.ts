@@ -3,13 +3,17 @@
  */
 
 import {IApi} from "../../interface";
-import {BLSPubkey, ForkResponse, Number64, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
+import {IBeaconPoolApi} from "./pool";
+import {IBeaconStateApi} from "./state/interface";
 
 export interface IBeaconApi extends IApi {
 
   blocks: IBeaconBlocksApi;
+  state: IBeaconStateApi;
+  pool: IBeaconPoolApi;
 
   /**
    * Requests the BeaconNode to provide which fork version it is currently on.
@@ -18,13 +22,7 @@ export interface IBeaconApi extends IApi {
 
   getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
 
-  /**
-   * Requests the genesis_time parameter from the BeaconNode,
-   * which should be consistent across all BeaconNodes that follow the same beacon chain.
-   * @returns The genesis_time,
-   * which is a fairly static configuration option for the BeaconNode.
-   */
-  getGenesisTime(): Promise<Number64>;
+  getGenesis(): Promise<Genesis|null>;
 
   getBlockStream(): LodestarEventIterator<SignedBeaconBlock>;
 }
