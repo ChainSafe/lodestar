@@ -1,14 +1,13 @@
-import {Options} from "yargs";
 import {ICLIOptions} from "../cmds/beacon/cmds/run/options/chain";
 
-function firstAlias(option: Options): string {
+function firstAlias(option: ICLIOptions): string {
   if (Array.isArray(option.alias)) {
     return option.alias[0];
   }
   return option.alias as string;
 }
 
-function popAlias(option: Options): void {
+function popAlias(option: ICLIOptions): void {
   if (Array.isArray(option.alias)) {
     option.alias.shift();
   } else {
