@@ -6,7 +6,6 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
-// import {printBeaconCliMetrics} from "../utils/cliMetrics";
 
 describe.only("no eth1 sim", function () {
 
@@ -17,7 +16,7 @@ describe.only("no eth1 sim", function () {
   };
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
-  
+
   for (const nodeCount of [1, 2]) {
     it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until justified`, async function () {
       this.timeout(10 * 60 * 1000);
@@ -35,7 +34,7 @@ describe.only("no eth1 sim", function () {
           genesisTime,
           logger: logger.child({module: `Node ${i}`})
         });
-  
+
         for (let j=0; j<validatorsPerNode; j++) {
           validators.push(getDevValidator({
             node,
@@ -43,7 +42,7 @@ describe.only("no eth1 sim", function () {
             logger: logger.child({module: `Validator ${i}-${j}`})
           }));
         }
-  
+
         nodes.push(node);
       }
 
@@ -57,10 +56,10 @@ describe.only("no eth1 sim", function () {
         // Wait a bit for nodes to shutdown
         await new Promise(r => setTimeout(r, 3000));
       });
-  
+
       // Start all nodes at once
       await Promise.all(nodes.map(node => node.start()));
-  
+
       // Connect all nodes with each other
       for (let i=0; i<nodeCount; i++) {
         for (let j=0; j<nodeCount; j++) {
@@ -69,15 +68,15 @@ describe.only("no eth1 sim", function () {
           }
         }
       }
-  
+
       // Start all validators at once.
       await Promise.all(validators.map(validator => validator.start()));
-  
+
       // Uncomment this to visualize validator dutties and attestations
       // printBeaconCliMetrics(nodes[0]);
-  
+
       // Wait for finalized checkpoint on all nodes
-      await Promise.all(nodes.map(node => 
+      await Promise.all(nodes.map(node =>
         waitForEvent<Checkpoint>(node.chain, "justifiedCheckpoint", 240000)
       ));
     });
