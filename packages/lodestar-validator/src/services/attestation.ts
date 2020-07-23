@@ -65,7 +65,9 @@ export class AttestationService {
   public start = async (): Promise<void> => {
     const slot = this.provider.getCurrentSlot();
     //trigger getting duties for current epoch
-    await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+    // TODO: errors should be handled in this service and just loop and wait for next duty
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
