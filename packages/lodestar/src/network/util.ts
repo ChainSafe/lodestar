@@ -84,13 +84,9 @@ export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>)
 }
 
 export async function dialProtocol(libp2p: LibP2p, peerId: PeerId, protocol: string, timeout: number): Promise<Stream> {
-  let connectionTimer;
-  const {stream} = await Promise.race([
-    libp2p.dialProtocol(peerId, protocol),
-    new Promise((resolve, reject) => {
-      connectionTimer = setTimeout(() => reject("Cannot dialProtocol"), timeout);
-    })
-  ]) as {stream: Stream};
+  const controller = new AbortController();
+  const connectionTimer = setTimeout(() => controller.abort(), timeout);
+  const {stream} = await libp2p.dialProtocol(peerId, protocol, {signal: controller.signal}) as {stream: Stream};
   clearTimeout(connectionTimer);
   return stream;
 }

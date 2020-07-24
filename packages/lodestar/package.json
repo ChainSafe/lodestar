@@ -112,7 +112,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "eventsource": "^1.0.7",
-    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git#tuyen/stream-type-as-duplex",
+    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
     "mocha": "^6.2.2",
     "rimraf": "^3.0.2",
     "supertest": "^4.0.2",

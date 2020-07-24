@@ -13,6 +13,8 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {TTFB_TIMEOUT} from "../../../src/constants";
 import {sleep} from "../../../src/util/sleep";
+import PeerId from "peer-id";
+import {dialProtocol} from "../../network";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -215,8 +217,13 @@ describe("[network] rpc", () => {
     loggerStub.error.callsFake(spy);
     const libP2pMock = await createNode(multiaddr);
     // @ts-ignore
-    libP2pMock.dialProtocol = async () => {
-      await sleep(6000);
+    libP2pMock.dialProtocol = async (peerId: PeerId, protocol: string, options: {signal?: AbortSignal}) => {
+      await Promise.race([
+        sleep(6000),
+        new Promise((resolve, reject) => {
+          options.signal.addEventListener("abort", () => reject("Cannot dialProtocol"));
+        })
+      ]);
       return {};
     };
     const rpcC = new ReqResp(networkOptions, {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()});
