@@ -1,5 +1,4 @@
 import {Options} from "yargs";
-import {withDefaultValue} from "../../util";
 import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
 import {paramsOptions, IParamsOptions} from "../../options/paramsOptions";
@@ -39,14 +38,16 @@ export const beaconOptions = {
   // Beacon paths
 
   beaconDir: {
-    description: withDefaultValue("Beacon root dir", defaultBeaconPaths.beaconDir),
+    description: "Beacon root dir",
+    defaultDescription: defaultBeaconPaths.beaconDir,
     hidden: true,
     type: "string",
   } as Options,
 
   dbDir: {
     alias: ["db.dir", "db.name"],
-    description: withDefaultValue("Beacon DB dir", defaultBeaconPaths.dbDir),
+    description: "Beacon DB dir",
+    defaultDescription: defaultBeaconPaths.dbDir,
     hidden: true,
     normalize: true,
     type: "string",
@@ -54,21 +55,24 @@ export const beaconOptions = {
 
   configFile: {
     alias: ["config"],
-    description: withDefaultValue("Beacon node configuration file", defaultBeaconPaths.configFile),
+    description: "Beacon node configuration file",
+    defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
     normalize: true,
   } as Options,
 
   "network.peerIdFile": {
     hidden: true,
-    description: withDefaultValue("Peer ID file", defaultBeaconPaths.network.peerIdFile),
+    description: "Peer ID file",
+    defaultDescription: defaultBeaconPaths.network.peerIdFile,
     normalize: true,
     type: "string",
   } as Options,
 
   "network.enrFile": {
     hidden: true,
-    description: withDefaultValue("ENR file", defaultBeaconPaths.network.enrFile),
+    description: "ENR file",
+    defaultDescription: defaultBeaconPaths.network.enrFile,
     normalize: true,
     type: "string",
   } as Options

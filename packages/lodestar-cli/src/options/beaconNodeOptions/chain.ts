@@ -1,4 +1,5 @@
 import {Options} from "yargs";
+import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 
 export const chainOptions = {
   "chain.name": {
@@ -6,6 +7,6 @@ export const chainOptions = {
     description: "Chain configuration",
     type: "string",
     choices: ["mainnet", "minimal"],
-    default: "mainnet",
+    defaultDescription: defaultOptions.chain.name
   } as Options,
 };

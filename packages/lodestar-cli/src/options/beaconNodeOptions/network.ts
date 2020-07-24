@@ -1,4 +1,5 @@
 import {Options} from "yargs";
+import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 
 export const networkOptions = {
   "network.discv5.enabled": {
@@ -9,12 +10,13 @@ export const networkOptions = {
 
   "network.discv5.bindAddr": {
     type: "string",
-    default: "/ip4/0.0.0.0/udp/9000",
+    defaultDescription: (defaultOptions.network.discv5 || {}).bindAddr || "",
     group: "network",
   } as Options,
 
   "network.discv5.bootEnrs": {
     type: "array",
+    defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
     default: [],
     group: "network",
   } as Options,

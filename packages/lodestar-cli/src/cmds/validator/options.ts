@@ -3,7 +3,6 @@ import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorOptions} from "../account/cmds/validator/options";
-import {withDefaultValue} from "../../util";
 
 export type IValidatorCliOptions = 
   IGlobalArgs &
@@ -20,7 +19,8 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   "chain.name": beaconNodeOptions["chain.name"],
 
   validatorsDbDir: {
-    description: withDefaultValue("Data directory for validator databases.", defaultValidatorPaths.validatorsDbDir),
+    description: "Data directory for validator databases.",
+    defaultDescription: defaultValidatorPaths.validatorsDbDir,
     alias: ["dbDir", "db.dir", "db.name"],
     normalize: true,
     type: "string",

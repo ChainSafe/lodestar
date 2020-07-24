@@ -1,6 +1,8 @@
 import {Options} from "yargs";
-import {LogLevel, LogLevels} from "@chainsafe/lodestar-utils/lib/logger";
+import {LogLevels} from "@chainsafe/lodestar-utils/lib/logger";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
+
+type LoggerModule = keyof typeof defaultOptions.logger;
 
 /**
  * Generates an option for each module in defaultOptions.logger
@@ -13,7 +15,7 @@ export const loggerOptions = Object.keys(defaultOptions.logger).reduce(
       hidden: true,
       type: "string",
       choices: LogLevels,
-      default: LogLevel.info,
+      defaultDescription: (defaultOptions.logger[logModule as LoggerModule] || {}).level,
       group: "log",
     };
     return options;
