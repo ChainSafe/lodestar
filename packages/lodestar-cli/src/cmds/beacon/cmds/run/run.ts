@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import process from "process";
-import deepmerge from "deepmerge";
 import {initBLS} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams} from "@chainsafe/lodestar-params";
@@ -8,13 +7,13 @@ import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/ma
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IBeaconOptions} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {ENR} from "@chainsafe/discv5";
 import {initHandler as initBeacon} from "../init/init";
 import {getBeaconPaths} from "../../paths";
+import {mergeConfigOptions} from "../../config";
 
 /**
  * Run a beacon node
@@ -27,8 +26,8 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
     await initBeacon(options);
   }
 
+  options = mergeConfigOptions(options);
   const beaconPaths = getBeaconPaths(options);
-  options = deepmerge(defaultOptions as IBeaconOptions, options);
 
   const peerId = await readPeerId(beaconPaths.network.peerIdFile);
   // read local enr from disk
