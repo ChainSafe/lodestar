@@ -1,16 +1,11 @@
-import {Options} from "yargs";
 import {params} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {IYargsOptionsMap} from "../../../../../util/yargs";
 
-const options: Record<string, Options> = {};
-
-Object.keys(params).forEach((key) => {
-  options[key] = {
-    alias: [
-      `chain.params.${key}`,
-    ],
-    hidden: true,
-    type: "string"
-  };
-});
-
-export const paramsOptions = options;
+export const paramsOptions: IYargsOptionsMap = 
+  Object.keys(params).reduce((options, key): IYargsOptionsMap => ({
+    ...options,
+    [`chain.params.${key}`]: {
+      hidden: true,
+      type: "string"
+    }
+  }), {} as IYargsOptionsMap);
