@@ -44,17 +44,6 @@ describe("Test beacon rest api", function () {
     return await restApi.stop();
   });
 
-  it("should return genesis time", async function () {
-    const genesis = Math.floor(Date.now()/1000);
-    beaconApi.getGenesisTime.resolves(genesis);
-    const response = await supertest(restApi.server.server)
-      .get("/lodestar/genesis_time")
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body).to.be.equal(genesis);
-  });
-
-
   it("should get block stream",  function (done) {
     const server = restApi.server.server.address();
     const source

@@ -1,5 +1,16 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {BLSPubkey, BLSSignature, CommitteeIndex, Gwei, Number64, Slot, Uint64, ValidatorIndex, Root} from "./primitive";
+import {
+  BLSPubkey,
+  BLSSignature,
+  CommitteeIndex,
+  Gwei,
+  Number64,
+  Slot,
+  Uint64,
+  ValidatorIndex,
+  Root,
+  Version
+} from "./primitive";
 import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
 
 export interface SignedBeaconHeaderResponse {
@@ -50,4 +61,10 @@ export interface ValidatorResponse {
   pubkey: BLSPubkey;
   balance: Gwei;
   validator: Validator;
+}
+
+export interface Genesis {
+  genesisTime: Uint64;
+  genesisValidatorsRoot: Root;
+  genesisForkVersion: Version;
 }

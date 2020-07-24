@@ -9856,9 +9856,9 @@ libp2p-tcp@^0.14.5:
     multiaddr "^7.2.1"
     stream-to-it "^0.2.0"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#tuyen/stream-type-as-duplex":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#bbf535ec6e366cb2153ebec587f4d7a74e369c4d"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#d6b41ba0607947e59d686a54f499edc68aea1843"
   dependencies:
     "@chainsafe/discv5" "^0.2.5"
     "@types/node" "^13.7.0"

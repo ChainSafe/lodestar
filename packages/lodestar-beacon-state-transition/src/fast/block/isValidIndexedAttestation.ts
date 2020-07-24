@@ -1,4 +1,4 @@
-import {verifyAggregate} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
@@ -40,9 +40,12 @@ export function isValidIndexedAttestation(
   const pubkeys = indices.map((i) => epochCtx.index2pubkey[i]);
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
-  return verifyAggregate(
-    pubkeys,
-    signingRoot,
-    indexedAttestation.signature.valueOf() as Uint8Array,
+  return pubkeys.reduce(
+    (aggregate, pubkey) => {
+      return aggregate.add(pubkey);
+    }, pubkeys.shift()
+  ).verifyMessage(
+    Signature.fromCompressedBytes(indexedAttestation.signature.valueOf() as Uint8Array),
+    signingRoot
   );
 }

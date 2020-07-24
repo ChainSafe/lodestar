@@ -1,4 +1,4 @@
-import {BLSPubkey, Fork, Number64, Root, Uint64, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Fork, Genesis, Root, Uint64, ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
 
@@ -12,12 +12,6 @@ export interface IBeaconApi {
      */
   getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
 
-  /**
-     * Requests the genesis_time parameter from the BeaconNode,
-     * which should be consistent across all BeaconNodes that follow the same beacon chain.
-     * @returns The genesis_time,
-     * which is a fairly static configuration option for the BeaconNode.
-     */
-  getGenesisTime(): Promise<Number64>;
+  getGenesis(): Promise<Genesis|null>;
 
 }

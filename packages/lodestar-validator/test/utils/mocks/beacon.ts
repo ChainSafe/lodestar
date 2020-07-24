@@ -6,7 +6,7 @@ import {
   Number64,
   SyncingStatus,
   Root,
-  Uint64
+  Uint64, Genesis
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {generateEmptyBlock} from "../block";
@@ -45,8 +45,12 @@ export class MockBeaconApi implements IBeaconApi {
     return {fork: this.fork, chainId: 1n, genesisValidatorsRoot: ZERO_HASH};
   }
 
-  public async getGenesisTime(): Promise<Number64> {
-    return this.genesisTime;
+  public async getGenesis(): Promise<Genesis | null> {
+    return {
+      genesisTime: BigInt(this.genesisTime),
+      genesisForkVersion: Buffer.alloc(8, 1),
+      genesisValidatorsRoot: Buffer.alloc(32, 1)
+    };
   }
 
   public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
