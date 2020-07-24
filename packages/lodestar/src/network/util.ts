@@ -61,10 +61,14 @@ export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
 }
 
-export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+export function eth2ResponseTimer<T>(
+  streamAbortController: AbortController
+): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
-  controller.signal.addEventListener("abort", () => stream.close());
-  let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
+  let responseTimer = setTimeout(() => {
+    controller.abort();
+  }, TTFB_TIMEOUT);
+  controller.signal.addEventListener("abort", () => streamAbortController.abort());
   const renewTimer = (): void => {
     clearTimeout(responseTimer);
     responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
@@ -83,10 +87,15 @@ export function eth2ResponseTimer<T>(stream: Stream): (source: AsyncIterable<T>)
   };
 }
 
-export async function dialProtocol(libp2p: LibP2p, peerId: PeerId, protocol: string, timeout: number): Promise<Stream> {
-  const controller = new AbortController();
-  const connectionTimer = setTimeout(() => controller.abort(), timeout);
-  const {stream} = await libp2p.dialProtocol(peerId, protocol, {signal: controller.signal}) as {stream: Stream};
-  clearTimeout(connectionTimer);
-  return stream;
+export async function dialProtocol(
+  libp2p: LibP2p,
+  peerId: PeerId,
+  protocol: string,
+  timeout: number
+): ReturnType<LibP2p["dialProtocol"]> {
+  const abortController = new AbortController();
+  const timer = setTimeout(() => abortController.abort(), timeout);
+  const result = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
+  clearTimeout(timer);
+  return result;
 }

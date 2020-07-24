@@ -281,13 +281,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-      const stream = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT);
+      const {stream} = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
       const controller = new AbortController();
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
         abortDuplex(stream, controller.signal, {returnOnAbort: true}),
-        eth2ResponseTimer(stream),
+        eth2ResponseTimer(controller),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
       );
     })();
