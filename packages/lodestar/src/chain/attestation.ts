@@ -1,12 +1,5 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttestationRootHex,
-  BlockRootHex,
-  Root,
-  SignedBeaconBlock,
-  Slot
-} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
@@ -20,7 +13,6 @@ import {ChainEventEmitter, IAttestationProcessor} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
 import {GENESIS_EPOCH} from "../constants";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
