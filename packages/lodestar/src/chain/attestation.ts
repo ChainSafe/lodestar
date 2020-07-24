@@ -71,6 +71,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     try {
       await this.processAttestation(attestation, attestationHash);
     } catch (e) {
+      console.log(e);
       this.logger.warn("Failed to process attestation. Reason: " + e.message);
     }
   }
@@ -97,14 +98,10 @@ export class AttestationProcessor implements IAttestationProcessor {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
-    let stateCtx: ITreeStateContext;
     const justifiedBlock = this.forkChoice.getBlockSummaryByBlockRoot(
       justifiedCheckpoint.root.valueOf() as Uint8Array
     );
-    if (justifiedBlock) {
-      stateCtx = await this.db.stateCache.get(justifiedBlock.stateRoot);
-    }
-    if (!justifiedBlock || !stateCtx) {
+    if (!justifiedBlock) {
       // should not happen
       throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
     }
@@ -127,7 +124,11 @@ export class AttestationProcessor implements IAttestationProcessor {
     assert.true(
       ancestor && this.config.types.Root.equals(target.root, ancestor),
       "FFG and LMD vote must be consistent with each other");
-
+    const stateCtx = await this.db.stateCache.get(block.stateRoot);
+    assert.true(
+      !!stateCtx,
+      `Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`
+    );
     const validators = getAttestingIndicesFromCommittee(
       stateCtx.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
       attestation.aggregationBits
