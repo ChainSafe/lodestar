@@ -4,9 +4,9 @@ import {mergeOptions} from "../../../util";
 import {IGlobalArgs} from "../../../options";
 import {IBeaconFileArgs} from "./beaconFile";
 
-import * as beaconDir from "./beaconDir";
-import * as beaconConfig from "./beaconConfig";
-import * as beaconFile from "./beaconFile";
+import {beaconDirOptions} from "./beaconDir";
+import {beaconConfigOptions} from "./beaconConfig";
+import {beaconFileOptions} from "./beaconFile";
 
 export interface IBeaconArgs extends IBeaconFileArgs {
   chain: {
