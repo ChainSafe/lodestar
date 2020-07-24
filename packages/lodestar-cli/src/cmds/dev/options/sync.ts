@@ -1,10 +1,15 @@
-import {Options} from "yargs";
+import {IYargsOptionsMap} from "../../../util/yargs";
 
-export const networkMinPeers: Options = {
-  alias: [
-    "sync.minPeers",
-  ],
-  type: "number",
-  default: 2,
-  group: "sync",
+export const syncOptions: IYargsOptionsMap = {
+  "sync.minPeers": {
+    type: "number",
+    default: 2,
+    group: "sync",
+  }
 };
+
+export interface ISyncOptions {
+  sync: {
+    minPeers?: number;
+  };
+}
