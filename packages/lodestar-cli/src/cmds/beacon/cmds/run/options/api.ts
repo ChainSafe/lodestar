@@ -1,52 +1,39 @@
-import {Options} from "yargs";
+import { IYargsOptionsMap } from "../../../../../util/yargs";
 
-export const apiEnabled: Options = {
-  alias: [
-    "api.enabled",
-    "api.rest.enabled",
-  ],
-  type: "boolean",
-  default: false,
-  group: "api",
-};
+export const apiOptions: IYargsOptionsMap = {
+  "api.rest.enabled": {
+    alias: ["api.enabled"],
+    type: "boolean",
+    default: false,
+    group: "api",
+  },
 
-export const apiNamespaces: Options = {
-  alias: [
-    "api.namespaces",
-    "api.rest.api",
-  ],
-  type: "array",
-  choices: ["beacon", "validator"],
-  default: ["beacon", "validator"],
-  group: "api",
-};
+  "api.rest.api": {
+    alias: ["api.namespaces"],
+    type: "array",
+    choices: ["beacon", "validator"],
+    default: ["beacon", "validator"],
+    group: "api",
+  },
 
-export const apiHost: Options = {
-  alias: [
-    "api.host",
-    "api.rest.host",
-  ],
-  type: "string",
-  default: "127.0.0.1",
-  group: "api",
-};
+  "api.rest.host": {
+    alias: ["api.host"],
+    type: "string",
+    default: "127.0.0.1",
+    group: "api",
+  },
 
-export const apiPort: Options = {
-  alias: [
-    "api.port",
-    "api.rest.port",
-  ],
-  type: "number",
-  default: 9596,
-  group: "api",
-};
+  "api.rest.port": {
+    alias: ["api.port"],
+    type: "number",
+    default: 9596,
+    group: "api",
+  },
 
-export const apiCorsOrigin: Options = {
-  alias: [
-    "api.cors.origin",
-    "api.rest.cors",
-  ],
-  type: "string",
-  default: "*",
-  group: "api",
+  "api.rest.cors": {
+    alias: ["api.cors.origin"],
+    type: "string",
+    default: "*",
+    group: "api",
+  },
 };

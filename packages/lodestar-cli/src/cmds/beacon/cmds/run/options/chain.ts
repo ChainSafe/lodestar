@@ -1,21 +1,17 @@
-import {Options} from "yargs";
+import { IYargsOptionsMap } from "../../../../../util/yargs";
 
-export const chainPreset: Options = {
-  alias: [
-    "chain.preset",
-    "chain.name",
-  ],
-  description: "Chain configuration",
-  type: "string",
-  choices: ["mainnet", "minimal"],
-  default: "mainnet",
-};
+export const chainOptions: IYargsOptionsMap = {
+  "chain.name": {
+    alias: ["chain.preset"],
+    description: "Chain configuration",
+    type: "string",
+    choices: ["mainnet", "minimal"],
+    default: "mainnet",
+  },
 
-export const chainGenesisStateFile: Options = {
-  alias: [
-    "chain.genesisStateFile",
-  ],
-  description: "Genesis state in ssz-encoded format",
-  type: "string",
-  normalize: true,
+  "chain.genesisStateFile": {
+    description: "Genesis state in ssz-encoded format",
+    type: "string",
+    normalize: true,
+  },
 };
