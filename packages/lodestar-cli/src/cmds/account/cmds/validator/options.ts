@@ -1,16 +1,22 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../../../options";
+import {beaconNodeOptions, IBeaconNodeOptions} from "../../../../options/beaconNodeOptions";
 import {defaultAccountPaths} from "../../paths";
-import {chainPreset, IChainArgs} from "../../../dev/options/chain";
 import {withDefaultValue} from "../../../../util";
 
-export interface IAccountValidatorOptions extends IGlobalArgs, IChainArgs {
-  keystoresDir?: string;
-  secretsDir?: string;
-}
+export type IAccountValidatorOptions = 
+  IGlobalArgs & 
+  { chain: IBeaconNodeOptions["chain"] } &
+  {
+    keystoresDir?: string;
+    secretsDir?: string;
+    chain: {
+      name: string;
+    };
+  };
 
 export const accountValidatorOptions = {
-  chainPreset,
+  "chain.name": beaconNodeOptions["chain.name"],
 
   keystoresDir: {
     description: withDefaultValue("Directory for storing validator keystores.", defaultAccountPaths.keystoresDir),
