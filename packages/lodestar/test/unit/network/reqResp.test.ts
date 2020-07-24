@@ -12,7 +12,7 @@ import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {TTFB_TIMEOUT} from "../../../src/constants";
-import {sleep} from "../../../src/util/sleep";
+import {AbortSignal} from "abort-controller/dist/abort-controller";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -182,7 +182,8 @@ describe("[network] rpc", () => {
   });
 
   it("should handle response timeout - TTFB", async function() {
-    this.timeout(12000);
+    this.timeout(400);
+    const timer = sinon.useFakeTimers({shouldAdvanceTime: true});
     const request: BeaconBlocksByRangeRequest = {
       startSlot: 100,
       count: 10,
@@ -190,10 +191,9 @@ describe("[network] rpc", () => {
     };
     const spy = sandbox.spy();
     loggerStub.error.callsFake(spy);
-    rpcB.once("request", (peerInfo, method, id, body) => {
-      setTimeout(() => {
-        rpcB.sendResponse(id, null, []);
-      }, TTFB_TIMEOUT);
+    rpcB.once("request", async () => {
+      timer.tick(TTFB_TIMEOUT);
+      timer.tick(TTFB_TIMEOUT);
     });
     const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
     expect(response).to.be.undefined;
@@ -202,10 +202,11 @@ describe("[network] rpc", () => {
     expect(errorMessages.length).to.be.equal(2);
     expect(errorMessages[0].startsWith("failed to send request")).to.be.true;
     expect(errorMessages[1].toString().startsWith("Error: response timeout")).to.be.true;
+    timer.restore();
   });
 
   it("should handle response timeout - suspended dialProtocol", async function() {
-    this.timeout(12000);
+    const timer = sinon.useFakeTimers();
     const request: BeaconBlocksByRangeRequest = {
       startSlot: 100,
       count: 10,
@@ -214,20 +215,25 @@ describe("[network] rpc", () => {
     const spy = sandbox.spy();
     loggerStub.error.callsFake(spy);
     const libP2pMock = await createNode(multiaddr);
-    // @ts-ignore
-    libP2pMock.dialProtocol = async () => {
-      await sleep(6000);
-      return {};
+    libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal} ) => {
+      timer.tick(TTFB_TIMEOUT);
+      if(signal.aborted) {
+        throw new Error("Failed to dial");
+      }
+      return {stream: {} as unknown as Stream, protocol: ""};
     };
-    const rpcC = new ReqResp(networkOptions, {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()});
-
+    const rpcC = new ReqResp(
+      networkOptions,
+      {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()}
+    );
     const response = await rpcC.beaconBlocksByRange(nodeB.peerId, request);
     expect(response).to.be.undefined;
     expect(spy.calledOnce).to.be.true;
     const errorMessages: string[] = spy.args[0];
     expect(errorMessages.length).to.be.equal(2);
     expect(errorMessages[0].startsWith("failed to send request")).to.be.true;
-    expect(errorMessages[1].toString().startsWith("Cannot dialProtocol")).to.be.true;
+    expect(errorMessages[1].toString().startsWith("Error: Failed to dial")).to.be.true;
+    timer.restore();
   });
 
 });
