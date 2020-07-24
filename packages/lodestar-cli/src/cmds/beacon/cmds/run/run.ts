@@ -40,11 +40,7 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
-  const node = new BeaconNode(options, {
-    config,
-    libp2p,
-    logger,
-  });
+  const node = new BeaconNode(options, {config, libp2p, logger});
 
   async function cleanup(): Promise<void> {
     await node.stop();
