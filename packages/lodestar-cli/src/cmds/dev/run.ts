@@ -1,9 +1,6 @@
 import fs, {mkdirSync} from "fs";
 import process from "process";
 import {initBLS} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -16,6 +13,7 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 import {getValidatorApiClient} from "./utils/validator";
 import {mergeConfigOptions} from "../beacon/config";
+import {getBeaconConfig} from "../../util";
 
 /**
  * Run a beacon node
@@ -26,10 +24,8 @@ export async function run(options: IDevOptions): Promise<void> {
   options = mergeConfigOptions(options) as IDevOptions;
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
-  const config = createIBeaconConfig({
-    ...(options.preset === "mainnet" ? mainnetParams : minimalParams),
-  });
 
+  const config = getBeaconConfig(options.preset, options.chain.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
