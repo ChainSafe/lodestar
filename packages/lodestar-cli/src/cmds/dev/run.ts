@@ -25,7 +25,7 @@ export async function run(options: IDevOptions): Promise<void> {
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
 
-  const config = getBeaconConfig(options.preset, options.chain.params);
+  const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 

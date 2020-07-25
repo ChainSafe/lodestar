@@ -28,12 +28,7 @@ To simplify the initial configuration, copy the following config template into a
   },
   "chain": {
     "preset": "mainnet",
-    "params": {
-        "MIN_GENESIS_TIME": 1593433800,
-        "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT": 640,
-        "GENESIS_DELAY": 172800, 
-        "GENESIS_FORK_VERSION": "0x00000121"
-    }
+    
   },
   "eth1": {
     "enabled": false,
@@ -94,6 +89,12 @@ To simplify the initial configuration, copy the following config template into a
     "localMultiaddrs": [
       "/ip4/0.0.0.0/tcp/30607"
     ]
+  },
+  "params": {
+    "MIN_GENESIS_TIME": 1593433800,
+    "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT": 640,
+    "GENESIS_DELAY": 172800, 
+    "GENESIS_FORK_VERSION": "0x00000121"
   }
 }
 ```

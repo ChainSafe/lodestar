@@ -23,10 +23,6 @@ To simplify the initial configuration, copy the following config template into a
       "origin": "*"
     }
   },
-  "chain": {
-    "preset": "mainnet",
-    "params": {}
-  },
   "eth1": {
     "enabled": false,
     "provider": {
