@@ -38,6 +38,7 @@ import {
   hasValidatorAttestedForThatTargetEpoch,
   isAttestingToValidBlock} from "../../util/validation/attestation";
 import {ExtendedValidatorResult} from "./constants";
+import {sleep} from "../../util/sleep";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -70,10 +71,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
     const {state, epochCtx} = await this.chain.getHeadStateContext();
     // block is not in the future
-    const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
-    if (signedBlock.message.slot * milliSecPerSlot >
-        getCurrentSlot(this.config, state.genesisTime) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
-      return ExtendedValidatorResult.ignore;
+    const blockTime = (state.genesisTime + slot * this.config.params.SECONDS_PER_SLOT) * 1000;
+    const tolerance = blockTime - (Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY);
+    if (tolerance > 0) {
+      if (tolerance >= this.config.params.SECONDS_PER_SLOT * 1000) {
+        this.logger.warn(`Receive future block at slot ${slot}, current time ${Date.now()}`);
+        return ExtendedValidatorResult.ignore;
+      }
+      // a client MAY queue future blocks for processing at the appropriate slot
+      await sleep(tolerance);
     }
     const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
     // skip block if its a known bad block
@@ -82,7 +88,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.reject;
     }
 
-    const existingBlock = await this.chain.getBlockAtSlot(signedBlock.message.slot);
+    const existingBlock = await this.chain.getBlockAtSlot(slot);
     if (existingBlock && existingBlock.message.proposerIndex === signedBlock.message.proposerIndex) {
       // same proposer submitted twice
       return ExtendedValidatorResult.ignore;
@@ -95,7 +101,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!verifyBlockSignature(this.config, state, signedBlock)) {
       return ExtendedValidatorResult.reject;
     }
-    const supposedProposerIndex = epochCtx.getBeaconProposer(signedBlock.message.slot);
+    const supposedProposerIndex = epochCtx.getBeaconProposer(slot);
     if (supposedProposerIndex !== signedBlock.message.proposerIndex) {
       return ExtendedValidatorResult.reject;
     }
