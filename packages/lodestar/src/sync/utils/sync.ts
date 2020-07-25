@@ -76,23 +76,19 @@ export function fetchBlockChunks(
   logger: ILogger,
   chain: IBeaconChain,
   reqResp: IReqResp,
-  getPeers: (minSlot: Slot) => Promise<PeerId[]>,
+  getPeers: () => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   maxBlocksPerChunk?: number
 ): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {
   return (source) => {
     return (async function*() {
       for await (const slotRange of source) {
-        let peers = await getPeers(
-          slotRange.end
-        );
+        let peers = await getPeers();
         let retry = 0;
         while (peers.length === 0 && retry < 5) {
           logger.info("Waiting for peers...");
           await sleep(6000);
-          peers = await getPeers(
-            slotRange.end
-          );
+          peers = await getPeers();
           retry++;
         }
         if(peers.length === 0) {

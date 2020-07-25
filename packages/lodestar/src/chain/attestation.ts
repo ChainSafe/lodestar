@@ -37,7 +37,7 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public async  receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
-    this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
+    this.logger.verbose(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
       const currentSlot = this.forkChoice.headBlockSlot();
@@ -133,7 +133,7 @@ export class AttestationProcessor implements IAttestationProcessor {
         balances[i]
       );
     }
-    this.logger.info(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
+    this.logger.verbose(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
     this.chain.emit("processedAttestation", attestation);
   }
 
