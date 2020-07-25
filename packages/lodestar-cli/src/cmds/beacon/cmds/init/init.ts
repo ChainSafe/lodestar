@@ -4,7 +4,7 @@ import {globalOptions} from "../../../../options";
 import {IBeaconOptions} from "../../options";
 import {mkdir} from "../../../../util";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
-import {initBeaconConfig, mergeConfigOptions} from "../../config";
+import {initBeaconConfig} from "../../config";
 import {getTestnetConfig, downloadGenesisFile, fetchBootnodes} from "../../testnets";
 import {getBeaconPaths} from "../../paths";
 
@@ -12,8 +12,6 @@ import {getBeaconPaths} from "../../paths";
  * Initialize lodestar-cli with an on-disk configuration
  */
 export async function initHandler(options: IBeaconOptions): Promise<void> {
-  options = mergeConfigOptions(options);
-
   // Set rootDir to testnet name to separate files per network
   if (options.testnet && options.rootDir === globalOptions.rootDir.default) {
     options.rootDir = `.${options.testnet}`;
