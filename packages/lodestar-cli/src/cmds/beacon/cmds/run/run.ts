@@ -49,9 +49,9 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
 
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
-  if (options.chain.genesisStateFile) {
+  if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.chain.genesisStateFile))
+      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.genesisStateFile))
     );
   }
   await node.start();

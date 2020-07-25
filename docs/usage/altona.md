@@ -28,7 +28,6 @@ To simplify the initial configuration, copy the following config template into a
   },
   "chain": {
     "preset": "mainnet",
-    "genesisStateFile": ".altona/beacon/genesis.ssz",
     "params": {
         "MIN_GENESIS_TIME": 1593433800,
         "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT": 640,
@@ -47,6 +46,7 @@ To simplify the initial configuration, copy the following config template into a
       "address": "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
     }
   },
+  "genesisStateFile": ".altona/beacon/genesis.ssz",
   "logger": {
     "chain": {
       "level": "verbose"
@@ -122,7 +122,7 @@ To initialize the Lodestar configuration, run the command:
 yarn run cli beacon init \
     --template-config-file altona.json \
     --eth1.enabled=false \
-    --chain.genesisStateFile=genesis.ssz \
+    --genesisStateFile=genesis.ssz \
     --root-dir .altona
 ```
 

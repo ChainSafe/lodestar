@@ -13,7 +13,6 @@ export const altonaConfig = {
     }
   },
   "chain": {
-    "genesisStateFile": ".altona/beacon/genesis.ssz",
     "params": {
       "MIN_GENESIS_TIME": 1593433800,
       "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT": 640,
@@ -32,6 +31,7 @@ export const altonaConfig = {
       "address": "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
     }
   },
+  "genesisStateFile": ".altona/beacon/genesis.ssz",
   "logger": {
     "chain": {
       "level": "info"

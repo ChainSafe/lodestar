@@ -31,8 +31,8 @@ export async function initHandler(options: IBeaconOptions): Promise<void> {
     }
     // Mutate options so options propagate upstream to the run call
     Object.assign(options, deepmerge(options, testnetConfig));
-    options.chain.genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
-    await downloadGenesisFile(options.testnet, options.chain.genesisStateFile);
+    options.genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
+    await downloadGenesisFile(options.testnet, options.genesisStateFile);
   }
 
   // initialize beacon directory + rootDir

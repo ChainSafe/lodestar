@@ -49,11 +49,11 @@ export async function run(options: IDevOptions): Promise<void> {
   if(options.dev.genesisValidators) {
     const state = await initDevChain(node, options.dev.genesisValidators);
     storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
-  }else if (options.chain.genesisStateFile) {
+  }else if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
       config.types.BeaconState.tree.deserialize(
         await fs.promises.readFile(
-          join(options.rootDir, options.chain.genesisStateFile)
+          join(options.rootDir, options.genesisStateFile)
         )
       )
     );

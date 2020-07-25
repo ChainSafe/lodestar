@@ -2,7 +2,6 @@ import {Options} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
 import {paramsOptions, IParamsOptions} from "../../options/paramsOptions";
-import {genesisStateFileOptions, IGenesisStateFileOptions} from "../../options/otherOptions";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {TestnetName} from "./testnets";
 
@@ -10,23 +9,28 @@ export type IBeaconOptions =
   IGlobalArgs &
   IBeaconNodeOptions &
   IParamsOptions &
-  IGenesisStateFileOptions &
   IBeaconPaths &
   {
     templateConfigFile?: string;
+    genesisStateFile?: string;
     testnet?: TestnetName;
   };
 
 export const beaconOptions = {
   ...beaconNodeOptions,
   ...paramsOptions,
-  ...genesisStateFileOptions,
 
   templateConfigFile: {
     alias: ["templateConfigFile", "templateConfig"],
     description: "Template configuration used to initialize beacon node",
     type: "string",
     default: null,
+  } as Options,
+
+  genesisStateFile: {
+    description: "Genesis state in ssz-encoded format",
+    type: "string",
+    normalize: true,
   } as Options,
 
   testnet: {
