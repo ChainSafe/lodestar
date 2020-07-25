@@ -22,14 +22,14 @@ export const beaconOptions = {
   ...paramsOptions,
   ...genesisStateFileOptions,
 
-  "templateConfigFile": {
+  templateConfigFile: {
     alias: ["templateConfigFile", "templateConfig"],
     description: "Template configuration used to initialize beacon node",
     type: "string",
     default: null,
   } as Options,
 
-  "testnet": {
+  testnet: {
     description: "Use a testnet configuration and genesis file",
     type: "string",
     choices: ["altona"] as TestnetName[],
@@ -61,18 +61,18 @@ export const beaconOptions = {
     normalize: true,
   } as Options,
 
-  "network.peerIdFile": {
+  peerIdFile: {
     hidden: true,
     description: "Peer ID file",
-    defaultDescription: defaultBeaconPaths.network.peerIdFile,
+    defaultDescription: defaultBeaconPaths.peerIdFile,
     normalize: true,
     type: "string",
   } as Options,
 
-  "network.enrFile": {
+  enrFile: {
     hidden: true,
     description: "ENR file",
-    defaultDescription: defaultBeaconPaths.network.enrFile,
+    defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
   } as Options

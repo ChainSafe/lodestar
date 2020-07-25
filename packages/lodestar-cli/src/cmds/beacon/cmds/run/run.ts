@@ -29,9 +29,9 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   options = mergeConfigOptions(options);
   const beaconPaths = getBeaconPaths(options);
 
-  const peerId = await readPeerId(beaconPaths.network.peerIdFile);
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
-  options.network.discv5.enr = await readEnr(beaconPaths.network.enrFile);
+  options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
 
   const config = createIBeaconConfig({
     ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
@@ -44,7 +44,7 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
 
   async function cleanup(): Promise<void> {
     await node.stop();
-    await writeEnr(beaconPaths.network.enrFile, options.network.discv5.enr as ENR, peerId);
+    await writeEnr(beaconPaths.enrFile, options.network.discv5.enr as ENR, peerId);
   }
 
   process.on("SIGTERM", cleanup);

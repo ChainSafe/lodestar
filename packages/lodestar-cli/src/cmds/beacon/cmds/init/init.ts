@@ -42,8 +42,8 @@ export async function initHandler(options: IBeaconOptions): Promise<void> {
   // initialize beacon db path
   await mkdir(beaconPaths.dbDir);
   // initialize peer id
-  await initPeerId(beaconPaths.network.peerIdFile);
-  const peerId = await readPeerId(beaconPaths.network.peerIdFile);
+  await initPeerId(beaconPaths.peerIdFile);
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
   // initialize local enr
-  await initEnr(beaconPaths.network.enrFile, peerId);
+  await initEnr(beaconPaths.enrFile, peerId);
 }

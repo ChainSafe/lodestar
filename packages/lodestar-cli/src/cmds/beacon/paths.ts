@@ -5,10 +5,8 @@ export interface IBeaconPaths {
   beaconDir: string;
   dbDir: string;
   configFile: string;
-  network: {
-    peerIdFile: string;
-    enrFile: string;
-  };
+  peerIdFile: string;
+  enrFile: string;
 }
 
 /**
@@ -29,17 +27,15 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
   const beaconDir = path.join(rootDir, options.beaconDir || "beacon");
   const dbDir = path.join(beaconDir, options.dbDir || "chain-db");
   const configFile = path.join(beaconDir, options.configFile || "beacon.config.json");
-  const peerIdFile = path.join(beaconDir, (options.network || {}).peerIdFile || "peer-id.json");
-  const enrFile = path.join(beaconDir, (options.network || {}).enrFile || "enr.json");
+  const peerIdFile = path.join(beaconDir, options.peerIdFile || "peer-id.json");
+  const enrFile = path.join(beaconDir, options.enrFile || "enr.json");
   
   return {
     beaconDir,
     dbDir,
     configFile,
-    network: {
-      peerIdFile,
-      enrFile
-    }
+    peerIdFile,
+    enrFile
   };
 }
 
