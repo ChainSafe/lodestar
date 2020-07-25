@@ -34,7 +34,7 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
 
   const config = createIBeaconConfig({
-    ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
+    ...(options.preset === "mainnet" ? mainnetParams : minimalParams),
     ...createIBeaconParams(options.chain.params || {}),
   });
   const libp2p = await createNodeJsLibp2p(peerId, options.network);

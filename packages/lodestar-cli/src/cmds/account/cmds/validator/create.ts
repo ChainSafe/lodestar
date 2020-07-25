@@ -67,7 +67,7 @@ reach the given count. Never deletes an existing validator.",
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const {name, passphraseFile, storeWithdrawalKeystore, count, atMost} = options;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.chain.name);
+  const config = getBeaconConfig(options.preset);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
 

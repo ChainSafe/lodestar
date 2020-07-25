@@ -13,7 +13,6 @@ export const altonaConfig = {
     }
   },
   "chain": {
-    "preset": "mainnet",
     "genesisStateFile": ".altona/beacon/genesis.ssz",
     "params": {
       "MIN_GENESIS_TIME": 1593433800,

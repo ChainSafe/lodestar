@@ -1,13 +1,11 @@
 import {CommandBuilder, Options} from "yargs";
 import {IGlobalArgs} from "../../options";
-import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorOptions} from "../account/cmds/validator/options";
 
 export type IValidatorCliOptions = 
   IGlobalArgs &
   IAccountValidatorOptions &
-  { chain: IBeaconNodeOptions["chain"] } &
   {
     validatorsDbDir?: string;
     server: string;
@@ -16,7 +14,6 @@ export type IValidatorCliOptions =
 
 export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   ...accountValidatorOptions,
-  "chain.name": beaconNodeOptions["chain.name"],
 
   validatorsDbDir: {
     description: "Data directory for validator databases.",

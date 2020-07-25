@@ -64,7 +64,7 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.chain.name);
+  const config = getBeaconConfig(options.preset);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
     throw new YargsError("deposit_contract not in configuration");
