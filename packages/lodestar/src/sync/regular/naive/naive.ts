@@ -1,4 +1,6 @@
 import PeerId from "peer-id";
+import AbortController from "abort-controller";
+import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules} from "../interface";
 import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
@@ -34,6 +36,7 @@ export class NaiveRegularSync implements IRegularSync {
   private targetSlotRangeSource: Pushable<ISlotRange>;
   private gossipParentBlockRoot: Root;
   private doneFirstSync: boolean;
+  private controller: AbortController;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     this.config = modules.config;
@@ -43,6 +46,7 @@ export class NaiveRegularSync implements IRegularSync {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.targetSlotRangeSource = pushable<ISlotRange>();
+    this.controller = new AbortController();
   }
 
   public async start(): Promise<void> {
@@ -60,6 +64,7 @@ export class NaiveRegularSync implements IRegularSync {
 
   public async stop(): Promise<void> {
     this.targetSlotRangeSource.end();
+    this.controller.abort();
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.clock.unsubscribeFromNewSlot(this.onNewSlot);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
@@ -123,6 +128,7 @@ export class NaiveRegularSync implements IRegularSync {
     const config = this.config;
     const logger = this.logger;
     const chain = this.chain;
+    const controller = this.controller;
     const reqResp = this.network.reqResp;
     const getSyncPeers = this.getSyncPeers;
     const setTarget = this.setTarget;
@@ -130,7 +136,7 @@ export class NaiveRegularSync implements IRegularSync {
       this.targetSlotRangeSource,
       (source) => {
         return(async function() {
-          for await (const range of source) {
+          for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
             const lastFetchedSlot = await pipe(
               [range],
               fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
