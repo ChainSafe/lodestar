@@ -4,7 +4,8 @@ import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 export const networkOptions = {
   "network.discv5.enabled": {
     type: "boolean",
-    default: true,
+    // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
+    defaultDescription: String(true),
     group: "network",
   } as Options,
 
@@ -17,27 +18,24 @@ export const networkOptions = {
   "network.discv5.bootEnrs": {
     type: "array",
     defaultDescription: JSON.stringify((defaultOptions.network.discv5 || {}).bootEnrs || []),
-    default: [],
     group: "network",
   } as Options,
 
   "network.maxPeers": {
     type: "number",
-    default: 25,
+    defaultDescription: String(defaultOptions.network.maxPeers),
     group: "network",
   } as Options,
 
-  "network.bootMultiaddrs": {
-    alias: ["network.bootnodes"],
+  "network.bootnodes": {
     type: "array",
-    default: [],
+    defaultDescription: JSON.stringify(defaultOptions.network.bootnodes),
     group: "network",
   } as Options,
 
-  "network.localMultiaddrs": {
-    alias: ["network.multiaddrs"],
+  "network.multiaddrs": {
     type: "array",
-    default: ["/ip4/0.0.0.0/tcp/30606"],
+    defaultDescription: JSON.stringify(defaultOptions.network.multiaddrs),
     group: "network",
   } as Options,
 };
