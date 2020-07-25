@@ -58,8 +58,7 @@ export class BlockProcessor implements IService {
 
   public async start(): Promise<void> {
     const abortSignal = this.controller.signal;
-    // An error in this pipe should panic the process, so it's not handled
-    // void indicates that a function is not awaited on purpose
+    // TODO: Add more robust error handling of this pipe
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     void pipe(
       //source of blocks
