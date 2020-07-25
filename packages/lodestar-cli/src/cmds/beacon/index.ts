@@ -9,11 +9,8 @@ export const beacon: CommandModule<IGlobalArgs, IBeaconOptions> = {
   describe: "Beacon node",
   builder: (yargs) => yargs
     .options(beaconOptions)
-    // Deep type error with the command's options
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .command(init as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .command(run as any),
+    .command(init as CommandModule<IGlobalArgs, IBeaconOptions>)
+    .command(run as CommandModule<IGlobalArgs, IBeaconOptions>),
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   handler: () => {}
 };
