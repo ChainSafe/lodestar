@@ -46,7 +46,6 @@ export class NaiveRegularSync implements IRegularSync {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.targetSlotRangeSource = pushable<ISlotRange>();
-    this.controller = new AbortController();
   }
 
   public async start(): Promise<void> {
@@ -64,7 +63,9 @@ export class NaiveRegularSync implements IRegularSync {
 
   public async stop(): Promise<void> {
     this.targetSlotRangeSource.end();
-    this.controller.abort();
+    if (this.controller) {
+      this.controller.abort();
+    }
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
     this.chain.clock.unsubscribeFromNewSlot(this.onNewSlot);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
@@ -125,10 +126,8 @@ export class NaiveRegularSync implements IRegularSync {
   };
 
   private async sync(): Promise<void> {
-    const config = this.config;
-    const logger = this.logger;
-    const chain = this.chain;
-    const controller = this.controller;
+    this.controller = new AbortController();
+    const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
     const getSyncPeers = this.getSyncPeers;
     const setTarget = this.setTarget;
