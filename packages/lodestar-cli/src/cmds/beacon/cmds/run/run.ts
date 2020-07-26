@@ -29,6 +29,8 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
   options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
+  // TODO: Rename db.name to db.path or db.location
+  options.db.name = beaconPaths.dbDir;
 
   const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
