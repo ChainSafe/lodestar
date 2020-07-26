@@ -14,7 +14,10 @@ To create a wallet, use the following command:
 lodestar account wallet create --name primary --passphrase-file primary.pass
 ```
 
-A random strong password will be generated and stored in `primary.pass`.
+This command will:
+
+- Create a hierarchical deterministic wallet identified with the name `primary`. This name can be arbitrary and is only used to reference the wallet in subsequent commands.
+- Generate a random strong password and stored in `primary.pass`.
 
 <!-- prettier-ignore-start -->
 !!! info
