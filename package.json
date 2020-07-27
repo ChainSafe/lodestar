@@ -10,6 +10,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
+    "build:cli-docs": "ts-node scripts/generateCLIDocs.ts",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
