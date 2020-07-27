@@ -7,7 +7,7 @@ import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 
-describe.only("no eth1 sim", function () {
+describe("no eth1 sim (multi-node test)", function () {
 
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
@@ -17,9 +17,9 @@ describe.only("no eth1 sim", function () {
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
-  for (const nodeCount of [1, 2]) {
+  for (const nodeCount of [2, 4]) {
     it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until justified`, async function () {
-      this.timeout(10 * 60 * 1000);
+      this.timeout("10 min");
 
       const nodes: BeaconNode[] = [];
       const validators: Validator[] = [];
