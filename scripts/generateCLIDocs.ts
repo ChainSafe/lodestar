@@ -11,6 +11,7 @@ import {init as beaconInit} from "../packages/lodestar-cli/src/cmds/beacon/cmds/
 import {run as beaconRun} from "../packages/lodestar-cli/src/cmds/beacon/cmds/run";
 import {wallet as accountWallet} from "../packages/lodestar-cli/src/cmds/account/cmds/wallet";
 import {validator as accountValidator} from "../packages/lodestar-cli/src/cmds/account/cmds/validator";
+import { paramsOptions } from "@chainsafe/lodestar-cli/lib/options";
 
 const optionsTableHeader = `| Name | Type | Description |\n| ----------- | ----------- | ----------- |\n`;
 
@@ -22,6 +23,7 @@ for (const [key, value] of Object.entries(globalOptions)) {
 function getOptionsTable(options: object) {
   let optionsStr = optionsTableHeader;
   for(const [key, value] of Object.entries(options)) {
+    if (!(key in paramsOptions))
     optionsStr = optionsStr.concat(`| ${key} | ${value.type} | ${value.description} | \n`);
   }
   return optionsStr;
