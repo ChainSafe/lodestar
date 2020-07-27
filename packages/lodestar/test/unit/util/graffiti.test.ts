@@ -2,7 +2,7 @@ import "mocha";
 import {expect} from "chai";
 import {toGraffitiBuffer} from "../../../src/util/graffiti";
 
-describe.only("Graffiti helper", () => {
+describe("Graffiti helper", () => {
   describe("toGraffitiBuffer", () => {
     const cases: {input: string; result: string}[] = [
       {
