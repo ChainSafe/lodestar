@@ -4,6 +4,7 @@
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import {pipe} from "it-pipe";
+import {Type} from "@chainsafe/ssz";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
@@ -14,9 +15,12 @@ import {
   ResponseBody,
   SignedBeaconBlock,
   Status,
+  IBeaconSSZTypes,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT} from "../constants";
+import {
+  Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT, MethodRequestType,
+} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
 import AbortController from "abort-controller";
@@ -258,8 +262,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             throw `No response returned for method ${method}. request=${requestId}`;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
-          this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`,
-            {requestId, encoding, body: body && JSON.stringify(body)});
+          this.logger.verbose(
+            `receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
+              requestId,
+              encoding,
+              body: body && (
+                this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>
+              ).toJson(body),
+            }
+          );
           return requestOnly ? null : finalResponse as T;
         }
       );

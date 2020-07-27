@@ -27,13 +27,11 @@ export function serializeContext(context?: Context|Error): string {
     return "Error: " + context.message + "\n" + context.stack;
   }
   if (typeof context === "string") return context;
+  if (
+    typeof context === "number" || typeof context === "boolean" || Array.isArray(context)
+  ) return JSON.stringify(context);
   return Object.keys(context).map((key) => {
-    let value = "";
-    if(Array.isArray(context[key]) || context[key] instanceof Uint8Array) {
-      value = toHex(context[key] as Uint8Array);
-    } else {
-      value = context[key].toString();
-    }
+    const value = typeof context[key] === "string" ? context[key] : JSON.stringify(context[key]);
     return `${key}=${value}`;
   }).join(", ");
 }
