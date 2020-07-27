@@ -22,7 +22,7 @@ describe("Graffiti helper", () => {
       }
     ];
     for (const {input, result} of cases) {
-      it(`Convert graffiti ASCII ${input} to Buffer`, () => {
+      it(`Convert graffiti UTF8 ${input} to Buffer`, () => {
         expect(toGraffitiBuffer(input).toString("hex")).to.equal(result);
       });
     }
