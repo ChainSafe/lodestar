@@ -74,7 +74,7 @@ describe("produce block", function () {
       // @ts-ignore
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
+    const block = await blockProposingService.createAndPublishBlock(0,1, state.fork, ZERO_HASH);
     expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
   });
 
@@ -84,7 +84,7 @@ describe("produce block", function () {
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       validatorDbStub as unknown as IValidatorDB,
       sinon.createStubInstance(WinstonLogger)

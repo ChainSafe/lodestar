@@ -8,6 +8,6 @@ export interface IValidatorOptions {
   db: IValidatorDB;
   config: IBeaconConfig;
   api: IApiClient | string;
-  keypair: Keypair;
+  keypairs: Keypair[];
   logger: ILogger;
 }

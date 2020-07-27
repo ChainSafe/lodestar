@@ -33,6 +33,6 @@ export function getDevValidator(node: BeaconNode, index: number): Validator {
       beacon: new BeaconApi({}, {...node}),
     }),
     logger: logger,
-    keypair: new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))
+    keypairs: [new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))]
   });
 }

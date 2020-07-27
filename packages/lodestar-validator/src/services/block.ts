@@ -30,8 +30,10 @@ export default class BlockProposingService {
 
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  private readonly privateKeys: PrivateKey[];
-  private readonly publicKeys: BLSPubkey[];
+  //validators private keys (order is important)
+  private readonly privateKeys: PrivateKey[] = [];
+  //validators public keys (order is important)
+  private readonly publicKeys: BLSPubkey[] = [];
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
 
@@ -71,8 +73,10 @@ export default class BlockProposingService {
       return;
     }
     proposerDuties.forEach((duty) => {
-      this.logger.debug("Next duty", {slot: duty.slot, validator: toHexString(duty.proposerPubkey)});
-      this.nextProposals.set(duty.slot, duty.proposerPubkey);
+      if(this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
+        this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.proposerPubkey)});
+        this.nextProposals.set(duty.slot, duty.proposerPubkey);
+      }
     });
     //because on new slot will execute before duties are fetched
     await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
@@ -91,12 +95,7 @@ export default class BlockProposingService {
       );
       const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
       await this.createAndPublishBlock(
-        this.publicKeys.findIndex((pubkey, index) => {
-          if(this.config.types.BLSPubkey.equals(pubkey, proposerPubKey)) {
-            return index;
-          }
-          return -1;
-        }),
+        this.getPubKeyIndex(proposerPubKey),
         slot,
         fork,
         genesisValidatorsRoot
@@ -109,7 +108,7 @@ export default class BlockProposingService {
    */
   public async createAndPublishBlock(
     proposerIndex: number, slot: Slot, fork: Fork, genesisValidatorsRoot: Root): Promise<SignedBeaconBlock | null> {
-    if(await this.hasProposedAlready(slot, proposerIndex)) {
+    if(await this.hasProposedAlready(proposerIndex, slot)) {
       this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
       return null;
     }
@@ -148,7 +147,7 @@ export default class BlockProposingService {
       message: block,
       signature: this.privateKeys[proposerIndex].signMessage(blockSigningRoot).toBytesCompressed(),
     };
-    await this.storeBlock(signedBlock, proposerIndex);
+    await this.storeBlock(proposerIndex, signedBlock);
     try {
       await this.provider.validator.publishBlock(signedBlock);
       this.logger.info(
@@ -164,14 +163,20 @@ export default class BlockProposingService {
     return this.provider;
   }
 
-  private async hasProposedAlready(slot: Slot, proposerIndex: number): Promise<boolean> {
+  private async hasProposedAlready(proposerIndex: number, slot: Slot): Promise<boolean> {
     // get last proposed block from database and check if belongs in same slot
     const lastProposedBlock = await this.db.getBlock(this.publicKeys[proposerIndex]);
     if(!lastProposedBlock) return  false;
     return this.config.types.Slot.equals(lastProposedBlock.message.slot, slot);
   }
 
-  private async storeBlock(signedBlock: SignedBeaconBlock, proposerIndex: number): Promise<void> {
+  private async storeBlock(proposerIndex: number, signedBlock: SignedBeaconBlock): Promise<void> {
     await this.db.setBlock(this.publicKeys[proposerIndex], signedBlock);
+  }
+
+  private getPubKeyIndex(search: BLSPubkey): number {
+    return this.publicKeys.findIndex((pubkey) => {
+      return this.config.types.BLSPubkey.equals(pubkey, search);
+    });
   }
 }

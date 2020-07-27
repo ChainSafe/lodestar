@@ -48,14 +48,18 @@ describe("validator attestation service", function () {
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub()
     };
+    rpcClientStub.beacon = {
+      getFork: sinon.stub()
+    };
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
     );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.beacon.getFork.resolves({fol: Buffer.alloc(8)});
     await service.onNewEpoch(1);
     expect(
       rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce
@@ -72,7 +76,7 @@ describe("validator attestation service", function () {
     };
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
@@ -96,7 +100,7 @@ describe("validator attestation service", function () {
     const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
@@ -115,7 +119,7 @@ describe("validator attestation service", function () {
     };
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
@@ -126,7 +130,7 @@ describe("validator attestation service", function () {
       aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
-    service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});
+    service["nextAttesterDuties"].set(0, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
@@ -138,7 +142,7 @@ describe("validator attestation service", function () {
     expect(
       rpcClientStub.validator
         .produceAttestation.withArgs(
-          keypair.publicKey.toBytesCompressed(),
+          sinon.match.any,
           1,
           1
         ).calledOnce
@@ -166,7 +170,7 @@ describe("validator attestation service", function () {
     };
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
@@ -177,7 +181,7 @@ describe("validator attestation service", function () {
       aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
-    service["nextAttesterDuties"].set(0, {...duty, isAggregator: false});
+    service["nextAttesterDuties"].set(0, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(
       generateAttestation({
@@ -219,18 +223,18 @@ describe("validator attestation service", function () {
     };
     const service = new AttestationService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       dbStub,
       logger
     );
     const duty: AttesterDuty = {
-      attestationSlot: 1,
+      attestationSlot: 10,
       committeeIndex: 1,
       aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
-    service["nextAttesterDuties"].set(10, {...duty, isAggregator: false});
+    service["nextAttesterDuties"].set(10, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
@@ -253,9 +257,9 @@ describe("validator attestation service", function () {
     expect(
       rpcClientStub.validator
         .produceAttestation.withArgs(
-          keypair.publicKey.toBytesCompressed(),
+          sinon.match.any,
           1,
-          1
+          10
         ).calledOnce
     ).to.be.true;
   });

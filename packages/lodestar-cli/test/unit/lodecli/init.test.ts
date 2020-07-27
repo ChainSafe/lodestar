@@ -18,6 +18,7 @@ describe("beacon cli", function() {
     // initialize beacon node configured to talk to testnet
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
+      // @ts-ignore
     }).command(beacon).help().parse(["beacon", "init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
     expect(fs.existsSync(tmpDir)).to.be.true;
