@@ -28,6 +28,9 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
         },
         "randao_reveal": {
           type: "string"
+        },
+        graffiti: {
+          type: "string"
         }
       }
     },
