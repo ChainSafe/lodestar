@@ -1,6 +1,5 @@
 import {format} from "winston";
 import {Context} from "./interface";
-import {toHex} from "../bytes";
 
 export const defaultLogFormat = format.combine(
   format.colorize(),

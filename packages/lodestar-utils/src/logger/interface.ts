@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {ArrayLike, Json} from "@chainsafe/ssz";
+import {Json} from "@chainsafe/ssz";
 import {Writable} from "stream";
 
 export enum LogLevel {
