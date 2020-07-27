@@ -34,7 +34,7 @@ export default class BlockProposingService {
   private readonly publicKey: BLSPubkey;
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
-  private readonly graffiti: string;
+  private readonly graffiti?: string;
 
   private nextProposalSlots: Slot[] = [];
 
@@ -44,7 +44,7 @@ export default class BlockProposingService {
     provider: IApiClient,
     db: IValidatorDB,
     logger: ILogger,
-    graffiti: string
+    graffiti?: string
   ) {
     this.config = config;
     this.privateKey = keypair.privateKey;
