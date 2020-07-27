@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {AttestationProcessor} from "../../../src/chain/attestation";
 import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as utils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateEmptyBlockSummary} from "../../utils/block";
@@ -12,6 +12,7 @@ import {generateValidators} from "../../utils/validator";
 import {fail} from "assert";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {Checkpoint, BeaconState} from "@chainsafe/lodestar-types";
+import { EpochContext } from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("AttestationProcessor", function () {
   const sandbox = sinon.createSandbox();
@@ -26,7 +27,7 @@ describe("AttestationProcessor", function () {
     logger = new WinstonLogger();
     logger.silent = true;
     attestationProcessor = new AttestationProcessor(chainStub, forkChoiceStub, {config, db: dbStub, logger});
-    getAttestingIndicesStub = sandbox.stub(utils, "getAttestingIndices");
+    getAttestingIndicesStub = sandbox.stub(utils, "getAttestingIndicesFromCommittee");
   });
 
   afterEach(() => {
@@ -38,7 +39,14 @@ describe("AttestationProcessor", function () {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
     const block = generateEmptyBlockSummary();
-    const state = generateState();
+    const state: BeaconState = generateState({
+      validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        activationEpoch: 0,
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+      }),
+      balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+        () => config.params.MAX_EFFECTIVE_BALANCE),
+    });
     forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     dbStub.stateCache.get.resolves(state);
     forkChoiceStub.hasBlock.returns(true);
@@ -50,7 +58,14 @@ describe("AttestationProcessor", function () {
     processAttestationStub = sandbox.stub(attestationProcessor, "processAttestation");
     const attestation = generateEmptyAttestation();
     const block = generateEmptyBlockSummary();
-    const state = generateState();
+    const state: BeaconState = generateState({
+      validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        activationEpoch: 0,
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+      }),
+      balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+        () => config.params.MAX_EFFECTIVE_BALANCE),
+    });
     forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
     dbStub.stateCache.get.resolves(state);
     forkChoiceStub.hasBlock.returns(false);
@@ -65,8 +80,17 @@ describe("AttestationProcessor", function () {
       const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
       const block = generateEmptyBlockSummary();
       forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-      const state = generateState();
-      dbStub.stateCache.get.resolves(state);
+      const state: BeaconState = generateState({
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      dbStub.stateCache.get.resolves({state, epochCtx});
       forkChoiceStub.getJustified.returns({} as Checkpoint);
 
       await attestationProcessor.processAttestation(attestation, attestationHash);
@@ -83,9 +107,18 @@ describe("AttestationProcessor", function () {
       const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
       const block = generateEmptyBlockSummary();
       forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-      const state: BeaconState = generateState();
+      const state: BeaconState = generateState({
+        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+          activationEpoch: 0,
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        }),
+        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE),
+      });
       state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
-      dbStub.stateArchive.get.withArgs(0).resolves(state);
+      const epochCtx = new EpochContext(config);
+      epochCtx.loadState(state);
+      dbStub.stateCache.get.resolves({state, epochCtx});
       forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
       forkChoiceStub.headBlockSlot.returns(0);
       getAttestingIndicesStub.returns([0]);
@@ -107,9 +140,18 @@ describe("AttestationProcessor", function () {
     const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
     const block = generateEmptyBlockSummary();
     forkChoiceStub.getBlockSummaryByBlockRoot.returns(block);
-    const state: BeaconState = generateState();
+    const state: BeaconState = generateState({
+      validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
+        activationEpoch: 0,
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+      }),
+      balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+        () => config.params.MAX_EFFECTIVE_BALANCE),
+    });
     state.genesisTime = state.genesisTime - config.params.SECONDS_PER_SLOT;
-    dbStub.stateArchive.get.withArgs(0).resolves(state);
+    const epochCtx = new EpochContext(config);
+    epochCtx.loadState(state);
+    dbStub.stateCache.get.resolves({state, epochCtx});
     forkChoiceStub.getJustified.returns(config.types.Checkpoint.defaultValue());
     forkChoiceStub.headBlockSlot.returns(0);
     getAttestingIndicesStub.returns([0]);

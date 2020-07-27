@@ -204,14 +204,16 @@ describe("sync utils", function () {
 
     it("should work", async function () {
       forkChoiceStub.headBlockRoot.returns(generateEmptySignedBlock().message.parentRoot.valueOf() as Uint8Array);
+      forkChoiceStub.headBlockSlot.returns(0);
       const block1 = generateEmptySignedBlock();
+      block1.message.slot = 1;
       const block2 = generateEmptySignedBlock();
       block2.message.slot = 3;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       await pipe(
         [[block2], [block1]],
         processSyncBlocks(
-          config, chainStub, sinon.createStubInstance(WinstonLogger))
+          config, chainStub, sinon.createStubInstance(WinstonLogger), true),
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
     });

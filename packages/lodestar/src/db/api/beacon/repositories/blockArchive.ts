@@ -4,8 +4,8 @@ import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 
 import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
 import {Bucket, encodeKey} from "../../schema";
-import {Repository} from "./abstract";
 import {ArrayLike} from "@chainsafe/ssz";
+import {Repository} from "./abstract";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
@@ -26,28 +26,32 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   public async put(key: Slot, value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.put(key, value),
-      this.storeRootRef(value)
+      this.storeRootIndex(value),
+      this.storeParentRootIndex(value)
     ]);
   }
 
   public async batchPut(items: ArrayLike<IKeyValue<Slot, SignedBeaconBlock>>): Promise<void> {
     await Promise.all([
       super.batchPut(items),
-      Array.from(items).map((item) => this.storeRootRef(item.value))
+      Array.from(items).map((item) => this.storeRootIndex(item.value)),
+      Array.from(items).map((item) => this.storeParentRootIndex(item.value))
     ]);
   }
 
   public async remove(value: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       super.remove(value),
-      this.deleteRootRef(value)
+      this.deleteRootIndex(value),
+      this.deleteParentRootIndex(value)
     ]);
   }
 
   public async batchRemove(values: ArrayLike<SignedBeaconBlock>): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
-      Array.from(values).map((value) => this.deleteRootRef(value))
+      Array.from(values).map((value) => this.deleteRootIndex(value)),
+      Array.from(values).map((value) => this.deleteParentRootIndex(value))
     ]);
   }
 
@@ -59,12 +63,27 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return null;
   }
 
+  public async getByParentRoot(root: Root): Promise<SignedBeaconBlock|null> {
+    const slot = await this.getSlotByParentRoot(root);
+    if(Number.isInteger(slot)) {
+      return this.get(slot);
+    }
+    return null;
+  }
+
   public async getSlotByRoot(root: Root): Promise<Slot|null> {
     const value = await this.db.get(
-      encodeKey(
-        Bucket.blockArchiveRootRef,
-        root.valueOf() as Uint8Array
-      )
+      this.getRootIndexKey(root)
+    );
+    if(value) {
+      return bytesToInt(value, "be");
+    }
+    return null;
+  }
+
+  public async getSlotByParentRoot(root: Root): Promise<Slot|null> {
+    const value = await this.db.get(
+      this.getParentRootIndexKey(root)
     );
     if(value) {
       return bytesToInt(value, "be");
@@ -104,22 +123,38 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     })();
   }
 
-  private async storeRootRef(block: SignedBeaconBlock): Promise<void> {
+  private async storeRootIndex(block: SignedBeaconBlock): Promise<void> {
     return this.db.put(
-      encodeKey(
-        Bucket.blockArchiveRootRef,
-        this.config.types.BeaconBlock.hashTreeRoot(block.message)
-      ),
+      this.getRootIndexKey(this.config.types.BeaconBlock.hashTreeRoot(block.message)),
       intToBytes(block.message.slot, 64, "be")
     );
   }
 
-  private async deleteRootRef(block: SignedBeaconBlock): Promise<void> {
-    return this.db.delete(
-      encodeKey(
-        Bucket.blockArchiveRootRef,
-        this.config.types.BeaconBlock.hashTreeRoot(block.message)
-      )
+  private async storeParentRootIndex(block: SignedBeaconBlock): Promise<void> {
+    return this.db.put(
+      this.getParentRootIndexKey(block.message.parentRoot),
+      intToBytes(block.message.slot, 64, "be")
     );
+  }
+
+  private async deleteRootIndex(block: SignedBeaconBlock): Promise<void> {
+    return this.db.delete(
+      this.getRootIndexKey(this.config.types.BeaconBlock.hashTreeRoot(block.message))
+    );
+  }
+
+  private async deleteParentRootIndex(block: SignedBeaconBlock): Promise<void> {
+    return this.db.delete(
+      this.getParentRootIndexKey(block.message.parentRoot)
+    );
+  }
+
+
+  private getParentRootIndexKey(parentRoot: Root): Buffer {
+    return encodeKey(Bucket.blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
+  }
+
+  private getRootIndexKey(root: Root): Buffer {
+    return encodeKey(Bucket.blockArchiveRootIndex, root.valueOf() as Uint8Array);
   }
 }

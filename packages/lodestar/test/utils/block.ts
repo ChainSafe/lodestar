@@ -54,3 +54,11 @@ export function generateEmptyBlockSummary(): BlockSummary {
     finalizedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
   };
 }
+
+export function generateBlockSummary(overrides: DeepPartial<BlockSummary> = {}): BlockSummary {
+  return deepmerge<BlockSummary, DeepPartial<BlockSummary>>(
+    generateEmptyBlockSummary(),
+    overrides,
+    {isMergeableObject: isPlainObject}
+  );
+}

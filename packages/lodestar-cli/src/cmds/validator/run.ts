@@ -21,7 +21,7 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
   const force = options.force;
   const accountPaths = getAccountPaths(options);
   const validatorPaths = getValidatorPaths(options);
-  const config = getBeaconConfig(options.chain.name);
+  const config = getBeaconConfig(options.preset);
   
   await initBLS();
 

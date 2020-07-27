@@ -16,8 +16,10 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus} from "../constants";
+import {Method, ReqRespEncoding, RequestId, RESP_TIMEOUT, RpcResponseStatus, TTFB_TIMEOUT} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {duplex as abortDuplex} from "abortable-iterator";
+import AbortController from "abort-controller";
 import {
   createResponseEvent,
   createRpcProtocol,
@@ -25,6 +27,7 @@ import {
   isRequestOnly,
   isRequestSingleChunk,
   randomRequestId,
+  dialProtocol,
 } from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -255,7 +258,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             throw `No response returned for method ${method}. request=${requestId}`;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
-          this.logger.verbose(`receive ${method} response from ${peerId.toB58String()}`,{requestId, encoding});
+          this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`,
+            {requestId, encoding, body: body && JSON.stringify(body)});
           return requestOnly ? null : finalResponse as T;
         }
       );
@@ -276,14 +280,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     const {libp2p, config, logger} = this;
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
-      const {stream} = await libp2p.dialProtocol(peerId, protocol) as {stream: Stream};
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
+      const {stream} = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
+      const controller = new AbortController();
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
-        stream,
-        eth2ResponseTimer(),
-        eth2ResponseDecode(config, logger, method, encoding, requestId)
+        abortDuplex(stream, controller.signal, {returnOnAbort: true}),
+        eth2ResponseTimer(controller),
+        eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
       );
     })();
   }

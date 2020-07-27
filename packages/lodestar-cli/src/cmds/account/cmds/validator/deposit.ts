@@ -1,7 +1,7 @@
 import {CommandBuilder} from "yargs";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
-import {getBeaconConfig, getEthersSigner} from "../../../../util";
+import {getBeaconConfig, getEthersSigner, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
@@ -64,10 +64,10 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.chain.name);
+  const config = getBeaconConfig(options.preset);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
-    throw Error("deposit_contract not in configuration");
+    throw new YargsError("deposit_contract not in configuration");
   const depositContractAddress = String(config.params.DEPOSIT_CONTRACT_ADDRESS);
 
   // Load validators to deposit
@@ -82,7 +82,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
     .filter(validatorDir => validatorDir.eth1DepositTxHashExists());
   
   if (validatorDirsToSubmit.length === 0)
-    throw Error("No validators to deposit");
+    throw new YargsError("No validators to deposit");
   // eslint-disable-next-line no-console
   console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 

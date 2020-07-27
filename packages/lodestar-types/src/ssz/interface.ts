@@ -88,6 +88,7 @@ export interface IBeaconSSZTypes {
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
   ForkResponse: ContainerType<t.ForkResponse>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
+  Genesis: ContainerType<t.Genesis>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -167,5 +168,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
-  "ValidatorResponse"
+  "ValidatorResponse",
+  "Genesis"
 ];

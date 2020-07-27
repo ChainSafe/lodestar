@@ -1,56 +1,53 @@
 import * as fs from "fs";
 import process from "process";
-import {Arguments} from "yargs";
-import deepmerge from "deepmerge";
 import {initBLS} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {createIBeaconParams} from "@chainsafe/lodestar-params";
-import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-
+import {IBeaconOptions} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
-import {IBeaconArgs} from "../../options";
 import {ENR} from "@chainsafe/discv5";
+import {initHandler as initBeacon} from "../init/init";
+import {getBeaconPaths} from "../../paths";
+import {mergeConfigOptions} from "../../config";
+import {getBeaconConfig} from "../../../../util";
 
 /**
  * Run a beacon node
  */
-export async function run(options: Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>): Promise<void> {
+export async function runHandler(options: IBeaconOptions): Promise<void> {
   await initBLS();
 
-  options = deepmerge(defaultOptions, options) as Arguments<IBeaconArgs & Partial<IBeaconNodeOptions>>;
+  // Auto-setup testnet
+  if (options.testnet) {
+    await initBeacon(options);
+  }
 
-  const peerId = await readPeerId(options.network.peerIdFile);
+  options = mergeConfigOptions(options);
+  const beaconPaths = getBeaconPaths(options);
+
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
-  options.network.discv5.enr = await readEnr(options.network.enrFile);
+  options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
+  // TODO: Rename db.name to db.path or db.location
+  options.db.name = beaconPaths.dbDir;
 
-  const config = createIBeaconConfig({
-    ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
-    ...createIBeaconParams(options.chain.params || {}),
-  });
+  const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
-  const node = new BeaconNode(options, {
-    config,
-    libp2p,
-    logger,
-  });
+  const node = new BeaconNode(options, {config, libp2p, logger});
 
   async function cleanup(): Promise<void> {
     await node.stop();
-    await writeEnr(options.network.enrFile, options.network.discv5.enr as ENR, peerId);
+    await writeEnr(beaconPaths.enrFile, options.network.discv5.enr as ENR, peerId);
   }
 
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
-  if (options.chain.genesisStateFile) {
+  if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.chain.genesisStateFile))
+      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.genesisStateFile))
     );
   }
   await node.start();

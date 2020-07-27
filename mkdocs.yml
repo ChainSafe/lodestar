@@ -45,5 +45,7 @@ nav:
   - Usage:
       - Local testnet: usage/local.md
       - Altona testnet: usage/altona.md
+      - Key management: usage/key-management.md
+      - Prometheus & Grafana Setup: usage/prometheus-grafana.md
   - Packages: packages.md
   - Contributing: contributing.md

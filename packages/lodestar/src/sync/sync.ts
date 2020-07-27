@@ -99,7 +99,7 @@ export class BeaconSync implements IBeaconSync {
     }
     return {
       headSlot: BigInt(target),
-      syncDistance: BigInt(target) - headSlot
+      syncDistance: target >= headSlot ? (BigInt(target) - headSlot) : BigInt(0)
     };
   }
 

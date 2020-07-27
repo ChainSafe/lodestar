@@ -1,18 +1,10 @@
-import {fromHexString, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttestationRootHex,
-  BeaconState,
-  BlockRootHex,
-  Root,
-  SignedBeaconBlock,
-  Slot
-} from "@chainsafe/lodestar-types";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndices
+  getAttestingIndicesFromCommittee,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -45,7 +37,7 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public async  receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
-    this.logger.info(`Received attestation ${toHexString(attestationHash)}`);
+    this.logger.verbose(`Received attestation ${toHexString(attestationHash)}`);
     try {
       const attestationSlot: Slot = attestation.data.slot;
       const currentSlot = this.forkChoice.headBlockSlot();
@@ -71,6 +63,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     try {
       await this.processAttestation(attestation, attestationHash);
     } catch (e) {
+      console.log(e);
       this.logger.warn("Failed to process attestation. Reason: " + e.message);
     }
   }
@@ -97,19 +90,12 @@ export class AttestationProcessor implements IAttestationProcessor {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
-    let checkpointState: TreeBacked<BeaconState>;
-    if(justifiedCheckpoint.epoch > GENESIS_EPOCH) {
-      const justifiedBlock =
-        this.forkChoice.getBlockSummaryByBlockRoot(justifiedCheckpoint.root.valueOf() as Uint8Array);
-      if (justifiedBlock) {
-        checkpointState = (await this.db.stateCache.get(justifiedBlock.stateRoot)).state;
-      } else {
-        // should not happen
-        throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
-      }
-    } else {
-      // should be genesis state
-      checkpointState = await this.db.stateArchive.get(0);
+    const justifiedBlock = this.forkChoice.getBlockSummaryByBlockRoot(
+      justifiedCheckpoint.root.valueOf() as Uint8Array
+    );
+    if (!justifiedBlock) {
+      // should not happen
+      throw new Error(`Cannot find justified node of forkchoice, blockHash=${toHexString(justifiedCheckpoint.root)}`);
     }
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
@@ -130,10 +116,16 @@ export class AttestationProcessor implements IAttestationProcessor {
     assert.true(
       ancestor && this.config.types.Root.equals(target.root, ancestor),
       "FFG and LMD vote must be consistent with each other");
-
-    const validators = getAttestingIndices(
-      this.config, checkpointState, attestation.data, attestation.aggregationBits);
-    const balances = validators.map((index) => checkpointState.balances[index]);
+    const stateCtx = await this.db.stateCache.get(block.stateRoot);
+    assert.true(
+      !!stateCtx,
+      `Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`
+    );
+    const validators = getAttestingIndicesFromCommittee(
+      stateCtx.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+      attestation.aggregationBits
+    );
+    const balances = validators.map((index) => stateCtx.state.balances[index]);
     for (let i = 0; i < validators.length; i++) {
       this.forkChoice.addAttestation(
         attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
@@ -141,7 +133,7 @@ export class AttestationProcessor implements IAttestationProcessor {
         balances[i]
       );
     }
-    this.logger.info(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
+    this.logger.verbose(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
     this.chain.emit("processedAttestation", attestation);
   }
 

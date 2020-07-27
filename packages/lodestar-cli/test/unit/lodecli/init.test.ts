@@ -6,7 +6,7 @@ import rimraf from "rimraf";
 import {beacon} from "../../../src/cmds/beacon";
 
 describe("beacon cli", function() {
-  this.timeout(0);
+  this.timeout("10 min");
 
   const tmpDir = ".tmp";
 

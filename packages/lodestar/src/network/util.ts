@@ -5,11 +5,13 @@
 
 import PeerId from "peer-id";
 import {Type} from "@chainsafe/ssz";
+import AbortController from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
-import AbortController from "abort-controller";
-
+import Multiaddr from "multiaddr";
+import {networkInterfaces} from "os";
+import {ENR} from "@chainsafe/discv5";
 // req/resp
 
 function randomNibble(): string {
@@ -61,9 +63,48 @@ export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
 }
 
-export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGenerator<T> {
+/**
+ * Check if multiaddr belongs to the local network interfaces.
+ */
+export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
+  if (!multiaddr) return false;
+  const protoNames = multiaddr.protoNames();
+  if (protoNames.length !== 2 && protoNames[1] !== "udp") {
+    throw new Error("Invalid udp multiaddr");
+  }
+  const interfaces = networkInterfaces();
+  const tuples = multiaddr.tuples();
+  const isIPv4: boolean = tuples[0][0] === 4;
+  const family = isIPv4 ? "IPv4" : "IPv6";
+  const ip = tuples[0][1];
+  const ipStr = isIPv4
+    ? Array.from(ip).join(".")
+    : Array.from(Uint16Array.from(ip))
+      .map((n) => n.toString(16))
+      .join(":");
+  const localIpStrs = Object.values(interfaces)
+    .reduce((finalArr, val) => finalArr.concat(val), [])
+    .filter((networkInterface) => networkInterface.family === family)
+    .map((networkInterface) => networkInterface.address);
+  return localIpStrs.includes(ipStr);
+}
+
+export function clearMultiaddrUDP(enr: ENR): void {
+  // enr.multiaddrUDP = undefined in new version
+  enr.delete("ip");
+  enr.delete("udp");
+  enr.delete("ip6");
+  enr.delete("udp6");
+}
+
+export function eth2ResponseTimer<T>(
+  streamAbortController: AbortController
+): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
-  let responseTimer = setTimeout(() => controller.abort(), TTFB_TIMEOUT);
+  let responseTimer = setTimeout(() => {
+    controller.abort();
+  }, TTFB_TIMEOUT);
+  controller.signal.addEventListener("abort", () => streamAbortController.abort());
   const renewTimer = (): void => {
     clearTimeout(responseTimer);
     responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
@@ -80,4 +121,17 @@ export function eth2ResponseTimer<T>(): (source: AsyncIterable<T>) => AsyncGener
       cancelTimer();
     })();
   };
+}
+
+export async function dialProtocol(
+  libp2p: LibP2p,
+  peerId: PeerId,
+  protocol: string,
+  timeout: number
+): ReturnType<LibP2p["dialProtocol"]> {
+  const abortController = new AbortController();
+  const timer = setTimeout(() => abortController.abort(), timeout);
+  const result = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
+  clearTimeout(timer);
+  return result;
 }

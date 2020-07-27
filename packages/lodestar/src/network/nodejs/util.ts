@@ -9,6 +9,8 @@ import LibP2p from "libp2p";
 import {NodejsNode} from ".";
 import {INetworkOptions} from "../options";
 import defaults from "../defaults";
+import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
+import {ENR} from "@chainsafe/discv5";
 
 /**
  * Save a peer id to disk
@@ -39,6 +41,13 @@ export async function createNodeJsLibp2p(
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
+  const enr = network.discv5?.enr;
+  if (enr && typeof enr !== "string") {
+    const enrInstance = enr as ENR;
+    if (enrInstance.multiaddrUDP && !isLocalMultiAddr(enrInstance.multiaddrUDP)) {
+      clearMultiaddrUDP(enrInstance);
+    }
+  }
   return new NodejsNode({
     peerId,
     addresses: {listen: multiaddrs},

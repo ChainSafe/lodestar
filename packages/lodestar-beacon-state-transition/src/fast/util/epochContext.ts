@@ -1,11 +1,12 @@
-import {ByteVector, toHexString, hash} from "@chainsafe/ssz";
-import {ValidatorIndex, Epoch, BeaconState, Slot, CommitteeIndex} from "@chainsafe/lodestar-types";
+import {ByteVector, hash, toHexString} from "@chainsafe/ssz";
+import {BeaconState, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
-import {GENESIS_EPOCH, DomainType} from "../../constants";
+import {DomainType, GENESIS_EPOCH} from "../../constants";
 import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSeed} from "../../util";
-import {IEpochShuffling, computeEpochShuffling} from "./epochShuffling";
+import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
+import {PublicKey} from "@chainsafe/bls";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
@@ -22,7 +23,7 @@ export class EpochContext {
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
   public pubkey2index: PubkeyIndexMap;
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
-  public index2pubkey: Uint8Array[];
+  public index2pubkey: PublicKey[];
   public proposers: number[];
   public previousShuffling?: IEpochShuffling;
   public currentShuffling?: IEpochShuffling;
@@ -85,7 +86,7 @@ export class EpochContext {
     for (let i = currentCount; i < newCount; i++) {
       const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
       this.pubkey2index.set(pubkey, i);
-      this.index2pubkey.push(pubkey);
+      this.index2pubkey.push(PublicKey.fromBytes(pubkey));
     }
   }
 

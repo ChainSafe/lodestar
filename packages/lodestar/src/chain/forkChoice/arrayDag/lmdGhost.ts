@@ -181,7 +181,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   }
 
   public async stop(): Promise<void> {
-    this.clock.unsubscribeFromNewEpoch(this.onTick);
+    this.clock && this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {
@@ -377,6 +377,18 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
     const node = this.getNode(blockRoot);
     return (node)? this.toBlockSummary(node) : null;
+  }
+
+  public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter((node) => {
+        return node.hasParent()
+          && this.config.types.Root.equals(
+            fromHexString(this.nodes[node.parent].blockRoot),
+            blockRoot
+          );
+      })
+      .map(node => this.toBlockSummary(node));
   }
 
   public hasBlock(blockRoot: Uint8Array): boolean {

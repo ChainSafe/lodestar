@@ -12,7 +12,7 @@ export function getValidatorApiClient(url: string, logger: ILogger, node: Beacon
       config: node.config,
       validator: new ValidatorApi({}, {...node, logger}),
       node: new NodeApi({}, {...node}),
-      beacon: new BeaconApi({}, {...node, logger}),
+      beacon: new BeaconApi({}, {...node}),
     });
   } else {
     return new ApiClientOverRest(node.config, url, logger);

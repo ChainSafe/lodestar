@@ -73,11 +73,11 @@ export abstract class AbstractApiClient
     if (!this.running) {
       return;
     }
-    const genesisTime =  await this.beacon.getGenesisTime();
-    if (genesisTime && Math.floor(Date.now() / 1000) >= genesisTime) {
+    const genesis =  await this.beacon.getGenesis();
+    if (genesis && Math.floor(Date.now() / 1000) >= genesis.genesisTime) {
       this.emit("beaconChainStarted");
       clearInterval(this.beaconNodeInterval);
-      this.startSlotCounting(genesisTime);
+      this.startSlotCounting(Number(genesis.genesisTime));
     }
   }
 

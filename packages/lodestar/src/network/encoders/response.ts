@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
 import {decode, encode} from "varint";
+import AbortController from "abort-controller";
 import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import BufferList from "bl";
 import {ResponseBody, P2pErrorMessage} from "@chainsafe/lodestar-types";
@@ -47,7 +48,12 @@ export function eth2ResponseEncode(
 }
 
 export function eth2ResponseDecode(
-  config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding, requestId: RequestId
+  config: IBeaconConfig,
+  logger: ILogger,
+  method: Method,
+  encoding: ReqRespEncoding,
+  requestId: RequestId,
+  controller: AbortController
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return (source) => {
     return (async function*() {
@@ -77,7 +83,8 @@ export function eth2ResponseDecode(
           }
           logger.warn(`eth2ResponseDecode: Received err status '${status}' with message ` +
           `'${errorMessage}' for method ${method} and request ${requestId}`);
-          break;
+          controller.abort();
+          continue;
         }
         if(sszLength === null) {
           sszLength = decode(buffer.slice());
@@ -116,7 +123,8 @@ export function eth2ResponseDecode(
               status = null;
               sszLength = null;
               if(Methods[method].responseType === MethodResponseType.SingleResponse) {
-                break;
+                controller.abort();
+                continue;
               }
             } catch (e) {
               logger.warn(

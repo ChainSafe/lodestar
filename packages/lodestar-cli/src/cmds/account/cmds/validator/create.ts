@@ -1,10 +1,9 @@
-import fs from "fs";
 import {CommandBuilder} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {stripOffNewlines, getBeaconConfig, YargsError} from "../../../../util";
+import {getBeaconConfig, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 
 export const command = "create";
@@ -68,7 +67,7 @@ reach the given count. Never deletes an existing validator.",
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const {name, passphraseFile, storeWithdrawalKeystore, count, atMost} = options;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.chain.name);
+  const config = getBeaconConfig(options.preset);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
 
@@ -83,7 +82,7 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const n = count || atMost - wallet.nextaccount;
   if (n <= 0) throw new YargsError("No validators to create");
 
-  const walletPassword = stripOffNewlines(fs.readFileSync(passphraseFile, "utf8"));
+  const walletPassword = readPassphraseFile(passphraseFile);
 
   for (let i = 0; i < n; i++) {
     const passwords = wallet.randomPasswords();

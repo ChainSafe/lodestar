@@ -96,14 +96,13 @@ export class FastSync
     return computeStartSlotAtEpoch(this.config, this.targetCheckpoint.epoch);
   }
 
-  private getNewBlockImportTarget(fromSlot?: Slot): Slot {
-    const headSlot = fromSlot || this.chain.forkChoice.headBlockSlot();
+  private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    if(headSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
+    if(fromSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
-      return headSlot + this.config.params.SLOTS_PER_EPOCH;
+      return fromSlot + this.config.params.SLOTS_PER_EPOCH;
     } else {
-      return headSlot + this.opts.maxSlotImport;
+      return fromSlot + this.opts.maxSlotImport;
     }
   }
 
@@ -136,6 +135,7 @@ export class FastSync
         const setBlockImportTarget = this.setBlockImportTarget;
         const updateBlockImportTarget = this.updateBlockImportTarget;
         const getInitialSyncPeers = this.getInitialSyncPeers;
+        const forkChoice = this.chain.forkChoice;
         return (async function() {
           for await (const slotRange of source) {
             const lastSlot = await pipe(
@@ -143,13 +143,19 @@ export class FastSync
               fetchBlockChunks(
                 logger, chain, network.reqResp, getInitialSyncPeers, opts.blockPerChunk
               ),
-              processSyncBlocks(config, chain, logger, true)
+              processSyncBlocks(config, chain, logger, true, true)
             );
-            logger.verbose("last fetched slot=" + lastSlot);
+            logger.verbose("last processed slot=" + lastSlot);
             if(lastSlot) {
-              //set new target from last block we've received
-              // it will trigger new sync once last block is processed
-              updateBlockImportTarget(lastSlot);
+              if (lastSlot === forkChoice.headBlockSlot()) {
+                // failed at start of range
+                logger.warn(`Failed to process range, retry fetching range, lastSlot=${lastSlot}`);
+                setBlockImportTarget(lastSlot);
+              } else {
+                //set new target from last block we've processed
+                // it will trigger new sync once last block is processed
+                updateBlockImportTarget(lastSlot);
+              }
             } else {
               logger.warn("Didn't receive any valid block in given range");
               //we didn't receive any block, set target from last requested slot
@@ -190,9 +196,10 @@ export class FastSync
       );
       if(newTarget.epoch > this.targetCheckpoint.epoch) {
         this.targetCheckpoint = newTarget;
-        this.setBlockImportTarget();
+        this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
         return;
       }
+      this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint.epoch}`);
       //finished initial sync
       await this.stop();
     }

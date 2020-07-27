@@ -5,7 +5,7 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {stripOffNewlines} from "../util";
+import {stripOffNewlines, YargsError} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {
   VOTING_KEYSTORE_FILE,
@@ -63,7 +63,7 @@ export class ValidatorDir {
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
     if (!fs.existsSync(this.dir))
-      throw Error(`Validator directory ${this.dir} does not exists`);
+      throw new YargsError(`Validator directory ${this.dir} does not exists`);
 
     try {
       lockFile.lockSync(this.lockfilePath);
@@ -138,7 +138,7 @@ export class ValidatorDir {
     const filepath = path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE);
 
     if (fs.existsSync(filepath))
-      throw Error(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
+      throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
 
     fs.writeFileSync(filepath, txHash);
   }

@@ -1,4 +1,4 @@
-import Axios, {AxiosError, AxiosInstance, AxiosResponse} from "axios";
+import Axios, {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse} from "axios";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import querystring from "querystring";
 
@@ -22,10 +22,10 @@ export class HttpClient {
     this.logger = logger;
   }
 
-  public async get<T>(url: string, query?: IHttpQuery): Promise<T> {
+  public async get<T>(url: string, query?: IHttpQuery, opts?: AxiosRequestConfig): Promise<T> {
     try {
       if (query) url += "?" + querystring.stringify(query);
-      const result: AxiosResponse<T> = await this.client.get<T>(url);
+      const result: AxiosResponse<T> = await this.client.get<T>(url, opts);
       this.logger.verbose(`HttpClient GET url=${url} result=${JSON.stringify(result.data)}`);
       return result.data;
     } catch(reason) {
