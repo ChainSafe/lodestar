@@ -19,6 +19,7 @@ import {IValidatorCliOptions} from "./options";
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
   const force = options.force;
+  const graffiti = options.graffiti;
   const accountPaths = getAccountPaths(options);
   const validatorPaths = getValidatorPaths(options);
   const config = getBeaconConfig(options.preset);
@@ -53,7 +54,8 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
       }),
       api,
       logger: childLogger,
-      keypair
+      keypair,
+      graffiti
     });
   });
 

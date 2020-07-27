@@ -10,4 +10,5 @@ export interface IValidatorOptions {
   api: IApiClient | string;
   keypair: Keypair;
   logger: ILogger;
+  graffiti: string;
 }

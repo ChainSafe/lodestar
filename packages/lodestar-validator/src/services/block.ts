@@ -34,6 +34,7 @@ export default class BlockProposingService {
   private readonly publicKey: BLSPubkey;
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
+  private readonly graffiti: string;
 
   private nextProposalSlots: Slot[] = [];
 
@@ -42,7 +43,8 @@ export default class BlockProposingService {
     keypair: Keypair,
     provider: IApiClient,
     db: IValidatorDB,
-    logger: ILogger
+    logger: ILogger,
+    graffiti: string
   ) {
     this.config = config;
     this.privateKey = keypair.privateKey;
@@ -50,6 +52,7 @@ export default class BlockProposingService {
     this.provider = provider;
     this.db = db;
     this.logger = logger;
+    this.graffiti = graffiti;
   }
 
   public start = async (): Promise<void> => {
@@ -110,7 +113,8 @@ export default class BlockProposingService {
         this.publicKey,
         this.privateKey.signMessage(
           randaoSigningRoot
-        ).toBytesCompressed()
+        ).toBytesCompressed(),
+        this.graffiti || ""
       );
     } catch (e) {
       this.logger.error(`Failed to produce block for slot ${slot}`, e);
