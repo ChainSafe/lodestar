@@ -1,47 +1,47 @@
 import path from "path";
-import {Arguments} from "yargs";
 import deepmerge from "deepmerge";
-
-import {rootDir} from "../../../../options";
-import {beaconDir} from "../../options/beaconDir";
-import {IBeaconArgs} from "../../options";
+import {globalOptions} from "../../../../options";
+import {IBeaconOptions} from "../../options";
 import {mkdir} from "../../../../util";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
 import {initBeaconConfig} from "../../config";
 import {getTestnetConfig, downloadGenesisFile, fetchBootnodes} from "../../testnets";
+import {getBeaconPaths} from "../../paths";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function init(args: Arguments<IBeaconArgs>): Promise<void> {
+export async function initHandler(options: IBeaconOptions): Promise<void> {
+  // Set rootDir to testnet name to separate files per network
+  if (options.testnet && options.rootDir === globalOptions.rootDir.default) {
+    options.rootDir = `.${options.testnet}`;
+  }
+  const beaconPaths = getBeaconPaths(options);
+
   // Auto-setup testnet
-  if (args.testnet) {
-    const testnetConfig = getTestnetConfig(args.testnet);
+  if (options.testnet) {
+    const testnetConfig = getTestnetConfig(options.testnet);
     try {
-      testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(args.testnet);
+      testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(options.testnet);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${e.stack}`);
     }
-    // Mutate args so options propagate upstream to the run call
-    Object.assign(args, deepmerge(args, testnetConfig));
-    if (args.beaconDir === beaconDir(args).default) args.beaconDir = `.${args.testnet}/beacon`;
-    if (args.rootDir === rootDir.default) args.rootDir = `.${args.testnet}`;
-    args.chain.genesisStateFile = path.join(args.beaconDir, "genesis.ssz");
-    await downloadGenesisFile(args.testnet, args.chain.genesisStateFile);
+    // Mutate options so options propagate upstream to the run call
+    Object.assign(options, deepmerge(options, testnetConfig));
+    options.genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
+    await downloadGenesisFile(options.testnet, options.genesisStateFile);
   }
 
-  // initialize root directory
-  await mkdir(args.rootDir);
-  // initialize beacon directory
-  await mkdir(args.beaconDir);
+  // initialize beacon directory + rootDir
+  await mkdir(beaconPaths.beaconDir);
   // initialize beacon configuration file
-  await initBeaconConfig(args.config, args);
+  await initBeaconConfig(beaconPaths.configFile, options);
   // initialize beacon db path
-  await mkdir(args.dbDir);
+  await mkdir(beaconPaths.dbDir);
   // initialize peer id
-  await initPeerId(args.network.peerIdFile);
-  const peerId = await readPeerId(args.network.peerIdFile);
+  await initPeerId(beaconPaths.peerIdFile);
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
   // initialize local enr
-  await initEnr(args.network.enrFile, peerId);
+  await initEnr(beaconPaths.enrFile, peerId);
 }

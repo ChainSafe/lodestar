@@ -1,14 +1,8 @@
 import fs, {mkdirSync} from "fs";
 import process from "process";
-import {Arguments} from "yargs";
-import deepmerge from "deepmerge";
 import {initBLS} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {createEnr, createPeerId} from "../../network";
 import rimraf from "rimraf";
@@ -18,20 +12,20 @@ import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 import {getValidatorApiClient} from "./utils/validator";
+import {mergeConfigOptions} from "../beacon/config";
+import {getBeaconConfig} from "../../util";
 
 /**
  * Run a beacon node
  */
-export async function run(options: Arguments<IDevOptions>): Promise<void> {
+export async function run(options: IDevOptions): Promise<void> {
   await initBLS();
 
-  options = deepmerge(defaultOptions, options) as Arguments<IDevOptions>;
+  options = mergeConfigOptions(options) as IDevOptions;
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
-  const config = createIBeaconConfig({
-    ...(options.chain.name === "mainnet" ? mainnetParams : minimalParams),
-  });
 
+  const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
 
@@ -51,11 +45,11 @@ export async function run(options: Arguments<IDevOptions>): Promise<void> {
   if(options.dev.genesisValidators) {
     const state = await initDevChain(node, options.dev.genesisValidators);
     storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
-  }else if (options.chain.genesisStateFile) {
+  }else if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
       config.types.BeaconState.tree.deserialize(
         await fs.promises.readFile(
-          join(options.rootDir, options.chain.genesisStateFile)
+          join(options.rootDir, options.genesisStateFile)
         )
       )
     );

@@ -23,11 +23,6 @@ To simplify the initial configuration, copy the following config template into a
       "origin": "*"
     }
   },
-  "chain": {
-    "preset": "mainnet",
-    "genesisStateFile": "genesis.ssz",
-    "params": {}
-  },
   "eth1": {
     "enabled": false,
     "provider": {
@@ -39,6 +34,7 @@ To simplify the initial configuration, copy the following config template into a
       "address": "0x42cc0FcEB02015F145105Cf6f19F90e9BEa76558"
     }
   },
+  "genesisStateFile": "genesis.ssz",
   "metrics": {
     "enabled": true,
     "serverPort": 5000

@@ -16,7 +16,7 @@ Connect to bootnode (node 1 default multiaddrs) but without starting validators.
 
 ```bash
 yarn run cli dev --dev.startValidators 0:0 \
-  --chain.genesisStateFile ./dev/genesis.ssz \
+  --genesisStateFile ./dev/genesis.ssz \
   --network.localMultiaddrs /ip4/127.0.0.1/tcp/30607 \
   --sync.minPeers 1
 ```
