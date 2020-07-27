@@ -14,11 +14,8 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   computeSubnetForAttestation,
-  getAttestingIndices,
   getCurrentSlot,
   getDomain,
-  getIndexedAttestation,
-  isAggregator,
   isValidAttesterSlashing,
   isValidIndexedAttestation,
   isValidProposerSlashing,
@@ -130,7 +127,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (!await isAttestingToValidBlock(this.db, attestation)) {
       return ExtendedValidatorResult.reject;
     }
-    if (!isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation))) {
+    if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
       return ExtendedValidatorResult.reject;
     }
     return ExtendedValidatorResult.accept;
@@ -165,7 +162,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.ignore;
     }
 
-    if (getAttestingIndices(this.config, state, attestationData, aggregate.aggregationBits).length < 1) {
+    if (
+      epochCtx.getAttestingIndices(
+        attestationData,
+        aggregate.aggregationBits
+      ).length < 1
+    ) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -175,7 +177,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const selectionProof = aggregateAndProof.selectionProof;
-    if (!isAggregator(this.config, state, slot, attestationData.index, selectionProof)) {
+    if (!epochCtx.isAggregator(slot, attestationData.index, selectionProof)) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -211,7 +213,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.reject;
     }
 
-    const indexedAttestation = getIndexedAttestation(this.config, state, aggregate);
+    const indexedAttestation = epochCtx.getIndexedAttestation(aggregate);
     if (!isValidIndexedAttestation(this.config, state, indexedAttestation)) {
       return ExtendedValidatorResult.reject;
     }
