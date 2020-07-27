@@ -11,7 +11,7 @@ The 12-word string is randomly generated during wallet creation and printed out 
 To create a wallet, use the following command:
 
 ```
-lodestar account wallet create --name primary --passphrase-file primary.pass
+lodestar account wallet create --name primary --passphraseFile primary.pass --rootDir .lodestar
 ```
 
 This command will:
@@ -35,16 +35,16 @@ Validators are represented by a BLS keypair. It is recommended to generate valid
 To create a new validator use the following command:
 
 ```
-lodestar account validator create --name primary --passphrase-file primary.pass
+lodestar account validator create --name primary --passphraseFile primary.pass --rootDir .lodestar
 ```
 
 This command will:
 
 - Derive a new BLS keypair from the wallet `primary`.
-- Create a new directory in `./.lodestar/keystores` containing:
+- Create a new directory in `.lodestar/keystores` containing:
   - An encrypted Keystore with the validator voting keypair.
   - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
-- Store the validator voting Keystore password in `./.lodestar/secrets`.
+- Store the validator voting Keystore password in `.lodestar/secrets`.
 - Print the validator public key to the terminal
 
 <!-- prettier-ignore-start -->
@@ -63,10 +63,10 @@ To submit the deposit transaction for a validator, use the following command wit
   - `--rpcUrl` alone to connect to the node's JSON RPC API if it's already unlocked.
 
 ```
-lodestar account validator deposit --validator 0x88f920bb56d76c68e0d983e9772e67d2ba4afadd5eb162a51f7fc62212c138e5611d99f98f834fce43f310295ca35eca
+lodestar account validator deposit --validator 0x88f920bb56d76c68e0d983e9772e67d2ba4afadd5eb162a51f7fc62212c138e5611d99f98f834fce43f310295ca35eca --rootDir .lodestar
 ```
 
-The resulting transaction hash will be print to the terminal and also stored in the validator's dir. 
+The resulting transaction hash will be print to the terminal and also stored in the validator's dir.
 
 <!-- prettier-ignore-start -->
 !!! info
