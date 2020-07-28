@@ -11,7 +11,8 @@ import {init as beaconInit} from "../packages/lodestar-cli/src/cmds/beacon/cmds/
 import {run as beaconRun} from "../packages/lodestar-cli/src/cmds/beacon/cmds/run";
 import {wallet as accountWallet} from "../packages/lodestar-cli/src/cmds/account/cmds/wallet";
 import {validator as accountValidator} from "../packages/lodestar-cli/src/cmds/account/cmds/validator";
-import { paramsOptions } from "@chainsafe/lodestar-cli/lib/options";
+import { paramsOptions, IGlobalArgs } from "@chainsafe/lodestar-cli/lib/options";
+import {CommandModule, Options} from "yargs";
 
 const optionsTableHeader = `| Name | Type | Description |\n| ----------- | ----------- | ----------- |\n`;
 
@@ -29,7 +30,7 @@ function getOptionsTable(options: object) {
   return optionsStr;
 }
 
-function getUsage<T>(commandModules: Array<any>) {
+function getUsage(commandModules: Array<any>) {
   let usageStr = `### Usage\n| Command | Description |\n| - | - |\n`;
   commandModules.forEach((commandModule) => 
     usageStr = usageStr.concat(`| ${commandModule.command} | ${commandModule.describe} | \n`)
