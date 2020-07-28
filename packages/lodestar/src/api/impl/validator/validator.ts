@@ -159,7 +159,7 @@ export class ValidatorApi implements IValidatorApi {
     }
     const validatorIndexes = validatorPubKeys.map((key) => {
       const validatorIndex = epochCtx.pubkey2index.get(key);
-      if (!validatorIndex) {
+      if (!Number.isInteger(validatorIndex)) {
         throw Error(`Validator pubkey ${Buffer.from(key).toString("hex")} not in epochCtx`);
       }
       return epochCtx.pubkey2index.get(key);
