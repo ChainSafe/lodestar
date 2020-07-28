@@ -10,6 +10,7 @@ export type IValidatorCliOptions =
     validatorsDbDir?: string;
     server: string;
     force: boolean;
+    graffiti: string;
   };
 
 export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
@@ -33,6 +34,12 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
   force: {
     description: "Open validators even if there's a lockfile. Use with caution",
     type: "boolean"
-  } as Options
+  } as Options,
+
+  graffiti: {
+    description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
+    // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
+    type: "string"
+  }
 };
 
