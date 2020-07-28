@@ -38,8 +38,7 @@ export const validatorOptions: CommandBuilder<{}, IValidatorCliOptions> = {
 
   graffiti: {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
-    ///////// |-------must be this long------|
-    default: "chainsafe/lodestar-version-x.x.x",
+    // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
     type: "string"
   }
 };
