@@ -25,7 +25,6 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
-import {sleep} from "../util";
 
 export default class BlockProposingService {
 
