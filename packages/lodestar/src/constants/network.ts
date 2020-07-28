@@ -18,6 +18,15 @@ export enum Method {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
+export enum MethodRequestType {
+  "status" = "Status",
+  "goodbye" = "Goodbye",
+  "ping" = "Ping",
+  "metadata" = "Metadata",
+  "beacon_blocks_by_range" = "BeaconBlocksByRangeRequest",
+  "beacon_blocks_by_root" = "BeaconBlocksByRootRequest",
+}
+
 export enum MethodResponseType {
   SingleResponse = "SingleResponse",
   NoResponse = "NoResponse",

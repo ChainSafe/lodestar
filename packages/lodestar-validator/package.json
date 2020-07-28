@@ -48,7 +48,7 @@
     "@chainsafe/lodestar-config": "^0.10.2",
     "@chainsafe/lodestar-types": "^0.10.2",
     "@chainsafe/lodestar-utils": "^0.10.2",
-    "@chainsafe/ssz": "^0.6.9",
+    "@chainsafe/ssz": "^0.6.10",
     "axios": "^0.19.0",
     "axios-mock-adapter": "^1.17.0",
     "bigint-buffer": "^1.1.5",

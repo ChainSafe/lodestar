@@ -1,3 +1,4 @@
+import {readOnlyMap} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
@@ -11,8 +12,7 @@ export function processSlashings(
   state: BeaconState
 ): void {
   const totalBalance = process.totalActiveStake;
-  // TODO fast read-only iteration
-  const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, BigInt(0));
+  const totalSlashings = readOnlyMap(state.slashings, (s) => s).reduce((a, b) => a + b, BigInt(0));
   const slashingsScale = bigIntMin(totalSlashings * BigInt(3), totalBalance);
   const increment = BigInt(epochCtx.config.params.EFFECTIVE_BALANCE_INCREMENT);
   process.indicesToSlash.forEach((index) => {

@@ -1,3 +1,4 @@
+import {List, readOnlyForEach} from "@chainsafe/ssz";
 import {
   Attestation,
   AttesterSlashing,
@@ -14,7 +15,6 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {List} from "@chainsafe/ssz";
 
 type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
 type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation, verify: boolean) => void;
@@ -44,7 +44,7 @@ export function processOperations(
     [body.deposits, processDeposit],
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]).forEach(([operations, processOp]) => {
-    Array.from(operations).forEach((op) => {
+    readOnlyForEach(operations, (op) => {
       processOp(epochCtx, state, op, verifySignatures);
     });
   });

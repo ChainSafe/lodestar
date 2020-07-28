@@ -16,25 +16,11 @@ export const eth1Options = {
     group: "eth1",
   } as Options,
 
-  "eth1.provider.network": {
-    description: "Eth1 network id",
-    type: "number",
-    defaultDescription: String(defaultOptions.eth1.provider.network),
-    group: "eth1",
-  } as Options,
-
   "eth1.depositContract.deployedAt": {
     description:
       "Block number at which the deposit contract contract was deployed",
     type: "number",
     defaultDescription: String(defaultOptions.eth1.depositContract.deployedAt),
-    group: "eth1",
-  } as Options,
-
-  "eth1.depositContract.address": {
-    description: "Address of deposit contract",
-    type: "string",
-    defaultDescription: defaultOptions.eth1.depositContract.address,
     group: "eth1",
   } as Options,
 };
