@@ -1,14 +1,15 @@
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {ReqResp} from "../../../../src/network/reqResp";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks} from "../../../../src/sync/utils";
+import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks, toBlocks, shouldRetryRange, getBlockRangeInterleave} from "../../../../src/sync/utils";
 import {expect} from "chai";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
+import {generateEmptyBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../utils/block";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 import PeerId from "peer-id";
 import {BeaconBlockHeader, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ISlotRange} from "../../../../lib/sync";
 
 describe("sync - block utils", function () {
 
@@ -87,6 +88,137 @@ describe("sync - block utils", function () {
     });
   });
 
+  describe("getBlockRangeInterleave", function () {
+    const sandbox = sinon.createSandbox();
+
+    let rpcStub: SinonStubbedInstance<ReqResp>;
+    let loggerStub: SinonStubbedInstance<ILogger>;
+
+    beforeEach(function () {
+      rpcStub = sandbox.createStubInstance(ReqResp);
+      loggerStub = sandbox.createStubInstance(WinstonLogger);
+    });
+
+    afterEach(function () {
+      sandbox.restore();
+    });
+
+    it("happy path - single peer", async function() {
+      const peers = [new PeerId(Buffer.from("lodestar1")), new PeerId(Buffer.from("lodestar2"))];
+      // 1 single request to 1 peer is enough
+      const range = {start: 3, end: 7};
+      rpcStub.beaconBlocksByRange
+        .resolves([generateSignedBlock({message: {slot: 7}})]);
+      const blocks = await getBlockRangeInterleave(loggerStub, rpcStub, peers, range);
+      expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
+      expect(blocks.length).to.be.equal(1);
+      expect(blocks[0].message.slot).to.be.equal(7);
+    });
+
+    it("happy path - 2 peers", async function() {
+      const peers = [new PeerId(Buffer.from("lodestar1")), new PeerId(Buffer.from("lodestar2"))];
+      const range = {start: 3, end: 9};
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 3, step: 2, count: 4})
+        .resolves([generateSignedBlock({message: {slot: 9}})]);
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 4, step: 2, count: 3})
+        .resolves([generateSignedBlock({message: {slot: 8}})]);
+      const blocks = await getBlockRangeInterleave(loggerStub, rpcStub, peers, range);
+      expect(rpcStub.beaconBlocksByRange.calledTwice).to.be.true;
+      expect(blocks.length).to.be.equal(2);
+      expect(blocks[0].message.slot).to.be.equal(8);
+      expect(blocks[1].message.slot).to.be.equal(9);
+    });
+
+    it("retry because of not expected end block", async function() {
+      const peers = [new PeerId(Buffer.from("lodestar1")), new PeerId(Buffer.from("lodestar2"))];
+      const range = {start: 3, end: 9};
+      // this is best peer, its even not up to date
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 3, step: 2, count: 4})
+        .resolves([generateSignedBlock({message: {slot: 7}})]);
+      // retry this again as we expect 8 as end block
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 4, step: 2, count: 3})
+        .resolves([generateSignedBlock({message: {slot: 6}})]);
+      rpcStub.beaconBlocksByRange
+        .onThirdCall()
+        .resolves([generateSignedBlock({message: {slot: 8}})]);
+      const blocks = await getBlockRangeInterleave(loggerStub, rpcStub, peers, range);
+      expect(rpcStub.beaconBlocksByRange.calledThrice).to.be.true;
+      expect(blocks.length).to.be.equal(3);
+      expect(blocks[0].message.slot).to.be.equal(6);
+      expect(blocks[1].message.slot).to.be.equal(7);
+      expect(blocks[2].message.slot).to.be.equal(8);
+    });
+
+    it("retry because of error", async function() {
+      const peers = [new PeerId(Buffer.from("lodestar1")), new PeerId(Buffer.from("lodestar2"))];
+      const range = {start: 3, end: 9};
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 3, step: 2, count: 4})
+        .resolves([generateSignedBlock({message: {slot: 9}})]);
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, {startSlot: 4, step: 2, count: 3})
+        .onFirstCall()
+        .resolves(undefined);
+      rpcStub.beaconBlocksByRange
+        // retry with same range
+        .withArgs(sinon.match.any, {startSlot: 4, step: 2, count: 3})
+        .onSecondCall()
+        .resolves([generateSignedBlock({message: {slot: 8}})]);
+      const blocks = await getBlockRangeInterleave(loggerStub, rpcStub, peers, range);
+      expect(rpcStub.beaconBlocksByRange.calledThrice).to.be.true;
+      expect(blocks.length).to.be.equal(2);
+      expect(blocks[0].message.slot).to.be.equal(8);
+      expect(blocks[1].message.slot).to.be.equal(9);
+    });
+
+    it("no retry, return empty array", async function() {
+      const peers = [new PeerId(Buffer.from("lodestar1")), new PeerId(Buffer.from("lodestar2"))];
+      const range = {start: 3, end: 9};
+      rpcStub.beaconBlocksByRange.resolves(undefined);
+      const blocks = await getBlockRangeInterleave(loggerStub, rpcStub, peers, range);
+      expect(rpcStub.beaconBlocksByRange.calledTwice).to.be.true;
+      expect(blocks.length).to.be.equal(0);
+      expect(loggerStub.warn.calledOnceWith(
+        sinon.match("All beacon_block_by_range requests return null or no block for range"))).to.be.true;
+    });
+  });
+
+  describe("toBlocks", function () {
+    it("should merge all blocks from request", function() {
+      const request0Blocks = [generateSignedBlock()];
+      const request1Blocks = [generateSignedBlock()];
+      const request2Blocks = null;
+      expect(toBlocks([request0Blocks, request1Blocks, request2Blocks]).length).to.be.equal(2);
+    });
+  });
+
+  describe("shouldRetryRange", function () {
+    it("should return false", () => {
+      const step = 3;
+      const range: ISlotRange = {start: 3, end: 10};
+      const blocks = [generateSignedBlock({message: {slot: 9}})];
+      expect(shouldRetryRange(range, blocks, step)).to.be.false;
+    });
+    it("should return true", () => {
+      const step = 3;
+      const range: ISlotRange = {start: 3, end: 10};
+      // expect slot 9 as last block
+      const blocks = [generateSignedBlock({message: {slot: 6}})];
+      expect(shouldRetryRange(range, blocks, step)).to.be.true;
+    });
+    it("should return true - undefined blocks", () => {
+      const step = 3;
+      const range: ISlotRange = {start: 3, end: 10};
+      // in case of beacon_block_by_range error, blocks is undefined
+      const blocks = undefined;
+      expect(shouldRetryRange(range, blocks, step)).to.be.true;
+    });
+  });
+
   describe("verify header chain", function () {
 
     it("Should verify correct chain of blocks", function () {
@@ -123,7 +255,7 @@ describe("sync - block utils", function () {
 
   describe("get blocks from peer", function () {
 
-    it("should get block range from peer", async function () {
+    it("should get block range from peer, step = 1", async function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match.any, sinon.match.any)
@@ -137,6 +269,25 @@ describe("sync - block utils", function () {
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
     });
 
+    it("should get block range from peer, step = 2", async function () {
+      const spy = sinon.spy();
+      const rpcStub = sinon.createStubInstance(ReqResp);
+      rpcStub.beaconBlocksByRange
+        .withArgs(sinon.match.any, sinon.match.any)
+        .resolves([generateEmptySignedBlock()]);
+      rpcStub.beaconBlocksByRange.callsFake(spy);
+      const step = 2;
+      const result = await getBlockRangeFromPeer(
+        rpcStub,
+        sinon.createStubInstance(PeerId),
+        {start: 3, end: 10},
+        step
+      );
+      expect(result.length).to.be.greaterThan(0);
+      // we want to query block 3, 5, 7, 9
+      expect(rpcStub.beaconBlocksByRange.calledOnceWith(
+        sinon.match.any, sinon.match({startSlot: 3, step: 2, count: 4}))).to.be.true;
+    });
   });
 
 });

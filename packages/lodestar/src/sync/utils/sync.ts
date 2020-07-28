@@ -5,7 +5,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
-import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
+import {getBlockRange, isValidChainOfBlocks, sortBlocks, getBlockRangeInterleave} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -72,6 +72,9 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
   }
 }
 
+/**
+ * Used for initial sync where we divide a range by chunks.
+ */
 export function fetchBlockChunks(
   logger: ILogger,
   chain: IBeaconChain,
@@ -83,20 +86,45 @@ export function fetchBlockChunks(
   return (source) => {
     return (async function*() {
       for await (const slotRange of source) {
-        let peers = await getPeers();
-        let retry = 0;
-        while (peers.length === 0 && retry < 5) {
-          logger.info("Waiting for peers...");
-          await sleep(6000);
-          peers = await getPeers();
-          retry++;
-        }
+        const peers = await waitForPeers(logger, getPeers);
         if(peers.length === 0) {
-          logger.error("Can't find new peers, stopping sync");
+          logger.error("fetchBlockChunks: Can't find new peers, stopping sync");
           return;
         }
         try {
           yield await getBlockRange(
+            logger,
+            reqResp,
+            peers,
+            slotRange
+          );
+        } catch (e) {
+          logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+          return;
+        }
+      }
+    })();
+  };
+}
+
+/**
+ * Used for regular sync where we get blocks by interleaving way.
+ */
+export function fetchBlockInterleave(
+  logger: ILogger,
+  reqResp: IReqResp,
+  getPeers: () => Promise<PeerId[]>,
+): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {
+  return (source) => {
+    return (async function*() {
+      for await (const slotRange of source) {
+        const peers = await waitForPeers(logger, getPeers);
+        if(peers.length === 0) {
+          logger.error("fetchBlockInterleave: Can't find new peers");
+          return;
+        }
+        try {
+          yield await getBlockRangeInterleave(
             logger,
             reqResp,
             peers,
@@ -195,4 +223,16 @@ export function processSyncBlocks(
     }
     return lastProcessedSlot;
   };
+}
+
+async function waitForPeers(logger: ILogger, getPeers: () => Promise<PeerId[]>): Promise<PeerId[]> {
+  let peers = await getPeers();
+  let retry = 0;
+  while (peers.length === 0 && retry < 5) {
+    logger.info("Waiting for peers...");
+    await sleep(6000);
+    peers = await getPeers();
+    retry++;
+  }
+  return peers;
 }

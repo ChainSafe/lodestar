@@ -12,7 +12,7 @@ import {IReputationStore} from "../../IReputation";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {fetchBlockChunks, processSyncBlocks} from "../../utils";
+import {processSyncBlocks, fetchBlockInterleave} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEvent} from "../../../network/gossip/constants";
@@ -138,7 +138,7 @@ export class NaiveRegularSync implements IRegularSync {
           for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
             const lastFetchedSlot = await pipe(
               [range],
-              fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
+              fetchBlockInterleave(logger, reqResp, getSyncPeers),
               processSyncBlocks(config, chain, logger, false)
             );
             if(lastFetchedSlot) {
