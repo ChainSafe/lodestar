@@ -23,12 +23,10 @@ describe("BeaconChain", function() {
     ...defaults,
     provider: {
       url: "https://goerli.prylabs.net",
-      network: 5,
     },
     depositContract: {
       ...defaults.depositContract,
       deployedAt: 2917810,
-      address: "0x16e82D77882A663454Ef92806b7DeCa1D394810f",
     }
   };
   let db: BeaconDb;
@@ -41,7 +39,10 @@ describe("BeaconChain", function() {
     MIN_GENESIS_TIME: 1593433800,
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 640,
     GENESIS_DELAY: 172800,
-    GENESIS_FORK_VERSION: fromHexString("0x00000121")
+    GENESIS_FORK_VERSION: fromHexString("0x00000121"),
+    DEPOSIT_CHAIN_ID: 5,
+    DEPOSIT_NETWORK_ID: 5,
+    DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x16e82D77882A663454Ef92806b7DeCa1D394810f"),
   });
 
 
@@ -55,7 +56,7 @@ describe("BeaconChain", function() {
       config: altonaConfig,
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
-    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, opts.provider.network);
+    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, altonaConfig.params.DEPOSIT_NETWORK_ID);
     await db.start();
     eth1Notifier = new EthersEth1Notifier(
       {...opts, providerInstance: provider},

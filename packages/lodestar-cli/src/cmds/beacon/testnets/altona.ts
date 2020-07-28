@@ -15,12 +15,10 @@ export const altonaConfig = {
   "eth1": {
     "enabled": false,
     "provider": {
-      "url": "http://goerli.prylabs.net",
-      "network": 5
+      "url": "http://goerli.prylabs.net"
     },
     "depositContract": {
-      "deployedAt": 2917810,
-      "address": "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
+      "deployedAt": 2917810
     }
   },
   "genesisStateFile": ".altona/beacon/genesis.ssz",
@@ -74,6 +72,8 @@ export const altonaConfig = {
     "MIN_GENESIS_TIME": 1593433800,
     "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT": 640,
     "GENESIS_DELAY": 172800,
-    "GENESIS_FORK_VERSION": "0x00000121"
+    "GENESIS_FORK_VERSION": "0x00000121",
+    "DEPOSIT_NETWORK_ID": 5,
+    "DEPOSIT_CONTRACT_ADDRESS": "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
   }
 };
