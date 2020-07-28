@@ -35,14 +35,12 @@ describe("no eth1 sim (multi-node test)", function () {
           logger: logger.child({module: `Node ${i}`})
         });
 
-        for (let j=0; j<validatorsPerNode; j++) {
-          validators.push(getDevValidator({
-            node,
-            startIndex: i * validatorsPerNode + j,
-            count: 1,
-            logger: logger.child({module: `Validator ${i}-${j}`})
-          }));
-        }
+        validators.push(getDevValidator({
+          node,
+          startIndex: i * validatorsPerNode,
+          count: validatorsPerNode,
+          logger: logger.child({module: `Validator ${i*validatorsPerNode}-${(i*validatorsPerNode)+validatorsPerNode}`})
+        }));
 
         nodes.push(node);
       }
