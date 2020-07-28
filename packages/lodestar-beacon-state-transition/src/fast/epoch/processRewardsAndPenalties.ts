@@ -1,4 +1,5 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
+import {readOnlyMap} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../constants";
 import {EpochContext, IEpochProcess} from "../util";
@@ -14,8 +15,7 @@ export function processRewardsAndPenalties(
     return;
   }
   const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
-  // TODO fast read-only iteration
-  const newBalances = Array.from(state.balances);
+  const newBalances = readOnlyMap(state.balances, (balance) => balance);
 
   rewards.forEach((reward, i) => {
     newBalances[i] += reward;

@@ -3,6 +3,7 @@ import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getRandaoMix} from "../../util";
 import {EpochContext, IEpochProcess} from "../util";
+import {readOnlyMap} from "@chainsafe/ssz";
 
 export function processFinalUpdates(
   epochCtx: EpochContext,
@@ -34,8 +35,7 @@ export function processFinalUpdates(
   }
 
   // update effective balances with hysteresis
-  // TODO fast read-only iteration
-  const balances = Array.from(state.balances);
+  const balances = readOnlyMap(state.balances, (balance) => balance);
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     const balance = balances[i];

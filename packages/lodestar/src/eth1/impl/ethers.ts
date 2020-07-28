@@ -67,7 +67,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.provider = new RetryProvider(
         ETH1_BLOCK_RETRY,
         this.opts.provider.url,
-        this.opts.provider.network
+        this.config.params.DEPOSIT_NETWORK_ID,
       );
     }
     this.contract = opts.contract;
@@ -304,7 +304,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
   }
 
   private async initContract(): Promise<void> {
-    const address = this.opts.depositContract.address;
+    const address = toHexString(this.config.params.DEPOSIT_CONTRACT_ADDRESS);
     const abi = this.opts.depositContract.abi;
     if (!(await this.contractExists(address))) {
       throw new Error(`There is no deposit contract at given address: ${address}`);
@@ -333,7 +333,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
     this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
     this.lastDepositCount = lastEth1Data? lastEth1Data.depositCount : 0;
     this.logger.info(
-      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.opts.provider.network}`
+      `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.config.params.DEPOSIT_NETWORK_ID}`
     );
     this.logger.verbose(
       `Last processed block number: ${this.lastProcessedEth1BlockNumber}`

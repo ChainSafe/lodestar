@@ -52,9 +52,11 @@ export function processBlock(
 
         const newChainHeadRoot = updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
-          logger.info("Processed new chain head",
-            {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
-          );
+          logger.info("Processed new chain head", {
+            newChainHeadRoot: toHexString(newChainHeadRoot),
+            slot: newState.slot,
+            epoch: computeEpochAtSlot(config, newState.slot)
+          });
           if(!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
