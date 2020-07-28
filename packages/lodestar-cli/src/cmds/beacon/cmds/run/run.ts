@@ -17,6 +17,8 @@ import {getBeaconConfig} from "../../../../util";
  */
 export async function runHandler(options: IBeaconOptions): Promise<void> {
   await initBLS();
+  const beaconPaths = getBeaconPaths(options);
+  options = {...options, ...beaconPaths};
 
   // Auto-setup testnet
   if (options.testnet) {
@@ -24,8 +26,6 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   }
 
   options = mergeConfigOptions(options);
-  const beaconPaths = getBeaconPaths(options);
-
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
   options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
