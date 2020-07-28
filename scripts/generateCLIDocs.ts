@@ -32,8 +32,9 @@ function getOptionsTable(options: object) {
 function getUsage(commandModules: Array<any>, commandName: string) {
   let usageStr = `### Usage\n| Command | Description |\n| - | - |\n`;
   commandModules.forEach((commandModule) => {
-    (new String).match
-    const commandStr = (typeof commandModule.command === "string" && !commandModule.command.includes(commandName)) ? `${commandName} ${commandModule.command}` : commandModule.command;
+    // prefix with the parent command name (e.g. beacon) if processing a child command (e.g. init, run)
+    const isChildCommand = (typeof commandModule.command === "string" && !commandModule.command.includes(commandName));
+    const commandStr = isChildCommand ? `${commandName} ${commandModule.command}` : commandModule.command;
     return usageStr = usageStr.concat(`| ${commandStr} | ${commandModule.describe} | \n`)
   });
   return usageStr;
