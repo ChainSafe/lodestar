@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, readOnlyMap} from "@chainsafe/ssz";
 import {BeaconState, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes} from "@chainsafe/lodestar-utils";
@@ -43,8 +43,7 @@ export class EpochContext {
     const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
     const nextEpoch = currentEpoch + 1;
 
-    // TODO use readonly iteration here
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
       i, v.activationEpoch, v.exitEpoch,
     ]));
 
@@ -94,8 +93,7 @@ export class EpochContext {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
-    // TODO use readonly iteration here
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
       i, v.activationEpoch, v.exitEpoch,
     ]));
     this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);

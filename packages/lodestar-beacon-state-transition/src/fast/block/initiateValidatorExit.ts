@@ -1,3 +1,4 @@
+import {readOnlyMap} from "@chainsafe/ssz";
 import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../../constants";
@@ -20,8 +21,7 @@ export function initiateValidatorExit(
   const currentEpoch = epochCtx.currentShuffling.epoch;
 
   // compute exit queue epoch
-  // TODO fast read-only iteration
-  const validatorExitEpochs = Array.from(state.validators).map((v) => v.exitEpoch);
+  const validatorExitEpochs = readOnlyMap(state.validators, (v) => v.exitEpoch);
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
   exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
   let exitQueueEpoch = Math.max(...exitEpochs);

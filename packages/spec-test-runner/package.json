@@ -40,7 +40,7 @@
     "@chainsafe/lodestar-types": "^0.10.2",
     "@chainsafe/lodestar-utils": "^0.10.2",
     "@chainsafe/lodestar-validator": "^0.10.2",
-    "@chainsafe/ssz": "^0.6.9",
+    "@chainsafe/ssz": "^0.6.10",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.1",
     "@types/mocha": "^5.2.7",
