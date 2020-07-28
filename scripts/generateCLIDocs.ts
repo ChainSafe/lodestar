@@ -29,11 +29,13 @@ function getOptionsTable(options: object) {
   return optionsStr;
 }
 
-function getUsage(commandModules: Array<any>) {
+function getUsage(commandModules: Array<any>, commandName: string) {
   let usageStr = `### Usage\n| Command | Description |\n| - | - |\n`;
-  commandModules.forEach((commandModule) => 
-    usageStr = usageStr.concat(`| ${commandModule.command} | ${commandModule.describe} | \n`)
-  );
+  commandModules.forEach((commandModule) => {
+    (new String).match
+    const commandStr = (typeof commandModule.command === "string" && !commandModule.command.includes(commandName)) ? `${commandName} ${commandModule.command}` : commandModule.command;
+    return usageStr = usageStr.concat(`| ${commandStr} | ${commandModule.describe} | \n`)
+  });
   return usageStr;
 }
 
@@ -49,19 +51,19 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 ${globalOptionsStr}
 
 ## Account
-${getUsage([account, accountWallet, accountValidator])}
+${getUsage([account, accountWallet, accountValidator], 'account')}
 ### account validator <command> options
 ${getOptionsTable(accountValidatorOptions)}
 ### account wallet <command> options
 ${getOptionsTable(accountWalletsOptions)}
 
 ## Beacon
-${getUsage([beacon, beaconInit, beaconRun])}
+${getUsage([beacon, beaconInit, beaconRun], 'beacon')}
 ### Options
 ${getOptionsTable(beaconOptions)}
 
 ## Validator
-${getUsage([validator])}
+${getUsage([validator], 'validator')}
 ### Options
 ${getOptionsTable(validatorOptions)}
 `;

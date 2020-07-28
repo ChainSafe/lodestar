@@ -15,8 +15,8 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 | Command | Description |
 | - | - |
 | account <command>,am,a | Utilities for generating and managing Ethereum 2.0 accounts | 
-| wallet <command> | Provides commands for managing Eth2 wallets. | 
-| validator <command> | Provides commands for managing Eth2 validators. | 
+| account wallet <command> | Provides commands for managing Eth2 wallets. | 
+| account validator <command> | Provides commands for managing Eth2 validators. | 
 
 ### account validator <command> options
 | Name | Type | Description |
@@ -35,8 +35,8 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 | Command | Description |
 | - | - |
 | beacon <command> | Beacon node | 
-| init | Initialize lodestar beacon node | 
-| run | Run a lodestar beacon node | 
+| beacon init | Initialize lodestar beacon node | 
+| beacon run | Run a lodestar beacon node | 
 
 ### Options
 | Name | Type | Description |
