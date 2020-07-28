@@ -1,9 +1,8 @@
-import {Attestation, BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
 import {EpochContext} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
-import {ValidatorIndex} from "@chainsafe/lodestar-types/lib/types/primitive";
 
 
 export function processAttestation(
