@@ -130,13 +130,13 @@ describe("validator attestation service", function () {
       aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
-    service["nextAttesterDuties"].set(0, [{...duty, attesterIndex: 0, isAggregator: false}]);
+    service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
     dbStub.getAttestations.resolves([]);
     dbStub.setAttestation.resolves();
-    const promise = service.onNewSlot(0);
+    const promise = service.onNewSlot(1);
     clock.tick(4000);
     await Promise.resolve(promise);
     expect(
@@ -181,7 +181,7 @@ describe("validator attestation service", function () {
       aggregatorModulo: 1,
       validatorPubkey: keypair.publicKey.toBytesCompressed()
     };
-    service["nextAttesterDuties"].set(0, [{...duty, attesterIndex: 0, isAggregator: false}]);
+    service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(
       generateAttestation({
@@ -195,7 +195,7 @@ describe("validator attestation service", function () {
       }
     ]);
     dbStub.setAttestation.resolves();
-    const promise = service.onNewSlot(0);
+    const promise = service.onNewSlot(1);
     clock.tick(4000);
     await Promise.resolve(promise);
     expect(
