@@ -41,36 +41,34 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 ### Options
 | Name | Type | Description |
 | ----------- | ----------- | ----------- |
-| api.rest.api | array | undefined | 
-| api.rest.cors | string | undefined | 
-| api.rest.enabled | boolean | undefined | 
-| api.rest.host | string | undefined | 
-| api.rest.port | number | undefined | 
+| api.rest.api | array | Pick namespaces to expose for HTTP API | 
+| api.rest.cors | string | Configures the Access-Control-Allow-Origin CORS header for HTTP API | 
+| api.rest.enabled | boolean | Enable/disable HTTP API | 
+| api.rest.host | string | Set host for HTTP API | 
+| api.rest.port | number | Set port for HTTP API | 
 | eth1.enabled | boolean | Whether to follow the eth1 chain | 
 | eth1.provider.url | string | Url to Eth1 node with enabled rpc | 
-| eth1.provider.network | number | Eth1 network id | 
 | eth1.depositContract.deployedAt | number | Block number at which the deposit contract contract was deployed | 
-| eth1.depositContract.address | string | Address of deposit contract | 
-| logger.chain.level | string | undefined | 
-| logger.db.level | string | undefined | 
-| logger.eth1.level | string | undefined | 
-| logger.node.level | string | undefined | 
-| logger.network.level | string | undefined | 
-| logger.sync.level | string | undefined | 
-| logger.api.level | string | undefined | 
-| logger.metrics.level | string | undefined | 
-| logger.chores.level | string | undefined | 
-| metrics.enabled | boolean | undefined | 
-| metrics.gatewayUrl | string | undefined | 
-| metrics.pushGateway | boolean | undefined | 
-| metrics.serverPort | number | undefined | 
-| metrics.timeout | number | undefined | 
-| network.discv5.enabled | boolean | undefined | 
-| network.discv5.bindAddr | string | undefined | 
-| network.discv5.bootEnrs | array | undefined | 
-| network.maxPeers | number | undefined | 
-| network.bootnodes | array | undefined | 
-| network.multiaddrs | array | undefined | 
+| logger.chain.level | string | Logging verbosity level for chain | 
+| logger.db.level | string | Logging verbosity level for db | 
+| logger.eth1.level | string | Logging verbosity level for eth1 | 
+| logger.node.level | string | Logging verbosity level for node | 
+| logger.network.level | string | Logging verbosity level for network | 
+| logger.sync.level | string | Logging verbosity level for sync | 
+| logger.api.level | string | Logging verbosity level for api | 
+| logger.metrics.level | string | Logging verbosity level for metrics | 
+| logger.chores.level | string | Logging verbosity level for chores | 
+| metrics.enabled | boolean | Enable metrics | 
+| metrics.gatewayUrl | string | Gateway URL for metrics | 
+| metrics.pushGateway | boolean | Enable/disable Prometheus Pushgateway for metrics | 
+| metrics.serverPort | number | Server port for metrics | 
+| metrics.timeout | number | How often metrics should be probed | 
+| network.discv5.enabled | boolean | Enable discv5 | 
+| network.discv5.bindAddr | string | Local multiaddress to listen on for discv5 | 
+| network.discv5.bootEnrs | array | Bootnodes for discv5 discovery | 
+| network.maxPeers | number | Maximum # of peers who can connect | 
+| network.bootnodes | array | Libp2p peers to connect to on boot | 
+| network.multiaddrs | array | Local listening addresses for req/resp and gossip | 
 | templateConfigFile | string | Template configuration used to initialize beacon node | 
 | genesisStateFile | string | Genesis state in ssz-encoded format | 
 | testnet | string | Use a testnet configuration and genesis file | 
@@ -95,4 +93,5 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 | validatorsDbDir | string | Data directory for validator databases. | 
 | server | string | Address to connect to BeaconNode | 
 | force | boolean | Open validators even if there's a lockfile. Use with caution | 
+| graffiti | string | Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max) | 
 

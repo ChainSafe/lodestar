@@ -15,6 +15,7 @@ export const loggerOptions = Object.keys(defaultOptions.logger).reduce(
       hidden: true,
       type: "string",
       choices: LogLevels,
+      description: `Logging verbosity level for ${logModule}`,
       defaultDescription: (defaultOptions.logger[logModule as LoggerModule] || {}).level,
       group: "log",
     };
