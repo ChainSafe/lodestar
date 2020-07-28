@@ -23,7 +23,7 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
   const accountPaths = getAccountPaths(options);
   const validatorPaths = getValidatorPaths(options);
   const config = getBeaconConfig(options.preset);
-  
+
   await initBLS();
 
   const logger = new WinstonLogger();
@@ -40,7 +40,7 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
     const loggerId = `Validator ${pubkey.slice(0, 10)}`;
     const dbPath = validatorPaths.validatorDbDir(pubkey);
     fs.mkdirSync(dbPath, {recursive: true});
-    
+
     const api = new ApiClientOverRest(config, server, logger);
     const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
 
@@ -54,7 +54,7 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
       }),
       api,
       logger: childLogger,
-      keypair,
+      keypairs: [keypair],
       graffiti
     });
   });

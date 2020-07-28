@@ -27,7 +27,7 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
       return attestation.data.index === committeeIndex
           && computeEpochAtSlot(this.config, attestation.data.slot) === epoch
           //filter out aggregated attestations
-          && attestation.aggregationBits.length === 1;
+          && Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1;
     });
   }
 

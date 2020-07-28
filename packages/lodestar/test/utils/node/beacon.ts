@@ -9,7 +9,7 @@ import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
 import {initDevChain} from "../../../src/node/utils/state";
-import { IBeaconNodeOptions } from "../../../lib/node/options";
+import {IBeaconNodeOptions} from "../../../lib/node/options";
 
 type RecursivePartial<T> = {
   [P in keyof T]?:
