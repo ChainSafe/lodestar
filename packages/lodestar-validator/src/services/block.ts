@@ -25,6 +25,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
+import {sleep} from "../util";
 
 export default class BlockProposingService {
 
@@ -59,10 +60,11 @@ export default class BlockProposingService {
   public start = async (): Promise<void> => {
     //trigger getting duties for current epoch
     const slot = this.provider.getCurrentSlot();
-    this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
+    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
     let proposerDuties: ProposerDuty[];
     try {
       proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys);
@@ -73,16 +75,17 @@ export default class BlockProposingService {
       return;
     }
     proposerDuties.forEach((duty) => {
-      if(this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
+      if(!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.proposerPubkey)});
         this.nextProposals.set(duty.slot, duty.proposerPubkey);
       }
     });
-    //because on new slot will execute before duties are fetched
-    await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
   };
 
   public onNewSlot = async(slot: Slot): Promise<void> => {
+    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
+      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    }
     if(this.nextProposals.has(slot) && slot !== 0) {
       const proposerPubKey = this.nextProposals.get(slot);
       this.nextProposals.delete(slot);

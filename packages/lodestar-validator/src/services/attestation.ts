@@ -68,8 +68,13 @@ export class AttestationService {
 
   public start = async (): Promise<void> => {
     const slot = this.provider.getCurrentSlot();
-    //trigger getting duties for current epoch
-    this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+    //get current epoch duties
+    await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+
+    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) !== slot) {
+      //trigger next epoch duties
+      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    }
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
@@ -89,6 +94,7 @@ export class AttestationService {
       const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
       this.logger.debug("new attester duty", {
         slot: duty.attestationSlot,
+        modulo: duty.aggregatorModulo,
         validator: toHexString(duty.validatorPubkey),
         committee: duty.committeeIndex,
         isAggregator: String(isAggregator)
@@ -116,10 +122,12 @@ export class AttestationService {
         }
       }
     }
-    await this.onNewSlot(computeStartSlotAtEpoch(this.config, epoch));
   };
 
   public onNewSlot = async (slot: Slot): Promise<void> => {
+    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
+      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    }
     const duties = this.nextAttesterDuties.get(slot);
     if(duties && duties.length > 0) {
       this.nextAttesterDuties.delete(slot);
@@ -192,6 +200,7 @@ export class AttestationService {
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
+          this.logger.debug("received block!");
           const signedBlock: SignedBeaconBlock =
               this.config.types.SignedBeaconBlock.fromJson(
                 JSON.parse(evt.data), {case: "snake"}
@@ -304,7 +313,7 @@ export class AttestationService {
       this.logger.warn(
         "Avoided signing conflicting attestation! "
                 + `Source epoch: ${attestation.data.source.epoch}, `
-                + `Target epoch: ${computeEpochAtSlot(this.config, slot)}`
+                + `Target epoch: ${attestation.data.target.epoch}`
       );
       return null;
     }
@@ -327,8 +336,10 @@ export class AttestationService {
   }
 
   private async isConflictingAttestation(attesterIndex: number, other: AttestationData): Promise<boolean> {
-    const potentialAttestationConflicts =
-            await this.db.getAttestations(this.publicKeys[attesterIndex], {gt: other.target.epoch - 1});
+    const potentialAttestationConflicts = await this.db.getAttestations(
+      this.publicKeys[attesterIndex],
+      {gt: other.target.epoch - 1}
+    );
     return potentialAttestationConflicts.some((attestation => {
       return isSlashableAttestationData(this.config, attestation.data, other);
     }));

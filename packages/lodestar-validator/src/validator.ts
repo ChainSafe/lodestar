@@ -59,9 +59,7 @@ export class Validator {
   public run = (): void => {
     this.logger.info("Chain start has occured!");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
-    this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
-    this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
     this.blockService.start();
     this.attestationService.start();
   };
