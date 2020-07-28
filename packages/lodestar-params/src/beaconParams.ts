@@ -36,6 +36,8 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     SECONDS_PER_ETH1_BLOCK: Number64,
 
     // Deposit contract
+    DEPOSIT_CHAIN_ID: Number64,
+    DEPOSIT_NETWORK_ID: Number64,
     DEPOSIT_CONTRACT_ADDRESS: ByteVector20,
 
     // Gwei Values

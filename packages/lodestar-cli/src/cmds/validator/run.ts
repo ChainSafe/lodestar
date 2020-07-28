@@ -7,7 +7,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-import {getBeaconConfig, YargsError} from "../../util";
+import {getBeaconConfig, YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
@@ -19,10 +19,11 @@ import {IValidatorCliOptions} from "./options";
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   const server = options.server;
   const force = options.force;
+  const graffiti = options.graffiti || getDefaultGraffiti();
   const accountPaths = getAccountPaths(options);
   const validatorPaths = getValidatorPaths(options);
   const config = getBeaconConfig(options.preset);
-  
+
   await initBLS();
 
   const logger = new WinstonLogger();
@@ -39,7 +40,7 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
     const loggerId = `Validator ${pubkey.slice(0, 10)}`;
     const dbPath = validatorPaths.validatorDbDir(pubkey);
     fs.mkdirSync(dbPath, {recursive: true});
-    
+
     const api = new ApiClientOverRest(config, server, logger);
     const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
 
@@ -53,7 +54,8 @@ export async function run(options: Arguments<IValidatorCliOptions>): Promise<voi
       }),
       api,
       logger: childLogger,
-      keypair
+      keypairs: [keypair],
+      graffiti
     });
   });
 

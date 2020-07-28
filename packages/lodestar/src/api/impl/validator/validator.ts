@@ -41,6 +41,7 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {validateAttestation} from "../../../util/validation/attestation";
+import {toGraffitiBuffer} from "../../../util/graffiti";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export class ValidatorApi implements IValidatorApi {
@@ -67,10 +68,21 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(slot: Slot, validatorPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+  public async produceBlock(
+    slot: Slot,
+    validatorPubkey: BLSPubkey,
+    randaoReveal: Bytes96,
+    graffiti = ""
+  ): Promise<BeaconBlock> {
     const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
     return await assembleBlock(
-      this.config, this.chain, this.db, slot, validatorIndex, randaoReveal
+      this.config,
+      this.chain,
+      this.db,
+      slot,
+      validatorIndex,
+      randaoReveal,
+      toGraffitiBuffer(graffiti)
     );
   }
 

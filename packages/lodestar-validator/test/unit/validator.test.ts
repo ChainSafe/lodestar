@@ -25,7 +25,7 @@ describe("Validator", () => {
 
     const validatorCtx: IValidatorOptions = {
       api: apiClient,
-      keypair: Keypair.generate(),
+      keypairs: [Keypair.generate()],
       config,
       db: sinon.createStubInstance(MockValidatorDB),
       logger: sinon.createStubInstance(WinstonLogger)

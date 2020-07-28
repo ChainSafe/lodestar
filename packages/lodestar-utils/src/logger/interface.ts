@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {ArrayLike} from "@chainsafe/ssz";
+import {Json} from "@chainsafe/ssz";
 import {Writable} from "stream";
 
 export enum LogLevel {
@@ -34,7 +34,7 @@ export interface ILoggerOptions {
   module?: string;
 }
 
-export type Context = {[k: string]: string|number|BigInt|ArrayLike<number>};
+export type Context = Json;
 
 export interface ILogger {
   level: LogLevel;

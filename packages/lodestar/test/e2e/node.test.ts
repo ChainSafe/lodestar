@@ -12,14 +12,14 @@ describe("beacon node", function () {
     SLOTS_PER_EPOCH: 8
   };
 
-  it("should justify block", async function () {
+  it("should justify block - 8 vc - 8validators", async function () {
     this.timeout(120000);
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {minPeers: 0}}
     });
     const justificationEventListener = waitForEvent<Checkpoint>(bn.chain, "justifiedCheckpoint", 110000);
-    const validators = getDevValidators(bn, 8);
+    const validators = getDevValidators(bn, 8, 8);
     await bn.start();
     validators.forEach((v) => v.start());
     try {
@@ -31,14 +31,36 @@ describe("beacon node", function () {
     await bn.stop();
   });
 
-  it("should finalize block", async function () {
+  it.only("should justify block - 1 vc - 32 validators", async function () {
+    this.timeout(120000);
+    const bn = await getDevBeaconNode({
+      params: {SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8, TARGET_AGGREGATORS_PER_COMMITTEE: 1},
+      options: {sync: {minPeers: 0}},
+      validatorCount: 32,
+    });
+    const justificationEventListener = waitForEvent<Checkpoint>(bn.chain, "justifiedCheckpoint", 110000);
+    const validators = getDevValidators(bn, 32, 1);
+    await bn.start();
+    validators.forEach((v) => v.start());
+    try {
+      await justificationEventListener;
+    } catch (e) {
+      await Promise.all(validators.map((v) => v.stop()));
+      await bn.stop();
+      assert.fail("Failed to reach justification");
+    }
+    await Promise.all(validators.map((v) => v.stop()));
+    await bn.stop();
+  });
+
+  it("should finalize block - 8 vc", async function () {
     this.timeout(120000);
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {minPeers: 0}}
     });
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 110000);
-    const validators = getDevValidators(bn, 8);
+    const validators = getDevValidators(bn, 8, 8);
     await bn.start();
     validators.forEach((v) => v.start());
     try {
