@@ -131,7 +131,7 @@ export async function getBlockRangeInterleave(
     }
   });
   const round0Blocks = toBlocks(round0BlocksByRequest);
-  if (retryRanges.length === 0 || selectedPeers.length === 1) return sortBlocks(round0Blocks);
+  if (retryRanges.length === 0 || numPeer === 1) return sortBlocks(round0Blocks);
   if (round0Blocks.length === 0) {
     // next call will shuffle peers hopefully
     logger.warn(`All beacon_block_by_range requests return null or no block for range ${JSON.stringify(range)}`);
@@ -169,6 +169,9 @@ export function isValidChainOfBlocks(
 }
 
 export function shouldRetryRange(range: ISlotRange, blocks: SignedBeaconBlock[], step: number): boolean {
+  if (step === 1) {
+    return false;
+  }
   let slot = range.start;
   while (slot + step < range.end) {
     slot += step;

@@ -131,6 +131,7 @@ export class NaiveRegularSync implements IRegularSync {
     const reqResp = this.network.reqResp;
     const getSyncPeers = this.getSyncPeers;
     const setTarget = this.setTarget;
+    const doneFirstSync = this.doneFirstSync;
     await pipe(
       this.targetSlotRangeSource,
       (source) => {
@@ -145,7 +146,9 @@ export class NaiveRegularSync implements IRegularSync {
               await setTarget(lastFetchedSlot, false);
             } else {
               // some peers maybe not up to date, retry the range again next time
-              await setTarget(range.start - 1, false);
+              // first sync: force it runs again
+              // after first sync: onNextSlot will trigger
+              await setTarget(range.start - 1, !doneFirstSync);
             }
           }
         })();

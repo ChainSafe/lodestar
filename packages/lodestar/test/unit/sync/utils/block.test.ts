@@ -197,7 +197,14 @@ describe("sync - block utils", function () {
   });
 
   describe("shouldRetryRange", function () {
-    it("should return false", () => {
+    it("should return false - step=1", () => {
+      const step = 1;
+      const range: ISlotRange = {start: 3, end: 10};
+      // even latest slot is not expected, don't want to retry because there is 1 peer only
+      const blocks = [generateSignedBlock({message: {slot: 3}})];
+      expect(shouldRetryRange(range, blocks, step)).to.be.false;
+    });
+    it("should return false - end slot is expected", () => {
       const step = 3;
       const range: ISlotRange = {start: 3, end: 10};
       const blocks = [generateSignedBlock({message: {slot: 9}})];
