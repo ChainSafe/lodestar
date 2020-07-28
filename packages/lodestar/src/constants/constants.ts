@@ -9,6 +9,7 @@ export const GENESIS_START_SHARD = 0;
 export const FAR_FUTURE_EPOCH = Infinity;
 export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
+export const GRAFFITI_SIZE = 32;
 
 // Domain Types
 export enum DomainType {

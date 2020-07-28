@@ -9,6 +9,7 @@ interface IQuery extends DefaultQuery {
   proposer_pubkey: string;
   // eslint-disable-next-line camelcase
   randao_reveal: string;
+  graffiti: string;
 }
 
 
@@ -27,6 +28,9 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
         },
         "randao_reveal": {
           type: "string"
+        },
+        graffiti: {
+          type: "string"
         }
       }
     },
@@ -41,7 +45,8 @@ export const registerBlockProductionEndpoint: LodestarRestApiEndpoint = (fastify
       const block = await api.validator.produceBlock(
         request.query.slot,
         fromHex(request.query.proposer_pubkey),
-        fromHex(request.query.randao_reveal)
+        fromHex(request.query.randao_reveal),
+        request.query.graffiti
       );
       reply
         .code(200)

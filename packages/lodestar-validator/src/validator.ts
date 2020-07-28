@@ -90,7 +90,8 @@ export class Validator {
       this.opts.keypair,
       this.apiClient,
       this.db,
-      this.logger
+      this.logger,
+      this.opts.graffiti
     );
 
     this.attestationService = new AttestationService(
