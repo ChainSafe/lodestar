@@ -31,7 +31,7 @@ describe("beacon node", function () {
     await bn.stop();
   });
 
-  it.only("should justify block - 1 vc - 32 validators", async function () {
+  it("should justify block - 1 vc - 32 validators", async function () {
     this.timeout(120000);
     const bn = await getDevBeaconNode({
       params: {SECONDS_PER_SLOT: 2, SLOTS_PER_EPOCH: 8, TARGET_AGGREGATORS_PER_COMMITTEE: 1},
