@@ -536,6 +536,75 @@ describe("ArrayDagLMDGHOST", () => {
         children: {[toHexString(blockE)]: 3}, // E
       });
     });
+
+    /**
+     * b c is added to forkchoice after d e f
+     * Linear: a g h b d e f
+     *              b -- c
+     *             /
+     *            /
+     * genesis - a - d -- e -- f
+     *
+     * When set d as finalized, b c should be removed
+     */
+    it("should update indices after setting new finalized check point - not in normal order", () => {
+      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotA = 1 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotD = 4 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotD, blockD, stateD, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotE = 5 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      // add B, C after the above
+      const slotB = 2 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      const slotC = 3 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      // block D is finalized
+      const slotF = 6 * config.params.SLOTS_PER_EPOCH;
+      addBlock(lmd, slotF, blockF, stateF, blockE, {root: blockE, epoch: 5}, {root: blockD, epoch: 4});
+      // a, b, c, genesis should be removed
+      expect(lmd.getNode(genesis)).to.be.undefined;
+      expect(lmd.getNode(blockA)).to.be.undefined;
+      expect(lmd.getNode(blockB)).to.be.undefined;
+      expect(lmd.getNode(blockC)).to.be.undefined;
+      expect(lmd.getNode(blockD)).to.be.deep.equal({
+        slot: 4 * config.params.SLOTS_PER_EPOCH,
+        blockRoot: toHexString(blockD),
+        stateRoot: stateD,
+        weight:BigInt(0),
+        parent: NO_NODE,// finalized
+        bestChild: 1, // E
+        bestTarget: 2,// F
+        justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
+        finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
+        children: {[toHexString(blockE)]: 1}, // E
+      });
+      expect(lmd.getNode(blockE)).to.be.deep.equal({
+        slot: 5 * config.params.SLOTS_PER_EPOCH,
+        blockRoot: toHexString(blockE),
+        stateRoot: stateE,
+        weight:BigInt(0),
+        parent: 0, // D
+        bestChild: 2, // F
+        bestTarget: 2,// F
+        justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
+        finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
+        children: {[toHexString(blockF)]: 2}, // E
+      });
+      expect(lmd.getNode(blockF)).to.be.deep.equal({
+        slot: 6 * config.params.SLOTS_PER_EPOCH,
+        blockRoot: toHexString(blockF),
+        stateRoot: stateF,
+        weight:BigInt(0),
+        parent: 1, // E
+        bestChild: null, // no child
+        bestTarget: 2,// itself
+        justifiedCheckpoint: {rootHex: toHexString(blockE), epoch: 5},
+        finalizedCheckpoint: {rootHex: toHexString(blockD), epoch: 4},
+        children: {}, // no child
+      });
+    });
   });
 
 });
