@@ -1,7 +1,8 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {createEnr} from "@chainsafe/lodestar-cli/src/network";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src/node";
@@ -33,10 +34,7 @@ export async function getDevBeaconNode({
 }): Promise<BeaconNode> {
   const peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
-  config.params = {
-    ...config.params,
-    ...params
-  };
+  const config = createIBeaconConfig({...minimalParams, ...params});
   const node = new BeaconNode(
     deepmerge({
       db: {
