@@ -92,8 +92,8 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
-      const [headBlock, {state: headState, epochCtx}] = await Promise.all([
-        this.chain.getHeadBlock(),
+      const [headBlockRoot, {state: headState, epochCtx}] = await Promise.all([
+        this.chain.forkChoice.headBlockRoot(),
         this.chain.getHeadStateContext(),
       ]);
       const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
@@ -101,9 +101,9 @@ export class ValidatorApi implements IValidatorApi {
         processSlots(epochCtx, headState, currentSlot);
       }
       return await assembleAttestation(
-        {config: this.config, db: this.db},
+        epochCtx,
         headState,
-        headBlock.message,
+        headBlockRoot,
         epochCtx.pubkey2index.get(validatorPubKey),
         index,
         slot

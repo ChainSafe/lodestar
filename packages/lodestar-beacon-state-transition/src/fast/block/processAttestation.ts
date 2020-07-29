@@ -1,9 +1,8 @@
-import {Attestation, BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
 import {EpochContext} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
-import {ValidatorIndex} from "@chainsafe/lodestar-types/lib/types/primitive";
 
 
 export function processAttestation(
@@ -81,27 +80,7 @@ export function processAttestation(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  // return the indexed attestation corresponding to attestation
-  const getIndexedAttestation = (attestation: Attestation): IndexedAttestation => {
-    const bits = Array.from(attestation.aggregationBits);
-    const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-    // No need for a Set, the indices in the committee are already unique.
-    const attestingIndices: ValidatorIndex[] = [];
-    committee.forEach((index, i) => {
-      if (bits[i]) {
-        attestingIndices.push(index);
-      }
-    });
-    // sort in-place
-    attestingIndices.sort((a, b) => a - b);
-    return {
-      attestingIndices: attestingIndices,
-      data: data,
-      signature: attestation.signature,
-    };
-  };
-
-  if (!isValidIndexedAttestation(epochCtx, state, getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }
