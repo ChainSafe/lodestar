@@ -1,7 +1,5 @@
-import {AttestationData, BeaconBlock, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
+import {AttestationData, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IBeaconDb} from "../../../db/api";
 import {
   computeStartSlotAtEpoch, getBlockRootAtSlot, getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -9,9 +7,8 @@ import {TreeBacked} from "@chainsafe/ssz";
 
 export async function assembleAttestationData(
   config: IBeaconConfig,
-  db: IBeaconDb,
   headState: TreeBacked<BeaconState>,
-  headBlock: BeaconBlock,
+  headBlockRoot: Uint8Array,
   slot: Slot,
   index: CommitteeIndex): Promise<AttestationData> {
 
@@ -20,7 +17,7 @@ export async function assembleAttestationData(
 
   let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
-    epochBoundaryBlockRoot = config.types.BeaconBlock.hashTreeRoot(headBlock);
+    epochBoundaryBlockRoot = headBlockRoot;
   } else {
     epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
@@ -31,7 +28,7 @@ export async function assembleAttestationData(
   return {
     slot,
     index,
-    beaconBlockRoot: config.types.BeaconBlock.hashTreeRoot(headBlock),
+    beaconBlockRoot: headBlockRoot,
     source: headState.currentJustifiedCheckpoint,
     target: {
       epoch: currentEpoch,
