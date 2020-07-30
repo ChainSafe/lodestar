@@ -27,13 +27,13 @@ export const networkOptions = {
     group: "network",
   } as Options,
 
-  "network.bootnodes": {
+  "network.bootMultiaddrs": {
     type: "array",
     defaultDescription: JSON.stringify(defaultOptions.network.bootnodes),
     group: "network",
   } as Options,
 
-  "network.multiaddrs": {
+  "network.localMultiaddrs": {
     type: "array",
     defaultDescription: JSON.stringify(defaultOptions.network.multiaddrs),
     group: "network",

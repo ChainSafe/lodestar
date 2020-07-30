@@ -16,21 +16,22 @@ export type IBeaconOptions =
     testnet?: TestnetName;
   };
 
+export const genesisStateFile = {
+  description: "Genesis state in ssz-encoded format",
+  type: "string",
+  normalize: true,
+} as Options;
+
 export const beaconOptions = {
   ...beaconNodeOptions,
   ...paramsOptions,
+  genesisStateFile,
 
   templateConfigFile: {
     alias: ["templateConfigFile", "templateConfig"],
     description: "Template configuration used to initialize beacon node",
     type: "string",
     default: null,
-  } as Options,
-
-  genesisStateFile: {
-    description: "Genesis state in ssz-encoded format",
-    type: "string",
-    normalize: true,
   } as Options,
 
   testnet: {
