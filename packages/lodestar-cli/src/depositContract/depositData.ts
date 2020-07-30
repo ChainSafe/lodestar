@@ -1,5 +1,5 @@
 import {ethers} from "ethers";
-import {fromHexString, hash} from "@chainsafe/ssz";
+import {hash, Json, toHexString} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls, {PrivateKey, PublicKey} from "@chainsafe/bls";
@@ -17,27 +17,21 @@ export function decodeEth1TxData(
   config: IBeaconConfig
 ): {depositData: DepositData; root: string} {
   const depositContract = getDepositInterface();
-  const inputs = depositContract.decodeFunctionData("deposit", bytes);
-  const [
-    pubkey,
-    withdrawalCredentials,
-    signature,
-    root
-  ] = inputs;
+  const inputs: Json = depositContract.decodeFunctionData("deposit", bytes);
+  const {
+    deposit_data_root: root,
+  } = inputs;
+  // attach `amount` to decoded deposit inputs so it can be parsed to a DepositData
+  inputs.amount = amount;
 
-  const depositData: DepositData = {
-    amount: config.types.Gwei.deserialize(fromHexString(amount)),
-    signature: fromHexString(signature),
-    withdrawalCredentials: fromHexString(withdrawalCredentials),
-    pubkey: fromHexString(pubkey)
-  };
+  const depositData: DepositData = config.types.DepositData.fromJson(inputs, {case: "snake"});
 
   // Sanity check
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
-  if (depositDataRoot != root)
+  if (toHexString(depositDataRoot) !== root)
     throw Error("deposit data root mismatch");
 
-  return {depositData, root};
+  return {depositData, root: root as string};
 }
 
 
