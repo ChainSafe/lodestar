@@ -96,6 +96,6 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
     walletManager.writeWallet(wallet);
 
     // eslint-disable-next-line no-console
-    console.log(`${i}/${count}\t${keystores.signing.pubkey}`);
+    console.log(`${i}/${n}\t${keystores.signing.pubkey}`);
   }
 }
