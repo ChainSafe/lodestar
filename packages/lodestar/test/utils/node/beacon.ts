@@ -52,6 +52,8 @@ export async function getDevBeaconNode({
         peerId,
         {
           discv5: {
+            // @ts-ignore
+            enabled: false,
             enr: await createEnr(peerId),
             bindAddr: "/ip4/127.0.0.1/udp/0",
             bootEnrs: []
@@ -60,7 +62,7 @@ export async function getDevBeaconNode({
             "/ip4/127.0.0.1/tcp/0"
           ]
         },
-        false
+        true
       )
     });
   await initDevChain(node, validatorCount, genesisTime);
