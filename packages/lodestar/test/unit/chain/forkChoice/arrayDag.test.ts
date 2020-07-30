@@ -538,8 +538,8 @@ describe("ArrayDagLMDGHOST", () => {
     });
 
     /**
-     * b c is added to forkchoice after d e f
-     * Linear: a g h b d e f
+     * b c is added to forkchoice after d e
+     * Linear: a d e b c f
      *              b -- c
      *             /
      *            /
