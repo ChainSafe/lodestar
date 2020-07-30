@@ -5,9 +5,8 @@ import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
-import {IBeaconOptions, beaconOptions, genesisStateFile} from "./options";
-import { beaconNodeOptions, paramsOptions } from "../../options";
-import { Options } from "read-pkg-up";
+import {IBeaconOptions, genesisStateFile} from "./options";
+import {beaconNodeOptions, paramsOptions} from "../../options";
 
 export function createBeaconConfig(args: Partial<IBeaconNodeOptions>): Partial<IBeaconNodeOptions> {
   const beaconConfigOptions = {
