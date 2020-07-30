@@ -1,15 +1,17 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../../../options";
+import {IGlobalArgs, IParamsOptions, paramsOptions} from "../../../../options";
 import {defaultAccountPaths} from "../../paths";
 
-export type IAccountValidatorOptions = 
-  IGlobalArgs & 
+export type IAccountValidatorOptions =
+  IGlobalArgs & IParamsOptions &
   {
     keystoresDir?: string;
     secretsDir?: string;
   };
 
 export const accountValidatorOptions = {
+  ...paramsOptions,
+
   keystoresDir: {
     description: "Directory for storing validator keystores.",
     defaultDescription: defaultAccountPaths.keystoresDir,
