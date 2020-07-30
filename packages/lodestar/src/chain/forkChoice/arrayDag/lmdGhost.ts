@@ -98,18 +98,21 @@ export class Node {
     return typeof(this.parent) === "number" && this.parent >= 0;
   }
 
-  public shiftIndex(n: number): void {
-    assert.gte(n, 0, "Shift index must be positive");
+  public shiftIndex(oldNodes: Node[], newNodeIndexes: Map<RootHex, number>): void {
     if (this.hasBestChild()) {
-      this.bestChild = this.bestChild - n;
+      const bestChildRoot = oldNodes[this.bestChild].blockRoot;
+      this.bestChild = newNodeIndexes.get(bestChildRoot);
     }
     if (this.hasParent()) {
-      this.parent = this.parent - n;
+      const parentRoot = oldNodes[this.parent].blockRoot;
+      // this may be undefined because its parent is deleted from node
+      this.parent = newNodeIndexes.get(parentRoot);
     }
     if (this.bestTarget) {
-      this.bestTarget = this.bestTarget - n;
+      const bestTargetRoot = oldNodes[this.bestTarget].blockRoot;
+      this.bestTarget = newNodeIndexes.get(bestTargetRoot);
     }
-    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = this.children[blockRoot] - n);
+    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.get(blockRoot));
   }
 
 }
@@ -614,16 +617,14 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot);
       const blockSummariesToDel = nodesToDel.map(node => this.toBlockSummary(node));
       const blockRootsToDel = nodesToDel.map(node => node.blockRoot);
-      const numDelete = nodesToDel.length;
-      this.nodes = this.nodes.slice(numDelete);
-      // Update indexes in node
-      this.nodes.forEach(node => node.shiftIndex(numDelete));
+      const oldNodes = this.nodes;
+      this.nodes = this.nodes.filter(node => !blockRootsToDel.includes(node.blockRoot));
       blockRootsToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
       // Update indexes in nodeIndices
-      for (const key of this.nodeIndices.keys()) {
-        const value = this.nodeIndices.get(key);
-        this.nodeIndices.set(key, value - numDelete);
-      }
+      this.nodeIndices = new Map();
+      this.nodes.forEach((node, index) => this.nodeIndices.set(node.blockRoot, index));
+      // Update indexes in node
+      this.nodes.forEach(node => node.shiftIndex(oldNodes, this.nodeIndices));
       this.finalized.node.parent = NO_NODE;
       this.emit("prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
     }
