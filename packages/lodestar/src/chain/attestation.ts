@@ -4,7 +4,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -121,8 +120,8 @@ export class AttestationProcessor implements IAttestationProcessor {
       !!stateCtx,
       `Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`
     );
-    const validators = getAttestingIndicesFromCommittee(
-      stateCtx.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+    const validators = stateCtx.epochCtx.getAttestingIndices(
+      attestation.data,
       attestation.aggregationBits
     );
     const balances = validators.map((index) => stateCtx.state.balances[index]);

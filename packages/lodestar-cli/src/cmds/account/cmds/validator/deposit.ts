@@ -1,4 +1,7 @@
 import {CommandBuilder} from "yargs";
+import {BigNumber} from "ethers";
+import {toHexString} from "@chainsafe/ssz";
+
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getBeaconConfig, getEthersSigner, YargsError} from "../../../../util";
@@ -64,11 +67,11 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.preset);
+  const config = getBeaconConfig(options.preset, options.params);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
     throw new YargsError("deposit_contract not in configuration");
-  const depositContractAddress = String(config.params.DEPOSIT_CONTRACT_ADDRESS);
+  const depositContractAddress = toHexString(config.params.DEPOSIT_CONTRACT_ADDRESS);
 
   // Load validators to deposit
   // depositData is already generated when building / creating the validator dir
@@ -79,7 +82,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
 
   const validatorDirsToSubmit = validatorDirs
     // txHash file is used as a flag of deposit submission
-    .filter(validatorDir => validatorDir.eth1DepositTxHashExists());
+    .filter(validatorDir => !validatorDir.eth1DepositTxHashExists());
   
   if (validatorDirsToSubmit.length === 0)
     throw new YargsError("No validators to deposit");
@@ -93,8 +96,9 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
     const tx = await eth1Signer.sendTransaction({
       to: depositContractAddress,
       gasLimit: DEPOSIT_GAS_LIMIT,
-      value: (depositData.amount * BigInt(1e9)).toString(),
-      data: rlp
+      value: BigNumber.from(depositData.amount * BigInt(1e9)),
+      data: rlp,
+      chainId: config.params.DEPOSIT_CHAIN_ID
     });
     if (!tx.hash) throw Error("No transaction hash");
     validatorDir.saveEth1DepositTxHash(tx.hash);

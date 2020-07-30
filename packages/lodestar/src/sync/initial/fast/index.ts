@@ -211,7 +211,7 @@ export class FastSync
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
     return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
       const rep = this.reps.getFromPeerId(peer);
-      if(rep && rep.latestStatus) {
+      if(rep && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint.epoch) {
         validPeers.push(peer);
       }
       return validPeers;
