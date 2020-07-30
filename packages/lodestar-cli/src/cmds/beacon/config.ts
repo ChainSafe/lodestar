@@ -5,17 +5,16 @@ import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
-import {beaconNodeOptions} from "../../options/beaconNodeOptions";
-import {IBeaconOptions} from "./options";
+import {IBeaconOptions, beaconOptions} from "./options";
 
 export function createBeaconConfig(args: Partial<IBeaconNodeOptions>): Partial<IBeaconNodeOptions> {
   const cliDefaults = _yargs().default(args)
-    .options(beaconNodeOptions)
+    .options(beaconOptions)
     .parse([]) as Partial<IBeaconNodeOptions>;
   // cliDefaults contains a bunch of extra keys created from yargs' leniency
   // don't create hidden options
   const config: Partial<IBeaconNodeOptions> = {};
-  for (const [alias, option] of Object.entries(beaconNodeOptions)) {
+  for (const [alias, option] of Object.entries(beaconOptions)) {
     // handle duck typed access to a subobject
     const preferredNameArr = alias.split(".");
     const value = getSubObject(cliDefaults, preferredNameArr);
