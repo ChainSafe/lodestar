@@ -79,7 +79,9 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const validatorDirBuilder = new ValidatorDirBuilder(accountPaths);
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
-  const n = count || atMost - wallet.nextaccount;
+  const n = typeof count === "number" ? count
+    : typeof atMost === "number" ? atMost - wallet.nextaccount
+      : 1;
   if (n <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = readPassphraseFile(passphraseFile);
