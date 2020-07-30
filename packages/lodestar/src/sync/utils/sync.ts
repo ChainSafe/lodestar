@@ -10,6 +10,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../util/sleep";
+import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 
 export function getHighestCommonSlot(peers: IReputation[]): Slot {
   const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
@@ -194,5 +195,17 @@ export function processSyncBlocks(
       }
     }
     return lastProcessedSlot;
+  };
+}
+
+
+export function createStatus(chain: IBeaconChain): Status {
+  const head = chain.forkChoice.head();
+  return {
+    forkDigest: chain.currentForkDigest,
+    finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
+    finalizedEpoch: head.finalizedCheckpoint.epoch,
+    headRoot: head.blockRoot,
+    headSlot: head.slot,
   };
 }

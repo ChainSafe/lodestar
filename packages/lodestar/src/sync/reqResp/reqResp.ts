@@ -24,6 +24,7 @@ import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
+import {createStatus} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -64,7 +65,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async start(): Promise<void> {
     this.network.reqResp.on("request", this.onRequest);
     this.network.on("peer:connect", this.handshake);
-    const myStatus = await this.createStatus();
+    const myStatus = await createStatus(this.chain);
     await Promise.all(
       this.network.getPeers().map((peerId) =>
         this.network.reqResp.status(peerId, myStatus)));
@@ -112,7 +113,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.reps.get(peerId.toB58String()).latestStatus = request;
     // send status response
     try {
-      const status = await this.createStatus();
+      const status = await createStatus(this.chain);
       this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
@@ -260,20 +261,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
   }
 
-  private async createStatus(): Promise<Status> {
-    const head = this.chain.forkChoice.head();
-    return {
-      forkDigest: this.chain.currentForkDigest,
-      finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
-      finalizedEpoch: head.finalizedCheckpoint.epoch,
-      headRoot: head.blockRoot,
-      headSlot: head.slot,
-    };
-  }
 
   private handshake = async (peerId: PeerId, direction: "inbound"|"outbound"): Promise<void> => {
     if(direction === "outbound") {
-      const request = await this.createStatus();
+      const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
       } catch (e) {
