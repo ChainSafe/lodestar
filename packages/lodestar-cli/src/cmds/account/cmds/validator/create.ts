@@ -82,6 +82,7 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const n = typeof count === "number" ? count
     : typeof atMost === "number" ? atMost - wallet.nextaccount
       : 1;
+  if (isNaN(n)) throw new Error(`Error computing validatorCount: ${n}`);
   if (n <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = readPassphraseFile(passphraseFile);
