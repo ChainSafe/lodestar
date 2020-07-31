@@ -1,5 +1,0 @@
-
-
-describe("account cli", function() {
-
-});
