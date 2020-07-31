@@ -19,13 +19,12 @@ import path from "path";
  */
 export async function runHandler(options: IBeaconOptions): Promise<void> {
   await initBLS();
-  const beaconPaths = getBeaconPaths(options);
-  options = {...options, ...beaconPaths};
-
   // Auto-setup testnet
   if (options.testnet) {
     await initBeacon(options);
   }
+  const beaconPaths = getBeaconPaths(options);
+  options = {...options, ...beaconPaths};
 
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
