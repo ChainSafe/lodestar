@@ -34,7 +34,6 @@ import {getDevValidator} from "../../utils/node/validator";
   node.chain.on("justifiedCheckpoint", (checkpoint) => {
     parentPort.postMessage({
       event: "justifiedCheckpoint",
-      checkpoint,
     });
   });
 })();
