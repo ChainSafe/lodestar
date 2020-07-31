@@ -11,7 +11,6 @@ export const altonaConfig: IBeaconNodeOptionsPartial = {
     },
   },
   eth1: {
-    enabled: false,
     provider: {
       url: "http://goerli.prylabs.net",
     },

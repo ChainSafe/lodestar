@@ -20,7 +20,10 @@ export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartia
   }
 }
 
-function getGenesisFileUrl(testnet: TestnetName): string {
+/**
+ * Get genesisStateFile URL to download. Returns null if not available
+ */
+export function getGenesisFileUrl(testnet: TestnetName): string | null {
   switch (testnet) {
     case "altona":
       // eslint-disable-next-line max-len
@@ -45,19 +48,13 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
 
 /**
  * Downloads a genesis file per testnet if it does not exist
- * @param options
  */
-export async function downloadGenesisFile(
-  testnet: TestnetName,
-  genesisFilePath: string
-): Promise<void> {
-  const genesisFileUrl = getGenesisFileUrl(testnet);
-
-  if (!fs.existsSync(genesisFilePath)) {
-    fs.mkdirSync(path.parse(genesisFilePath).dir, {recursive: true});
+export async function downloadGenesisFile(filepath: string, url: string): Promise<void> {
+  if (!fs.existsSync(filepath)) {
+    fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
     await promisify(stream.pipeline)(
-      got.stream(genesisFileUrl),
-      fs.createWriteStream(genesisFilePath)
+      got.stream(url),
+      fs.createWriteStream(filepath)
     );
   }
 }

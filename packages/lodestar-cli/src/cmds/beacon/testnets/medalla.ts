@@ -11,7 +11,6 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
     },
   },
   eth1: {
-    enabled: false,
     provider: {
       url: "http://goerli.prylabs.net",
     },
@@ -19,7 +18,6 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
       deployedAt: 3085928,
     },
   },
-  genesisStateFile: ".medalla/beacon/genesis.ssz",
   metrics: {
     enabled: true,
     serverPort: 8008,
