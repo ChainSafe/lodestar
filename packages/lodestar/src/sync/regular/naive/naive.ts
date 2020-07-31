@@ -191,9 +191,9 @@ export class NaiveRegularSync implements IRegularSync {
       isAborted = true;
     });
     while (!this.bestPeer && !isAborted) {
-      const peers = this.network.getPeers();
       const previousSlot = getCurrentSlot(this.config, state.genesisTime) - 1;
       await syncPeersStatus(this.reps, this.network, status);
+      const peers = this.network.getPeers();
       const maxHeadSlot = Math.max(...peers.map(
         (peerId) => this.reps.get(peerId.toB58String()).latestStatus?.headSlot || 0));
       this.bestPeer = peers.find(peerId => {
@@ -204,7 +204,8 @@ export class NaiveRegularSync implements IRegularSync {
       if (this.bestPeer) {
         this.logger.verbose(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}`);
       } else {
-        this.logger.verbose(`Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}`);
+        this.logger.verbose(`Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}` +
+          ` maxHeadSlot=${maxHeadSlot}`);
       }
     }
   };
