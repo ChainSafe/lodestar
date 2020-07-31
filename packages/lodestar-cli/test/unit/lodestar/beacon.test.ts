@@ -1,17 +1,16 @@
 import * as fs from "fs";
 import yargs from "yargs/yargs";
 import {expect} from "chai";
-import rimraf from "rimraf";
 
 import {beacon} from "../../../src/cmds/beacon";
 import {altonaConfig} from "../../../src/cmds/beacon/testnets/altona";
 import { downloadGenesisFile } from "../../../src/cmds/beacon/testnets";
 import {testnetName, testnetDir} from "../../constants";
+import {tmpDir} from "../../constants";
 
 describe("beacon cli", function() {
-  this.timeout("10 min");
+  // this.timeout("10 min");
 
-  const tmpDir = ".tmp";
   const tmpGenesisPath = `${tmpDir}/beacon/tmpGenesis.ssz`;
 
   // const tmpGenesisStateFile = downloadGenesisFile("altona", tmpGenesisPath);
@@ -26,15 +25,17 @@ describe("beacon cli", function() {
       "DEPOSIT_CONTRACT_ADDRESS": "0x16e82D77882A663454Ef92806b7DeCa1D394810f"
     },
     "api": {
-      "enabled": true,
-      "namespaces": [
-        "beacon",
-        "validator"
-      ],
-      "host": "127.0.0.1",
-      "port": 9596,
-      "cors": {
-        "origin": "*"
+      "rest": {
+        "enabled": true,
+        "namespaces": [
+          "beacon",
+          "validator"
+        ],
+        "host": "127.0.0.1",
+        "port": 9596,
+        "cors": {
+          "origin": "*"
+        }
       }
     },
     "chain": {
@@ -89,23 +90,18 @@ describe("beacon cli", function() {
         ]
       },
       "maxPeers": 25,
-      "bootMultiaddrs": [
+      "bootnodes": [
         "/ip4/51.15.97.240/tcp/9000/p2p/16Uiu2HAkwVT363kpFmupwJBH5tkhnaNZPQSY7zANnPGB63ikD1Wp",
         "/ip4/51.15.70.7/tcp/9000/p2p/16Uiu2HAmHV1UA1SBnNK7Ztp8ACQ8DzHwNnR49VDEPBavCU33PtVE"
       ],
-      "localMultiaddrs": [
+      "multiaddrs": [
         "/ip4/0.0.0.0/tcp/30607"
       ]
     }
   };
 
-  after(async () => {
-    await new Promise(resolve => rimraf(tmpDir, resolve));
-    // fs.unlink(tmpGenesisPath, () => {});
-  });
-
+  // lodestar beacon init --rootDir .tmp --genesisStateFile .tmp/beacon/tmpGenesis.ssz
   it("should init beacon configuration", async function() {
-    // initialize beacon node configured to talk to testnet
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
       preset: "mainnet",
@@ -115,87 +111,85 @@ describe("beacon cli", function() {
     await new Promise(resolve => setTimeout(resolve, 500));
     expect(fs.existsSync(tmpDir)).to.be.true;
     expect(fs.existsSync(`${tmpDir}/beacon/beacon.config.json`)).to.be.true;
-    await new Promise(resolve => rimraf(tmpDir, resolve));
   });
 
   // @TODO: bugs out; WIP fix in #1267
-  // it("should init beacon configuration with --testnet option", async function() {
-  //   // initialize beacon node configured to talk to testnet
-  //   await new Promise(resolve => yargs()
-  //     .default({
-  //       rootDir: testnetDir,
-  //       preset: "mainnet",
-  //       genesisStateFile: tmpGenesisPath,
-  //     })
-  //     .command(beacon)
-  //     .help().parse(["beacon", "init" ,"--testnet", "altona"], resolve));
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  //   expect(fs.existsSync(testnetDir)).to.be.true;
-  //   const beaconConfigPath = `${testnetDir}/beacon/beacon.config.json`;
-  //   expect(fs.existsSync(beaconConfigPath)).to.be.true;
+  it.skip("should init beacon configuration with --testnet option", async function() {
+    // initialize beacon node configured to talk to testnet
+    await new Promise(resolve => yargs()
+      .default({
+        rootDir: testnetDir,
+        preset: "mainnet",
+        genesisStateFile: tmpGenesisPath,
+      })
+      .command(beacon)
+      .help().parse(["beacon", "init" ,"--testnet", "altona"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    expect(fs.existsSync(testnetDir)).to.be.true;
+    const beaconConfigPath = `${testnetDir}/beacon/beacon.config.json`;
+    expect(fs.existsSync(beaconConfigPath)).to.be.true;
     
-  //   const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
-  //   expect(beaconConfig).to.deep.equal(altonaConfig);
-  // });
+    const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
+    expect(beaconConfig).to.deep.equal(altonaConfig);
+  });
 
   // @TODO: this one fails, documented in #1252
-  // it("should init beacon configuration with --templateConfigFile option and copy over all options from altona config to beacon config", async function() {
-  //   // initialize beacon node configured to talk to testnet
-  //   await new Promise(resolve => yargs().default({
-  //     rootDir: tmpDir,
-  //     templateConfigFile: testTemplateConfigFile,
-  //     // @ts-ignore
-  //   }).command(beacon).help().parse(["beacon", "init"], resolve));
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  //   expect(fs.existsSync(tmpDir)).to.be.true;
-  //   const beaconConfigPath = `${tmpDir}/beacon/beacon.config.json`;
-  //   expect(fs.existsSync(beaconConfigPath)).to.be.true;
-  //   expect(fs.existsSync(tmpGenesisPath)).to.be.true;
+  it.skip("should init beacon configuration with --templateConfigFile option and copy over all options from altona config to beacon config", async function() {
+    // initialize beacon node configured to talk to testnet
+    await new Promise(resolve => yargs().default({
+      rootDir: tmpDir,
+      templateConfigFile: testTemplateConfigFile,
+      // @ts-ignore
+    }).command(beacon).help().parse(["beacon", "init"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    expect(fs.existsSync(tmpDir)).to.be.true;
+    const beaconConfigPath = `${tmpDir}/beacon/beacon.config.json`;
+    expect(fs.existsSync(beaconConfigPath)).to.be.true;
     
-  //   const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
-  //   expect(beaconConfig).to.deep.equal(testTemplateConfigFile);
-  // });
+    const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
+    expect(beaconConfig).to.deep.equal(testTemplateConfigFile);
+  });
 
-  // it("should init beacon configuration & run beacon node", async function() {
-  //   // initialize beacon node configured to talk to testnet
-  //   await new Promise(resolve => yargs().default({
-  //     rootDir: tmpDir,
-  //     // @ts-ignore
-  //   }).command(beacon).help().parse(["beacon", "init", "--testnet", testnetName], resolve));
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  //   expect(fs.existsSync(tmpDir)).to.be.true;
-  //   const beaconConfigPath = `${tmpDir}/beacon/beacon.config.json`;
-  //   expect(fs.existsSync(beaconConfigPath)).to.be.true;
-  //   expect(fs.existsSync(tmpDir)).to.be.true;
+  it.skip("should init beacon configuration & run beacon node", async function() {
+    // initialize beacon node configured to talk to testnet
+    await new Promise(resolve => yargs().default({
+      rootDir: tmpDir,
+      testnet: testnetName,
+      preset: "mainnet",
+      // @ts-ignore
+    }).command(beacon).help().parse(["beacon", "init"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    expect(fs.existsSync(tmpDir)).to.be.true;
+    const beaconConfigPath = `${tmpDir}/beacon/beacon.config.json`;
+    // expect(fs.existsSync(beaconConfigPath)).to.be.true;
     
-  //   const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
-  //   expect(beaconConfig).to.deep.equal(altonaConfig);
+    const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
+    expect(beaconConfig).to.deep.equal(altonaConfig);
 
-  //   // initialize beacon node configured to talk to testnet
-  //   await new Promise(resolve => yargs().default({
-  //     rootDir: tmpDir,
-  //     preset: "mainnet",
-  //     // @ts-ignore
-  //   }).command(beacon).help().parse(["beacon", "run"], resolve));
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  // });
+    // initialize beacon node configured to talk to testnet
+    await new Promise(resolve => yargs().default({
+      rootDir: tmpDir,
+      preset: "mainnet",
+      // @ts-ignore
+    }).command(beacon).help().parse(["beacon", "run"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+  });
 
-  // it("should init beacon configuration & run beacon node", async function() {
+  it.skip("should run beacon node", async function() {
     
-  //   // initialize beacon node configured to talk to testnet
-  //   await new Promise(resolve => yargs().default({
-  //     rootDir: testnetDir,
-  //     preset: "mainnet",
-  //     testnet: "altona"
-  //     // @ts-ignore
-  //   }).command(beacon).help().parse(["beacon", "run"], resolve));
-  //   await new Promise(resolve => setTimeout(resolve, 500));
-  //   expect(fs.existsSync(testnetDir)).to.be.true;
-  //   const beaconConfigPath = `${testnetDir}/beacon/beacon.config.json`;
-  //   expect(fs.existsSync(beaconConfigPath)).to.be.true;
-  //   expect(fs.existsSync(testnetDir)).to.be.true;
+    // initialize beacon node configured to talk to testnet
+    await new Promise(resolve => yargs().default({
+      rootDir: tmpDir,
+      preset: "mainnet",
+      testnet: "altona"
+      // @ts-ignore
+    }).command(beacon).help().parse(["beacon", "run"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const beaconConfigPath = `${tmpDir}/beacon/beacon.config.json`;
+    expect(fs.existsSync(beaconConfigPath)).to.be.true;
+    expect(fs.existsSync(tmpDir)).to.be.true;
     
-  //   const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
-  //   expect(beaconConfig).to.deep.equal(altonaConfig);
-  // });
+    const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
+    expect(beaconConfig).to.deep.equal(altonaConfig);
+  });
 });
