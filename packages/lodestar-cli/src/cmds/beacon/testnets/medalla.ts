@@ -35,8 +35,8 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
       ],
     },
     maxPeers: 25,
-    bootMultiaddrs: [],
-    localMultiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
+    bootnodes: [],
+    multiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
   },
   params: {
     MIN_GENESIS_TIME: 1596546000,
