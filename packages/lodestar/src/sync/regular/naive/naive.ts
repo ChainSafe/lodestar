@@ -90,7 +90,8 @@ export class NaiveRegularSync implements IRegularSync {
   private async getNewTarget(): Promise<Slot> {
     const state = await this.chain.getHeadState();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    return Math.min((this.currentTarget + this.opts.blockPerChunk), currentSlot);
+    // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
+    return Math.min((this.currentTarget + this.opts.blockPerChunk), currentSlot + 1);
   }
 
   private setTarget = async (newTarget?: Slot, triggerSync = true): Promise<void> => {
