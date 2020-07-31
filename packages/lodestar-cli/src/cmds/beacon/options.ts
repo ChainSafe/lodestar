@@ -1,7 +1,6 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../options";
-import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
-import {paramsOptions, IParamsOptions} from "../../options/paramsOptions";
+import {paramsOptions, IParamsOptions, beaconNodeOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {TestnetName} from "./testnets";
 
@@ -14,9 +13,10 @@ export type IBeaconOptions =
     templateConfigFile?: string;
     genesisStateFile?: string;
     testnet?: TestnetName;
+    logFile?: string;
   };
 
-export const beaconOptions = {
+export const beaconOptions: {[k: string]: Options} = {
   ...beaconNodeOptions,
   ...paramsOptions,
 
@@ -25,19 +25,19 @@ export const beaconOptions = {
     description: "Template configuration used to initialize beacon node",
     type: "string",
     default: null,
-  } as Options,
+  },
 
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
     type: "string",
     normalize: true,
-  } as Options,
+  },
 
   testnet: {
     description: "Use a testnet configuration and genesis file",
     type: "string",
     choices: ["altona"] as TestnetName[],
-  } as Options,
+  },
 
   // Beacon paths
 
@@ -46,7 +46,7 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.beaconDir,
     hidden: true,
     type: "string",
-  } as Options,
+  },
 
   dbDir: {
     alias: ["db.dir", "db.name"],
@@ -55,7 +55,7 @@ export const beaconOptions = {
     hidden: true,
     normalize: true,
     type: "string",
-  } as Options,
+  },
 
   configFile: {
     alias: ["config"],
@@ -63,7 +63,7 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
     normalize: true,
-  } as Options,
+  },
 
   peerIdFile: {
     hidden: true,
@@ -71,7 +71,7 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.peerIdFile,
     normalize: true,
     type: "string",
-  } as Options,
+  },
 
   enrFile: {
     hidden: true,
@@ -79,5 +79,11 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
-  } as Options
+  },
+
+  logFile: {
+    alias: ["log.file"],
+    type: "string",
+    normalize: true,
+  }
 };
