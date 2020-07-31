@@ -3,7 +3,7 @@ import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IBeaconOptions} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {ENR} from "@chainsafe/discv5";
@@ -11,6 +11,8 @@ import {initHandler as initBeacon} from "../init/init";
 import {getBeaconPaths} from "../../paths";
 import {mergeConfigOptions} from "../../config";
 import {getBeaconConfig} from "../../../../util";
+import {consoleTransport} from "@chainsafe/lodestar-utils";
+import path from "path";
 
 /**
  * Run a beacon node
@@ -34,7 +36,13 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
 
   const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger();
+  const loggerTransports = [
+    consoleTransport
+  ];
+  if(options.logFile) {
+    loggerTransports.push(fileTransport(path.join(options.rootDir, options.logFile)));
+  }
+  const logger = new WinstonLogger({}, loggerTransports);
 
   const node = new BeaconNode(options, {config, libp2p, logger});
 
