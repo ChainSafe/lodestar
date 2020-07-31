@@ -66,7 +66,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.ignore;
     }
 
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
+    const parentSummary =
+      this.chain.forkChoice.getBlockSummaryByBlockRoot(signedBlock.message.parentRoot as Uint8Array);
+    const stateEpochCtx = parentSummary? await this.db.stateCache.get(parentSummary.stateRoot) :
+      await this.chain.getHeadStateContext();
+    const {state, epochCtx} = stateEpochCtx;
     // block is not in the future
     const blockTime = (state.genesisTime + slot * this.config.params.SECONDS_PER_SLOT) * 1000;
     const tolerance = blockTime - (Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY);
