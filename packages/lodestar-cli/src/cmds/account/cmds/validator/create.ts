@@ -18,7 +18,6 @@ interface IValidatorCreateOptions extends IAccountValidatorOptions {
   depositGwei?: string;
   storeWithdrawalKeystore?: boolean;
   count?: number;
-  atMost?: number;
 }
 
 export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
@@ -51,21 +50,14 @@ instead generate them from the wallet seed when required.",
   },
 
   count: {
-    description: "The number of validators to create, regardless of how many already exist",
-    conflicts: ["atMost"],
-    type: "number"
-  },
-
-  atMost: {
-    description: "Observe the number of validators in --validator-dir, only creating enough to \
-reach the given count. Never deletes an existing validator.",
-    conflicts: ["count"],
+    description: "The number of validators to create",
+    default: 1,
     type: "number"
   }
 };
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
-  const {name, passphraseFile, storeWithdrawalKeystore, count, atMost} = options;
+  const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
   const accountPaths = getAccountPaths(options);
   const config = getBeaconConfig(options.preset, options.params);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
@@ -79,15 +71,11 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const validatorDirBuilder = new ValidatorDirBuilder(accountPaths);
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
-  const n = typeof count === "number" ? count
-    : typeof atMost === "number" ? atMost - wallet.nextaccount
-      : 1;
-  if (isNaN(n)) throw new Error(`Error computing validatorCount: ${n}`);
-  if (n <= 0) throw new YargsError("No validators to create");
+  if (count <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = readPassphraseFile(passphraseFile);
 
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < count; i++) {
     const passwords = wallet.randomPasswords();
     const keystores = wallet.nextValidator(walletPassword, passwords);
     validatorDirBuilder.build({keystores, passwords, storeWithdrawalKeystore, depositGwei, config});
@@ -96,6 +84,6 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
     walletManager.writeWallet(wallet);
 
     // eslint-disable-next-line no-console
-    console.log(`${i}/${n}\t${keystores.signing.pubkey}`);
+    console.log(`${i}/${count}\t${keystores.signing.pubkey}`);
   }
 }
