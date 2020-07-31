@@ -36,7 +36,7 @@ export const beaconOptions: {[k: string]: Options} = {
   testnet: {
     description: "Use a testnet configuration and genesis file",
     type: "string",
-    choices: ["altona"] as TestnetName[],
+    choices: ["altona", "medalla"] as TestnetName[],
   },
 
   // Beacon paths
