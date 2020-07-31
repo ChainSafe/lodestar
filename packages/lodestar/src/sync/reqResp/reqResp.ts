@@ -24,7 +24,7 @@ import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus} from "../utils/sync";
+import {createStatus, syncPeersStatus} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -66,10 +66,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.on("request", this.onRequest);
     this.network.on("peer:connect", this.handshake);
     const myStatus = await createStatus(this.chain);
-    await Promise.all(
-      this.network.getPeers().map((peerId) =>
-        this.network.reqResp.status(peerId, myStatus)));
-
+    await syncPeersStatus(this.reps, this.network, myStatus);
   }
 
   public async stop(): Promise<void> {

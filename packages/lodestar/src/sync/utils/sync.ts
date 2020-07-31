@@ -1,8 +1,8 @@
 import PeerId from "peer-id";
-import {IReputation} from "../IReputation";
+import {IReputation, IReputationStore} from "../IReputation";
 import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReqResp} from "../../network";
+import {IReqResp, INetwork} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
@@ -198,7 +198,6 @@ export function processSyncBlocks(
   };
 }
 
-
 export function createStatus(chain: IBeaconChain): Status {
   const head = chain.forkChoice.head();
   return {
@@ -208,4 +207,10 @@ export function createStatus(chain: IBeaconChain): Status {
     headRoot: head.blockRoot,
     headSlot: head.slot,
   };
+}
+
+export async function syncPeersStatus(reps: IReputationStore, network: INetwork, status: Status): Promise<void> {
+  await Promise.all(network.getPeers().map(peerId => async () => {
+    reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+  }));
 }
