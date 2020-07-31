@@ -3,16 +3,15 @@ import path from "path";
 import stream from "stream";
 import {promisify} from "util";
 import got from "got";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptionsPartial} from "../../../options";
 import {altonaConfig} from "./altona";
 
 export type TestnetName = "altona";
 
-export function getTestnetConfig(testnet: TestnetName): Partial<IBeaconNodeOptions> {
+export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartial {
   switch (testnet) {
     case "altona":
-      // Casting type since IBeaconNodeOptions doesn't match this config
-      return altonaConfig as unknown as Partial<IBeaconNodeOptions>;
+      return altonaConfig;
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }

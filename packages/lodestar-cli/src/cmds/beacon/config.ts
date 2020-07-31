@@ -2,7 +2,7 @@ import fs from "fs";
 import _yargs from "yargs/yargs";
 import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "../../options";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {readFileSync, writeFile, getSubObject, setSubObject} from "../../util";
 import {IBeaconOptions, beaconOptions} from "./options";
@@ -53,7 +53,7 @@ export function mergeConfigOptions(options: IBeaconOptions): IBeaconOptions {
 
   return deepmerge(
     deepmerge(
-      defaultOptions as IBeaconOptions,
+      defaultOptions as Partial<IBeaconOptions>,
       optionsFromFile
     ),
     options
