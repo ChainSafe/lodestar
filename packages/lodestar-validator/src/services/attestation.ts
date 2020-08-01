@@ -104,8 +104,9 @@ export class AttestationService {
         attesterIndex,
         isAggregator
       };
-      if(this.nextAttesterDuties.has(duty.attestationSlot)) {
-        this.nextAttesterDuties.get(duty.attestationSlot).push(nextDuty);
+      const attesterDuties = this.nextAttesterDuties.get(duty.attestationSlot);
+      if(attesterDuties) {
+        attesterDuties.push(nextDuty);
       } else {
         this.nextAttesterDuties.set(duty.attestationSlot, [nextDuty]);
       }
