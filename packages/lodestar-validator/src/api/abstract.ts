@@ -21,9 +21,9 @@ export abstract class AbstractApiClient
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;
-  private beaconNodeInterval: NodeJS.Timeout;
-  private slotCountingTimeout: NodeJS.Timeout;
-  private genesisTime: number;
+  private beaconNodeInterval?: NodeJS.Timeout;
+  private slotCountingTimeout?: NodeJS.Timeout;
+  private genesisTime?: number;
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
@@ -76,7 +76,9 @@ export abstract class AbstractApiClient
     const genesis =  await this.beacon.getGenesis();
     if (genesis && Math.floor(Date.now() / 1000) >= genesis.genesisTime) {
       this.emit("beaconChainStarted");
-      clearInterval(this.beaconNodeInterval);
+      if (this.beaconNodeInterval) {
+        clearInterval(this.beaconNodeInterval);
+      }
       this.startSlotCounting(Number(genesis.genesisTime));
     }
   }
@@ -102,6 +104,7 @@ export abstract class AbstractApiClient
       return;
     }
     //to prevent sometime being updated prematurely
+    if (this.genesisTime === undefined) throw Error("no genesisTime set");
     if(this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
       await sleep(this.getDiffTillNextSlot());
     }
@@ -130,6 +133,7 @@ export abstract class AbstractApiClient
    * Returns milis till next slot
    */
   private getDiffTillNextSlot(): number {
+    if (this.genesisTime === undefined) throw Error("no genesisTime set");
     const diffInSeconds = Math.floor((Date.now() / 1000) - this.genesisTime);
     //update slot after remaining seconds until next slot
     return (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
