@@ -294,6 +294,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       const {stream} = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+
       const controller = new AbortController();
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
