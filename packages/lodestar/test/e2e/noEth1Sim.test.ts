@@ -11,7 +11,7 @@ describe("no eth1 sim (multi-node test)", function () {
 
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
-    SECONDS_PER_SLOT: 2,
+    SECONDS_PER_SLOT: 3,
     SLOTS_PER_EPOCH: 8
   };
 
