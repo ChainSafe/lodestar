@@ -45,7 +45,7 @@ After finding some peers the chain should start processing blocks up to the curr
     If your node is stuck with `Current peerCount=0` review your network configuration to make sure your ports are open.
 <!-- prettier-ignore-end -->
 
-A young testnet (such as Altona) should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!
+A young testnet (such as Medalla) should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!
 
 The `--testnet medalla` flag automatically sets the following configuration options. You may overwrite them with flags if necessary:
 
