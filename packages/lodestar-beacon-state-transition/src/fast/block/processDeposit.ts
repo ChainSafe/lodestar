@@ -31,7 +31,7 @@ export function processDeposit(
   const pubkey = deposit.data.pubkey;
   const amount = deposit.data.amount;
   const cachedIndex = epochCtx.pubkey2index.get(pubkey);
-  if (!Number.isSafeInteger(cachedIndex) || cachedIndex >= state.validators.length) {
+  if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= state.validators.length) {
     // verify the deposit signature (proof of posession) which is not checked by the deposit contract
     const depositMessage = {
       pubkey: deposit.data.pubkey,
