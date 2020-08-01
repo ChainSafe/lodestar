@@ -99,7 +99,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     const target = attestation.data.target;
     assert.true([previousEpoch, currentEpoch].includes(target.epoch),
-      `attestation is targeting too old epoch ${target.epoch}, current=${currentEpoch}`
+      `attestation target epoch ${target.epoch} is not current(${currentEpoch}) or previous(${previousEpoch})`
     );
     assert.equal(
       target.epoch, computeEpochAtSlot(this.config, attestation.data.slot),

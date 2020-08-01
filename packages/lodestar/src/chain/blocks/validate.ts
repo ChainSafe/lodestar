@@ -4,6 +4,7 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
+import {getBlockAttestationCount} from "../utils";
 
 export function validateBlock(
   config: IBeaconConfig, logger: ILogger, forkChoice: ILMDGHOST
@@ -27,8 +28,13 @@ export function validateBlock(
         }
         const currentSlot = forkChoice.headBlockSlot();
         logger.debug(
-          `Received block with hash ${toHexString(blockHash)}` +
-            `at slot ${job.signedBlock.message.slot}. Current state slot ${currentSlot}`
+          "Started block processing",
+          {
+            root: toHexString(blockHash),
+            currentSlot,
+            blockSlot: job.signedBlock.message.slot,
+            // attestationCount: getBlockAttestationCount(job.signedBlock.message)
+          }
         );
         yield job;
       }
