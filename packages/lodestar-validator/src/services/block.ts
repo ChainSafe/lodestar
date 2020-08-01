@@ -88,8 +88,8 @@ export default class BlockProposingService {
     if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
-    if(this.nextProposals.has(slot) && slot !== 0) {
-      const proposerPubKey = this.nextProposals.get(slot);
+    const proposerPubKey = this.nextProposals.get(slot);
+    if(proposerPubKey && slot !== 0) {
       this.nextProposals.delete(slot);
       this.logger.info(
         "Validator is proposer!",
