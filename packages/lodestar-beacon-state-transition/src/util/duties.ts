@@ -24,7 +24,7 @@ export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
-): CommitteeAssignment {
+): CommitteeAssignment | null {
 
   const next2Epoch = getCurrentEpoch(config, state) + 2;
   assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
@@ -44,7 +44,7 @@ export function getCommitteeAssignment(
     }
   }
 
-  throw Error("No committeeAssignment");
+  return null;
 }
 
 /**

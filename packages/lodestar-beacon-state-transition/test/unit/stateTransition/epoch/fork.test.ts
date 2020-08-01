@@ -18,11 +18,11 @@ describe("processForkChanged", () => {
   });
 
   afterEach(() => {
-    config.params.ALL_FORKS = undefined;
+    config.params.ALL_FORKS = [];
   });
 
   it("should not update fork if no matched next fork", () => {
-    config.params.ALL_FORKS = undefined;
+    config.params.ALL_FORKS = [];
     const preFork = state.fork;
     processForkChanged(config, state);
     expect(config.types.Fork.equals(preFork, state.fork)).to.be.true;

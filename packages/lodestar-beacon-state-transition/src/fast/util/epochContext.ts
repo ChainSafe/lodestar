@@ -174,7 +174,7 @@ export class EpochContext {
    * ``assignment[2]`` is the slot at which the committee is assigned
    * Return null if no assignment..
    */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment {
+  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment | null {
 
     const nextEpoch = this.currentShuffling.epoch + 1;
     assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
@@ -194,7 +194,7 @@ export class EpochContext {
       }
     }
 
-    throw Error("no committeeAssignment");
+    return null;
   }
 
   public isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
