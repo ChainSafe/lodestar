@@ -217,9 +217,6 @@ describe("[network] rpc", () => {
     const libP2pMock = await createNode(multiaddr);
     libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal} ) => {
       timer.tick(TTFB_TIMEOUT);
-      if(signal.aborted) {
-        throw new Error("Failed to dial");
-      }
       return {stream: {} as unknown as Stream, protocol: ""};
     };
     const rpcC = new ReqResp(

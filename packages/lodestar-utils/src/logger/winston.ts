@@ -9,12 +9,26 @@ import {defaultLogFormat} from "./format";
 import TransportStream from "winston-transport";
 import {Writable} from "stream";
 
+export const consoleTransport: TransportStream = new winstonTransports.Console({
+  debugStdout: true,
+  level: "silly",
+  handleExceptions: true
+});
+
+export const fileTransport = (filename: string): TransportStream => {
+  return new winstonTransports.File({
+    level: "silly",
+    filename,
+    handleExceptions: true,
+  });
+};
+
 export class WinstonLogger implements ILogger {
   private winston: Logger;
   private _level: LogLevel;
   private _silent: boolean;
 
-  public constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream) {
+  public constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream[]) {
     options = {
       level: defaultLogLevel,
       module: "",
@@ -27,11 +41,7 @@ export class WinstonLogger implements ILogger {
       },
       format: defaultLogFormat,
       transports: transports || [
-        new winstonTransports.Console({
-          debugStdout: true,
-          level: "silly",
-          handleExceptions: true
-        })
+        consoleTransport
       ],
       exitOnError: false
     });
