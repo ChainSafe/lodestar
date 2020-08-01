@@ -45,7 +45,7 @@ export class WinstonLogger implements ILogger {
       ],
       exitOnError: false
     });
-    this._level = options.level;
+    this._level = options.level || LogLevel.info;
     this._silent = false;
     if (typeof process !== "undefined" && typeof process.env !== "undefined") {
       this._silent = process.env.LODESTAR_SILENCE === "true";
@@ -85,7 +85,7 @@ export class WinstonLogger implements ILogger {
   }
 
   public stream(): Writable {
-    return null;
+    throw Error("Not implemented");
   }
 
   public set level(level: LogLevel) {
@@ -116,7 +116,7 @@ export class WinstonLogger implements ILogger {
     });
   }
 
-  private createLogEntry(level: LogLevel, message: string, context: Context|Error): void {
+  private createLogEntry(level: LogLevel, message: string, context?: Context|Error): void {
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
