@@ -10,35 +10,20 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {
-  computeEpochAtSlot,
-  computeSigningRoot,
   computeStartSlotAtEpoch,
-  computeSubnetForAttestation,
-  getCurrentSlot,
-  getDomain,
   isValidAttesterSlashing,
-  isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
-  verifyBlockSignature,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots,} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
-import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
-import {
-  hasValidAttestationSlot,
-  isUnaggregatedAttestation,
-  hasValidatorAttestedForThatTargetEpoch,
-  isAttestingToValidBlock} from "../../util/validation/attestation";
+import {validateGossipAggregateAndProof, validateGossipBlock, validateGossipCommitteeAttestation} from "./validation";
 import {ExtendedValidatorResult} from "./constants";
-import {sleep} from "../../util/sleep";
 
-/* eslint-disable @typescript-eslint/interface-name-prefix */
-interface GossipMessageValidatorModules {
+interface IGossipMessageValidatorModules {
   chain: IBeaconChain;
   db: IBeaconDb;
   config: IBeaconConfig;
@@ -51,7 +36,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
 
-  public constructor({chain, db, config, logger}: GossipMessageValidatorModules) {
+  public constructor({chain, db, config, logger}: IGossipMessageValidatorModules) {
     this.chain = chain;
     this.db = db;
     this.config = config;
@@ -59,165 +44,19 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
-    const finalizedCheckpoint = await this.chain.getFinalizedCheckpoint();
-    const slot = signedBlock.message.slot;
-    // block is too old
-    if (slot <= computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch)) {
-      return ExtendedValidatorResult.ignore;
-    }
-
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    // block is not in the future
-    const blockTime = (state.genesisTime + slot * this.config.params.SECONDS_PER_SLOT) * 1000;
-    const tolerance = blockTime - (Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY);
-    if (tolerance > 0) {
-      if (tolerance >= this.config.params.SECONDS_PER_SLOT * 1000) {
-        this.logger.warn(`Receive future block at slot ${slot}, current time ${Date.now()}`);
-        return ExtendedValidatorResult.ignore;
-      }
-      // a client MAY queue future blocks for processing at the appropriate slot
-      await sleep(tolerance);
-    }
-    const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-    // skip block if its a known bad block
-    if (await this.db.badBlock.has(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return ExtendedValidatorResult.reject;
-    }
-
-    const existingBlock = await this.chain.getBlockAtSlot(slot);
-    if (existingBlock && existingBlock.message.proposerIndex === signedBlock.message.proposerIndex) {
-      // same proposer submitted twice
-      return ExtendedValidatorResult.ignore;
-    }
-
-    if (state.slot < slot) {
-      processSlots(epochCtx, state, slot);
-    }
-
-    if (!verifyBlockSignature(this.config, state, signedBlock)) {
-      return ExtendedValidatorResult.reject;
-    }
-    const supposedProposerIndex = epochCtx.getBeaconProposer(slot);
-    if (supposedProposerIndex !== signedBlock.message.proposerIndex) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
+    return validateGossipBlock(this.config, this.chain, this.db, this.logger, signedBlock);
   };
 
-  public isValidIncomingCommitteeAttestation =
-  async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    if(!hasValidAttestationSlot(this.config, state.genesisTime, attestation)) {
-      return ExtendedValidatorResult.ignore;
-    }
-    if (state.slot < attestation.data.slot) {
-      processSlots(epochCtx, state, attestation.data.slot);
-    }
-    if (subnet !== computeSubnetForAttestation(this.config, state, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    // Make sure this is unaggregated attestation
-    if (!isUnaggregatedAttestation(this.config, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    if (await hasValidatorAttestedForThatTargetEpoch(this.config, this.db, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.ignore;
-    }
-    if (!await isAttestingToValidBlock(this.db, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
+  public isValidIncomingCommitteeAttestation = async (
+    attestation: Attestation, subnet: number
+  ): Promise<ExtendedValidatorResult> => {
+    return validateGossipCommitteeAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
   };
 
-  public isValidIncomingAggregateAndProof =
-  async (signedAggregationAndProof: SignedAggregateAndProof): Promise<ExtendedValidatorResult> => {
-    const aggregateAndProof = signedAggregationAndProof.message;
-    const aggregate = aggregateAndProof.aggregate;
-    const attestationData = aggregate.data;
-    const slot = attestationData.slot;
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
-    const currentSlotTime = currentSlot * milliSecPerSlot;
-    if (!((slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        >= currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
-      return ExtendedValidatorResult.ignore;
-    }
-    if (state.slot < slot) {
-      processSlots(epochCtx, state, slot);
-    }
-
-    if (await this.db.aggregateAndProof.hasAttestation(aggregate)) {
-      return ExtendedValidatorResult.ignore;
-    }
-
-    const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-    const existingAttestations = await this.db.aggregateAndProof.getByAggregatorAndEpoch(
-      aggregatorIndex, attestationData.target.epoch) || [];
-    if (existingAttestations.length > 0) {
-      return ExtendedValidatorResult.ignore;
-    }
-
-    if (
-      epochCtx.getAttestingIndices(
-        attestationData,
-        aggregate.aggregationBits
-      ).length < 1
-    ) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const selectionProof = aggregateAndProof.selectionProof;
-    if (!epochCtx.isAggregator(slot, attestationData.index, selectionProof)) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const committee = epochCtx.getBeaconCommittee(attestationData.slot, attestationData.index);
-    if (!committee.includes(aggregatorIndex)) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const epoch = computeEpochAtSlot(this.config, slot);
-    const selectionProofDomain = getDomain(this.config, state, DomainType.SELECTION_PROOF, epoch);
-    const selectionProofSigningRoot = computeSigningRoot(
-      this.config, this.config.types.Slot, slot, selectionProofDomain);
-    const validatorPubKey = state.validators[aggregatorIndex].pubkey;
-    if (!verify(
-      validatorPubKey.valueOf() as Uint8Array,
-      selectionProofSigningRoot,
-      selectionProof.valueOf() as Uint8Array,
-    )) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const aggregatorDomain = getDomain(this.config, state, DomainType.AGGREGATE_AND_PROOF, epoch);
-    const aggregatorSigningRoot = computeSigningRoot(
-      this.config,
-      this.config.types.AggregateAndProof,
-      aggregateAndProof,
-      aggregatorDomain);
-    if (!verify(
-      validatorPubKey.valueOf() as Uint8Array,
-      aggregatorSigningRoot,
-      signedAggregationAndProof.signature.valueOf() as Uint8Array,
-    )) {
-      return ExtendedValidatorResult.reject;
-    }
-
-    const indexedAttestation = epochCtx.getIndexedAttestation(aggregate);
-    if (!isValidIndexedAttestation(this.config, state, indexedAttestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
+  public isValidIncomingAggregateAndProof = async (
+    signedAggregationAndProof: SignedAggregateAndProof
+  ): Promise<ExtendedValidatorResult> => {
+    return validateGossipAggregateAndProof(this.config, this.chain, this.db, this.logger, signedAggregationAndProof);
   };
 
   public isValidIncomingVoluntaryExit = async(voluntaryExit: SignedVoluntaryExit): Promise<ExtendedValidatorResult> => {

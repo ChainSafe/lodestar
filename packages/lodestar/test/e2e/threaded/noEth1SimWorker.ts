@@ -1,7 +1,7 @@
 import {parentPort, workerData} from "worker_threads";
 
 import {initBLS} from "@chainsafe/bls";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {consoleTransport, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidator} from "../../utils/node/validator";
@@ -10,15 +10,39 @@ import {getDevValidator} from "../../utils/node/validator";
   await initBLS();
 
   const {
-    index,
+    nodeIndex,
     validatorsPerNode,
     startIndex,
   } = workerData.options;
 
-  const logger = new WinstonLogger();
+  const logger = new WinstonLogger({
+    level: LogLevel.debug
+  }, [
+    consoleTransport,
+    // fileTransport(path.join(__dirname, "./node_" + nodeIndex + ".log"))
+  ]);
   const node = await getDevBeaconNode({
     ...workerData.options,
-    logger: logger.child({module: `Node ${index}`})
+    options: {
+      logger: {
+        // chain: {
+        //   level: LogLevel.debug
+        // },
+        // api: {
+        //   level: LogLevel.verbose
+        // },
+        // network: {
+        //   level: LogLevel.debug
+        // },
+        // sync: {
+        //   level: LogLevel.debug
+        // },
+        // node: {
+        //   level: LogLevel.debug
+        // }
+      }
+    },
+    logger: logger.child({module: `Node ${nodeIndex}`})
   });
 
   const validator = getDevValidator({
@@ -31,10 +55,9 @@ import {getDevValidator} from "../../utils/node/validator";
   await node.start();
   await validator.start();
 
-  node.chain.on("justifiedCheckpoint", (checkpoint) => {
+  node.chain.on("justifiedCheckpoint", () => {
     parentPort.postMessage({
-      event: "justifiedCheckpoint",
-      checkpoint,
+      event: "justifiedCheckpoint"
     });
   });
 })();

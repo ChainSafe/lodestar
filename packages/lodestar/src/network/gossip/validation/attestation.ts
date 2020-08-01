@@ -3,12 +3,99 @@ import {
   getCurrentSlot,
   isValidIndexedAttestation
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
-import {IBeaconDb} from "../../db/api";
-import {assert} from "@chainsafe/lodestar-utils";
+import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
+import {IBeaconDb} from "../../../db/api";
+import {ExtendedValidatorResult} from "../constants";
+import {toHexString} from "@chainsafe/ssz";
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IBeaconChain} from "../../../chain";
+
+export async function validateGossipCommitteeAttestation(
+  config: IBeaconConfig,
+  chain: IBeaconChain,
+  db: IBeaconDb,
+  logger: ILogger,
+  attestation: Attestation,
+  subnet: number
+): Promise<ExtendedValidatorResult> {
+  const {state, epochCtx} = await chain.getHeadStateContext();
+  const root = config.types.Attestation.hashTreeRoot(attestation);
+  if(!hasValidAttestationSlot(config, state.genesisTime, attestation)) {
+    logger.warn(
+      "Ignoring received gossip committee attestation",
+      {
+        reason: "invalid attestation slot",
+        root: toHexString(root),
+        currentSlot: getCurrentSlot(config, state.genesisTime),
+        attestationSlot: attestation.data.slot
+      }
+    );
+    return ExtendedValidatorResult.ignore;
+  }
+  if (state.slot < attestation.data.slot) {
+    processSlots(epochCtx, state, attestation.data.slot);
+  }
+  if (subnet !== computeSubnetForAttestation(config, epochCtx, attestation)) {
+    logger.warn(
+      "Rejecting received gossip committee attestation",
+      {
+        reason: "invalid subnet",
+        root: toHexString(root),
+        subnet,
+        expectedSubnet: computeSubnetForAttestation(config, epochCtx, attestation)
+      }
+    );
+    return ExtendedValidatorResult.reject;
+  }
+  // Make sure this is unaggregated attestation
+  if (!isUnaggregatedAttestation(config, state, epochCtx, attestation)) {
+    logger.warn(
+      "Rejecting received gossip committee attestation",
+      {
+        reason: "not unaggregated attestation",
+        root: toHexString(root),
+      }
+    );
+    return ExtendedValidatorResult.reject;
+  }
+  if (await hasValidatorAttestedForThatTargetEpoch(config, db, state, epochCtx, attestation)) {
+    logger.warn(
+      "Ignoring received gossip committee attestation",
+      {
+        reason: "validator attested to that epoch",
+        root: toHexString(root),
+      }
+    );
+    return ExtendedValidatorResult.ignore;
+  }
+  if (!await isAttestingToValidBlock(db, attestation)) {
+    logger.warn(
+      "Rejecting received gossip committee attestation",
+      {
+        reason: "attesting to invalid block",
+        root: toHexString(root),
+        blockRoot: toHexString(attestation.data.beaconBlockRoot)
+      }
+    );
+    return ExtendedValidatorResult.reject;
+  }
+  if (!isValidIndexedAttestation(config, state, epochCtx.getIndexedAttestation(attestation))) {
+    logger.warn(
+      "Rejecting received gossip committee attestation",
+      {
+        reason: "invalid indexed attestation",
+        root: toHexString(root),
+      }
+    );
+    return ExtendedValidatorResult.reject;
+  }
+  logger.debug("Received gossip committee attestation passed validation", {root: toHexString(root)});
+  return ExtendedValidatorResult.accept;
+}
 
 /**
  * is ready to be included in block

@@ -25,13 +25,16 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
 export async function publishAggregatedAttestation(
   this: Gossip, signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
   const forkDigestValue = await this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
+  this.logger.verbose(
+    "Publishing SignedAggregateAndProof",
+    {
+      commitee: signedAggregateAndProof.message.aggregate.data.index,
+      slot: signedAggregateAndProof.message.aggregate.data.slot,
+      topic: getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue)
+    }
+  );
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
     Buffer.from(this.config.types.SignedAggregateAndProof.serialize(signedAggregateAndProof))
-  );
-
-  this.logger.verbose(
-    `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}`
-        + ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
   );
 }

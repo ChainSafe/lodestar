@@ -148,7 +148,8 @@ export class AttestationService {
     );
     await this.waitForAttestationBlock(duty.attestationSlot);
     let attestation: Attestation|undefined;
-    let fork, genesisValidatorsRoot;
+
+    let fork: Fork, genesisValidatorsRoot: Root;
     try {
       ({fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork()));
       attestation = await this.createAttestation(
@@ -170,9 +171,8 @@ export class AttestationService {
 
     if (duty.isAggregator) {
       setTimeout(
-        this.aggregateAttestations,
-        this.config.params.SECONDS_PER_SLOT / 3 * 1000,
-        duty.attesterIndex, duty, attestation, fork
+        () => this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot),
+        this.config.params.SECONDS_PER_SLOT / 3 * 1000
       );
     }
     try {
@@ -275,6 +275,7 @@ export class AttestationService {
       DomainType.AGGREGATE_AND_PROOF,
       computeEpochAtSlot(this.config, aggregate.data.slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
+    this.logger.info("signing aggregate and proof", {signingRoot: toHexString(signingRoot), genesisValidatorsRoot: toHexString(genesisValidatorsRoot), domain: toHexString(domain), epoch: computeEpochAtSlot(this.config, aggregate.data.slot)});
     return this.privateKeys[aggregatorIndex].signMessage(signingRoot).toBytesCompressed();
   }
 

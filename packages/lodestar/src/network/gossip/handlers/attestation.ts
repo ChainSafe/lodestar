@@ -8,8 +8,8 @@ import {getGossipTopic, getAttestationSubnetEvent} from "../utils";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {GossipEvent} from "../constants";
 import {GossipObject} from "../interface";
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "../encoding";
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn {
   return function handleIncomingCommitteeAttestation(this: Gossip, obj: GossipObject): void {
@@ -29,8 +29,8 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
 
 export async function publishCommiteeAttestation(this: Gossip, attestation: Attestation): Promise<void> {
   const forkDigestValue = await this.getForkDigest(attestation.data.slot);
-  const headState = await this.chain.getHeadState();
-  const subnet = computeSubnetForAttestation(this.config, headState, attestation);
+  const epochCtx = await this.chain.getHeadEpochContext();
+  const subnet = computeSubnetForAttestation(this.config, epochCtx, attestation);
   await this.pubsub.publish(
     getGossipTopic(
       GossipEvent.ATTESTATION_SUBNET,

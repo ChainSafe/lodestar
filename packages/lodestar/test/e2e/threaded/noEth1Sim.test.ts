@@ -22,7 +22,7 @@ describe("no eth1 sim (multi-node test)", function () {
       for (let i=0; i<nodeCount; i++) {
         const options = {
           params: beaconParams,
-          options: {sync: {minPeers: 0}},
+          options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           nodeIndex: i,
