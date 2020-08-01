@@ -30,8 +30,8 @@ export class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
   private apiClient: IApiClient;
-  private blockService: BlockProposingService;
-  private attestationService: AttestationService;
+  private blockService?: BlockProposingService;
+  private attestationService?: AttestationService;
   private db: IValidatorDB;
   private logger: ILogger;
   private isRunning: boolean;
@@ -58,6 +58,8 @@ export class Validator {
 
   public run = (): void => {
     this.logger.info("Chain start has occured!");
+    if (!this.blockService) throw Error("blockService not setup");
+    if (!this.attestationService) throw Error("attestationService not setup");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     this.blockService.start();
