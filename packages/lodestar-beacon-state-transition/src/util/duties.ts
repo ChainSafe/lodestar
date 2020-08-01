@@ -44,7 +44,7 @@ export function getCommitteeAssignment(
     }
   }
 
-  return null;
+  throw Error("No committeeAssignment");
 }
 
 /**

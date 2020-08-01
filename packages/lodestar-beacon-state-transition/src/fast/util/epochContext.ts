@@ -194,7 +194,7 @@ export class EpochContext {
       }
     }
 
-    return null;
+    throw Error("no committeeAssignment");
   }
 
   public isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
