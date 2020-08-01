@@ -30,6 +30,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async start(): Promise<void> {
+    this.logger.info("Subscribing to gossip topics");
     await this.network.gossip.start();
     this.currentForkDigest = this.chain.currentForkDigest;
     this.subscribe(this.currentForkDigest);
@@ -37,6 +38,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async stop(): Promise<void> {
+    this.logger.info("Unsubscribing from gossip topics");
     this.unsubscribe(this.currentForkDigest);
     this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.network.gossip.stop();

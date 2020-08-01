@@ -4,8 +4,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
-import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export interface IAttestationCollectorModules {
   chain: IBeaconChain;
@@ -43,9 +45,13 @@ export class AttestationCollector implements IService {
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
     const forkDigest = this.chain.currentForkDigest;
-    const headState = await this.chain.getHeadState();
-    const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+    const {epochCtx, state} = await this.chain.getHeadStateContext();
+
     try {
+      if (state.slot < slot) {
+        processSlots(epochCtx, state, slot);
+      }
+      const subnet = computeSubnetForSlot(this.config, epochCtx, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
       if(this.aggregationDuties.has(slot)) {
         this.aggregationDuties.get(slot).add(committeeIndex);
@@ -53,17 +59,17 @@ export class AttestationCollector implements IService {
         this.aggregationDuties.set(slot, new Set([committeeIndex]));
       }
     } catch (e) {
-      this.logger.error("Unable to subscribe to attestation subnet", {subnet});
+      this.logger.error("Unable to subscribe to attestation subnet", e);
     }
   }
 
   private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.currentForkDigest;
-    const headState = await this.chain.getHeadState();
+    const epochContext = await this.chain.getHeadEpochContext();
     this.timers = [];
     committees.forEach((committeeIndex) => {
-      const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+      const subnet = computeSubnetForSlot(this.config, epochContext, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(
         forkDigest,
         subnet,
