@@ -236,19 +236,19 @@ describe("sync utils", function () {
       forkDigest: Buffer.alloc(0),
       finalizedRoot: Buffer.alloc(0),
       finalizedEpoch: 0,
-      headRoot: Buffer.alloc(0),
+      headRoot: Buffer.alloc(32, 1),
       headSlot: 1000
     };
     reps.get(peer2.toB58String()).latestStatus = {
       forkDigest: Buffer.alloc(0),
       finalizedRoot: Buffer.alloc(0),
       finalizedEpoch: 0,
-      headRoot: Buffer.alloc(0),
+      headRoot: Buffer.alloc(32, 2),
       headSlot: 2000
     };
 
-    expect(getBestHead(peers, reps)).to.be.equal(2000);
-    expect(getBestPeer(peers, reps)).to.be.equal(peer2);
+    expect(getBestHead(peers, reps)).to.be.deep.equal({slot: 2000, root: Buffer.alloc(32, 2)});
+    expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
   });
 
 });

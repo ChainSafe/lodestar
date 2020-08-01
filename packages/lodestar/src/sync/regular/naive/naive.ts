@@ -56,13 +56,14 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
   public async start(): Promise<void> {
     this.logger.info("Started regular syncing");
     this.chain.on("processedBlock", this.onProcessedBlock);
-    this.currentTarget = this.chain.forkChoice.headBlockSlot();
+    const headSlot = this.chain.forkChoice.headBlockSlot();
     const state = await this.chain.getHeadState();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    if (this.currentTarget >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${this.currentTarget}`);
+    if (headSlot >= currentSlot) {
+      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
       return;
     }
+    this.currentTarget = headSlot;
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
@@ -188,9 +189,9 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
       await sleep(waitingTime);
       const previousSlot = getCurrentSlot(this.config, state.genesisTime) - 1;
       const peers = this.network.getPeers();
-      const maxHeadSlot = getBestHead(peers, this.reps);
+      const {slot: maxHeadSlot} = getBestHead(peers, this.reps);
       if (maxHeadSlot >= previousSlot) {
-        this.bestPeer = getBestPeer(peers, this.reps);
+        this.bestPeer = getBestPeer(this.config, peers, this.reps);
         this.logger.verbose(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}, headSlot=${maxHeadSlot}`);
       } else {
         this.logger.verbose(`Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}` +

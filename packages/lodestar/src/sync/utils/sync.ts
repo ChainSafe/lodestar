@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {IReputation, IReputationStore} from "../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
+import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, INetwork} from "../../network";
 import {ISlotRange} from "../interface";
@@ -215,16 +215,18 @@ export async function syncPeersStatus(reps: IReputationStore, network: INetwork,
   }));
 }
 
-export function getBestHead(peers: PeerId[], reps: IReputationStore): number {
-  return Math.max(...peers.map(
-    (peerId) => reps.get(peerId.toB58String()).latestStatus?.headSlot || 0));
+export function getBestHead(peers: PeerId[], reps: IReputationStore): {slot: number; root: Root} {
+  return peers.map((peerId) => {
+    const latestStatus = reps.get(peerId.toB58String()).latestStatus;
+    return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot} : {slot: 0, root: ZERO_HASH};
+  }).reduce((head, peerStatus) => {
+    return peerStatus.slot > head.slot? peerStatus : head;
+  });
 }
 
 // should add peer score later
-export function getBestPeer(peers: PeerId[], reps: IReputationStore): PeerId {
-  const bestHead = getBestHead(peers, reps);
-  return peers.find(peerId => {
-    const headSlot = reps.get(peerId.toB58String()).latestStatus?.headSlot;
-    return headSlot === bestHead;
-  });
+export function getBestPeer(config: IBeaconConfig, peers: PeerId[], reps: IReputationStore): PeerId {
+  const {root} = getBestHead(peers, reps);
+  return peers.find(peerId =>
+    config.types.Root.equals(root, reps.get(peerId.toB58String()).latestStatus?.headRoot || ZERO_HASH));
 }
