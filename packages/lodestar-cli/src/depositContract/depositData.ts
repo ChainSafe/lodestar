@@ -21,10 +21,12 @@ export function decodeEth1TxData(
   const {
     deposit_data_root: root,
   } = inputs;
-  // attach `amount` to decoded deposit inputs so it can be parsed to a DepositData
-  inputs.amount = amount;
 
-  const depositData: DepositData = config.types.DepositData.fromJson(inputs, {case: "snake"});
+  const depositData: DepositData = config.types.DepositData.fromJson(
+    // attach `amount` to decoded deposit inputs so it can be parsed to a DepositData
+    {...inputs, amount},
+    {case: "snake"}
+  );
 
   // Sanity check
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
