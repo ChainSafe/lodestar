@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, readOnlyMap, BitList} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
 import {PublicKey} from "@chainsafe/bls";
 import {
   Attestation,
@@ -152,7 +152,7 @@ export class EpochContext {
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
-      attestingIndices: attestingIndices,
+      attestingIndices: attestingIndices as List<number>,
       data: data,
       signature: attestation.signature,
     };
@@ -162,7 +162,7 @@ export class EpochContext {
     const committee = this.getBeaconCommittee(data.slot, data.index);
     return getAttestingIndicesFromCommittee(
       committee,
-      readOnlyMap(bits, (b) => b),
+      readOnlyMap(bits, (b) => b) as List<boolean>,
     );
   }
 
@@ -186,7 +186,7 @@ export class EpochContext {
         const committee = this.getBeaconCommittee(slot, i);
         if (committee.includes(validatorIndex)) {
           return {
-            validators: committee,
+            validators: committee as List<number>,
             committeeIndex: i,
             slot,
           };

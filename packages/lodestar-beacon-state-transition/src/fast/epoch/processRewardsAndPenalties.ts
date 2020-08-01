@@ -1,5 +1,5 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {readOnlyMap} from "@chainsafe/ssz";
+import {readOnlyMap, List} from "@chainsafe/ssz";
 
 import {GENESIS_EPOCH} from "../../constants";
 import {EpochContext, IEpochProcess} from "../util";
@@ -30,5 +30,5 @@ export function processRewardsAndPenalties(
   });
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
-  state.balances = newBalances;
+  state.balances = newBalances as List<bigint>;
 }

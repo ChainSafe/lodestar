@@ -1,5 +1,14 @@
 import crypto from "crypto";
-import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
+import {
+  BeaconBlock,
+  SignedBeaconBlock,
+  ProposerSlashing,
+  AttesterSlashing,
+  Deposit,
+  SignedVoluntaryExit,
+  Attestation
+} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 
@@ -17,11 +26,11 @@ export function generateEmptyBlock(): BeaconBlock {
         depositCount: 0,
       },
       graffiti: crypto.randomBytes(32),
-      proposerSlashings: [],
-      attesterSlashings: [],
-      attestations: [],
-      deposits: [],
-      voluntaryExits: [],
+      proposerSlashings: [] as ProposerSlashing[] as List<ProposerSlashing>,
+      attesterSlashings: [] as AttesterSlashing[] as List<AttesterSlashing>,
+      attestations: [] as Attestation[] as List<Attestation>,
+      deposits: [] as Deposit[] as List<Deposit>,
+      voluntaryExits: [] as SignedVoluntaryExit[] as  List<SignedVoluntaryExit>,
     },
   };
 }
