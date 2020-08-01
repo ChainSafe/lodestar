@@ -214,3 +214,17 @@ export async function syncPeersStatus(reps: IReputationStore, network: INetwork,
     reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
   }));
 }
+
+export function getBestHead(peers: PeerId[], reps: IReputationStore): number {
+  return Math.max(...peers.map(
+    (peerId) => reps.get(peerId.toB58String()).latestStatus?.headSlot || 0));
+}
+
+// should add peer score later
+export function getBestPeer(peers: PeerId[], reps: IReputationStore): PeerId {
+  const bestHead = getBestHead(peers, reps);
+  return peers.find(peerId => {
+    const headSlot = reps.get(peerId.toB58String()).latestStatus?.headSlot;
+    return headSlot === bestHead;
+  });
+}

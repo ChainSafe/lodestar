@@ -10,9 +10,10 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, RoundRobinArray} from "./utils";
+import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -25,6 +26,7 @@ export enum SyncMode {
 export class BeaconSync implements IBeaconSync {
 
   private readonly opts: ISyncOptions;
+  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
@@ -36,11 +38,13 @@ export class BeaconSync implements IBeaconSync {
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
-
   private startingBlock: Slot = 0;
+
+  private statusSyncTimer: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
+    this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
@@ -76,6 +80,8 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
     await this.attestationCollector.stop();
@@ -117,6 +123,7 @@ export class BeaconSync implements IBeaconSync {
   private async startInitialSync(): Promise<void> {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
+    this.startSyncTimer(this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000);
     await this.regularSync.stop();
     await this.initialSync.start();
   }
@@ -125,10 +132,23 @@ export class BeaconSync implements IBeaconSync {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
+    this.startSyncTimer(this.config.params.SECONDS_PER_SLOT * 1000);
+    this.regularSync.on("syncCompleted", this.stopSyncTimer);
     await Promise.all([
-      this.regularSync.start(),
       this.gossip.start(),
+      this.regularSync.start(),
     ]);
+  }
+
+  private startSyncTimer(interval: number): void {
+    this.stopSyncTimer();
+    this.statusSyncTimer = setInterval(() => {
+      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain));
+    }, interval);
+  }
+
+  private stopSyncTimer(): void {
+    if(this.statusSyncTimer) clearInterval(this.statusSyncTimer);
   }
 
   private async waitForPeers(): Promise<void> {
