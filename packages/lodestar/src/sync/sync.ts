@@ -134,10 +134,8 @@ export class BeaconSync implements IBeaconSync {
     await this.initialSync.stop();
     this.startSyncTimer(this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.stopSyncTimer);
-    await Promise.all([
-      this.gossip.start(),
-      this.regularSync.start(),
-    ]);
+    await this.gossip.start();
+    await this.regularSync.start();
   }
 
   private startSyncTimer(interval: number): void {
