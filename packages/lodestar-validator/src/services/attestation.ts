@@ -301,19 +301,13 @@ export class AttestationService {
         slot
       );
     } catch (e) {
-      this.logger.error(
-        `Failed to obtain attestation from beacon node at slot ${slot} and committee ${committeeIndex}`,
-        e
-      );
-      return null;
+      e.message = `Failed to obtain attestation at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
+      throw e;
     }
     if (await this.isConflictingAttestation(attesterIndex, attestation.data)) {
-      this.logger.warn(
-        "Avoided signing conflicting attestation! "
-                + `Source epoch: ${attestation.data.source.epoch}, `
-                + `Target epoch: ${attestation.data.target.epoch}`
-      );
-      return null;
+      throw Error("Avoided signing conflicting attestation! "
+        + `Source epoch: ${attestation.data.source.epoch}, `
+        + `Target epoch: ${attestation.data.target.epoch}`);
     }
     const domain = getDomain(
       this.config,
