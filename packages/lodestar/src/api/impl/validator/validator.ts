@@ -32,7 +32,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  computeSubnetForSlot, getCurrentSlot,
+  getCurrentSlot,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
@@ -40,9 +40,10 @@ import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
-import {validateAttestation} from "../../../util/validation/attestation";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {validateAttestation} from "../../../network/gossip/validation";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -203,7 +204,7 @@ export class ValidatorApi implements IValidatorApi {
     const matchingAttestations = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     });
-    
+
     if (matchingAttestations.length === 0) {
       throw Error("No matching attestations found for attestationData");
     }
@@ -237,7 +238,7 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
-    const state = await this.chain.getHeadState();
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     const domain = getDomain(
       this.config,
       state,
@@ -256,8 +257,12 @@ export class ValidatorApi implements IValidatorApi {
       slot,
       committeeIndex
     );
-    const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
+    if (state.slot < slot) {
+      processSlots(epochCtx, state, slot);
+    }
+    const subnet = computeSubnetForSlot(this.config, epochCtx, slot, committeeIndex);
     await this.network.searchSubnetPeers(String(subnet));
+
   }
 
 }

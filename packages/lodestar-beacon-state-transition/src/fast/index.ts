@@ -1,6 +1,6 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {verifyBlockSignature} from "../util";
+import {verifyBlockSignatureFast} from "../util";
 import {EpochContext, IStateContext} from "./util";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
@@ -27,7 +27,7 @@ export function fastStateTransition(
 
   // verify signature
   if (verifyProposer) {
-    if (!verifyBlockSignature(epochCtx.config, postState, signedBlock)) {
+    if (!verifyBlockSignatureFast(epochCtx, postState, signedBlock)) {
       throw new Error("Invalid block signature");
     }
   }
