@@ -46,12 +46,12 @@ describe("no eth1 sim (multi-node test)", function () {
       }
       // Wait for finalized checkpoint on all nodes
       try {
-        const checkpoints = await Promise.all(workers.map(worker =>
+        await Promise.all(workers.map(worker =>
           waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
             return evt.event == "justifiedCheckpoint";
           })
         ));
-        console.log("Success: Terminating workers", checkpoints);
+        console.log("Success: Terminating workers");
         await Promise.all(workers.map(worker => worker.terminate()));
       } catch (e) {
         console.log("Failure: Terminating workers");

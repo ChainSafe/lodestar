@@ -81,7 +81,8 @@ describe("no eth1 sim (multi-node test)", function () {
     });
   }
 
-  afterEach("Stop nodes and validators", async () => {
+  afterEach("Stop nodes and validators", async function () {
+    this.timeout(10000);
     for (const onDoneHandler of onDoneHandlers) {
       await onDoneHandler();
     }
