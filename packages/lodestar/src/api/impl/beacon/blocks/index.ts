@@ -32,7 +32,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       }
       const nonFinalizedBlockSummaries
           = this.chain.forkChoice.getBlockSummaryByParentBlockRoot(filters.parentRoot.valueOf() as Uint8Array);
-      for (const summary of nonFinalizedBlockSummaries) {
+      await Promise.all(nonFinalizedBlockSummaries.map(async summary => {
         const block = await this.db.block.get(summary.blockRoot);
         if (block) {
           const cannonical = this.chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
@@ -44,7 +44,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
             ));
           }
         }
-      }
+      }));
       return result.filter(
         (item) =>
         //skip if no slot filter
@@ -73,14 +73,14 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
       //fork blocks
-      for (const summary of this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot)) {
+      await Promise.all(this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async summary => {
         if (!this.config.types.Root.equals(summary.blockRoot, canonicalRoot)) {
           const block = await this.db.block.get(summary.blockRoot);
           if (block) {
             result.push(toBeaconHeaderResponse(this.config, block));
           }
         }
-      }
+      }));
     }
 
     return result;
