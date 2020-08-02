@@ -5,11 +5,11 @@ import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 export type IValidatorPaths = IGlobalPaths & {
   validatorsDbDir: string;
   validatorDbDir: (pubkey: string) => string;
-}
+};
 
 /**
  * Defines the path structure of the validator files
- * 
+ *
  * ```bash
  * $validatorRootDir
  * └── validator-db
