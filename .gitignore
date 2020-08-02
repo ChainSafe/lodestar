@@ -38,7 +38,9 @@ docs/assets
 genesis.ssz
 witti.json
 altona.json
+medalla.json
 .altona
+.medalla
 packages/lodestar/.tmpdb/
 
 # Wallet CLI artifacts

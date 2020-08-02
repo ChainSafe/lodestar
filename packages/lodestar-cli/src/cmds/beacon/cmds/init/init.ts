@@ -5,7 +5,7 @@ import {IBeaconOptions} from "../../options";
 import {mkdir} from "../../../../util";
 import {initPeerId, initEnr, readPeerId} from "../../../../network";
 import {initBeaconConfig} from "../../config";
-import {getTestnetConfig, downloadGenesisFile, fetchBootnodes} from "../../testnets";
+import {getTestnetConfig, getGenesisFileUrl, downloadGenesisFile, fetchBootnodes} from "../../testnets";
 import {getBeaconPaths} from "../../paths";
 
 /**
@@ -29,8 +29,13 @@ export async function initHandler(options: IBeaconOptions): Promise<void> {
     }
     // Mutate options so options propagate upstream to the run call
     Object.assign(options, deepmerge(options, testnetConfig));
-    options.genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
-    await downloadGenesisFile(options.testnet, options.genesisStateFile);
+    const genesisFileUrl = getGenesisFileUrl(options.testnet);
+    if (genesisFileUrl) {
+      const genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
+      await downloadGenesisFile(options.genesisStateFile, genesisFileUrl);
+      options.genesisStateFile = genesisStateFile;
+      options.eth1.enabled = false;
+    }
   }
 
   // initialize beacon directory + rootDir
