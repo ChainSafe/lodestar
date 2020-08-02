@@ -18,7 +18,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     this.forkChoice = modules.chain.forkChoice;
   }
 
-  public async getState(stateId: StateId): Promise<BeaconState> {
+  public async getState(stateId: StateId): Promise<BeaconState | null> {
     return resolveStateId(this.config, this.db, this.forkChoice, stateId);
   }
 
