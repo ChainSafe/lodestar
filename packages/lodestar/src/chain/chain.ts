@@ -40,6 +40,7 @@ import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {notNullish} from "../util/notNullish";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -127,11 +128,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     const blockRoots = slots.map((slot) => {
       const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-      return summary? summary.blockRoot : null;
-    }).filter((blockRoot) => !!blockRoot);
+      return summary ? summary.blockRoot : null;
+    }).filter(notNullish);
     // these blocks are on the same chain to head
-    return await Promise.all(blockRoots.map(
-      (blockRoot) => this.db.block.get(blockRoot)));
+    const unfinalizedBlocks = await Promise.all(blockRoots.map(
+      (blockRoot) => this.db.block.get(blockRoot)
+    ));
+    return unfinalizedBlocks.filter(notNullish);
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
