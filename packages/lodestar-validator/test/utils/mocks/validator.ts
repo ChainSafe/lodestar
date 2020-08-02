@@ -48,40 +48,40 @@ export class MockValidatorApi implements IValidatorApi {
   }
 
   getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   getProposerDuties(epoch: number): Promise<ProposerDuty[]> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   produceAttestation(validatorPubKey: Buffer, index: number, slot: number): Promise<Attestation> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   produceBlock(slot: number, proposerPubkey: Buffer, randaoReveal: Buffer, graffiti?: string): Promise<BeaconBlock> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   publishAttestation(attestation: Attestation): Promise<void> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   publishBlock(beaconBlock: SignedBeaconBlock): Promise<void> {
-    return undefined;
+    throw Error("not implemented");
   }
 
   subscribeCommitteeSubnet(
     slot: number, slotSignature: Buffer, committeeIndex: number, aggregatorPubkey: Buffer
   ): Promise<void> {
-    return undefined;
+    throw Error("not implemented");
   }
 }
