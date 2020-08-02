@@ -41,6 +41,7 @@ altona.json
 medalla.json
 .altona
 .medalla
+packages/lodestar/.tmpdb/
 
 # Wallet CLI artifacts
 .pass

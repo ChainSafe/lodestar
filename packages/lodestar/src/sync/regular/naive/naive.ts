@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import AbortController from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
-import {IRegularSync, IRegularSyncModules} from "../interface";
+import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
 import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
@@ -12,13 +12,15 @@ import {IReputationStore} from "../../IReputation";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {fetchBlockChunks, processSyncBlocks} from "../../utils";
+import {fetchBlockChunks, processSyncBlocks, getBestHead, getBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
+import {sleep} from "../../../util/sleep";
+import {EventEmitter} from "events";
 
-export class NaiveRegularSync implements IRegularSync {
+export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEventEmitter }) implements IRegularSync {
 
   private readonly config: IBeaconConfig;
 
@@ -32,13 +34,16 @@ export class NaiveRegularSync implements IRegularSync {
 
   private readonly opts: IRegularSyncOptions;
 
+  private bestPeer: PeerId;
+
   private currentTarget: Slot = 0;
   private targetSlotRangeSource: Pushable<ISlotRange>;
   private gossipParentBlockRoot: Root;
-  private doneFirstSync: boolean;
+  // only subscribe to gossip when we're up to this
   private controller: AbortController;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
+    super();
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
@@ -51,10 +56,21 @@ export class NaiveRegularSync implements IRegularSync {
   public async start(): Promise<void> {
     this.logger.info("Started regular syncing");
     this.chain.on("processedBlock", this.onProcessedBlock);
-    this.currentTarget = this.chain.forkChoice.headBlockSlot();
+    const headSlot = this.chain.forkChoice.headBlockSlot();
+    const state = await this.chain.getHeadState();
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    if (headSlot >= currentSlot) {
+      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+      return;
+    }
+    this.currentTarget = headSlot;
+    this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
+    this.controller = new AbortController();
+    await this.waitForBestPeer(this.controller.signal);
     const newTarget = await this.getNewTarget();
-    this.logger.info("Setting target", {newTargetSlot: newTarget});
+    this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
+    this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
     await Promise.all([
       this.sync(),
       this.setTarget()
@@ -67,7 +83,6 @@ export class NaiveRegularSync implements IRegularSync {
       this.controller.abort();
     }
     this.chain.removeListener("processedBlock", this.onProcessedBlock);
-    this.chain.clock.unsubscribeFromNewSlot(this.onNewSlot);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
   }
 
@@ -77,13 +92,15 @@ export class NaiveRegularSync implements IRegularSync {
 
   private async getNewTarget(): Promise<Slot> {
     const state = await this.chain.getHeadState();
-    return getCurrentSlot(this.config, state.genesisTime);
+    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
+    return Math.min((this.currentTarget + this.opts.blockPerChunk), currentSlot + 1);
   }
 
   private setTarget = async (newTarget?: Slot, triggerSync = true): Promise<void> => {
     newTarget = newTarget || await this.getNewTarget();
     if(triggerSync && newTarget > this.currentTarget) {
-      this.logger.info(`Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
+      this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
     this.currentTarget = newTarget;
@@ -94,31 +111,24 @@ export class NaiveRegularSync implements IRegularSync {
       if(await this.checkSyncComplete()) {
         return;
       }
-      this.logger.info(`Synced up to slot ${lastProcessedBlock.message.slot}`);
-      if (!this.doneFirstSync) {
-        this.doneFirstSync = true;
-        this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
-        this.chain.clock.onNewSlot(this.onNewSlot);
-        this.logger.info("Finished first sync, triggered onNewSlot and onGossipBlock");
-      }
+      this.logger.info(`Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
+        `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`);
+      await this.setTarget();
     }
-  };
-
-  private onNewSlot = async (slot: Slot): Promise<void> => {
-    // the chunkify wants `slot + 1`
-    await this.setTarget(slot + 1);
   };
 
   private onGossipBlock = async(block: SignedBeaconBlock): Promise<void> => {
     this.gossipParentBlockRoot = block.message.parentRoot;
-    this.logger.verbose(`Set gossip parent block to ${toHexString(this.gossipParentBlockRoot)}` +
+    this.logger.verbose(`Regular Sync: Set gossip parent block to ${toHexString(this.gossipParentBlockRoot)}` +
       `, gossip slot ${block.message.slot}`);
     await this.checkSyncComplete();
   };
 
   private checkSyncComplete = async(): Promise<boolean> => {
     if (this.gossipParentBlockRoot && this.chain.forkChoice.hasBlock(this.gossipParentBlockRoot as Uint8Array)) {
-      this.logger.important("Sync caught up to gossip block parent " + toHexString(this.gossipParentBlockRoot));
+      this.logger.
+        important("Regular Sync: caught up to gossip block parent " + toHexString(this.gossipParentBlockRoot));
+      this.emit("syncCompleted");
       await this.stop();
       return true;
     }
@@ -126,7 +136,6 @@ export class NaiveRegularSync implements IRegularSync {
   };
 
   private async sync(): Promise<void> {
-    this.controller = new AbortController();
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
     const getSyncPeers = this.getSyncPeers;
@@ -142,10 +151,14 @@ export class NaiveRegularSync implements IRegularSync {
               processSyncBlocks(config, chain, logger, false)
             );
             if(lastFetchedSlot) {
+              // not trigger sync until after we process lastFetchedSlot
               await setTarget(lastFetchedSlot, false);
             } else {
-              // some peers maybe not up to date, retry the range again next time
+              // no block, retry the range again next slot
               await setTarget(range.start - 1, false);
+              logger.verbose(`Not found any blocks for range ${JSON.stringify(range)}, will retry at next slot`);
+              await sleep(config.params.SECONDS_PER_SLOT * 1000);
+              await setTarget();
             }
           }
         })();
@@ -154,12 +167,36 @@ export class NaiveRegularSync implements IRegularSync {
   }
 
   private getSyncPeers = async (): Promise<PeerId[]> => {
-    return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
-      const rep = this.reps.getFromPeerId(peer);
-      if(rep && rep.latestStatus) {
-        validPeers.push(peer);
+    if (!this.network.getPeers().includes(this.bestPeer)) {
+      // bestPeer disconnected
+      this.bestPeer = undefined;
+      await this.waitForBestPeer(this.controller.signal);
+    }
+    return [this.bestPeer];
+  };
+
+  private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
+    // statusSyncTimer is per slot
+    const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
+    const state = await this.chain.getHeadState();
+    let isAborted = false;
+    signal.addEventListener("abort", () => {
+      this.logger.verbose("RegularSync: Abort waitForBestPeer");
+      isAborted = true;
+    });
+    while (!this.bestPeer && !isAborted) {
+      // wait first to make sure we have latest status
+      await sleep(waitingTime);
+      const previousSlot = getCurrentSlot(this.config, state.genesisTime) - 1;
+      const peers = this.network.getPeers();
+      const {slot: maxHeadSlot} = getBestHead(peers, this.reps);
+      if (maxHeadSlot >= previousSlot) {
+        this.bestPeer = getBestPeer(this.config, peers, this.reps);
+        this.logger.verbose(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}, headSlot=${maxHeadSlot}`);
+      } else {
+        this.logger.verbose(`Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}` +
+        ` maxHeadSlot=${maxHeadSlot}`);
       }
-      return validPeers;
-    }, [] as PeerId[]);
+    }
   };
 }
