@@ -23,10 +23,13 @@ export class NodeApi implements INodeApi {
   public async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
+    const discoveryAddresses = [] as string[];
+    if (enr?.multiaddrTCP) discoveryAddresses.push(enr.multiaddrTCP.toString());
+    if (enr?.multiaddrUDP) discoveryAddresses.push(enr.multiaddrUDP.toString());
     return {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
-      discoveryAddresses: [enr?.multiaddrTCP?.toString(), enr?.multiaddrUDP?.toString()].filter(v => !!v),
+      discoveryAddresses,
       p2pAddresses: this.network.multiaddrs.map((m) => m.toString()),
       metadata: this.network.metadata
     };
