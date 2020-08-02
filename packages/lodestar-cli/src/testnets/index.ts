@@ -60,7 +60,7 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
 /**
  * Downloads a genesis file per testnet if it does not exist
  */
-export async function downloadGenesisFile(filepath: string, url: string): Promise<void> {
+export async function downloadFile(filepath: string, url: string): Promise<void> {
   if (!fs.existsSync(filepath)) {
     fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
     await promisify(stream.pipeline)(

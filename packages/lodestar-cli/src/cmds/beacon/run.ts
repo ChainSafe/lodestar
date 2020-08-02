@@ -10,7 +10,7 @@ import {consoleTransport} from "@chainsafe/lodestar-utils";
 
 import {readPeerId, readEnr, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
-import {getBeaconConfig} from "../../util";
+import {getMergedIBeaconConfig} from "../../config/params";
 import {initHandler as initCmd} from "../init/init";
 import {IBeaconOptions} from "./options";
 import {getBeaconPaths} from "./paths";
@@ -20,10 +20,9 @@ import {getBeaconPaths} from "./paths";
  */
 export async function run(options: IBeaconOptions): Promise<void> {
   await initBLS();
-  // Auto-setup testnet
-  if (options.testnet) {
-    await initCmd(options);
-  }
+  // always run the init command
+  await initCmd(options);
+
   const beaconPaths = getBeaconPaths(options);
   options = {...options, ...beaconPaths};
 
@@ -34,7 +33,7 @@ export async function run(options: IBeaconOptions): Promise<void> {
   // TODO: Rename db.name to db.path or db.location
   options.db.name = beaconPaths.dbDir;
 
-  const config = getBeaconConfig(options.preset, options.params);
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const loggerTransports = [
     consoleTransport

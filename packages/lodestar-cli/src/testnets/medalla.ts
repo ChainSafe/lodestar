@@ -38,12 +38,4 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
     bootnodes: [],
     multiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
   },
-  params: {
-    MIN_GENESIS_TIME: 1596546000,
-    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 16384,
-    GENESIS_DELAY: 172800,
-    GENESIS_FORK_VERSION: "0x00000001",
-    DEPOSIT_NETWORK_ID: 5,
-    DEPOSIT_CONTRACT_ADDRESS: "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC",
-  },
 };

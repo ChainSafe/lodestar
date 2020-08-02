@@ -1,7 +1,8 @@
 import path from "path";
 import {IGlobalArgs} from "../../options";
+import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 
-export interface IValidatorPaths {
+export type IValidatorPaths = IGlobalPaths & {
   validatorsDbDir: string;
   validatorDbDir: (pubkey: string) => string;
 }
@@ -17,12 +18,17 @@ export interface IValidatorPaths {
  * ```
  */
 export function getValidatorPaths(options: Partial<IValidatorPaths> & Pick<IGlobalArgs, "rootDir">): IValidatorPaths {
+  options = {
+    ...options,
+    ...getGlobalPaths(options),
+  };
   const rootDir = options.rootDir;
   const validatorsDbDir = path.join(rootDir, options.validatorsDbDir || "validator-db");
   return {
+    ...options,
     validatorsDbDir,
     validatorDbDir: (pubkey: string) => path.join(validatorsDbDir, pubkey)
-  };
+  } as IValidatorPaths;
 }
 
 /**

@@ -46,10 +46,7 @@ export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> 
  * @param options 
  */
 export function mergeConfigOptions(options: IBeaconOptions): IBeaconOptions {
-  const optionsFromFile = deepmerge(
-    readBeaconConfig(options.templateConfigFile),
-    readBeaconConfig(options.configFile)
-  ) as IBeaconOptions;
+  const optionsFromFile = readBeaconConfig(options.configFile) as IBeaconOptions;
 
   return deepmerge(
     deepmerge(
