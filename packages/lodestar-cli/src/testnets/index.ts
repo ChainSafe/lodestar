@@ -3,7 +3,7 @@ import path from "path";
 import stream from "stream";
 import {promisify} from "util";
 import got from "got";
-import {IBeaconNodeOptionsPartial} from "../../../options";
+import {IBeaconNodeOptionsPartial} from "../options";
 import {altonaConfig} from "./altona";
 import {medallaConfig} from "./medalla";
 
@@ -15,6 +15,17 @@ export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartia
       return altonaConfig;
     case "medalla":
       return medallaConfig;
+    default:
+      throw Error(`Testnet not supported: ${testnet}`);
+  }
+}
+
+export function getTestnetParamsUrl(testnet: TestnetName): string | null {
+  switch (testnet) {
+    case "altona":
+      return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/altona/config.yaml";
+    case "medalla":
+      return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/medalla/config.yaml";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }

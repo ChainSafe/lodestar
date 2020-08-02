@@ -1,8 +1,8 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {paramsOptions, IParamsOptions, beaconNodeOptions, IBeaconNodeOptions} from "../../options";
+import {TestnetName} from "../../testnets";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {TestnetName} from "./testnets";
 
 export type IBeaconOptions =
   IGlobalArgs &

@@ -1,4 +1,4 @@
-import {IBeaconNodeOptionsPartial} from "../../../options";
+import {IBeaconNodeOptionsPartial} from "../options";
 
 /* eslint-disable max-len */
 

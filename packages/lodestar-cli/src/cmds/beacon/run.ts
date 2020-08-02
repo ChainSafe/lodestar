@@ -1,27 +1,28 @@
 import * as fs from "fs";
+import path from "path";
 import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {IBeaconOptions} from "../../options";
-import {readPeerId, readEnr, writeEnr} from "../../../../network";
 import {ENR} from "@chainsafe/discv5";
-import {initHandler as initBeacon} from "../init/init";
-import {getBeaconPaths} from "../../paths";
-import {mergeConfigOptions} from "../../config";
-import {getBeaconConfig} from "../../../../util";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
-import path from "path";
+
+import {readPeerId, readEnr, writeEnr} from "../../network";
+import {mergeConfigOptions} from "../../config/beacon";
+import {getBeaconConfig} from "../../util";
+import {initHandler as initCmd} from "../init/init";
+import {IBeaconOptions} from "./options";
+import {getBeaconPaths} from "./paths";
 
 /**
  * Run a beacon node
  */
-export async function runHandler(options: IBeaconOptions): Promise<void> {
+export async function run(options: IBeaconOptions): Promise<void> {
   await initBLS();
   // Auto-setup testnet
   if (options.testnet) {
-    await initBeacon(options);
+    await initCmd(options);
   }
   const beaconPaths = getBeaconPaths(options);
   options = {...options, ...beaconPaths};

@@ -1,12 +1,12 @@
 import path from "path";
 import deepmerge from "deepmerge";
-import {globalOptions} from "../../../../options";
-import {IBeaconOptions} from "../../options";
-import {mkdir} from "../../../../util";
-import {initPeerId, initEnr, readPeerId} from "../../../../network";
-import {initBeaconConfig} from "../../config";
+import {globalOptions} from "../../options";
+import {IBeaconOptions} from "../beacon/options";
+import {initBeaconConfig} from "../../config/beacon";
+import {mkdir} from "../../util";
+import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadGenesisFile, fetchBootnodes} from "../../testnets";
-import {getBeaconPaths} from "../../paths";
+import {getBeaconPaths} from "../beacon/paths";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
