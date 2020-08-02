@@ -18,6 +18,7 @@ import {
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../../db";
@@ -75,7 +76,9 @@ export class ValidatorApi implements IValidatorApi {
     graffiti = ""
   ): Promise<BeaconBlock> {
     const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
-    if (validatorIndex === undefined) throw Error("Validator pubKey not in epochCtx");
+    if (validatorIndex === undefined) {
+      throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
+    }
     return await assembleBlock(
       this.config,
       this.chain,
@@ -98,7 +101,9 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.getHeadStateContext(),
       ]);
       const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
-      if (validatorIndex === undefined) throw Error("Validator pubKey not in epochCtx");
+      if (validatorIndex === undefined) {
+        throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
+      }
       const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
       if(headState.slot < currentSlot) {
         processSlots(epochCtx, headState, currentSlot);
@@ -163,7 +168,7 @@ export class ValidatorApi implements IValidatorApi {
     const validatorIndexes = validatorPubKeys.map((key) => {
       const validatorIndex = epochCtx.pubkey2index.get(key);
       if (validatorIndex === undefined || !Number.isInteger(validatorIndex)) {
-        throw Error(`Validator pubKey ${Buffer.from(key).toString("hex")} not in epochCtx`);
+        throw Error(`Validator pubKey ${toHexString(key)} not in epochCtx`);
       }
       return validatorIndex;
     });
@@ -213,7 +218,7 @@ export class ValidatorApi implements IValidatorApi {
 
     const aggregatorIndex = epochCtx.pubkey2index.get(aggregator);
     if (aggregatorIndex === undefined) {
-      throw Error("Aggregator pubkey not in epochCtx");
+      throw Error(`Aggregator pubkey ${toHexString(aggregator)} not in epochCtx`);
     }
 
     const aggregate = matchingAttestations.reduce((current, attestation) => {
