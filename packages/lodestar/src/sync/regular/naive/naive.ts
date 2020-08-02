@@ -56,14 +56,14 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
   public async start(): Promise<void> {
     this.logger.info("Started regular syncing");
     this.chain.on("processedBlock", this.onProcessedBlock);
-    const headSlot = this.chain.forkChoice.headBlockSlot();
+    const {slot: lastSlot} = this.chain.forkChoice.latest();
     const state = await this.chain.getHeadState();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    if (headSlot >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+    if (lastSlot >= currentSlot) {
+      this.logger.info(`Regular Sync: node is up to date, lastSlot=${lastSlot}`);
       return;
     }
-    this.currentTarget = headSlot;
+    this.currentTarget = lastSlot;
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
@@ -128,7 +128,6 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
     if (this.gossipParentBlockRoot && this.chain.forkChoice.hasBlock(this.gossipParentBlockRoot as Uint8Array)) {
       this.logger.
         important("Regular Sync: caught up to gossip block parent " + toHexString(this.gossipParentBlockRoot));
-      this.emit("syncCompleted");
       await this.stop();
       return true;
     }
@@ -176,7 +175,8 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
   };
 
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
-    // statusSyncTimer is per slot
+    // inform sync to query peer status
+    this.emit("findingBestPeer");
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
     const state = await this.chain.getHeadState();
     let isAborted = false;
@@ -192,6 +192,7 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
       const {slot: maxHeadSlot} = getBestHead(peers, this.reps);
       if (maxHeadSlot >= previousSlot) {
         this.bestPeer = getBestPeer(this.config, peers, this.reps);
+        this.emit("foundBestPeer");
         this.logger.verbose(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}, headSlot=${maxHeadSlot}`);
       } else {
         this.logger.verbose(`Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}` +

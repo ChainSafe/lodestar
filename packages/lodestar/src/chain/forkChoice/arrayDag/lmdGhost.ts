@@ -322,6 +322,13 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     this.synced = true;
   }
 
+  public latest(): BlockSummary {
+    if (!this.nodes || this.nodes.length === 0) {
+      return null;
+    }
+    return this.toBlockSummary(this.nodes[this.nodes.length - 1]);
+  }
+
   public head(): BlockSummary {
     if (!this.headNode()) {
       return null;

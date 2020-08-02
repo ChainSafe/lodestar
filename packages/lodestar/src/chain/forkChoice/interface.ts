@@ -19,6 +19,7 @@ export interface ILMDGHOST extends ForkChoiceEventEmitter {
   addBlock(info: BlockSummary): void;
   addAttestation(blockRoot: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
   head(): BlockSummary;
+  latest(): BlockSummary;
   headBlockSlot(): Slot;
   headBlockRoot(): Uint8Array;
   headStateRoot(): Uint8Array;

@@ -2,7 +2,7 @@ import {describe} from "mocha";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST, BlockSummary} from "../../../../src/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
@@ -36,7 +36,7 @@ describe("fast sync", function () {
   });
 
   it("no peers with finalized epoch", async function () {
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.latest.returns({slot: 0} as BlockSummary);
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
@@ -58,7 +58,7 @@ describe("fast sync", function () {
   it("should sync till target and end", function (done) {
     const chainEventEmitter = new EventEmitter();
     const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.latest.returns({slot: 0} as BlockSummary);
     // @ts-ignore
     chainEventEmitter.forkChoice = forkChoiceStub;
     const statsStub = sinon.createStubInstance(SyncStats);
@@ -98,7 +98,7 @@ describe("fast sync", function () {
   it("should continue syncing if there is new target", function (done) {
     const chainEventEmitter = new EventEmitter();
     const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.latest.returns({slot: 0} as BlockSummary);
     // @ts-ignore
     chainEventEmitter.forkChoice = forkChoiceStub;
     const statsStub = sinon.createStubInstance(SyncStats);

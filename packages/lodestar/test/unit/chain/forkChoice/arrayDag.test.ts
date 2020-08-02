@@ -452,11 +452,11 @@ describe("ArrayDagLMDGHOST", () => {
     });
   });
 
-  describe("getAncestor", () => {
+  describe("getAncestor and latest", () => {
     /**
      * genesis - a - b -c
      */
-    it("should return correct ancestor", () => {
+    it("should return correct ancestor and latest", () => {
       addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
@@ -468,6 +468,14 @@ describe("ArrayDagLMDGHOST", () => {
       expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1))).to.be.deep.equal(blockA);
       expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
       expect(lmd.getAncestor(genesis, GENESIS_SLOT - 1)).to.be.equal(null);
+      expect(lmd.latest()).to.be.deep.equal({
+        slot: slotC,
+        blockRoot: blockC,
+        parentRoot: blockB,
+        stateRoot: stateC,
+        justifiedCheckpoint: {root: genesis, epoch: GENESIS_EPOCH},
+        finalizedCheckpoint: {root: genesis, epoch: GENESIS_EPOCH}
+      });
     });
   });
 

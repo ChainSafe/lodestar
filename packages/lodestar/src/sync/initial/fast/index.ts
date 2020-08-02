@@ -65,7 +65,7 @@ export class FastSync
     this.chain.on("processedCheckpoint", this.checkSyncCompleted);
     this.chain.on("processedBlock", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
-    this.blockImportTarget = this.chain.forkChoice.headBlockSlot();
+    this.blockImportTarget = this.chain.forkChoice.latest().slot;
     this.targetCheckpoint = getCommonFinalizedCheckpoint(
       this.config,
       this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))

@@ -263,6 +263,10 @@ export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEve
    * Best justified checkpoint.
    */
   private bestJustifiedCheckpoint: Checkpoint;
+  /**
+   * The lastest block summary
+   */
+  private latestBlockSummary: BlockSummary;
   private synced: boolean;
   private clock: IBeaconClock;
 
@@ -364,6 +368,9 @@ export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEve
     if (shouldCheckBestTarget) {
       this.ensureCorrectBestTargets();
     }
+    if (!this.latestBlockSummary || this.latestBlockSummary.slot < slot) {
+      this.latestBlockSummary = node.toBlockSummary();
+    }
   }
 
   public getNode(blockRootBuf: Uint8Array): Node {
@@ -404,6 +411,10 @@ export class StatefulDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEve
     });
 
     this.synced = true;
+  }
+
+  public latest(): BlockSummary {
+    return this.latestBlockSummary;
   }
 
   public head(): BlockSummary {

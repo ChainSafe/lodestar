@@ -80,7 +80,8 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.regularSync.removeListener("findingBestPeer", this.findBestPeer);
+    this.regularSync.removeListener("foundBestPeer", this.stopSyncTimer);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -132,10 +133,14 @@ export class BeaconSync implements IBeaconSync {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
-    this.startSyncTimer(this.config.params.SECONDS_PER_SLOT * 1000);
-    this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
+    this.regularSync.on("findingBestPeer", this.findBestPeer.bind(this));
+    this.regularSync.on("foundBestPeer", this.stopSyncTimer.bind(this));
     await this.gossip.start();
     await this.regularSync.start();
+  }
+
+  private findBestPeer(): void {
+    this.startSyncTimer(2 * this.config.params.SECONDS_PER_SLOT * 1000);
   }
 
   private startSyncTimer(interval: number): void {
