@@ -46,6 +46,7 @@ export class NodeApi implements INodeApi {
   public async getPeers(): Promise<NodePeer[]> {
     return this.network.getPeers().map((peer) => {
       const conn = this.network.getPeerConnection(peer);
+      if (!conn) throw Error(`No peer connection for ${peer.id.toString()}`);
       return {
         peerId: peer.toB58String(),
         //TODO: figure out how to get enr of peer
