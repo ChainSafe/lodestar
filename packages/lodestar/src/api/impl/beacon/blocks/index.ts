@@ -32,17 +32,17 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       }
       const nonFinalizedBlockSummaries
           = this.chain.forkChoice.getBlockSummaryByParentBlockRoot(filters.parentRoot.valueOf() as Uint8Array);
-      result.push(... await Promise.all(
-        nonFinalizedBlockSummaries.map(async (summary) => {
-          const block = await this.db.block.get(summary.blockRoot);
+      for (const summary of nonFinalizedBlockSummaries) {
+        const block = await this.db.block.get(summary.blockRoot);
+        if (block) {
           const cannonical = this.chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
-          return toBeaconHeaderResponse(
+          result.push(toBeaconHeaderResponse(
             this.config,
             block,
             this.config.types.Root.equals(cannonical.blockRoot, summary.blockRoot)
-          );
-        })
-      ));
+          ));
+        }
+      }
       return result.filter(
         (item) =>
         //skip if no slot filter
@@ -50,31 +50,37 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
               item.header.message.slot === filters.slot
       );
     }
+    
     const headSlot = this.chain.forkChoice.headBlockSlot();
     if(!filters.parentRoot && !filters.slot && filters.slot !== 0) {
       filters.slot = headSlot;
     }
-    //future slot
-    if(filters.slot > headSlot) {
-      return [];
-    }
-    const canonicalBlock = await this.chain.getBlockAtSlot(filters.slot);
-    //skip slot
-    if(!canonicalBlock) {
-      return [];
-    }
-    const canonicalRoot = this.config.types.BeaconBlock.hashTreeRoot(canonicalBlock.message);
-    result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
-    //fork blocks
-    await Promise.all(
-      this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot)
-        //remove canonical block
-        .filter((summary) => !this.config.types.Root.equals(summary.blockRoot, canonicalRoot))
-        .map(async (summary) => {
-          result.push(toBeaconHeaderResponse(this.config, await this.db.block.get(summary.blockRoot)));
-        })
-    );
+    if (filters.slot !== undefined) {
+      //future slot
+      if (filters.slot > headSlot) {
+        return [];
+      }
+
+      const canonicalBlock = await this.chain.getBlockAtSlot(filters.slot);
+      //skip slot
+      if(!canonicalBlock) {
+        return [];
+      }
+      const canonicalRoot = this.config.types.BeaconBlock.hashTreeRoot(canonicalBlock.message);
+      result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
+
+      //fork blocks
+      for (const summary of this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot)) {
+        if (!this.config.types.Root.equals(summary.blockRoot, canonicalRoot)) {
+          const block = await this.db.block.get(summary.blockRoot);
+          if (block) {
+            result.push(toBeaconHeaderResponse(this.config, block));
+          }
+        }
+      }
+    }
+
     return result;
   }
 
