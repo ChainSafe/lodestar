@@ -221,7 +221,7 @@ export function getBestHead(peers: PeerId[], reps: IReputationStore): {slot: num
     return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot} : {slot: 0, root: ZERO_HASH};
   }).reduce((head, peerStatus) => {
     return peerStatus.slot > head.slot? peerStatus : head;
-  });
+  }, {slot: 0, root: ZERO_HASH});
 }
 
 // should add peer score later
