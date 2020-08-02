@@ -1,4 +1,4 @@
-# Connect to Witti testnet
+# Connect to Witti testnet (DEPRECATED)
 
 Running a Lodestar node on the [Witti](https://github.com/goerli/witti) multi-client testnet only requires basic familiarity with the terminal.
 
