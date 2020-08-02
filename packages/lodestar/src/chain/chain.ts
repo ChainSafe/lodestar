@@ -95,15 +95,17 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
     //head state should always exist
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot()));
+    const headStateRoot = await this.db.stateCache.get(this.forkChoice.headStateRoot());
+    if (!headStateRoot) throw Error("headStateRoot does not exist");
+    return headStateRoot;
   }
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
     //head state should always have epoch ctx
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).state;
+    return (await this.getHeadStateContext()).state;
   }
   public async getHeadEpochContext(): Promise<EpochContext> {
     //head should always have epoch ctx
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).epochCtx;
+    return (await this.getHeadStateContext()).epochCtx;
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
