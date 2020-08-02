@@ -357,7 +357,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   // If we don't have a state yet, we have to wait for genesis state
   private async waitForState(): Promise<TreeBacked<BeaconState>> {
-    let state: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
+    let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
       const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});
