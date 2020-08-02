@@ -36,11 +36,13 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
         const block = await this.db.block.get(summary.blockRoot);
         if (block) {
           const cannonical = this.chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
-          result.push(toBeaconHeaderResponse(
-            this.config,
-            block,
-            this.config.types.Root.equals(cannonical.blockRoot, summary.blockRoot)
-          ));
+          if (cannonical) {
+            result.push(toBeaconHeaderResponse(
+              this.config,
+              block,
+              this.config.types.Root.equals(cannonical.blockRoot, summary.blockRoot)
+            ));
+          }
         }
       }
       return result.filter(
