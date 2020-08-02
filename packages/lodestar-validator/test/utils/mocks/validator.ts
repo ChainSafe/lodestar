@@ -16,7 +16,7 @@ import {
   SignedAggregateAndProof
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
-import {generateEmptyBlock} from "../block";
+import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;

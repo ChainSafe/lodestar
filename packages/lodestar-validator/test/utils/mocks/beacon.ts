@@ -9,7 +9,7 @@ import {
   Uint64, Genesis
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
-import {generateEmptyBlock} from "../block";
+import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IMockBeaconApiOpts {
