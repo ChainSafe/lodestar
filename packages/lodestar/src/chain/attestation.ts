@@ -113,7 +113,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
     const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot as Uint8Array, targetSlot);
     assert.true(
-      ancestor && this.config.types.Root.equals(target.root, ancestor),
+      Boolean(ancestor && this.config.types.Root.equals(target.root, ancestor)),
       "FFG and LMD vote must be consistent with each other");
     const stateCtx = await this.db.stateCache.get(block.stateRoot);
     assert.true(
