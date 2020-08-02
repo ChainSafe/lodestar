@@ -23,8 +23,8 @@ export async function getEthersSigner({
     const eth1Provider = rpcUrl
       ? new ethers.providers.JsonRpcProvider(rpcUrl)
       : ethers.getDefaultProvider();
-    wallet.connect(eth1Provider);
-    return wallet;
+    const providerWallet = wallet.connect(eth1Provider);
+    return providerWallet;
   }
 
   if (rpcUrl) {
