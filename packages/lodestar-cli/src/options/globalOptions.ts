@@ -1,16 +1,26 @@
 import {Options} from "yargs";
+import {defaultGlobalPaths} from "../paths/global";
+import {paramsOptions, IParamsArgs} from "./paramsOptions";
+import {TestnetName} from "../testnets";
 
-export interface IGlobalArgs {
+export type IGlobalArgs = {
   rootDir: string;
+  testnet?: TestnetName;
   preset: string;
-}
+  paramsFile: string;
+} & IParamsArgs;
 
 export const globalOptions = {
   rootDir: {
     description: "Lodestar root directory",
     normalize: true,
-    default: "./.lodestar",
     type: "string"
+  } as Options,
+
+  testnet: {
+    description: "Use a testnet configuration",
+    type: "string",
+    choices: ["altona", "medalla"] as TestnetName[],
   } as Options,
 
   preset: {
@@ -18,5 +28,13 @@ export const globalOptions = {
     choices: ["mainnet", "minimal"],
     default: "mainnet",
     type: "string"
-  } as Options
+  } as Options,
+
+  paramsFile: {
+    description: "Network configuration file",
+    defaultDescription: defaultGlobalPaths.paramsFile,
+    type: "string",
+  } as Options,
+
+  ...paramsOptions,
 };

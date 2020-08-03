@@ -1,5 +1,5 @@
 import {describe} from "mocha";
-import {IReputation} from "../../../../src/sync/IReputation";
+import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {
   fetchBlockChunks,
@@ -7,6 +7,8 @@ import {
   getHighestCommonSlot,
   getStatusFinalizedCheckpoint,
   processSyncBlocks,
+  getBestHead,
+  getBestPeer,
 } from "../../../../src/sync/utils";
 import {expect} from "chai";
 import deepmerge from "deepmerge";
@@ -20,6 +22,8 @@ import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import PeerId from "peer-id";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("sync utils", function () {
 
@@ -219,6 +223,44 @@ describe("sync utils", function () {
     });
 
   });
+
+  describe("getBestHead and getBestPeer", () => {
+    it("should get best head and best peer", async () => {
+      const peer1 = await PeerId.create();
+      const peer2 = await PeerId.create();
+      const peer3 = await PeerId.create();
+      const peers = [peer1, peer2, peer3];
+      const reps = new ReputationStore();
+      reps.add(peer1.toB58String());
+      reps.add(peer2.toB58String());
+      reps.add(peer3.toB58String());
+      reps.get(peer1.toB58String()).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 1),
+        headSlot: 1000
+      };
+      reps.get(peer2.toB58String()).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 2),
+        headSlot: 2000
+      };
+
+      expect(getBestHead(peers, reps)).to.be.deep.equal({slot: 2000, root: Buffer.alloc(32, 2)});
+      expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
+    });
+
+    it("should handle no peer", () => {
+      const reps = new ReputationStore();
+      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH});
+      expect(getBestPeer(config, [], reps)).to.be.undefined;
+    });
+  });
+
+
 
 });
 

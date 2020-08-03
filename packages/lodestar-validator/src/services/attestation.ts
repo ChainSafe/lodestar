@@ -148,7 +148,7 @@ export class AttestationService {
     );
     await this.waitForAttestationBlock(duty.attestationSlot);
     let attestation: Attestation|undefined;
-    let fork, genesisValidatorsRoot;
+    let fork: Fork, genesisValidatorsRoot: Root;
     try {
       ({fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork()));
       attestation = await this.createAttestation(
@@ -169,11 +169,9 @@ export class AttestationService {
     }
 
     if (duty.isAggregator) {
-      setTimeout(
-        this.aggregateAttestations,
-        this.config.params.SECONDS_PER_SLOT / 3 * 1000,
-        duty.attesterIndex, duty, attestation, fork
-      );
+      setTimeout(() => {
+        this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+      }, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
     }
     try {
       await this.provider.validator.publishAttestation(attestation);

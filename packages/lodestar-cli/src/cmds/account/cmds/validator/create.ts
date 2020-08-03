@@ -3,8 +3,11 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getBeaconConfig, YargsError, readPassphraseFile} from "../../../../util";
+import {YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
+import {initHandler as initCmd} from "../../../init/init";
+import {IInitOptions} from "../../../init/options";
+import {getMergedIBeaconConfig} from "../../../../config/params";
 
 export const command = "create";
 
@@ -57,13 +60,14 @@ instead generate them from the wallet seed when required.",
 };
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
+  await initBLS(); // Necessary to compute validator pubkey from privKey
+  await initCmd(options as unknown as IInitOptions);
+
   const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.preset, options.params);
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
-
-  await initBLS(); // Necessary to compute validator pubkey from privKey
 
   if (depositGwei > maxEffectiveBalance)
     throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);

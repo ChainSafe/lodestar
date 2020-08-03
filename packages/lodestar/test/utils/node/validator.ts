@@ -3,12 +3,11 @@ import {ValidatorDB} from "../../../src/db/api";
 import {LevelDbController} from "../../../src/db/controller";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ApiClientOverInstance, interopKeypair, Validator} from "@chainsafe/lodestar-validator/lib";
-import {intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {intDiv, LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
 import tmp from "tmp";
 import {ValidatorApi} from "../../../src/api/impl/validator";
 import {BeaconApi} from "../../../src/api/impl/beacon";
 import {NodeApi} from "../../../src/api/impl/node/node";
-import {toHexString} from "@chainsafe/ssz";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
@@ -16,19 +15,19 @@ export function getDevValidators(node: BeaconNode, count = 8, validatorClientCou
   while(count > 0) {
     if(count > validatorsPerValidatorClient) {
       vcs.push(
-        getDevValidator(
+        getDevValidator({
           node,
-          vcs.length * validatorsPerValidatorClient,
-          validatorsPerValidatorClient
-        )
+          startIndex: vcs.length * validatorsPerValidatorClient,
+          count: validatorsPerValidatorClient
+        })
       );
     } else {
       vcs.push(
-        getDevValidator(
+        getDevValidator({
           node,
-          vcs.length * validatorsPerValidatorClient,
+          startIndex: vcs.length * validatorsPerValidatorClient,
           count
-        )
+        })
       );
     }
     count = count - validatorsPerValidatorClient;
@@ -36,8 +35,18 @@ export function getDevValidators(node: BeaconNode, count = 8, validatorClientCou
   return vcs;
 }
 
-export function getDevValidator(node: BeaconNode, startIndex: number, count: number): Validator {
-  const logger=new WinstonLogger({level: LogLevel.debug, module: "validator"});
+export function getDevValidator({
+  node,
+  startIndex,
+  count,
+  logger,
+}: {
+  node: BeaconNode;
+  startIndex: number;
+  count: number;
+  logger?: ILogger;
+}): Validator {
+  if (!logger) logger = new WinstonLogger({level: LogLevel.debug, module: "validator"});
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,

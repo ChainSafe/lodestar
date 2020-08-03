@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance, SinonFakeTimers} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
@@ -26,6 +26,7 @@ describe("sync", function () {
   let loggerStub: SinonStubbedInstance<ILogger>;
   let regularSyncStub: SinonStubbedInstance<IRegularSync>;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
+  let clock: SinonFakeTimers;
 
   const getSync = (opts: ISyncOptions): IBeaconSync => {
     return new BeaconSync(
@@ -54,6 +55,11 @@ describe("sync", function () {
     loggerStub = sinon.createStubInstance(WinstonLogger);
     regularSyncStub = sinon.createStubInstance(NaiveRegularSync);
     initialSyncStub = sinon.createStubInstance(FastSync);
+    clock = sinon.useFakeTimers();
+  });
+
+  afterEach(() => {
+    clock.restore();
   });
 
   it("is synced should be true", async function () {

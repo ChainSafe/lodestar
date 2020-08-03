@@ -9,7 +9,7 @@ import {testnetName, testnetDir} from "../../constants";
 import {tmpDir} from "../../constants";
 
 describe("beacon cli", function() {
-  // this.timeout("10 min");
+  this.timeout("10 min");
 
   const tmpGenesisPath = `${tmpDir}/beacon/tmpGenesis.ssz`;
 
@@ -100,17 +100,16 @@ describe("beacon cli", function() {
     }
   };
 
-  // lodestar beacon init --rootDir .tmp --genesisStateFile .tmp/beacon/tmpGenesis.ssz
   it("should init beacon configuration", async function() {
+    // initialize beacon node configured to talk to testnet
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
       preset: "mainnet",
-      genesisStateFile: tmpGenesisPath,
       // @ts-ignore
-    }).command(beacon).help().parse(["beacon", "init"], resolve));
+    }).command(init).parse(["init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
     expect(fs.existsSync(tmpDir)).to.be.true;
-    expect(fs.existsSync(`${tmpDir}/beacon/beacon.config.json`)).to.be.true;
+    expect(fs.existsSync(`${tmpDir}/beacon.config.json`)).to.be.true;
   });
 
   // @TODO: bugs out; WIP fix in #1267
