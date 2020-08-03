@@ -275,9 +275,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       );
     } catch (e) {
-      this.logger.error(
+      this.logger.verbose(
         `failed to send request ${requestId} to peer ${peerId.toB58String()}`, e
       );
+      throw e;
     }
   }
 
@@ -292,14 +293,24 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-      const {stream} = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
-      logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+      let conn: {stream: Stream};
+      try {
+        conn = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
+        if(!conn) {
+          throw new Error("Failed to get stream to peer");
+        }
+        logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+      } catch (e) {
+        logger.warn("Failed to open stream", {peer: peerId.toB58String(), reason: e.message});
+        yield null;
+        return;
+      }
 
       const controller = new AbortController();
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
-        abortDuplex(stream, controller.signal, {returnOnAbort: true}),
+        abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
       );

@@ -5,7 +5,7 @@ import PeerId from "peer-id";
 import {ISlotRange} from "../../interface";
 import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
 import {sleep} from "../../../util/sleep";
-import {getBlockRangeFromPeer, RoundRobinArray, syncPeersStatus} from "../../utils";
+import {getBlockRangeFromPeer, RoundRobinArray} from "../../utils";
 import {ZERO_HASH} from "../../../constants";
 import {IReputationStore} from "../../reputation";
 
@@ -30,16 +30,14 @@ export function fetchSlotRangeBlocks(
           logger.error("Can't find new peers, stopping sync");
           return;
         }
-        yield * await Promise.all(
-          slotRanges.map(async function(slotRange) {
-            return getBlockRangeFromPeers(
-              reqResp,
-              logger,
-              peers,
-              slotRange
-            );
-          })
-        );
+        for (const slotRange of slotRanges) {
+          yield getBlockRangeFromPeers(
+            reqResp,
+            logger,
+            peers,
+            slotRange
+          );
+        }
       }
     })();
   };
@@ -48,14 +46,23 @@ export function fetchSlotRangeBlocks(
 export async function getBlockRangeFromPeers(
   rpc: IReqResp, logger: ILogger, peers: PeerId[], chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]> {
+  logger.info("Fetching block chunks", {validPeerCount: peers.length});
   const peerBalancer = new RoundRobinArray(peers);
   const peer = peerBalancer.next();
   while(peer) {
-    try {
-      return getBlockRangeFromPeer(rpc, peer, chunk);
-    } catch(e) {
-      logger.warn("Failed to get block range from peer", {peer: peer.toB58String(), slotRange: JSON.stringify(chunk)});
+    let retryCount = 0;
+    while (retryCount < 2) {
+      try {
+        return await getBlockRangeFromPeer(rpc, peer, chunk);
+      } catch(e) {
+        logger.warn(
+          "Failed to get block range from peer",
+          {peer: peer.toB58String(), slotRange: JSON.stringify(chunk), retryCount}
+        );
+      }
+      retryCount++;
     }
+
   }
   return [];
 }
@@ -63,7 +70,7 @@ export async function getBlockRangeFromPeers(
 export async function getBestHead(
   reps: IReputationStore, network: INetwork, logger: ILogger, currentStatus: Status
 ): Promise<{slot: number; root: Root}> {
-  await syncPeersStatus(reps, network, logger, currentStatus);
+  // await syncPeersStatus(reps, network, logger, currentStatus);
   return network.getPeers().map((peerId) => {
     const latestStatus = reps.get(peerId.toB58String()).latestStatus;
     return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot} : {slot: 0, root: ZERO_HASH};

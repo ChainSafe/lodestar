@@ -13,8 +13,7 @@ export class RoundRobinArray<T> {
     if(item) {
       return item;
     } {
-      this.index = 0;
-      return this.array[this.index];
+      return null;
     }
   }
 

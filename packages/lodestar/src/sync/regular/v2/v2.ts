@@ -64,15 +64,15 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
   }
 
   private checkSync = async (lastProcessedBlock: SignedBeaconBlock): Promise<void> => {
-    if(lastProcessedBlock.message.slot >= this.bestHead.slot) {
-      this.logger.verbose("Reached current best head, checking for new one");
+    if(lastProcessedBlock.message.slot >= this.bestHead.slot && this.chain.listeners) {
+      this.logger.info("Reached current best head, checking for new one");
       const newBestHead = await getBestHead(
         this.reputationStore,
         this.network,
         this.logger,
         createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest)
       );
-      if(lastProcessedBlock.message.slot >= newBestHead.slot) {
+      if(this.chain.forkChoice.headBlockSlot() >= newBestHead.slot) {
         this.logger.info(
           "Synced to best head slot",
           {
@@ -99,9 +99,7 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
     void pipe(
       () => {
         return (async function* () {
-          const chunks = chunkify(opts.blockPerChunk, headSlot ?? chain.forkChoice.headBlockSlot(), bestHead.slot);
-          logger.debug("Created chunks", {chunks: JSON.stringify(chunks)});
-          yield chunks;
+          yield chunkify(opts.blockPerChunk, headSlot ?? chain.forkChoice.headBlockSlot(), bestHead.slot);
         })();
       },
       fetchSlotRangeBlocks(logger, chain, reqResp, getPeers),
@@ -110,12 +108,32 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
           let lastBlock: SignedBeaconBlock;
           for await (const blockRange of source) {
             const sortedBlocks= sortBlocks(blockRange);
+            if(sortedBlocks.length > 0) {
+              logger.info(
+                "Received blocks for range",
+                {
+                  blockCount: sortedBlocks.length,
+                  startSlot: sortedBlocks[0].message.slot,
+                  endSlot: sortedBlocks[sortedBlocks.length - 1].message.slot
+                }
+              );
+            } else {
+              logger.info(
+                "Range contained only skip slots"
+              );
+            }
             for(const block of sortedBlocks) {
+              if(!block) continue;
               await chain.receiveBlock(block, false);
               if(!lastBlock || block.message.slot > lastBlock.message.slot) {
                 lastBlock = block;
               }
             }
+          }
+          if(!lastBlock) {
+            //no block returned assume error
+            await sync(bestHead);
+            return;
           }
           //block pool will find missing blocks in between
           if(lastBlock.message.slot < bestHead.slot) {
