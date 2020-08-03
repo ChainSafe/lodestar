@@ -7,6 +7,7 @@ export * from "./graffiti";
 export * from "./paths";
 export * from "./randomPassword";
 export * from "./recursivelyFindVotingKeystores";
+export * from "./sleep";
 export * from "./stripOffNewlines";
 export * from "./subObject";
 

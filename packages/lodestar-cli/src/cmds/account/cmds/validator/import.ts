@@ -7,7 +7,8 @@ import {
   YargsError,
   stripOffNewlines,
   writeFile600Perm,
-  recursivelyFindVotingKeystores
+  recursivelyFindVotingKeystores,
+  sleep
 } from "../../../../util";
 import {VOTING_KEYSTORE_FILE} from "../../../../validatorDir/paths";
 import {IAccountValidatorOptions} from "./options";
@@ -120,7 +121,7 @@ required each time the validator client starts.
     }]);
 
     console.log("Password is correct");
-    await new Promise(r => setTimeout(r, 1000)); // For UX
+    await sleep(1000); // For UX
 
     fs.mkdirSync(secretsDir, {recursive: true});
     fs.mkdirSync(validatorDirPath, {recursive: true});
