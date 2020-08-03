@@ -40,7 +40,7 @@ export function getGenesisFileUrl(testnet: TestnetName): string | null {
       // eslint-disable-next-line max-len
       return "https://github.com/eth2-clients/eth2-testnets/raw/b84d27cc8f161cc6289c91acce6dae9c35096845/shared/altona/genesis.ssz";
     case "medalla":
-      return null;
+      return "https://github.com/eth2-clients/eth2-testnets/blob/master/shared/medalla/genesis.ssz?raw=true";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
