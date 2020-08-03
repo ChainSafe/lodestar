@@ -8,8 +8,8 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
   private currentSlot: number;
-  private isRunning: boolean;
-  private timeoutId: NodeJS.Timeout;
+  private isRunning = false;
+  private timeoutId?: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig, genesisTime: number) {
     super();
@@ -29,7 +29,9 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
   }
   public async stop(): Promise<void> {
     this.isRunning = false;
-    clearTimeout(this.timeoutId);
+    if (this.timeoutId !== undefined) {
+      clearTimeout(this.timeoutId);
+    }
   }
 
   public getCurrentSlot(): number {
