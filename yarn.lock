@@ -2369,6 +2369,16 @@
   resolved "https://registry.yarnpkg.com/@types/cookiejar/-/cookiejar-2.1.1.tgz#90b68446364baf9efd8e8349bb36bd3852b75b80"
   integrity sha512-aRnpPa7ysx3aNW60hTiCtLHlQaIFsXFCgQlpakNgDNVFzbtusSY8PwjAQgRWfSk0ekNoBjO51eQRB6upA9uuyw==
 
+"@types/datastore-level@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@types/datastore-level/-/datastore-level-1.1.1.tgz#6fa396ec616ecf29347b8d804484dd1d3891fe78"
+  integrity sha512-vQ30DtwliI/6B9wRmgS9hECYOCA3pQkfuQfjmY2Qsy+C7/LbHnRjW4Wb1FNWDqS/a5iAP3rcFS0+gUMiVgKTtw==
+  dependencies:
+    "@types/abstract-leveldown" "*"
+    "@types/interface-datastore" "*"
+    "@types/levelup" "*"
+    "@types/node" "*"
+
 "@types/deepmerge@^2.2.0":
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/@types/deepmerge/-/deepmerge-2.2.0.tgz#6f63896c217f3164782f52d858d9f3a927139f64"
@@ -2431,6 +2441,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/interface-datastore@*":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@types/interface-datastore/-/interface-datastore-1.0.1.tgz#4845ea53bed33b470d42324a9a959d20d27bfd36"
+  integrity sha512-BjpDsX6N8p8zzVEaugPbgecunwQNGQWalVISXRaLTzRJcK5UjMs2EYJvnhvRlA00MTjEFXfkChCX4k5+2rO5+A==
+  dependencies:
+    "@types/node" "*"
+
 "@types/js-yaml@^3.12.1", "@types/js-yaml@^3.12.2":
   version "3.12.3"
   resolved "https://registry.yarnpkg.com/@types/js-yaml/-/js-yaml-3.12.3.tgz#abf383c5b639d0aa8b8c4a420d6a85f703357d6c"
@@ -2451,6 +2468,14 @@
   resolved "https://registry.yarnpkg.com/@types/keyv/-/keyv-3.1.1.tgz#e45a45324fca9dab716ab1230ee249c9fb52cfa7"
   integrity sha512-MPtoySlAZQ37VoLaPcTHCu1RWJ4llDkULYZIzOYxlhxBqYPB0RsRlmMU0R6tahtFe27mIdkHV+551ZWV4PLmVw==
   dependencies:
+    "@types/node" "*"
+
+"@types/levelup@*":
+  version "4.3.0"
+  resolved "https://registry.yarnpkg.com/@types/levelup/-/levelup-4.3.0.tgz#4f55585e05a33caa08c1439c344bbba93e947327"
+  integrity sha512-h82BoajhjU/zwLoM4BUBX/SCodCFi1ae/ZlFOYh5Z4GbHeaXj9H709fF1LYl/StrK8KSwnJOeMRPo9lnC6sz4w==
+  dependencies:
+    "@types/abstract-leveldown" "*"
     "@types/node" "*"
 
 "@types/levelup@^3.1.0":
@@ -5443,6 +5468,24 @@ dashdash@^1.12.0:
   integrity sha1-hTz6D3y+L+1d4gMmuN1YEDX24vA=
   dependencies:
     assert-plus "^1.0.0"
+
+datastore-core@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/datastore-core/-/datastore-core-2.0.0.tgz#49e3c96cdfc4729fcd5c92d64b3b614429cb4472"
+  integrity sha512-E6SS3GEZNMCRZScWO98qQ14MIb7+3MLsJtcgla/ULCjfnhThsUE21HN+wT0+QLoYrKR54puWy/3XKp5N+5+zyA==
+  dependencies:
+    debug "^4.1.1"
+    interface-datastore "^2.0.0"
+    ipfs-utils "^2.3.1"
+
+datastore-level@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/datastore-level/-/datastore-level-2.0.0.tgz#0851283cd9d10436798a01d97dbf60135e469c29"
+  integrity sha512-52qSxZG75QRqO502cSvnYnXj/5sO29Dvtd9uuiRLSzUaSPher8pS0hl5xzlx7zglpzAjQpjaq9oy2UFO6vMn6g==
+  dependencies:
+    datastore-core "^2.0.0"
+    interface-datastore "^2.0.0"
+    level "^5.0.1"
 
 dateformat@^3.0.0:
   version "3.0.3"
@@ -8438,6 +8481,19 @@ interface-datastore@^1.0.4:
     it-drain "^1.0.1"
     nanoid "^3.0.2"
 
+interface-datastore@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/interface-datastore/-/interface-datastore-2.0.0.tgz#a0c2de1df9e42553e4723428c02242d9c47a2cc9"
+  integrity sha512-wOImix5uVEZWo+8zPSRMJ9nHbszZi3PhZ14KHLN7oRQjaYQtjtOpYj6n5EXTjDAfIQI8KN9vntHXxyAw1lcRIA==
+  dependencies:
+    class-is "^1.1.0"
+    err-code "^2.0.1"
+    ipfs-utils "^2.3.1"
+    iso-random-stream "^1.1.1"
+    it-all "^1.0.2"
+    it-drain "^1.0.1"
+    nanoid "^3.0.2"
+
 interpret@^1.0.0, interpret@^1.1.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/interpret/-/interpret-1.2.0.tgz#d5061a6224be58e8083985f5014d844359576296"
@@ -8501,7 +8557,7 @@ ipfs-utils@^2.2.0:
     node-fetch "^2.6.0"
     stream-to-it "^0.2.0"
 
-ipfs-utils@^2.2.2:
+ipfs-utils@^2.2.2, ipfs-utils@^2.3.1:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/ipfs-utils/-/ipfs-utils-2.3.1.tgz#999951da4461b5901a5ad38329e247b5c14b7bd1"
   integrity sha512-Rq2iyFdqNknVtIgq8+/URt5WK94uEqTa2w22t2yrNE9CDifh5jvFaO6lBOMhsqzPkHjjJBoIqk+g5P0T2OHSow==

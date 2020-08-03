@@ -34,7 +34,7 @@ export async function run(options: IBeaconOptions): Promise<void> {
   options.db.name = beaconPaths.dbDir;
 
   const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
-  const libp2p = await createNodeJsLibp2p(peerId, options.network);
+  const libp2p = await createNodeJsLibp2p(peerId, options.network, options.peerStoreDir);
   const loggerTransports = [
     consoleTransport
   ];
