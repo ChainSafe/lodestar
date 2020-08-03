@@ -27,9 +27,9 @@ export class BlockPool {
 
   public addPendingBlock(job: IBlockProcessJob): void {
     const key = this.getKey(job.signedBlock);
-    const jobPool = this.pool.get(key);
-    if(jobPool) {
-      jobPool.push(job);
+    const pendingBlockPool = this.pool.get(key);
+    if(pendingBlockPool) {
+      pendingBlockPool.push(job);
     } else {
       this.pool.set(key, [job]);
       //this prevents backward syncing
