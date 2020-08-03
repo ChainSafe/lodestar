@@ -892,7 +892,7 @@
     "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
 
-"@chainsafe/discv5@0.2.6":
+"@chainsafe/discv5@0.2.6", "@chainsafe/discv5@^0.2.6":
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.6.tgz#285235a99f65dc5bb8cda2efb9ce109d35a29e47"
   integrity sha512-HVS1Z8p4inyfB+HTfBgnRbNcJ+IgPz5P6NbrYoo1aB3nqNkuR+IVJ0uEbAJC6DsHRT5WHYBHmR6uGkzP9seMhA==
@@ -903,23 +903,6 @@
     debug "^4.1.1"
     dgram "^1.0.1"
     ip6addr "^0.2.3"
-    is-ip "^3.1.0"
-    libp2p-crypto "^0.17.5"
-    multiaddr "^7.4.2"
-    peer-id "^0.13.11"
-    rlp "^2.2.4"
-    strict-event-emitter-types "^2.0.0"
-
-"@chainsafe/discv5@^0.2.5":
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.2.5.tgz#30d05d2098117e4e2d452b6c8d942f06ffeb8081"
-  integrity sha512-iE/VAUzHGLUVI5F2+yavcKHGf+hpOAgKEp7n7VpTId7OnNeHrxUqovMedIBOoNteGb/FqRaojBW382RjnGYEdA==
-  dependencies:
-    base64url "^3.0.1"
-    bcrypto "^4.2.8"
-    bigint-buffer "^1.1.5"
-    debug "^4.1.1"
-    dgram "^1.0.1"
     is-ip "^3.1.0"
     libp2p-crypto "^0.17.5"
     multiaddr "^7.4.2"
@@ -9946,9 +9929,9 @@ libp2p-tcp@^0.14.5:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#d6b41ba0607947e59d686a54f499edc68aea1843"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#680f764576b0374af8d7abe59fb28415351d56c8"
   dependencies:
-    "@chainsafe/discv5" "^0.2.5"
+    "@chainsafe/discv5" "^0.2.6"
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"
     libp2p-gossipsub "^0.4.5"
