@@ -382,7 +382,9 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     while (genesisTime - now > 0) {
       // wait 15s or time to genesis, whichever is shorter
       const diff = Math.min(genesisTime - now, 15000);
-      this.logger.info("Waiting for genesis", {waitTime: Math.floor(diff / 1000)});
+      // print time remaining in minutes, 1 decimal point accuracy
+      const waitTime = Math.floor((genesisTime - now) / 1000 / 6) / 10 + " minute(s)";
+      this.logger.info("Waiting for genesis", {waitTime: waitTime});
       await sleep(diff);
       now = Date.now();
     }
