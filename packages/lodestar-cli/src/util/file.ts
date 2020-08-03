@@ -1,7 +1,20 @@
 import * as fs from "fs";
 import * as path from "path";
+import {load, dump, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {Json} from "@chainsafe/ssz";
 import {ensureDirExists} from "./fs";
+
+export const yamlSchema = new Schema({
+  include: [
+    FAILSAFE_SCHEMA
+  ],
+  implicit: [
+    new Type("tag:yaml.org,2002:str", {
+      kind: "scalar",
+      construct: function (data) { return data !== null ? data : ""; }
+    })
+  ]
+});
 
 /**
  * Maybe create a directory
@@ -16,10 +29,14 @@ export enum FileFormat {
   toml = "toml",
 }
 
+
+
 export function parse<T=Json>(contents: string, fileFormat: FileFormat): T {
   switch (fileFormat) {
     case FileFormat.json:
       return JSON.parse(contents);
+    case FileFormat.yaml:
+      return load(contents, {schema: yamlSchema});
     default:
       throw new Error("Invalid filetype");
   }
@@ -29,6 +46,9 @@ export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
   switch (fileFormat) {
     case FileFormat.json:
       contents = JSON.stringify(obj, null, 2);
+      break;
+    case FileFormat.yaml:
+      contents = dump(obj, {schema: yamlSchema});
       break;
     default:
       throw new Error("Invalid filetype");

@@ -3,7 +3,7 @@ import path from "path";
 import stream from "stream";
 import {promisify} from "util";
 import got from "got";
-import {IBeaconNodeOptionsPartial} from "../../../options";
+import {IBeaconNodeOptionsPartial} from "../options";
 import {altonaConfig} from "./altona";
 import {medallaConfig} from "./medalla";
 
@@ -20,6 +20,17 @@ export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartia
   }
 }
 
+export function getTestnetParamsUrl(testnet: TestnetName): string | null {
+  switch (testnet) {
+    case "altona":
+      return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/altona/config.yaml";
+    case "medalla":
+      return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/medalla/config.yaml";
+    default:
+      throw Error(`Testnet not supported: ${testnet}`);
+  }
+}
+
 /**
  * Get genesisStateFile URL to download. Returns null if not available
  */
@@ -29,7 +40,7 @@ export function getGenesisFileUrl(testnet: TestnetName): string | null {
       // eslint-disable-next-line max-len
       return "https://github.com/eth2-clients/eth2-testnets/raw/b84d27cc8f161cc6289c91acce6dae9c35096845/shared/altona/genesis.ssz";
     case "medalla":
-      return null;
+      return "https://github.com/eth2-clients/eth2-testnets/blob/master/shared/medalla/genesis.ssz?raw=true";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
@@ -49,7 +60,7 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
 /**
  * Downloads a genesis file per testnet if it does not exist
  */
-export async function downloadGenesisFile(filepath: string, url: string): Promise<void> {
+export async function downloadFile(filepath: string, url: string): Promise<void> {
   if (!fs.existsSync(filepath)) {
     fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
     await promisify(stream.pipeline)(

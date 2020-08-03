@@ -13,7 +13,7 @@ yarn run cli --help
 To start a Lodestar beacon run the command:
 
 ```bash
-yarn run cli beacon run --testnet altona
+yarn run cli beacon --testnet altona
 ```
 
 Immediatelly you should see confirmation that the different modules have started
