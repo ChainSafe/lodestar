@@ -40,7 +40,7 @@ import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
-import {IReputationStore} from "../sync/IReputation";
+import {IReputationStore} from "../sync/reputation";
 
 interface IReqEventEmitterClass {
   new(): ReqEventEmitter;

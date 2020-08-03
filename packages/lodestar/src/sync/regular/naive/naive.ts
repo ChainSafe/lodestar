@@ -8,7 +8,7 @@ import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReputationStore} from "../../IReputation";
+import {IReputationStore} from "../../reputation";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";

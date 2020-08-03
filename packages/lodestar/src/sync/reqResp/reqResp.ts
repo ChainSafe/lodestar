@@ -20,7 +20,7 @@ import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
-import {IReputationStore} from "../IReputation";
+import {IReputationStore} from "../reputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
@@ -65,8 +65,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async start(): Promise<void> {
     this.network.reqResp.on("request", this.onRequest);
     this.network.on("peer:connect", this.handshake);
-    const myStatus = await createStatus(this.chain);
-    await syncPeersStatus(this.reps, this.network, myStatus);
+    const myStatus = await createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest);
+    await syncPeersStatus(this.reps, this.network, this.logger, myStatus);
   }
 
   public async stop(): Promise<void> {
@@ -110,7 +110,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.reps.get(peerId.toB58String()).latestStatus = request;
     // send status response
     try {
-      const status = await createStatus(this.chain);
+      const status = await createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest);
       this.network.reqResp.sendResponse(id, null, status);
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
@@ -261,7 +261,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private handshake = async (peerId: PeerId, direction: "inbound"|"outbound"): Promise<void> => {
     if(direction === "outbound") {
-      const request = createStatus(this.chain);
+      const request = await createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
       } catch (e) {

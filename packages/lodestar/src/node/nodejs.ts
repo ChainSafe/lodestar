@@ -17,7 +17,7 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
-import {ReputationStore} from "../sync/IReputation";
+import {ReputationStore} from "../sync/reputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 

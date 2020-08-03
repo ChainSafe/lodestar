@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
-import {IReputationStore} from "./IReputation";
+import {IReputationStore} from "./reputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {CommitteeIndex, Root, SignedBeaconBlock, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
@@ -10,10 +10,10 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} from "./utils";
+import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {IBeaconChain} from "../chain";
-import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {RegularSyncV2} from "./regular/v2";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -50,7 +50,7 @@ export class BeaconSync implements IBeaconSync {
     this.logger = modules.logger;
     this.peerReputations = modules.reputationStore;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
-    this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
+    this.regularSync = modules.regularSync || new RegularSyncV2(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip = modules.gossipHandler ||
       new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
@@ -140,8 +140,13 @@ export class BeaconSync implements IBeaconSync {
 
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
-    this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain));
+    this.statusSyncTimer = setInterval(async () => {
+      await syncPeersStatus(
+        this.peerReputations,
+        this.network,
+        this.logger,
+        createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest)
+      );
     }, interval);
   }
 

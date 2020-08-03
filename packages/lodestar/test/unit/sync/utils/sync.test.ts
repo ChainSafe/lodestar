@@ -1,5 +1,5 @@
 import {describe} from "mocha";
-import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
+import {Reputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {
   fetchBlockChunks,
@@ -253,7 +253,7 @@ describe("sync utils", function () {
 
 });
 
-function generateReputation(overiddes: Partial<IReputation>): IReputation {
+function generateReputation(overiddes: Partial<Reputation>): Reputation {
   return deepmerge(
     {
       score: 1,

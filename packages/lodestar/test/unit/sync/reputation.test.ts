@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from  "chai";
-import {IReputation, ReputationStore} from "../../../src/sync/IReputation";
+import {Reputation, ReputationStore} from "../../../src/sync/IReputation";
 import {AttestationSubnets} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
@@ -19,7 +19,7 @@ describe("syncing", function () {
 
 
   it("should able to add reputation", async function () {
-    const expected: IReputation = {
+    const expected: Reputation = {
       latestMetadata: null,
       latestStatus: null,
       score: 0,

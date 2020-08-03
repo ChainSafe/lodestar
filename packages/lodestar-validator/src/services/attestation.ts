@@ -118,7 +118,7 @@ export class AttestationService {
             this.publicKeys[attesterIndex]
           );
         } catch (e) {
-          this.logger.error("Failed to subscribe to committee subnet", e);
+          this.logger.error("Failed to subscribe to committee subnet", {reason: e.message});
         }
       }
     }

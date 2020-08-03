@@ -1,6 +1,6 @@
 import {IService} from "../node";
 import {INetwork} from "../network";
-import {IReputationStore} from "./IReputation";
+import {IReputationStore} from "./reputation";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {InitialSync} from "./initial";

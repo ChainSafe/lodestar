@@ -17,7 +17,7 @@ import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {IReputationStore} from "../sync/IReputation";
+import {IReputationStore} from "../sync/reputation";
 
 interface ILibp2pModules {
   config: IBeaconConfig;

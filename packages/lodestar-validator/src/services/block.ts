@@ -160,7 +160,7 @@ export default class BlockProposingService {
         `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
       );
     } catch (e) {
-      this.logger.error(`Failed to publish block for slot ${slot}`, e);
+      this.logger.error(`Failed to publish block for slot ${slot}`, {reason: e.message});
     }
     return signedBlock;
   }

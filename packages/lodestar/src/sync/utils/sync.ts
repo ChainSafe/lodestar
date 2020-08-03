@@ -1,10 +1,10 @@
 import PeerId from "peer-id";
-import {IReputation, IReputationStore} from "../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
+import {IReputation, IReputationStore} from "../reputation";
+import {Checkpoint, ForkDigest, Root, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReqResp, INetwork} from "../../network";
+import {INetwork, IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {IBeaconChain} from "../../chain";
+import {BlockSummary, IBeaconChain} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
@@ -198,10 +198,9 @@ export function processSyncBlocks(
   };
 }
 
-export function createStatus(chain: IBeaconChain): Status {
-  const head = chain.forkChoice.head();
+export function createStatus(head: BlockSummary, currentForkDigest: ForkDigest): Status {
   return {
-    forkDigest: chain.currentForkDigest,
+    forkDigest: currentForkDigest,
     finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
     finalizedEpoch: head.finalizedCheckpoint.epoch,
     headRoot: head.blockRoot,
@@ -209,9 +208,15 @@ export function createStatus(chain: IBeaconChain): Status {
   };
 }
 
-export async function syncPeersStatus(reps: IReputationStore, network: INetwork, status: Status): Promise<void> {
+export async function syncPeersStatus(
+  reps: IReputationStore, network: INetwork, logger: ILogger, status: Status
+): Promise<void> {
   await Promise.all(network.getPeers().map(async (peerId) => {
-    reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+    try {
+      reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+    } catch(e) {
+      logger.warn("Failed to update peer status", {peer: peerId.toB58String(), error: e.message});
+    }
   }));
 }
 

@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
-import {IReputationStore} from "../IReputation";
+import {IReputationStore} from "../reputation";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
