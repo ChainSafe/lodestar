@@ -22,11 +22,14 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
 };
 
 export const registerGetValidatorEndpoint: LodestarRestApiEndpoint = (server, {api, config}): void => {
-  server.get<IQuery, {}, unknown>(
+  server.get<IQuery>(
     "/validators/{pubkey}",
     opts,
     async (request, reply) => {
       const validator = await api.beacon.getValidator(fromHexString(request.query.pubkey));
+      if (!validator) {
+        return reply.code(404).send();
+      }
       reply
         .code(200)
         .type("application/json")
