@@ -3,6 +3,7 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
 
+import {init} from "./cmds/init";
 import {dev} from "./cmds/dev";
 import {beacon} from "./cmds/beacon";
 import {validator} from "./cmds/validator";
@@ -17,6 +18,7 @@ yargs
   .env("LODESTAR")
   .options(globalOptions)
   .command(dev)
+  .command(init)
   .command(beacon)
   .command(validator)
   .command(account)

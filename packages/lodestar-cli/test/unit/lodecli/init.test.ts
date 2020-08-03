@@ -3,7 +3,7 @@ import yargs from "yargs/yargs";
 import {expect} from "chai";
 import rimraf from "rimraf";
 
-import {beacon} from "../../../src/cmds/beacon";
+import {init} from "../../../src/cmds/init";
 
 describe("beacon cli", function() {
   this.timeout("10 min");
@@ -18,10 +18,11 @@ describe("beacon cli", function() {
     // initialize beacon node configured to talk to testnet
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
+      preset: "mainnet",
       // @ts-ignore
-    }).command(beacon).help().parse(["beacon", "init"], resolve));
+    }).command(init).parse(["init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
     expect(fs.existsSync(tmpDir)).to.be.true;
-    expect(fs.existsSync(`${tmpDir}/beacon/beacon.config.json`)).to.be.true;
+    expect(fs.existsSync(`${tmpDir}/beacon.config.json`)).to.be.true;
   });
 });
