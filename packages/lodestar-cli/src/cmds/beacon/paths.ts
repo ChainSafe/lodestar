@@ -5,6 +5,7 @@ import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
 
 export type IBeaconPaths = IGlobalPaths & {
   beaconDir: string;
+  peerStoreDir: string;
   dbDir: string;
   configFile: string;
   peerIdFile: string;
@@ -32,6 +33,7 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
   const rootDir = options.rootDir;
   const beaconDir = rootDir;
   const dbDir = path.join(beaconDir, options.dbDir || "chain-db");
+  const peerStoreDir = path.join(beaconDir, options.dbDir || "peerstore");
   const configFile = path.join(beaconDir, options.configFile || "beacon.config.json");
   const peerIdFile = path.join(beaconDir, options.peerIdFile || "peer-id.json");
   const enrFile = path.join(beaconDir, options.enrFile || "enr.json");
@@ -41,6 +43,7 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
     beaconDir,
     dbDir,
     configFile,
+    peerStoreDir,
     peerIdFile,
     enrFile
   } as IBeaconPaths;
