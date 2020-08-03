@@ -50,7 +50,7 @@
     "@chainsafe/bls": "2.0.0",
     "@chainsafe/bls-keygen": "^0.1.0",
     "@chainsafe/bls-keystore": "^1.0.0-beta8",
-    "@chainsafe/discv5": "0.2.5",
+    "@chainsafe/discv5": "0.2.6",
     "@chainsafe/lodestar": "^0.10.2",
     "@chainsafe/lodestar-config": "^0.10.2",
     "@chainsafe/lodestar-types": "^0.10.2",
