@@ -32,7 +32,7 @@ export async function initHandler(options: IBeaconOptions): Promise<void> {
     const genesisFileUrl = getGenesisFileUrl(options.testnet);
     if (genesisFileUrl) {
       const genesisStateFile = path.join(beaconPaths.beaconDir, "genesis.ssz");
-      await downloadGenesisFile(options.genesisStateFile, genesisFileUrl);
+      await downloadGenesisFile(genesisStateFile, genesisFileUrl);
       options.genesisStateFile = genesisStateFile;
       options.eth1.enabled = false;
     }
