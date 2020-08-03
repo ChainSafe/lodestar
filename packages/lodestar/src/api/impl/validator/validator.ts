@@ -115,10 +115,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    await Promise.all([
-      this.chain.receiveBlock(signedBlock),
-      this.network.gossip.publishBlock(signedBlock)
-    ]);
+    await this.chain.receiveBlock(signedBlock);
+    await this.network.gossip.publishBlock(signedBlock);
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
@@ -203,7 +201,7 @@ export class ValidatorApi implements IValidatorApi {
     const matchingAttestations = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     });
-    
+
     if (matchingAttestations.length === 0) {
       throw Error("No matching attestations found for attestationData");
     }
