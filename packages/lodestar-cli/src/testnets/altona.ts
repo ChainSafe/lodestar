@@ -5,6 +5,10 @@ import {IBeaconNodeOptionsPartial} from "../options";
 // Use a Typescript file instead of JSON so it's automatically included in the built files
 
 export const altonaConfig: IBeaconNodeOptionsPartial = {
+  params: {
+    DEPOSIT_CHAIN_ID: 5,
+    DEPOSIT_NETWORK_ID: 5,
+  },
   api: {
     rest: {
       enabled: true,

@@ -38,13 +38,3 @@ export async function getMergedIBeaconConfig(
     ...options,
   });
 }
-
-/**
- * Adds required params not found in the downloaded config
- */
-export async function appendTestnetParamsConfig(filename: string): Promise<void> {
-  const params = await readParamsConfig(filename);
-  if (params.DEPOSIT_CHAIN_ID === undefined) params.DEPOSIT_CHAIN_ID = 5;
-  if (params.DEPOSIT_NETWORK_ID === undefined) params.DEPOSIT_NETWORK_ID = 5;
-  await writeParams(filename, params as IBeaconParams);
-}

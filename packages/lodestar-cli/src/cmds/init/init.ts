@@ -6,7 +6,7 @@ import {initBeaconConfig} from "../../config/beacon";
 import {mkdir, getBeaconConfig} from "../../util";
 import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
-import {writeParamsConfig, appendTestnetParamsConfig} from "../../config/params";
+import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
 
 /**
@@ -42,7 +42,6 @@ export async function initHandler(options: IInitOptions): Promise<void> {
     const paramsUrl = getTestnetParamsUrl(options.testnet);
     if (paramsUrl) {
       await downloadFile(options.paramsFile, paramsUrl);
-      await appendTestnetParamsConfig(options.paramsFile);
     }
   }
 
