@@ -40,6 +40,7 @@ import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {sleep} from "../util/sleep";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -145,6 +146,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const epochCtx = new EpochContext(this.config);
     epochCtx.loadState(state);
     await this.db.stateCache.add({state, epochCtx});
+    await this.waitForGenesisTime(state.genesisTime);
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
@@ -370,6 +372,20 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
     this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
+  }
+
+  /**
+   * Wait until now >= genesisTime
+   */
+  private async waitForGenesisTime(genesisTime: number): Promise<void> {
+    let now = Date.now();
+    while (genesisTime - now > 0) {
+      // wait 15s or time to genesis, whichever is shorter
+      const diff = Math.min(genesisTime - now, 15000);
+      this.logger.info("Waiting for genesis", {waitTime: Math.floor(diff / 1000)});
+      await sleep(diff);
+      now = Date.now();
+    }
   }
 
 }
