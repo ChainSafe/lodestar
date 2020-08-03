@@ -1,10 +1,11 @@
 import {CommandModule} from "yargs";
-import {IBeaconOptions} from "../../options";
+import {IBeaconOptions, beaconOptions} from "../beacon/options";
 import {initHandler} from "./init";
-import {IGlobalArgs} from "../../../../options";
+import {IGlobalArgs} from "../../options";
 
 export const init: CommandModule<IGlobalArgs, IBeaconOptions> = {
   command: "init",
-  describe: "Initialize lodestar beacon node",
+  describe: "Initialize lodestar",
+  builder: beaconOptions,
   handler: initHandler
 };

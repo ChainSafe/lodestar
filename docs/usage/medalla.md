@@ -13,7 +13,7 @@ yarn run cli --help
 To start a Lodestar beacon run the command:
 
 ```bash
-yarn run cli beacon run --testnet medalla
+yarn run cli beacon --testnet medalla
 ```
 
 <!-- prettier-ignore-start -->

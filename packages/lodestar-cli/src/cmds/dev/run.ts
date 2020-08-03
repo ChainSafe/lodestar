@@ -12,7 +12,7 @@ import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 import {getValidatorApiClient} from "./utils/validator";
-import {mergeConfigOptions} from "../beacon/config";
+import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
 
 /**

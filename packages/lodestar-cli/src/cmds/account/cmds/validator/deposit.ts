@@ -4,8 +4,11 @@ import {toHexString} from "@chainsafe/ssz";
 
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
-import {getBeaconConfig, getEthersSigner, YargsError} from "../../../../util";
+import {getEthersSigner, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
+import {IInitOptions} from "../../../init/options";
+import {initHandler as initCmd} from "../../../init/init";
+import {getMergedIBeaconConfig} from "../../../../config/params";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
@@ -65,9 +68,10 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 };
 
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
+  await initCmd(options as unknown as IInitOptions);
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.preset, options.params);
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
     throw new YargsError("deposit_contract not in configuration");
@@ -83,7 +87,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
   const validatorDirsToSubmit = validatorDirs
     // txHash file is used as a flag of deposit submission
     .filter(validatorDir => !validatorDir.eth1DepositTxHashExists());
-  
+
   if (validatorDirsToSubmit.length === 0)
     throw new YargsError("No validators to deposit");
   // eslint-disable-next-line no-console
