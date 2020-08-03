@@ -7,8 +7,10 @@ import {
   YargsError,
   stripOffNewlines,
   writeFile600Perm,
-  recursivelyFindVotingKeystores,
-  sleep
+  sleep,
+  recursivelyFind,
+  isVotingKeystore,
+  isPassphraseFile
 } from "../../../../util";
 import {VOTING_KEYSTORE_FILE} from "../../../../validatorDir/paths";
 import {IAccountValidatorOptions} from "./options";
@@ -49,14 +51,17 @@ has the '.json' extension will be attempted to be imported.",
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const singleKeystorePath = options.keystore;
-  const directoryPaths = options.directory;
+  const directoryPath = options.directory;
   const {keystoresDir, secretsDir} = getAccountPaths(options);
 
   const keystorePaths = singleKeystorePath
     ? [singleKeystorePath]
-    : directoryPaths
-      ? recursivelyFindVotingKeystores(directoryPaths)
+    : directoryPath
+      ? recursivelyFind(directoryPath, isVotingKeystore)
       : null;
+  const passphrasePaths = directoryPath
+    ? recursivelyFind(directoryPath, isPassphraseFile)
+    : [];
 
   if (!keystorePaths) {
     throw new YargsError("Must supply either keystore or directory");
@@ -77,14 +82,14 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
     console.log(`
 ${keystorePaths.join("\n")}
 
-Found ${keystorePaths.length} keystores in \t${directoryPaths}
+Found ${keystorePaths.length} keystores in \t${directoryPath}
 Importing to \t\t${keystoresDir}
 `);
   }
 
   for (const keystorePath of keystorePaths) {
     const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
-    const pubkey = keystore.pubkey;
+    const pubkey = `0x${keystore.pubkey}`;
     const uuid = keystore.uuid;
     if (!pubkey) {
       throw Error("Invalid keystore, must contain .pubkey property");
@@ -96,36 +101,14 @@ Importing to \t\t${keystoresDir}
       continue;
     }
 
-    console.log(`
-Keystore found at ${keystorePath}
-- Public key: 0x${pubkey}
-- UUID: ${uuid}
+    console.log(`Importing keystore ${keystorePath}
+- Public key: ${pubkey}
+- UUID: ${uuid}`);
 
-If you enter the password it will be stored as plain-text in ${secretsDir} so that it is not \
-required each time the validator client starts.
-`);
-    
-    const answers = await inquirer.prompt<{password: string}>([{
-      name: "password",
-      type: "password",
-      message: "Enter the keystore password, or press enter to omit it",
-      validate: (input) => {
-        try {
-          // Accept empty passwords
-          if (input) keystore.decrypt(stripOffNewlines(input));
-          return true;
-        } catch (e) {
-          return `Invalid password: ${e.message}`;
-        }
-      }
-    }]);
-
-    console.log("Password is correct");
-    await sleep(1000); // For UX
-
+    const passphrase = await getKeystorePassphrase(keystore, passphrasePaths);
     fs.mkdirSync(secretsDir, {recursive: true});
     fs.mkdirSync(validatorDirPath, {recursive: true});
-    writeFile600Perm(path.join(secretsDir, pubkey), answers.password);
+    writeFile600Perm(path.join(secretsDir, pubkey), passphrase);
     fs.writeFileSync(path.join(keystoresDir, pubkey, VOTING_KEYSTORE_FILE), keystore.toJSON());
 
     console.log(`Successfully imported validator ${pubkey}`);
@@ -143,4 +126,53 @@ required each time the validator client starts.
 DO NOT USE THE ORIGINAL KEYSTORES TO VALIDATE WITH
 ANOTHER CLIENT, OR YOU WILL GET SLASHED.
 `);
+}
+
+/**
+ * Fetches the passphrase of an imported Kestore
+ * 
+ * Paths that may contain valid passphrases
+ * @param passphrasePaths ["secrets/0x12341234"]
+ */
+async function getKeystorePassphrase(
+  keystore: Keystore,
+  passphrasePaths: string[]
+): Promise<string> {
+  // First, try to find a passphrase file in the provided directory
+  const passphraseFile = passphrasePaths.find(file => file.endsWith(`0x${keystore.pubkey}`));
+  if (passphraseFile) {
+    const passphrase = fs.readFileSync(passphraseFile, "utf8");
+    try {
+      keystore.decrypt(stripOffNewlines(passphrase));
+      console.log(`Imported passphrase ${passphraseFile}`);
+      return passphrase;
+    } catch (e) {
+      console.log(`Imported passphrase ${passphraseFile}, but it's invalid: ${e.message}`);
+    }
+  }
+
+  console.log(`
+If you enter the password it will be stored as plain-text so that it is not \
+required each time the validator client starts
+`);
+    
+  const answers = await inquirer.prompt<{password: string}>([{
+    name: "password",
+    type: "password",
+    message: "Enter the keystore password, or press enter to omit it",
+    validate: (input) => {
+      try {
+        // Accept empty passwords
+        if (input) keystore.decrypt(stripOffNewlines(input));
+        return true;
+      } catch (e) {
+        return `Invalid password: ${e.message}`;
+      }
+    }
+  }]);
+
+  console.log("Password is correct");
+  await sleep(1000); // For UX
+
+  return answers.password;
 }

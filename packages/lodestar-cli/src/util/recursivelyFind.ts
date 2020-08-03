@@ -2,20 +2,37 @@ import fs from "fs";
 import path from "path";
 import {VOTING_KEYSTORE_FILE} from "../validatorDir/paths";
 
-export function recursivelyFindVotingKeystores(dirPath: string, keystorePaths: string[] = []): string[] {
+/**
+ * Find files recursively in `dirPath` whose filename matches a custom function
+ * @param dirPath
+ * Return `true` for a given filepath to be included
+ * @param filenameMatcher 
+ */
+export function recursivelyFind(
+  dirPath: string,
+  filenameMatcher: (filename: string) => boolean
+): string[] {
+  let filepaths: string[] = [];
   for (const filename of fs.readdirSync(dirPath)) {
     const filepath = path.join(dirPath, filename);
     if (fs.statSync(filepath).isDirectory()) {
-      recursivelyFindVotingKeystores(filepath, keystorePaths);
-    } else if (isVotingKeystore(filename)) {
-      keystorePaths.push(filepath);
+      filepaths = filepaths.concat(recursivelyFind(filepath, filenameMatcher));
+    } else if (filenameMatcher(filename)) {
+      filepaths.push(filepath);
     }
   }
-  return keystorePaths;
+  return filepaths;
 }
 
 /**
- * Returns `true` if we should consider the `file_name` to represent a voting keystore.
+ * Find voting keystores recursively in `dirPath`
+ */
+export function recursivelyFindVotingKeystores(dirPath: string): string[] {
+  return recursivelyFind(dirPath, isVotingKeystore);
+}
+
+/**
+ * Returns `true` if we should consider the `filename` to represent a voting keystore.
  */
 export function isVotingKeystore(filename: string): boolean {
   // All formats end with `.json`.
@@ -35,4 +52,11 @@ export function isVotingKeystore(filename: string): boolean {
     //
     // https://eips.ethereum.org/EIPS/eip-2334
     /keystore-m_12381_3600_[0-9]+_0_0-[0-9]+.json/.test(filename));
+}
+
+/**
+ * Returns true if filename is a BLS Keystore passphrase file
+ */
+export function isPassphraseFile(filename: string): boolean {
+  return /[0-9A-Fa-f]{96}/.test(filename);
 }
