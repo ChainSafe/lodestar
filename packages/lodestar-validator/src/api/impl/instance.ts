@@ -3,6 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IValidatorApi} from "../interface/validators";
 import {IBeaconApi} from "../interface/beacon";
 import {INodeApi} from "../interface/node";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 export interface IApiClientOverInstanceOpts {
   config: IBeaconConfig;
@@ -22,7 +23,7 @@ export class ApiClientOverInstance extends AbstractApiClient {
   public validator: IValidatorApi;
 
   public constructor(opts: IApiClientOverInstanceOpts) {
-    super(opts.config);
+    super(opts.config, new WinstonLogger());
     this.beacon = opts.beacon;
     this.validator = opts.validator;
     this.node = opts.node;
