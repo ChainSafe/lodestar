@@ -73,8 +73,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.removeListener("peer:connect", this.handshake);
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
-      this.network.getPeers().map((peerId) => {
-        return this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+      this.network.getPeers().map(async (peerId) => {
+        try {
+          await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+        } catch (e) {
+          this.logger.verbose("Failed to send goodbye", {reason: e.message});
+        }
       }));
   }
 

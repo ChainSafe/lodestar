@@ -44,8 +44,8 @@ block2.message.slot = BLOCK_SLOT + 1;
 describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  const logger = new WinstonLogger({level: LogLevel.verbose});
-  logger.silent = true;
+  const logger = new WinstonLogger({level: LogLevel.debug});
+  logger.silent = false;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
@@ -155,7 +155,11 @@ describe("[sync] rpc", function () {
     });
     await new Promise((resolve, reject) => {
       // if there is goodbye request from B
-      netA.reqResp.once("request", (a, b, c) => reject([a, b, c]));
+      netA.reqResp.once("request", (a, b, c) => {
+        if(a.toB58String() === netB.peerId.toB58String()) {
+          reject([a, b, c]);
+        }
+      });
       setTimeout(resolve, 2000);
     });
     expect(repsA.get(netB.peerId.toB58String()).latestStatus).to.not.equal(null);

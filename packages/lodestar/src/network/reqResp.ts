@@ -259,7 +259,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           if (requestSingleChunk && responses.length === 0) {
             // allow empty response for beacon blocks by range/root
-            this.logger.warn(`No response returned for method ${method}. request=${requestId}`);
+            this.logger.warn(
+              `No response returned for method ${method}. request=${requestId}`,
+              {peer: peerId.toB58String()}
+            );
             return null;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
