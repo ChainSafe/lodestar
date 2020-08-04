@@ -297,9 +297,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-      const conn = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
-      if(!conn) {
-        throw new Error("Failed to dial peer (timeout)");
+      let conn: {stream: Stream};
+      try {
+        conn = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
+      } catch (e) {
+        throw new Error("Failed to dial peer ("+ e.message +")");
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();

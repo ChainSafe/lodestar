@@ -72,7 +72,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.chain.on("forkDigest", this.handleForkDigest);
     this.emit("gossip:start");
     this.logger.verbose("Gossip is started");
-    this.statusInterval = setInterval(this.logSubscriptions, 15000);
+    this.statusInterval = setInterval(this.logSubscriptions, 60000);
   }
 
   public async stop(): Promise<void> {
