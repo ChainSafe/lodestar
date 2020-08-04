@@ -109,7 +109,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public async disconnect(peerId: PeerId): Promise<void> {
-    await this.libp2p.hangUp(peerId);
+    try {
+      await this.libp2p.hangUp(peerId);
+    } catch (e) {
+      this.logger.warn("Unclean disconnect", {reason: e.message});
+    }
   }
 
   public async  searchSubnetPeers(subnet: string): Promise<void> {

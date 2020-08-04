@@ -128,13 +128,16 @@ export async function dialProtocol(
   peerId: PeerId,
   protocol: string,
   timeout: number
-): ReturnType<LibP2p["dialProtocol"]> {
+): ReturnType<LibP2p["dialProtocol"]|null> {
   const abortController = new AbortController();
   const timer = setTimeout(() => {
     abortController.abort();
-    throw new Error("Failed to dial");
   }, timeout);
-  const result = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
-  clearTimeout(timer);
-  return result;
+  try {
+    return await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }

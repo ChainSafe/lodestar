@@ -121,7 +121,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
     if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.warn("Fork digest mismatch "
+      this.logger.verbose("Fork digest mismatch "
           + `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
       );
       return true;
@@ -129,7 +129,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.warn("Genesis finalized root must be zeroed "
+        this.logger.verbose("Genesis finalized root must be zeroed "
           + `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
         );
         return true;
@@ -143,7 +143,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
         if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.warn("Status with same finalized epoch has different root "
+          this.logger.verbose("Status with same finalized epoch has different root "
             + `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
           );
           return true;
@@ -265,7 +265,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
       } catch (e) {
-        this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status. Error: ` + e.message);
+        this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status`, e);
+        await this.network.disconnect(peerId);
       }
     }
   };

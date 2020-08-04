@@ -211,7 +211,10 @@ export function createStatus(chain: IBeaconChain): Status {
 
 export async function syncPeersStatus(reps: IReputationStore, network: INetwork, status: Status): Promise<void> {
   await Promise.all(network.getPeers().map(async (peerId) => {
-    reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+    try {
+      reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+      // eslint-disable-next-line no-empty
+    } catch {}
   }));
 }
 
