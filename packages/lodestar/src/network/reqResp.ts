@@ -279,8 +279,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       );
     } catch (e) {
-      this.logger.verbose(
-        `failed to send request ${requestId} to peer ${peerId.toB58String()}`, e
+      this.logger.warn(
+        `failed to send request ${requestId} to peer ${peerId.toB58String()}`, {reason: e.message}
       );
       throw e;
     }

@@ -31,8 +31,8 @@ export class BlockPool {
       this.pool.get(key).push(job);
     } else {
       this.pool.set(key, [job]);
-      //this prevents backward syncing
-      if(job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 5) {
+      //this prevents backward syncing, tolerance is 20 blocks
+      if(job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 20) {
         this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
       }
     }

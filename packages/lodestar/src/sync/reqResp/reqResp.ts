@@ -159,6 +159,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           // This will get the latest known block at the start of the epoch.
           const expected = getBlockRoot(this.config, headState, request.finalizedEpoch);
           if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
+            this.logger.verbose(
+              "Status with different finalized root",
+              {
+                received: toHexString(request.finalizedRoot),
+                epected: toHexString(expected), epoch: request.finalizedEpoch}
+            );
             return true;
           }
         } else {
