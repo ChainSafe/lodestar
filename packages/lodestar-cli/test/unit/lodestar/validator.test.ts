@@ -20,7 +20,7 @@ describe("validator cli", function() {
     expect(fs.existsSync(`${tmpDir}/wallets/`)).to.be.true;
 
     
-    // crate a validator
+    // create a validator
     await new Promise(resolve => yargs().default({
       name: "primary",
       passphraseFile: "primary.pass",

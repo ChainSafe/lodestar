@@ -4,8 +4,8 @@ import {tmpDir} from "../../constants";
 import { dev } from "../../../src/cmds/dev";
 import { expect } from "chai";
 
-describe.only("dev cli", function() {
-  it("should run dev command", async function() {
+describe("dev cli", function() {
+  it.skip("should run dev command", async function() {
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
       preset: "mainnet", // @TODO: do we really need this?
