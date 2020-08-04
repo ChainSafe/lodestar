@@ -51,6 +51,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   private handlers: Map<string, GossipHandlerFn>;
   //TODO: make this configurable
   private supportedEncodings = [GossipEncoding.SSZ_SNAPPY, GossipEncoding.SSZ];
+  private statusInterval?: NodeJS.Timeout;
 
   public constructor(
     opts: INetworkOptions,
@@ -71,6 +72,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.chain.on("forkDigest", this.handleForkDigest);
     this.emit("gossip:start");
     this.logger.verbose("Gossip is started");
+    this.statusInterval = setInterval(this.logSubscriptions, 15000);
   }
 
   public async stop(): Promise<void> {
@@ -78,6 +80,9 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.unregisterHandlers();
     this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();
+    if(this.statusInterval) {
+      clearInterval(this.statusInterval);
+    }
     this.logger.verbose("Gossip is stopped");
   }
 
@@ -237,6 +242,10 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   private emitGossipHeartbeat = (): void => {
     this.emit("gossipsub:heartbeat");
+  };
+
+  private logSubscriptions = (): void => {
+    this.logger.info("Current gossip subscriptions: " + Array.from(this.pubsub.subscriptions).join(","));
   };
 
 }
