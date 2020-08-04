@@ -69,6 +69,7 @@ N/A
 #### account wallet list options
 N/A
 
+
 ## Beacon
 ### Usage
 | Command | Description |
@@ -114,6 +115,7 @@ N/A
 | peerIdFile | string | Peer ID file | 
 | enrFile | string | ENR file | 
 | logFile | string | Log file | 
+
 
 
 ## Validator

@@ -52,17 +52,8 @@ function getUsage(commandModules: Array<any>, commandName: string) {
   return usageStr;
 }
 
-function generate() {
-  let docsString = `
-# Lodestar CLI Documentation
-This reference describes the syntax of the Lodestar CLI options and commands.
-
-## Global Options
-| Name | Type | Description | Default |
-| ----------- | ----------- | ----------- | ----------- |
-${globalOptionsStr}
-
-## Account
+function getAccountOptions() {
+return `## Account
 ${getUsage([account, accountWallet, accountValidator], 'account')}
 ### account validator <command> options
 ${getOptionsTable(accountValidatorOptions)}
@@ -80,18 +71,42 @@ ${getOptionsTable(accountWalletsOptions)}
 #### account wallet create options
 ${getOptionsTable(accountWalletCreateOptions)}
 #### account wallet list options
-${getOptionsTable(accountWalletListOptions)}
+${getOptionsTable(accountWalletListOptions)}`
+}
 
+function getBeaconOptions() {
+return `
 ## Beacon
 ${getUsage([beaconInit, beaconRun], 'beacon')}
 ### Options
 ${getOptionsTable(beaconOptions)}
+`;
+}
 
-## Validator
+function getValidatorOptions() {
+return `## Validator
 ${getUsage([validator], 'validator')}
 ### Options
-${getOptionsTable(validatorOptions)}
+${getOptionsTable(validatorOptions)}`;
+}
+
+function generate() {
+  let docsString = `
+# Lodestar CLI Documentation
+This reference describes the syntax of the Lodestar CLI options and commands.
+
+## Global Options
+| Name | Type | Description | Default |
+| ----------- | ----------- | ----------- | ----------- |
+${globalOptionsStr}
+
+${getAccountOptions()}
+
+${getBeaconOptions()}
+
+${getValidatorOptions()}
 `;
+
   writeFile('./docs/usage/cli.md', docsString, () => {});
 }
 
