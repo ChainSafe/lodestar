@@ -71,7 +71,7 @@ export async function handler(options: IAccountValidatorDepositOptions): Promise
   await initCmd(options as unknown as IInitOptions);
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
-  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+  const config = await getMergedIBeaconConfig(options.preset, accountPaths.paramsFile, options.params);
 
   if (!config.params.DEPOSIT_CONTRACT_ADDRESS)
     throw new YargsError("deposit_contract not in configuration");
