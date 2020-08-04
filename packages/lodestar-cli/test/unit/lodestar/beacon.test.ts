@@ -30,7 +30,7 @@ describe("beacon cli", function() {
         preset: "mainnet",
       })
       .command(init).help().parse(["init", "--testnet", testnetName], resolve));
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     expect(fs.existsSync(tmpDir)).to.be.true;
     const beaconConfigPath = `${tmpDir}/beacon.config.json`;
     expect(fs.existsSync(beaconConfigPath)).to.be.true;
