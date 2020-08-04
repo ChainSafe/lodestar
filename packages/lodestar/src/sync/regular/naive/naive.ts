@@ -61,6 +61,8 @@ export class NaiveRegularSync extends (EventEmitter as { new(): RegularSyncEvent
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if (headSlot >= currentSlot) {
       this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+      this.emit("syncCompleted");
+      await this.stop();
       return;
     }
     this.currentTarget = headSlot;

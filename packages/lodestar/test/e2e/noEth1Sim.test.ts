@@ -29,7 +29,7 @@ describe("no eth1 sim (multi-node test)", function () {
       for (let i=0; i<nodeCount; i++) {
         const node = await getDevBeaconNode({
           params: beaconParams,
-          options: {sync: {minPeers: 0}},
+          options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger: logger.child({module: `Node ${i}`})
