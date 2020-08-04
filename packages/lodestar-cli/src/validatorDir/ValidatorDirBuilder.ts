@@ -6,12 +6,13 @@ import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
 import {encodeDepositData} from "../depositContract/depositData";
-import {writeFile600Perm, ensureDirExists, YargsError} from "../util";
+import {ensureDirExists, YargsError, writeValidatorPassphrase} from "../util";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
   ETH1_DEPOSIT_DATA_FILE,
-  ETH1_DEPOSIT_AMOUNT_FILE
+  ETH1_DEPOSIT_AMOUNT_FILE,
+  getValidatorDirPath
 } from "./paths";
 
 interface IValidatorDirBuildOptions {
@@ -62,9 +63,15 @@ export class ValidatorDirBuilder {
     depositGwei,
     config
   }: IValidatorDirBuildOptions): ValidatorDir {
-    if (!keystores.signing.pubkey) throw Error("signing keystore has no pubkey");
-    const dir = path.join(this.keystoresDir, keystores.signing.pubkey);
-    if (fs.existsSync(dir)) throw new YargsError(`validator dir ${dir} already exists`);
+    const keystoresDir = this.keystoresDir;
+    const secretsDir = this.secretsDir;
+    const pubkey = keystores.signing.pubkey;
+    if (!pubkey) throw Error("signing keystore has no pubkey");
+    
+    const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+    if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
+      throw new YargsError(`validator dir for ${pubkey} already exists`);
+    }
     fs.mkdirSync(dir, {recursive: true});
 
     const withdrawalPublicKey = PublicKey.fromHex(keystores.withdrawal.pubkey);
@@ -87,14 +94,14 @@ export class ValidatorDirBuilder {
 
     // Only the withdrawal keystore if explicitly required.
     if (storeWithdrawalKeystore) {
-      writeFile600Perm(path.join(this.secretsDir, keystores.withdrawal.pubkey), passwords.withdrawal);
       fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), keystores.withdrawal.toJSON());
+      writeValidatorPassphrase({secretsDir, pubkey: keystores.withdrawal.pubkey, passphrase: passwords.withdrawal});
     }
 
     // Always store voting credentials
-    writeFile600Perm(path.join(this.secretsDir, keystores.signing.pubkey), passwords.signing);
     fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystores.signing.toJSON());
+    writeValidatorPassphrase({secretsDir, pubkey, passphrase: passwords.signing});
 
-    return new ValidatorDir(this.keystoresDir, keystores.signing.pubkey);
+    return new ValidatorDir(this.keystoresDir, pubkey);
   }
 }

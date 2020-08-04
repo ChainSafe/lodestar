@@ -6,11 +6,20 @@ Lodestar runs on Linux, MacOS and Windows.
 
 ## Install and build from source
 
+Make sure to have [Yarn installed](https://classic.yarnpkg.com/en/docs/install). It is also recommended to [install NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) and use NodeJS latest stable version [v12.13.0](https://nodejs.org/en/blog/release/v12.13.0/).
+
+<!-- prettier-ignore-start -->
+!!! info
+    NodeJS versions < 12 are not supported by Lodestar.
+<!-- prettier-ignore-end -->
+
+Clone the repo locally.
+
 ```bash
 git clone https://github.com/chainsafe/lodestar.git
 ```
 
-Install across all packages
+Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
 
 ```bash
 yarn install
