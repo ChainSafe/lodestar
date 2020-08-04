@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.10.2",
+  "version": "0.11.0",
   "main": "lib/index.js",
   "bin": {
     "lodestar": "./bin/lodestar"
@@ -43,12 +43,13 @@
   "dependencies": {
     "@chainsafe/bls": "2.0.0",
     "@chainsafe/discv5": "0.2.6",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.10.2",
-    "@chainsafe/lodestar-config": "^0.10.2",
-    "@chainsafe/lodestar-params": "^0.10.2",
-    "@chainsafe/lodestar-types": "^0.10.2",
-    "@chainsafe/lodestar-utils": "^0.10.2",
-    "@chainsafe/lodestar-validator": "^0.10.2",
+    "@chainsafe/discv5": "0.2.5",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
+    "@chainsafe/lodestar-config": "^0.11.0",
+    "@chainsafe/lodestar-params": "^0.11.0",
+    "@chainsafe/lodestar-types": "^0.11.0",
+    "@chainsafe/lodestar-utils": "^0.11.0",
+    "@chainsafe/lodestar-validator": "^0.11.0",
     "@chainsafe/snappy-stream": "3.0.4",
     "@chainsafe/ssz": "^0.6.11",
     "@types/async": "^3.0.1",
@@ -95,7 +96,7 @@
     "ws": "^7.0.1"
   },
   "devDependencies": {
-    "@chainsafe/benchmark-utils": "^0.10.2",
+    "@chainsafe/benchmark-utils": "^0.11.0",
     "@types/bl": "^2.1.0",
     "@types/buffer-xor": "^2.0.0",
     "@types/es6-promisify": "6.0.0",
