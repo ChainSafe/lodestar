@@ -1,11 +1,12 @@
 import path from "path";
 import {IGlobalArgs} from "../../options";
+import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 
-export interface IAccountPaths {
+export type IAccountPaths = IGlobalPaths & {
   keystoresDir: string;
   secretsDir: string;
   walletsDir: string;
-}
+};
 
 /**
  * Defines the path structure of the account files
@@ -32,15 +33,20 @@ export interface IAccountPaths {
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
 export function getAccountPaths(options: Partial<IAccountPaths> & Pick<IGlobalArgs, "rootDir">): IAccountPaths {
+  options = {
+    ...options,
+    ...getGlobalPaths(options),
+  };
   const rootDir = options.rootDir;
   const keystoresDir = path.join(rootDir, options.keystoresDir || "keystores");
   const secretsDir = path.join(rootDir, options.secretsDir || "secrets");
   const walletsDir = path.join(rootDir, options.walletsDir || "wallets");
   return {
+    ...options,
     keystoresDir,
     secretsDir,
     walletsDir
-  };
+  } as IAccountPaths;
 }
 
 /**

@@ -28,6 +28,6 @@ export function getInteropValidator(
     }),
     api: modules.api,
     logger: logger,
-    keypair: new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))
+    keypairs: [new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))]
   });
 }

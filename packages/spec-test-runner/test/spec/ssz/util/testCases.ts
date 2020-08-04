@@ -79,10 +79,13 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
           const structural = Type.deserialize(testCase.serialized_raw)
           // @ts-ignore
           const tree = Type.tree.deserialize(testCase.serialized_raw)
+          // @ts-ignore
+          const treeFromStructural = Type.tree.createValue(structural)
           expect(
             tree.serialize(),
             "tree serialization != structural serialization"
           ).to.deep.equal(Type.serialize(structural))
+          expect(Type.equals(tree, treeFromStructural), "tree != treeFromStructural")
           expect(expected.serialized.equals(Type.serialize(structural)))
           expect(expected.root.equals(Type.hashTreeRoot(structural)))
           expect(expected.serialized.equals(actual.serialized), "incorrect serialize").to.be.true;

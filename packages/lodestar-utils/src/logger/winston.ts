@@ -9,12 +9,26 @@ import {defaultLogFormat} from "./format";
 import TransportStream from "winston-transport";
 import {Writable} from "stream";
 
+export const consoleTransport: TransportStream = new winstonTransports.Console({
+  debugStdout: true,
+  level: "silly",
+  handleExceptions: true
+});
+
+export const fileTransport = (filename: string): TransportStream => {
+  return new winstonTransports.File({
+    level: "silly",
+    filename,
+    handleExceptions: true,
+  });
+};
+
 export class WinstonLogger implements ILogger {
   private winston: Logger;
   private _level: LogLevel;
   private _silent: boolean;
 
-  public constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream) {
+  public constructor(options?: Partial<ILoggerOptions>, transports?: TransportStream[]) {
     options = {
       level: defaultLogLevel,
       module: "",
@@ -27,15 +41,11 @@ export class WinstonLogger implements ILogger {
       },
       format: defaultLogFormat,
       transports: transports || [
-        new winstonTransports.Console({
-          debugStdout: true,
-          level: "silly",
-          handleExceptions: true
-        })
+        consoleTransport
       ],
       exitOnError: false
     });
-    this._level = options.level;
+    this._level = options.level || LogLevel.info;
     this._silent = false;
     if (typeof process !== "undefined" && typeof process.env !== "undefined") {
       this._silent = process.env.LODESTAR_SILENCE === "true";
@@ -75,7 +85,7 @@ export class WinstonLogger implements ILogger {
   }
 
   public stream(): Writable {
-    return null;
+    throw Error("Not implemented");
   }
 
   public set level(level: LogLevel) {
@@ -106,7 +116,7 @@ export class WinstonLogger implements ILogger {
     });
   }
 
-  private createLogEntry(level: LogLevel, message: string, context: Context|Error): void {
+  private createLogEntry(level: LogLevel, message: string, context?: Context|Error): void {
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }

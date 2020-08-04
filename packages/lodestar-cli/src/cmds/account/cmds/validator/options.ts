@@ -2,8 +2,8 @@ import {Options} from "yargs";
 import {IGlobalArgs} from "../../../../options";
 import {defaultAccountPaths} from "../../paths";
 
-export type IAccountValidatorOptions = 
-  IGlobalArgs & 
+export type IAccountValidatorOptions =
+  IGlobalArgs &
   {
     keystoresDir?: string;
     secretsDir?: string;

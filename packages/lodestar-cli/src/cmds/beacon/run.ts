@@ -1,29 +1,30 @@
 import * as fs from "fs";
+import path from "path";
 import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {IBeaconOptions} from "../../options";
-import {readPeerId, readEnr, writeEnr} from "../../../../network";
+import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ENR} from "@chainsafe/discv5";
-import {initHandler as initBeacon} from "../init/init";
-import {getBeaconPaths} from "../../paths";
-import {mergeConfigOptions} from "../../config";
-import {getBeaconConfig} from "../../../../util";
+import {consoleTransport} from "@chainsafe/lodestar-utils";
+
+import {readPeerId, readEnr, writeEnr} from "../../network";
+import {mergeConfigOptions} from "../../config/beacon";
+import {getMergedIBeaconConfig} from "../../config/params";
+import {initHandler as initCmd} from "../init/init";
+import {IBeaconOptions} from "./options";
+import {getBeaconPaths} from "./paths";
 
 /**
  * Run a beacon node
  */
-export async function runHandler(options: IBeaconOptions): Promise<void> {
+export async function run(options: IBeaconOptions): Promise<void> {
   await initBLS();
+  // always run the init command
+  await initCmd(options);
+
   const beaconPaths = getBeaconPaths(options);
   options = {...options, ...beaconPaths};
-
-  // Auto-setup testnet
-  if (options.testnet) {
-    await initBeacon(options);
-  }
 
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
@@ -32,9 +33,15 @@ export async function runHandler(options: IBeaconOptions): Promise<void> {
   // TODO: Rename db.name to db.path or db.location
   options.db.name = beaconPaths.dbDir;
 
-  const config = getBeaconConfig(options.preset, options.params);
-  const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger();
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+  const libp2p = await createNodeJsLibp2p(peerId, options.network, options.peerStoreDir);
+  const loggerTransports = [
+    consoleTransport
+  ];
+  if(options.logFile) {
+    loggerTransports.push(fileTransport(path.join(options.rootDir, options.logFile)));
+  }
+  const logger = new WinstonLogger({}, loggerTransports);
 
   const node = new BeaconNode(options, {config, libp2p, logger});
 

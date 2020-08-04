@@ -1,7 +1,7 @@
 import {Options} from "yargs";
 import {params} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 
-export interface IParamsOptions {
+export interface IParamsArgs {
   params: Record<string, unknown>;
 }
 

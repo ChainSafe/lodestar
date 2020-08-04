@@ -3,8 +3,11 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getBeaconConfig, YargsError, readPassphraseFile} from "../../../../util";
+import {YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
+import {initHandler as initCmd} from "../../../init/init";
+import {IInitOptions} from "../../../init/options";
+import {getMergedIBeaconConfig} from "../../../../config/params";
 
 export const command = "create";
 
@@ -18,7 +21,6 @@ interface IValidatorCreateOptions extends IAccountValidatorOptions {
   depositGwei?: string;
   storeWithdrawalKeystore?: boolean;
   count?: number;
-  atMost?: number;
 }
 
 export const builder: CommandBuilder<{}, IValidatorCreateOptions> = {
@@ -51,27 +53,21 @@ instead generate them from the wallet seed when required.",
   },
 
   count: {
-    description: "The number of validators to create, regardless of how many already exist",
-    conflicts: ["atMost"],
-    type: "number"
-  },
-
-  atMost: {
-    description: "Observe the number of validators in --validator-dir, only creating enough to \
-reach the given count. Never deletes an existing validator.",
-    conflicts: ["count"],
+    description: "The number of validators to create",
+    default: 1,
     type: "number"
   }
 };
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
-  const {name, passphraseFile, storeWithdrawalKeystore, count, atMost} = options;
+  await initBLS(); // Necessary to compute validator pubkey from privKey
+  await initCmd(options as unknown as IInitOptions);
+
+  const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
   const accountPaths = getAccountPaths(options);
-  const config = getBeaconConfig(options.preset);
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
   const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
   const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
-
-  await initBLS(); // Necessary to compute validator pubkey from privKey
 
   if (depositGwei > maxEffectiveBalance)
     throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
@@ -79,12 +75,11 @@ export async function handler(options: IValidatorCreateOptions): Promise<void> {
   const validatorDirBuilder = new ValidatorDirBuilder(accountPaths);
   const walletManager = new WalletManager(accountPaths);
   const wallet = walletManager.openByName(name);
-  const n = count || atMost - wallet.nextaccount;
-  if (n <= 0) throw new YargsError("No validators to create");
+  if (count <= 0) throw new YargsError("No validators to create");
 
   const walletPassword = readPassphraseFile(passphraseFile);
 
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < count; i++) {
     const passwords = wallet.randomPasswords();
     const keystores = wallet.nextValidator(walletPassword, passwords);
     validatorDirBuilder.build({keystores, passwords, storeWithdrawalKeystore, depositGwei, config});

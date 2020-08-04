@@ -30,7 +30,7 @@ export class HttpClient {
       return result.data;
     } catch(reason) {
       this.logger.verbose(`HttpClient GET error url=${url}`);
-      throw handleError(reason);
+      throw this.handleError(reason);
     }
   }
 
@@ -42,24 +42,25 @@ export class HttpClient {
       return result.data;
     } catch(reason) {
       this.logger.verbose(`HttpClient POST error url=${url}`);
-      throw handleError(reason);
+      throw this.handleError(reason);
     }
   }
+
+  private handleError = (error: AxiosError & NodeJS.ErrnoException): Error => {
+    if (error.response) {
+      if(error.response.status === 404) {
+        error.message = "Endpoint not found";
+        if (error.request && error.request.path) {
+          error.message += `: ${error.request.path}`;
+        }
+      } else {
+        error.message = error.response.data.message || "Request failed with response status " + error.response.status;
+      }
+    } else if (error.request) {
+      error.message = error.syscall + " " + error.errno + " " + error.request._currentUrl;
+    }
+    error.stack = "";
+    return error;
+  };
 }
 
-const handleError = (error: AxiosError): AxiosError => {
-  if (error.response) {
-    if(error.response.status === 404) {
-      error.message = "Endpoint not found";
-      if (error.request && error.request.path) {
-        error.message += `: ${error.request.path}`;
-      }
-    } else {
-      error.message = error.response.data.message || "Request failed with response status " + error.response.status;
-    }
-  } else if (error.request) {
-    error.message = error.request.message;
-  }
-  error.stack = "";
-  return error;
-};
