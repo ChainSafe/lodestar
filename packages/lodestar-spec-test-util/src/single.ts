@@ -67,7 +67,6 @@ export function describeDirectorySpecTest<TestCase, Result>(
   testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
-  // @ts-ignore
   options = {...defaultOptions, ...options};
   if(!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);
@@ -124,6 +123,8 @@ function generateTestCase<TestCase, Result>(
 
         generateProfileReport(profile, profilingDirectory, profileId);
       }
+      if (!options.getExpected) throw Error("getExpected is not defined");
+      if (!options.expectFunc) throw Error("expectFunc is not defined");
       const expected = options.getExpected(testCase);
       options.expectFunc(testCase, expected, result);
     }
@@ -140,6 +141,7 @@ function loadInputFiles<TestCase, Result>(
       if(isDirectory(file)) {
         return false;
       }
+      if (!options.inputTypes) throw Error("inputTypes is not defined");
       const extension = options.inputTypes[parse(file).name] || InputType.SSZ;
       return file.endsWith(extension);
     })
@@ -149,6 +151,7 @@ function loadInputFiles<TestCase, Result>(
       if (file.endsWith(InputType.SSZ)) {
         testCase[`${inputName}_raw`] = readFileSync(file);
       }
+      if (!options.inputProcessing) throw Error("inputProcessing is not defined");
       if(options.inputProcessing[inputName]) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
@@ -158,6 +161,7 @@ function loadInputFiles<TestCase, Result>(
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
+    if (!options.sszTypes) throw Error("sszTypes is not defined");
     return options.sszTypes[inputName].deserialize(readFileSync(file));
   } else {
     return  loadYamlFile(file);

@@ -5,7 +5,7 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {stripOffNewlines, YargsError} from "../util";
+import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {
   VOTING_KEYSTORE_FILE,
@@ -114,8 +114,7 @@ export class ValidatorDir {
   */
   unlockKeypair(keystorePath: string, secretsDir: string): Keypair {
     const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
-    const passwordPath = path.join(secretsDir, keystore.pubkey);
-    const password = stripOffNewlines(fs.readFileSync(passwordPath, "utf8"));
+    const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
     const privKey = keystore.decrypt(password);
     return new Keypair(PrivateKey.fromBytes(privKey));
   }
