@@ -6,13 +6,13 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {
   YargsError,
   stripOffNewlines,
-  writeFile600Perm,
   sleep,
   recursivelyFind,
   isVotingKeystore,
-  isPassphraseFile
+  isPassphraseFile,
+  writeValidatorPassphrase
 } from "../../../../util";
-import {VOTING_KEYSTORE_FILE} from "../../../../validatorDir/paths";
+import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths";
 import {IAccountValidatorOptions} from "./options";
 import {getAccountPaths} from "../../paths";
 
@@ -89,14 +89,13 @@ Importing to \t\t${keystoresDir}
 
   for (const keystorePath of keystorePaths) {
     const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
-    const pubkey = `0x${keystore.pubkey}`;
+    const pubkey = keystore.pubkey;
     const uuid = keystore.uuid;
     if (!pubkey) {
       throw Error("Invalid keystore, must contain .pubkey property");
     }
-    const validatorDirPath = path.join(keystoresDir, pubkey);
-
-    if (fs.existsSync(validatorDirPath)) {
+    const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+    if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
       console.log(`Skipping existing validator ${pubkey}`);
       continue;
     }
@@ -107,9 +106,9 @@ Importing to \t\t${keystoresDir}
 
     const passphrase = await getKeystorePassphrase(keystore, passphrasePaths);
     fs.mkdirSync(secretsDir, {recursive: true});
-    fs.mkdirSync(validatorDirPath, {recursive: true});
-    writeFile600Perm(path.join(secretsDir, pubkey), passphrase);
-    fs.writeFileSync(path.join(keystoresDir, pubkey, VOTING_KEYSTORE_FILE), keystore.toJSON());
+    fs.mkdirSync(dir, {recursive: true});
+    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.toJSON());
+    writeValidatorPassphrase({secretsDir, pubkey, passphrase});
 
     console.log(`Successfully imported validator ${pubkey}`);
     numOfImportedValidators++;
@@ -139,7 +138,7 @@ async function getKeystorePassphrase(
   passphrasePaths: string[]
 ): Promise<string> {
   // First, try to find a passphrase file in the provided directory
-  const passphraseFile = passphrasePaths.find(file => file.endsWith(`0x${keystore.pubkey}`));
+  const passphraseFile = passphrasePaths.find(filepath => filepath.endsWith(keystore.pubkey));
   if (passphraseFile) {
     const passphrase = fs.readFileSync(passphraseFile, "utf8");
     try {
