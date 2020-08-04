@@ -57,13 +57,10 @@ function generate() {
 # Lodestar CLI Documentation
 This reference describes the syntax of the Lodestar CLI options and commands.
 
-
 ## Global Options
-
 | Name | Type | Description | Default |
 | ----------- | ----------- | ----------- | ----------- |
 ${globalOptionsStr}
-
 
 ## Account
 ${getUsage([account, accountWallet, accountValidator], 'account')}
@@ -90,13 +87,11 @@ ${getUsage([beaconInit, beaconRun], 'beacon')}
 ### Options
 ${getOptionsTable(beaconOptions)}
 
-
 ## Validator
 ${getUsage([validator], 'validator')}
 ### Options
 ${getOptionsTable(validatorOptions)}
 `;
-
   writeFile('./docs/usage/cli.md', docsString, () => {});
 }
 

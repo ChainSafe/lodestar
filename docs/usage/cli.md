@@ -2,16 +2,13 @@
 # Lodestar CLI Documentation
 This reference describes the syntax of the Lodestar CLI options and commands.
 
-
 ## Global Options
-
 | Name | Type | Description | Default |
 | ----------- | ----------- | ----------- | ----------- |
 | rootDir | string | Lodestar root directory |  |
 | testnet | string | Use a testnet configuration |  |
 | preset | string | Specifies the default eth2 spec type | mainnet |
 | paramsFile | string | Network configuration file |  |
-
 
 
 ## Account
@@ -117,7 +114,6 @@ N/A
 | peerIdFile | string | Peer ID file | 
 | enrFile | string | ENR file | 
 | logFile | string | Log file | 
-
 
 
 ## Validator
