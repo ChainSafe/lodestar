@@ -2,7 +2,7 @@
 
 Running a Lodestar node on the [Witti](https://github.com/goerli/witti) multi-client testnet only requires basic familiarity with the terminal.
 
-Make sure lodestar in installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](/install) and make sure Lodestar is available in your environment.
+Make sure lodestar in installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/) and make sure Lodestar is available in your environment.
 
 ```
 yarn run cli --help

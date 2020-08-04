@@ -132,7 +132,7 @@ export class BeaconSync implements IBeaconSync {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
-    this.startSyncTimer(this.config.params.SECONDS_PER_SLOT * 1000);
+    this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
     await this.gossip.start();
     await this.regularSync.start();

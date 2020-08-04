@@ -16,7 +16,7 @@ export class ApiClientOverRest extends AbstractApiClient {
   public url: string;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    super(config);
+    super(config, logger);
     this.url = restUrl;
     this.validator = new RestValidatorApi(config, restUrl, logger);
     this.beacon = new RestBeaconApi(config, restUrl, logger);

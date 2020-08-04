@@ -2,7 +2,7 @@
 
 Running a Lodestar node on the [Medalla](https://github.com/goerli/medalla) multi-client testnet only requires basic familiarity with the terminal.
 
-Make sure lodestar is installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](/install).
+Make sure lodestar is installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/).
 
 ```
 yarn run cli --help
