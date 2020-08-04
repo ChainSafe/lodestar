@@ -2442,13 +2442,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/interface-datastore@*":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@types/interface-datastore/-/interface-datastore-1.0.1.tgz#4845ea53bed33b470d42324a9a959d20d27bfd36"
-  integrity sha512-BjpDsX6N8p8zzVEaugPbgecunwQNGQWalVISXRaLTzRJcK5UjMs2EYJvnhvRlA00MTjEFXfkChCX4k5+2rO5+A==
-  dependencies:
-    "@types/node" "*"
-
 "@types/inquirer@^7.3.0":
   version "7.3.0"
   resolved "https://registry.yarnpkg.com/@types/inquirer/-/inquirer-7.3.0.tgz#a1233632ea6249f14eb481dae91138e747b85664"
@@ -2456,6 +2449,13 @@
   dependencies:
     "@types/through" "*"
     rxjs "^6.4.0"
+
+"@types/interface-datastore@*":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@types/interface-datastore/-/interface-datastore-1.0.1.tgz#4845ea53bed33b470d42324a9a959d20d27bfd36"
+  integrity sha512-BjpDsX6N8p8zzVEaugPbgecunwQNGQWalVISXRaLTzRJcK5UjMs2EYJvnhvRlA00MTjEFXfkChCX4k5+2rO5+A==
+  dependencies:
+    "@types/node" "*"
 
 "@types/js-yaml@^3.12.1", "@types/js-yaml@^3.12.2":
   version "3.12.3"
