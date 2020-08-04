@@ -65,6 +65,7 @@ export const beaconOptions: {[k: string]: Options} = {
   },
 
   logFile: {
+    description: "Log file",
     alias: ["log.file"],
     type: "string",
     normalize: true,
