@@ -31,6 +31,7 @@ yargs
   .epilogue(bottomBanner)
   .alias("h", "help")
   .alias("v", "version")
+  .allowUnknownOption(false)
   .recommendCommands()
   .help()
   .wrap(yargs.terminalWidth())
