@@ -48,7 +48,7 @@ describe.only("account cli", function() {
     await new Promise(resolve => yargs()
       .default(initDefaults)
       .command(init).help().parse(["init"], resolve));
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 6000));
     expect(fs.existsSync(rootDir)).to.be.true;
     const beaconConfigPath = `${rootDir}/beacon.config.json`;
     expect(fs.existsSync(beaconConfigPath)).to.be.true;
@@ -108,10 +108,14 @@ describe.only("account cli", function() {
   it("should make a deposit to validator registration contract", async function() {
     const validatorId = fs.readdirSync(`${rootDir}/keystores`)[0];
     expect(validatorId).to.not.be.undefined;
+    fs.unlinkSync(`${rootDir}/keystores/${validatorId}/.lock`)
     await new Promise(resolve => yargs().default({
       ...accountDefaults,
       rpcUrl: "http://127.0.0.1:8545",
-    }).command(account).help().parse(["account", "validator", "deposit", "validator", validatorId], resolve));
-    await new Promise(resolve => setTimeout(resolve, 500));
+      keystoresDir: `keystores/`,
+      secretsDir: `secrets/`,
+      validator: validatorId
+    }).command(account).help().parse(["account", "validator", "deposit"], resolve));
+    await new Promise(resolve => setTimeout(resolve, 2000));
   });
 });
