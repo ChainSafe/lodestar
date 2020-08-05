@@ -6,9 +6,9 @@ import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getEthersSigner, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
-import {IInitOptions} from "../../../init/options";
 import {initHandler as initCmd} from "../../../init/init";
 import {getMergedIBeaconConfig} from "../../../../config/params";
+import { IBeaconOptions } from "../../../beacon/options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
@@ -68,7 +68,7 @@ export const builder: CommandBuilder<{}, IAccountValidatorDepositOptions> = {
 };
 
 export async function handler(options: IAccountValidatorDepositOptions): Promise<void> {
-  await initCmd(options as unknown as IInitOptions);
+  await initCmd(options as unknown as IBeaconOptions);
   const validatorName = options.validator;
   const accountPaths = getAccountPaths(options);
   const config = await getMergedIBeaconConfig(options.preset, accountPaths.paramsFile, options.params);

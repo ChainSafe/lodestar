@@ -6,8 +6,8 @@ import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 import {initHandler as initCmd} from "../../../init/init";
-import {IInitOptions} from "../../../init/options";
 import {getMergedIBeaconConfig} from "../../../../config/params";
+import { IBeaconOptions } from "../../../beacon/options";
 
 export const command = "create";
 
@@ -61,7 +61,7 @@ instead generate them from the wallet seed when required.",
 
 export async function handler(options: IValidatorCreateOptions): Promise<void> {
   await initBLS(); // Necessary to compute validator pubkey from privKey
-  await initCmd(options as unknown as IInitOptions);
+  await initCmd(options as unknown as IBeaconOptions);
 
   const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
   const accountPaths = getAccountPaths(options);

@@ -15,14 +15,14 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliOptions} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initHandler as initCmd} from "../init/init";
-import {IInitOptions} from "../init/options";
+import { IBeaconOptions } from "../beacon/options";
 
 /**
  * Run a validator client
  */
 export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
   await initBLS();
-  await initCmd(options as unknown as IInitOptions);
+  await initCmd(options as unknown as IBeaconOptions);
 
   const server = options.server;
   const force = options.force;
