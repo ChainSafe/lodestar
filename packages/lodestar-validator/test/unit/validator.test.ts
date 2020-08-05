@@ -17,7 +17,7 @@ describe("Validator", () => {
     const apiClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Date.now() / 1000
+        genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
       validator: new MockValidatorApi(),

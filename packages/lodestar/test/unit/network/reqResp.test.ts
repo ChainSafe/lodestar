@@ -189,19 +189,16 @@ describe("[network] rpc", () => {
       count: 10,
       step: 1
     };
-    const spy = sandbox.spy();
-    loggerStub.error.callsFake(spy);
     rpcB.once("request", async () => {
       timer.tick(TTFB_TIMEOUT);
       timer.tick(TTFB_TIMEOUT);
     });
-    const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
-    expect(response).to.be.undefined;
-    expect(spy.calledOnce).to.be.true;
-    const errorMessages: string[] = spy.args[0];
-    expect(errorMessages.length).to.be.equal(2);
-    expect(errorMessages[0].startsWith("failed to send request")).to.be.true;
-    expect(errorMessages[1].toString().startsWith("Error: response timeout")).to.be.true;
+    try {
+      await rpcA.beaconBlocksByRange(nodeB.peerId, request);
+      expect.fail();
+    } catch (e) {
+      expect(e.toString().startsWith("Error: response timeout")).to.be.true;
+    }
     timer.restore();
   });
 
@@ -212,24 +209,21 @@ describe("[network] rpc", () => {
       count: 10,
       step: 1
     };
-    const spy = sandbox.spy();
-    loggerStub.error.callsFake(spy);
     const libP2pMock = await createNode(multiaddr);
     libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal} ) => {
       timer.tick(TTFB_TIMEOUT);
-      return {stream: {} as unknown as Stream, protocol: ""};
+      return null;
     };
     const rpcC = new ReqResp(
       networkOptions,
       {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()}
     );
-    const response = await rpcC.beaconBlocksByRange(nodeB.peerId, request);
-    expect(response).to.be.undefined;
-    expect(spy.calledOnce).to.be.true;
-    const errorMessages: string[] = spy.args[0];
-    expect(errorMessages.length).to.be.equal(2);
-    expect(errorMessages[0].startsWith("failed to send request")).to.be.true;
-    expect(errorMessages[1].toString().startsWith("Error: Failed to dial")).to.be.true;
+    try {
+      await rpcC.beaconBlocksByRange(nodeB.peerId, request)
+      expect.fail();
+    } catch (e) {
+      expect(e.toString().startsWith("Error: Failed to dial")).to.be.true;
+    }
     timer.restore();
   });
 

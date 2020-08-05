@@ -259,7 +259,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           if (requestSingleChunk && responses.length === 0) {
             // allow empty response for beacon blocks by range/root
-            throw `No response returned for method ${method}. request=${requestId}`;
+            this.logger.warn(
+              `No response returned for method ${method}. request=${requestId}`,
+              {peer: peerId.toB58String()}
+            );
+            return null;
           }
           const finalResponse = requestSingleChunk ? responses[0] : responses;
           this.logger.verbose(
@@ -275,9 +279,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         }
       );
     } catch (e) {
-      this.logger.error(
-        `failed to send request ${requestId} to peer ${peerId.toB58String()}`, e
+      this.logger.warn(
+        `failed to send request ${requestId} to peer ${peerId.toB58String()}`, {reason: e.message}
       );
+      throw e;
     }
   }
 
@@ -292,14 +297,18 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     return (async function * () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-      const {stream} = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
+      let conn: {stream: Stream};
+      try {
+        conn = await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT) as {stream: Stream};
+      } catch (e) {
+        throw new Error("Failed to dial peer ("+ e.message +")");
+      }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
-
       const controller = new AbortController();
       yield* pipe(
         (body !== null && body !== undefined) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
-        abortDuplex(stream, controller.signal, {returnOnAbort: true}),
+        abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
       );
