@@ -7,7 +7,7 @@ import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
 import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
-import { IBeaconOptions } from "../beacon/options";
+import {IBeaconOptions} from "../beacon/options";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration

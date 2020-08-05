@@ -7,7 +7,7 @@ import {YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 import {initHandler as initCmd} from "../../../init/init";
 import {getMergedIBeaconConfig} from "../../../../config/params";
-import { IBeaconOptions } from "../../../beacon/options";
+import {IBeaconOptions} from "../../../beacon/options";
 
 export const command = "create";
 

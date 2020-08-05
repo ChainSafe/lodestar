@@ -15,7 +15,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliOptions} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initHandler as initCmd} from "../init/init";
-import { IBeaconOptions } from "../beacon/options";
+import {IBeaconOptions} from "../beacon/options";
 
 /**
  * Run a validator client

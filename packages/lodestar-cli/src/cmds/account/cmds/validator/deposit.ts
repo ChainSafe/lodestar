@@ -8,7 +8,7 @@ import {getEthersSigner, YargsError} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 import {initHandler as initCmd} from "../../../init/init";
 import {getMergedIBeaconConfig} from "../../../../config/params";
-import { IBeaconOptions } from "../../../beacon/options";
+import {IBeaconOptions} from "../../../beacon/options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
