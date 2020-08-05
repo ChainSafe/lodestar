@@ -65,6 +65,7 @@
     "deepmerge": "^3.2.0",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",
+    "ganache-core": "^2.10.2",
     "got": "^11.5.0",
     "inquirer": "^7.3.3",
     "js-yaml": "^3.14.0",

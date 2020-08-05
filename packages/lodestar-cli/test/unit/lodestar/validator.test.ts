@@ -25,7 +25,7 @@ describe("validator cli", function() {
       name: "primary",
       passphraseFile: "primary.pass",
       rootDir: tmpDir,
-      preset: "mainnet", // @TODO: do we really need this?
+      preset: "mainnet",
       // @ts-ignore
     }).command(account).help().parse(["account", "validator", "create"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -34,7 +34,7 @@ describe("validator cli", function() {
     // run validator command
     await new Promise(resolve => yargs().default({
       rootDir: tmpDir,
-      preset: "mainnet", // @TODO: do we really need this?
+      preset: "mainnet",
       // @ts-ignore
     }).command(validator).help().parse(["validator"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
