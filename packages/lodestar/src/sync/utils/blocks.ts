@@ -5,7 +5,6 @@ import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {sleep} from "../../util/sleep";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot

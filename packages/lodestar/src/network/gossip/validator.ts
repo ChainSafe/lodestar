@@ -69,10 +69,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingCommitteeAttestation =
   async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    if(!hasValidAttestationSlot(this.config, state.genesisTime, attestation)) {
+    if(!hasValidAttestationSlot(this.config, this.chain.getGenesisTime(), attestation)) {
       return ExtendedValidatorResult.ignore;
     }
+    if (!await isAttestingToValidBlock(this.db, attestation)) {
+      return ExtendedValidatorResult.reject;
+    }
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     if (state.slot < attestation.data.slot) {
       processSlots(epochCtx, state, attestation.data.slot);
     }
@@ -85,9 +88,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     if (await hasValidatorAttestedForThatTargetEpoch(this.config, this.db, state, epochCtx, attestation)) {
       return ExtendedValidatorResult.ignore;
-    }
-    if (!await isAttestingToValidBlock(this.db, attestation)) {
-      return ExtendedValidatorResult.reject;
     }
     if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
       return ExtendedValidatorResult.reject;

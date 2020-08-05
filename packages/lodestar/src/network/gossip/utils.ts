@@ -3,14 +3,14 @@
  */
 
 import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
+import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
 import {Message} from "libp2p-gossipsub/src/message";
 import {utils} from "libp2p-pubsub";
-import {ILodestarGossipMessage, IGossipEvents} from "./interface";
+import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
-import {IBeaconChain, ILMDGHOST} from "../../chain";
+import {ILMDGHOST} from "../../chain";
 import {IBeaconDb} from "../../db/api";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
