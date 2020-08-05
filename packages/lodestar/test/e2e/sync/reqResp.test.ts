@@ -45,7 +45,7 @@ describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
   const logger = new WinstonLogger({level: LogLevel.debug});
-  logger.silent = false;
+  logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
