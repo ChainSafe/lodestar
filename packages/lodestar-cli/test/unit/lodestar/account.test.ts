@@ -116,6 +116,6 @@ describe.only("account cli", function() {
       secretsDir: `secrets/`,
       validator: validatorId
     }).command(account).help().parse(["account", "validator", "deposit"], resolve));
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 500));
   });
 });
