@@ -79,6 +79,7 @@ export async function validateGossipBlock(
       });
     return ExtendedValidatorResult.reject;
   }
+  logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
   return ExtendedValidatorResult.accept;
 }
 
