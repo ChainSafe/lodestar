@@ -1,20 +1,20 @@
-import * as fs from "fs";
 import yargs from "yargs/yargs";
 import { expect } from "chai";
-import * as sinon from "sinon";
+import { stub, match } from "sinon";
 
-import {rootDir} from "../../constants";
+import { rootDir } from "../../constants";
 import { account } from "../../../src/cmds/account";
 import { ValidatorDirManager } from "../../../src/validatorDir";
 import { getAccountPaths } from "../../../src/cmds/account/paths";
 import { init } from "../../../src/cmds/init";
 import { TestnetName } from "../../../src/testnets";
 import { medallaConfig } from "../../../src/testnets/medalla";
+import { existsSync, readFileSync, readdirSync, unlinkSync } from "fs";
 
 describe.only("account cli", function() {
   this.timeout("10 min");
 
-  const spy = sinon.stub(console, 'log');
+  const spy = stub(console, 'log');
 
   const testnetName = "medalla";
   const initDefaults = {
@@ -49,11 +49,11 @@ describe.only("account cli", function() {
       .default(initDefaults)
       .command(init).help().parse(["init"], resolve));
     await new Promise(resolve => setTimeout(resolve, 6000));
-    expect(fs.existsSync(rootDir)).to.be.true;
+    expect(existsSync(rootDir)).to.be.true;
     const beaconConfigPath = `${rootDir}/beacon.config.json`;
-    expect(fs.existsSync(beaconConfigPath)).to.be.true;
+    expect(existsSync(beaconConfigPath)).to.be.true;
     
-    const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
+    const beaconConfig = JSON.parse(readFileSync(beaconConfigPath, "utf8"));
     let templateConfigCopy = JSON.parse(JSON.stringify(medallaConfig));
     templateConfigCopy = {
       ...templateConfigCopy,
@@ -69,12 +69,12 @@ describe.only("account cli", function() {
   });
   
   it("should create a wallet", async function() {
-    expect(fs.existsSync(rootDir)).to.be.true;
+    expect(existsSync(rootDir)).to.be.true;
     await new Promise(resolve => yargs().default(accountDefaults)
       .command(account).help().parse(["account", "wallet", "create"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
-    expect(fs.existsSync(walletsDir)).to.be.true;
-    const wallets = fs.readdirSync(walletsDir);
+    expect(existsSync(walletsDir)).to.be.true;
+    const wallets = readdirSync(walletsDir);
     expect(wallets.length > 0).to.be.true;
   });
 
@@ -86,16 +86,16 @@ describe.only("account cli", function() {
   });
 
   it("should create new validator", async function() {
-    const wallets = fs.readdirSync(walletsDir);
+    const wallets = readdirSync(walletsDir);
     expect(wallets.length > 0).to.be.true;
     await new Promise(resolve => yargs().default(accountDefaults)
       .command(account).help().parse(["account", "validator", "create"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
-    expect(spy.calledWith(sinon.match.string)).to.be.true;
+    expect(spy.calledWith(match.string)).to.be.true;
   });
 
   it("should list validators", async function() {
-    expect(fs.existsSync(`${rootDir}/keystores`)).to.be.true;
+    expect(existsSync(`${rootDir}/keystores`)).to.be.true;
     await new Promise(resolve => yargs().default(accountDefaults)
       .command(account).help().parse(["account", "validator", "list"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -106,9 +106,9 @@ describe.only("account cli", function() {
   });
 
   it("should make a deposit to validator registration contract", async function() {
-    const validatorId = fs.readdirSync(`${rootDir}/keystores`)[0];
+    const validatorId = readdirSync(`${rootDir}/keystores`)[0];
     expect(validatorId).to.not.be.undefined;
-    fs.unlinkSync(`${rootDir}/keystores/${validatorId}/.lock`)
+    unlinkSync(`${rootDir}/keystores/${validatorId}/.lock`)
     await new Promise(resolve => yargs().default({
       ...accountDefaults,
       rpcUrl: "http://127.0.0.1:8545",
