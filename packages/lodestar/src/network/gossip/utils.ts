@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {ForkDigest} from "@chainsafe/lodestar-types";
+import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
 import {Message} from "libp2p-gossipsub/src/message";
@@ -10,6 +10,10 @@ import {utils} from "libp2p-pubsub";
 import {ILodestarGossipMessage, IGossipEvents} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
+import {IBeaconChain, ILMDGHOST} from "../../chain";
+import {IBeaconDb} from "../../db/api";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -68,4 +72,20 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
 
 export function getMessageId(rawMessage: Message): string {
   return Buffer.from(hash(rawMessage.data)).toString("base64");
+}
+
+export async function getBlockStateContext(
+  forkChoice: ILMDGHOST, db: IBeaconDb, block: SignedBeaconBlock
+): Promise<ITreeStateContext|null> {
+  const parentSummary =
+      forkChoice.getBlockSummaryByBlockRoot(block.message.parentRoot as Uint8Array);
+  if(!parentSummary) {
+    return null;
+  }
+  const stateEpochCtx = await db.stateCache.get(parentSummary.stateRoot);
+  if(!stateEpochCtx) return null;
+  if (stateEpochCtx.state.slot < block.message.slot) {
+    processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, block.message.slot);
+  }
+  return stateEpochCtx;
 }
