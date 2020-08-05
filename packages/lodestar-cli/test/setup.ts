@@ -1,7 +1,7 @@
 import {initBLS} from "@chainsafe/bls";
 import {before, after} from "mocha";
 import rimraf from "rimraf";
-import {tmpDir} from "./constants";
+import {rootDir} from "./constants";
 import { mkdir } from "fs";
 
 const ganache = require("ganache-core");
@@ -19,5 +19,5 @@ before(async () => {
 
 after(async () => {
   server.close((a: any) => console.log('closing server....', a))
-  await new Promise(resolve => rimraf(tmpDir, resolve));
+  await new Promise(resolve => rimraf(rootDir, resolve));
 });
