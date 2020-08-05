@@ -36,24 +36,24 @@ describe.only("account cli", function() {
     await new Promise(resolve => yargs()
       .default(initDefaults)
       .command(init).help().parse(["init"], resolve));
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
     expect(fs.existsSync(rootDir)).to.be.true;
     const beaconConfigPath = `${rootDir}/beacon.config.json`;
     expect(fs.existsSync(beaconConfigPath)).to.be.true;
     
     const beaconConfig = JSON.parse(fs.readFileSync(beaconConfigPath, "utf8"));
-    let medallaConfigCopy = JSON.parse(JSON.stringify(medallaConfig));
-    medallaConfigCopy = {
-      ...medallaConfigCopy,
+    let templateConfigCopy = JSON.parse(JSON.stringify(medallaConfig));
+    templateConfigCopy = {
+      ...templateConfigCopy,
       beaconDir: rootDir,
       configFile: beaconConfigPath,
       dbDir: `${rootDir}/chain-db`,
       enrFile: `${rootDir}/enr.json`,
-      eth1: { ...medallaConfigCopy.eth1, enabled: false },
+      eth1: { ...templateConfigCopy.eth1, enabled: false },
       genesisStateFile: `${rootDir}/genesis.ssz`,
       peerIdFile: `${rootDir}/peer-id.json`
     }
-    expect(beaconConfig).to.deep.equal(medallaConfigCopy);
+    expect(beaconConfig).to.deep.equal(templateConfigCopy);
   });
   
   it("should create a wallet", async function() {
