@@ -32,16 +32,9 @@ describe.only("account cli", function() {
   const walletName = "primary";
 
   const accountDefaults = {
-    rootDir,
+    ...initDefaults,
     name: walletName,
     passphraseFile: "primary.pass",
-    testnet: testnetName as TestnetName,
-    preset: "mainnet",
-    paramsFile: `${rootDir}/config.yaml`,
-    params: {
-      "DEPOSIT_CHAIN_ID": 5,
-      "DEPOSIT_NETWORK_ID": 5
-    },
   };
 
   it("should init beacon configuration with --testnet option", async function() {
