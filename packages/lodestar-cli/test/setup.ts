@@ -2,7 +2,6 @@ import {initBLS} from "@chainsafe/bls";
 import {before, after} from "mocha";
 import rimraf from "rimraf";
 import {rootDir} from "./constants";
-import { mkdir } from "fs";
 
 const ganache = require("ganache-core");
 
@@ -14,7 +13,6 @@ before(async () => {
   server.listen(8545, function(err: any, blockchain: any) { 
     console.log('error: ', err);
    });
-  // mkdir("./tmp", () => {});
 });
 
 after(async () => {

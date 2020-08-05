@@ -3,7 +3,7 @@ import yargs from "yargs/yargs";
 import { expect } from "chai";
 import * as sinon from "sinon";
 
-import {rootDir, testnetName, testnetDir, initDefaults} from "../../constants";
+import {rootDir} from "../../constants";
 import { account } from "../../../src/cmds/account";
 import { ValidatorDirManager } from "../../../src/validatorDir";
 import { getAccountPaths } from "../../../src/cmds/account/paths";
@@ -15,6 +15,18 @@ describe.only("account cli", function() {
   this.timeout("10 min");
 
   const spy = sinon.stub(console, 'log');
+
+  const testnetName = "medalla";
+  const initDefaults = {
+    rootDir,
+    preset: "mainnet",
+    testnet: testnetName as TestnetName,
+    paramsFile: `${rootDir}/config.yaml`,
+    params: {
+      "DEPOSIT_CHAIN_ID": 5,
+      "DEPOSIT_NETWORK_ID": 5
+    },
+  }
 
   const walletsDir = `${rootDir}/wallets/`;
   const walletName = "primary";
