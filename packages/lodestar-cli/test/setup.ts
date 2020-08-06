@@ -1,7 +1,7 @@
 import {initBLS} from "@chainsafe/bls";
 import {before, after} from "mocha";
 import rimraf from "rimraf";
-import {rootDir} from "./constants";
+import {rootDir, passphraseFile} from "./constants";
 
 import  ganache from "ganache-core";
 
@@ -16,4 +16,5 @@ before(async () => {
 after(async () => {
   server.close();
   await new Promise(resolve => rimraf(rootDir, resolve));
+  await new Promise(resolve => rimraf(passphraseFile, resolve));
 });

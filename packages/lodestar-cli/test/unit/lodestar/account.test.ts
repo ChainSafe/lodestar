@@ -1,8 +1,8 @@
 import yargs from "yargs/yargs";
 import { expect } from "chai";
-import { stub, match } from "sinon";
+import { stub } from "sinon";
 
-import { rootDir } from "../../constants";
+import { rootDir, passphraseFile } from "../../constants";
 import { account } from "../../../src/cmds/account";
 import { ValidatorDirManager } from "../../../src/validatorDir";
 import { getAccountPaths } from "../../../src/cmds/account/paths";
@@ -34,7 +34,7 @@ describe.only("account cli", function() {
   const accountDefaults = {
     ...initDefaults,
     name: walletName,
-    passphraseFile: "primary.pass",
+    passphraseFile,
   };
 
   it("should init beacon configuration with --testnet option", async function() {
