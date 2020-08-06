@@ -14,6 +14,6 @@ before(async () => {
 });
 
 after(async () => {
-  server.close(() => console.log('closing server....'))
+  server.close();
   await new Promise(resolve => rimraf(rootDir, resolve));
 });
