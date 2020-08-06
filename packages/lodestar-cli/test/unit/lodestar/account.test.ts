@@ -84,11 +84,11 @@ describe.only("account cli", function() {
     await new Promise(resolve => yargs().default(accountDefaults)
       .command(account).help().parse(["account", "validator", "create"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
-    expect(spy.calledWith(match.string)).to.be.true;
+    expect(existsSync(`${rootDir}/keystores`)).to.be.true;
+    expect(readdirSync(`${rootDir}/keystores`).length > 0).to.be.true;
   });
 
   it("should list validators", async function() {
-    expect(existsSync(`${rootDir}/keystores`)).to.be.true;
     await new Promise(resolve => yargs().default(accountDefaults)
       .command(account).help().parse(["account", "validator", "list"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
