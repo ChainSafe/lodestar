@@ -9,7 +9,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest,
+  ForkDigest, Number64,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -72,6 +72,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private blockProcessor: BlockProcessor;
   private _currentForkDigest: ForkDigest;
   private attestationProcessor: IAttestationProcessor;
+  private genesisTime: Number64 = 0;
 
   public constructor(
     opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
@@ -90,6 +91,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.blockProcessor = new BlockProcessor(
       config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
     );
+  }
+
+  public getGenesisTime(): Number64 {
+    return this.genesisTime;
   }
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
@@ -142,6 +147,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.verbose("Starting chain");
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
+    this.genesisTime = state.genesisTime;
     const epochCtx = new EpochContext(this.config);
     epochCtx.loadState(state);
     await this.db.stateCache.add({state, epochCtx});

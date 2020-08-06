@@ -56,7 +56,7 @@
     "@chainsafe/lodestar-types": "^0.11.0",
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
-    "@chainsafe/ssz": "^0.6.11",
+    "@chainsafe/ssz": "^0.6.12",
     "@iarna/toml": "^2.2.3",
     "@types/lockfile": "^1.0.1",
     "bigint-buffer": "^1.1.5",
