@@ -65,7 +65,6 @@
     "deepmerge": "^3.2.0",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",
-    "ganache-core": "^2.10.2",
     "got": "^11.5.0",
     "inquirer": "^7.3.3",
     "js-yaml": "^3.14.0",
@@ -92,6 +91,7 @@
     "@types/yargs": "^15.0.4",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
+    "ganache-core": "^2.11.2",
     "mocha": "^6.2.2",
     "mockery": "^2.1.0",
     "webpack": "^4.39.1"
