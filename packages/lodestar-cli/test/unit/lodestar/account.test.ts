@@ -9,19 +9,22 @@ import { getAccountPaths } from "../../../src/cmds/account/paths";
 import { init } from "../../../src/cmds/init";
 import { TestnetName } from "../../../src/testnets";
 import { medallaConfig } from "../../../src/testnets/medalla";
-import { existsSync, readFileSync, readdirSync, unlinkSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
+import lockFile from "lockfile";
+
 
 describe.only("account cli", function() {
   this.timeout("10 min");
 
   const spy = stub(console, 'log');
+  const lockSpy = stub(lockFile, 'lockSync');
 
   const testnetName = "medalla";
   const initDefaults = {
     rootDir,
     preset: "mainnet",
     testnet: testnetName as TestnetName,
-    paramsFile: `${rootDir}/config.yaml`,
+    paramsFile: "config.yaml",
     params: {
       "DEPOSIT_CHAIN_ID": 5,
       "DEPOSIT_NETWORK_ID": 5
@@ -81,9 +84,11 @@ describe.only("account cli", function() {
   it("should create new validator", async function() {
     const wallets = readdirSync(walletsDir);
     expect(wallets.length > 0).to.be.true;
-    await new Promise(resolve => yargs().default(accountDefaults)
-      .command(account).help().parse(["account", "validator", "create"], resolve));
+    await new Promise(resolve => yargs().default({
+      ...accountDefaults,
+    }).command(account).help().parse(["account", "validator", "create"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
+    expect(lockSpy.calledOnce);
     expect(existsSync(`${rootDir}/keystores`)).to.be.true;
     expect(readdirSync(`${rootDir}/keystores`).length > 0).to.be.true;
   });
@@ -99,16 +104,16 @@ describe.only("account cli", function() {
   });
 
   it("should make a deposit to validator registration contract", async function() {
+    expect(existsSync(`${rootDir}/keystores`)).to.be.true;
     const validatorId = readdirSync(`${rootDir}/keystores`)[0];
     expect(validatorId).to.not.be.undefined;
-    unlinkSync(`${rootDir}/keystores/${validatorId}/.lock`)
+    expect(existsSync(`${rootDir}/keystores/${validatorId}/.lock`)).to.be.false;
     await new Promise(resolve => yargs().default({
       ...accountDefaults,
       rpcUrl: "http://127.0.0.1:8545",
-      keystoresDir: `keystores/`,
-      secretsDir: `secrets/`,
-      validator: validatorId
+      validator: validatorId,
     }).command(account).help().parse(["account", "validator", "deposit"], resolve));
     await new Promise(resolve => setTimeout(resolve, 500));
+    expect(existsSync(`${rootDir}/keystores/${validatorId}/eth1-deposit-tx-hash.txt`)).to.be.true;
   });
 });

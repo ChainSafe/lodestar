@@ -6,7 +6,6 @@ import {rootDir, passphraseFile} from "./constants";
 import  ganache from "ganache-core";
 
 const server = ganache.server();
-const provider = server.provider;
 
 before(async () => {
   await initBLS();
