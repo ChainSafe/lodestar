@@ -14,6 +14,7 @@ import {getMergedIBeaconConfig} from "../../config/params";
 import {initHandler as initCmd} from "../init/init";
 import {IBeaconOptions} from "./options";
 import {getBeaconPaths} from "./paths";
+import {updateENR} from "../../util/enr";
 
 /**
  * Run a beacon node
@@ -30,6 +31,11 @@ export async function run(options: IBeaconOptions): Promise<void> {
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
   options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
+  // set enr overrides
+  updateENR(options.network.discv5.enr, options);
+  if (options.enr?.ip || options.enr?.ip6) {
+    options.network.discv5.enrUpdate = false;
+  }
   // TODO: Rename db.name to db.path or db.location
   options.db.name = beaconPaths.dbDir;
 
