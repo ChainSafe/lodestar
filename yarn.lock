@@ -941,10 +941,10 @@
     fast-crc32c "^1.0.1"
     snappy "^6.0.1"
 
-"@chainsafe/ssz@^0.6.12":
-  version "0.6.12"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.12.tgz#5b6352d483f1bb887800b42173133a9ef55f58a3"
-  integrity sha512-TuqTqULShmXLU7KTFPMVhbKOWvzzsU3lu4D19ezKa1yvxsl6Re+K1VsVE/ck6SNkFJ+pPm3ELmba08NbnkdT1A==
+"@chainsafe/ssz@^0.6.13":
+  version "0.6.13"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.6.13.tgz#94333993b9eb5e8ae7798fc3e4a5db36f846e5ec"
+  integrity sha512-pKb1nlIRD3YvVlgbgB5kir+H2tu1pUhiZd9SIrwUr3xq/vQvoYcs3z+DBrhl1WtW5zwQorxgMe/1pnXp7raLtA==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
     "@chainsafe/persistent-merkle-tree" "^0.2.1"
