@@ -6,7 +6,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest,
+  ForkDigest, Number64,
   Root,
   SignedBeaconBlock,
   Slot,
@@ -57,7 +57,7 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Return ENRForkID.
    */
   getENRForkID(): Promise<ENRForkID>;
-
+  getGenesisTime(): Number64;
   getHeadStateContext(): Promise<ITreeStateContext>;
   getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
