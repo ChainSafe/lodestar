@@ -146,8 +146,13 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
       // eslint-disable-next-line camelcase,@typescript-eslint/camelcase
       inclusive_end: !(opts && opts.lt),
       descending: opts && opts.reverse,
-      startkey: (opts && (opts.gt || opts.gte)) ? toHexString(opts.gt || opts.gte) : undefined,
-      end: (opts && (opts.lt || opts.lte)) ? toHexString(opts.lt || opts.lte) : undefined,
+      startkey: this.parseLogicOpts(opts?.gt, opts?.gte),
+      end: this.parseLogicOpts(opts?.lt, opts?.lte)
     };
+  }
+
+  private parseLogicOpts(...optArr: (Buffer | undefined)[]): Buffer | undefined {
+    for (const opt of optArr) if (opt) toHexString(opt);
+    return undefined;
   }
 }
