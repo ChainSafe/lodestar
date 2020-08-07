@@ -32,7 +32,7 @@ interface ILibp2pModules {
 export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
 
   public peerId: PeerId;
-  public multiaddrs?: Multiaddr[];
+  public multiaddrs: Multiaddr[];
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
@@ -53,6 +53,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.metrics = metrics;
     this.peerReputations = reps;
     this.peerId = libp2p.peerId;
+    this.multiaddrs = libp2p.multiaddrs;
     this.libp2p = libp2p;
     this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
