@@ -9,7 +9,6 @@
       "./types"
     ],
     "outDir": "lib",
-    "rootDir": "./src",
-    "strictNullChecks": true
+    "rootDir": "./src"
   }
 }
