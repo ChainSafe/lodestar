@@ -120,15 +120,15 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     });
   }
 
-  public sendResponse(id: RequestId, err: RpcError|null, response?: ResponseBody): void {
+  public sendResponse(id: RequestId, err: RpcError | null, response: ResponseBody | null): void {
     return this.sendResponseStream(id, err, async function *() {
-      if(response !== null && response !== undefined) {
+      if(response !== null) {
         yield response;
       }
     }());
   }
 
-  public sendResponseStream(id: RequestId, err: RpcError|null, chunkIter: AsyncIterable<ResponseBody>): void {
+  public sendResponseStream(id: RequestId, err: RpcError | null, chunkIter: AsyncIterable<ResponseBody>): void {
     if(err) {
       const config = this.config;
       this.responseListener.emit(createResponseEvent(id), async function* () {
