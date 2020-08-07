@@ -23,7 +23,7 @@ describe("syncing", function () {
       latestStatus: null,
       score: 0,
       encoding: null,
-      supportSync: false
+      supportedProtocols: []
     };
     try {
       const result = reps.add("lodestar");

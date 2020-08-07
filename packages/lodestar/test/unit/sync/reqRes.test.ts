@@ -76,7 +76,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerId, peerId]);
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportedProtocols: []
     });
 
 
@@ -100,7 +100,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     const reputation: IReputation = {
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportedProtocols: []
     };
     repsStub.get.returns(reputation);
     repsStub.getFromPeerId.returns(reputation);
@@ -125,7 +125,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportedProtocols: []
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));

@@ -248,7 +248,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     if (this.pubsub && this.pubsub.subscriptions) {
       this.logger.info("Current gossip subscriptions: " + Array.from(this.pubsub.subscriptions).join(","));
     } else {
-      this.logger.info("No gossip subscriptions");
+      this.logger.info("Gossipsub not started");
     }
   };
 
