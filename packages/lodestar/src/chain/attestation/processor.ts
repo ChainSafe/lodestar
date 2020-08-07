@@ -1,28 +1,30 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {ChainEventEmitter, IAttestationProcessor} from "./interface";
+import {IAttestationProcessor, IBeaconChain} from "./interface";
 import {ILMDGHOST} from ".";
 import {IBeaconDb} from "../db";
 import {GENESIS_EPOCH} from "../constants";
+import {ExtendedValidatorResult} from "../../network/gossip/constants";
 
 export class AttestationProcessor implements IAttestationProcessor {
   private readonly config: IBeaconConfig;
   private db: IBeaconDb;
   private logger: ILogger;
-  private chain: ChainEventEmitter;
+  private chain: IBeaconChain;
   private forkChoice: ILMDGHOST;
   private pendingAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
 
   public constructor(
-    chain: ChainEventEmitter,
+    chain: IBeaconChain,
     forkChoice: ILMDGHOST,
     {config, db, logger}: { config: IBeaconConfig; db: IBeaconDb; logger: ILogger }
   ) {
@@ -34,36 +36,81 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.pendingAttestations = new Map<BlockRootHex, Map<AttestationRootHex, Attestation>>();
   }
 
-  public async  receiveAttestation(attestation: Attestation): Promise<void> {
+  /**
+   * Runs fork choice attestation validation (method may take a long time to resolve and throw error)
+   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#validate_on_attestation
+   *
+   * @param attestation
+   */
+  public async receiveAttestation(attestation: Attestation): Promise<ExtendedValidatorResult> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
-    this.logger.verbose(`Received attestation ${toHexString(attestationHash)}`);
+    const attestationLogContext  = {
+      attestationHash: toHexString(attestationHash),
+      target: attestation.data.target.epoch,
+    };
+    this.logger.info("Received attestation", attestationLogContext);
+    const target = attestation.data.target;
+    const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
+    const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
+    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
+    if(target.epoch < previousEpoch) {
+      this.logger.warn("Ignored attestation", {reason: "target too old", currentEpoch, ...attestationLogContext});
+      return ExtendedValidatorResult.ignore;
+    }
+    if(target.epoch > currentEpoch) {
+      this.logger.verbose(
+        "Delaying attestation",
+        {reason: "target ahead of current epooch", currentEpoch, ...attestationLogContext}
+      );
+      setTimeout(() => {
+        this.receiveAttestation(attestation).catch();
+      }, 3000);
+      return ExtendedValidatorResult.ignore;
+    }
+    if(!this.forkChoice.hasBlock(target.root.valueOf() as Uint8Array)) {
+      this.logger.verbose(
+        "Adding attestation to pool",
+        {reason: "missing target block", targetRoot: toHexString(target.root), ...attestationLogContext}
+      );
+      this.addPendingAttestation(target.root, attestation, attestationHash);
+      return ExtendedValidatorResult.ignore;
+    }
+    const attestationBlock = this.forkChoice.getBlockSummaryByBlockRoot(
+      attestation.data.beaconBlockRoot.valueOf() as Uint8Array
+    );
+    if(!attestationBlock) {
+      this.logger.verbose(
+        "Adding attestation to pool",
+        {
+          reason: "missing attestation block",
+          beaconBlockRoot: toHexString(attestation.data.beaconBlockRoot),
+          ...attestationLogContext
+        }
+      );
+      this.addPendingAttestation(attestation.data.beaconBlockRoot, attestation, attestationHash);
+      return ExtendedValidatorResult.ignore;
+    }
+
+    if(attestationBlock.slot > attestation.data.slot) {
+      this.logger.warn("Ignored attestation", {reason: "attestation for future block", ...attestationLogContext});
+      return ExtendedValidatorResult.ignore;
+    }
+
+    const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
+    const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, targetSlot);
+    if(!this.config.types.Root.equals(target.root, ancestor)) {
+      this.logger.warn(
+        "Rejected attestation",
+        {reason: "LMD vote must be consistent with FFG vote target", ...attestationLogContext}
+      );
+      return ExtendedValidatorResult.reject;
+    }
+    this.logger.verbose("Attestation passed forkchoice validation", attestationLogContext);
     try {
-      const attestationSlot: Slot = attestation.data.slot;
-      const currentSlot = this.forkChoice.headBlockSlot();
-      if(attestationSlot + this.config.params.SLOTS_PER_EPOCH < currentSlot) {
-        this.logger.verbose(`Attestation ${toHexString(attestationHash)} is too old. Ignored.`);
-        return;
-      }
+      return await this.processAttestation(attestation, attestationHash);
     } catch (e) {
-      return;
-    }
-    const targetRoot = attestation.data.target.root;
-    if (!this.forkChoice.hasBlock(targetRoot.valueOf() as Uint8Array)) {
-      this.chain.emit("unknownBlockRoot", targetRoot);
-      this.addPendingAttestation(targetRoot, attestation, attestationHash);
-      return;
-    }
-    const beaconBlockRoot = attestation.data.beaconBlockRoot;
-    if (!this.forkChoice.hasBlock(beaconBlockRoot.valueOf() as Uint8Array)) {
-      this.chain.emit("unknownBlockRoot", beaconBlockRoot);
-      this.addPendingAttestation(beaconBlockRoot, attestation, attestationHash);
-      return;
-    }
-    try {
-      await this.processAttestation(attestation, attestationHash);
-    } catch (e) {
-      console.log(e);
-      this.logger.warn("Failed to process attestation. Reason: " + e.message);
+      this.logger.warn("Attestation failed processing", {reason: e.message, ...attestationLogContext});
+      return ExtendedValidatorResult.reject;
     }
   }
 
@@ -85,7 +132,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.pendingAttestations.delete(toHexString(blockRoot));
   }
 
-  public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
+  public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<ExtendedValidatorResult> {
     const justifiedCheckpoint = this.forkChoice.getJustified();
     const currentSlot = this.forkChoice.headBlockSlot();
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
@@ -137,6 +184,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   private addPendingAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
+    this.chain.emit("unknownBlockRoot", blockRoot);
     const blockPendingAttestations = this.pendingAttestations.get(toHexString(blockRoot)) ||
       new Map<AttestationRootHex, Attestation>();
     blockPendingAttestations.set(toHexString(attestationHash), attestation);
