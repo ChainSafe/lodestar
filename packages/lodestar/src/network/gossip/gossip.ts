@@ -48,7 +48,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly chain: IBeaconChain;
   protected readonly  logger: ILogger;
 
-  private handlers: Map<string, GossipHandlerFn>;
+  private handlers?: Map<string, GossipHandlerFn>;
   //TODO: make this configurable
   private supportedEncodings = [GossipEncoding.SSZ_SNAPPY, GossipEncoding.SSZ];
   private statusInterval?: NodeJS.Timeout;

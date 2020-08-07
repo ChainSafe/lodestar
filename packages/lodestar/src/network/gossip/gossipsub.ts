@@ -28,7 +28,7 @@ export class LodestarGossipsub extends Gossipsub {
   private transformedObjects: Map<string, {createdAt: Date; object: GossipObject}>;
   private config: IBeaconConfig;
   private validator: IGossipMessageValidator;
-  private interval: NodeJS.Timeout;
+  private interval?: NodeJS.Timeout;
   private timeToLive: number;
   private readonly  logger: ILogger;
 

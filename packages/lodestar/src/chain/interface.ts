@@ -39,7 +39,7 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
  */
 export interface IBeaconChain extends ChainEventEmitter {
   forkChoice: ILMDGHOST;
-  clock: IBeaconClock;
+  clock?: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;
   currentForkDigest: ForkDigest;

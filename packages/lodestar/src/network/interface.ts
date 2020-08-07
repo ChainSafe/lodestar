@@ -64,7 +64,7 @@ export interface INetwork extends NetworkEventEmitter {
    * Our network identity
    */
   peerId: PeerId;
-  multiaddrs: Multiaddr[];
+  multiaddrs?: Multiaddr[];
   getEnr(): ENR|undefined;
   getPeers(): PeerId[];
   getPeerConnection(peerId: PeerId): LibP2pConnection|null;

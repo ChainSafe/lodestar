@@ -40,7 +40,7 @@ export class BeaconSync implements IBeaconSync {
   private attestationCollector: AttestationCollector;
   private startingBlock: Slot = 0;
 
-  private statusSyncTimer: NodeJS.Timeout;
+  private statusSyncTimer?: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;

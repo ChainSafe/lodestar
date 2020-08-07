@@ -155,9 +155,9 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   /**
    * Best justified checkpoint.
    */
-  private bestJustifiedCheckpoint: Checkpoint;
+  private bestJustifiedCheckpoint?: Checkpoint;
   private synced: boolean;
-  private clock: IBeaconClock;
+  private clock?: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
     super();

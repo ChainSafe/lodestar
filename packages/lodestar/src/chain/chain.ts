@@ -63,7 +63,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
-  public clock: IBeaconClock;
+  public clock?: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;

@@ -6,8 +6,8 @@ export class RateCounter {
   private readonly timePeriod: number;
 
   private count = 0;
-  private since: number;
-  private timer: NodeJS.Timeout;
+  private since?: number;
+  private timer?: NodeJS.Timeout;
 
   /**
      *
@@ -36,7 +36,7 @@ export class RateCounter {
   }
 
   public rate(): number {
-    if(this.count == 0) {
+    if(this.count == 0 || this.since === undefined) {
       return 0;
     }
     const diff = new Date().getTime() - this.since;
