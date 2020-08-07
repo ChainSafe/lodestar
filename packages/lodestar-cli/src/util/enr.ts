@@ -12,7 +12,7 @@ export function updateENR(enr: ENR, args: IENRArgs & IBeaconNodeOptions): void {
         enr.tcp = tcpOpts.port;
       }
     } catch (e) {
-      throw new Error("Invalid tcp multiaddr");
+      throw new Error(`Invalid tcp multiaddr: ${e.message}`);
     }
   }
   if (args.network.discv5.bindAddr) {
@@ -22,7 +22,7 @@ export function updateENR(enr: ENR, args: IENRArgs & IBeaconNodeOptions): void {
         enr.udp = udpOpts.port;
       }
     } catch (e) {
-      throw new Error("Invalid udp multiaddr");
+      throw new Error(`Invalid udp multiaddr: ${e.message}`);
     }
   }
   if (args.enr?.ip) {
