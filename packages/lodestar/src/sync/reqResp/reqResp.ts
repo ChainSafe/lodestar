@@ -24,7 +24,7 @@ import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus, syncPeersStatus} from "../utils/sync";
+import {createStatus, syncPeersStatus, checkPeerSupportSync} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -116,6 +116,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     try {
       const status = await createStatus(this.chain);
       this.network.reqResp.sendResponse(id, null, status);
+      await checkPeerSupportSync(this.config, this.reps, peerId, this.network.reqResp);
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
@@ -274,6 +275,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
+        await checkPeerSupportSync(this.config, this.reps, peerId, this.network.reqResp);
       } catch (e) {
         this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status`, e);
         await this.network.disconnect(peerId);

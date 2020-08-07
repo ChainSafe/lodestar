@@ -10,6 +10,7 @@ export interface IReputation {
   latestMetadata: Metadata | null;
   score: number;
   encoding: ReqRespEncoding | null;
+  supportSync: boolean;
 }
 
 export interface IReputationStore {
@@ -31,6 +32,7 @@ export class ReputationStore implements IReputationStore {
       latestMetadata: null,
       score: 0,
       encoding: null,
+      supportSync: false,
     };
     this.reputations.set(peerId, reputation);
     return reputation;

@@ -4,7 +4,6 @@ import {IReputation, ReputationStore} from "../../../src/sync/IReputation";
 import {AttestationSubnets} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let reps: ReputationStore;
@@ -24,6 +23,7 @@ describe("syncing", function () {
       latestStatus: null,
       score: 0,
       encoding: null,
+      supportSync: false
     };
     try {
       const result = reps.add("lodestar");

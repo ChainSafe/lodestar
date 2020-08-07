@@ -113,7 +113,7 @@ export class FastSync
 
   private setBlockImportTarget = (fromSlot?: Slot): void => {
     const lastTarget = fromSlot || this.blockImportTarget;
-    const newTarget = this.getNewBlockImportTarget(this.blockImportTarget);
+    const newTarget = this.getNewBlockImportTarget(lastTarget);
     this.logger.info(
       `Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`
     );
@@ -211,7 +211,7 @@ export class FastSync
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
     return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
       const rep = this.reps.getFromPeerId(peer);
-      if(rep && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint.epoch) {
+      if(rep && rep.supportSync && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint.epoch) {
         validPeers.push(peer);
       }
       return validPeers;

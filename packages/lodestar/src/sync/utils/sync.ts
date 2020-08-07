@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {IReputation, IReputationStore} from "../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, SignedBeaconBlock, Slot, Status, Root, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, INetwork} from "../../network";
 import {ISlotRange} from "../interface";
@@ -8,7 +8,7 @@ import {IBeaconChain} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
-import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../util/sleep";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 
@@ -218,13 +218,46 @@ export async function syncPeersStatus(reps: IReputationStore, network: INetwork,
   }));
 }
 
-export function getBestHead(peers: PeerId[], reps: IReputationStore): {slot: number; root: Root} {
+/**
+ * Check if a peer supports sync.
+ */
+export async function checkPeerSupportSync(
+  config: IBeaconConfig, reps: IReputationStore, peerId: PeerId, reqResp: IReqResp): Promise<void> {
+  const latestStatus = reps.getFromPeerId(peerId).latestStatus;
+  if (!latestStatus) {
+    reps.getFromPeerId(peerId).supportSync = false;
+    return;
+  }
+  const finalizedSlot = computeStartSlotAtEpoch(config, latestStatus.finalizedEpoch);
+  const testCount = 5;
+  if (latestStatus.headSlot - finalizedSlot <= testCount) {
+    reps.getFromPeerId(peerId).supportSync = false;
+    return;
+  }
+  const testReqResp: BeaconBlocksByRangeRequest = {
+    startSlot: finalizedSlot,
+    count: testCount,
+    step: 1
+  };
+  const result = await reqResp.beaconBlocksByRange(peerId, testReqResp);
+  // a lot of good peers return testCount - 1 = 4 maybe because of missing slot
+  // temporarily make it quite relax at least to filter out Nimbus "0 chunks" or "1 chunks" peers
+  // or "ERR_UNSUPPORTED_PROTOCOL" peers
+  if (result && result.length > 1) {
+    reps.getFromPeerId(peerId).supportSync = true;
+  } else {
+    reps.getFromPeerId(peerId).supportSync = false;
+  }
+}
+
+export function getBestHead(peers: PeerId[], reps: IReputationStore): {slot: number; root: Root; supportSync: boolean} {
   return peers.map((peerId) => {
-    const latestStatus = reps.get(peerId.toB58String()).latestStatus;
-    return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot} : {slot: 0, root: ZERO_HASH};
+    const {latestStatus, supportSync} = reps.get(peerId.toB58String());
+    return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot, supportSync} :
+      {slot: 0, root: ZERO_HASH, supportSync};
   }).reduce((head, peerStatus) => {
-    return peerStatus.slot > head.slot? peerStatus : head;
-  }, {slot: 0, root: ZERO_HASH});
+    return (peerStatus.supportSync && peerStatus.slot >= head.slot) ? peerStatus : head;
+  }, {slot: 0, root: ZERO_HASH, supportSync: false});
 }
 
 // should add peer score later

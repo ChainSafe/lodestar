@@ -18,7 +18,7 @@ import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {ReqResp} from "../../../src/network/reqResp";
-import {ReputationStore} from "../../../src/sync/IReputation";
+import {ReputationStore, IReputation} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
@@ -76,7 +76,7 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([peerId, peerId]);
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
     });
 
 
@@ -99,9 +99,11 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
-    });
+    const reputation: IReputation = {
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
+    };
+    repsStub.get.returns(reputation);
+    repsStub.getFromPeerId.returns(reputation);
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
     try {
@@ -123,7 +125,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
     repsStub.get.returns({
-      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY
+      latestMetadata: null, latestStatus: null, score: 0, encoding: ReqRespEncoding.SSZ_SNAPPY, supportSync: false
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
