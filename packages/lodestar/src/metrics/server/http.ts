@@ -42,7 +42,7 @@ export class HttpMetricsServer implements IMetricsServer {
   }
 
   private onRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    if (req.method === "GET" && req.url.includes("/metrics")) {
+    if (req.method === "GET" && req.url && req.url.includes("/metrics")) {
       res.writeHead(200, {"content-type": this.metrics.registry.contentType});
       res.end(this.metrics.registry.metrics());
     } else {
