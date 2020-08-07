@@ -5,6 +5,7 @@ import {describe, it, before, after, beforeEach, afterEach} from "mocha";
 import {ApiClientOverInstance} from "../../../src/api";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
+import {MockValidatorApi} from "../../utils/mocks/validator";
 
 describe("RpcClientOverInstance test", function() {
 
@@ -33,7 +34,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     await rpcClient.connect();
@@ -48,7 +49,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     rpcClient.onNewSlot(cb);
@@ -68,7 +69,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     rpcClient.onNewSlot(cb);
@@ -86,7 +87,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);
@@ -102,7 +103,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);
@@ -118,7 +119,7 @@ describe("RpcClientOverInstance test", function() {
         genesisTime: Math.floor(Date.now() / 1000)
       }),
       node: new MockNodeApi(),
-      validator: null
+      validator: new MockValidatorApi()
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);

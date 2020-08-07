@@ -7,7 +7,6 @@ import {
   BLSPubkey,
   Epoch,
   Fork,
-  ProposerDuty,
   Root,
   SignedBeaconBlock,
   Slot
@@ -67,12 +66,10 @@ export default class BlockProposingService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
-    let proposerDuties: ProposerDuty[];
-    try {
-      proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys);
-    } catch (e) {
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch(e => {
       this.logger.error("Failed to obtain proposer duties", e);
-    }
+      return null;
+    });
     if(!proposerDuties) {
       return;
     }
@@ -88,8 +85,8 @@ export default class BlockProposingService {
     if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
-    if(this.nextProposals.has(slot) && slot !== 0) {
-      const proposerPubKey = this.nextProposals.get(slot);
+    const proposerPubKey = this.nextProposals.get(slot);
+    if(proposerPubKey && slot !== 0) {
       this.nextProposals.delete(slot);
       this.logger.info(
         "Validator is proposer!",
