@@ -44,7 +44,7 @@ export function eth2RequestDecode(
         yield {isValid: true};
         return;
       }
-      let sszDataLength: number = null;
+      let sszDataLength: number | null = null;
       const decompressor = getDecompressor(encoding);
       const buffer = new BufferList();
       for await (let chunk of source) {
@@ -75,7 +75,7 @@ export function eth2RequestDecode(
           yield {isValid: false};
           break;
         }
-        let uncompressed: Buffer;
+        let uncompressed: Buffer | null;
         try {
           uncompressed = decompressor.uncompress(chunk.slice());
         } catch (e) {
