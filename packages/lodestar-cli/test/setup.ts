@@ -5,6 +5,7 @@ import {rootDir, passphraseFile} from "./constants";
 import bre from "@nomiclabs/buidler";
 
 before(async () => {
+  await new Promise(resolve => rimraf(rootDir, resolve));
   await initBLS();
   bre.run("node");
 });
