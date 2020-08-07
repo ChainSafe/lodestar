@@ -37,12 +37,14 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
 
   public async start(): Promise<void> {
     this.logger.info("Starting regular sync");
+    //from all peers find one with highest slot head
     this.bestHead = await getBestHead(
       this.reputationStore,
       this.network,
       this.logger,
       createStatus(this.chain.forkChoice.head(), this.chain.currentForkDigest)
     );
+    //if our head slot is greater, we are already synced
     if(this.chain.forkChoice.headBlockSlot() >= this.bestHead.slot) {
       this.logger.info(
         "Synced to best head slot",
@@ -64,8 +66,10 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
   }
 
   private checkSync = async (lastProcessedBlock: SignedBeaconBlock): Promise<void> => {
+    //check if we processed block up to or past best head
     if(lastProcessedBlock.message.slot >= this.bestHead.slot && this.chain.listeners) {
       this.logger.info("Reached current best head, checking for new one");
+      //check if while syncing peers moved to better head
       const newBestHead = await getBestHead(
         this.reputationStore,
         this.network,
@@ -86,6 +90,7 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
         return;
       }
       this.bestHead = newBestHead;
+      //trigger sync to new best head
       this.sync(newBestHead);
     }
   };
@@ -94,11 +99,17 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
     const {logger, chain, opts} = this;
     const reqResp = this.network.reqResp;
     const sync = this.sync;
+    //get all peers with status head same as best head
+    //this ensured we dont fetch some range from different chain
     const getPeers = this.getPeers(bestHead);
     logger.info("Syncing up to best head", {slot: bestHead.slot, root: toHexString(bestHead.root)});
+    // we might not need pipe here
+    // pipe makes easier to test separate components but it's hard to do stuff in parallel
     void pipe(
       () => {
         return (async function* () {
+          //split range between our head slot and best head slot into chunks
+          //chunks should not be too small or we could end up waiting too long for range with few blocks
           yield chunkify(opts.blockPerChunk, headSlot ?? chain.forkChoice.headBlockSlot(), bestHead.slot);
         })();
       },
@@ -107,6 +118,8 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
         return(async function() {
           let lastBlock: SignedBeaconBlock;
           for await (const blockRange of source) {
+            // we will receive chunks in order
+            // but we cannot send in parallel (check comment inside fetchSlotRangeBlocks)
             const sortedBlocks= sortBlocks(blockRange);
             if(sortedBlocks.length > 0) {
               logger.info(
@@ -124,6 +137,8 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
             }
             for(const block of sortedBlocks) {
               if(!block) continue;
+              // while this makes sense in terms of filling our block pool
+              // we don't know if we actually processed block (if our head is parent to received block)
               await chain.receiveBlock(block, false);
               if(!lastBlock || block.message.slot > lastBlock.message.slot) {
                 lastBlock = block;
@@ -131,13 +146,17 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
             }
           }
           if(!lastBlock) {
-            //no block returned assume error
+            //no block returned assume error and restart sync
             await sync(bestHead);
             return;
           }
           //block pool will find missing blocks in between
           if(lastBlock.message.slot < bestHead.slot) {
             logger.info("Failed to fetch best head block", {lastBlockSlot: lastBlock.message.slot});
+            // we didn't reach best head so try to fetch blocks from last slot to best head
+            //note: this is buggy, our lastBlock might not have been process (our head is not parent)
+            // in that case we need to resync from our head not lastBlock
+            // (there is small chance that block pool would manage to find missing blocks)
             await sync(bestHead, lastBlock.message.slot);
           }
         })();
@@ -148,6 +167,7 @@ export class RegularSyncV2 extends (EventEmitter as { new(): RegularSyncEventEmi
   private getPeers = (bestHead: {root: Root; slot: Slot}): () => Promise<PeerId[]> => {
     const reputationStore = this.reputationStore;
     const config = this.config;
+    //filter peers that have common best head so we don't sync from peers on different head
     return async () => this.network.getPeers()
       .filter((peer) => {
         const reputation = reputationStore.getFromPeerId(peer);

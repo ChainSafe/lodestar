@@ -31,6 +31,11 @@ export function fetchSlotRangeBlocks(
           return;
         }
         for (const slotRange of slotRanges) {
+          // ideally we would send request in parallel
+          // but not sure if possible to yield out of order in generator
+          // idea: send blocks to process from here, that way we can send parallel requests
+          // and if next chunk than process if not, cache blocks
+          // after we submit each chunk for process check if we have following chunk in cache
           yield getBlockRangeFromPeers(
             reqResp,
             logger,
@@ -47,8 +52,11 @@ export async function getBlockRangeFromPeers(
   rpc: IReqResp, logger: ILogger, peers: PeerId[], chunk: ISlotRange
 ): Promise<SignedBeaconBlock[]> {
   logger.info("Fetching block chunks", {validPeerCount: peers.length});
+  //shuffle eligeble peers
   const peerBalancer = new RoundRobinArray(peers);
   const peer = peerBalancer.next();
+  //retry chunk fetch for as long as we have eligible peers
+  //if we still failed to get chunk we need to restart
   while(peer) {
     let retryCount = 0;
     while (retryCount < 2) {
