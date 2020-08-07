@@ -61,9 +61,9 @@ export function eth2ResponseDecode(
       let buffer = new BufferList();
       //holds uncompressed chunks
       let uncompressedData = new BufferList();
-      let status: number = null;
-      let errorMessage: string = null;
-      let sszLength: number = null;
+      let status: number | null = null;
+      let errorMessage: string | null = null;
+      let sszLength: number | null = null;
       const decompressor = getDecompressor(encoding);
       const type = Methods[method].responseSSZType(config);
       for await (const chunk of source) {
@@ -102,14 +102,14 @@ export function eth2ResponseDecode(
             `sszLength ${sszLength}`);
         }
         if(buffer.length === 0) continue;
-        let uncompressed: Buffer;
+        let uncompressed: Buffer | null = null;
         try {
           uncompressed = decompressor.uncompress(buffer.slice());
           buffer.consume(buffer.length);
         } catch (e) {
           logger.warn(`Failed to uncompress data for method ${method}. Error: ${e.message}`, {requestId, encoding});
         }
-        if(uncompressed) {
+        if(uncompressed !== null) {
           uncompressedData.append(uncompressed);
           if(uncompressedData.length > sszLength) {
             throw new Error(`Received too much data for method ${method}`);
