@@ -1,4 +1,4 @@
-import {TreeBacked} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {Attestation, BeaconState, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -16,7 +16,7 @@ export async function assembleAttestation(
   if(committee.find((c) => c === validatorIndex) === undefined) {
     throw new Error("Validator not in given committee");
   }
-  const aggregationBits = getAggregationBits(committee, validatorIndex);
+  const aggregationBits = getAggregationBits(committee, validatorIndex) as List<boolean>;
   const data = await assembleAttestationData(epochCtx.config, state, headBlockRoot, slot, index);
   return {
     aggregationBits,

@@ -15,6 +15,10 @@ import {
   SignedBeaconBlock,
   Root,
   DepositData,
+  AttesterSlashing,
+  ProposerSlashing,
+  Attestation,
+  SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -167,11 +171,11 @@ export function getEmptyBlockBody(): BeaconBlockBody {
       blockHash: ZERO_HASH,
     },
     graffiti: ZERO_HASH,
-    proposerSlashings: [],
-    attesterSlashings: [],
-    attestations: [],
-    deposits: [],
-    voluntaryExits: [],
+    proposerSlashings: [] as ProposerSlashing[] as List<ProposerSlashing>,
+    attesterSlashings: [] as AttesterSlashing[] as List<AttesterSlashing>,
+    attestations: [] as Attestation[] as List<Attestation>,
+    deposits: [] as Deposit[] as List<Deposit>,
+    voluntaryExits: [] as SignedVoluntaryExit[] as List<SignedVoluntaryExit>,
   };
 }
 

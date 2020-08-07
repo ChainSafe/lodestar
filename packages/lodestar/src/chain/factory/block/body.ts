@@ -2,13 +2,23 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlockBody, BeaconState, Bytes96, Bytes32} from "@chainsafe/lodestar-types";
+import {
+  BeaconBlockBody,
+  BeaconState,
+  Bytes96,
+  Bytes32,
+  ProposerSlashing,
+  AttesterSlashing,
+  Attestation,
+  Deposit,
+  SignedVoluntaryExit
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db";
 import {generateDeposits} from "./deposits";
 import {getEth1Vote} from "./eth1Vote";
-import {TreeBacked} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 
 export async function assembleBody(
   config: IBeaconConfig,
@@ -40,10 +50,10 @@ export async function assembleBody(
     randaoReveal,
     graffiti,
     eth1Data,
-    proposerSlashings,
-    attesterSlashings,
-    attestations,
-    deposits,
-    voluntaryExits,
+    proposerSlashings: proposerSlashings as List<ProposerSlashing>,
+    attesterSlashings: attesterSlashings as List<AttesterSlashing>,
+    attestations: attestations as List<Attestation>,
+    deposits: deposits as List<Deposit>,
+    voluntaryExits: voluntaryExits as List<SignedVoluntaryExit>,
   };
 }
