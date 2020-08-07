@@ -77,10 +77,9 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async delete(key: Buffer): Promise<void> {
     const existingDoc = await this._get(key);
-    if (!existingDoc) {
-      return null;
+    if (existingDoc) {
+      await this.db.remove(existingDoc._id, existingDoc._rev);
     }
-    await this.db.remove(existingDoc._id, existingDoc._rev);
   }
 
   public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
