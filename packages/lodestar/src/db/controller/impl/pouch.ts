@@ -77,10 +77,9 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async delete(key: Buffer): Promise<void> {
     const existingDoc = await this._get(key);
-    if (!existingDoc) {
-      return null;
+    if (existingDoc) {
+      await this.db.remove(existingDoc._id, existingDoc._rev);
     }
-    await this.db.remove(existingDoc._id, existingDoc._rev);
   }
 
   public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
@@ -147,8 +146,13 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
       // eslint-disable-next-line camelcase,@typescript-eslint/camelcase
       inclusive_end: !(opts && opts.lt),
       descending: opts && opts.reverse,
-      startkey: (opts && (opts.gt || opts.gte)) ? toHexString(opts.gt || opts.gte) : undefined,
-      end: (opts && (opts.lt || opts.lte)) ? toHexString(opts.lt || opts.lte) : undefined,
+      startkey: this.parseLogicOpts(opts?.gt, opts?.gte),
+      end: this.parseLogicOpts(opts?.lt, opts?.lte)
     };
+  }
+
+  private parseLogicOpts(...optArr: (Buffer | undefined)[]): Buffer | undefined {
+    for (const opt of optArr) if (opt) toHexString(opt);
+    return undefined;
   }
 }
