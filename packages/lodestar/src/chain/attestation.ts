@@ -117,7 +117,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       "FFG and LMD vote must be consistent with each other");
     const stateCtx = await this.db.stateCache.get(block.stateRoot);
     if (stateCtx === null) {
-      throw Error(`Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`)
+      throw Error(`Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`);
     }
     const validators = stateCtx.epochCtx.getAttestingIndices(
       attestation.data,
