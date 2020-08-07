@@ -57,7 +57,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public async getByRoot(root: Root): Promise<SignedBeaconBlock|null> {
     const slot = await this.getSlotByRoot(root);
-    if(Number.isInteger(slot)) {
+    if(slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
     }
     return null;
@@ -65,7 +65,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public async getByParentRoot(root: Root): Promise<SignedBeaconBlock|null> {
     const slot = await this.getSlotByParentRoot(root);
-    if(Number.isInteger(slot)) {
+    if(slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
     }
     return null;
