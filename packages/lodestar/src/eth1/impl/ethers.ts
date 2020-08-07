@@ -53,8 +53,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
    * Pregenesis block number to check remaining time/block to form genesis.
    * This helps avoid calling too many unnecessary getBlock() calls before genesis.
    */
-  private preGenesisCheckpoint: number;
-  private eth1Source: Pushable<Eth1EventsBlock>;
+  private preGenesisCheckpoint: number | null;
+  private eth1Source: Pushable<Eth1EventsBlock> | null;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
     this.opts = opts;
@@ -71,7 +71,11 @@ export class EthersEth1Notifier implements IEth1Notifier {
       );
     }
     this.contract = opts.contract;
-    this.preGenesisCheckpoint = undefined;
+    this.startedProcessEth1 = false;
+    this.lastProcessedEth1BlockNumber = 0;
+    this.lastDepositCount = 0;
+    this.preGenesisCheckpoint = null;
+    this.eth1Source = null;
   }
 
   /**
@@ -251,14 +255,14 @@ export class EthersEth1Notifier implements IEth1Notifier {
         this.logger.info(`At block ${block.number}, probably ${numBlocksToGenesis} blocks` +
           " to genesis time if there is enough validators");
         // if it's too close to genesis time then always getBlock()
-        this.preGenesisCheckpoint = undefined;
+        this.preGenesisCheckpoint = null;
       } else {
         this.preGenesisCheckpoint = block.number + Math.floor(numBlocksToGenesis / 2);
         this.logger.info(`Set checkpoint to ${this.preGenesisCheckpoint}`);
       }
       return true;
     } else {
-      this.preGenesisCheckpoint = undefined;
+      this.preGenesisCheckpoint = null;
       return false;
     }
   }
