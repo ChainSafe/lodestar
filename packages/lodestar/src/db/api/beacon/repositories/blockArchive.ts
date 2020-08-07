@@ -109,9 +109,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
-    const firstSlot = dbFilterOpts.gt ?
-      this.decodeKey(dbFilterOpts.gt) + 1 :
-      this.decodeKey(dbFilterOpts.gte);
+    const firstSlot = dbFilterOpts.gt
+      ? this.decodeKey(dbFilterOpts.gt) + 1
+      : dbFilterOpts.gte
+        ? this.decodeKey(dbFilterOpts.gte)
+        : null;
+    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
     const valuesStream = super.valuesStream(opts);
     const step = opts && opts.step || 1;
     return (async function* () {
