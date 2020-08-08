@@ -57,7 +57,7 @@ describe("block pool", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
     forkChoiceStub.headBlockSlot.returns(0);
     const block = config.types.SignedBeaconBlock.defaultValue();
-    block.message.slot = 10;
+    block.message.slot = 30;
     pool.addPendingBlock({
       signedBlock: block,
       trusted: false,

@@ -96,6 +96,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     };
   }
 
+  public getGenesisTime(): Number64 {
+    return Math.floor(Date.now() / 1000);
+  }
+
   receiveAttestation(): Promise<void> {
     return undefined;
   }
