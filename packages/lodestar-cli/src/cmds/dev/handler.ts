@@ -8,7 +8,7 @@ import {createEnr, createPeerId} from "../../network";
 import {IGlobalArgs} from "../../options";
 import rimraf from "rimraf";
 import {join} from "path";
-import {IDevOptions} from "./options";
+import {IDevArgs} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
@@ -19,7 +19,7 @@ import {getBeaconConfig} from "../../util";
 /**
  * Run a beacon node
  */
-export async function devHandler(options: IDevOptions & IGlobalArgs): Promise<void> {
+export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
   options = mergeConfigOptions(options);

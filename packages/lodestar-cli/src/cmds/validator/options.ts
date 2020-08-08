@@ -1,9 +1,9 @@
 import {ICliCommandOptions} from "../../util";
 import {defaultValidatorPaths} from "./paths";
-import {accountValidatorOptions, IAccountValidatorOptions} from "../account/cmds/validator/options";
+import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 
-export type IValidatorCliOptions = 
-  IAccountValidatorOptions &
+export type IValidatorCliArgs = 
+  IAccountValidatorArgs &
   {
     validatorsDbDir?: string;
     server: string;
@@ -11,7 +11,7 @@ export type IValidatorCliOptions =
     graffiti: string;
   };
 
-export const validatorOptions: ICliCommandOptions<IValidatorCliOptions> = {
+export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
 
   validatorsDbDir: {

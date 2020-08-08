@@ -4,12 +4,12 @@ import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {IENRArgs, enrOptions} from "./enrOptions";
 import {ICliCommandOptions} from "../../util";
 
-interface IBeaconExtraOptions {
+interface IBeaconExtraArgs {
   genesisStateFile?: string;
   logFile?: string;
 }
 
-const beaconExtraOptions: ICliCommandOptions<IBeaconExtraOptions> = {
+const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
     type: "string",
@@ -77,7 +77,7 @@ export type IBeaconOptions =
   IBeaconNodeOptions &
   IBeaconPaths &
   IENRArgs &
-  IBeaconExtraOptions;
+  IBeaconExtraArgs;
 
 export const beaconOptions: { [k: string]: Options } = {
   ...beaconPathsOptions,

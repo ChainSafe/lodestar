@@ -3,14 +3,14 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getEthersSigner, YargsError, ICliCommand} from "../../../../util";
-import {IAccountValidatorOptions} from "./options";
+import {IAccountValidatorArgs} from "./options";
 import {initCmd} from "../../../init/handler";
 import {getMergedIBeaconConfig} from "../../../../config/params";
 import {IGlobalArgs} from "../../../../options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
 
-interface IAccountValidatorDepositOptions {
+interface IAccountValidatorDepositArgs {
   validator: string;
   keystorePath?: string;
   keystorePassword?: string;
@@ -19,7 +19,7 @@ interface IAccountValidatorDepositOptions {
   ipcPath?: string;
 }
 
-export const deposit: ICliCommand<IAccountValidatorDepositOptions, IAccountValidatorOptions & IGlobalArgs> = {
+export const deposit: ICliCommand<IAccountValidatorDepositArgs, IAccountValidatorArgs & IGlobalArgs> = {
   command: "deposit",
 
   describe: "Submits a deposit to an Eth1 validator registration contract via an IPC endpoint \

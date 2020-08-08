@@ -3,12 +3,12 @@ import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
-import {IAccountValidatorOptions} from "./options";
+import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
 import {initCmd} from "../../../init/handler";
 import {getMergedIBeaconConfig} from "../../../../config/params";
 
-interface IValidatorCreateOptions {
+interface IValidatorCreateArgs {
   name: string;
   passphraseFile: string;
   depositGwei?: string;
@@ -16,7 +16,7 @@ interface IValidatorCreateOptions {
   count?: number;
 }
 
-export const create: ICliCommand<IValidatorCreateOptions, IAccountValidatorOptions & IGlobalArgs> = {
+export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs> = {
   command: "create",
   
   describe: "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \

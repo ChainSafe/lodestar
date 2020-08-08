@@ -40,6 +40,6 @@ export const devOptions = {
   ...devOwnOptions
 };
 
-export type IDevOptions =
+export type IDevArgs =
   IDevOwnOptions &
   IBeaconOptions;

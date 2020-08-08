@@ -1,12 +1,12 @@
 import {ICliCommandOptions} from "../../../../util";
 import {defaultAccountPaths} from "../../paths";
 
-export interface IAccountValidatorOptions {
+export interface IAccountValidatorArgs {
   keystoresDir?: string;
   secretsDir?: string;
 }
 
-export const accountValidatorOptions: ICliCommandOptions<IAccountValidatorOptions> = {
+export const accountValidatorOptions: ICliCommandOptions<IAccountValidatorArgs> = {
   keystoresDir: {
     description: "Directory for storing validator keystores.",
     defaultDescription: defaultAccountPaths.keystoresDir,

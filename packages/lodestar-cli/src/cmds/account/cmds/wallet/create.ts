@@ -5,20 +5,20 @@ import {randomPassword, writeFile600Perm,YargsError, readPassphraseFile, ICliCom
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
-import {IAccountWalletOptions} from "./options";
+import {IAccountWalletArgs} from "./options";
 
 export const command = "create";
 
 export const description = "Creates a new HD (hierarchical-deterministic) EIP-2386 wallet";
 
-interface IWalletCreateOptions {
+interface IWalletCreateArgs {
   name: string;
   passphraseFile: string;
   type: string;
   mnemonicOutputPath?: string;
 }
 
-export const create: ICliCommand<IWalletCreateOptions, IAccountWalletOptions & IGlobalArgs> = {
+export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobalArgs> = {
   command: "create",
 
   describe: "Creates a new HD (hierarchical-deterministic) EIP-2386 wallet",

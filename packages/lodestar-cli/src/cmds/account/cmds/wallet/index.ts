@@ -1,10 +1,10 @@
 import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {accountWalletsOptions, IAccountWalletOptions} from "./options";
+import {accountWalletsOptions, IAccountWalletArgs} from "./options";
 import {create} from "./create";
 import {list} from "./list";
 
-export const wallet: ICliCommand<IAccountWalletOptions, IGlobalArgs> = {
+export const wallet: ICliCommand<IAccountWalletArgs, IGlobalArgs> = {
   command: "wallet <command>",
   describe: "Provides commands for managing Eth2 wallets.",
   options: accountWalletsOptions,

@@ -1,10 +1,10 @@
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
-import {IAccountValidatorOptions} from "./options";
+import {IAccountValidatorArgs} from "./options";
 import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 
-export const list: ICliCommand<{}, IAccountValidatorOptions & IGlobalArgs> = {
+export const list: ICliCommand<{}, IAccountValidatorArgs & IGlobalArgs> = {
   command: "list",
 
   describe: "Lists the public keys of all validators",

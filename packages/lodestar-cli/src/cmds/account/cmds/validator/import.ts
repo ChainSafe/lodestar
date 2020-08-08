@@ -13,18 +13,18 @@ import {
   ICliCommand
 } from "../../../../util";
 import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths";
-import {IAccountValidatorOptions} from "./options";
+import {IAccountValidatorArgs} from "./options";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 
 /* eslint-disable no-console */
 
-interface IValidatorImportOptions {
+interface IValidatorImportArgs {
   keystore?: string;
   directory?: string;
 }
 
-export const importCmd: ICliCommand<IValidatorImportOptions, IAccountValidatorOptions & IGlobalArgs> = {
+export const importCmd: ICliCommand<IValidatorImportArgs, IAccountValidatorArgs & IGlobalArgs> = {
   command: "import",
 
   describe: "Imports one or more EIP-2335 keystores into a Lodestar validator client directory, \

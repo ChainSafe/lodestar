@@ -11,14 +11,14 @@ import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
-import {IValidatorCliOptions} from "./options";
+import {IValidatorCliArgs} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
 
 /**
  * Run a validator client
  */
-export async function validatorHandler(options: IValidatorCliOptions & IGlobalArgs): Promise<void> {
+export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
   await initCmd(options);
 
