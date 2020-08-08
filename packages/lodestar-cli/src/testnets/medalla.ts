@@ -40,6 +40,6 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
     },
     maxPeers: 25,
     bootnodes: [],
-    multiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
+    multiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   },
 };
