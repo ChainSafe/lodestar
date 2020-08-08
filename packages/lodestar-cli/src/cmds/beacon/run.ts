@@ -7,7 +7,7 @@ import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ENR} from "@chainsafe/discv5";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
-
+import {IGlobalArgs} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getMergedIBeaconConfig} from "../../config/params";
@@ -19,7 +19,7 @@ import {updateENR} from "../../util/enr";
 /**
  * Run a beacon node
  */
-export async function run(options: IBeaconOptions): Promise<void> {
+export async function run(options: IBeaconOptions & IGlobalArgs): Promise<void> {
   await initBLS();
   // always run the init command
   await initCmd(options);

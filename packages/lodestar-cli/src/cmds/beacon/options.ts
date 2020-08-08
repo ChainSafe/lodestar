@@ -2,16 +2,26 @@ import {Options} from "yargs";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {IENRArgs, enrOptions} from "./enrOptions";
-import { ICliCommandOptions } from "../../util";
+import {ICliCommandOptions} from "../../util";
 
-export type IBeaconOptions =
-  IBeaconNodeOptions &
-  IBeaconPaths &
-  IENRArgs &
-  {
-    genesisStateFile?: string;
-    logFile?: string;
-  };
+interface IBeaconExtraOptions {
+  genesisStateFile?: string;
+  logFile?: string;
+}
+
+const beaconExtraOptions: ICliCommandOptions<IBeaconExtraOptions> = {
+  genesisStateFile: {
+    description: "Genesis state in ssz-encoded format",
+    type: "string",
+    normalize: true,
+  },
+
+  logFile: {
+    alias: ["log.file"],
+    type: "string",
+    normalize: true,
+  }
+};
 
 const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
@@ -38,6 +48,14 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     normalize: true,
   },
 
+  peerStoreDir: {
+    hidden: true,
+    description: "Peer store dir",
+    defaultDescription: defaultBeaconPaths.peerStoreDir,
+    normalize: true,
+    type: "string",
+  },
+
   peerIdFile: {
     hidden: true,
     description: "Peer ID file",
@@ -52,27 +70,19 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
-  },
-
-  logFile: {
-    alias: ["log.file"],
-    type: "string",
-    normalize: true,
   }
-}
+};
 
-export const beaconOptions: {[k: string]: Options} = {
+export type IBeaconOptions =
+  IBeaconNodeOptions &
+  IBeaconPaths &
+  IENRArgs &
+  IBeaconExtraOptions;
+
+export const beaconOptions: { [k: string]: Options } = {
+  ...beaconPathsOptions,
+  ...beaconExtraOptions,
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,
-
-  genesisStateFile: {
-    description: "Genesis state in ssz-encoded format",
-    type: "string",
-    normalize: true,
-  },
-
-  // Beacon paths
-
-  
 };

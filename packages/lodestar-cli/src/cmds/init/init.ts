@@ -1,18 +1,19 @@
 import * as fs from "fs";
 import path from "path";
 import deepmerge from "deepmerge";
-import {IInitOptions} from "./options";
 import {initBeaconConfig} from "../../config/beacon";
+import {IGlobalArgs} from "../../options";
 import {mkdir, getBeaconConfig} from "../../util";
 import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
 import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
+import {IBeaconOptions} from "../beacon/options";
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function initHandler(options: IInitOptions): Promise<void> {
+export async function initHandler(options: IBeaconOptions & IGlobalArgs): Promise<void> {
   options = {
     ...options,
     ...getBeaconPaths(options),

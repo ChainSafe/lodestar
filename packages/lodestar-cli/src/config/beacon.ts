@@ -45,7 +45,7 @@ export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> 
  * Reads config files and merges their options with default options and user options
  * @param options
  */
-export function mergeConfigOptions(options: IBeaconOptions): IBeaconOptions {
+export function mergeConfigOptions<T extends IBeaconOptions>(options: T): T {
   const optionsFromFile = readBeaconConfig(options.configFile) as IBeaconOptions;
 
   return deepmerge(
@@ -60,7 +60,7 @@ export function mergeConfigOptions(options: IBeaconOptions): IBeaconOptions {
     {
       arrayMerge
     }
-  );
+  ) as T;
 }
 
 export async function initBeaconConfig(filename: string, args: Partial<IBeaconNodeOptions>): Promise<void> {

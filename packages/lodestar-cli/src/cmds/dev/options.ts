@@ -1,5 +1,4 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../options";
 import {beaconOptions, IBeaconOptions} from "../beacon/options";
 
 export const devRunOptions = {
@@ -44,7 +43,6 @@ export const devRunOptions = {
 };
 
 export type IDevOptions = 
-  IGlobalArgs &
   IBeaconOptions &
   {
     sync: {

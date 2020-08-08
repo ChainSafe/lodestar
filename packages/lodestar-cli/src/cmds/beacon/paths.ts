@@ -1,9 +1,9 @@
 import path from "path";
 
 import {IGlobalArgs} from "../../options";
-import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
+import {getGlobalPaths} from "../../paths/global";
 
-export type IBeaconPaths = IGlobalPaths & {
+export type IBeaconPaths = {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
@@ -26,12 +26,8 @@ export type IBeaconPaths = IGlobalPaths & {
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
 export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs, "rootDir">): IBeaconPaths {
-  options = {
-    ...options,
-    ...getGlobalPaths(options),
-  };
-  const rootDir = options.rootDir;
-  const beaconDir = rootDir;
+  const globalPaths = getGlobalPaths(options);
+  const beaconDir = globalPaths.rootDir;
   const dbDir = path.join(beaconDir, options.dbDir || "chain-db");
   const peerStoreDir = path.join(beaconDir, options.dbDir || "peerstore");
   const configFile = path.join(beaconDir, options.configFile || "beacon.config.json");
@@ -39,14 +35,13 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
   const enrFile = path.join(beaconDir, options.enrFile || "enr.json");
 
   return {
-    ...options,
     beaconDir,
     dbDir,
     configFile,
     peerStoreDir,
     peerIdFile,
     enrFile
-  } as IBeaconPaths;
+  };
 }
 
 /**
