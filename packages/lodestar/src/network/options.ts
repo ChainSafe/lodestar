@@ -19,6 +19,7 @@ const config: INetworkOptions = {
     bindAddr: "/ip4/0.0.0.0/udp/5500",
     enr: new ENR(),
     bootEnrs: [],
+    enrUpdate: true,
   },
   rpcTimeout: 5000,
   connectTimeout: 3000,

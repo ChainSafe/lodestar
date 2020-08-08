@@ -2,11 +2,13 @@ import {Options} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
+import {IENRArgs, enrOptions} from "./enrOptions";
 
 export type IBeaconOptions =
   IGlobalArgs &
   IBeaconNodeOptions &
   IBeaconPaths &
+  IENRArgs &
   {
     genesisStateFile?: string;
     logFile?: string;
@@ -15,6 +17,7 @@ export type IBeaconOptions =
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconNodeOptions,
   ...paramsOptions,
+  ...enrOptions,
 
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
