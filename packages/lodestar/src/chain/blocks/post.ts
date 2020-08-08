@@ -65,7 +65,7 @@ function newJustifiedEpoch(
   eventBus: ChainEventEmitter,
   state: TreeBacked<BeaconState>
 ): void {
-  logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified at root\
+  logger.important(`Epoch ${state.currentJustifiedCheckpoint.epoch} is justified at root \
     ${toHexString(state.currentJustifiedCheckpoint.root)}!`);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
@@ -78,7 +78,7 @@ function newFinalizedEpoch(
   eventBus: ChainEventEmitter,
   state: TreeBacked<BeaconState>
 ): void {
-  logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized at root\
+  logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized at root \
     ${toHexString(state.finalizedCheckpoint.root)}!`);
   metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
   eventBus.emit("finalizedCheckpoint", state.finalizedCheckpoint);
