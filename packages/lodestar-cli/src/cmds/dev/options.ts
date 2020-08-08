@@ -1,59 +1,45 @@
-import {Options} from "yargs";
+import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconOptions} from "../beacon/options";
 
-export const devRunOptions = {
-  ...beaconOptions,
+interface IDevGroupOptions {
+  genesisValidators?: number;
+  startValidators?: string;
+  reset?: boolean;
+  server: string;
+}
 
-  "sync.minPeers": {
-    type: "number",
-    default: 2,
-    group: "sync",
-  } as Options,
-
-  "validator.beaconUrl": {
-    description: "To delete chain and validator directories. Pass 'memory' for in memory communication",
-    type: "string",
-    group: "validator",
-    default: "http://localhost:9596",
-    requiresArg: false
-  } as Options,
-
-  "dev.genesisValidators": {
+const devGroupOptions: ICliCommandOptions<IDevGroupOptions> = {
+  genesisValidators: {
     description: "If present it will create genesis with interop validators and start chain.",
     type: "number",
     group: "dev",
-    requiresArg: false
-  } as Options,
+  },
 
-  "dev.startValidators": {
+  startValidators: {
     description: "Start interop validators in given range",
     default: "0:8",
     type: "string",
     group: "dev",
-    requiresArg: false
-  } as Options,
+  },
 
-  "dev.reset": {
+  reset: {
     description: "To delete chain and validator directories",
     type: "boolean",
     group: "dev",
-    default: false,
-    requiresArg: false
-  } as Options
+  },
+
+  server: {
+    description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
+    default: "http://127.0.0.1:9596",
+    type: "string",
+  }
 };
 
-export type IDevOptions = 
-  IBeaconOptions &
-  {
-    sync: {
-      minPeers?: number;
-    };
-    validator: {
-      beaconUrl?: string;
-    };
-    dev: {
-      genesisValidators?: number;
-      startValidators?: string;
-      reset?: boolean;
-    };
-  };
+export const devRunOptions = {
+  ...beaconOptions,
+  ...devGroupOptions
+};
+
+export type IDevOptions =
+  IDevGroupOptions &
+  IBeaconOptions;
