@@ -156,7 +156,7 @@ describe("[sync] rpc", function () {
     await new Promise((resolve, reject) => {
       // if there is goodbye request from B
       netA.reqResp.once("request", (a, b, c) => {
-        if(a.toB58String() === netB.peerId.toB58String()) {
+        if(a.toB58String() === netB.peerId.toB58String() && b === Method.Goodbye) {
           reject([a, b, c]);
         }
       });
