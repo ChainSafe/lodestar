@@ -1,10 +1,11 @@
-import {CommandModule} from "yargs";
+import {ICliCommand} from "../../util";
+import {IGlobalArgs} from "../../options";
 import {devRunOptions, IDevOptions} from "./options";
 import {run} from "./run";
 
-export const dev: CommandModule<{}, IDevOptions> = {
+export const dev: ICliCommand<IDevOptions, IGlobalArgs> = {
   command: "dev",
   describe: "Command used to quickly bootstrap beacon node and validators",
-  builder: devRunOptions,
+  options: devRunOptions,
   handler: run
 };

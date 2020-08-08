@@ -1,13 +1,12 @@
 import fs from "fs";
 import process from "process";
-import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-
+import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
@@ -20,7 +19,7 @@ import {IInitOptions} from "../init/options";
 /**
  * Run a validator client
  */
-export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
+export async function run(options: IValidatorCliOptions & IGlobalArgs): Promise<void> {
   await initBLS();
   await initCmd(options as unknown as IInitOptions);
 

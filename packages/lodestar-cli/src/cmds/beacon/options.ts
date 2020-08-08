@@ -1,11 +1,10 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {IENRArgs, enrOptions} from "./enrOptions";
+import { ICliCommandOptions } from "../../util";
 
 export type IBeaconOptions =
-  IGlobalArgs &
   IBeaconNodeOptions &
   IBeaconPaths &
   IENRArgs &
@@ -14,19 +13,7 @@ export type IBeaconOptions =
     logFile?: string;
   };
 
-export const beaconOptions: {[k: string]: Options} = {
-  ...beaconNodeOptions,
-  ...paramsOptions,
-  ...enrOptions,
-
-  genesisStateFile: {
-    description: "Genesis state in ssz-encoded format",
-    type: "string",
-    normalize: true,
-  },
-
-  // Beacon paths
-
+const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root dir",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -72,4 +59,20 @@ export const beaconOptions: {[k: string]: Options} = {
     type: "string",
     normalize: true,
   }
+}
+
+export const beaconOptions: {[k: string]: Options} = {
+  ...beaconNodeOptions,
+  ...paramsOptions,
+  ...enrOptions,
+
+  genesisStateFile: {
+    description: "Genesis state in ssz-encoded format",
+    type: "string",
+    normalize: true,
+  },
+
+  // Beacon paths
+
+  
 };
