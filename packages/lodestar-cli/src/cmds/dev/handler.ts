@@ -19,7 +19,7 @@ import {getBeaconConfig} from "../../util";
 /**
  * Run a beacon node
  */
-export async function run(options: IDevOptions & IGlobalArgs): Promise<void> {
+export async function devHandler(options: IDevOptions & IGlobalArgs): Promise<void> {
   await initBLS();
 
   options = mergeConfigOptions(options);

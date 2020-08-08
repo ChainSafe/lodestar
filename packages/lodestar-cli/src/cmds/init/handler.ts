@@ -11,6 +11,13 @@ import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconOptions} from "../beacon/options";
 
 /**
+ * Handler runable from other commands
+ */
+export async function initCmd(options: IGlobalArgs): Promise<void> {
+  await initHandler(options as IBeaconOptions & IGlobalArgs);
+}
+
+/**
  * Initialize lodestar-cli with an on-disk configuration
  */
 export async function initHandler(options: IBeaconOptions & IGlobalArgs): Promise<void> {

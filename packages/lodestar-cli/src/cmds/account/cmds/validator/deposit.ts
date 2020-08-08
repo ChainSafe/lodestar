@@ -4,8 +4,7 @@ import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getEthersSigner, YargsError, ICliCommand} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
-import {IInitOptions} from "../../../init/options";
-import {initHandler as initCmd} from "../../../init/init";
+import {initCmd} from "../../../init/handler";
 import {getMergedIBeaconConfig} from "../../../../config/params";
 import {IGlobalArgs} from "../../../../options";
 
@@ -68,7 +67,7 @@ The deposit contract address will be determined by the spec config flag.",
   },
 
   handler: async (options) => {
-    await initCmd(options as unknown as IInitOptions);
+    await initCmd(options);
     const validatorName = options.validator;
     const accountPaths = getAccountPaths(options);
     const config = await getMergedIBeaconConfig(options.preset, accountPaths.paramsFile, options.params);

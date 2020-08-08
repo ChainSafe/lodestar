@@ -5,8 +5,7 @@ import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorOptions} from "./options";
 import {IGlobalArgs} from "../../../../options";
-import {initHandler as initCmd} from "../../../init/init";
-import {IInitOptions} from "../../../init/options";
+import {initCmd} from "../../../init/handler";
 import {getMergedIBeaconConfig} from "../../../../config/params";
 
 interface IValidatorCreateOptions {
@@ -62,7 +61,7 @@ and pre-computed deposit RPL data",
 
   handler: async (options) => {
     await initBLS(); // Necessary to compute validator pubkey from privKey
-    await initCmd(options as unknown as IInitOptions);
+    await initCmd(options);
   
     const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
     const accountPaths = getAccountPaths(options);

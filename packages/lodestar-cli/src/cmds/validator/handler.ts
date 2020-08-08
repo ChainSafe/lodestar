@@ -13,15 +13,14 @@ import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliOptions} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
-import {initHandler as initCmd} from "../init/init";
-import {IInitOptions} from "../init/options";
+import {initCmd} from "../init/handler";
 
 /**
  * Run a validator client
  */
-export async function run(options: IValidatorCliOptions & IGlobalArgs): Promise<void> {
+export async function validatorHandler(options: IValidatorCliOptions & IGlobalArgs): Promise<void> {
   await initBLS();
-  await initCmd(options as unknown as IInitOptions);
+  await initCmd(options);
 
   const server = options.server;
   const force = options.force;

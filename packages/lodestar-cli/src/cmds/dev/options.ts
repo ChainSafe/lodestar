@@ -1,14 +1,14 @@
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconOptions} from "../beacon/options";
 
-interface IDevGroupOptions {
+interface IDevOwnOptions {
   genesisValidators?: number;
   startValidators?: string;
   reset?: boolean;
   server: string;
 }
 
-const devGroupOptions: ICliCommandOptions<IDevGroupOptions> = {
+const devOwnOptions: ICliCommandOptions<IDevOwnOptions> = {
   genesisValidators: {
     description: "If present it will create genesis with interop validators and start chain.",
     type: "number",
@@ -35,11 +35,11 @@ const devGroupOptions: ICliCommandOptions<IDevGroupOptions> = {
   }
 };
 
-export const devRunOptions = {
+export const devOptions = {
   ...beaconOptions,
-  ...devGroupOptions
+  ...devOwnOptions
 };
 
 export type IDevOptions =
-  IDevGroupOptions &
+  IDevOwnOptions &
   IBeaconOptions;
