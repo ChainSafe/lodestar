@@ -43,9 +43,10 @@ export class EpochContext {
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
   public index2pubkey: PublicKey[];
   public proposers: number[];
-  public previousShuffling?: IEpochShuffling;
-  public currentShuffling?: IEpochShuffling;
-  public nextShuffling?: IEpochShuffling;
+  // Per spec definition, shuffling will always be defined. They are never called before loadState()
+  public previousShuffling!: IEpochShuffling;
+  public currentShuffling!: IEpochShuffling;
+  public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
 
   constructor(config: IBeaconConfig) {
