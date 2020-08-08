@@ -10,7 +10,7 @@ export interface ICliCommand<OwnOptions = {}, ParentOptions = {}> {
   // 2nd arg: subcommand parent options is = to this command options + parent options
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subcommands?: ICliCommand<any, OwnOptions & ParentOptions>[];
-  handler: (args: OwnOptions & ParentOptions) => void;
+  handler?: (args: OwnOptions & ParentOptions) => void;
 }
 
 /**
@@ -30,6 +30,7 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: ICliCommand<any,
       }
       return yargs;
     },
-    handler: cliCommand.handler
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    handler: cliCommand.handler || function emptyHandler(): void {}
   });
 }
