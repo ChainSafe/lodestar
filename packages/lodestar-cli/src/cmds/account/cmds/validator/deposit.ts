@@ -11,7 +11,6 @@ import {IGlobalArgs} from "../../../../options";
 const DEPOSIT_GAS_LIMIT = 400000;
 
 interface IAccountValidatorDepositOptions {
-  keystoresDir: string;
   validator: string;
   keystorePath?: string;
   keystorePassword?: string;
@@ -23,7 +22,7 @@ interface IAccountValidatorDepositOptions {
 export const deposit: ICliCommand<IAccountValidatorDepositOptions, IAccountValidatorOptions & IGlobalArgs> = {
   command: "deposit",
 
-  description: "Submits a deposit to an Eth1 validator registration contract via an IPC endpoint \
+  describe: "Submits a deposit to an Eth1 validator registration contract via an IPC endpoint \
 of an Eth1 client (e.g., Geth, OpenEthereum, etc.). The validators must already \
 have been created and exist on the file-system. The process will exit immediately \
 with an error if any error occurs. After each deposit is submitted to the Eth1 \
