@@ -2,6 +2,7 @@
  * @module chain/stateTransition/util
  */
 
+import {List} from "@chainsafe/ssz";
 import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -23,7 +24,7 @@ export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
-): CommitteeAssignment {
+): CommitteeAssignment | null {
 
   const next2Epoch = getCurrentEpoch(config, state) + 2;
   assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
@@ -35,7 +36,7 @@ export function getCommitteeAssignment(
       const committee = getBeaconCommittee(config, state, slot, i);
       if (committee.includes(validatorIndex)) {
         return {
-          validators: committee,
+          validators: committee as List<number>,
           committeeIndex: i,
           slot,
         };

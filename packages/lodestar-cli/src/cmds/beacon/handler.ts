@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import path from "path";
 import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
@@ -44,8 +43,8 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   const loggerTransports = [
     consoleTransport
   ];
-  if(options.logFile) {
-    loggerTransports.push(fileTransport(path.join(options.rootDir, options.logFile)));
+  if(options.logFile && beaconPaths.logFile) {
+    loggerTransports.push(fileTransport(beaconPaths.logFile));
   }
   const logger = new WinstonLogger({}, loggerTransports);
 

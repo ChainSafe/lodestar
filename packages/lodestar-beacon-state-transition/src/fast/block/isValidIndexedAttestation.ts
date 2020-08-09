@@ -40,10 +40,12 @@ export function isValidIndexedAttestation(
   const pubkeys = indices.map((i) => epochCtx.index2pubkey[i]);
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
+  const firstPubkey = pubkeys.shift();
+  if (firstPubkey === undefined) throw Error("pubkeys is empty");
   return pubkeys.reduce(
     (aggregate, pubkey) => {
       return aggregate.add(pubkey);
-    }, pubkeys.shift()
+    }, firstPubkey
   ).verifyMessage(
     Signature.fromCompressedBytes(indexedAttestation.signature.valueOf() as Uint8Array),
     signingRoot

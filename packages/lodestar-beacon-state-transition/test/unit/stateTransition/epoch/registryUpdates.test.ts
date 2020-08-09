@@ -1,6 +1,8 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
+import {List} from "@chainsafe/ssz";
+import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../src/util";
 import {initiateValidatorExit} from "../../../../src/util";
@@ -36,7 +38,7 @@ describe('process epoch - slashings', function () {
     const validatorToExit = generateValidator({activation: 1});
     validatorToExit.effectiveBalance = 1n;
     isActiveValidatorStub.withArgs(sinon.match.any, sinon.match.any).returns(true);
-    const state = generateState({validators: [validatorEligble, validatorToExit]});
+    const state = generateState({validators: [validatorEligble, validatorToExit] as List<Validator>});
     try {
       processRegistryUpdates(config, state);
       expect(initiateValidatorExitStub.calledOnceWith(sinon.match.any, sinon.match.any, 1)).to.be.true;

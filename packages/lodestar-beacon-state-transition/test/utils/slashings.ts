@@ -1,3 +1,4 @@
+import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "./block";
@@ -19,12 +20,12 @@ export function generateEmptyAttesterSlashing(): AttesterSlashing {
     attestation1: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: []
+      attestingIndices: [] as number[] as List<number>
     },
     attestation2: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: []
+      attestingIndices: [] as number[] as List<number>
     },
   };
 }
