@@ -6,18 +6,11 @@ import {ICliCommandOptions} from "../../util";
 
 interface IBeaconExtraArgs {
   genesisStateFile?: string;
-  logFile?: string;
 }
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
-    type: "string",
-    normalize: true,
-  },
-
-  logFile: {
-    alias: ["log.file"],
     type: "string",
     normalize: true,
   }
@@ -70,6 +63,12 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
+  },
+
+  logFile: {
+    alias: ["log.file"],
+    type: "string",
+    normalize: true,
   }
 };
 
