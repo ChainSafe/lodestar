@@ -14,7 +14,7 @@ describe("validate indexed attestation", () => {
   it("should return invalid indexed attestation - empty participants", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: Array.from({length: 100}, () => generateValidator())
+      validators: generateValidators(100)
     });
 
     const indexedAttestation: IndexedAttestation = {
@@ -28,7 +28,7 @@ describe("validate indexed attestation", () => {
   it("should return invalid indexed attestation - indexes not sorted", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: Array.from({length: 100}, () => generateValidator())
+      validators: generateValidators(100)
     });
 
     const indexedAttestation: IndexedAttestation = {
@@ -42,7 +42,7 @@ describe("validate indexed attestation", () => {
   it("should return valid indexed attestation", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: Array.from({length: 100}, () => generateValidator())
+      validators: generateValidators(100)
     });
 
     const indexedAttestation: IndexedAttestation = {
