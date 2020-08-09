@@ -11,3 +11,10 @@ import expandTilde from "expand-tilde";
 export function resolveTildePath(unsafePath: string): string {
   return path.resolve(expandTilde(unsafePath));
 }
+
+/**
+ * path.join but when the base is an absolute path, does not join
+ */
+export function joinIfRelative(dir: string, base: string): string {
+  return path.isAbsolute(base) ? base : path.join(dir, base);
+}
