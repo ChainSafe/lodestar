@@ -8,19 +8,19 @@ import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
 import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
-import {IBeaconOptions} from "../beacon/options";
+import {IBeaconArgs} from "../beacon/options";
 
 /**
  * Handler runable from other commands
  */
 export async function initCmd(options: IGlobalArgs): Promise<void> {
-  await initHandler(options as IBeaconOptions & IGlobalArgs);
+  await initHandler(options as IBeaconArgs & IGlobalArgs);
 }
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function initHandler(options: IBeaconOptions & IGlobalArgs): Promise<void> {
+export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<void> {
   options = {
     ...options,
     ...getBeaconPaths(options),

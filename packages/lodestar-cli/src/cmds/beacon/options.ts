@@ -73,7 +73,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   }
 };
 
-export type IBeaconOptions =
+export type IBeaconArgs =
   IBeaconNodeOptions &
   IBeaconPaths &
   IENRArgs &

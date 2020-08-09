@@ -5,7 +5,7 @@ import {Json} from "@chainsafe/ssz";
 import {IBeaconNodeOptions} from "../options";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 import {readFileSync, writeFile, getSubObject, setSubObject} from "../util";
-import {IBeaconOptions, beaconOptions} from "../cmds/beacon/options";
+import {IBeaconArgs, beaconOptions} from "../cmds/beacon/options";
 
 export function createBeaconConfig(args: Partial<IBeaconNodeOptions>): Partial<IBeaconNodeOptions> {
   const cliDefaults = _yargs().default(args)
@@ -45,12 +45,12 @@ export function readBeaconConfig(filename: string): Partial<IBeaconNodeOptions> 
  * Reads config files and merges their options with default options and user options
  * @param options
  */
-export function mergeConfigOptions<T extends IBeaconOptions>(options: T): T {
-  const optionsFromFile = readBeaconConfig(options.configFile) as IBeaconOptions;
+export function mergeConfigOptions<T extends IBeaconArgs>(options: T): T {
+  const optionsFromFile = readBeaconConfig(options.configFile) as IBeaconArgs;
 
   return deepmerge(
     deepmerge(
-      defaultOptions as Partial<IBeaconOptions>,
+      defaultOptions as Partial<IBeaconArgs>,
       optionsFromFile,
       {
         arrayMerge

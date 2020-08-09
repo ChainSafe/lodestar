@@ -12,14 +12,14 @@ import {readPeerId, readEnr, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
-import {IBeaconOptions} from "./options";
+import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
 
 /**
  * Run a beacon node
  */
-export async function beaconHandler(options: IBeaconOptions & IGlobalArgs): Promise<void> {
+export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise<void> {
   await initBLS();
   // always run the init command
   await initCmd(options);
