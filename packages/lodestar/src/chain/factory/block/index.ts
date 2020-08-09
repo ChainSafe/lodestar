@@ -21,7 +21,7 @@ export async function assembleBlock(
   proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH,
-): Promise<BeaconBlock | null> {
+): Promise<BeaconBlock> {
   const [parentBlock, stateContext] = await Promise.all([
     chain.getHeadBlock(),
     chain.getHeadStateContext()
