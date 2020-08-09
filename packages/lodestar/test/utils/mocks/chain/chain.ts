@@ -44,8 +44,8 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     this.config = config;
   }
 
-  getHeadBlock(): Promise<| null> {
-    return undefined;
+  getHeadBlock(): Promise<SignedBeaconBlock> {
+    throw Error("Not implemented");
   }
 
   public async getHeadStateContext(): Promise<ITreeStateContext| null> {

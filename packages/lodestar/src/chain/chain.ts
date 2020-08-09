@@ -63,7 +63,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
-  public clock?: IBeaconClock;
+  public clock: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
@@ -113,8 +113,10 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return (await this.getHeadStateContext()).epochCtx;
   }
 
-  public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
-    return this.db.block.get(this.forkChoice.headBlockRoot());
+  public async getHeadBlock(): Promise<SignedBeaconBlock> {
+    const headBlock = await this.db.block.get(this.forkChoice.headBlockRoot());
+    if (headBlock === null) throw Error("headBlock not in db");
+    return headBlock;
   }
 
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
@@ -326,6 +328,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // add justified block to forkchoice so "this.justified" in forkchoice really map to a block
     if (isStateNotGenesis) {
       const preJustifiedBlock = await this.db.blockArchive.getByRoot(lastKnownState.currentJustifiedCheckpoint.root);
+      if (!preJustifiedBlock) throw Error("lastKnownState not in db");
       let preFinalizedBlocks = await this.db.blockArchive.values({
         gt: preJustifiedBlock.message.slot, lt: finalizedSlot});
       preFinalizedBlocks = sortBlocks([preJustifiedBlock, ...preFinalizedBlocks]);

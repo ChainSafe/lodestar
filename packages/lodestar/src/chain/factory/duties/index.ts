@@ -31,8 +31,8 @@ export function generateEmptyAttesterDuty(publicKey: BLSPubkey, duty?: Partial<A
   return {
     validatorPubkey: publicKey,
     aggregatorModulo: 1,
-    attestationSlot: null,
-    committeeIndex: null,
+    attestationSlot: -1,
+    committeeIndex: -1,
     ...duty
   };
 }

@@ -33,7 +33,7 @@ export async function assembleBlock(
     slot,
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
-    stateRoot: undefined,
+    stateRoot: ZERO_HASH,
     body: await assembleBody(config, db, headState, randaoReveal, graffiti),
   };
 

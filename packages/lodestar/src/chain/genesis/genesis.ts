@@ -85,6 +85,8 @@ export class GenesisBuilder implements IGenesisBuilder {
           return this.state;
         }
       }
+      
+      throw Error("Could not find valid genesis state");
     };
   }
 

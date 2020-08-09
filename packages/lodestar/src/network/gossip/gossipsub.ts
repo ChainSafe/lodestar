@@ -69,6 +69,7 @@ export class LodestarGossipsub extends Gossipsub {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
     assert.true(Boolean(message.topicIDs), "topicIds is not defined");
     assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
+    if (!message.data) throw Error("Message has not data");
     assert.lte(message.data.length, GOSSIP_MAX_SIZE, "Message exceeds byte size limit");
     const topic = message.topicIDs[0];
     // avoid duplicate
@@ -77,7 +78,7 @@ export class LodestarGossipsub extends Gossipsub {
     }
 
     let validationResult;
-    let transformedObj: GossipObject;
+    let transformedObj: GossipObject | null = null;
     try {
       const validatorFn = this.getTopicValidator(topic);
       const objSubnet = this.deserializeGossipMessage(topic, message);

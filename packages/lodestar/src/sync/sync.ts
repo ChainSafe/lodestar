@@ -5,7 +5,7 @@ import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {CommitteeIndex, Root, SignedBeaconBlock, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
@@ -14,6 +14,7 @@ import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} fr
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {List} from "@chainsafe/ssz";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -166,14 +167,16 @@ export class BeaconSync implements IBeaconSync {
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     const peerBalancer = new RoundRobinArray(this.getPeers());
-    let peer = peerBalancer.next();
-    let block: SignedBeaconBlock;
-    while (!block && peer) {
-      block = (await this.network.reqResp.beaconBlocksByRoot(peer, [root]))[0];
-      peer = peerBalancer.next();
-    }
-    if(block) {
-      await this.chain.receiveBlock(block);
+    const maxAttempts = 1000;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const peer = peerBalancer.next();
+      if (!peer) {
+        return;
+      }
+      const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
+      if (blocks && blocks[0]) {
+        return await this.chain.receiveBlock(blocks[0]);
+      }
     }
   };
 }

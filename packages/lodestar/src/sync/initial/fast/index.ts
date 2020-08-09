@@ -7,7 +7,7 @@ import {IBeaconChain} from "../../../chain";
 import {IReputationStore} from "../../IReputation";
 import {INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ISyncOptions} from "../../options";
+import syncOptions, {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
@@ -34,7 +34,7 @@ export class FastSync
   /**
    * Targeted finalized checkpoint. Initial sync should only sync up to that point.
    */
-  private targetCheckpoint: Checkpoint;
+  private targetCheckpoint?: Checkpoint;
   /**
    * Target slot for block import, we won't download blocks past that point.
    */
@@ -98,11 +98,12 @@ export class FastSync
 
   private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    if(fromSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
+    const maxSlotImport = this.opts.maxSlotImport || syncOptions.maxSlotImport;
+    if(fromSlot + maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
       return fromSlot + this.config.params.SLOTS_PER_EPOCH;
     } else {
-      return fromSlot + this.opts.maxSlotImport;
+      return fromSlot + maxSlotImport;
     }
   }
 

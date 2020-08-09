@@ -4,7 +4,6 @@
 
 import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
-import {assert} from "@chainsafe/lodestar-utils";
 import {Message} from "libp2p-gossipsub/src/message";
 import {utils} from "libp2p-pubsub";
 import {IGossipEvents, ILodestarGossipMessage} from "./interface";
@@ -14,6 +13,7 @@ import {ILMDGHOST} from "../../chain";
 import {IBeaconDb} from "../../db/api";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {ZERO_HASH} from "../../constants";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -38,7 +38,8 @@ export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent
 
 export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
-  const topicName = groups[3] as keyof typeof GossipEvent;
+  const topicName = groups && groups[3];
+  if (topicName === null || topicName === undefined) throw Error(`Bad gossip topic format: ${topic}`);
   return topicName as GossipEvent;
 }
 
@@ -56,9 +57,9 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 }
 
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
-  assert.true(isAttestationSubnetTopic(topic), "Should be an attestation topic");
   const groups = topic.match(AttestationSubnetRegExp);
-  const subnetStr = groups[4];
+  const subnetStr = groups && groups[4];
+  if (subnetStr === null || subnetStr === undefined) throw Error(`Bad attestation topic format: ${topic}`);
   return parseInt(subnetStr);
 }
 
@@ -71,7 +72,7 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
 }
 
 export function getMessageId(rawMessage: Message): string {
-  return Buffer.from(hash(rawMessage.data)).toString("base64");
+  return Buffer.from(hash(rawMessage.data || ZERO_HASH)).toString("base64");
 }
 
 export async function getBlockStateContext(

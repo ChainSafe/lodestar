@@ -39,7 +39,7 @@ export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
  */
 export interface IBeaconChain extends ChainEventEmitter {
   forkChoice: ILMDGHOST;
-  clock?: IBeaconClock;
+  clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;
   currentForkDigest: ForkDigest;
@@ -62,7 +62,7 @@ export interface IBeaconChain extends ChainEventEmitter {
   getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
 
-  getHeadBlock(): Promise<SignedBeaconBlock|null>;
+  getHeadBlock(): Promise<SignedBeaconBlock>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 

@@ -125,7 +125,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
     this.logger.info("Unsubscribed eth1 blocks & depoosit events");
   }
 
-  public async getLastProcessedBlockTag(lastEth1Data: Eth1Data): Promise<string | number> {
+  public async getLastProcessedBlockTag(lastEth1Data: Eth1Data | null): Promise<string | number> {
     return lastEth1Data? toHexString(lastEth1Data.blockHash) : this.opts.depositContract.deployedAt;
   }
   public async getLastProcessedDepositIndex(): Promise<number> {
@@ -302,8 +302,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
       // without await we can't catch error
       return await this.provider.getBlock(blockTag);
     } catch (e) {
-      this.logger.warn("Failed to get eth1 block " + blockTag + ". Error: " + e.message);
-      return null;
+      throw Error(`Failed to get eth1 block ${blockTag}: ${e.message}`);
     }
   }
 
@@ -332,10 +331,14 @@ export class EthersEth1Notifier implements IEth1Notifier {
     if(!this.contract) {
       await this.initContract();
     }
+    
     const lastEth1Data = await this.db.eth1Data.lastValue();
-    const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
-    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-    this.lastDepositCount = lastEth1Data? lastEth1Data.depositCount : 0;
+    if (lastEth1Data) {
+      const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
+      this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+      this.lastDepositCount = lastEth1Data.depositCount;
+    }
+    
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.config.params.DEPOSIT_NETWORK_ID}`
     );
@@ -361,6 +364,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
    */
   private parseDepositEvent(log: ethers.Event): IDepositEvent {
     const values = log.args;
+    if (!values) throw Error(`DepositEvent ${log.transactionHash} has no values`);
     return {
       blockNumber: log.blockNumber,
       index: this.config.types.Number64.deserialize(fromHexString(values.index)),

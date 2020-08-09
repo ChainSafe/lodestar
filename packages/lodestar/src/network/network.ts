@@ -18,6 +18,7 @@ import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IReputationStore} from "../sync/IReputation";
+import {notNullish} from "../util/notNullish";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -142,6 +143,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
       // we'll dial thru sendRequest so don't need to do connect() like in the spec
       try {
         const metadata = await this.reqResp.metadata(peerId);
+        if (metadata === null) throw Error(`No metadata for peer ${peerId.toHexString()}`);
         if (metadata.attnets[subnet]) {
           count++;
         }
@@ -159,20 +161,26 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private searchDiscv5Peers = async (subnet: number): Promise<PeerId[]> => {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const discv5: Discv5 = discovery.discv5;
-    return await Promise.all(
-      discv5.kadValues()
-        .filter((enr: ENR) => enr.get("attnets"))
-        .filter((enr: ENR) => {
+    const peers = await Promise.all(
+      discv5.kadValues().map(async (enr): Promise<PeerId | undefined> => {
+        const attnets = enr.get("attnets");
+        if (attnets) {
           try {
-            return this.config.types.AttestationSubnets.deserialize(enr.get("attnets"))[subnet];
-          } catch (err) {
-            return false;
+            const isOnAttestationSubnet = this.config.types.AttestationSubnets.deserialize(attnets)[subnet];
+            if (isOnAttestationSubnet) {
+              const peerId = await enr.peerId();
+              if (enr.multiaddrTCP) {
+                this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP]);
+                return peerId;
+              }
+            }
+          } catch (e) {
+            this.logger.debug(`Error parsing parsing peer ENR ${enr.id}`, e);
           }
-        })
-        .map((enr: ENR) => enr.peerId().then((peerId) => {
-          this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP]);
-          return peerId;
-        })));
+        }
+      })
+    );
+    return peers.filter(notNullish);
   };
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {

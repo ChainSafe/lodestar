@@ -34,7 +34,7 @@ export function eth2ResponseEncode(
           const serialized = type.serialize(chunk.body as any);
           serializedData = Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length);
         } catch (e) {
-          logger.warn(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`);
+          throw Error(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`);
         }
         //yield encoded ssz length
         yield Buffer.from(encode(serializedData.length));
