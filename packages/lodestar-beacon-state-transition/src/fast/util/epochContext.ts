@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, readOnlyMap, BitList} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
 import {PublicKey} from "@chainsafe/bls";
 import {
   Attestation,
@@ -43,9 +43,10 @@ export class EpochContext {
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
   public index2pubkey: PublicKey[];
   public proposers: number[];
-  public previousShuffling?: IEpochShuffling;
-  public currentShuffling?: IEpochShuffling;
-  public nextShuffling?: IEpochShuffling;
+  // Per spec definition, shuffling will always be defined. They are never called before loadState()
+  public previousShuffling!: IEpochShuffling;
+  public currentShuffling!: IEpochShuffling;
+  public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
 
   constructor(config: IBeaconConfig) {
@@ -152,7 +153,7 @@ export class EpochContext {
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
-      attestingIndices: attestingIndices,
+      attestingIndices: attestingIndices as List<number>,
       data: data,
       signature: attestation.signature,
     };
@@ -162,7 +163,7 @@ export class EpochContext {
     const committee = this.getBeaconCommittee(data.slot, data.index);
     return getAttestingIndicesFromCommittee(
       committee,
-      readOnlyMap(bits, (b) => b),
+      readOnlyMap(bits, (b) => b) as List<boolean>,
     );
   }
 
@@ -174,7 +175,7 @@ export class EpochContext {
    * ``assignment[2]`` is the slot at which the committee is assigned
    * Return null if no assignment..
    */
-  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment {
+  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment | null {
 
     const nextEpoch = this.currentShuffling.epoch + 1;
     assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
@@ -186,7 +187,7 @@ export class EpochContext {
         const committee = this.getBeaconCommittee(slot, i);
         if (committee.includes(validatorIndex)) {
           return {
-            validators: committee,
+            validators: committee as List<number>,
             committeeIndex: i,
             slot,
           };

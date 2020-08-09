@@ -1,3 +1,4 @@
+import {List} from "@chainsafe/ssz";
 import {
   Attestation,
   AttestationData,
@@ -29,7 +30,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch):
 
 export function generateEmptyAttestation(): Attestation {
   return {
-    aggregationBits: Array.from({length: 64}, () => false),
+    aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
     data: {
       slot: 1,
       index: 0,
