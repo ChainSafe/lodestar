@@ -172,7 +172,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
         this.lastProcessedEth1BlockNumber = endRangeBlockNumber;
       }
     }
-    this.logger.info(`Done procesing up to block ${toNumber}`);
+    this.logger.info(`Done processing up to block ${toNumber}`);
   }
 
   /**
