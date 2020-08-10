@@ -2,13 +2,13 @@ import yargs from "yargs/yargs";
 import { expect } from "chai";
 import { stub } from "sinon";
 
-import { rootDir, passphraseFile } from "../../constants";
-import { account } from "../../../src/cmds/account";
-import { ValidatorDirManager } from "../../../src/validatorDir";
-import { getAccountPaths } from "../../../src/cmds/account/paths";
-import { init } from "../../../src/cmds/init";
-import { TestnetName } from "../../../src/testnets";
-import { medallaConfig } from "../../../src/testnets/medalla";
+import { rootDir, passphraseFile } from "./constants";
+import { account } from "../../src/cmds/account";
+import { ValidatorDirManager } from "../../src/validatorDir";
+import { getAccountPaths } from "../../src/cmds/account/paths";
+import { init } from "../../src/cmds/init";
+import { TestnetName } from "../../src/testnets";
+import { medallaConfig } from "../../src/testnets/medalla";
 import { existsSync, readFileSync, readdirSync } from "fs";
 import lockFile from "lockfile";
 
