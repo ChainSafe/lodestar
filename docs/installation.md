@@ -19,10 +19,10 @@ Clone the repo locally.
 git clone https://github.com/chainsafe/lodestar.git
 ```
 
-Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root.
+Install across all packages. Lodestar follows a [monorepo](https://github.com/lerna/lerna) structure, so all commands below must be run in the project root. Use the `--ignore-optional` flag to prevent downloading the eth2 spec tests.
 
 ```bash
-yarn install
+yarn install --ignore-optional
 ```
 
 Build across all packages

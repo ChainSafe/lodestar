@@ -51,7 +51,8 @@ describe("Network Gossip", function() {
     await gossip.start();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await gossip.stop();
     sandbox.restore();
   });
 

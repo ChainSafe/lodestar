@@ -1,6 +1,7 @@
 import {generateState} from "../../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
+import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
 import {processAttesterSlashing} from "../../../../../src/block/operations";
@@ -86,8 +87,8 @@ describe("process block - attester slashings", function () {
   it("should process slashings", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
-    attesterSlashing.attestation1.attestingIndices = [1, 2, 3]
-    attesterSlashing.attestation2.attestingIndices = [2, 3, 4]
+    attesterSlashing.attestation1.attestingIndices = [1, 2, 3] as List<number>;
+    attesterSlashing.attestation2.attestingIndices = [2, 3, 4] as List<number>;
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(true);
     isSlashableValidatorStub.returns(true);

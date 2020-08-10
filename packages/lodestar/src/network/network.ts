@@ -60,13 +60,13 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   }
 
   public async start(): Promise<void> {
+    this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
+    this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
     await this.libp2p.start();
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
     const enr = this.getEnr();
     await this.metadata.start(enr);
-    this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
-    this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }

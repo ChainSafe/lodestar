@@ -1,4 +1,4 @@
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {List, TreeBacked, Vector} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
@@ -9,7 +9,7 @@ import {Bucket} from "../../schema";
 
 export class DepositDataRootRepository extends Repository<number, Root> {
 
-  private depositRootTree: TreeBacked<List<Root>>;
+  private depositRootTree?: TreeBacked<List<Root>>;
 
   public constructor(
     config: IBeaconConfig,
@@ -29,28 +29,22 @@ export class DepositDataRootRepository extends Repository<number, Root> {
   }
 
   public async put(id: number, value: Root): Promise<void> {
-    if (!this.depositRootTree) {
-      await this.initTree();
-    }
+    const depositRootTree = await this.getDepositRootTree();
     await super.put(id, value);
-    this.depositRootTree[id] = value as TreeBacked<Root>;
+    depositRootTree[id] = value as TreeBacked<Root>;
   }
 
   public async batchPut(items: IKeyValue<number, Root>[]): Promise<void> {
-    if (!this.depositRootTree) {
-      await this.initTree();
-    }
+    const depositRootTree = await this.getDepositRootTree();
     await super.batchPut(items);
     for (const {key, value} of items) {
-      this.depositRootTree[key] = value as TreeBacked<Root>;
+      depositRootTree[key] = value as TreeBacked<Root>;
     }
   }
 
   public async getTreeBacked(depositIndex: number): Promise<TreeBacked<List<Root>>> {
-    if (!this.depositRootTree) {
-      await this.initTree();
-    }
-    const tree = this.depositRootTree.clone();
+    const depositRootTree = await this.getDepositRootTree();
+    const tree = depositRootTree.clone();
     let maxIndex = tree.length - 1;
     if (depositIndex > maxIndex) {
       throw new Error(`Cannot get tree for unseen deposits: requested ${depositIndex}, last seen ${maxIndex}`);
@@ -62,7 +56,11 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     return tree;
   }
 
-  private async initTree(): Promise<void> {
-    this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(await this.values());
+  private async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
+    if (!this.depositRootTree) {
+      const values = await this.values() as List<Vector<number>>;
+      this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(values);
+    }
+    return this.depositRootTree;
   }
 }

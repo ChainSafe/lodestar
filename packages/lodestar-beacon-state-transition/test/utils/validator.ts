@@ -1,3 +1,4 @@
+import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
@@ -35,6 +36,6 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator 
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): Validator[] {
-  return Array.from({ length: n }, () => generateValidator(opts));
+export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): List<Validator> {
+  return Array.from({ length: n }, () => generateValidator(opts)) as List<Validator>;
 }

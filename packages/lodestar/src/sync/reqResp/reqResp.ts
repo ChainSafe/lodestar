@@ -24,7 +24,7 @@ import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus, syncPeersStatus} from "../utils/sync";
+import {createStatus, syncPeersStatus, getPeerSupportedProtocols} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -113,12 +113,23 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     // set status on peer
     this.reps.get(peerId.toB58String()).latestStatus = request;
     // send status response
+    let isSuccess;
     try {
       const status = await createStatus(this.chain);
       this.network.reqResp.sendResponse(id, null, status);
+      isSuccess = true;
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
+    }
+    if (isSuccess) {
+      // response Status request first
+      try {
+        this.reps.get(peerId.toB58String()).supportedProtocols =
+          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+      } catch (e) {
+        this.logger.error("Failed to get peer supported protocol", e.message);
+      }
     }
   }
 
@@ -253,10 +264,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
+      const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root);
+          const block = await getBlock(root) || await getFinalizedBlock(root);
           if (block) {
             yield block;
           }
@@ -274,6 +286,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
+        const supportedProtocols =
+          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+        this.reps.get(peerId.toB58String()).supportedProtocols = [Method.Status, ...supportedProtocols];
       } catch (e) {
         this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status`, e);
         await this.network.disconnect(peerId);

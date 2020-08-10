@@ -62,6 +62,25 @@ This command will:
     The validator voting keypair must be "hot" so its Keystore and password are kept in disk to be available for the validator client. The withdrawal keypair is **not** kept in disk as it can be generated latter from the wallet mnemonic.
 <!-- prettier-ignore-end -->
 
+### Import a validator keystore from Deposit Launch Pad
+
+To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
+
+```
+yarn run cli account validator import --testnet medalla --directory <path to your launchpad keys>
+```
+
+You will be prompted to enter a password. Use the same one you used to create the keys initially.
+
+To confirm your keys have been imported run:
+
+```
+yarn run cli account validator list --testnet medalla
+```
+
+This command will print the public address of every active keystore.
+
+
 ### Submit a validator deposit
 
 To submit the deposit transaction for a validator, use the following command with one of these options to connect to an Eth1 node:
