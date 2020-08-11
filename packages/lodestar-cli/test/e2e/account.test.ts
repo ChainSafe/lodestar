@@ -13,7 +13,7 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import lockFile from "lockfile";
 
 
-describe.only("account cli", function() {
+describe("account cli", function() {
   this.timeout("10 min");
 
   const spy = stub(console, 'log');
