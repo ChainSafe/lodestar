@@ -1,7 +1,6 @@
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {Options} from "yargs";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 
 interface IDevOwnArgs {
   genesisValidators?: number;
@@ -41,6 +40,10 @@ export const devOptions = {
   ...beaconOptions,
   ...devOwnOptions,
 
+  // Add custom defaults different than the ones in `beaconOptions`:
+  // - In dev command we don't wanna connect to other peers, 
+  // - but we do wanna get out of syncing (min peers) 
+  // - and have api enabled by default (as it's used by validator)
   "sync.minPeers": {
     type: "number",
     default: 0,
@@ -49,7 +52,6 @@ export const devOptions = {
 
   "network.maxPeers": {
     type: "number",
-    defaultDescription: String(defaultOptions.network.maxPeers),
     default: 0,
     group: "network",
   } as Options,
@@ -58,6 +60,13 @@ export const devOptions = {
     type: "boolean",
     default: false,
     group: "eth1",
+  } as Options,
+
+  "api.rest.enabled": {
+    alias: ["api.enabled"],
+    type: "boolean",
+    default: true,
+    group: "api",
   } as Options,
 };
 
