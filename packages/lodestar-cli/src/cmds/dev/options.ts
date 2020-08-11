@@ -1,6 +1,7 @@
+import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
-import {Options} from "yargs";
+import {globalOptions, beaconNodeOptions} from "../../options";
 
 interface IDevOwnArgs {
   genesisValidators?: number;
@@ -36,38 +37,44 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   }
 };
 
+/**
+ * Add custom defaults different than the ones in `beaconOptions`:
+ * - In dev command we don't wanna connect to other peers, 
+ * - but we do wanna get out of syncing (min peers) 
+ * - and have api enabled by default (as it's used by validator)
+ * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
+ */
+const externalOptionsOverrides: {[k: string]: Options} = {
+  "sync.minPeers": {
+    ...beaconNodeOptions["sync.minPeers"],
+    defaultDescription: undefined,
+    default: 0
+  },
+  "network.maxPeers": {
+    ...beaconNodeOptions["network.maxPeers"],
+    defaultDescription: undefined,
+    default: 0,
+  },
+  "eth1.enabled": {
+    ...beaconNodeOptions["eth1.enabled"],
+    defaultDescription: undefined,
+    default: false,
+  },
+  "api.rest.enabled": {
+    ...beaconNodeOptions["api.rest.enabled"],
+    defaultDescription: undefined,
+    default: true,
+  },
+  preset: {
+    ...globalOptions.preset,
+    default: "minimal"
+  }
+};
+
 export const devOptions = {
   ...beaconOptions,
+  ...externalOptionsOverrides,
   ...devOwnOptions,
-
-  // Add custom defaults different than the ones in `beaconOptions`:
-  // - In dev command we don't wanna connect to other peers, 
-  // - but we do wanna get out of syncing (min peers) 
-  // - and have api enabled by default (as it's used by validator)
-  "sync.minPeers": {
-    type: "number",
-    default: 0,
-    group: "sync",
-  } as Options,
-
-  "network.maxPeers": {
-    type: "number",
-    default: 0,
-    group: "network",
-  } as Options,
-
-  "eth1.enabled": {
-    type: "boolean",
-    default: false,
-    group: "eth1",
-  } as Options,
-
-  "api.rest.enabled": {
-    alias: ["api.enabled"],
-    type: "boolean",
-    default: true,
-    group: "api",
-  } as Options,
 };
 
 export type IDevArgs =
