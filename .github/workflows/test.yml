@@ -15,6 +15,9 @@ jobs:
           docker rmi $(docker image ls -aq)
           df -h
       - uses: actions/checkout@v1
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: '12.14.1'
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
