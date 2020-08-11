@@ -5,7 +5,7 @@ export const apiOptions = {
   "api.rest.api": {
     alias: ["api.namespaces"],
     type: "array",
-    choices: ["beacon", "validator"],
+    choices: ["beacon", "node", "validator"],
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
   } as Options,

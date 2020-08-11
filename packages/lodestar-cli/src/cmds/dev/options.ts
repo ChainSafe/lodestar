@@ -1,14 +1,43 @@
 import {Options} from "yargs";
 import {IGlobalArgs} from "../../options";
 import {beaconOptions, IBeaconOptions} from "../beacon/options";
+import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 
 export const devRunOptions = {
   ...beaconOptions,
 
   "sync.minPeers": {
     type: "number",
-    default: 2,
+    default: 0,
     group: "sync",
+  } as Options,
+
+  "network.maxPeers": {
+    type: "number",
+    defaultDescription: String(defaultOptions.network.maxPeers),
+    default: 0,
+    group: "network",
+  } as Options,
+
+  "eth1.enabled": {
+    type: "boolean",
+    default: false,
+    group: "eth1",
+  } as Options,
+
+  preset: {
+    description: "Specifies the default eth2 spec type",
+    choices: ["mainnet", "minimal"],
+    default: "minimal",
+    type: "string"
+  } as Options,
+
+  "api.rest.enabled": {
+    alias: ["api.enabled"],
+    type: "boolean",
+    default: true,
+    defaultDescription: String(defaultOptions.api.rest.enabled),
+    group: "api",
   } as Options,
 
   "validator.beaconUrl": {
@@ -43,7 +72,7 @@ export const devRunOptions = {
   } as Options
 };
 
-export type IDevOptions = 
+export type IDevOptions =
   IGlobalArgs &
   IBeaconOptions &
   {
