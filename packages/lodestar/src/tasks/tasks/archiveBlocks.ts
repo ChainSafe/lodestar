@@ -51,8 +51,12 @@ export class ArchiveBlocksTask implements ITask {
         ({key, value}) => ([toHexString(key), value])
       )
     );
+
+    const archivedBlocks: SignedBeaconBlock[] = [];
     const finalizedBlock = blocksByRoot.get(toHexString(this.finalized.blockRoot));
-    const archivedBlocks = [finalizedBlock];
+    if (finalizedBlock) {
+      archivedBlocks.push(finalizedBlock);
+    }
     let lastBlock = finalizedBlock;
     while (lastBlock) {
       lastBlock = blocksByRoot.get(toHexString(lastBlock.message.parentRoot));

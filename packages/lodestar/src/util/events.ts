@@ -4,7 +4,7 @@ import {EventIteratorOptions, ListenHandler} from "event-iterator/src/event-iter
 export class LodestarEventIterator<T> implements AsyncIterable<T>{
 
   public [Symbol.asyncIterator]: () => AsyncIterator<T>;
-  private stopCallback: () => void;
+  private stopCallback?: () => void;
 
   constructor(
     listenHandler: ListenHandler<T>,
@@ -19,7 +19,9 @@ export class LodestarEventIterator<T> implements AsyncIterable<T>{
   }
 
   public stop(): void {
-    this.stopCallback();
+    if (this.stopCallback) {
+      this.stopCallback();
+    }
   }
 
 }

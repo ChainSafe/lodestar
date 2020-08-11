@@ -57,7 +57,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public async getByRoot(root: Root): Promise<SignedBeaconBlock|null> {
     const slot = await this.getSlotByRoot(root);
-    if(Number.isInteger(slot)) {
+    if(slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
     }
     return null;
@@ -65,7 +65,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public async getByParentRoot(root: Root): Promise<SignedBeaconBlock|null> {
     const slot = await this.getSlotByParentRoot(root);
-    if(Number.isInteger(slot)) {
+    if(slot !== null && Number.isInteger(slot)) {
       return this.get(slot);
     }
     return null;
@@ -109,9 +109,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
 
   public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
-    const firstSlot = dbFilterOpts.gt ?
-      this.decodeKey(dbFilterOpts.gt) + 1 :
-      this.decodeKey(dbFilterOpts.gte);
+    const firstSlot = dbFilterOpts.gt
+      ? this.decodeKey(dbFilterOpts.gt) + 1
+      : dbFilterOpts.gte
+        ? this.decodeKey(dbFilterOpts.gte)
+        : null;
+    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
     const valuesStream = super.valuesStream(opts);
     const step = opts && opts.step || 1;
     return (async function* () {

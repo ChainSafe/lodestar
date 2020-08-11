@@ -18,6 +18,7 @@ import {
   SignedBeaconBlock,
   Slot
 } from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../../db";
@@ -75,6 +76,9 @@ export class ValidatorApi implements IValidatorApi {
     graffiti = ""
   ): Promise<BeaconBlock> {
     const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
+    if (validatorIndex === undefined) {
+      throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
+    }
     return await assembleBlock(
       this.config,
       this.chain,
@@ -96,6 +100,10 @@ export class ValidatorApi implements IValidatorApi {
         this.chain.forkChoice.headBlockRoot(),
         this.chain.getHeadStateContext(),
       ]);
+      const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
+      if (validatorIndex === undefined) {
+        throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
+      }
       const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
       if(headState.slot < currentSlot) {
         processSlots(epochCtx, headState, currentSlot);
@@ -104,7 +112,7 @@ export class ValidatorApi implements IValidatorApi {
         epochCtx,
         headState,
         headBlockRoot,
-        epochCtx.pubkey2index.get(validatorPubKey),
+        validatorIndex,
         index,
         slot
       );
@@ -159,15 +167,15 @@ export class ValidatorApi implements IValidatorApi {
     }
     const validatorIndexes = validatorPubKeys.map((key) => {
       const validatorIndex = epochCtx.pubkey2index.get(key);
-      if (!Number.isInteger(validatorIndex)) {
-        throw Error(`Validator pubkey ${Buffer.from(key).toString("hex")} not in epochCtx`);
+      if (validatorIndex === undefined || !Number.isInteger(validatorIndex)) {
+        throw Error(`Validator pubKey ${toHexString(key)} not in epochCtx`);
       }
-      return epochCtx.pubkey2index.get(key);
+      return validatorIndex;
     });
     return validatorIndexes.map((validatorIndex) => {
       const validator = state.validators[validatorIndex];
       if (!validator) {
-        throw Error(`Validator ${validatorIndex} not in state`);
+        throw Error(`Validator index ${validatorIndex} not in state`);
       }
       return assembleAttesterDuty(
         this.config,
@@ -208,6 +216,11 @@ export class ValidatorApi implements IValidatorApi {
       throw Error("No matching attestations found for attestationData");
     }
 
+    const aggregatorIndex = epochCtx.pubkey2index.get(aggregator);
+    if (aggregatorIndex === undefined) {
+      throw Error(`Aggregator pubkey ${toHexString(aggregator)} not in epochCtx`);
+    }
+
     const aggregate = matchingAttestations.reduce((current, attestation) => {
       try {
         current.signature = Signature
@@ -229,7 +242,7 @@ export class ValidatorApi implements IValidatorApi {
 
     return {
       aggregate,
-      aggregatorIndex: epochCtx.pubkey2index.get(aggregator),
+      aggregatorIndex,
       selectionProof: EMPTY_SIGNATURE
     };
   }
