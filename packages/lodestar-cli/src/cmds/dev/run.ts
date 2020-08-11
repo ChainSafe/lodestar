@@ -14,6 +14,7 @@ import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/st
 import {getValidatorApiClient} from "./utils/validator";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
+import {getBeaconPaths} from "../beacon/paths";
 
 /**
  * Run a beacon node
@@ -24,7 +25,8 @@ export async function run(options: IDevOptions): Promise<void> {
   options = mergeConfigOptions(options) as IDevOptions;
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
-
+  const beaconPaths = getBeaconPaths(options);
+  options = {...options, ...beaconPaths};
   const config = getBeaconConfig(options.preset, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
