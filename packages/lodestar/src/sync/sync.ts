@@ -167,8 +167,8 @@ export class BeaconSync implements IBeaconSync {
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     const peerBalancer = new RoundRobinArray(this.getPeers());
-    const maxAttempts = 1000;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
       const peer = peerBalancer.next();
       if (!peer) {
         return;
