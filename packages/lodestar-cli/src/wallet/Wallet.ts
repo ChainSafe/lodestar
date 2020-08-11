@@ -1,5 +1,5 @@
 import * as bip39 from "bip39";
-import {mapValues} from "lodash";
+import {mapValues, keys, values} from "lodash";
 import {PrivateKey} from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
@@ -45,7 +45,7 @@ export class Wallet extends Keystore {
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = bip39.mnemonicToSeedSync(mnemonic);
     
-    const wallet = await this.create(password, seed, emptyPubkey, "") as Wallet;
+    const wallet = (await this.create(password, seed, emptyPubkey, "")) as Wallet;
     wallet.name = name;
     wallet.nextaccount = 0;
     wallet.version = 1;
@@ -111,7 +111,10 @@ export class Wallet extends Keystore {
     // Update nextaccount last in case Keystore generation throws
     this.nextaccount += 1;
 
-    return keystores;
+    // return await Promise.all(keystores);
+    return Promise.all(
+      keystores
+    );
   }
 
   /**
