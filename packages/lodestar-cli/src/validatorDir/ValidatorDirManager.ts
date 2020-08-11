@@ -67,8 +67,8 @@ export class ValidatorDirManager {
   /**
    * Opens all the validator directories in `this` and decrypts the validator keypairs.
    */
-  decryptAllValidators(options?: IValidatorDirOptions): Keypair[] {
+  async decryptAllValidators(options?: IValidatorDirOptions): Promise<Keypair[]> {
     const validators = this.openAllValidators(options);
-    return validators.map(validator => validator.votingKeypair(this.secretsDir));
+    return await Promise.all(validators.map(async validator => await validator.votingKeypair(this.secretsDir)));
   }
 }

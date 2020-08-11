@@ -90,9 +90,9 @@ export class ValidatorDir {
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir 
    */
-  votingKeypair(secretsDir: string): Keypair {
+  async votingKeypair(secretsDir: string): Promise<Keypair> {
     const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
-    return this.unlockKeypair(keystorePath, secretsDir);
+    return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
   /**
@@ -102,9 +102,9 @@ export class ValidatorDir {
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir 
    */
-  withdrawalKeypair(secretsDir: string): Keypair {
+  async withdrawalKeypair(secretsDir: string): Promise<Keypair> {
     const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
-    return this.unlockKeypair(keystorePath, secretsDir);
+    return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
   /**
@@ -112,10 +112,10 @@ export class ValidatorDir {
   * @param keystorePath Path to a EIP-2335 keystore
   * @param secretsDir Directory containing keystore passwords
   */
-  unlockKeypair(keystorePath: string, secretsDir: string): Keypair {
-    const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
+  async unlockKeypair(keystorePath: string, secretsDir: string): Promise<Keypair> {
+    const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
-    const privKey = keystore.decrypt(password);
+    const privKey = await keystore.decrypt(password);
     return new Keypair(PrivateKey.fromBytes(privKey));
   }
 

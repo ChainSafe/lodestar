@@ -68,7 +68,7 @@ export async function handler(options: IWalletCreateOptions): Promise<void> {
   const password = readPassphraseFile(passphraseFile);
 
   const walletManager = new WalletManager(accountPaths);
-  const wallet = walletManager.createWallet(name, type, mnemonic, password);
+  const wallet = await walletManager.createWallet(name, type, mnemonic, password);
 
   if (mnemonicOutputPath) {
     writeFile600Perm(mnemonicOutputPath, mnemonic);

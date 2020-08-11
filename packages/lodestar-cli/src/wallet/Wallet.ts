@@ -1,7 +1,7 @@
 import * as bip39 from "bip39";
 import {mapValues} from "lodash";
 import {PrivateKey} from "@chainsafe/bls";
-import {Keystore} from "@chainsafe/bls-keystore";
+import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
   deriveEth2ValidatorKeys,
   IEth2ValidatorKeys,
@@ -31,7 +31,7 @@ export class Wallet extends Keystore {
   type: string;
 
   constructor(keystore: Partial<IWalletKeystoreJson>) {
-    super(keystore);
+    super(keystore as IKeystore);
     this.name = keystore.name;
     this.nextaccount = keystore.nextaccount || 0;
     this.version = keystore.version || 1;
@@ -42,10 +42,10 @@ export class Wallet extends Keystore {
    * Creates a new builder for a seed specified as a BIP-39 `Mnemonic` (where the nmemonic itself does
    * not have a passphrase).
    */
-  static fromMnemonic(mnemonic: string, password: string, name: string): Wallet {
+  static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = bip39.mnemonicToSeedSync(mnemonic);
     
-    const wallet = this.encrypt(seed, emptyPubkey, password) as Wallet;
+    const wallet = await this.create(password, seed, emptyPubkey, "") as Wallet;
     wallet.name = name;
     wallet.nextaccount = 0;
     wallet.version = 1;
@@ -58,7 +58,7 @@ export class Wallet extends Keystore {
    */
   toWalletObject(): IWalletKeystoreJson {
     return {
-      crypto: this.crypto.toObject(),
+      crypto: this.toObject(),
       uuid: this.uuid,
       name: this.name,
       nextaccount: this.nextaccount,
@@ -82,11 +82,13 @@ export class Wallet extends Keystore {
    * Uses the default encryption settings of `KeystoreBuilder`, not necessarily those that were
    * used to encrypt `this`.
    */
-  nextValidator(
+  async nextValidator(
     walletPassword: string,
     passwords: { [key in keyof IEth2ValidatorKeys]: string }
-  ): { [key in keyof IEth2ValidatorKeys]: Keystore } {
-    const masterKey = this.decrypt(walletPassword);
+  ): Promise<{
+    [key in keyof IEth2ValidatorKeys]: Keystore;
+  }> {
+    const masterKey = await this.decrypt(walletPassword);
     const validatorIndex = this.nextaccount;
     const privKeys = deriveEth2ValidatorKeys(masterKey, validatorIndex);
 
@@ -97,10 +99,10 @@ export class Wallet extends Keystore {
       withdrawal: `m/12381/3600/${validatorIndex}/0`,
     };
 
-    const keystores = mapValues(privKeys, (privKey, key) => {
+    const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
       const privateKey = PrivateKey.fromBytes(privKey);
-      const keystore = Keystore.encrypt(privKey, emptyPubkey, passwords[type], paths[type]);
+      const keystore = await Keystore.create(passwords[type], privKey, emptyPubkey, paths[type]);
       // @chainsafe/bls-keystore@1.0.0-beta8 does not compute pubkey by default (it's okay)
       keystore.pubkey = privateKey.toPublicKey().toHexString();
       return keystore;

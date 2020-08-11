@@ -85,17 +85,17 @@ export class WalletManager {
    * Creates a new wallet with the given `name` in `self.dir` with the given `mnemonic` as a
    * seed, encrypted with `password`.
    */
-  createWallet(
+  async createWallet(
     name: string,
     walletType: string,
     mnemonic: string,
     password: string
-  ): Wallet {
+  ): Promise<Wallet> {
     if (this.wallets().some(wallet => wallet.name === name))
       throw new YargsError(`Wallet name ${name} already used`);
 
       
-    const wallet = Wallet.fromMnemonic(mnemonic, password, name);
+    const wallet = await Wallet.fromMnemonic(mnemonic, password, name);
     const walletDir = path.join(this.walletsDir, wallet.uuid);
 
     if (fs.existsSync(walletDir))

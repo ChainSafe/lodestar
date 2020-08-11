@@ -88,7 +88,7 @@ Importing to \t\t${keystoresDir}
   }
 
   for (const keystorePath of keystorePaths) {
-    const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
+    const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const pubkey = keystore.pubkey;
     const uuid = keystore.uuid;
     if (!pubkey) {
@@ -107,7 +107,7 @@ Importing to \t\t${keystoresDir}
     const passphrase = await getKeystorePassphrase(keystore, passphrasePaths);
     fs.mkdirSync(secretsDir, {recursive: true});
     fs.mkdirSync(dir, {recursive: true});
-    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.toJSON());
+    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.stringify());
     writeValidatorPassphrase({secretsDir, pubkey, passphrase});
 
     console.log(`Successfully imported validator ${pubkey}`);
