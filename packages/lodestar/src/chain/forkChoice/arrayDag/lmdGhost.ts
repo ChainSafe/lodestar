@@ -35,6 +35,9 @@ class NodeIndices {
     if (!value) throw Error(`No index for root ${key}`);
     return value;
   }
+  getMaybe(key: RootHex): number | null {
+    return this.map.get(key) ?? null;
+  }
   set(key: RootHex, value: number): void {
     this.map.set(key, value);
   }
@@ -302,10 +305,11 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     }
   }
 
-  public getNode(blockRootBuf: Uint8Array): Node {
+  public getNode(blockRootBuf: Uint8Array): Node | null {
     const blockRoot = toHexString(blockRootBuf);
-    const index = this.nodeIndices.get(blockRoot);
-    return this.nodes[index];
+    const index = this.nodeIndices.getMaybe(blockRoot);
+    if (index === null) return null;
+    return this.nodes[index] ?? null;
   }
 
   public isBestTarget(parent: Node, child: Node): boolean {
@@ -398,7 +402,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
     const node = this.getNode(blockRoot);
-    return (node)? this.toBlockSummary(node) : null;
+    return node ? this.toBlockSummary(node) : null;
   }
 
   public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
