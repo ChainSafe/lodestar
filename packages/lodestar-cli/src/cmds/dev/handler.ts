@@ -5,9 +5,10 @@ import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {createEnr, createPeerId} from "../../network";
+import {IGlobalArgs} from "../../options";
 import rimraf from "rimraf";
 import {join} from "path";
-import {IDevOptions} from "./options";
+import {IDevArgs} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
@@ -19,10 +20,10 @@ import {getBeaconPaths} from "../beacon/paths";
 /**
  * Run a beacon node
  */
-export async function run(options: IDevOptions): Promise<void> {
+export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
-  options = mergeConfigOptions(options) as IDevOptions;
+  options = mergeConfigOptions(options);
   const peerId = await createPeerId();
   options.network.discv5.enr = await createEnr(peerId);
   const beaconPaths = getBeaconPaths(options);
@@ -44,8 +45,8 @@ export async function run(options: IDevOptions): Promise<void> {
     logger,
   });
 
-  if(options.dev.genesisValidators) {
-    const state = await initDevChain(node, options.dev.genesisValidators);
+  if(options.genesisValidators) {
+    const state = await initDevChain(node, options.genesisValidators);
     storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
   }else if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
@@ -60,9 +61,9 @@ export async function run(options: IDevOptions): Promise<void> {
   await node.start();
 
   let validators: Validator[];
-  if(options.dev.startValidators) {
-    const range = options.dev.startValidators.split(":").map(s => parseInt(s));
-    const api = getValidatorApiClient(options.validator.beaconUrl, logger, node);
+  if(options.startValidators) {
+    const range = options.startValidators.split(":").map(s => parseInt(s));
+    const api = getValidatorApiClient(options.server, logger, node);
     validators = Array.from(
       {length:range[1] + range[0]},(v,i)=>i+range[0]
     ).map((index) => {
@@ -84,7 +85,7 @@ export async function run(options: IDevOptions): Promise<void> {
     await Promise.all(validators.map((v) => v.stop()));
     logger.info("Stopping BN");
     await node.stop();
-    if(options.dev.reset) {
+    if(options.reset) {
       logger.info("Cleaning directories");
       //delete db directory
       rimraf.sync(chainDir);

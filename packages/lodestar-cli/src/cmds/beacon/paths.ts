@@ -1,8 +1,8 @@
 import {IGlobalArgs} from "../../options";
-import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
+import {getGlobalPaths} from "../../paths/global";
 import {joinIfRelative} from "../../util";
 
-export type IBeaconPaths = IGlobalPaths & {
+export type IBeaconPaths = {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
