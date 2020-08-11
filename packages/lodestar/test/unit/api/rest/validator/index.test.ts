@@ -11,7 +11,6 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
-import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {
   generateAttestation,
@@ -66,7 +65,12 @@ describe("Test validator rest API", function () {
 
   it("should return attester duties", async function () {
     const publicKey1= Keypair.generate().publicKey.toBytesCompressed();
-    validatorApi.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
+    validatorApi.getAttesterDuties.resolves([{
+      validatorPubkey: Buffer.alloc(48, 1),
+      aggregatorModulo: 1,
+      committeeIndex: 0,
+      attestationSlot: 0
+    }]);
     const response = await supertest(restApi.server.server)
       .get(
         "/validator/duties/2/attester",

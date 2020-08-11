@@ -10,29 +10,17 @@ export function assembleAttesterDuty(
   epochCtx: EpochContext,
   epoch: Epoch
 ): AttesterDuty  {
-  let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
   const committeeAssignment = epochCtx.getCommitteeAssignment(epoch, validator.index);
-  if (committeeAssignment) {
-    duty = {
-      ...duty,
-      aggregatorModulo: Math.max(
-        1,
-        intDiv(committeeAssignment.validators.length, config.params.TARGET_AGGREGATORS_PER_COMMITTEE)
-      ),
-      committeeIndex: committeeAssignment.committeeIndex,
-      attestationSlot: committeeAssignment.slot,
-    };
+  if (!committeeAssignment) {
+    throw Error(`No committeeAssignment for validator ${validator.index} at epoch ${epoch}`);
   }
-
-  return duty;
-}
-
-export function generateEmptyAttesterDuty(publicKey: BLSPubkey, duty?: Partial<AttesterDuty>): AttesterDuty {
   return {
-    validatorPubkey: publicKey,
-    aggregatorModulo: 1,
-    attestationSlot: -1,
-    committeeIndex: -1,
-    ...duty
+    validatorPubkey: validator.publicKey,
+    aggregatorModulo: Math.max(
+      1,
+      intDiv(committeeAssignment.validators.length, config.params.TARGET_AGGREGATORS_PER_COMMITTEE)
+    ),
+    committeeIndex: committeeAssignment.committeeIndex,
+    attestationSlot: committeeAssignment.slot,
   };
 }
