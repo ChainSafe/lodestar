@@ -39,7 +39,7 @@ export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent
 export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
   const topicName = groups && groups[3];
-  if (topicName === null || topicName === undefined) throw Error(`Bad gossip topic format: ${topic}`);
+  if (!topicName) throw Error(`Bad gossip topic format: ${topic}`);
   return topicName as GossipEvent;
 }
 
@@ -59,7 +59,7 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   const groups = topic.match(AttestationSubnetRegExp);
   const subnetStr = groups && groups[4];
-  if (subnetStr === null || subnetStr === undefined) throw Error(`Bad attestation topic format: ${topic}`);
+  if (!subnetStr) throw Error(`Bad attestation topic format: ${topic}`);
   return parseInt(subnetStr);
 }
 
