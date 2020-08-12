@@ -1,3 +1,4 @@
+import {List} from "@chainsafe/ssz";
 import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,
   SignedVoluntaryExit, SignedAggregateAndProof,} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
@@ -30,7 +31,7 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch, 
 
 export function generateAttestation(override: Partial<Attestation> = {}): Attestation {
   return {
-    aggregationBits: Array.from({length: 64}, () => false),
+    aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
     data: {
       slot: 0,
       index: 0,

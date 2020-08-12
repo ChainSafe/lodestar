@@ -31,7 +31,7 @@ interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
   eth1?: IEth1Notifier;
-  libp2p?: LibP2p;
+  libp2p: LibP2p;
 }
 
 // TODO move into src/node/beacon

@@ -7,6 +7,7 @@ import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {sleep} from "../util";
 import {INodeApi} from "./interface/node";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 
 export abstract class AbstractApiClient
@@ -15,24 +16,26 @@ export abstract class AbstractApiClient
 
 
   protected config: IBeaconConfig;
+  protected logger: ILogger;
 
   private currentSlot: Slot = 0;
   private currentEpoch: Epoch = 0;
   private newSlotCallbacks: INewSlotCallback[] = [];
   private newEpochCallbacks: INewEpochCallback[] = [];
   private running = false;
-  private beaconNodeInterval: NodeJS.Timeout;
-  private slotCountingTimeout: NodeJS.Timeout;
-  private genesisTime: number;
+  private beaconNodeInterval?: NodeJS.Timeout;
+  private slotCountingTimeout?: NodeJS.Timeout;
+  private genesisTime?: number;
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
   abstract node: INodeApi;
   abstract validator: IValidatorApi;
 
-  protected constructor(config: IBeaconConfig) {
+  protected constructor(config: IBeaconConfig, logger: ILogger) {
     super();
     this.config = config;
+    this.logger = logger;
   }
 
   public onNewEpoch(cb: INewEpochCallback): void {
@@ -51,7 +54,7 @@ export abstract class AbstractApiClient
     if(!this.beaconNodeInterval) {
       this.running = true;
       await this.pollBeaconNode();
-      this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 1000);
+      this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 3000);
     }
   }
 
@@ -73,11 +76,21 @@ export abstract class AbstractApiClient
     if (!this.running) {
       return;
     }
+
+    this.logger.info("Checking genesis time and beacon node connection");
     const genesis =  await this.beacon.getGenesis();
     if (genesis && Math.floor(Date.now() / 1000) >= genesis.genesisTime) {
       this.emit("beaconChainStarted");
-      clearInterval(this.beaconNodeInterval);
+      if (this.beaconNodeInterval) {
+        clearInterval(this.beaconNodeInterval);
+      }
       this.startSlotCounting(Number(genesis.genesisTime));
+    } else {
+      let waitTime = "unknown";
+      if(genesis) {
+        waitTime = (genesis.genesisTime - BigInt(Math.floor(Date.now() / 1000))) + "s";
+      }
+      this.logger.info("Waiting for genesis time", {waitTime});
     }
   }
 
@@ -102,6 +115,7 @@ export abstract class AbstractApiClient
       return;
     }
     //to prevent sometime being updated prematurely
+    if (this.genesisTime === undefined) throw Error("no genesisTime set");
     if(this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
       await sleep(this.getDiffTillNextSlot());
     }
@@ -130,6 +144,7 @@ export abstract class AbstractApiClient
    * Returns milis till next slot
    */
   private getDiffTillNextSlot(): number {
+    if (this.genesisTime === undefined) throw Error("no genesisTime set");
     const diffInSeconds = Math.floor((Date.now() / 1000) - this.genesisTime);
     //update slot after remaining seconds until next slot
     return (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;

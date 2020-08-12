@@ -6,12 +6,17 @@ A wallet helps to manage many validators from an easy-to-remember 12-word string
 
 The 12-word string is randomly generated during wallet creation and printed out to the terminal. It's important to make one or more backups of the mnemonic to ensure your ETH is not lost in the case of data loss. It is very important to keep your mnemonic private as it represents the ultimate control of your ETH.
 
+<!-- prettier-ignore-start -->
+!!! warning
+    If you want to create a wallet for a testnet, you need to add `--testnet $TESTNET_NAME` to the following command
+<!-- prettier-ignore-end -->
+
 ### Create a wallet
 
 To create a wallet, use the following command:
 
 ```
-lodestar account wallet create --name primary --passphraseFile primary.pass --rootDir .lodestar
+lodestar account wallet create --name primary --passphraseFile primary.pass
 ```
 
 This command will:
@@ -30,12 +35,17 @@ Next, you can create validator keys from your wallet `primary`
 
 Validators are represented by a BLS keypair. It is recommended to generate validator keypairs from a wallet mnemonic to ease its backup.
 
+<!-- prettier-ignore-start -->
+!!! warning
+    If you want to create a validator for a testnet, you need to add `--testnet $TESTNET_NAME` to all of the following commands
+<!-- prettier-ignore-end -->
+
 ### Create validator keypair
 
 To create a new validator use the following command:
 
 ```
-lodestar account validator create --name primary --passphraseFile primary.pass --rootDir .lodestar
+lodestar account validator create --name primary --passphraseFile primary.pass
 ```
 
 This command will:
@@ -52,6 +62,25 @@ This command will:
     The validator voting keypair must be "hot" so its Keystore and password are kept in disk to be available for the validator client. The withdrawal keypair is **not** kept in disk as it can be generated latter from the wallet mnemonic.
 <!-- prettier-ignore-end -->
 
+### Import a validator keystore from Deposit Launch Pad
+
+To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
+
+```
+yarn run cli account validator import --testnet medalla --directory <path to your launchpad keys>
+```
+
+You will be prompted to enter a password. Use the same one you used to create the keys initially.
+
+To confirm your keys have been imported run:
+
+```
+yarn run cli account validator list --testnet medalla
+```
+
+This command will print the public address of every active keystore.
+
+
 ### Submit a validator deposit
 
 To submit the deposit transaction for a validator, use the following command with one of these options to connect to an Eth1 node:
@@ -63,7 +92,7 @@ To submit the deposit transaction for a validator, use the following command wit
   - `--rpcUrl` alone to connect to the node's JSON RPC API if it's already unlocked.
 
 ```
-lodestar account validator deposit --validator 0x88f920bb56d76c68e0d983e9772e67d2ba4afadd5eb162a51f7fc62212c138e5611d99f98f834fce43f310295ca35eca --rootDir .lodestar
+lodestar account validator deposit --validator 0x88f920bb56d76c68e0d983e9772e67d2ba4afadd5eb162a51f7fc62212c138e5611d99f98f834fce43f310295ca35eca
 ```
 
 The resulting transaction hash will be print to the terminal and also stored in the validator's dir.

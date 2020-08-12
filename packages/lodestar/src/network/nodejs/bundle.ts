@@ -10,6 +10,7 @@ import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
 import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
+import {Adapter} from "interface-datastore";
 
 
 export interface ILibp2pOptions {
@@ -20,6 +21,7 @@ export interface ILibp2pOptions {
     noAnnounce?: string[];
   };
   autoDial: boolean;
+  datastore?: Adapter;
   discv5: {
     bindAddr: string;
     enr: ENRInput;
@@ -47,6 +49,11 @@ export class NodejsNode extends LibP2p {
           MDNS,
           Discv5Discovery,
         ],
+      },
+      datastore: options.datastore,
+      peerStore: {
+        persistence: !!options.datastore,
+        threshold: 10
       },
       config: {
         relay: {

@@ -63,12 +63,18 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map(value => this.config.types.Attestation.fromJson(value, {case: "snake"}));
   }
 
-  public async produceBlock(slot: Slot, proposerPubkey: BLSPubkey, randaoReveal: Bytes96): Promise<BeaconBlock> {
+  public async produceBlock(
+    slot: Slot,
+    proposerPubkey: BLSPubkey,
+    randaoReveal: Bytes96,
+    graffiti: string
+  ): Promise<BeaconBlock> {
     const url = "/block";
     const query = ({
       "slot": slot, 
       "proposer_pubkey": toHexString(proposerPubkey), 
-      "randao_reveal": toHexString(randaoReveal)
+      "randao_reveal": toHexString(randaoReveal),
+      "graffiti": graffiti
     });
     const responseData = await this.client.get<Json>(url, query);
     return this.config.types.BeaconBlock.fromJson(responseData, {case: "snake"});

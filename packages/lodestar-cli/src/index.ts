@@ -2,24 +2,16 @@
 
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
-
-import {dev} from "./cmds/dev";
-import {beacon} from "./cmds/beacon";
-import {validator} from "./cmds/validator";
-import {account} from "./cmds/account";
+import {cmds} from "./cmds";
 import {globalOptions} from "./options";
-import {YargsError} from "./util";
+import {YargsError, registerCommandToYargs} from "./util";
 
 const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
 const bottomBanner = "for more information, checks the docs https://chainsafe.github.io/lodestar";
 
-yargs
+const lodestar = yargs
   .env("LODESTAR")
   .options(globalOptions)
-  .command(dev)
-  .command(beacon)
-  .command(validator)
-  .command(account)
   // blank scriptName so that help text doesn't display the cli name before each command
   .scriptName("")
   .demandCommand(1)
@@ -51,7 +43,13 @@ yargs
     // eslint-disable-next-line no-console
     console.error(` ✖ ${errorMessage}\n`);
     process.exit(1);
-  })
-  .parse();
+  });
+
+// yargs.command and all ./cmds
+for (const cmd of cmds) {
+  registerCommandToYargs(lodestar, cmd);
+}
+  
+lodestar.parse();
 
 

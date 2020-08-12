@@ -45,6 +45,7 @@ export interface IGossipModules {
 }
 
 export interface IGossipSub extends EventEmitter {
+  subscriptions: Set<string>;
   publish(topic: string, data: Buffer): Promise<void>;
   start(): Promise<void>;
   stop(): Promise<void>;

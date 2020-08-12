@@ -52,9 +52,11 @@ export function processBlock(
 
         const newChainHeadRoot = updateForkChoice(config, forkChoice, job.signedBlock, newState);
         if(config.types.Root.equals(newChainHeadRoot, blockRoot)) {
-          logger.info("Processed new chain head",
-            {newChainHeadRoot, slot: newState.slot, epoch: computeEpochAtSlot(config, newState.slot)}
-          );
+          logger.info("Processed new chain head", {
+            newChainHeadRoot: toHexString(newChainHeadRoot),
+            slot: newState.slot,
+            epoch: computeEpochAtSlot(config, newState.slot)
+          });
           if(!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -117,8 +119,8 @@ export async function runStateTransition(
   stateContext: Required<IStateContext>, job: IBlockProcessJob
 ): Promise<IStateContext|null> {
   try {
-    // if block is trusted don't verify state roots, proposer or signature
-    return fastStateTransition(stateContext, job.signedBlock, !job.trusted, !job.trusted, !job.trusted);
+    // if block is trusted don't verify proposer or op signature
+    return fastStateTransition(stateContext, job.signedBlock, true, !job.trusted, !job.trusted);
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate

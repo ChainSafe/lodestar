@@ -10,7 +10,7 @@ export interface IRestApiOptions {
 
 export default {
   enabled: false,
-  api: [ApiNamespace.BEACON, ApiNamespace.VALIDATOR],
+  api: [ApiNamespace.BEACON, ApiNamespace.NODE, ApiNamespace.VALIDATOR],
   host: "127.0.0.1",
   port: 9596,
   cors: "*"

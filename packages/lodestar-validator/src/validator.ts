@@ -30,8 +30,8 @@ export class Validator {
   private opts: IValidatorOptions;
   private config: IBeaconConfig;
   private apiClient: IApiClient;
-  private blockService: BlockProposingService;
-  private attestationService: AttestationService;
+  private blockService?: BlockProposingService;
+  private attestationService?: AttestationService;
   private db: IValidatorDB;
   private logger: ILogger;
   private isRunning: boolean;
@@ -58,10 +58,10 @@ export class Validator {
 
   public run = async (): Promise<void> => {
     this.logger.info("Chain start has occured!");
+    if (!this.blockService) throw Error("blockService not setup");
+    if (!this.attestationService) throw Error("attestationService not setup");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
-    this.apiClient.onNewEpoch(this.blockService.onNewEpoch);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
-    this.apiClient.onNewEpoch(this.attestationService.onNewEpoch);
     // Run both services at once to prevent missing first attestation
     await Promise.all([
       this.blockService.start(),
@@ -90,15 +90,16 @@ export class Validator {
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.opts.keypair,
+      this.opts.keypairs,
       this.apiClient,
       this.db,
-      this.logger
+      this.logger,
+      this.opts.graffiti
     );
 
     this.attestationService = new AttestationService(
       this.config,
-      this.opts.keypair,
+      this.opts.keypairs,
       this.apiClient,
       this.db,
       this.logger

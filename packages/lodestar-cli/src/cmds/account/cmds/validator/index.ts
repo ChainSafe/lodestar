@@ -1,18 +1,14 @@
-import {CommandModule} from "yargs";
+import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {accountValidatorOptions, IAccountValidatorOptions} from "./options";
-import * as create from "./create";
-import * as deposit from "./deposit";
-import * as list from "./list";
+import {accountValidatorOptions, IAccountValidatorArgs} from "./options";
+import {create} from "./create";
+import {deposit} from "./deposit";
+import {importCmd} from "./import";
+import {list} from "./list";
 
-export const validator: CommandModule<IGlobalArgs, IAccountValidatorOptions> = {
+export const validator: ICliCommand<IAccountValidatorArgs, IGlobalArgs> = {
   command: "validator <command>",
   describe: "Provides commands for managing Eth2 validators.",
-  builder: (yargs) => yargs
-    .options(accountValidatorOptions)
-    .command(create)
-    .command(deposit)
-    .command(list),
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  handler: () => {}
+  options: accountValidatorOptions,
+  subcommands: [create, deposit, importCmd, list],
 };

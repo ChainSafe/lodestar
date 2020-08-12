@@ -1,12 +1,30 @@
-import {ByteVector, hash, toHexString} from "@chainsafe/ssz";
-import {BeaconState, CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
+import {PublicKey} from "@chainsafe/bls";
+import {
+  Attestation,
+  AttestationData,
+  BeaconState,
+  BLSSignature,
+  CommitteeIndex,
+  Epoch,
+  IndexedAttestation,
+  Slot,
+  ValidatorIndex,
+  CommitteeAssignment,
+} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
 import {DomainType, GENESIS_EPOCH} from "../../constants";
-import {computeEpochAtSlot, computeProposerIndex, computeStartSlotAtEpoch, getSeed} from "../../util";
+import {
+  computeEpochAtSlot,
+  computeProposerIndex,
+  computeStartSlotAtEpoch,
+  getAttestingIndicesFromCommittee,
+  getSeed,
+  isAggregatorFromCommitteeLength,
+} from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {PublicKey} from "@chainsafe/bls";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
@@ -25,9 +43,10 @@ export class EpochContext {
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
   public index2pubkey: PublicKey[];
   public proposers: number[];
-  public previousShuffling?: IEpochShuffling;
-  public currentShuffling?: IEpochShuffling;
-  public nextShuffling?: IEpochShuffling;
+  // Per spec definition, shuffling will always be defined. They are never called before loadState()
+  public previousShuffling!: IEpochShuffling;
+  public currentShuffling!: IEpochShuffling;
+  public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
 
   constructor(config: IBeaconConfig) {
@@ -43,8 +62,7 @@ export class EpochContext {
     const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
     const nextEpoch = currentEpoch + 1;
 
-    // TODO use readonly iteration here
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
       i, v.activationEpoch, v.exitEpoch,
     ]));
 
@@ -94,8 +112,7 @@ export class EpochContext {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
-    // TODO use readonly iteration here
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = Array.from(state.validators).map((v, i) => ([
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
       i, v.activationEpoch, v.exitEpoch,
     ]));
     this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
@@ -120,6 +137,70 @@ export class EpochContext {
       throw new Error("beacon proposer index out of range");
     }
     return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
+  }
+
+  public getIndexedAttestation (attestation: Attestation): IndexedAttestation {
+    const data = attestation.data;
+    const bits = readOnlyMap(attestation.aggregationBits, (b) => b);
+    const committee = this.getBeaconCommittee(data.slot, data.index);
+    // No need for a Set, the indices in the committee are already unique.
+    const attestingIndices: ValidatorIndex[] = [];
+    committee.forEach((index, i) => {
+      if (bits[i]) {
+        attestingIndices.push(index);
+      }
+    });
+    // sort in-place
+    attestingIndices.sort((a, b) => a - b);
+    return {
+      attestingIndices: attestingIndices as List<number>,
+      data: data,
+      signature: attestation.signature,
+    };
+  }
+
+  public getAttestingIndices(data: AttestationData, bits: BitList): ValidatorIndex[] {
+    const committee = this.getBeaconCommittee(data.slot, data.index);
+    return getAttestingIndicesFromCommittee(
+      committee,
+      readOnlyMap(bits, (b) => b) as List<boolean>,
+    );
+  }
+
+  /**
+   * Return the committee assignment in the ``epoch`` for ``validator_index``.
+   * ``assignment`` returned is a tuple of the following form:
+   * ``assignment[0]`` is the list of validators in the committee
+   * ``assignment[1]`` is the index to which the committee is assigned
+   * ``assignment[2]`` is the slot at which the committee is assigned
+   * Return null if no assignment..
+   */
+  getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment | null {
+
+    const nextEpoch = this.currentShuffling.epoch + 1;
+    assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
+
+    const epochStartSlot = computeStartSlotAtEpoch(this.config, epoch);
+    for (let slot = epochStartSlot; slot < epochStartSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
+      const committeeCount = this.getCommitteeCountAtSlot(slot);
+      for (let i = 0; i < committeeCount; i++) {
+        const committee = this.getBeaconCommittee(slot, i);
+        if (committee.includes(validatorIndex)) {
+          return {
+            validators: committee as List<number>,
+            committeeIndex: i,
+            slot,
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  public isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
+    const committee = this.getBeaconCommittee(slot, index);
+    return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
   }
 
   private _resetProposers(state: BeaconState): void {

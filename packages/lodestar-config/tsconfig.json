@@ -4,6 +4,7 @@
   "compilerOptions": {
     "typeRoots": [
       "../../node_modules/@types"
-    ]
+    ],
+    "strictNullChecks": true
   }
 }

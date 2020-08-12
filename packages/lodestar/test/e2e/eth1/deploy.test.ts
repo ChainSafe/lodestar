@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
+import {fromHexString} from "@chainsafe/ssz";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier, Eth1EventsBlock} from "../../../src/eth1";
@@ -22,12 +23,10 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     ...defaults,
     provider: {
       url: "https://goerli.prylabs.net",
-      network: 5,
     },
     depositContract: {
       ...defaults.depositContract,
       deployedAt: 2524641,
-      address: "0x5cA1e00004366Ac85f492887AAab12d0e6418876",
     }
   };
   let db: BeaconDb;
@@ -37,7 +36,10 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   const testConfig = Object.assign({}, {params: config.params}, config);
   // 1586833385 is timestamp of the contract's block
   testConfig.params = Object.assign({}, config.params,
-    {MIN_GENESIS_TIME: 1586833385, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1, ETH1_FOLLOW_DISTANCE: 0});
+    {
+      MIN_GENESIS_TIME: 1586833385, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1, ETH1_FOLLOW_DISTANCE: 0,
+      DEPOSIT_CONTRACT_ADDRESS:  fromHexString("0x5cA1e00004366Ac85f492887AAab12d0e6418876"),
+    });
   beforeEach(async function () {
     this.timeout(10000);
     rimraf.sync(dbPath);
@@ -47,7 +49,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
       config: testConfig,
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
-    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, opts.provider.network);
+    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, 5);
     eth1Notifier = new EthersEth1Notifier(
       {...opts, providerInstance: provider},
       {

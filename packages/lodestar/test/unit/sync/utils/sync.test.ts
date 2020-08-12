@@ -1,5 +1,5 @@
 import {describe} from "mocha";
-import {IReputation} from "../../../../src/sync/IReputation";
+import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {
   fetchBlockChunks,
@@ -7,6 +7,9 @@ import {
   getHighestCommonSlot,
   getStatusFinalizedCheckpoint,
   processSyncBlocks,
+  getBestHead,
+  getBestPeer,
+  getPeerSupportedProtocols,
 } from "../../../../src/sync/utils";
 import {expect} from "chai";
 import deepmerge from "deepmerge";
@@ -20,6 +23,10 @@ import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import PeerId from "peer-id";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
+import {Method} from "../../../../src/constants";
 
 describe("sync utils", function () {
 
@@ -219,6 +226,111 @@ describe("sync utils", function () {
     });
 
   });
+
+  describe("getBestHead and getBestPeer", () => {
+    it("should get best head and best peer", async () => {
+      const peer1 = await PeerId.create();
+      const peer2 = await PeerId.create();
+      const peer3 = await PeerId.create();
+      const peer4 = await PeerId.create();
+      const peers = [peer1, peer2, peer3, peer4];
+      const reps = new ReputationStore();
+      reps.add(peer1.toB58String());
+      reps.add(peer2.toB58String());
+      reps.add(peer3.toB58String());
+      reps.getFromPeerId(peer1).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 1),
+        headSlot: 1000
+      };
+      reps.getFromPeerId(peer1).supportedProtocols = [Method.BeaconBlocksByRange];
+      reps.getFromPeerId(peer2).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 2),
+        headSlot: 2000
+      };
+      reps.getFromPeerId(peer2).supportedProtocols = [Method.BeaconBlocksByRange];
+      reps.getFromPeerId(peer4).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 2),
+        headSlot: 4000
+      };
+      // peer4 has highest slot but does not support sync
+      reps.getFromPeerId(peer4).supportedProtocols = [];
+
+      expect(getBestHead(peers, reps)).to.be.deep.equal({slot: 2000, root: Buffer.alloc(32, 2), supportedProtocols: [Method.BeaconBlocksByRange]});
+      expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
+    });
+
+    it("should handle no peer", () => {
+      const reps = new ReputationStore();
+      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH, supportedProtocols: []});
+      expect(getBestPeer(config, [], reps)).to.be.undefined;
+    });
+  });
+
+  describe("getPeerSupportedProtocols", () => {
+    let reqRespStub: SinonStubbedInstance<ReqResp>;
+    beforeEach(() => {
+      reqRespStub = sinon.createStubInstance(ReqResp);
+    });
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("no protocol - no latest status", async () => {
+      const peer1 = await PeerId.create();
+      const reps = new ReputationStore();
+      const protocols = await getPeerSupportedProtocols(config, reps, peer1, reqRespStub);
+      expect(protocols.length).to.be.equal(0);
+    });
+
+    it("no protocol - no chunk returned for beacon_blocks_by_root", async () => {
+      const peer1 = await PeerId.create();
+      const reps = new ReputationStore();
+      reps.getFromPeerId(peer1).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: Buffer.alloc(0),
+        finalizedEpoch: 0,
+        headRoot: Buffer.alloc(32, 1),
+        headSlot: 1000
+      };
+      reqRespStub.beaconBlocksByRoot.resolves([]);
+      const protocols = await getPeerSupportedProtocols(config, reps, peer1, reqRespStub);
+      expect(protocols.length).to.be.equal(0);
+    });
+
+    it("support beacon_blocks_by_range, beacon_blocks_by_root", async () => {
+      const peer1 = await PeerId.create();
+      const reps = new ReputationStore();
+      const finallizedBlock = getEmptySignedBlock();
+      finallizedBlock.message.slot = 100;
+      const parentBlock = getEmptySignedBlock();
+      parentBlock.message.slot = 99;
+      finallizedBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(parentBlock.message);
+
+      reps.getFromPeerId(peer1).latestStatus = {
+        forkDigest: Buffer.alloc(0),
+        finalizedRoot: config.types.BeaconBlock.hashTreeRoot(finallizedBlock.message),
+        finalizedEpoch: 10,
+        headRoot: Buffer.alloc(32, 1),
+        headSlot: 1000
+      };
+      reqRespStub.beaconBlocksByRoot.onFirstCall().resolves([finallizedBlock]);
+      reqRespStub.beaconBlocksByRoot.onSecondCall().resolves([parentBlock]);
+      reqRespStub.beaconBlocksByRange.resolves([parentBlock, finallizedBlock]);
+      const protocols = await getPeerSupportedProtocols(config, reps, peer1, reqRespStub);
+      expect(protocols).to.be.deep.equal([Method.BeaconBlocksByRoot, Method.BeaconBlocksByRange]);
+    });
+  });
+
+
 
 });
 

@@ -1,52 +1,28 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../options";
-import {beaconNodeOptions, IBeaconNodeOptions} from "../../options/beaconNodeOptions";
-import {paramsOptions, IParamsOptions} from "../../options/paramsOptions";
+import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {TestnetName} from "./testnets";
+import {IENRArgs, enrOptions} from "./enrOptions";
+import {ICliCommandOptions} from "../../util";
 
-export type IBeaconOptions =
-  IGlobalArgs &
-  IBeaconNodeOptions &
-  IParamsOptions &
-  IBeaconPaths &
-  {
-    templateConfigFile?: string;
-    genesisStateFile?: string;
-    testnet?: TestnetName;
-  };
+interface IBeaconExtraArgs {
+  genesisStateFile?: string;
+}
 
-export const beaconOptions = {
-  ...beaconNodeOptions,
-  ...paramsOptions,
-
-  templateConfigFile: {
-    alias: ["templateConfigFile", "templateConfig"],
-    description: "Template configuration used to initialize beacon node",
-    type: "string",
-    default: null,
-  } as Options,
-
+const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
     type: "string",
     normalize: true,
-  } as Options,
+  }
+};
 
-  testnet: {
-    description: "Use a testnet configuration and genesis file",
-    type: "string",
-    choices: ["altona"] as TestnetName[],
-  } as Options,
-
-  // Beacon paths
-
+const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root dir",
     defaultDescription: defaultBeaconPaths.beaconDir,
     hidden: true,
     type: "string",
-  } as Options,
+  },
 
   dbDir: {
     alias: ["db.dir", "db.name"],
@@ -55,7 +31,7 @@ export const beaconOptions = {
     hidden: true,
     normalize: true,
     type: "string",
-  } as Options,
+  },
 
   configFile: {
     alias: ["config"],
@@ -63,7 +39,15 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
     normalize: true,
-  } as Options,
+  },
+
+  peerStoreDir: {
+    hidden: true,
+    description: "Peer store dir",
+    defaultDescription: defaultBeaconPaths.peerStoreDir,
+    normalize: true,
+    type: "string",
+  },
 
   peerIdFile: {
     hidden: true,
@@ -71,7 +55,7 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.peerIdFile,
     normalize: true,
     type: "string",
-  } as Options,
+  },
 
   enrFile: {
     hidden: true,
@@ -79,5 +63,25 @@ export const beaconOptions = {
     defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
-  } as Options
+  },
+
+  logFile: {
+    alias: ["log.file"],
+    type: "string",
+    normalize: true,
+  }
+};
+
+export type IBeaconArgs =
+  IBeaconNodeOptions &
+  IBeaconPaths &
+  IENRArgs &
+  IBeaconExtraArgs;
+
+export const beaconOptions: { [k: string]: Options } = {
+  ...beaconPathsOptions,
+  ...beaconExtraOptions,
+  ...beaconNodeOptions,
+  ...paramsOptions,
+  ...enrOptions,
 };

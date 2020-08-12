@@ -9,7 +9,7 @@ import {
   Uint64, Genesis
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
-import {generateEmptyBlock} from "../block";
+import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IMockBeaconApiOpts {
@@ -30,7 +30,7 @@ export class MockBeaconApi implements IBeaconApi {
     this.fork = opts && opts.fork
       || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = opts && opts.head || generateEmptyBlock();
-    this.genesisTime = (opts && opts.genesisTime) || (Date.now() / 1000);
+    this.genesisTime = (opts && opts.genesisTime) || Math.floor(Date.now() / 1000);
   }
 
   public async getValidator(): Promise<any> {

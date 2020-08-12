@@ -4,6 +4,7 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
 import {BlockSummary} from "../../chain";
@@ -44,7 +45,11 @@ export class ArchiveStatesTask implements ITask {
     );
     this.logger.profile("Archive States");
     // store the state of finalized checkpoint
-    const finalizedState = (await this.db.stateCache.get(this.finalized.stateRoot)).state;
+    const stateCache = await this.db.stateCache.get(this.finalized.stateRoot);
+    if (!stateCache) {
+      throw Error(`No state cache in db for finalized stateRoot ${toHexString(this.finalized.stateRoot)}`);
+    }
+    const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
     const prunedStates = this.pruned.map(summary => summary.stateRoot);

@@ -10,21 +10,22 @@ export async function getEthersSigner({
   rpcUrl,
   rpcPassword,
   ipcPath,
+  chainId
 }: {
   keystorePath?: string;
   keystorePassword?: string;
   rpcUrl?: string;
   rpcPassword?: string;
   ipcPath?: string;
+  chainId: number;
 }): Promise<ethers.Signer> {
   if (keystorePath) {
     const keystoreJson = fs.readFileSync(keystorePath, "utf8");
     const wallet = await ethers.Wallet.fromEncryptedJson(keystoreJson, keystorePassword);
     const eth1Provider = rpcUrl
       ? new ethers.providers.JsonRpcProvider(rpcUrl)
-      : ethers.getDefaultProvider();
-    wallet.connect(eth1Provider);
-    return wallet;
+      : new ethers.providers.InfuraProvider({name: "deposit", chainId});
+    return wallet.connect(eth1Provider);
   }
 
   if (rpcUrl) {

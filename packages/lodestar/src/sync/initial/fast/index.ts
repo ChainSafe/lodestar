@@ -16,7 +16,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-b
 import pipe from "it-pipe";
 import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
-import {GENESIS_EPOCH} from "../../../constants";
+import {GENESIS_EPOCH, Method} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
 
 export class FastSync
@@ -113,7 +113,7 @@ export class FastSync
 
   private setBlockImportTarget = (fromSlot?: Slot): void => {
     const lastTarget = fromSlot || this.blockImportTarget;
-    const newTarget = this.getNewBlockImportTarget(this.blockImportTarget);
+    const newTarget = this.getNewBlockImportTarget(lastTarget);
     this.logger.info(
       `Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`
     );
@@ -211,7 +211,8 @@ export class FastSync
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
     return this.network.getPeers().reduce( (validPeers: PeerId[], peer: PeerId) => {
       const rep = this.reps.getFromPeerId(peer);
-      if(rep && rep.latestStatus) {
+      if(rep && rep.supportedProtocols.includes(Method.BeaconBlocksByRange)
+        && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint.epoch) {
         validPeers.push(peer);
       }
       return validPeers;

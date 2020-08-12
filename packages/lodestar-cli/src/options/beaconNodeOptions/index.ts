@@ -4,9 +4,18 @@ import {eth1Options} from "./eth1";
 import {loggerOptions} from "./logger";
 import {metricsOptions} from "./metrics";
 import {networkOptions} from "./network";
+import {syncOptions} from "./sync";
+
+type RecursivePartial<T> = {
+  [P in keyof T]?:
+  T[P] extends (infer U)[] ? RecursivePartial<U>[] :
+    T[P] extends object ? RecursivePartial<T[P]> :
+      T[P];
+};
 
 // Re-export for convenience
-export type IBeaconNodeOptions = Partial<_IBeaconNodeOptions>;
+export type IBeaconNodeOptions = _IBeaconNodeOptions;
+export type IBeaconNodeOptionsPartial = RecursivePartial<_IBeaconNodeOptions>;
 
 export const beaconNodeOptions = {
   ...apiOptions,
@@ -14,4 +23,5 @@ export const beaconNodeOptions = {
   ...loggerOptions,
   ...metricsOptions,
   ...networkOptions,
+  ...syncOptions
 };

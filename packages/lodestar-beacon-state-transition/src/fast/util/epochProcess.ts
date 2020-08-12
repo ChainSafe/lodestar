@@ -1,4 +1,4 @@
-import {List} from "@chainsafe/ssz";
+import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -75,8 +75,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  // TODO fast read-only iteration here
-  state.validators.forEach((validator, i) => {
+  readOnlyForEach(state.validators, (validator, i) => {
     const v = createIFlatValidator(validator);
     const status = createIAttesterStatus(v);
 
@@ -165,7 +164,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     sourceFlag: number, targetFlag: number, headFlag: number,
   ): void => {
     const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
-    attestations.forEach((att) => {
+    readOnlyForEach(attestations, (att) => {
       // Load all the attestation details from the state tree once, do not reload for each participant
       const aggregationBits = att.aggregationBits;
       const attData = att.data;
@@ -176,7 +175,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       const attBeaconBlockRoot = attData.beaconBlockRoot;
       const attTarget = attData.target;
 
-      const attBits = Array.from(aggregationBits);
+      const attBits = readOnlyMap(aggregationBits, (b) => b);
       const attVotedTargetRoot = Root.equals(attTarget.root, actualTargetBlockRoot);
       const attVotedHeadRoot = Root.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
 
@@ -220,7 +219,6 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       });
     });
   };
-  // TODO fast read-only iteration here
   statusProcessEpoch(
     out.statuses, state.previousEpochAttestations, prevEpoch,
     FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER,

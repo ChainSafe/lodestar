@@ -14,16 +14,12 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   computeSubnetForAttestation,
-  getAttestingIndices,
   getCurrentSlot,
   getDomain,
-  getIndexedAttestation,
-  isAggregator,
   isValidAttesterSlashing,
   isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
-  verifyBlockSignature,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots,} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -33,12 +29,13 @@ import {IBeaconChain} from "../../chain";
 import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 import {
-  hasValidAttestationSlot,
-  isUnaggregatedAttestation,
   hasValidatorAttestedForThatTargetEpoch,
-  isAttestingToValidBlock} from "../../util/validation/attestation";
+  hasValidAttestationSlot,
+  isAttestingToValidBlock,
+  isUnaggregatedAttestation
+} from "../../util/validation/attestation";
 import {ExtendedValidatorResult} from "./constants";
-import {sleep} from "../../util/sleep";
+import {validateGossipBlock} from "./validation";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -62,58 +59,23 @@ export class GossipMessageValidator implements IGossipMessageValidator {
   }
 
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
-    const finalizedCheckpoint = await this.chain.getFinalizedCheckpoint();
-    const slot = signedBlock.message.slot;
-    // block is too old
-    if (slot <= computeStartSlotAtEpoch(this.config, finalizedCheckpoint.epoch)) {
+    try {
+      return await validateGossipBlock(this.config, this.chain, this.db, this.logger, signedBlock);
+    } catch (e) {
+      this.logger.error("Error while validating gossip block", e);
       return ExtendedValidatorResult.ignore;
     }
-
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    // block is not in the future
-    const blockTime = (state.genesisTime + slot * this.config.params.SECONDS_PER_SLOT) * 1000;
-    const tolerance = blockTime - (Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY);
-    if (tolerance > 0) {
-      if (tolerance >= this.config.params.SECONDS_PER_SLOT * 1000) {
-        this.logger.warn(`Receive future block at slot ${slot}, current time ${Date.now()}`);
-        return ExtendedValidatorResult.ignore;
-      }
-      // a client MAY queue future blocks for processing at the appropriate slot
-      await sleep(tolerance);
-    }
-    const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-    // skip block if its a known bad block
-    if (await this.db.badBlock.has(root)) {
-      this.logger.warn(`Received bad block, block root : ${root} `);
-      return ExtendedValidatorResult.reject;
-    }
-
-    const existingBlock = await this.chain.getBlockAtSlot(slot);
-    if (existingBlock && existingBlock.message.proposerIndex === signedBlock.message.proposerIndex) {
-      // same proposer submitted twice
-      return ExtendedValidatorResult.ignore;
-    }
-
-    if (state.slot < slot) {
-      processSlots(epochCtx, state, slot);
-    }
-
-    if (!verifyBlockSignature(this.config, state, signedBlock)) {
-      return ExtendedValidatorResult.reject;
-    }
-    const supposedProposerIndex = epochCtx.getBeaconProposer(slot);
-    if (supposedProposerIndex !== signedBlock.message.proposerIndex) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
   };
 
   public isValidIncomingCommitteeAttestation =
   async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    if(!hasValidAttestationSlot(this.config, state.genesisTime, attestation)) {
+    if(!hasValidAttestationSlot(this.config, this.chain.getGenesisTime(), attestation)) {
       return ExtendedValidatorResult.ignore;
     }
+    if (!await isAttestingToValidBlock(this.db, attestation)) {
+      return ExtendedValidatorResult.reject;
+    }
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     if (state.slot < attestation.data.slot) {
       processSlots(epochCtx, state, attestation.data.slot);
     }
@@ -127,10 +89,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await hasValidatorAttestedForThatTargetEpoch(this.config, this.db, state, epochCtx, attestation)) {
       return ExtendedValidatorResult.ignore;
     }
-    if (!await isAttestingToValidBlock(this.db, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    if (!isValidIndexedAttestation(this.config, state, getIndexedAttestation(this.config, state, attestation))) {
+    if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
       return ExtendedValidatorResult.reject;
     }
     return ExtendedValidatorResult.accept;
@@ -165,7 +124,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.ignore;
     }
 
-    if (getAttestingIndices(this.config, state, attestationData, aggregate.aggregationBits).length < 1) {
+    if (
+      epochCtx.getAttestingIndices(
+        attestationData,
+        aggregate.aggregationBits
+      ).length < 1
+    ) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -175,7 +139,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const selectionProof = aggregateAndProof.selectionProof;
-    if (!isAggregator(this.config, state, slot, attestationData.index, selectionProof)) {
+    if (!epochCtx.isAggregator(slot, attestationData.index, selectionProof)) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -211,7 +175,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       return ExtendedValidatorResult.reject;
     }
 
-    const indexedAttestation = getIndexedAttestation(this.config, state, aggregate);
+    const indexedAttestation = epochCtx.getIndexedAttestation(aggregate);
     if (!isValidIndexedAttestation(this.config, state, indexedAttestation)) {
       return ExtendedValidatorResult.reject;
     }

@@ -1,14 +1,16 @@
 import path from "path";
 import {IGlobalArgs} from "../../options";
+import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
+import {joinIfRelative} from "../../util";
 
-export interface IValidatorPaths {
+export type IValidatorPaths = IGlobalPaths & {
   validatorsDbDir: string;
   validatorDbDir: (pubkey: string) => string;
-}
+};
 
 /**
  * Defines the path structure of the validator files
- * 
+ *
  * ```bash
  * $validatorRootDir
  * └── validator-db
@@ -17,12 +19,17 @@ export interface IValidatorPaths {
  * ```
  */
 export function getValidatorPaths(options: Partial<IValidatorPaths> & Pick<IGlobalArgs, "rootDir">): IValidatorPaths {
+  options = {
+    ...options,
+    ...getGlobalPaths(options),
+  };
   const rootDir = options.rootDir;
-  const validatorsDbDir = path.join(rootDir, options.validatorsDbDir || "validator-db");
+  const validatorsDbDir = joinIfRelative(rootDir, options.validatorsDbDir || "validator-db");
   return {
+    ...options,
     validatorsDbDir,
     validatorDbDir: (pubkey: string) => path.join(validatorsDbDir, pubkey)
-  };
+  } as IValidatorPaths;
 }
 
 /**

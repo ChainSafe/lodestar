@@ -5,7 +5,6 @@ import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {sleep} from "../../util/sleep";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -74,14 +73,18 @@ export async function getBlockRange(
     chunks = (await Promise.all(
       chunks.map(async (chunk) => {
         const peer = peerBalancer.next();
-        const chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+        let chunkBlocks;
+        try {
+          chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+        } catch (e) {
+          chunkBlocks = null;
+        }
         if(chunkBlocks) {
           blocks = blocks.concat(chunkBlocks);
           return null;
         } else {
           logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} `
             +`from peer ${peer.toB58String()}`);
-          await sleep(1000);
           //if failed to obtain blocks, try in next round on another peer
           return chunk;
         }

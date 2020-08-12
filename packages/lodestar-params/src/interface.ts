@@ -28,6 +28,8 @@ export interface IBeaconParams {
   SECONDS_PER_ETH1_BLOCK: number;
 
   // Deposit contract
+  DEPOSIT_CHAIN_ID: number;
+  DEPOSIT_NETWORK_ID: number;
   DEPOSIT_CONTRACT_ADDRESS: Buffer;
 
   // Gwei Values

@@ -1,8 +1,6 @@
 import {
   EpochContext,
-  getAttestingIndicesFromCommittee,
   getCurrentSlot,
-  getIndexedAttestation,
   isValidIndexedAttestation
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -28,8 +26,8 @@ export function isUnaggregatedAttestation(
     processSlots(epochCtx, state, attestation.data.slot);
   }
   // Make sure this is unaggregated attestation
-  return getAttestingIndicesFromCommittee(
-    epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+  return epochCtx.getAttestingIndices(
+    attestation.data,
     attestation.aggregationBits
   ).length === 1;
 }
@@ -50,19 +48,12 @@ export async function hasValidatorAttestedForThatTargetEpoch(
   );
     // each attestation has only 1 validator index
   const existingValidatorIndexes = existingAttestations.map(
-    item => getAttestingIndicesFromCommittee(
-      epochCtx.getBeaconCommittee(
-        item.data.slot,
-        item.data.index
-      ),
+    item => epochCtx.getAttestingIndices(
+      item.data,
       item.aggregationBits
     )[0]);
     // attestation is unaggregated attestation as validated above
-  const committee = epochCtx.getBeaconCommittee(
-    attestation.data.slot,
-    attestation.data.index
-  );
-  const validatorIndex = getAttestingIndicesFromCommittee(committee, attestation.aggregationBits)[0];
+  const validatorIndex = epochCtx.getAttestingIndices(attestation.data, attestation.aggregationBits)[0];
   return existingValidatorIndexes.includes(validatorIndex);
 }
 
@@ -83,7 +74,7 @@ export async function validateAttestation(
   );
   assert.true(await isAttestingToValidBlock(db, attestation), "Attestation block missing or invalid");
   assert.true(
-    isValidIndexedAttestation(config, state, getIndexedAttestation(config, state, attestation)),
+    isValidIndexedAttestation(config, state, epochCtx.getIndexedAttestation(attestation)),
     "Invalid indexed attestation (signature/)"
   );
 }

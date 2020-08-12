@@ -1,18 +1,12 @@
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import * as fastStateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/duties";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
 
 describe("assemble validator duty", function () {
 
   const sandbox = sinon.createSandbox();
-  let committeeAssignmentStub: any;
-
-  beforeEach(() => {
-    committeeAssignmentStub = sandbox.stub(fastStateTransitionUtils, "getFastCommitteeAssignment");
-  });
 
   afterEach(() => {
     sandbox.restore();
@@ -22,7 +16,7 @@ describe("assemble validator duty", function () {
     const publicKey = Buffer.alloc(48, 1);
     const validatorIndex = 2;
     const epochCtx = new EpochContext(config);
-    committeeAssignmentStub.returns({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
+    epochCtx.getCommitteeAssignment = () => ({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
     const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, epochCtx, 2);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
@@ -34,7 +28,7 @@ describe("assemble validator duty", function () {
     const publicKey = Buffer.alloc(48, 1);
     const validatorIndex = 2;
     const epochCtx = new EpochContext(config);
-    committeeAssignmentStub.returns({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
+    epochCtx.getCommitteeAssignment = () => ({committeeIndex: 2, slot: 1, validators: [1, validatorIndex, 5]});
     const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, epochCtx, 3);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);
@@ -46,7 +40,7 @@ describe("assemble validator duty", function () {
     const publicKey = Buffer.alloc(48, 1);
     const validatorIndex = 2;
     const epochCtx = new EpochContext(config);
-    committeeAssignmentStub.returns(null);
+    epochCtx.getCommitteeAssignment = () => (null);
     const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, epochCtx, 3);
     expect(result).to.not.be.null;
     expect(result.validatorPubkey).to.be.equal(publicKey);

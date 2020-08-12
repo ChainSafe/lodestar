@@ -4,7 +4,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getAttestingIndicesFromCommittee,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -114,15 +113,14 @@ export class AttestationProcessor implements IAttestationProcessor {
     const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
     const ancestor = this.forkChoice.getAncestor(attestation.data.beaconBlockRoot as Uint8Array, targetSlot);
     assert.true(
-      ancestor && this.config.types.Root.equals(target.root, ancestor),
+      Boolean(ancestor && this.config.types.Root.equals(target.root, ancestor)),
       "FFG and LMD vote must be consistent with each other");
     const stateCtx = await this.db.stateCache.get(block.stateRoot);
-    assert.true(
-      !!stateCtx,
-      `Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`
-    );
-    const validators = getAttestingIndicesFromCommittee(
-      stateCtx.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index),
+    if (stateCtx === null) {
+      throw Error(`Missing state context for attestation block with stateRoot ${toHexString(block.stateRoot)}`);
+    }
+    const validators = stateCtx.epochCtx.getAttestingIndices(
+      attestation.data,
       attestation.aggregationBits
     );
     const balances = validators.map((index) => stateCtx.state.balances[index]);
