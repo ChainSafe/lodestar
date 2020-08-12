@@ -1,6 +1,6 @@
 import path from "path";
+import os from "os";
 import {Worker} from "worker_threads";
-import {expect} from "chai";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -18,6 +18,8 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
+      console.log("OS CPUs", os.cpus().map(cpu => cpu.model));
+
       const workers = [];
       const genesisTime = Math.floor(Date.now() / 1000);
 
@@ -33,14 +35,12 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
           checkpointEvent
         };
 
-        const worker = new Worker(path.join(__dirname, "threaded", "worker.js"), {
+        workers.push(new Worker(path.join(__dirname, "threaded", "worker.js"), {
           workerData: {
             path: "./noEth1SimWorker.ts",
             options,
           }
-        });
-
-        workers.push(worker);
+        }));
       }
 
       interface IJustifiedCheckpointEvent {
@@ -64,9 +64,9 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
         console.log("Success: Terminating workers");
         await Promise.all(workers.map(worker => worker.terminate()));
       } catch (e) {
-        console.log("Failure: Terminating workers");
+        console.log("Failure: Terminating workers. Error:", e);
         await Promise.all(workers.map(worker => worker.terminate()));
-        expect.fail(e);
+        throw e;
       }
     });
   }
