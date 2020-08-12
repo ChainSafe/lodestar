@@ -7,8 +7,8 @@ import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 
-describe("no eth1 sim (multi-node test)", function () {
-
+describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
+  const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
     SECONDS_PER_SLOT: 3,
@@ -18,7 +18,7 @@ describe("no eth1 sim (multi-node test)", function () {
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
   for (const nodeCount of [2, 4]) {
-    it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until justified`, async function () {
+    it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
       const nodes: BeaconNode[] = [];
@@ -76,7 +76,7 @@ describe("no eth1 sim (multi-node test)", function () {
 
       // Wait for finalized checkpoint on all nodes
       await Promise.all(nodes.map(node =>
-        waitForEvent<Checkpoint>(node.chain, "justifiedCheckpoint", 240000)
+        waitForEvent<Checkpoint>(node.chain, checkpointEvent, 240000)
       ));
     });
   }

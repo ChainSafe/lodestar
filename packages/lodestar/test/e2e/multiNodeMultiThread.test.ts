@@ -1,11 +1,13 @@
+import path from "path";
 import {Worker} from "worker_threads";
 import {expect} from "chai";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {waitForEvent} from "../../utils/events/resolver";
+import {toHexString} from "@chainsafe/ssz";
+import {waitForEvent} from "../utils/events/resolver";
 
-describe("no eth1 sim (multi-node test)", function () {
-
+describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
+  const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
     SECONDS_PER_SLOT: 2,
@@ -13,7 +15,7 @@ describe("no eth1 sim (multi-node test)", function () {
   };
 
   for (const nodeCount of [4]) {
-    it(`Run ${nodeCount} nodes, ${validatorsPerNode} validators each until justified`, async function () {
+    it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
       const workers = [];
@@ -28,9 +30,10 @@ describe("no eth1 sim (multi-node test)", function () {
           nodeIndex: i,
           startIndex: i * validatorsPerNode,
           validatorsPerNode,
+          checkpointEvent
         };
 
-        const worker = new Worker(__dirname + "/worker.js", {
+        const worker = new Worker(path.join(__dirname, "threaded", "worker.js"), {
           workerData: {
             path: "./noEth1SimWorker.ts",
             options,
@@ -41,14 +44,21 @@ describe("no eth1 sim (multi-node test)", function () {
       }
 
       interface IJustifiedCheckpointEvent {
-        event: "justifiedCheckpoint";
+        event: typeof checkpointEvent;
         checkpoint: Checkpoint;
       }
       // Wait for finalized checkpoint on all nodes
       try {
-        await Promise.all(workers.map(worker =>
+        await Promise.all(workers.map((worker, i) =>
           waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
-            return evt.event == "justifiedCheckpoint";
+            if (evt.event === checkpointEvent) {
+              const epoch = evt.checkpoint.epoch;
+              const rootHex = toHexString(evt.checkpoint.root);
+              console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, rootHex});
+              return true;
+            } else {
+              return false;
+            }
           })
         ));
         console.log("Success: Terminating workers");
@@ -61,4 +71,3 @@ describe("no eth1 sim (multi-node test)", function () {
     });
   }
 });
-
