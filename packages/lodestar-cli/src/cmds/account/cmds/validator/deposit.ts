@@ -91,7 +91,10 @@ The deposit contract address will be determined by the spec config flag.",
     // eslint-disable-next-line no-console
     console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 
-    const eth1Signer = await getEthersSigner(options);
+    const eth1Signer = await getEthersSigner({
+      ...options,
+      chainId: config.params.DEPOSIT_NETWORK_ID
+    });
 
     for (const validatorDir of validatorDirsToSubmit) {
       const {rlp, depositData} = validatorDir.eth1DepositData(config);
