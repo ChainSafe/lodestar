@@ -9,10 +9,10 @@ export function assembleAttesterDuty(
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   epochCtx: EpochContext,
   epoch: Epoch
-): AttesterDuty  {
+): AttesterDuty | null {
   const committeeAssignment = epochCtx.getCommitteeAssignment(epoch, validator.index);
   if (!committeeAssignment) {
-    throw Error(`No committeeAssignment for validator ${validator.index} at epoch ${epoch}`);
+    return null;
   }
   return {
     validatorPubkey: validator.publicKey,

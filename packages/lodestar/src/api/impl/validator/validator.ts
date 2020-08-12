@@ -44,6 +44,7 @@ import {IBeaconSync} from "../../../sync";
 import {validateAttestation} from "../../../util/validation/attestation";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {notNullish} from "../../../util/notNullish";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -165,25 +166,21 @@ export class ValidatorApi implements IValidatorApi {
     if(state.slot < currentSlot) {
       processSlots(epochCtx, state, currentSlot);
     }
-    const validatorIndexes = validatorPubKeys.map((key) => {
+    return validatorPubKeys.map((key): AttesterDuty | null => {
       const validatorIndex = epochCtx.pubkey2index.get(key);
-      if (validatorIndex === undefined || !Number.isInteger(validatorIndex)) {
-        throw Error(`Validator pubKey ${toHexString(key)} not in epochCtx`);
+      if (validatorIndex !== undefined && Number.isInteger(validatorIndex)) {
+        const validator = state.validators[validatorIndex];
+        if (validator) {
+          return assembleAttesterDuty(
+            this.config,
+            {publicKey: validator.pubkey, index: validatorIndex},
+            epochCtx,
+            epoch
+          );
+        }
       }
-      return validatorIndex;
-    });
-    return validatorIndexes.map((validatorIndex) => {
-      const validator = state.validators[validatorIndex];
-      if (!validator) {
-        throw Error(`Validator index ${validatorIndex} not in state`);
-      }
-      return assembleAttesterDuty(
-        this.config,
-        {publicKey: validator.pubkey, index: validatorIndex},
-        epochCtx,
-        epoch
-      );
-    });
+      return null;
+    }).filter(notNullish);
   }
 
   public async publishAggregateAndProof(
