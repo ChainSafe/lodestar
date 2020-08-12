@@ -1,6 +1,6 @@
 import * as bip39 from "bip39";
-import {mapValues, keys, values} from "lodash";
-import {PrivateKey} from "@chainsafe/bls";
+import {mapValues, values} from "lodash";
+import {generatePublicKey} from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
   deriveEth2ValidatorKeys,
@@ -12,7 +12,7 @@ import {randomPassword} from "../util";
  * @chainsafe/bls-keystore@1.0.0-beta8 requires a pubKey argument
  * While the library is not agnostic use this empty value 
  */
-const emptyPubkey = Buffer.from("");
+const emptyPubKey = Buffer.from("");
 
 export interface IWalletKeystoreJson {
   crypto: object;
@@ -44,8 +44,8 @@ export class Wallet extends Keystore {
    */
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = bip39.mnemonicToSeedSync(mnemonic);
-    
-    const wallet = (await this.create(password, seed, emptyPubkey, "")) as Wallet;
+
+    const wallet = new Wallet(await this.create(password, seed, emptyPubKey, ""));
     wallet.name = name;
     wallet.nextaccount = 0;
     wallet.version = 1;
@@ -58,7 +58,7 @@ export class Wallet extends Keystore {
    */
   toWalletObject(): IWalletKeystoreJson {
     return {
-      crypto: this.toObject(),
+      crypto: this.crypto,
       uuid: this.uuid,
       name: this.name,
       nextaccount: this.nextaccount,
@@ -101,20 +101,19 @@ export class Wallet extends Keystore {
 
     const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
-      const privateKey = PrivateKey.fromBytes(privKey);
-      const keystore = await Keystore.create(passwords[type], privKey, emptyPubkey, paths[type]);
-      // @chainsafe/bls-keystore@1.0.0-beta8 does not compute pubkey by default (it's okay)
-      keystore.pubkey = privateKey.toPublicKey().toHexString();
+      const publicKey = generatePublicKey(privKey);
+      const keystore = await Keystore.create(passwords[type], privKey, publicKey, paths[type]);
       return keystore;
     });
 
     // Update nextaccount last in case Keystore generation throws
     this.nextaccount += 1;
 
-    // return await Promise.all(keystores);
-    return Promise.all(
-      keystores
-    );
+    const resolved = (await Promise.all(values(keystores)));
+    return {
+      withdrawal: resolved[0],
+      signing: resolved[1],
+    }
   }
 
   /**

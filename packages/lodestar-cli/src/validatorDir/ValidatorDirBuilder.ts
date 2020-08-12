@@ -68,7 +68,7 @@ export class ValidatorDirBuilder {
     const pubkey = keystores.signing.pubkey;
     if (!pubkey) throw Error("signing keystore has no pubkey");
     
-    const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+    const dir = getValidatorDirPath({keystoresDir, pubkey});
     if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
       throw new YargsError(`validator dir for ${pubkey} already exists`);
     }

@@ -94,7 +94,7 @@ Importing to \t\t${keystoresDir}
     if (!pubkey) {
       throw Error("Invalid keystore, must contain .pubkey property");
     }
-    const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+    const dir = getValidatorDirPath({keystoresDir, pubkey});
     if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
       console.log(`Skipping existing validator ${pubkey}`);
       continue;
