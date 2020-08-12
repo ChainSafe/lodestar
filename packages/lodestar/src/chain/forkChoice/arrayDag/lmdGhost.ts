@@ -19,6 +19,7 @@ import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
 import {EventEmitter} from "events";
+import {notNullish} from "../../../util/notNullish";
 
 /**
  * RootHex > number ES6 Map that asserts return values
@@ -30,12 +31,12 @@ class NodeIndices {
     this.map = new Map<RootHex, number>();
   }
 
-  get(key: RootHex): number {
+  getStrict(key: RootHex): number {
     const value = this.map.get(key);
     if (!value) throw Error(`No index for root ${key}`);
     return value;
   }
-  getMaybe(key: RootHex): number | null {
+  get(key: RootHex): number | null {
     return this.map.get(key) ?? null;
   }
   set(key: RootHex, value: number): void {
@@ -63,18 +64,19 @@ export class Node {
 
   /**
    * Parent node index, the previous block
+   * After pruning the fork choice, the finalized node doesn't have a parent
    */
-  public parent: number;
+  public parent: number | null;
 
   /**
    * Child node index with the most weight
    */
-  public bestChild: number;
+  public bestChild: number | null;
 
   /**
    * Decendent node index with the most weight
    */
-  public bestTarget: number;
+  public bestTarget: number | null;
 
   /**
    * State's current justified check point respective to this block/node.
@@ -116,20 +118,12 @@ export class Node {
     this.bestChild = NO_NODE;
   }
 
-  public hasBestChild(): boolean {
-    return typeof(this.bestChild) === "number" && this.bestChild >= 0;
-  }
-
-  public hasParent(): boolean {
-    return typeof(this.parent) === "number" && this.parent >= 0;
-  }
-
   public shiftIndex(oldNodes: Node[], newNodeIndexes: NodeIndices): void {
-    if (this.hasBestChild()) {
+    if (this.bestChild !== null) {
       const bestChildRoot = oldNodes[this.bestChild].blockRoot;
       this.bestChild = newNodeIndexes.get(bestChildRoot);
     }
-    if (this.hasParent()) {
+    if (this.parent !== null) {
       const parentRoot = oldNodes[this.parent].blockRoot;
       // this may be undefined because its parent is deleted from node
       this.parent = newNodeIndexes.get(parentRoot);
@@ -138,7 +132,7 @@ export class Node {
       const bestTargetRoot = oldNodes[this.bestTarget].blockRoot;
       this.bestTarget = newNodeIndexes.get(bestTargetRoot);
     }
-    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.get(blockRoot));
+    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.getStrict(blockRoot));
   }
 
 }
@@ -173,13 +167,13 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
    * Last finalized block
    * According to the spec, finalized should never be null. It's only due to this constructor architecture
    */
-  private finalized: { node: Node; epoch: Epoch } | null;
+  private finalized: {node: Node | null; epoch: Epoch} | null;
 
   /**
    * Last justified block
    * According to the spec, justified should never be null. It's only due to this constructor architecture
    */
-  private justified: { node: Node; epoch: Epoch } | null;
+  private justified: {node: Node | null; epoch: Epoch} | null;
   /**
    * Best justified checkpoint.
    */
@@ -190,7 +184,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   public constructor(config: IBeaconConfig) {
     super();
     const slotFinder = (hex: string): Slot | null =>
-      this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)].slot : null;
+      this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.getStrict(hex)].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
     this.nodes = [];
     this.nodeIndices = new NodeIndices();
@@ -238,7 +232,9 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       slot,
       blockRoot: blockRootHex,
       stateRoot: stateRoot,
-      parent: this.nodeIndices.get(parentRootHex),
+      // genesis or first known block will not have a parent
+      // TODO: Fix when refactoring start / stop architecture
+      parent: this.nodeIndices.get(parentRootHex) ?? null,
       justifiedCheckpoint: {rootHex: toHexString(justifiedCheckpoint.root), epoch: justifiedCheckpoint.epoch},
       finalizedCheckpoint: {rootHex: toHexString(finalizedCheckpoint.root), epoch: finalizedCheckpoint.epoch},
     });
@@ -275,16 +271,16 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       const finalizedSlot = computeStartSlotAtEpoch(this.config, finalized.epoch);
       // Update justified if new justified is later than store justified
       // or if store justified is not in chain with finalized checkpoint
-      if (justifiedCheckpoint.epoch > this.justified.epoch ||
-        (finalized.node &&
-          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== finalized.node.blockRoot)) {
+      if (this.justified && (justifiedCheckpoint.epoch > this.justified.epoch ||
+        (finalized.node && this.justified.node &&
+          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== finalized.node.blockRoot))) {
         this.setJustified(justifiedCheckpoint);
       }
     }
     // if parent root exists, link to blockRoot
-    if (node.hasParent()) {
+    if (node.parent !== null) {
       // nodeIndex may not be correct after setFinalized
-      this.addChild(node.parent, this.nodeIndices.get(node.blockRoot));
+      this.addChild(node.parent, this.nodeIndices.getStrict(node.blockRoot));
     }
     if (shouldCheckBestTarget) {
       this.ensureCorrectBestTargets();
@@ -298,7 +294,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     const parent = this.nodes[parentIndex];
     const child = this.nodes[childIndex];
     parent.children[child.blockRoot] = childIndex;
-    if (!parent.hasBestChild()) {
+    if (parent.bestChild === null) {
       // propagate itself as best target as far as necessary
       parent.bestChild = childIndex;
       this.propagateWeightChange(childIndex, BigInt(0));
@@ -307,7 +303,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   public getNode(blockRootBuf: Uint8Array): Node | null {
     const blockRoot = toHexString(blockRootBuf);
-    const index = this.nodeIndices.getMaybe(blockRoot);
+    const index = this.nodeIndices.get(blockRoot);
     if (index === null) return null;
     return this.nodes[index] ?? null;
   }
@@ -322,8 +318,10 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   // Make sure bestTarget has correct justified_checkpoint and finalized_checkpoint
   public ensureCorrectBestTargets(): void {
-    const leafNodeIdxs = this.nodes.filter((n) => Object.values(n.children).length === 0)
-      .map(n => this.nodeIndices.get(n.blockRoot));
+    const leafNodeIdxs = this.nodes
+      .filter((n) => Object.values(n.children).length === 0)
+      .map(n => this.nodeIndices.get(n.blockRoot))
+      .filter(notNullish);
     const incorrectBestTargets = leafNodeIdxs.filter(idx => !this.isCandidateForBestTarget(idx));
     // step down as best targets
     incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, BigInt(0)));
@@ -344,7 +342,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
         const delta = agg.weight - agg.prevWeight;
         agg.prevWeight = agg.weight;
 
-        this.propagateWeightChange(this.nodeIndices.get(agg.target), delta);
+        this.propagateWeightChange(this.nodeIndices.getStrict(agg.target), delta);
       }
     });
 
@@ -358,6 +356,9 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   public headNode(): Node {
     if (this.justified === null) {
       throw Error("Justified checkpoint is null");
+    }
+    if (this.justified.node === null || this.justified.node.bestTarget === null) {
+      throw Error("No best target for justified checkpoint");
     }
     if (!this.synced) {
       this.syncChanges();
@@ -386,7 +387,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     }
     // navigate from the head node, up the chain until either the slot is found or the slot is passed
     while(node.slot !== slot) {
-      if (node.slot < slot || !node.hasParent()) {
+      if (node.slot < slot || node.parent === null) {
         return null;
       }
       node = this.nodes[node.parent];
@@ -408,7 +409,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
     return Object.values(this.nodes)
       .filter((node) => {
-        return node.hasParent()
+        return node.parent !== null
           && this.config.types.Root.equals(
             fromHexString(this.nodes[node.parent].blockRoot),
             blockRoot
@@ -475,7 +476,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     node.weight += delta;
     const isAddWeight = (delta > 0)? true :
       (delta < 0)? false : this.isCandidateForBestTarget(node.bestTarget);
-    if (node.hasParent()) {
+    if (node.parent !== null) {
       isAddWeight? this.onAddWeight(nodeIndex) : this.onRemoveWeight(nodeIndex);
       this.propagateWeightChange(node.parent, delta);
     }
@@ -484,7 +485,8 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   /**
    * Check if a leaf is eligible to be a head
    */
-  private isCandidateForBestTarget(nodeIndex: number): boolean {
+  private isCandidateForBestTarget(nodeIndex: number | null): boolean {
+    if (nodeIndex === null) return false;
     const node = this.nodes[nodeIndex];
     const justifiedCheckpoint = this.getJustifiedCheckpoint();
     const finalizedCheckpoint = this.getFinalizedCheckpoint();
@@ -502,10 +504,11 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
    */
   private onAddWeight(nodeIndex: number): void {
     const node = this.nodes[nodeIndex];
+    if (node.parent === null) return;
     const parentNode: Node = this.nodes[node.parent];
-    const isFirstBestChild = !parentNode.hasBestChild() &&
+    const isFirstBestChild = parentNode.bestChild === null &&
       this.isCandidateForBestTarget(node.bestTarget);
-    const needUpdateBestTarget = parentNode.hasBestChild() &&
+    const needUpdateBestTarget = parentNode.bestChild !== null &&
       (this.isBestChildOfParent(node) || this.betterThan(nodeIndex, parentNode.bestChild));
     if (isFirstBestChild || needUpdateBestTarget) {
       parentNode.bestChild = this.nodeIndices.get(node.blockRoot);
@@ -518,6 +521,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
    */
   private onRemoveWeight(nodeIndex: number): void {
     const node = this.nodes[nodeIndex];
+    if (node.parent === null) return;
     const parentNode = this.nodes[node.parent];
     // if this node is the best child it may lose that position
     if (this.isBestChildOfParent(node)) {
@@ -565,7 +569,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   }
 
   private isBestChildOfParent(node: Node): boolean {
-    if (!node.hasParent) {
+    if (node.parent === null) {
       return false;
     }
     const nodeIndex = this.nodeIndices.get(node.blockRoot);
@@ -599,11 +603,11 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     return {rootHex: this.finalized.node.blockRoot, epoch: this.finalized.epoch};
   }
 
-  private setFinalized(checkpoint: Checkpoint): {node: Node; epoch: number} {
+  private setFinalized(checkpoint: Checkpoint): {node: Node | null; epoch: Epoch} {
     this.synced = false;
     const rootHex = toHexString(checkpoint.root);
     const idx = this.nodeIndices.get(rootHex);
-    this.finalized = {node: this.nodes[idx], epoch: checkpoint.epoch};
+    this.finalized = {node: idx === null ? null : this.nodes[idx], epoch: checkpoint.epoch};
     this.prune();
     this.aggregator.prune();
     return this.finalized;
@@ -613,23 +617,23 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     const {root: blockRoot, epoch} = checkpoint;
     const rootHex = toHexString(blockRoot);
     const idx = this.nodeIndices.get(rootHex);
-    this.justified = {node: this.nodes[idx], epoch};
+    this.justified = {node: idx === null ? null : this.nodes[idx], epoch};
   }
 
   private getAncestorHex(root: RootHex, slot: Slot): RootHex | null {
     const idx = this.nodeIndices.get(root);
-    if (idx === undefined) {
+    if (idx === null) {
       return null;
     }
     const node = this.nodes[idx];
     if (node.slot > slot) {
-      if (node.hasParent()) {
+      if (node.parent !== null) {
         const parentNode = this.nodes[node.parent];
         return this.getAncestorHex(parentNode.blockRoot, slot);
       } else {
         return null;
       }
-      // return (node.hasParent())? this.getAncestor(parentNode.blockRoot, slot) : null;
+      // return (node.parent !== null)? this.getAncestor(parentNode.blockRoot, slot) : null;
     } else if (node.slot === slot) {
       return node.blockRoot;
     } else {
@@ -659,7 +663,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   private toBlockSummary(node: Node): BlockSummary {
     let parentRootBuf: Uint8Array;
-    if(node.hasParent()) {
+    if(node.parent !== null) {
       parentRootBuf = fromHexString(this.nodes[node.parent].blockRoot);
     } else {
       parentRootBuf = ZERO_HASH;

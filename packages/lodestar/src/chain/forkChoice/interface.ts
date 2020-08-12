@@ -79,4 +79,4 @@ export interface HexCheckpoint {
 }
 
 // non Existent node
-export const NO_NODE = -1;
+export const NO_NODE = null as null;

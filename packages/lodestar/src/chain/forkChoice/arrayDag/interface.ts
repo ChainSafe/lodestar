@@ -8,7 +8,8 @@ import {RootHex, HexCheckpoint} from "../interface";
 export interface NodeInfo {
   slot: Slot;
   blockRoot: RootHex;
-  parent: number;
+  // genesis or first known block will not have a parent
+  parent: number | null;
   justifiedCheckpoint: HexCheckpoint;
   finalizedCheckpoint: HexCheckpoint;
   stateRoot: Root;

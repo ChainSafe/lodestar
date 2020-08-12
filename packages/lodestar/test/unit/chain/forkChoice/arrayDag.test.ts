@@ -9,7 +9,7 @@ import {sleep} from "../../../../src/util/sleep";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {toHexString} from "@chainsafe/ssz";
 import {NO_NODE} from "../../../../src/chain";
-import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
+import {ArrayDagLMDGHOST, Node} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
 
 describe("ArrayDagLMDGHOST", () => {
   const genesis = Buffer.from("genesis");
@@ -44,6 +44,18 @@ describe("ArrayDagLMDGHOST", () => {
     parentRoot: Uint8Array,
     justifiedCheckpoint: Checkpoint,
     finalizedCheckpoint: Checkpoint): void => lmd.addBlock({slot, blockRoot, stateRoot, parentRoot, justifiedCheckpoint, finalizedCheckpoint});
+
+  const getNodeStrict = (root: Uint8Array): Node => {
+    const node = lmd.getNode(root);
+    if (node === null) throw Error(`No node for ${toHexString(root)}`);
+    return node;
+  };
+
+  const getAncestorStrict = (root: Uint8Array, slot: number): Uint8Array => {
+    const ancestor = lmd.getAncestor(root, slot);
+    if (ancestor === null) throw Error(`No ancestor for ${toHexString(root)} at ${slot}`);
+    return ancestor;
+  };
 
   beforeEach(() => {
     clock = sinon.useFakeTimers();
@@ -333,23 +345,23 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       // add vote for d
       lmd.addAttestation(blockD, 1,BigInt(3));
-      assert(lmd.isBestTarget(lmd.getNode(blockD), lmd.getNode(blockE)), "e should be best target of d");
-      assert(lmd.isBestTarget(lmd.getNode(blockC), lmd.getNode(blockE)), "e should be best target of c too");
-      assert(lmd.isBestTarget(lmd.getNode(blockB), lmd.getNode(blockE)), "e should be best target of b too");
-      assert(lmd.isBestChild(lmd.getNode(blockD), lmd.getNode(blockE)), "e should be best child of d");
+      assert(lmd.isBestTarget(getNodeStrict(blockD), getNodeStrict(blockE)), "e should be best target of d");
+      assert(lmd.isBestTarget(getNodeStrict(blockC), getNodeStrict(blockE)), "e should be best target of c too");
+      assert(lmd.isBestTarget(getNodeStrict(blockB), getNodeStrict(blockE)), "e should be best target of b too");
+      assert(lmd.isBestChild(getNodeStrict(blockD), getNodeStrict(blockE)), "e should be best child of d");
       assert.deepEqual(lmd.headBlockRoot(), blockE);
 
       // f set new justified/finalized check point
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotF, blockF, stateF, blockC, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
-      assert(lmd.getNode(blockD).hasBestChild() === false, "e is not best target so d has no best child");
+      assert(getNodeStrict(blockD).bestChild === null, "e is not best target so d has no best child");
       // so e is not best target anymore although d has more votes
       assert.deepEqual(lmd.headBlockRoot(), blockF, "f should be the only possible head since it has no conflict justified/finalized epoch");
 
       // add g as head candidate with good justified/finalized
       const slotG = 7 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotG, blockG, stateG, blockD, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
-      assert(lmd.isBestChild(lmd.getNode(blockD), lmd.getNode(blockG)), "g should be best child of d");
+      assert(lmd.isBestChild(getNodeStrict(blockD), getNodeStrict(blockG)), "g should be best child of d");
       assert.deepEqual(lmd.headBlockRoot(), blockG, "g should be the head because d has more votes anyway");
 
       // add h as as head candidate with good justified/finalized
@@ -464,9 +476,9 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
-      expect(Buffer.from(lmd.getAncestor(blockC, slotA))).to.be.deep.equal(blockA);
-      expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1))).to.be.deep.equal(blockA);
-      expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
+      expect(Buffer.from(getAncestorStrict(blockC, slotA))).to.be.deep.equal(blockA);
+      expect(Buffer.from(getAncestorStrict(blockC, slotA + 1))).to.be.deep.equal(blockA);
+      expect(Buffer.from(getAncestorStrict(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
       expect(lmd.getAncestor(genesis, GENESIS_SLOT - 1)).to.be.equal(null);
     });
   });
@@ -564,10 +576,10 @@ describe("ArrayDagLMDGHOST", () => {
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotF, blockF, stateF, blockE, {root: blockE, epoch: 5}, {root: blockD, epoch: 4});
       // a, b, c, genesis should be removed
-      expect(lmd.getNode(genesis)).to.be.undefined;
-      expect(lmd.getNode(blockA)).to.be.undefined;
-      expect(lmd.getNode(blockB)).to.be.undefined;
-      expect(lmd.getNode(blockC)).to.be.undefined;
+      expect(lmd.getNode(genesis)).to.be.null;
+      expect(lmd.getNode(blockA)).to.be.null;
+      expect(lmd.getNode(blockB)).to.be.null;
+      expect(lmd.getNode(blockC)).to.be.null;
       expect(lmd.getNode(blockD)).to.be.deep.equal({
         slot: 4 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockD),
