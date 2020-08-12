@@ -82,8 +82,10 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.verbose("Eth1 notifier is disabled, no need to process eth1 for proposing data");
       return;
     }
-    // TODO: refactor the this module to respect the "start should resolve quickly" interface
-    await this.startProcessEth1Blocks();
+    // no need await
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
   }
 
   public async stop(): Promise<void> {
@@ -102,11 +104,9 @@ export class EthersEth1Notifier implements IEth1Notifier {
     }
     this.eth1Source = pushable<Eth1EventsBlock>();
     // no need await
-    // startProcessEth1Blocks won't resolve until all blocks are processed, and
-    // getEth1BlockAndDepositEventsSource needs to return the source before that
-    // TODO: refactor the this module to respect the "start should resolve quickly" interface
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.startProcessEth1Blocks();
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
     return this.eth1Source;
   }
 
