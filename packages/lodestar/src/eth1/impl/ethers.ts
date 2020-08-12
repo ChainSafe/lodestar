@@ -238,7 +238,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
    * After genesis: true
    */
   public passCheckpoint(blockNumber: number): boolean {
-    return (!this.preGenesisCheckpoint || blockNumber >= this.preGenesisCheckpoint);
+    return (this.preGenesisCheckpoint === null || blockNumber >= this.preGenesisCheckpoint);
   }
 
   /**
@@ -331,14 +331,10 @@ export class EthersEth1Notifier implements IEth1Notifier {
     if(!this.contract) {
       await this.initContract();
     }
-    
     const lastEth1Data = await this.db.eth1Data.lastValue();
-    if (lastEth1Data) {
-      const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
-      this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
-      this.lastDepositCount = lastEth1Data.depositCount;
-    }
-    
+    const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
+    this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+    this.lastDepositCount = lastEth1Data? lastEth1Data.depositCount : 0;
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.config.params.DEPOSIT_NETWORK_ID}`
     );
