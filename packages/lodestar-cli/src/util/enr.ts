@@ -15,7 +15,7 @@ export function updateENR(enr: ENR, args: IENRArgs & IBeaconNodeOptions): void {
       throw new Error(`Invalid tcp multiaddr: ${e.message}`);
     }
   }
-  if (args.network.discv5.bindAddr) {
+  if (args.network.discv5?.bindAddr) {
     try {
       const udpOpts = Multiaddr(args.network.multiaddrs[0]).toOptions();
       if (udpOpts.transport === "udp") {

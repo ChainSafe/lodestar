@@ -20,10 +20,10 @@ fs.writeFileSync(docsMarkdownPath, renderMarkdownSections(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
-  const section: IMarkdownSection = {
+  const section = {
     title: `\`${commandJson}\``, 
     body: cmd.describe,
-    subsections: []
+    subsections: [] as IMarkdownSection[]
   };
   if (cmd.options) {
     section.subsections.push({
@@ -32,7 +32,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
       subsections: Object.entries(cmd.options)
         .filter(([, opt]) => !opt.hidden)
         .map(([key, opt]) => {
-          return {title: key, body: opt.description || opt.describe};
+          return {title: key, body: opt.description || opt.describe || ""};
         })
     });
   }

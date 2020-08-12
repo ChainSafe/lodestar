@@ -16,6 +16,7 @@ import {getValidatorApiClient} from "./utils/validator";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 
 /**
  * Run a beacon node
@@ -25,6 +26,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
 
   options = mergeConfigOptions(options);
   const peerId = await createPeerId();
+  if (!options.network.discv5) options.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
   options.network.discv5.enr = await createEnr(peerId);
   const beaconPaths = getBeaconPaths(options);
   options = {...options, ...beaconPaths};
