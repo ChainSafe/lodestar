@@ -141,7 +141,9 @@ export class BeaconSync implements IBeaconSync {
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
     this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain));
+      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain)).catch(e => {
+        this.logger.error("Error on syncPeersStatus", e);
+      });
     }, interval);
   }
 
