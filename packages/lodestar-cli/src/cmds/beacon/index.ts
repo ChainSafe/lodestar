@@ -1,11 +1,11 @@
-import {CommandModule} from "yargs";
+import {ICliCommand, ICliCommandOptions} from "../../util";
 import {IGlobalArgs} from "../../options";
-import {beaconOptions, IBeaconOptions} from "./options";
-import {run} from "./run";
+import {beaconOptions, IBeaconArgs} from "./options";
+import {beaconHandler} from "./handler";
 
-export const beacon: CommandModule<IGlobalArgs, IBeaconOptions> = {
+export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   command: "beacon",
   describe: "Run a beacon node",
-  builder: beaconOptions,
-  handler: run
+  options: beaconOptions as ICliCommandOptions<IBeaconArgs>,
+  handler: beaconHandler
 };

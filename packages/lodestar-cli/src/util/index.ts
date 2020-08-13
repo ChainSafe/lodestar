@@ -1,3 +1,4 @@
+export * from "./command";
 export * from "./config";
 export * from "./errors";
 export * from "./ethers";

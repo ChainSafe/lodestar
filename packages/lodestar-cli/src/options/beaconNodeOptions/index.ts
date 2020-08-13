@@ -4,6 +4,7 @@ import {eth1Options} from "./eth1";
 import {loggerOptions} from "./logger";
 import {metricsOptions} from "./metrics";
 import {networkOptions} from "./network";
+import {syncOptions} from "./sync";
 
 type RecursivePartial<T> = {
   [P in keyof T]?:
@@ -22,4 +23,5 @@ export const beaconNodeOptions = {
   ...loggerOptions,
   ...metricsOptions,
   ...networkOptions,
+  ...syncOptions
 };

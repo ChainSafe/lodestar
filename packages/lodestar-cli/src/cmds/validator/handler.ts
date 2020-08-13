@@ -1,28 +1,26 @@
 import fs from "fs";
 import process from "process";
-import {Arguments} from "yargs";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
-
+import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
-import {IValidatorCliOptions} from "./options";
+import {IValidatorCliArgs} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
-import {initHandler as initCmd} from "../init/init";
-import {IInitOptions} from "../init/options";
+import {initCmd} from "../init/handler";
 
 /**
  * Run a validator client
  */
-export async function run(options: Arguments<IValidatorCliOptions>): Promise<void> {
+export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
-  await initCmd(options as unknown as IInitOptions);
+  await initCmd(options);
 
   const server = options.server;
   const force = options.force;
