@@ -19,10 +19,13 @@ interface IWalletCreateArgs {
   mnemonicOutputPath?: string;
 }
 
-function validatePassphraseFile(passphraseFile: string): void {
+function validatePassphraseFilename(passphraseFile: string): void {
   if (path.parse(passphraseFile).ext !== ".pass") {
     throw new YargsError("passphraseFile must end with .pass, make sure to not provide the actual password");
   }
+}
+
+function maybeCreatePassphraseFile(passphraseFile: string): void {
   if (!fs.existsSync(passphraseFile)) {
     writeFile600Perm(passphraseFile, randomPassword());
   }
@@ -76,7 +79,9 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
     // Create a new random mnemonic.
     const mnemonic = bip39.generateMnemonic();
 
-    validatePassphraseFile(passphraseFile);
+    validatePassphraseFilename(passphraseFile);
+    maybeCreatePassphraseFile(passphraseFile);
+
     const password = readPassphraseFile(passphraseFile);
 
     const walletManager = new WalletManager(accountPaths);
