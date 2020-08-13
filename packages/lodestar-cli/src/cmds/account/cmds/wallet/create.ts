@@ -43,8 +43,7 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
     },
   
     type: {
-      description: `The type of wallet to create. Only HD (hierarchical-deterministic)
-  wallets are supported presently.`,
+      description: `The type of wallet to create. Only HD (hierarchical-deterministic) wallets are supported presently.`,
       choices: ["hd"],
       default: "hd",
       type: "string"
