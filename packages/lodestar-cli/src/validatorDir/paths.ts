@@ -1,4 +1,5 @@
 import path from "path";
+import {add0xPrefix} from "../util/format";
 
 export const VOTING_KEYSTORE_FILE = "voting-keystore.json";
 export const WITHDRAWAL_KEYSTORE_FILE = "withdrawal-keystore.json";
@@ -13,13 +14,13 @@ export const LOCK_FILE = ".lock";
 // Dynamic paths computed from the validator pubkey
 
 export function getValidatorDirPath(
-  {keystoresDir, pubkey}: {keystoresDir: string; pubkey: string}
+  {keystoresDir, pubkey, prefixed}: {keystoresDir: string; pubkey: string; prefixed?: boolean}
 ): string {
-  return path.join(keystoresDir, pubkey);
+  return path.join(keystoresDir, prefixed ? add0xPrefix(pubkey) : pubkey);
 }
 
 export function getValidatorPassphrasePath(
-  {secretsDir, pubkey}: {secretsDir: string; pubkey: string}
+  {secretsDir, pubkey, prefixed}: {secretsDir: string; pubkey: string; prefixed?: boolean}
 ): string {
-  return path.join(secretsDir, pubkey);
+  return path.join(secretsDir, prefixed ? add0xPrefix(pubkey) : pubkey);
 }
