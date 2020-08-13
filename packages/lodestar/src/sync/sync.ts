@@ -14,6 +14,8 @@ import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} fr
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IEth1Notifier} from "../eth1";
+import {toHexString} from "@chainsafe/ssz";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -30,6 +32,7 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly eth1: IEth1Notifier;
   private readonly peerReputations: IReputationStore;
 
   private mode: SyncMode;
@@ -47,6 +50,7 @@ export class BeaconSync implements IBeaconSync {
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
+    this.eth1 = modules.eth1;
     this.logger = modules.logger;
     this.peerReputations = modules.reputationStore;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
@@ -80,7 +84,7 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.regularSync.removeListener("syncCompleted", this.onSyncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -133,9 +137,18 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
-    this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
+    this.regularSync.on("syncCompleted", this.onSyncCompleted.bind(this));
     await this.gossip.start();
     await this.regularSync.start();
+  }
+
+  private async onSyncCompleted(): Promise<void> {
+    this.stopSyncTimer();
+    const state = await this.chain.getHeadState();
+    const eth1Votes = state.eth1DataVotes;
+    const blockHash = (eth1Votes && eth1Votes.length > 0)?
+      eth1Votes[eth1Votes.length - 1].blockHash : state.eth1Data.blockHash;
+    await this.eth1.collectEth1Data(toHexString(blockHash));
   }
 
   private startSyncTimer(interval: number): void {

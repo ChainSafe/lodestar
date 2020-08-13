@@ -11,6 +11,7 @@ import {IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
+import {IEth1Notifier} from "../eth1";
 
 export interface IBeaconSync extends IService {
   getSyncStatus(): Promise<SyncingStatus>;
@@ -34,6 +35,7 @@ export interface ISyncModules {
   reputationStore: IReputationStore;
   logger: ILogger;
   chain: IBeaconChain;
+  eth1: IEth1Notifier;
   initialSync?: InitialSync;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;

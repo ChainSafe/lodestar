@@ -50,10 +50,11 @@ export class EthersEth1Notifier implements IEth1Notifier {
   private lastProcessedEth1BlockNumber: number;
   private lastDepositCount: number;
   /**
-   * Pregenesis block number to check remaining time/block to form genesis.
-   * This helps avoid calling too many unnecessary getBlock() calls before genesis.
+   * Pregenesis: block number to check remaining time/block to form genesis.
+   * After genesis: single checkpoint, always getBlock after we pass it.
+   * This helps avoid calling too many unnecessary getBlock() calls before/after genesis.
    */
-  private preGenesisCheckpoint: number;
+  private checkpoint: number;
   private eth1Source: Pushable<Eth1EventsBlock>;
 
   public constructor(opts: IEthersEth1Options, {config, db, logger}: IEthersEth1Modules) {
@@ -71,7 +72,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
       );
     }
     this.contract = opts.contract;
-    this.preGenesisCheckpoint = undefined;
+    this.checkpoint = undefined;
   }
 
   /**
@@ -93,6 +94,14 @@ export class EthersEth1Notifier implements IEth1Notifier {
     // stop processing eth1
     this.startedProcessEth1 = false;
     this.logger.verbose("Eth1 notifier stopped");
+  }
+
+  /**
+   * Sync calls this after it's up to head.
+   * @param blockHash block hash of last eth1 vote
+   */
+  public async collectEth1Data(blockHash: string): Promise<void> {
+    this.checkpoint = (await this.getBlock(blockHash)).number;
   }
 
   /**
@@ -156,7 +165,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
           `${this.lastProcessedEth1BlockNumber + 1} to ${endRangeBlockNumber}`);
       } catch (ex) {
         this.logger.warn(`failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
-          + ` to ${endRangeBlockNumber}`, ex);
+          + ` to ${endRangeBlockNumber}`);
         continue;
       }
       let success = true;
@@ -208,25 +217,19 @@ export class EthersEth1Notifier implements IEth1Notifier {
       this.logger.verbose(`Processing ${blockDepositEvents.length} deposit events of eth1 block ${blockNumber}`);
       this.lastDepositCount = blockDepositEvents[blockDepositEvents.length - 1].index + 1;
     }
-    const shouldGetBlock = this.lastDepositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT &&
-      this.passCheckpoint(blockNumber);
     // preGenesis: avoid calling getBlock() frequently if we are too far away from genesis time
-    // postGenesis: always call getBlock to store eth1Data
-    if (shouldGetBlock) {
+    // postGenesis: avoid calling getBlock() frequently until sync is completed
+    if (this.shouldGetBlock(blockNumber)) {
       const block = await this.getBlock(blockNumber);
       if (!block) {
         this.logger.verbose(`eth1 block ${blockNumber} not found`);
         return false;
       }
-      const beforeGenesis = this.setCheckpoint(block);
-      if (beforeGenesis) {
-        this.eth1Source && blockDepositEvents.length > 0 && this.eth1Source.push({events: blockDepositEvents});
-        return true;
-      } else {
-        // maybe no deposit events for this block, still need to push to form genesis
-        this.eth1Source && this.eth1Source.push({events: blockDepositEvents, block});
-        return await this.processEth1Data(block);
-      }
+      // set the next checkpoint
+      const shouldProcessEth1Data = this.setCheckpoint(block);
+      // maybe no deposit events for this block, still need to push to form genesis
+      if (this.eth1Source) this.eth1Source.push({events: blockDepositEvents, block});
+      if (shouldProcessEth1Data) return await this.processEth1Data(block);
     } else {
       this.eth1Source && blockDepositEvents.length > 0 && this.eth1Source.push({events: blockDepositEvents});
     }
@@ -234,19 +237,42 @@ export class EthersEth1Notifier implements IEth1Notifier {
   }
 
   /**
-   * Before genesis: return blockNumber >= checkpoint
-   * After genesis: true
+   * Decide if we should get eth1 block or not.
    */
-  public passCheckpoint(blockNumber: number): boolean {
-    return (!this.preGenesisCheckpoint || blockNumber >= this.preGenesisCheckpoint);
+  public shouldGetBlock(blockNumber: number): boolean {
+    const passed = this.passCheckpoint(blockNumber);
+    return (this.eth1Source)?
+      this.lastDepositCount >= this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT && passed : passed;
   }
 
   /**
-   * Before genesis: set the next checkpoint from the current checkpoint.
-   * Ideally it's 1024 blocks to genesis, then 512 -> 256 -> ... 2 -> 1 -> 0
-   * @returns true of before genesis, false otherwise
+   * return blockNumber >= checkpoint
+   * pregenesis: have checkpoint from beginning as deployedAt
+   * aftergenesis: have single checkpoint after sync is completed
+   */
+  public passCheckpoint(blockNumber: number): boolean {
+    return (this.checkpoint)? blockNumber >= this.checkpoint : false;
+  }
+
+  /**
+   * Return true to processEth1Data, false otherwise.
+   * @param block
    */
   public setCheckpoint(block: Eth1Block): boolean {
+    if (this.eth1Source) {
+      return this.setCheckpointPreGenesis(block);
+    }
+    // aftergenesis: single checkpoint, process eth1 data from now
+    return true;
+  }
+
+  /**
+   * Pregenesis: set the next checkpoint from the current checkpoint.
+   * if it's 1024 blocks to timestamp of eth1 block forming genesis,
+   * we set checkpoint to 512 -> 256 -> ... 2 -> 1 -> 0
+   * @returns true if should process Eth1Data, false otherwise
+   */
+  public setCheckpointPreGenesis(block: Eth1Block): boolean {
     const estimatedStateTime = calculateStateTime(this.config, block.timestamp);
     if (estimatedStateTime < this.config.params.MIN_GENESIS_TIME) {
       const numBlocksToGenesis = Math.floor(
@@ -254,16 +280,15 @@ export class EthersEth1Notifier implements IEth1Notifier {
       if (numBlocksToGenesis <= 2) {
         this.logger.info(`At block ${block.number}, probably ${numBlocksToGenesis} blocks` +
           " to genesis time if there is enough validators");
-        // if it's too close to genesis time then always getBlock()
-        this.preGenesisCheckpoint = undefined;
+        // if it's too close to genesis time then always getBlock(), keep old checkpoint
       } else {
-        this.preGenesisCheckpoint = block.number + Math.floor(numBlocksToGenesis / 2);
-        this.logger.info(`Set checkpoint to ${this.preGenesisCheckpoint}`);
+        this.checkpoint = block.number + Math.floor(numBlocksToGenesis / 2);
+        this.logger.info(`Set checkpoint to ${this.checkpoint}`);
       }
-      return true;
-    } else {
-      this.preGenesisCheckpoint = undefined;
       return false;
+    } else {
+      // always getBlock() from now on, keep old checkpoint
+      return true;
     }
   }
 
@@ -335,6 +360,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
     const lastEth1Data = await this.db.eth1Data.lastValue();
     const lastProcessedBlockTag = await this.getLastProcessedBlockTag(lastEth1Data);
     this.lastProcessedEth1BlockNumber = (await this.getBlock(lastProcessedBlockTag)).number;
+    // after genesis: checkpoint is undefined until sync's completed
+    if (this.eth1Source) this.checkpoint = this.lastProcessedEth1BlockNumber;
     this.lastDepositCount = lastEth1Data? lastEth1Data.depositCount : 0;
     this.logger.info(
       `Started listening to eth1 provider ${this.opts.provider.url} on chain ${this.config.params.DEPOSIT_NETWORK_ID}`

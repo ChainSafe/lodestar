@@ -15,10 +15,12 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../lib/sync";
+import {IEth1Notifier, EthersEth1Notifier} from "../../../src/eth1";
 
 describe("sync", function () {
 
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let eth1Stub: SinonStubbedInstance<IEth1Notifier>;
   let reqRespStub: SinonStubbedInstance<IReqRespHandler>;
   let attestationCollectorStub: SinonStubbedInstance<AttestationCollector>;
   let gossipStub: SinonStubbedInstance<IGossipHandler>;
@@ -33,6 +35,7 @@ describe("sync", function () {
       opts,
       {
         chain: chainStub,
+        eth1: eth1Stub,
         config,
         db: sinon.createStubInstance(BeaconDb),
         regularSync: regularSyncStub,
@@ -48,6 +51,7 @@ describe("sync", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
+    eth1Stub = sinon.createStubInstance(EthersEth1Notifier);
     reqRespStub = sinon.createStubInstance(BeaconReqRespHandler);
     attestationCollectorStub = sinon.createStubInstance(AttestationCollector);
     gossipStub = sinon.createStubInstance(BeaconGossipHandler);

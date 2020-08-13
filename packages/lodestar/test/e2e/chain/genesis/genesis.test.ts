@@ -13,7 +13,7 @@ import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../../../src/util/sleep";
 
-describe("BeaconChain", function() {
+describe("Altona genesis state", function() {
   this.timeout(10 * 60 * 1000);
 
   let eth1Notifier: IEth1Notifier;

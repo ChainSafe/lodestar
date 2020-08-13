@@ -23,6 +23,7 @@ export interface IDepositEvent extends DepositData {
 export interface IEth1Notifier {
   start(): Promise<void>;
   stop(): Promise<void>;
+  collectEth1Data(blockHash: string): Promise<void>;
   getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>>;
   endEth1BlockAndDepositEventsSource(): Promise<void>;
 

@@ -11,6 +11,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public constructor() {
     super();
   }
+  public async collectEth1Data(blockHash: string): Promise<void> {}
 
   public async start(): Promise<void> {}
   public async stop(): Promise<void> {}
@@ -25,9 +26,6 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   }
   public async getDepositCount(blockTag: string | number): Promise<number> {
     return 0;
-  }
-  public async getEth1Data(blockHash: string): Promise<Eth1Data> {
-    return null as unknown as Eth1Data;
   }
   public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
     return [];

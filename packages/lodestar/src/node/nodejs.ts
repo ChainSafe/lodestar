@@ -110,6 +110,7 @@ export class BeaconNode {
       config,
       db: this.db,
       chain: this.chain,
+      eth1: this.eth1,
       network: this.network,
       reputationStore: this.reps,
       logger: logger.child(this.conf.logger.sync),

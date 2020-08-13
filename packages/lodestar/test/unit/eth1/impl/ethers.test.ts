@@ -80,10 +80,6 @@ describe("Eth1Notifier", () => {
     });
     await eth1.start();
     expect(provider.getBlock.called).to.be.false;
-    // cannot start if subscribe=false
-    await eth1.start();
-    expect(provider.getBlock.called).to.be.false;
-    // should start if subscribe=true
     const lastProcessedEth1Data = {
       blockHash: Buffer.alloc(32, 1),
       depositRoot: Buffer.alloc(32, 2),
@@ -94,7 +90,7 @@ describe("Eth1Notifier", () => {
     } as ethers.providers.Block;
     const currentBlockNumber = lastProcessedBlock.number;
     db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
-    provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
+    provider.getBlock.resolves(lastProcessedBlock);
     provider.getBlockNumber.resolves(currentBlockNumber);
     const eth1Source = await eth1.getEth1BlockAndDepositEventsSource();
     expect(eth1Source).not.to.be.undefined;
@@ -133,9 +129,9 @@ describe("Eth1Notifier", () => {
     expect(block).to.not.be.null;
   });
 
-  it("should set checkpoints correctly - correct SECONDS_PER_ETH1_BLOCK", () => {
-    // initially preGenesisCheckpoint is undefined
-    expect(eth1.passCheckpoint(3001)).to.be.true;
+  it("should set checkpoints correctly - pregenesis - correct SECONDS_PER_ETH1_BLOCK", () => {
+    // initially checkpoint is undefined
+    expect(eth1.passCheckpoint(3001)).to.be.false;
     const setCheckpoint = (blockNumber: number): void => {
       // assuming 3000 is genesis, this is 1000 blocks to genesis
       eth1.setCheckpoint({number: blockNumber, timestamp:
@@ -145,6 +141,7 @@ describe("Eth1Notifier", () => {
       expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
       expect(eth1.passCheckpoint(blockNumber)).to.be.true;
     };
+    eth1.getEth1BlockAndDepositEventsSource();
     // assuming 3000 is genesis, this is 1000 blocks to genesis
     setCheckpoint(2000);
     expectCheckpoint(2500);
@@ -171,10 +168,10 @@ describe("Eth1Notifier", () => {
     expect(eth1.passCheckpoint(3000)).to.be.true;
   });
 
-  it("should set checkpoints correctly - eth1 runs faster than expected", () => {
+  it("should set checkpoints correctly - pregenesis - eth1 runs faster than expected", () => {
     const secPerBlock = config.params.SECONDS_PER_ETH1_BLOCK - 2;
     // initially preGenesisCheckpoint is undefined
-    expect(eth1.passCheckpoint(3001)).to.be.true;
+    expect(eth1.passCheckpoint(3001)).to.be.false;
     const setCheckpoint = (blockNumber: number): void => {
       // assuming 3000 is genesis, this is 1000 blocks to genesis
       eth1.setCheckpoint({number: blockNumber, timestamp:
@@ -184,6 +181,7 @@ describe("Eth1Notifier", () => {
       expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
       expect(eth1.passCheckpoint(blockNumber)).to.be.true;
     };
+    eth1.getEth1BlockAndDepositEventsSource();
     setCheckpoint(2000);
     expectCheckpoint(2428);
     setCheckpoint(2428);
@@ -211,6 +209,87 @@ describe("Eth1Notifier", () => {
     expect(eth1.passCheckpoint(2999)).to.be.true;
     expect(eth1.passCheckpoint(3000)).to.be.true;
   });
+
+  it("should set checkpoint correctly - after genesis", async () => {
+    // https://medalla.beaconcha.in/block/48463
+    // time of block 48463, eth1 block 3203432
+    const clock = sinon.useFakeTimers(new Date("2020-08-11 06:32:44Z").getTime());
+    const lastProcessedEth1Data = {
+      blockHash: Buffer.alloc(32, 1),
+      depositRoot: Buffer.alloc(32, 2),
+      depositCount: 5,
+    };
+    const lastProcessedBlock = {
+      number: 3085928,//medalla deployedAt
+    } as ethers.providers.Block;
+    const currentBlockNumber = lastProcessedBlock.number;
+    db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
+    provider.getBlock.onFirstCall().resolves(lastProcessedBlock);
+    provider.getBlockNumber.resolves(currentBlockNumber);
+    await eth1.start();
+    // sync completed
+    provider.getBlock.onSecondCall().resolves({number: 3203432} as Eth1Block);
+    await eth1.collectEth1Data("");
+    expect(eth1.shouldGetBlock(3203432)).to.be.true;
+    expect(eth1.shouldGetBlock(3203433)).to.be.true;
+    expect(eth1.shouldGetBlock(3203434)).to.be.true;
+
+    clock.restore();
+  });
+
+  describe("shouldGetBlock", () => {
+    it("after genesis, sync not completed", async () => {
+      provider.getBlock.resolves({number: 3085928} as ethers.providers.Block);
+      await eth1.start();
+      expect(eth1.shouldGetBlock(3188162)).to.be.false;
+    });
+
+    it("after genesis, sync is completed", async () => {
+      provider.getBlock.resolves({number: 3085928} as ethers.providers.Block);
+      await eth1.start();
+      await new Promise((resolve) => {
+        provider.getBlockNumber.callsFake(async () => {
+          resolve();
+          return 0;
+        });
+      });
+      provider.getBlock.onSecondCall().resolves({number: 3188162} as Eth1Block);
+      // sync is completed
+      await eth1.collectEth1Data("");
+      expect(eth1.passCheckpoint(3188161)).to.be.false;
+      expect(eth1.passCheckpoint(3188162)).to.be.true;
+      expect(eth1.shouldGetBlock(3188161)).to.be.false;
+      expect(eth1.shouldGetBlock(3188162)).to.be.true;
+    });
+
+    it("pregenesis, not enough deposit count", async () => {
+      await eth1.getEth1BlockAndDepositEventsSource();
+      expect(eth1.shouldGetBlock(100)).to.be.false;
+    });
+
+    it("pregenesis, enough deposit count", async () => {
+      const lastProcessedEth1Data = {
+        blockHash: Buffer.alloc(32, 1),
+        depositRoot: Buffer.alloc(32, 2),
+        depositCount: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT  + 1,
+      };
+      db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
+      // initialize checkpoint
+      provider.getBlock.resolves({number: 3085928} as ethers.providers.Block);
+      await eth1.getEth1BlockAndDepositEventsSource();
+      await new Promise((resolve) => {
+        provider.getBlockNumber.callsFake(async () => {
+          resolve();
+          return 0;
+        });
+      });
+
+      expect(eth1.shouldGetBlock(3085928 - 1)).to.be.false;
+      expect(eth1.shouldGetBlock(3085928)).to.be.true;
+    });
+
+  });
+
 
   it.skip("should get deposit events from a block", async () => {
     provider.getLogs.resolves([]);
