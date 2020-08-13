@@ -42,7 +42,7 @@ export class AttestationProcessor implements IAttestationProcessor {
    *
    * @param attestation
    */
-  public async receiveAttestation(attestation: Attestation): Promise<ExtendedValidatorResult> {
+  public async receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
     const attestationLogContext  = {
       attestationHash: toHexString(attestationHash),

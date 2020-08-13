@@ -64,6 +64,8 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
+  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext|null>;
+
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;

@@ -9,7 +9,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest, Number64,
+  ForkDigest, Number64, Root,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -124,6 +124,18 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       return null;
     }
     return this.db.block.get(summary.blockRoot);
+  }
+
+  public async getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
+    const blockSummary = this.forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
+    if(!blockSummary) {
+      return null;
+    }
+    const stateContext = await this.db.stateCache.get(blockSummary.stateRoot);
+    if(!stateContext) {
+      return null;
+    }
+    return stateContext;
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
