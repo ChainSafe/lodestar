@@ -168,6 +168,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.clock.start();
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
+    await this.attestationProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkVersion", this.handleForkVersionChanged);
     await this.restoreHeadState(state, epochCtx);
@@ -181,6 +182,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       await this.clock.stop();
     }
 
+    await this.attestationProcessor.stop();
     await this.blockProcessor.stop();
     this.removeListener("forkVersion", this.handleForkVersionChanged);
   }

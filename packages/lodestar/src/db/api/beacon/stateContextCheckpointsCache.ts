@@ -31,6 +31,9 @@ export class CheckpointStateCache {
 
   public async add(cp: Checkpoint, item: ITreeStateContext): Promise<void> {
     const key = toHexString(this.config.types.Checkpoint.hashTreeRoot(cp));
+    if(this.cache[key]) {
+      return;
+    }
     this.cache[key] = this.clone(item);
     if(this.epochIndex[cp.epoch]) {
       this.epochIndex[cp.epoch].push(key);
