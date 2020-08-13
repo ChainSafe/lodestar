@@ -2,40 +2,30 @@ import {IGossipMessageValidator} from "./interface";
 import {
   Attestation,
   AttesterSlashing,
-  ProposerSlashing,
-  SignedAggregateAndProof,
-  SignedBeaconBlock,
-  SignedVoluntaryExit,
+  ProposerSlashing, SignedAggregateAndProof,
+  SignedBeaconBlock, SignedVoluntaryExit,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  computeSubnetForAttestation,
-  getCurrentSlot,
-  getDomain,
   isValidAttesterSlashing,
-  isValidIndexedAttestation,
   isValidProposerSlashing,
-  isValidVoluntaryExit,
+  computeEpochAtSlot,
+  getDomain, computeSigningRoot, computeStartSlotAtEpoch, isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots,} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
-import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
-import {
-  hasValidatorAttestedForThatTargetEpoch,
-  hasValidAttestationSlot,
-  isAttestingToValidBlock,
-  isUnaggregatedAttestation
-} from "../../util/validation/attestation";
 import {ExtendedValidatorResult} from "./constants";
-import {validateGossipBlock} from "./validation";
+import {hasValidAttestationSlot, validateGossipAttestation, validateGossipBlock} from "./validation";
+import {toHexString} from "@chainsafe/ssz";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {DomainType} from "../../constants";
+import {Signature, verify} from "@chainsafe/bls";
+import {
+  isValidIndexedAttestation
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -69,30 +59,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingCommitteeAttestation =
   async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
-    if(!hasValidAttestationSlot(this.config, this.chain.getGenesisTime(), attestation)) {
+    try {
+      return await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
+    } catch (e) {
+      this.logger.error("Error while validating gossip attestation", e);
       return ExtendedValidatorResult.ignore;
     }
-    if (!await isAttestingToValidBlock(this.db, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    if (state.slot < attestation.data.slot) {
-      processSlots(epochCtx, state, attestation.data.slot);
-    }
-    if (subnet !== computeSubnetForAttestation(this.config, state, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    // Make sure this is unaggregated attestation
-    if (!isUnaggregatedAttestation(this.config, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    if (await hasValidatorAttestedForThatTargetEpoch(this.config, this.db, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.ignore;
-    }
-    if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
   };
 
   public isValidIncomingAggregateAndProof =
@@ -101,12 +73,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const aggregate = aggregateAndProof.aggregate;
     const attestationData = aggregate.data;
     const slot = attestationData.slot;
+    const attestationRoot = this.config.types.Attestation.hashTreeRoot(aggregate);
     const {state, epochCtx} = await this.chain.getHeadStateContext();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
-    const currentSlotTime = currentSlot * milliSecPerSlot;
-    if (!((slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        >= currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+    if (hasValidAttestationSlot(this.config, state.genesisTime, aggregate)) {
+      this.logger.warn(
+        "Ignored gossiped aggregate and proof",
+        {reason: "Outside of clock disparity tolerance", attestationRoot: toHexString(attestationRoot)}
+      );
       return ExtendedValidatorResult.ignore;
     }
     if (state.slot < slot) {
@@ -114,13 +87,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     if (await this.db.aggregateAndProof.hasAttestation(aggregate)) {
+      this.logger.warn("Ignored gossiped aggregate and proof", {reason: "Already have in database"});
       return ExtendedValidatorResult.ignore;
     }
 
-    const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-    const existingAttestations = await this.db.aggregateAndProof.getByAggregatorAndEpoch(
-      aggregatorIndex, attestationData.target.epoch) || [];
-    if (existingAttestations.length > 0) {
+    if (await this.db.seenAttestationCache.hasAggreagateAndProof(aggregateAndProof)) {
+      this.logger.warn(
+        "Ignored gossiped aggregate and proof",
+        {reason: "Already have those attestations", attestationRoot: toHexString(attestationRoot)}
+      );
       return ExtendedValidatorResult.ignore;
     }
 
@@ -130,21 +105,36 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         aggregate.aggregationBits
       ).length < 1
     ) {
+      this.logger.warn(
+        "Rejected gossiped aggregate and proof",
+        {reason: "No attesters", attestationRoot: toHexString(attestationRoot)}
+      );
       return ExtendedValidatorResult.reject;
     }
 
     const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
     if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
+      this.logger.warn(
+        "Rejected gossiped aggregate and proof",
+        {reason: "Attest to invalid block or missing block", attestationRoot: toHexString(attestationRoot)}
+      );
       return ExtendedValidatorResult.reject;
     }
 
     const selectionProof = aggregateAndProof.selectionProof;
     if (!epochCtx.isAggregator(slot, attestationData.index, selectionProof)) {
+      this.logger.warn(
+        "Rejected gossiped aggregate and proof",
+        {reason: "Signer not aggregator", attestationRoot: toHexString(attestationRoot)});
+
       return ExtendedValidatorResult.reject;
     }
 
     const committee = epochCtx.getBeaconCommittee(attestationData.slot, attestationData.index);
-    if (!committee.includes(aggregatorIndex)) {
+    if (!committee.includes(aggregateAndProof.aggregatorIndex)) {
+      this.logger.debug(
+        "Rejected gossiped aggregate and proof",
+        {reason: "Aggregator not in committee", attestationRoot: toHexString(attestationRoot)});
       return ExtendedValidatorResult.reject;
     }
 
@@ -152,12 +142,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const selectionProofDomain = getDomain(this.config, state, DomainType.SELECTION_PROOF, epoch);
     const selectionProofSigningRoot = computeSigningRoot(
       this.config, this.config.types.Slot, slot, selectionProofDomain);
-    const validatorPubKey = state.validators[aggregatorIndex].pubkey;
-    if (!verify(
-      validatorPubKey.valueOf() as Uint8Array,
+    const validatorPubKey = epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
+    if (!validatorPubKey.verifyMessage(
+      Signature.fromCompressedBytes(selectionProof.valueOf() as Uint8Array),
       selectionProofSigningRoot,
-      selectionProof.valueOf() as Uint8Array,
     )) {
+      this.logger.warn(
+        "Rejected gossiped aggregate and proof",
+        {reason: "Invalid selection proof signature", attestationRoot: toHexString(attestationRoot)}
+      );
       return ExtendedValidatorResult.reject;
     }
 
@@ -172,13 +165,19 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       aggregatorSigningRoot,
       signedAggregationAndProof.signature.valueOf() as Uint8Array,
     )) {
+      this.logger.warn(
+        "Rejected gossiped aggregate and proof",
+        {reason: "Invalid aggregate and proof signature"}
+      );
       return ExtendedValidatorResult.reject;
     }
 
     const indexedAttestation = epochCtx.getIndexedAttestation(aggregate);
-    if (!isValidIndexedAttestation(this.config, state, indexedAttestation)) {
+    if (!isValidIndexedAttestation(epochCtx, state, indexedAttestation)) {
+      this.logger.debug("Ignored gossiped aggregate and proof", {reason: "Not a valid attestation"});
       return ExtendedValidatorResult.reject;
     }
+    await this.db.seenAttestationCache.addAggregateAndProod(aggregateAndProof);
     return ExtendedValidatorResult.accept;
   };
 
@@ -228,4 +227,5 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     return ExtendedValidatorResult.accept;
   };
+
 }
