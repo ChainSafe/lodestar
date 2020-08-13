@@ -5,6 +5,8 @@ import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
   deriveEth2ValidatorKeys,
   IEth2ValidatorKeys,
+  eth2ValidatorPaths,
+  deriveKeyFromMnemonic,
 } from "@chainsafe/bls-keygen";
 import {randomPassword} from "../util";
 
@@ -43,7 +45,7 @@ export class Wallet extends Keystore {
    * not have a passphrase).
    */
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
-    const seed = bip39.mnemonicToSeedSync(mnemonic);
+    const seed = deriveKeyFromMnemonic(mnemonic);
 
     const wallet = new Wallet(await this.create(password, seed, emptyPubKey, ""));
     wallet.name = name;
@@ -91,13 +93,7 @@ export class Wallet extends Keystore {
     const masterKey = await this.decrypt(walletPassword);
     const validatorIndex = this.nextaccount;
     const privKeys = deriveEth2ValidatorKeys(masterKey, validatorIndex);
-
-    // ### Todo: deriveEth2ValidatorKeys should return the paths somehow too
-    //           to prevent code duplication
-    const paths: { [key in keyof IEth2ValidatorKeys]: string } = {
-      signing: `m/12381/3600/${validatorIndex}/0/0`,
-      withdrawal: `m/12381/3600/${validatorIndex}/0`,
-    };
+    const paths = eth2ValidatorPaths(validatorIndex);
 
     const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
