@@ -1,90 +1,82 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../options";
-import {beaconOptions, IBeaconOptions} from "../beacon/options";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
+import {ICliCommandOptions} from "../../util";
+import {beaconOptions, IBeaconArgs} from "../beacon/options";
+import {globalOptions, beaconNodeOptions} from "../../options";
 
-export const devRunOptions = {
-  ...beaconOptions,
+interface IDevOwnArgs {
+  genesisValidators?: number;
+  startValidators?: string;
+  reset?: boolean;
+  server: string;
+}
 
-  "sync.minPeers": {
-    type: "number",
-    default: 0,
-    group: "sync",
-  } as Options,
-
-  "network.maxPeers": {
-    type: "number",
-    defaultDescription: String(defaultOptions.network.maxPeers),
-    default: 0,
-    group: "network",
-  } as Options,
-
-  "eth1.enabled": {
-    type: "boolean",
-    default: false,
-    group: "eth1",
-  } as Options,
-
-  preset: {
-    description: "Specifies the default eth2 spec type",
-    choices: ["mainnet", "minimal"],
-    default: "minimal",
-    type: "string"
-  } as Options,
-
-  "api.rest.enabled": {
-    alias: ["api.enabled"],
-    type: "boolean",
-    default: true,
-    defaultDescription: String(defaultOptions.api.rest.enabled),
-    group: "api",
-  } as Options,
-
-  "validator.beaconUrl": {
-    description: "To delete chain and validator directories. Pass 'memory' for in memory communication",
-    type: "string",
-    group: "validator",
-    default: "http://localhost:9596",
-    requiresArg: false
-  } as Options,
-
-  "dev.genesisValidators": {
+const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+  genesisValidators: {
     description: "If present it will create genesis with interop validators and start chain.",
     type: "number",
     group: "dev",
-    requiresArg: false
-  } as Options,
+  },
 
-  "dev.startValidators": {
+  startValidators: {
     description: "Start interop validators in given range",
     default: "0:8",
     type: "string",
     group: "dev",
-    requiresArg: false
-  } as Options,
+  },
 
-  "dev.reset": {
+  reset: {
     description: "To delete chain and validator directories",
     type: "boolean",
     group: "dev",
-    default: false,
-    requiresArg: false
-  } as Options
+  },
+
+  server: {
+    description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
+    default: "http://127.0.0.1:9596",
+    type: "string",
+  }
 };
 
-export type IDevOptions =
-  IGlobalArgs &
-  IBeaconOptions &
-  {
-    sync: {
-      minPeers?: number;
-    };
-    validator: {
-      beaconUrl?: string;
-    };
-    dev: {
-      genesisValidators?: number;
-      startValidators?: string;
-      reset?: boolean;
-    };
-  };
+/**
+ * Add custom defaults different than the ones in `beaconOptions`:
+ * - In dev command we don't wanna connect to other peers, 
+ * - but we do wanna get out of syncing (min peers) 
+ * - and have api enabled by default (as it's used by validator)
+ * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
+ */
+const externalOptionsOverrides: {[k: string]: Options} = {
+  "sync.minPeers": {
+    ...beaconNodeOptions["sync.minPeers"],
+    defaultDescription: undefined,
+    default: 0
+  },
+  "network.maxPeers": {
+    ...beaconNodeOptions["network.maxPeers"],
+    defaultDescription: undefined,
+    default: 0,
+  },
+  "eth1.enabled": {
+    ...beaconNodeOptions["eth1.enabled"],
+    defaultDescription: undefined,
+    default: false,
+  },
+  "api.rest.enabled": {
+    ...beaconNodeOptions["api.rest.enabled"],
+    defaultDescription: undefined,
+    default: true,
+  },
+  preset: {
+    ...globalOptions.preset,
+    default: "minimal"
+  }
+};
+
+export const devOptions = {
+  ...beaconOptions,
+  ...externalOptionsOverrides,
+  ...devOwnOptions,
+};
+
+export type IDevArgs =
+  IBeaconArgs &
+  IDevOwnArgs;
