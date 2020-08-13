@@ -117,8 +117,7 @@ These are the account  wallet  create command options
 | ----------- | ----------- | ----------- |
 | name | string | The wallet will be created with this name. It is not allowed to   create two wallets with the same name for the same --base-dir. |
 | passphraseFile | string | A path to a file containing the password which will unlock the wallet.   If the file does not exist, a random password will be generated and saved at that   path. To avoid confusion, if the file does not already exist it must include a   '.pass' suffix. |
-| type | string | The type of wallet to create. Only HD (hierarchical-deterministic)
-  wallets are supported presently. |
+| type | string | The type of wallet to create. Only HD (hierarchical-deterministic) wallets are supported presently. |
 | mnemonicOutputPath | string | If present, the mnemonic will be saved to this file |
 #### `account  wallet  list`
 Lists the names of all wallets
