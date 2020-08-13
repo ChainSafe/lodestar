@@ -1,4 +1,3 @@
-import * as bip39 from "bip39";
 import {mapValues, values} from "lodash";
 import {generatePublicKey} from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
