@@ -6,6 +6,7 @@ import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
+import { initBLS } from "@chainsafe/bls";
 
 export const command = "create";
 
@@ -58,6 +59,8 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
   },
 
   handler: async (options) => {
+    await initBLS();
+    
     const {name, type, passphraseFile, mnemonicOutputPath} = options;
     const accountPaths = getAccountPaths(options);
 

@@ -45,8 +45,9 @@ export class Wallet extends Keystore {
    */
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = deriveKeyFromMnemonic(mnemonic);
+    const publicKey = generatePublicKey(seed);
 
-    const wallet = new Wallet(await this.create(password, seed, emptyPubKey, ""));
+    const wallet = new Wallet(await this.create(password, seed, publicKey, ""));
     wallet.name = name;
     wallet.nextaccount = 0;
     wallet.version = 1;
