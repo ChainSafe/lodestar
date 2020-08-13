@@ -6,7 +6,7 @@ import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
-import { initBLS } from "@chainsafe/bls";
+import {initBLS} from "@chainsafe/bls";
 
 export const command = "create";
 
@@ -19,7 +19,7 @@ interface IWalletCreateArgs {
   mnemonicOutputPath?: string;
 }
 
-function validatePassphraseFile(passphraseFile: string) {
+function validatePassphraseFile(passphraseFile: string): void {
   if (path.parse(passphraseFile).ext !== ".pass") {
     throw new YargsError("passphraseFile must end with .pass, make sure to not provide the actual password");
   }

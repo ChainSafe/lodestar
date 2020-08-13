@@ -13,7 +13,6 @@ import {randomPassword} from "../util";
  * @chainsafe/bls-keystore@1.0.0-beta8 requires a pubKey argument
  * While the library is not agnostic use this empty value 
  */
-const emptyPubKey = Buffer.from("");
 
 export interface IWalletKeystoreJson {
   crypto: object;
