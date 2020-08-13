@@ -86,8 +86,8 @@ export class Wallet extends Keystore {
     walletPassword: string,
     passwords: { [key in keyof IEth2ValidatorKeys]: string }
   ): Promise<{
-    [key in keyof IEth2ValidatorKeys]: Keystore;
-  }> {
+      [key in keyof IEth2ValidatorKeys]: Keystore;
+    }> {
     const masterKey = await this.decrypt(walletPassword);
     const validatorIndex = this.nextaccount;
     const privKeys = deriveEth2ValidatorKeys(masterKey, validatorIndex);
@@ -113,7 +113,7 @@ export class Wallet extends Keystore {
     return {
       withdrawal: resolved[0],
       signing: resolved[1],
-    }
+    };
   }
 
   /**
