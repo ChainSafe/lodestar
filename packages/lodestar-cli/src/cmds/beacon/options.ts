@@ -1,29 +1,22 @@
 import {Options} from "yargs";
-import {IGlobalArgs} from "../../options";
 import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
+import {IENRArgs, enrOptions} from "./enrOptions";
+import {ICliCommandOptions} from "../../util";
 
-export type IBeaconOptions =
-  IGlobalArgs &
-  IBeaconNodeOptions &
-  IBeaconPaths &
-  {
-    genesisStateFile?: string;
-    logFile?: string;
-  };
+interface IBeaconExtraArgs {
+  genesisStateFile?: string;
+}
 
-export const beaconOptions: {[k: string]: Options} = {
-  ...beaconNodeOptions,
-  ...paramsOptions,
-
+const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
     description: "Genesis state in ssz-encoded format",
     type: "string",
     normalize: true,
-  },
+  }
+};
 
-  // Beacon paths
-
+const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
     description: "Beacon root dir",
     defaultDescription: defaultBeaconPaths.beaconDir,
@@ -48,6 +41,14 @@ export const beaconOptions: {[k: string]: Options} = {
     normalize: true,
   },
 
+  peerStoreDir: {
+    hidden: true,
+    description: "Peer store dir",
+    defaultDescription: defaultBeaconPaths.peerStoreDir,
+    normalize: true,
+    type: "string",
+  },
+
   peerIdFile: {
     hidden: true,
     description: "Peer ID file",
@@ -70,4 +71,18 @@ export const beaconOptions: {[k: string]: Options} = {
     type: "string",
     normalize: true,
   }
+};
+
+export type IBeaconArgs =
+  IBeaconNodeOptions &
+  IBeaconPaths &
+  IENRArgs &
+  IBeaconExtraArgs;
+
+export const beaconOptions: { [k: string]: Options } = {
+  ...beaconPathsOptions,
+  ...beaconExtraOptions,
+  ...beaconNodeOptions,
+  ...paramsOptions,
+  ...enrOptions,
 };

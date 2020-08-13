@@ -18,7 +18,7 @@ export interface IBeaconNodeOptions {
   eth1: IEth1Options;
   network: INetworkOptions;
   sync: ISyncOptions;
-  logger: Partial<IBeaconLoggerOptions>;
+  logger: IBeaconLoggerOptions;
   metrics: IMetricsOptions;
 }
 

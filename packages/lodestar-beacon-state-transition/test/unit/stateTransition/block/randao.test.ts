@@ -7,7 +7,7 @@ import {describe, beforeEach, afterEach} from "mocha";
 import {getCurrentEpoch} from "../../../../src/util";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {generateValidator} from "../../../utils/validator";
+import {generateValidators} from "../../../utils/validator";
 
 describe("process block - randao", function () {
 
@@ -24,7 +24,7 @@ describe("process block - randao", function () {
   });
 
   it("should fail to process - invalid randao signature", function () {
-    const state = generateState({validators: [generateValidator()]});
+    const state = generateState({validators: generateValidators(0)});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
     try {
@@ -36,8 +36,7 @@ describe("process block - randao", function () {
   });
 
   it("should process randao", function () {
-    const validator = generateValidator();
-    const state = generateState({validators: [validator]});
+    const state = generateState({validators: generateValidators(1)});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
     try {

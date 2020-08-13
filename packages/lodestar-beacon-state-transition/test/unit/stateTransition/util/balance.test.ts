@@ -1,6 +1,7 @@
 import {assert} from "chai";
 
-import {BeaconState, Gwei, Validator, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
+import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {
@@ -18,10 +19,10 @@ describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 500;
     const validatorBalance = 1000000000000n;
-    const validators: Validator[] = generateValidators(num).map((v) => {
+    const validators = generateValidators(num);
+    for (const v of validators) {
       v.effectiveBalance = validatorBalance;
-      return v;
-    });
+    }
     const state: BeaconState = generateState({validators: validators});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
@@ -32,8 +33,8 @@ describe("getTotalBalance", () => {
 
   it("should return correct balances", () => {
     const num = 5;
-    const validators: Validator[] = generateValidators(num);
-    const balances: Gwei[] = Array.from({length: num}, () => 0n);
+    const validators = generateValidators(num);
+    const balances = Array.from({length: num}, () => 0n) as List<Gwei>;
     const state: BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
@@ -47,7 +48,7 @@ describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    state.balances = [0n];
+    state.balances = [0n] as List<Gwei>;
     const delta = 5n;
     for (let i = 1n; i < 10n; i++) {
       increaseBalance(state, 0, delta);
@@ -61,7 +62,7 @@ describe("decreaseBalance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
     const initial = 100n
-    state.balances = [initial];
+    state.balances = [initial] as List<Gwei>;
     const delta = 5n
     for (let i = 1n; i < 10n; i++) {
       decreaseBalance(state, 0, delta);
@@ -72,7 +73,7 @@ describe("decreaseBalance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
     const initial = 10n;
-    state.balances = [initial];
+    state.balances = [initial] as List<Gwei>;
     const delta = 11n
     decreaseBalance(state, 0, delta);
     assert(state.balances[0] === 0n);

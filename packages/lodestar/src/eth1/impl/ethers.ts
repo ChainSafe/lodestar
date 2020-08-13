@@ -83,7 +83,9 @@ export class EthersEth1Notifier implements IEth1Notifier {
       return;
     }
     // no need await
-    this.startProcessEth1Blocks();
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
   }
 
   public async stop(): Promise<void> {
@@ -102,7 +104,9 @@ export class EthersEth1Notifier implements IEth1Notifier {
     }
     this.eth1Source = pushable<Eth1EventsBlock>();
     // no need await
-    this.startProcessEth1Blocks();
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
     return this.eth1Source;
   }
 
@@ -151,8 +155,8 @@ export class EthersEth1Notifier implements IEth1Notifier {
         this.logger.verbose(`Found ${rangeDepositEvents.length} events from block ` +
           `${this.lastProcessedEth1BlockNumber + 1} to ${endRangeBlockNumber}`);
       } catch (ex) {
-        this.logger.warn(`eth1: failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
-          + ` to ${endRangeBlockNumber}`);
+        this.logger.warn(`failed to get deposit events from ${this.lastProcessedEth1BlockNumber + 1}`
+          + ` to ${endRangeBlockNumber}`, ex);
         continue;
       }
       let success = true;
@@ -172,7 +176,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
         this.lastProcessedEth1BlockNumber = endRangeBlockNumber;
       }
     }
-    this.logger.info(`Done procesing up to block ${toNumber}`);
+    this.logger.info(`Done processing up to block ${toNumber}`);
   }
 
   /**

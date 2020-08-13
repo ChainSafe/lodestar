@@ -9,7 +9,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest,
+  ForkDigest, Number64,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -40,6 +40,7 @@ import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {notNullish} from "../util/notNullish";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -72,6 +73,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   private blockProcessor: BlockProcessor;
   private _currentForkDigest: ForkDigest;
   private attestationProcessor: IAttestationProcessor;
+  private genesisTime: Number64 = 0;
 
   public constructor(
     opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
@@ -92,17 +94,23 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     );
   }
 
+  public getGenesisTime(): Number64 {
+    return this.genesisTime;
+  }
+
   public async getHeadStateContext(): Promise<ITreeStateContext> {
     //head state should always exist
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot()));
+    const headStateRoot = await this.db.stateCache.get(this.forkChoice.headStateRoot());
+    if (!headStateRoot) throw Error("headStateRoot does not exist");
+    return headStateRoot;
   }
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
     //head state should always have epoch ctx
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).state;
+    return (await this.getHeadStateContext()).state;
   }
   public async getHeadEpochContext(): Promise<EpochContext> {
     //head should always have epoch ctx
-    return (await this.db.stateCache.get(this.forkChoice.headStateRoot())).epochCtx;
+    return (await this.getHeadStateContext()).epochCtx;
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock|null> {
@@ -127,11 +135,13 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     }
     const blockRoots = slots.map((slot) => {
       const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-      return summary? summary.blockRoot : null;
-    }).filter((blockRoot) => !!blockRoot);
+      return summary ? summary.blockRoot : null;
+    }).filter(notNullish);
     // these blocks are on the same chain to head
-    return await Promise.all(blockRoots.map(
-      (blockRoot) => this.db.block.get(blockRoot)));
+    const unfinalizedBlocks = await Promise.all(blockRoots.map(
+      (blockRoot) => this.db.block.get(blockRoot)
+    ));
+    return unfinalizedBlocks.filter(notNullish);
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
@@ -142,6 +152,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.verbose("Starting chain");
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
+    this.genesisTime = state.genesisTime;
     const epochCtx = new EpochContext(this.config);
     epochCtx.loadState(state);
     await this.db.stateCache.add({state, epochCtx});
@@ -237,17 +248,16 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
   }
 
   public async waitForBlockProcessed(blockRoot: Uint8Array): Promise<void> {
-    let listener: (signedBlock: SignedBeaconBlock) => void;
     await new Promise((resolve) => {
-      listener = (signedBlock) => {
+      const listener = (signedBlock: SignedBeaconBlock): void => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
+          this.removeListener("processedBlock", listener);
           resolve();
         }
       };
       this.on("processedBlock", listener);
     });
-    this.removeListener("processedBlock", listener);
   }
 
   /**
@@ -357,7 +367,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
 
   // If we don't have a state yet, we have to wait for genesis state
   private async waitForState(): Promise<TreeBacked<BeaconState>> {
-    let state: TreeBacked<BeaconState> = await this.db.stateArchive.lastValue();
+    let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
       const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});

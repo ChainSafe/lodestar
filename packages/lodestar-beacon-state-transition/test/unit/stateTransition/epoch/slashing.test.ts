@@ -1,5 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
+import {List} from "@chainsafe/ssz";
+import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
@@ -41,7 +43,7 @@ describe('process epoch - slashings', function () {
         validator1,
         validator2,
         validator3
-      ]
+      ] as List<Validator>
     });
     try {
       processSlashings(config, state);

@@ -1,15 +1,15 @@
-import path from "path";
-
 import {IGlobalArgs} from "../../options";
-import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
+import {getGlobalPaths} from "../../paths/global";
+import {joinIfRelative} from "../../util";
 
-export type IBeaconPaths = IGlobalPaths & {
+export type IBeaconPaths = {
   beaconDir: string;
   peerStoreDir: string;
   dbDir: string;
   configFile: string;
   peerIdFile: string;
   enrFile: string;
+  logFile?: string;
 };
 
 /**
@@ -32,11 +32,12 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
   };
   const rootDir = options.rootDir;
   const beaconDir = rootDir;
-  const dbDir = path.join(beaconDir, options.dbDir || "chain-db");
-  const peerStoreDir = path.join(beaconDir, options.dbDir || "peerstore");
-  const configFile = path.join(beaconDir, options.configFile || "beacon.config.json");
-  const peerIdFile = path.join(beaconDir, options.peerIdFile || "peer-id.json");
-  const enrFile = path.join(beaconDir, options.enrFile || "enr.json");
+  const dbDir = joinIfRelative(beaconDir, options.dbDir || "chain-db");
+  const peerStoreDir = joinIfRelative(beaconDir, options.dbDir || "peerstore");
+  const configFile = joinIfRelative(beaconDir, options.configFile || "beacon.config.json");
+  const peerIdFile = joinIfRelative(beaconDir, options.peerIdFile || "peer-id.json");
+  const enrFile = joinIfRelative(beaconDir, options.enrFile || "enr.json");
+  const logFile = options.logFile && joinIfRelative(beaconDir, options.logFile);
 
   return {
     ...options,
@@ -45,7 +46,8 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
     configFile,
     peerStoreDir,
     peerIdFile,
-    enrFile
+    enrFile,
+    logFile
   } as IBeaconPaths;
 }
 

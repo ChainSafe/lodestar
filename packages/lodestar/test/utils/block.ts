@@ -1,4 +1,13 @@
-import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {
+  BeaconBlock,
+  SignedBeaconBlock,
+  ProposerSlashing,
+  AttesterSlashing,
+  Attestation,
+  Deposit,
+  SignedVoluntaryExit
+} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import {BlockSummary} from "../../src/chain";
 import deepmerge from "deepmerge";
@@ -20,11 +29,11 @@ export function generateEmptyBlock(): BeaconBlock {
         depositCount: 0,
       },
       graffiti: Buffer.alloc(32),
-      proposerSlashings: [],
-      attesterSlashings: [],
-      attestations: [],
-      deposits: [],
-      voluntaryExits: [],
+      proposerSlashings: [] as ProposerSlashing[] as List<ProposerSlashing>,
+      attesterSlashings: [] as AttesterSlashing[] as List<AttesterSlashing>,
+      attestations: [] as Attestation[] as List<Attestation>,
+      deposits: [] as Deposit[] as List<Deposit>,
+      voluntaryExits: [] as SignedVoluntaryExit[] as List<SignedVoluntaryExit>,
     },
   };
 }

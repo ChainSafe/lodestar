@@ -8,9 +8,13 @@ export const registerBlockStreamEndpoint: LodestarRestApiEndpoint = (server, {ap
     "/blocks/stream",
     {},
     async (request, reply) => {
+      //should be migrated to fastify-sse but this allows us to handle underlying stream closing
+      reply.sent = true;
       const source = api.beacon.getBlockStream();
-      request.raw.on("close", () => {
-        source.stop();
+      ["end", "error", "close"].forEach((event) => {
+        request.req.once(event, () => {
+          source.stop();
+        });
       });
       const transform = (source: AsyncIterable<SignedBeaconBlock>): AsyncIterable<EventMessage> => (async function*() {
         for await (const block of source) {

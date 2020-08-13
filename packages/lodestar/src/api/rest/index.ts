@@ -1,10 +1,10 @@
-import * as fastify from "fastify";
-import {FastifyInstance} from "fastify";
+import fastify, {FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import {IService} from "../../node";
 import {IRestApiOptions} from "./options";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import * as routes from "./routes";
+import {registerRoutes} from "./routes";
 import {ApiNamespace} from "../index";
 import {IRestApiModules} from "./interface";
 import {FastifySSEPlugin} from "fastify-sse-v2";
@@ -15,7 +15,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IValidatorApi} from "../impl/validator";
 import {IBeaconApi} from "../impl/beacon";
 import {INodeApi} from "../impl/node";
-import {registerRoutes} from "./routes";
+import {IncomingMessage, Server, ServerResponse} from "http";
 
 export class RestApi implements IService {
 
@@ -48,7 +48,7 @@ export class RestApi implements IService {
   }
 
   private  setupServer(modules: IRestApiModules): FastifyInstance {
-    const server = fastify.default({
+    const server = fastify({
       logger: new FastifyLogger(this.logger),
       ajv: {
         customOptions: {
@@ -59,9 +59,11 @@ export class RestApi implements IService {
     });
     server.setErrorHandler(errorHandler);
     if(this.opts.cors) {
-      // const corsArr = this.opts.cors.split(",");
-      server.register(fastifyCors, {
-        origin: "*",
+      server.register(fastifyCors as fastify.Plugin<
+      Server,
+      IncomingMessage,
+      ServerResponse, {}>, {
+        origin: this.opts.cors,
       });
     }
     server.register(FastifySSEPlugin);

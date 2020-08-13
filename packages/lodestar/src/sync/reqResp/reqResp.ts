@@ -24,7 +24,7 @@ import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus, syncPeersStatus} from "../utils/sync";
+import {createStatus, syncPeersStatus, getPeerSupportedProtocols} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -73,8 +73,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.removeListener("peer:connect", this.handshake);
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
-      this.network.getPeers().map((peerId) => {
-        return this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+      this.network.getPeers().map(async (peerId) => {
+        try {
+          await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+        } catch (e) {
+          this.logger.verbose("Failed to send goodbye", {reason: e.message});
+        }
       }));
   }
 
@@ -109,19 +113,30 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     // set status on peer
     this.reps.get(peerId.toB58String()).latestStatus = request;
     // send status response
+    let isSuccess;
     try {
       const status = await createStatus(this.chain);
       this.network.reqResp.sendResponse(id, null, status);
+      isSuccess = true;
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e, null);
+    }
+    if (isSuccess) {
+      // response Status request first
+      try {
+        this.reps.get(peerId.toB58String()).supportedProtocols =
+          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+      } catch (e) {
+        this.logger.error("Failed to get peer supported protocol", e.message);
+      }
     }
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
     if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.warn("Fork digest mismatch "
+      this.logger.verbose("Fork digest mismatch "
           + `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
       );
       return true;
@@ -129,7 +144,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.warn("Genesis finalized root must be zeroed "
+        this.logger.verbose("Genesis finalized root must be zeroed "
           + `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
         );
         return true;
@@ -143,7 +158,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
         if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.warn("Status with same finalized epoch has different root "
+          this.logger.verbose("Status with same finalized epoch has different root "
             + `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
           );
           return true;
@@ -155,6 +170,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           // This will get the latest known block at the start of the epoch.
           const expected = getBlockRoot(this.config, headState, request.finalizedEpoch);
           if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
+            this.logger.verbose(
+              "Status with different finalized root",
+              {
+                received: toHexString(request.finalizedRoot),
+                epected: toHexString(expected), epoch: request.finalizedEpoch}
+            );
             return true;
           }
         } else {
@@ -243,10 +264,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
+      const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
       const blockGenerator = async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root);
+          const block = await getBlock(root) || await getFinalizedBlock(root);
           if (block) {
             yield block;
           }
@@ -264,8 +286,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
+        const supportedProtocols =
+          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+        this.reps.get(peerId.toB58String()).supportedProtocols = [Method.Status, ...supportedProtocols];
       } catch (e) {
-        this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status. Error: ` + e.message);
+        this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status`, e);
+        await this.network.disconnect(peerId);
       }
     }
   };

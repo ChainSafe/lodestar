@@ -2,7 +2,8 @@
  * @module chain/stateTransition/epoch
  */
 
-import {BeaconState, HistoricalBatch} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
+import {BeaconState, HistoricalBatch, Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   getCurrentEpoch,
@@ -16,7 +17,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes
   if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = [];
+    state.eth1DataVotes = [] as Eth1Data[] as List<Eth1Data>;
   }
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
@@ -48,5 +49,5 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   }
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = [];
+  state.currentEpochAttestations = [] as PendingAttestation[] as List<PendingAttestation>;
 }
