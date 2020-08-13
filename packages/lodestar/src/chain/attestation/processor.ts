@@ -129,7 +129,7 @@ export class AttestationProcessor implements IAttestationProcessor {
     this.pendingBlockAttestations.delete(toHexString(blockRoot));
   }
 
-  public async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
+  private async processAttestation(attestation: Attestation, attestationHash: Root): Promise<void> {
     const target = attestation.data.target;
     //LMD vote must be consistent with FFG vote target
     const targetSlot = computeStartSlotAtEpoch(this.config, target.epoch);
