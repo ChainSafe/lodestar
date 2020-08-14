@@ -36,8 +36,8 @@ ${renderMarkdownSections(
     cmds.map(cmd => cmdToMarkdownSection(cmd))
   )}
 `;
-
-  writeFile("./docs/usage/cli.md", docsString, null);
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  writeFile("./docs/usage/cli.md", docsString, () => {});
 }
 
 function getOptionsTable(options: object): IMarkdownSection[] {
