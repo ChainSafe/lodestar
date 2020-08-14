@@ -892,10 +892,10 @@
     "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
 
-"@chainsafe/discv5@0.3.0", "@chainsafe/discv5@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.3.0.tgz#4496c43ab97328fa761cf75eb03b3f6359af6886"
-  integrity sha512-Zf+AsDDLeCYeltwhkb1nEIP9CEgppyElEA78kP75SFKEooRVWKAdpx0mBNsijq00Q7ItCZqfvcCF2dXDcKha/Q==
+"@chainsafe/discv5@0.3.1", "@chainsafe/discv5@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.3.1.tgz#f2f2a1756d8e7ff5d629ee9a108c7859febaa329"
+  integrity sha512-NrIltrcbaUB/jbcdvrs74VsQn6crQKLvgF0RVl/1U+8b5yZ2fpdxvwrshFVfkBV5FgZYTfUXgqpITNbGHo774A==
   dependencies:
     base64url "^3.0.1"
     bcrypto "^4.2.8"
@@ -9991,9 +9991,9 @@ libp2p-tcp@^0.14.5:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#dd83a67cdf28c0594365a9405e10390a1f13579c"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#1306a2248294a89ca576ff4a7fc2c348169265c4"
   dependencies:
-    "@chainsafe/discv5" "^0.3.0"
+    "@chainsafe/discv5" "^0.3.1"
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.17.2"
     libp2p-gossipsub "^0.4.5"
