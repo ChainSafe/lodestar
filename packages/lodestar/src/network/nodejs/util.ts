@@ -57,6 +57,7 @@ export async function createNodeJsLibp2p(
     autoDial,
     datastore: peerStoreDir? new LevelDatastore(peerStoreDir) : null,
     bootnodes: bootnodes,
-    discv5: network.discv5
+    discv5: network.discv5,
+    maxConnections: network.maxPeers,
   });
 }

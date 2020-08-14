@@ -29,6 +29,7 @@ export interface ILibp2pOptions {
   };
   peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
   bootnodes?: string[];
+  maxConnections?: number;
 }
 
 export class NodejsNode extends LibP2p {
@@ -49,6 +50,9 @@ export class NodejsNode extends LibP2p {
           MDNS,
           Discv5Discovery,
         ],
+      },
+      connectionManager: {
+        maxConnections: options.maxConnections,
       },
       datastore: options.datastore,
       peerStore: {
