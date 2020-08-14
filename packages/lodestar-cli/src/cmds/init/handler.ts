@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import path from "path";
 import deepmerge from "deepmerge";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {initBeaconConfig} from "../../config/beacon";
 import {IGlobalArgs} from "../../options";
 import {mkdir, getBeaconConfig} from "../../util";
@@ -31,6 +32,8 @@ export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<v
   if (options.testnet && !fs.existsSync(options.paramsFile)) {
     const testnetConfig = getTestnetConfig(options.testnet);
     try {
+      if (!testnetConfig.network) testnetConfig.network = {};
+      if (!testnetConfig.network.discv5) testnetConfig.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
       testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(options.testnet);
     } catch (e) {
       // eslint-disable-next-line no-console

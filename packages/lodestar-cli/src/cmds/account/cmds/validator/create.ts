@@ -13,7 +13,7 @@ interface IValidatorCreateArgs {
   passphraseFile: string;
   depositGwei?: string;
   storeWithdrawalKeystore?: boolean;
-  count?: number;
+  count: number;
 }
 
 export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs> = {
