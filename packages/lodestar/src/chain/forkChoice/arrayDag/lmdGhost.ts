@@ -22,32 +22,6 @@ import {EventEmitter} from "events";
 import {notNullish} from "../../../util/notNullish";
 
 /**
- * RootHex > number ES6 Map that asserts return values
- */
-class NodeIndices {
-  map: Map<RootHex, number>;
-
-  constructor () {
-    this.map = new Map<RootHex, number>();
-  }
-
-  getStrict(key: RootHex): number {
-    const value = this.map.get(key);
-    if (!value) throw Error(`No index for root ${key}`);
-    return value;
-  }
-  get(key: RootHex): number | null {
-    return this.map.get(key) ?? null;
-  }
-  set(key: RootHex, value: number): void {
-    this.map.set(key, value);
-  }
-  delete(key: string): void {
-    this.map.delete(key);
-  }
-}
-
-/**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
  */
@@ -118,7 +92,7 @@ export class Node {
     this.bestChild = NO_NODE;
   }
 
-  public shiftIndex(oldNodes: Node[], newNodeIndexes: NodeIndices): void {
+  public shiftIndex(oldNodes: Node[], newNodeIndexes: Map<RootHex, number>): void {
     if (this.bestChild !== null) {
       const bestChildRoot = oldNodes[this.bestChild].blockRoot;
       this.bestChild = newNodeIndexes.get(bestChildRoot);
@@ -132,7 +106,7 @@ export class Node {
       const bestTargetRoot = oldNodes[this.bestTarget].blockRoot;
       this.bestTarget = newNodeIndexes.get(bestTargetRoot);
     }
-    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.getStrict(blockRoot));
+    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.get(blockRoot));
   }
 
 }
@@ -161,7 +135,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   /**
    * A map with key as root hex and value as index in `nodes` array
    */
-  private nodeIndices: NodeIndices;
+  private nodeIndices: Map<RootHex, number>;
 
   /**
    * Last finalized block
@@ -184,10 +158,10 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   public constructor(config: IBeaconConfig) {
     super();
     const slotFinder = (hex: string): Slot | null =>
-      this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.getStrict(hex)].slot : null;
+      this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
     this.nodes = [];
-    this.nodeIndices = new NodeIndices();
+    this.nodeIndices = new Map();
     this.finalized = null;
     this.justified = null;
     this.synced = true;
@@ -280,7 +254,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     // if parent root exists, link to blockRoot
     if (node.parent !== null) {
       // nodeIndex may not be correct after setFinalized
-      this.addChild(node.parent, this.nodeIndices.getStrict(node.blockRoot));
+      this.addChild(node.parent, this.nodeIndices.get(node.blockRoot));
     }
     if (shouldCheckBestTarget) {
       this.ensureCorrectBestTargets();
@@ -342,7 +316,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
         const delta = agg.weight - agg.prevWeight;
         agg.prevWeight = agg.weight;
 
-        this.propagateWeightChange(this.nodeIndices.getStrict(agg.target), delta);
+        this.propagateWeightChange(this.nodeIndices.get(agg.target), delta);
       }
     });
 
@@ -652,7 +626,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       this.nodes = this.nodes.filter(node => !blockRootsToDel.includes(node.blockRoot));
       blockRootsToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
       // Update indexes in nodeIndices
-      this.nodeIndices = new NodeIndices();
+      this.nodeIndices = new Map<RootHex, number>();
       this.nodes.forEach((node, index) => this.nodeIndices.set(node.blockRoot, index));
       // Update indexes in node
       this.nodes.forEach(node => node.shiftIndex(oldNodes, this.nodeIndices));
