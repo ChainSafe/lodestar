@@ -63,7 +63,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
   if (cmd.options) {
     section.subsections.push({
       title: `\`${commandJson}\` options`,
-      body: `These are the ${commandJson} command options\n${optionsTableHeader}`,
+      body: `\n\nThese are the ${commandJson} command options\n\n${optionsTableHeader}`,
       subsections: getOptionsTable(cmd.options)
     });
   }
@@ -80,7 +80,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
  */
 function renderMarkdownSections(sections: IMarkdownSection[], level = 2): string {
   return sections.map(section => {
-    const parts = section.title ? [`${"#".repeat(level)} ${section.title}`] : [""];
+    const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
     if (section.body) parts.push(section.body);
     if (section.subsections) parts.push(renderMarkdownSections(section.subsections, level + 1));
     return parts.join(section.title ? "\n" : "");
