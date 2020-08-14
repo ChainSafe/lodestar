@@ -33,7 +33,8 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  computeSubnetForSlot, getCurrentSlot,
+  computeSubnetForSlot,
+  getCurrentSlot,
   getDomain
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
@@ -41,9 +42,9 @@ import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
-import {validateAttestation} from "../../../util/validation/attestation";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {validateGossipAttestation} from "../../../network/gossip/validation";
 
 export class ValidatorApi implements IValidatorApi {
 
@@ -130,8 +131,10 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    const headStateContext = await this.chain.getHeadStateContext();
-    await validateAttestation(this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation);
+    //it could discard attestations that would can be valid a bit later
+    // await validateGossipAttestation(
+    //   this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation
+    // );
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation)
@@ -211,7 +214,7 @@ export class ValidatorApi implements IValidatorApi {
     const matchingAttestations = attestations.filter((a) => {
       return this.config.types.AttestationData.equals(a.data, attestationData);
     });
-    
+
     if (matchingAttestations.length === 0) {
       throw Error("No matching attestations found for attestationData");
     }
