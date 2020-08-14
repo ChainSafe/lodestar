@@ -10,7 +10,7 @@ interface IMarkdownSection {
   subsections?: IMarkdownSection[];
 }
 
-const optionsTableHeader = "| Name | Type | Description |\n| ----------- | ----------- | ----------- |";
+const optionsTableHeader = "\n| Name | Type | Description |\n| ----------- | ----------- | ----------- |";
 
 let globalOptionsStr = "";
 for (const [key, value] of Object.entries(globalOptions)) {
@@ -63,8 +63,8 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
   if (cmd.options) {
     section.subsections.push({
       title: `\`${commandJson}\` options`,
-      body: `\n\nThese are the ${commandJson} command options\n\n${optionsTableHeader}`,
-      subsections: getOptionsTable(cmd.options)
+      body: `These are the ${commandJson} command options`,
+      subsections: [{title: undefined, body: optionsTableHeader}, ...getOptionsTable(cmd.options)]
     });
   }
   if (cmd.subcommands) {
