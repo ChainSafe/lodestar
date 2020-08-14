@@ -1,8 +1,8 @@
 import { writeFile } from "fs";
-import {cmds} from "@chainsafe/lodestar-cli/src/cmds";
-import {ICliCommand} from "@chainsafe/lodestar-cli/src/util";
-import { globalOptions } from "@chainsafe/lodestar-cli/src/options/globalOptions";
-import { paramsOptions } from "@chainsafe/lodestar-cli/src/options/paramsOptions";
+import {cmds} from "./cmds";
+import {ICliCommand} from "./util";
+import { globalOptions } from "./options/globalOptions";
+import { paramsOptions } from "./options/paramsOptions";
 
 interface IMarkdownSection {
   title: string;

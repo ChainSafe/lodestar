@@ -30,6 +30,7 @@ packages/**/docs
 docs/packages
 docs/contributing.md
 docs/assets
+docs/usage/cli.md
 /site
 
 # Testnet artifacts
