@@ -1,8 +1,8 @@
-import { writeFile } from "fs";
+import {writeFile} from "fs";
 import {cmds} from "./cmds";
 import {ICliCommand} from "./util";
-import { globalOptions } from "./options/globalOptions";
-import { paramsOptions } from "./options/paramsOptions";
+import {globalOptions} from "./options/globalOptions";
+import {paramsOptions} from "./options/paramsOptions";
 
 interface IMarkdownSection {
   title: string;
@@ -10,18 +10,20 @@ interface IMarkdownSection {
   subsections?: IMarkdownSection[];
 }
 
-const optionsTableHeader = `| Name | Type | Description |\n| ----------- | ----------- | ----------- |`;
+const optionsTableHeader = "| Name | Type | Description |\n| ----------- | ----------- | ----------- |";
 
-let globalOptionsStr = '';
+let globalOptionsStr = "";
 for (const [key, value] of Object.entries(globalOptions)) {
   if (!(key in paramsOptions))
-  globalOptionsStr = globalOptionsStr.concat(`| ${key} | ${value.type} | ${value.description} | ${value.default || ''} |\n`);
-};
+    globalOptionsStr = globalOptionsStr.concat(
+      `| ${key} | ${value.type} | ${value.description} | ${value.default || ""} |\n`
+    );
+}
 
 generate();
 
-function generate() {
-  let docsString = `
+function generate(): void {
+  const docsString = `
 # Lodestar CLI Documentation
 This reference describes the syntax of the Lodestar CLI options and commands.
 
@@ -31,20 +33,20 @@ This reference describes the syntax of the Lodestar CLI options and commands.
 ${globalOptionsStr}
 
 ${renderMarkdownSections(
-  cmds.map(cmd => cmdToMarkdownSection(cmd))
-)}
+    cmds.map(cmd => cmdToMarkdownSection(cmd))
+  )}
 `;
 
-  writeFile('./docs/usage/cli.md', docsString, () => {});
+  writeFile("./docs/usage/cli.md", docsString, null);
 }
 
-function getOptionsTable(options: object) {
+function getOptionsTable(options: object): IMarkdownSection[] {
   return Object.entries(options)
     .filter(([, opt]) => !opt.hidden)
     .map(([key, opt]) => {
       // set title to undefined to indicate that this is an option and should not have a title
       return {title: undefined, body: `| ${key} | ${opt.type} | ${opt.description} |`};
-    })
+    });
 }
 
 /**
