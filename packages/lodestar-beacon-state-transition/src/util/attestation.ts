@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {BitList} from "@chainsafe/ssz";
+import {BitList, List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {
   Attestation,
@@ -111,7 +111,7 @@ export function getIndexedAttestation(
   const sortedAttestingIndices = attestingIndices.sort(
     (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
   return {
-    attestingIndices: sortedAttestingIndices,
+    attestingIndices: sortedAttestingIndices as List<number>,
     data: attestation.data,
     signature: attestation.signature,
   };

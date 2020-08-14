@@ -27,7 +27,7 @@ export function slashValidator(
 
   // apply proposer and whistleblower rewards
   const proposerIndex = epochCtx.getBeaconProposer(state.slot);
-  if (!Number.isSafeInteger(whistleblowerIndex)) {
+  if (whistleblowerIndex === undefined || !Number.isSafeInteger(whistleblowerIndex)) {
     whistleblowerIndex = proposerIndex;
   }
   const whistleblowerReward = validator.effectiveBalance / BigInt(WHISTLEBLOWER_REWARD_QUOTIENT);

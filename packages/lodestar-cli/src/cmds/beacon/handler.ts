@@ -1,24 +1,24 @@
 import * as fs from "fs";
-import path from "path";
 import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {ENR} from "@chainsafe/discv5";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
-
+import {IGlobalArgs} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getMergedIBeaconConfig} from "../../config/params";
-import {initHandler as initCmd} from "../init/init";
-import {IBeaconOptions} from "./options";
+import {initCmd} from "../init/handler";
+import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
+import {updateENR} from "../../util/enr";
 
 /**
  * Run a beacon node
  */
-export async function run(options: IBeaconOptions): Promise<void> {
+export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise<void> {
   await initBLS();
   // always run the init command
   await initCmd(options);
@@ -29,7 +29,12 @@ export async function run(options: IBeaconOptions): Promise<void> {
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk
-  options.network.discv5.enr = await readEnr(beaconPaths.enrFile);
+  const enr = await readEnr(beaconPaths.enrFile);
+  // set enr overrides
+  updateENR(enr, options);
+  if (!options.network.discv5) options.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
+  options.network.discv5.enr = enr;
+  options.network.discv5.enrUpdate = !options.enr?.ip && !options.enr?.ip6;
   // TODO: Rename db.name to db.path or db.location
   options.db.name = beaconPaths.dbDir;
 
@@ -38,8 +43,8 @@ export async function run(options: IBeaconOptions): Promise<void> {
   const loggerTransports = [
     consoleTransport
   ];
-  if(options.logFile) {
-    loggerTransports.push(fileTransport(path.join(options.rootDir, options.logFile)));
+  if(options.logFile && beaconPaths.logFile) {
+    loggerTransports.push(fileTransport(beaconPaths.logFile));
   }
   const logger = new WinstonLogger({}, loggerTransports);
 
@@ -47,7 +52,7 @@ export async function run(options: IBeaconOptions): Promise<void> {
 
   async function cleanup(): Promise<void> {
     await node.stop();
-    await writeEnr(beaconPaths.enrFile, options.network.discv5.enr as ENR, peerId);
+    await writeEnr(beaconPaths.enrFile, enr, peerId);
   }
 
   process.on("SIGTERM", cleanup);

@@ -23,10 +23,13 @@ export class NodeApi implements INodeApi {
   public async getNodeIdentity(): Promise<NodeIdentity> {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
+    const discoveryAddresses = [] as string[];
+    if (enr?.multiaddrTCP) discoveryAddresses.push(enr.multiaddrTCP.toString());
+    if (enr?.multiaddrUDP) discoveryAddresses.push(enr.multiaddrUDP.toString());
     return {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
-      discoveryAddresses: [enr?.multiaddrTCP?.toString(), enr?.multiaddrUDP?.toString()].filter(v => !!v),
+      discoveryAddresses,
       p2pAddresses: this.network.multiaddrs.map((m) => m.toString()),
       metadata: this.network.metadata
     };
@@ -41,17 +44,21 @@ export class NodeApi implements INodeApi {
   }
 
   public async getPeers(): Promise<NodePeer[]> {
-    return this.network.getPeers().map((peer) => {
+    const peers: NodePeer[] = [];
+    for (const peer of this.network.getPeers()) {
       const conn = this.network.getPeerConnection(peer);
-      return {
-        peerId: peer.toB58String(),
-        //TODO: figure out how to get enr of peer
-        enr: "",
-        address: conn.remoteAddr.toString(),
-        direction: conn.stat.direction,
-        state: getPeerState(conn.stat.status)
-      };
-    });
+      if (conn) {
+        peers.push({
+          peerId: peer.toB58String(),
+          //TODO: figure out how to get enr of peer
+          enr: "",
+          address: conn.remoteAddr.toString(),
+          direction: conn.stat.direction,
+          state: getPeerState(conn.stat.status)
+        });
+      }
+    }
+    return peers;
   }
 
   public async getSyncingStatus(): Promise<SyncingStatus> {

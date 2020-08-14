@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-
+import {Json} from "@chainsafe/ssz";
 import {writeFile, readFile} from "../util";
 
 export async function createPeerId(): Promise<PeerId> {
@@ -7,7 +7,7 @@ export async function createPeerId(): Promise<PeerId> {
 }
 
 export async function writePeerId(filename: string, peerId: PeerId): Promise<void> {
-  await writeFile(filename, peerId.toJSON());
+  await writeFile(filename, peerId.toJSON() as Json);
 }
 
 export async function readPeerId(filename: string): Promise<PeerId> {

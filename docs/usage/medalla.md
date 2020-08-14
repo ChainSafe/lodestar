@@ -21,7 +21,7 @@ yarn run cli beacon --testnet medalla
     Until genesis, the node will stay idle waiting for all genesis conditions to pass.
 <!-- prettier-ignore-end -->
 
-Immediatelly you should see confirmation that the different modules have started
+Immediately you should see confirmation that the different modules have started
 
 ```bash
 2020-06-21 17:34:24  [CHAIN]            info: Initializing beacon chain with state root 0x773c694b47504d789dc768d2356f691866b47833d0d85e02511d7cd339925b17 and genesis block root 0x19aa2deaa02cac9774eb8948a8ead1ebe851ba9590878a10cd5767092e16ba12
@@ -55,7 +55,24 @@ The `--testnet medalla` flag automatically sets the following configuration opti
 
 ## Run a validator
 
-_TBD_
+To start a Lodestar validator run the command:
+
+```bash
+yarn run cli validator --testnet medalla
+```
+
+You should see confirmation that modules have started. 
+
+```bash
+2020-08-07 14:14:24  []                 info: Decrypted 2 validator keystores 
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up validator client... 
+2020-08-07 14:14:24  [VALIDATOR 0X8BAC4815] info: Setting up RPC connection... 
+2020-08-07 14:14:24  []                 info: Checking genesis time and beacon node connection 
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up validator client... 
+2020-08-07 14:14:24  [VALIDATOR 0X8E44237B] info: Setting up RPC connection... 
+```
+
+
 
 ## Submit your deposit to Goerli
 

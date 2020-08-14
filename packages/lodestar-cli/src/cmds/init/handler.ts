@@ -1,18 +1,27 @@
 import * as fs from "fs";
 import path from "path";
 import deepmerge from "deepmerge";
-import {IInitOptions} from "./options";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {initBeaconConfig} from "../../config/beacon";
+import {IGlobalArgs} from "../../options";
 import {mkdir, getBeaconConfig} from "../../util";
 import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
 import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
+import {IBeaconArgs} from "../beacon/options";
+
+/**
+ * Handler runable from other commands
+ */
+export async function initCmd(options: IGlobalArgs): Promise<void> {
+  await initHandler(options as IBeaconArgs & IGlobalArgs);
+}
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function initHandler(options: IInitOptions): Promise<void> {
+export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<void> {
   options = {
     ...options,
     ...getBeaconPaths(options),
@@ -23,6 +32,8 @@ export async function initHandler(options: IInitOptions): Promise<void> {
   if (options.testnet && !fs.existsSync(options.paramsFile)) {
     const testnetConfig = getTestnetConfig(options.testnet);
     try {
+      if (!testnetConfig.network) testnetConfig.network = {};
+      if (!testnetConfig.network.discv5) testnetConfig.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
       testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(options.testnet);
     } catch (e) {
       // eslint-disable-next-line no-console

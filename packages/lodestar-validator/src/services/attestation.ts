@@ -104,8 +104,9 @@ export class AttestationService {
         attesterIndex,
         isAggregator
       };
-      if(this.nextAttesterDuties.has(duty.attestationSlot)) {
-        this.nextAttesterDuties.get(duty.attestationSlot).push(nextDuty);
+      const attesterDuties = this.nextAttesterDuties.get(duty.attestationSlot);
+      if(attesterDuties) {
+        attesterDuties.push(nextDuty);
       } else {
         this.nextAttesterDuties.set(duty.attestationSlot, [nextDuty]);
       }
@@ -170,7 +171,9 @@ export class AttestationService {
 
     if (duty.isAggregator) {
       setTimeout(() => {
-        this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+        if (attestation) {
+          this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+        }
       }, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
     }
     try {
@@ -301,19 +304,13 @@ export class AttestationService {
         slot
       );
     } catch (e) {
-      this.logger.error(
-        `Failed to obtain attestation from beacon node at slot ${slot} and committee ${committeeIndex}`,
-        e
-      );
-      return null;
+      e.message = `Failed to obtain attestation at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
+      throw e;
     }
     if (await this.isConflictingAttestation(attesterIndex, attestation.data)) {
-      this.logger.warn(
-        "Avoided signing conflicting attestation! "
-                + `Source epoch: ${attestation.data.source.epoch}, `
-                + `Target epoch: ${attestation.data.target.epoch}`
-      );
-      return null;
+      throw Error("Avoided signing conflicting attestation! "
+        + `Source epoch: ${attestation.data.source.epoch}, `
+        + `Target epoch: ${attestation.data.target.epoch}`);
     }
     const domain = getDomain(
       this.config,

@@ -26,7 +26,7 @@ export interface ILMDGHOST extends ForkChoiceEventEmitter {
   getFinalized(): Checkpoint;
   getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null;
   getBlockSummariesAtSlot(slot: Slot): BlockSummary[];
-  getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary;
+  getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null;
   getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary;
   getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[];
   hasBlock(blockRoot: Uint8Array): boolean;
