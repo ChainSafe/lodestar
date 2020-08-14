@@ -33,7 +33,7 @@ interface IValidatorDirBuildOptions {
    * randomly. When this random keystore is generated, calls to this function are ignored and
    * the withdrawal keystore is *always* stored to disk. This is to prevent data loss.
    */
-  storeWithdrawalKeystore: boolean;
+  storeWithdrawalKeystore?: boolean;
   depositGwei: bigint;
   config: IBeaconConfig;
 }

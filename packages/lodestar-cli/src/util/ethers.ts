@@ -19,7 +19,7 @@ export async function getEthersSigner({
   ipcPath?: string;
   chainId: number;
 }): Promise<ethers.Signer> {
-  if (keystorePath) {
+  if (keystorePath && keystorePassword) {
     const keystoreJson = fs.readFileSync(keystorePath, "utf8");
     const wallet = await ethers.Wallet.fromEncryptedJson(keystoreJson, keystorePassword);
     const eth1Provider = rpcUrl

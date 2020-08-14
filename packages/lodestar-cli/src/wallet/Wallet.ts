@@ -24,8 +24,7 @@ export interface IWalletKeystoreJson {
 }
 
 export class Wallet extends Keystore {
-  keystore: Keystore;
-  name: string;
+  name?: string;
   nextaccount: number;
   version: number;
   type: string;
@@ -61,7 +60,7 @@ export class Wallet extends Keystore {
     return {
       crypto: this.crypto,
       uuid: this.uuid,
-      name: this.name,
+      name: this.name || "",
       nextaccount: this.nextaccount,
       version: this.version,
       type: this.type
