@@ -66,6 +66,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 
   logFile: {
+    description: "Log file",
     alias: ["log.file"],
     type: "string",
     normalize: true,

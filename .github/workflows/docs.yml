@@ -28,6 +28,8 @@ jobs:
         run: yarn install --frozen-lockfile
       - name: Build typedocs
         run: node_modules/.bin/lerna run build:release
+      - name: Build cli docs
+        run: yarn run build:cli-docs
       - name: Prepare docs
         run: ./scripts/prepare-docs.sh
 

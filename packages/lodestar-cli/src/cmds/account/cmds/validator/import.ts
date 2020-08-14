@@ -34,6 +34,7 @@ Ethereum Foundation utility.",
 
   options: {
     keystore: {
+      description: "Path to a single keystore to be imported.",
       describe: "Path to a single keystore to be imported.",
       normalize: true,
       conflicts: ["directory"],
@@ -41,6 +42,10 @@ Ethereum Foundation utility.",
     },
 
     directory: {
+      description: "Path to a directory which contains zero or more keystores \
+for import. This directory and all sub-directories will be \
+searched and any file name which contains 'keystore' and \
+has the '.json' extension will be attempted to be imported.",
       describe: "Path to a directory which contains zero or more keystores \
   for import. This directory and all sub-directories will be \
   searched and any file name which contains 'keystore' and \
