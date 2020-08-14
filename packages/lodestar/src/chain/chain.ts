@@ -328,7 +328,6 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     // add justified block to forkchoice so "this.justified" in forkchoice really map to a block
     if (isStateNotGenesis) {
       const preJustifiedBlock = await this.db.blockArchive.getByRoot(lastKnownState.currentJustifiedCheckpoint.root);
-      if (!preJustifiedBlock) throw Error("lastJustifiedBlock not in db");
       let preFinalizedBlocks = await this.db.blockArchive.values({
         gt: preJustifiedBlock.message.slot, lt: finalizedSlot});
       preFinalizedBlocks = sortBlocks([preJustifiedBlock, ...preFinalizedBlocks]);
