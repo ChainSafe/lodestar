@@ -11,16 +11,7 @@ interface IMarkdownSection {
 }
 
 const docsMarkdownPath = process.argv[2];
-if (!docsMarkdownPath) throw Error("Run script with output path: 'node docs.js doc.md'");
-
-// let globalOptionsStr = "";
-// for (const [key, value] of Object.entries(globalOptions)) {
-//   if (!(key in paramsOptions))
-//     globalOptionsStr = globalOptionsStr.concat(
-//       `| ${key} | ${value.type} | ${value.description} | ${value.default || ""} |\n`
-//     );
-// }
-
+if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node generateCliReference.ts cli.md'");
 
 const docsString = renderMarkdownSections([{
   title: "Lodestar CLI Documentation",
