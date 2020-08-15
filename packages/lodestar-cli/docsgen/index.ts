@@ -1,18 +1,14 @@
 import fs from "fs";
 import path from "path";
-import {cmds} from "./cmds";
-import {ICliCommand} from "./util";
 import {Options} from "yargs";
-import {globalOptions} from "./options/globalOptions";
+import {cmds} from "../src/cmds";
+import {ICliCommand} from "../src/util";
+import {globalOptions} from "../src/options/globalOptions";
+import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markdown";
 
-interface IMarkdownSection {
-  title: string;
-  body: string;
-  subsections?: IMarkdownSection[];
-}
 
 const docsMarkdownPath = process.argv[2];
-if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node generateCliReference.ts cli.md'");
+if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node index.ts cli.md'");
 
 const docsString = renderMarkdownSections([{
   title: "Lodestar CLI Documentation",
@@ -69,35 +65,4 @@ function getOptionsTable(
       Description: opt.description,
       Default: opt.defaultDescription || opt.default || ""
     })), ["Name", "Type", "Description", "Default"]);
-}
-
-
-/**
- * Render IMarkdownSection recursively tracking its level depth
- */
-function renderMarkdownSections(sections: IMarkdownSection[], level = 2): string {
-  return sections.map(section => {
-    const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
-    if (section.body) parts.push(section.body);
-    if (section.subsections) parts.push(renderMarkdownSections(section.subsections, level + 1));
-    return parts.join(section.title ? "\n" : "");
-  }).join("\n");
-}
-
-/**
- * Render an array of objects as a markdown table
- */
-function toMarkdownTable<T extends {[key: string]: string}>(rows: T[], headers: (keyof T)[]): string {
-  return [
-    toMarkdownTableRow(headers as string[]),
-    toMarkdownTableRow(headers.map(() => "---")),
-    ...rows.map(row => toMarkdownTableRow(headers.map(key => row[key])))
-  ].join("\n");
-}
-
-/**
- * Render an array of items as a markdown table row
- */
-function toMarkdownTableRow(row: string[]): string {
-  return `| ${row.join(" | ")} |`;
 }
