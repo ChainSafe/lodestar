@@ -69,9 +69,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
       body.push(`Cmd \`${commandJson}\` has all the options from the [\`beacon\` cmd](#beacon).`);
     }
 
-    if (Object.keys(cmd.options).length > 0) {
-      body.push(getOptionsTable(cmd.options));
-    }
+    body.push(getOptionsTable(cmd.options));
   }
   return {
     title: `\`${commandJson}\``, 
@@ -87,9 +85,15 @@ function getOptionsTable(
   options: Record<string, Options>,
   {showHidden}: {showHidden?: boolean} = {}
 ): string {
-  return toMarkdownTable(Object.entries(options)
-    .filter(([, opt]) => showHidden || !opt.hidden)
-    .map(([key, opt]) => ({
+  const visibleOptions = Object.entries(options)
+    .filter(([, opt]) => showHidden || !opt.hidden);
+
+  if (visibleOptions.length === 0) {
+    return "";
+  }
+
+  return toMarkdownTable(
+    visibleOptions.map(([key, opt]) => ({
       Option: `\`--${key}\``,
       Type: opt.type,
       Description: opt.description,
