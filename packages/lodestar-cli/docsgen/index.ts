@@ -1,14 +1,24 @@
 import fs from "fs";
 import path from "path";
 import {Options} from "yargs";
+import {omit} from "lodash";
 import {cmds} from "../src/cmds";
 import {ICliCommand} from "../src/util";
-import {globalOptions} from "../src/options/globalOptions";
+import {globalOptions} from "../src/options";
+import {beaconOptions} from "../src/cmds/beacon/options";
 import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markdown";
 
+// Script to generate a reference of all CLI commands and options
+// Outputs a markdown format ready to be consumed by mkdocs
+//
+// Usage:
+// ts-node docsgen docs/cli.md
+//
+// After generation the resulting .md should be mv to the path expected
+// by the mkdocs index and other existing paths in the documentation
 
 const docsMarkdownPath = process.argv[2];
-if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node index.ts cli.md'");
+if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node docsgen docs/cli.md'");
 
 const docsString = renderMarkdownSections([{
   title: "Lodestar CLI Documentation",
@@ -31,16 +41,29 @@ fs.writeFileSync(docsMarkdownPath, docsString);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
-  const bodyParts = [cmd.describe];
+  const body = [cmd.describe];
   if (cmd.options) {
     if (cmd.subcommands) {
-      bodyParts.push("The options below apply to all subcommands.");
+      body.push("The options below apply to all subcommands.");
     }
-    bodyParts.push(getOptionsTable(cmd.options));
+
+    // De-duplicate beaconOptions. If all beaconOptions exists in this command, skip them
+    if (
+      cmds.some(c => c.command === "beacon") &&
+      commandJson !== "beacon" &&
+      Object.keys(beaconOptions).every(key => cmd.options[key])
+    ) {
+      cmd.options = omit(cmd.options, Object.keys(beaconOptions));
+      body.push(`Cmd \`${commandJson}\` has all the options from the [\`beacon\` cmd](#beacon).`);
+    }
+
+    if (Object.keys(cmd.options).length > 0) {
+      body.push(getOptionsTable(cmd.options));
+    }
   }
   return {
     title: `\`${commandJson}\``, 
-    body: bodyParts.join("\n\n"),
+    body,
     subsections: (cmd.subcommands || []).map(subcmd => cmdToMarkdownSection(subcmd, commandJson))
   };
 }

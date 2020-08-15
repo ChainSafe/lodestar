@@ -1,6 +1,6 @@
 export interface IMarkdownSection {
   title: string;
-  body: string;
+  body: string | string[];
   subsections?: IMarkdownSection[];
 }
 
@@ -10,8 +10,12 @@ export interface IMarkdownSection {
 export function renderMarkdownSections(sections: IMarkdownSection[], level = 1): string {
   return sections.map(section => {
     const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
-    if (section.body) parts.push(section.body);
-    if (section.subsections) parts.push(renderMarkdownSections(section.subsections, level + 1));
+    if (section.body) {
+      parts.push(Array.isArray(section.body) ? section.body.join("\n\n") : section.body);
+    }
+    if (section.subsections) {
+      parts.push(renderMarkdownSections(section.subsections, level + 1));
+    }
     return parts.join(section.title ? "\n" : "");
   }).join("\n");
 }
