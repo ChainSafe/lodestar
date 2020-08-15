@@ -21,8 +21,8 @@ const docsMarkdownPath = process.argv[2];
 if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node docsgen docs/cli.md'");
 
 const docsString = renderMarkdownSections([{
-  title: "Lodestar CLI Documentation",
-  body: "This reference describes the syntax of the Lodestar CLI options and commands.",
+  title: "Command Line Reference",
+  body: "This reference describes the syntax of the Lodestar CLI commands and their options.",
   subsections: [
     {
       title: "Global Options",
