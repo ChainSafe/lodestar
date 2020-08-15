@@ -31,23 +31,19 @@ fs.writeFileSync(docsMarkdownPath, docsString);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
-  const section: IMarkdownSection = {
-    title: `\`${commandJson}\``, 
-    body: cmd.describe,
-    subsections: []
-  };
+  const bodyParts = [cmd.describe];
   if (cmd.options) {
-    section.subsections.push({
-      title: `\`${commandJson}\` options`,
-      body: `These are the ${commandJson} command options \n\n ${getOptionsTable(cmd.options)}`,
-    });
+    bodyParts.push(
+      `These are the \`${commandJson}\` command options.` + 
+      `${cmd.subcommands ? " Apply to all subcommands." : ""}`
+    );
+    bodyParts.push(getOptionsTable(cmd.options));
   }
-  if (cmd.subcommands) {
-    for (const subcmd of cmd.subcommands) {
-      section.subsections.push(cmdToMarkdownSection(subcmd, commandJson));
-    }
-  }
-  return section;
+  return {
+    title: `\`${commandJson}\``, 
+    body: bodyParts.join("\n\n"),
+    subsections: (cmd.subcommands || []).map(subcmd => cmdToMarkdownSection(subcmd, commandJson))
+  };
 }
 
 /**

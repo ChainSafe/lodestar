@@ -7,7 +7,7 @@ export interface IMarkdownSection {
 /**
  * Render IMarkdownSection recursively tracking its level depth
  */
-export function renderMarkdownSections(sections: IMarkdownSection[], level = 2): string {
+export function renderMarkdownSections(sections: IMarkdownSection[], level = 1): string {
   return sections.map(section => {
     const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
     if (section.body) parts.push(section.body);
