@@ -11,7 +11,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
-    "build:cli-docs": "TS_NODE_PROJECT=packages/lodestar-cli/tsconfig.test.json ts-node packages/lodestar-cli/src/generateCLIDocs.ts",
+    "build:docs": "lerna run clean && lerna run build && lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",

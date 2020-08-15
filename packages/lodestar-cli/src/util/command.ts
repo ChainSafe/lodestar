@@ -5,6 +5,7 @@ export type ICliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Opti
 export interface ICliCommand<OwnArgs = {}, ParentArgs = {}> {
   command: string;
   describe: string;
+  examples?: {command: string; description: string}[];
   options?: ICliCommandOptions<OwnArgs>;
   // 1st arg: any = free own sub command options
   // 2nd arg: subcommand parent options is = to this command options + parent options
@@ -27,6 +28,11 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: ICliCommand<any,
       yargsBuilder.options(cliCommand.options || {});
       for (const subcommand of cliCommand.subcommands || []) {
         registerCommandToYargs(yargsBuilder, subcommand);
+      }
+      if (cliCommand.examples) {
+        for (const example of cliCommand.examples) {
+          yargsBuilder.example(`$0 ${example.command}`, example.description);
+        }
       }
       return yargs;
     },
