@@ -1,8 +1,8 @@
-import {writeFile} from "fs";
+import fs from "fs";
 import {cmds} from "./cmds";
 import {ICliCommand} from "./util";
+import {Options} from "yargs";
 import {globalOptions} from "./options/globalOptions";
-import {paramsOptions} from "./options/paramsOptions";
 
 interface IMarkdownSection {
   title: string;
@@ -10,44 +10,30 @@ interface IMarkdownSection {
   subsections?: IMarkdownSection[];
 }
 
-const optionsTableHeader = "\n| Name | Type | Description |\n| ----------- | ----------- | ----------- |";
+const docsMarkdownPath = process.argv[2];
+if (!docsMarkdownPath) throw Error("Run script with output path: 'node docs.js doc.md'");
 
-let globalOptionsStr = "";
-for (const [key, value] of Object.entries(globalOptions)) {
-  if (!(key in paramsOptions))
-    globalOptionsStr = globalOptionsStr.concat(
-      `| ${key} | ${value.type} | ${value.description} | ${value.default || ""} |\n`
-    );
-}
+// let globalOptionsStr = "";
+// for (const [key, value] of Object.entries(globalOptions)) {
+//   if (!(key in paramsOptions))
+//     globalOptionsStr = globalOptionsStr.concat(
+//       `| ${key} | ${value.type} | ${value.description} | ${value.default || ""} |\n`
+//     );
+// }
 
-generate();
 
-function generate(): void {
-  const docsString = `
-# Lodestar CLI Documentation
-This reference describes the syntax of the Lodestar CLI options and commands.
-
-## Global Options
-| Name | Type | Description | Default |
-| ----------- | ----------- | ----------- | ----------- |
-${globalOptionsStr}
-
-${renderMarkdownSections(
-    cmds.map(cmd => cmdToMarkdownSection(cmd))
-  )}
-`;
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  writeFile("./docs/usage/cli.md", docsString, () => {});
-}
-
-function getOptionsTable(options: object): IMarkdownSection[] {
-  return Object.entries(options)
-    .filter(([, opt]) => !opt.hidden)
-    .map(([key, opt]) => {
-      // set title to undefined to indicate that this is an option and should not have a title
-      return {title: undefined, body: `| ${key} | ${opt.type} | ${opt.description} |`};
-    });
-}
+const docsString = renderMarkdownSections([{
+  title: "Lodestar CLI Documentation",
+  body: "This reference describes the syntax of the Lodestar CLI options and commands.",
+  subsections: [
+    {
+      title: "Global Options",
+      body: getOptionsTable(globalOptions)
+    },
+    ...cmds.map(cmd => cmdToMarkdownSection(cmd))
+  ]
+}]);
+fs.writeFileSync(docsMarkdownPath, docsString);
 
 /**
  * Parse an ICliCommand type recursively and output a IMarkdownSection
@@ -63,8 +49,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
   if (cmd.options) {
     section.subsections.push({
       title: `\`${commandJson}\` options`,
-      body: `These are the ${commandJson} command options`,
-      subsections: [{title: undefined, body: optionsTableHeader}, ...getOptionsTable(cmd.options)]
+      body: `These are the ${commandJson} command options \n\n ${getOptionsTable(cmd.options)}`,
     });
   }
   if (cmd.subcommands) {
@@ -76,6 +61,24 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
 }
 
 /**
+ * Render a Yargs options dictionary to a markdown table
+ */
+function getOptionsTable(
+  options: Record<string, Options>,
+  {showHidden}: {showHidden?: boolean} = {}
+): string {
+  return toMarkdownTable(Object.entries(options)
+    .filter(([, opt]) => showHidden || !opt.hidden)
+    .map(([key, opt]) => ({
+      Name: `\`--${key}\``,
+      Type: opt.type,
+      Description: opt.description,
+      Default: opt.defaultDescription || opt.default || ""
+    })), ["Name", "Type", "Description", "Default"]);
+}
+
+
+/**
  * Render IMarkdownSection recursively tracking its level depth
  */
 function renderMarkdownSections(sections: IMarkdownSection[], level = 2): string {
@@ -85,4 +88,22 @@ function renderMarkdownSections(sections: IMarkdownSection[], level = 2): string
     if (section.subsections) parts.push(renderMarkdownSections(section.subsections, level + 1));
     return parts.join(section.title ? "\n" : "");
   }).join("\n");
+}
+
+/**
+ * Render an array of objects as a markdown table
+ */
+function toMarkdownTable<T extends {[key: string]: string}>(rows: T[], headers: (keyof T)[]): string {
+  return [
+    toMarkdownTableRow(headers as string[]),
+    toMarkdownTableRow(headers.map(() => "---")),
+    ...rows.map(row => toMarkdownTableRow(headers.map(key => row[key])))
+  ].join("\n");
+}
+
+/**
+ * Render an array of items as a markdown table row
+ */
+function toMarkdownTableRow(row: string[]): string {
+  return `| ${row.join(" | ")} |`;
 }
