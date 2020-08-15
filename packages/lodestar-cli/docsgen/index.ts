@@ -42,7 +42,19 @@ fs.writeFileSync(docsMarkdownPath, docsString);
 function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IMarkdownSection {
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
   const body = [cmd.describe];
+
+  if (cmd.examples) {
+    body.push("**Examples**");
+    for (const example of cmd.examples) {
+      if (example.command.startsWith("lodestar")) example.command = `lodestar ${example.command}`;
+      body.push(example.description);
+      body.push(`\`\`\` \n${example.command}\n \`\`\``);
+    }
+  }
+
   if (cmd.options) {
+    body.push("**Options**");
+
     if (cmd.subcommands) {
       body.push("The options below apply to all subcommands.");
     }

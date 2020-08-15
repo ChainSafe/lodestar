@@ -7,7 +7,7 @@ import {globalOptions} from "./options";
 import {YargsError, registerCommandToYargs} from "./util";
 
 const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
-const bottomBanner = "for more information, checks the docs https://chainsafe.github.io/lodestar";
+const bottomBanner = "For more information, check the CLI reference https://chainsafe.github.io/lodestar/reference/cli";
 
 const lodestar = yargs
   .env("LODESTAR")

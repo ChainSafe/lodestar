@@ -23,6 +23,11 @@ export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobal
 
   describe: "Creates a new HD (hierarchical-deterministic) EIP-2386 wallet",
 
+  examples: [{
+    command: "account wallet create --name primary --passphraseFile primary.pass",
+    description: "Create an HD wallet named 'primary'"
+  }],
+
   options: {
     name: {
       description: "The wallet will be created with this name. It is not allowed to \
