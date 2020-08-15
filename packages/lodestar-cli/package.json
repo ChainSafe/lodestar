@@ -20,10 +20,10 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn run build:lib && yarn run build:types",
-    "build:release": "yarn clean && yarn run build && yarn run build:docs",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
-    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:types": "tsc --project tsconfig.build.json --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "check-types": "tsc --noEmit",
