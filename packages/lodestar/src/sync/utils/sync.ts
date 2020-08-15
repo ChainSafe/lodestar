@@ -231,9 +231,12 @@ export async function getPeerSupportedProtocols(
   if (!finalizedBlock || finalizedBlock.length !== 1) {
     return [];
   }
-  const supportedProtocols = [Method.BeaconBlocksByRoot];
   const parentRoot = finalizedBlock[0].message.parentRoot;
   const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot]);
+  if(!parentBlock) {
+    return [];
+  }
+  const supportedProtocols = [Method.BeaconBlocksByRoot];
   const testReqResp: BeaconBlocksByRangeRequest = {
     startSlot: parentBlock[0].message.slot,
     count: 2,
