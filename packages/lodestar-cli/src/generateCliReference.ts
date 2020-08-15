@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import {cmds} from "./cmds";
 import {ICliCommand} from "./util";
 import {Options} from "yargs";
@@ -24,6 +25,8 @@ const docsString = renderMarkdownSections([{
     ...cmds.map(cmd => cmdToMarkdownSection(cmd))
   ]
 }]);
+
+fs.mkdirSync(path.parse(docsMarkdownPath).dir, {recursive: true});
 fs.writeFileSync(docsMarkdownPath, docsString);
 
 /**
