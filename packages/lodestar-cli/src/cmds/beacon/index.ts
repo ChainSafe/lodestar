@@ -5,7 +5,7 @@ import {beaconHandler} from "./handler";
 
 export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   command: "beacon",
-  describe: "Run a beacon node",
+  describe: "Run a beacon chain node",
   options: beaconOptions as ICliCommandOptions<IBeaconArgs>,
   handler: beaconHandler
 };

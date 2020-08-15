@@ -5,7 +5,8 @@ import {IGlobalArgs} from "../../options";
 
 export const init: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   command: "init",
-  describe: "Initialize lodestar",
+  describe: "Initialize Lodestar directories and files necessary to run a beacon chain node. \
+This step is not required, and should only be used to prepare special configurations",
   options: beaconOptions as ICliCommandOptions<IBeaconArgs>,
   handler: initHandler
 };

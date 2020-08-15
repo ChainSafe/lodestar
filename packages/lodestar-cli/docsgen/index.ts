@@ -33,10 +33,9 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
   const commandJson = [parentCommand, cmd.command.replace("<command>", "")].filter(Boolean).join(" ");
   const bodyParts = [cmd.describe];
   if (cmd.options) {
-    bodyParts.push(
-      `These are the \`${commandJson}\` command options.` + 
-      `${cmd.subcommands ? " Apply to all subcommands." : ""}`
-    );
+    if (cmd.subcommands) {
+      bodyParts.push("The options below apply to all subcommands.");
+    }
     bodyParts.push(getOptionsTable(cmd.options));
   }
   return {
@@ -56,9 +55,9 @@ function getOptionsTable(
   return toMarkdownTable(Object.entries(options)
     .filter(([, opt]) => showHidden || !opt.hidden)
     .map(([key, opt]) => ({
-      Name: `\`--${key}\``,
+      Option: `\`--${key}\``,
       Type: opt.type,
       Description: opt.description,
       Default: opt.defaultDescription || opt.default || ""
-    })), ["Name", "Type", "Description", "Default"]);
+    })), ["Option", "Type", "Description", "Default"]);
 }
