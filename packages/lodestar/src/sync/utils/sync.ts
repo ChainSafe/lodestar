@@ -233,7 +233,7 @@ export async function getPeerSupportedProtocols(
   }
   const parentRoot = finalizedBlock[0].message.parentRoot;
   const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot]);
-  if(!parentBlock) {
+  if(!parentBlock || parentBlock.length !== 1) {
     return [];
   }
   const supportedProtocols = [Method.BeaconBlocksByRoot];
