@@ -6,7 +6,7 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {waitForEvent} from "../utils/events/resolver";
 
-describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
+describe.only("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
@@ -52,9 +52,8 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
         await Promise.all(workers.map((worker, i) =>
           waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
             if (evt.event === checkpointEvent) {
-              const epoch = evt.checkpoint.epoch;
-              const rootHex = toHexString(evt.checkpoint.root);
-              console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, rootHex});
+              const {epoch, root} = evt.checkpoint;
+              console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, root});
               return true;
             } else {
               return false;
