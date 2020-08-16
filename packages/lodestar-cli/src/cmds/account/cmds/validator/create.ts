@@ -13,7 +13,7 @@ interface IValidatorCreateArgs {
   passphraseFile: string;
   depositGwei?: string;
   storeWithdrawalKeystore?: boolean;
-  count?: number;
+  count: number;
 }
 
 export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs> = {
@@ -22,6 +22,11 @@ export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & I
   describe: "Creates new validators from an existing EIP-2386 wallet using the EIP-2333 HD key \
 derivation scheme. Creates a new directory per validator with a voting keystore, withdrawal keystore, \
 and pre-computed deposit RPL data",
+
+  examples: [{
+    command: "account validator create --name primary --passphraseFile primary.pass",
+    description: "Create a validator from HD wallet named 'primary'"
+  }],
   
   options: {
     name: {

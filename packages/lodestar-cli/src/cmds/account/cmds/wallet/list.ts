@@ -9,6 +9,11 @@ export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
 
   describe: "Lists the names of all wallets",
 
+  examples: [{
+    command: "account wallet list --walletsDir .testnet/wallets",
+    description: "List all wallets in .testnet/wallets"
+  }],
+
   handler: async (options) => {
     const accountPaths = getAccountPaths(options);
     const walletManager = new WalletManager(accountPaths);

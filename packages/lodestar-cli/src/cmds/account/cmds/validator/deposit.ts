@@ -29,6 +29,24 @@ with an error if any error occurs. After each deposit is submitted to the Eth1 \
 node, a file will be saved in the validator directory with the transaction hash. \
 The deposit contract address will be determined by the spec config flag.",
 
+  examples: [
+    {
+      command: "account validator deposit --validator 0x88f92 \
+--keystorePath keystore.json --keystorePassword my-secret-pass",
+      description: "Fund a deposit using a local keystore file"
+    },
+    {
+      command: "account validator deposit --validator 0x88f92 \
+--ipcPath /home/your_folder/geth.ipc",
+      description: "Fund a deposit using a local Eth1 node via IPC"
+    },
+    {
+      command: "account validator deposit --validator 0x88f92 \
+--rpcUrl http://localhost:8545 --rpcPassword my-secret-pass",
+      description: "Fund a deposit using a local Eth1 node unlockable via JSON RPC"
+    }
+  ],
+
   options: {
     validator: {
       description: "The name of the validator directory in $keystoresDir for which to deposit. \
@@ -91,7 +109,10 @@ The deposit contract address will be determined by the spec config flag.",
     // eslint-disable-next-line no-console
     console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 
-    const eth1Signer = await getEthersSigner(options);
+    const eth1Signer = await getEthersSigner({
+      ...options,
+      chainId: config.params.DEPOSIT_NETWORK_ID
+    });
 
     for (const validatorDir of validatorDirsToSubmit) {
       const {rlp, depositData} = validatorDir.eth1DepositData(config);

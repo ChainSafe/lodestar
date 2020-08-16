@@ -83,7 +83,9 @@ export class EthersEth1Notifier implements IEth1Notifier {
       return;
     }
     // no need await
-    this.startProcessEth1Blocks();
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
   }
 
   public async stop(): Promise<void> {
@@ -102,7 +104,9 @@ export class EthersEth1Notifier implements IEth1Notifier {
     }
     this.eth1Source = pushable<Eth1EventsBlock>();
     // no need await
-    this.startProcessEth1Blocks();
+    this.startProcessEth1Blocks().catch(e => {
+      this.logger.error("Error on startProcessEth1Blocks", e);
+    });
     return this.eth1Source;
   }
 

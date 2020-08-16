@@ -20,12 +20,13 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn run build:lib && yarn run build:types",
-    "build:release": "yarn clean && yarn run build && yarn run build:docs",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
-    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:types": "tsc --project tsconfig.build.json --incremental --declaration --outDir lib --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
+    "build:refdocs": "ts-node docsgen docs/cli.md",
     "check-types": "tsc --noEmit",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
@@ -50,7 +51,7 @@
     "@chainsafe/bls": "2.0.0",
     "@chainsafe/bls-keygen": "^0.1.0",
     "@chainsafe/bls-keystore": "^1.0.0-beta8",
-    "@chainsafe/discv5": "0.3.0",
+    "@chainsafe/discv5": "0.3.1",
     "@chainsafe/lodestar": "^0.11.0",
     "@chainsafe/lodestar-config": "^0.11.0",
     "@chainsafe/lodestar-types": "^0.11.0",
@@ -78,6 +79,7 @@
     "yargs": "^15.3.1"
   },
   "devDependencies": {
+    "@nomiclabs/buidler": "^1.4.3",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.1",
     "@types/es6-promisify": "6.0.0",

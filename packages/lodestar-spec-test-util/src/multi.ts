@@ -81,7 +81,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
             const profile = profiler.stopProfiling(profileId);
             const directory = env.GEN_PROFILE_DIR || __dirname;
             profile.export((error, result) => {
-              if (error) {
+              if (error || result === undefined) {
                 return;
               }
               writeFile(`${directory}/${profileId}`, result, () => {

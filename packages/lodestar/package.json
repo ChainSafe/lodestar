@@ -24,10 +24,10 @@
   "scripts": {
     "benchmark": "ts-node test/benchmarks",
     "build": "yarn run build:lib && yarn run build:types",
-    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
-    "build:release": "yarn clean && yarn run build && yarn run build:docs",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "check-types": "tsc --noEmit",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@chainsafe/bls": "2.0.0",
-    "@chainsafe/discv5": "0.3.0",
+    "@chainsafe/discv5": "0.3.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
     "@chainsafe/lodestar-config": "^0.11.0",
     "@chainsafe/lodestar-params": "^0.11.0",

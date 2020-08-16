@@ -6,4 +6,4 @@ import {dev} from "./dev";
 import {init} from "./init";
 import {validator} from "./validator";
 
-export const cmds: ICliCommand<IGlobalArgs, {}>["subcommands"] = [beacon, validator, account, init, dev];
+export const cmds: Required<ICliCommand<IGlobalArgs, {}>>["subcommands"] = [beacon, validator, account, init, dev];
