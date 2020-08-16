@@ -3,6 +3,7 @@ import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
+import { expect } from "chai";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -38,7 +39,13 @@ describe("Run single node single thread interop validators (no eth1) until check
       const validators = getDevValidators(bn, testCase.vc, testCase.validators);
       await bn.start();
       await Promise.all(validators.map(v => v.start()));
-      await justificationEventListener;
+      try {
+        await justificationEventListener;
+      } catch (e) {
+        await Promise.all(validators.map((v) => v.stop()));
+        await bn.stop();
+        expect(`failed to get event: ${testCase.event}`);
+      }
       await Promise.all(validators.map((v) => v.stop()));
       await bn.stop();
     });
