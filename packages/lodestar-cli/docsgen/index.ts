@@ -48,7 +48,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
     for (const example of cmd.examples) {
       if (example.command.startsWith("lodestar")) example.command = `lodestar ${example.command}`;
       body.push(example.description);
-      body.push(`\`\`\` \n${example.command}\n \`\`\``);
+      body.push(`\`\`\` \n${example.command}\n\`\`\``);
     }
   }
 
