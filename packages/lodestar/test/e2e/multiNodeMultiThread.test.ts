@@ -6,7 +6,7 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {waitForEvent} from "../utils/events/resolver";
 
-describe.only("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
+describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
