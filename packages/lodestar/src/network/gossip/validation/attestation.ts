@@ -29,8 +29,14 @@ export async function validateGossipAttestation(
     attestationLogContext
   );
 
-  if(attestation.aggregationBits.length === 0) {
-    logger.warn("Rejected gossip committee attestation", {reason: "empty aggreagtion bits", ...attestationLogContext});
+  if(!isUnaggregatedAttestation(attestation)) {
+    logger.warn(
+      "Rejected gossip committee attestation",
+      {
+        reason: "not unaggregated attesation",
+        aggregationBits: JSON.stringify(attestation.aggregationBits),
+        ...attestationLogContext}
+    );
     return ExtendedValidatorResult.reject;
   }
 
@@ -52,11 +58,6 @@ export async function validateGossipAttestation(
   //no other validator attestation for same target epoch has been seen
   if(await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     return ExtendedValidatorResult.ignore;
-  }
-
-  if(!isUnaggregatedAttestation(attestation)) {
-    logger.warn("Rejected gossip committee attestation", {reason: "not unaggregated", ...attestationLogContext});
-    return ExtendedValidatorResult.reject;
   }
 
   const attestationStateContext = await getBlockStateContext(chain.forkChoice, db, attestation.data.beaconBlockRoot);
