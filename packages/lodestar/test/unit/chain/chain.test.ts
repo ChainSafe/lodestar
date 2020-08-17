@@ -21,7 +21,7 @@ describe("BeaconChain", function() {
   let chain: IBeaconChain;
 
   beforeEach(async () => {
-    dbStub = new StubbedBeaconDb(sandbox, config);
+    dbStub = new StubbedBeaconDb(sandbox);
     eth1 = new InteropEth1Notifier();
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);

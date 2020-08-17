@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Checkpoint, ForkDigest, Root, Slot} from "@chainsafe/lodestar-types";
 import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
 import {Message} from "libp2p-gossipsub/src/message";
@@ -10,10 +10,12 @@ import {utils} from "libp2p-pubsub";
 import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
-import {ILMDGHOST} from "../../chain";
+import {IBeaconChain, ILMDGHOST} from "../../chain";
 import {IBeaconDb} from "../../db/api";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -75,17 +77,38 @@ export function getMessageId(rawMessage: Message): string {
 }
 
 export async function getBlockStateContext(
-  forkChoice: ILMDGHOST, db: IBeaconDb, block: SignedBeaconBlock
+  forkChoice: ILMDGHOST, db: IBeaconDb, blockRoot: Root, slot?: Slot
 ): Promise<ITreeStateContext|null> {
   const parentSummary =
-      forkChoice.getBlockSummaryByBlockRoot(block.message.parentRoot as Uint8Array);
+      forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
   if(!parentSummary) {
     return null;
   }
   const stateEpochCtx = await db.stateCache.get(parentSummary.stateRoot);
   if(!stateEpochCtx) return null;
-  if (stateEpochCtx.state.slot < block.message.slot) {
-    processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, block.message.slot);
+  //only advance state transition if asked for future block
+  slot = slot ?? parentSummary.slot;
+  if (stateEpochCtx.state.slot < slot) {
+    processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, slot);
   }
   return stateEpochCtx;
+}
+
+export async function getAttestationPreState(
+  config: IBeaconConfig, chain: IBeaconChain, db: IBeaconDb, cp: Checkpoint
+): Promise<ITreeStateContext|null> {
+  const preStateContext  = await db.checkpointStateCache.get(cp);
+  if(preStateContext) {
+    return preStateContext;
+  }
+  const baseState = await chain.getStateContextByBlockRoot(cp.root);
+  if(!baseState) {
+    return null;
+  }
+  const epochStartSlot = computeStartSlotAtEpoch(config, cp.epoch);
+  if(epochStartSlot > baseState.state.slot) {
+    processSlots(baseState.epochCtx, baseState.state, epochStartSlot);
+    await db.checkpointStateCache.add(cp, baseState);
+  }
+  return baseState;
 }

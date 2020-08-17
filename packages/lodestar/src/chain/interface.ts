@@ -19,6 +19,7 @@ import {IBeaconClock} from "./clock/interface";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {IService} from "../node";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -64,6 +65,8 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
 
+  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext|null>;
+
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
@@ -86,7 +89,9 @@ export interface IBeaconChain extends ChainEventEmitter {
   initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void>;
 }
 
-export interface IAttestationProcessor {
+export interface IAttestationProcessor extends IService {
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
   receiveAttestation(attestation: Attestation): Promise<void>;
+  getPendingBlockAttestations(blockRootHex: string): Attestation[];
+  getPendingSlotAttestations(slot: Slot): Attestation[];
 }

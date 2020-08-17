@@ -48,7 +48,7 @@ export async function validateGossipBlock(
     return ExtendedValidatorResult.ignore;
   }
 
-  const blockContext = await getBlockStateContext(chain.forkChoice, db, block);
+  const blockContext = await getBlockStateContext(chain.forkChoice, db, block.message.parentRoot, block.message.slot);
   if(!blockContext) {
     logger.warn(
       "Ignoring gossip block",

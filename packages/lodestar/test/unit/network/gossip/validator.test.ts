@@ -33,24 +33,15 @@ describe.skip("GossipMessageValidator", () => {
   let validator: GossipMessageValidator;
   let dbStub: StubbedBeaconDb, logger: any, isValidIndexedAttestationStub: any,
     isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
-    isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain,
-    getAttestingIndicesStub: any,
-    getAttestingIndicesFromCommitteeStub: SinonStub,
-    isAggregatorStub: any, isBlsVerifyStub: SinonStub,
-    getIndexedAttestationStub: SinonStub, epochCtxStub: SinonStubbedInstance<EpochContext>;
+    isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain, isBlsVerifyStub: SinonStub;
 
   beforeEach(() => {
     isValidIndexedAttestationStub = sandbox.stub(attestationUtils, "isValidIndexedAttestation");
-    getAttestingIndicesStub = sandbox.stub(attestationUtils, "getAttestingIndices");
-    getAttestingIndicesFromCommitteeStub = sandbox.stub(attestationUtils, "getAttestingIndicesFromCommittee");
-    isAggregatorStub = sandbox.stub(validatorUtils, "isAggregator");
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
-    getIndexedAttestationStub = sandbox.stub(attestationUtils, "getIndexedAttestation");
     chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    epochCtxStub = sinon.createStubInstance(EpochContext);
     isBlsVerifyStub = sandbox.stub(bls, "verify");
 
     dbStub = new StubbedBeaconDb(sandbox);
@@ -65,184 +56,6 @@ describe.skip("GossipMessageValidator", () => {
 
   afterEach(() => {
     sandbox.restore();
-  });
-
-  describe("validate committee attestation", () => {
-    it("should return invalid committee attestation - invalid subnet", async () => {
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      const attestation = generateEmptyAttestation();
-      const invalidSubnet = 2000;
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, invalidSubnet)).to.be.equal(ExtendedValidatorResult.reject);
-    });
-
-    it("should return invalid committee attestation - invalid slot", async () => {
-      const attestation = generateEmptyAttestation();
-      const state = generateState({
-        genesisTime: Math.floor(new Date("2000-01-01").getTime()) / 1000,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.ignore);
-      expect(chainStub.getHeadStateContext.calledOnce).to.be.true;
-    });
-
-    it("should return invalid committee attestation - invalid unaggregated attestation", async () => {
-      const attestation = generateEmptyAttestation();
-      // aggregationBits are all false
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      getAttestingIndicesFromCommitteeStub.returns([]);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.reject);
-      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.false;
-    });
-
-    it("should return invalid committee attestation - prevent DOS", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([attestation]);
-      getAttestingIndicesFromCommitteeStub.returns([0]);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.ignore);
-      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
-      expect(chainStub.forkChoice.hasBlock.calledOnce).to.be.false;
-      expect(getAttestingIndicesFromCommitteeStub.calledOnce).to.be.false;
-    });
-
-    it("should return invalid committee attestation - block not exist", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(false);
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesFromCommitteeStub.returns([0]);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.reject);
-      expect(dbStub.attestation.geAttestationsByTargetEpoch.calledOnce).to.be.true;
-      expect(dbStub.block.has.calledOnce).to.be.true;
-      expect(dbStub.badBlock.has.calledOnce).to.be.false;
-    });
-
-    it("should return invalid committee attestation - bad block", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.badBlock.has.resolves(true);
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesFromCommitteeStub.returns([0]);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.reject);
-      expect(dbStub.badBlock.has.calledOnce).to.be.true;
-      expect(isValidIndexedAttestationStub.calledOnce).to.be.false;
-    });
-
-    it("should return invalid committee attestation - invalid attestation", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.badBlock.has.resolves(false);
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesFromCommitteeStub.returns([0]);
-      getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
-      isValidIndexedAttestationStub.returns(false);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.reject);
-      expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
-    });
-
-    it("should return valid committee attestation", async () => {
-      const attestation = generateEmptyAttestation();
-      attestation.aggregationBits[0] = true;
-      dbStub.block.has.resolves(true);
-      dbStub.badBlock.has.resolves(false);
-      const state = generateState({
-        genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
-        validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
-          activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
-        }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
-      });
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
-      dbStub.attestation.geAttestationsByTargetEpoch.resolves([]);
-      getAttestingIndicesFromCommitteeStub.returns([0]);
-      getIndexedAttestationStub.returns({attestingIndices: [], data: attestation.data, signature: Buffer.alloc(0)});
-      isValidIndexedAttestationStub.returns(true);
-      expect(await validator.isValidIncomingCommitteeAttestation(attestation, 0)).to.be.equal(ExtendedValidatorResult.accept);
-    });
   });
 
   describe("validate signed aggregate and proof", () => {

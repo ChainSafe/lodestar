@@ -2,25 +2,25 @@
  * @module db/api/beacon
  */
 
-import {
-  SignedBeaconBlock,
-} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock,} from "@chainsafe/lodestar-types";
 
 import {
+  AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
+  BadBlockRepository,
+  BlockArchiveRepository,
   BlockRepository,
   DepositDataRepository,
   DepositDataRootRepository,
+  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  AggregateAndProofRepository,
-  BlockArchiveRepository,
-  BadBlockRepository,
-  Eth1DataRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {SeenAttestationCache} from "./seenAttestationCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -37,6 +37,10 @@ export interface IBeaconDb {
 
   // unfinalized states
   stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
+
+  //cache
+  seenAttestationCache: SeenAttestationCache;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
