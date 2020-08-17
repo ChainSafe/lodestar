@@ -118,4 +118,31 @@ describe("sync", function () {
     expect(status.syncDistance.toString()).to.be.deep.equal("5");
   });
 
+  it("get sync status - initial sync - target less than our head", async function () {
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
+    const block = generateEmptySignedBlock();
+    block.message.slot = 10;
+    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
+    networkStub.getPeers.returns([]);
+    await sync.start();
+    // @ts-ignore
+    sync.mode = SyncMode.INITIAL_SYNCING;
+    initialSyncStub.getHighestBlock.resolves(5);
+    const status = await sync.getSyncStatus();
+    expect(status.headSlot.toString()).to.be.deep.equal("5");
+    expect(status.syncDistance.toString()).to.be.deep.equal("0");
+  });
+
+  it("get sync status - waiting for peers", async function () {
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
+    const block = generateEmptySignedBlock();
+    block.message.slot = 10;
+    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
+    // @ts-ignore
+    sync.mode = SyncMode.WAITING_PEERS;
+    const status = await sync.getSyncStatus();
+    expect(status.headSlot.toString()).to.be.deep.equal("0");
+    expect(status.syncDistance.toString()).to.be.deep.equal("1");
+  });
+
 });

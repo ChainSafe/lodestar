@@ -90,22 +90,32 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public async getSyncStatus(): Promise<SyncingStatus> {
-    const headSlot = BigInt((await this.chain.getHeadBlock()).message.slot);
-    if(this.isSynced()) {
-      return {
-        headSlot,
-        syncDistance: BigInt(0)
-      };
-    }
-    let target: Slot = 0;
-    if(this.mode === SyncMode.INITIAL_SYNCING) {
-      target = await this.initialSync.getHighestBlock();
-    } else {
-      target = await this.regularSync.getHighestBlock();
+    const headSlot = (await this.chain.getHeadBlock()).message.slot;
+    let target: Slot;
+    let syncDistance: bigint;
+    switch (this.mode) {
+      case SyncMode.WAITING_PEERS:
+        target = 0;
+        syncDistance = BigInt(1);
+        break;
+      case SyncMode.INITIAL_SYNCING:
+        target = await this.initialSync.getHighestBlock();
+        syncDistance = BigInt(target) - BigInt(headSlot);
+        break;
+      case SyncMode.REGULAR_SYNCING:
+        target = await this.regularSync.getHighestBlock();
+        syncDistance = BigInt(target) - BigInt(headSlot);
+        break;
+      case SyncMode.SYNCED:
+        target = headSlot;
+        syncDistance = BigInt(0);
+        break;
+      default:
+        throw new Error("Node is stopped, cannot get sync status");
     }
     return {
       headSlot: BigInt(target),
-      syncDistance: target >= headSlot ? (BigInt(target) - headSlot) : BigInt(0)
+      syncDistance: (syncDistance < 0)? BigInt(0) : syncDistance,
     };
   }
 
