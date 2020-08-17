@@ -16,7 +16,7 @@ describe("beacon api implementation", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    dbStub = new StubbedBeaconDb(sinon, config);
+    dbStub = new StubbedBeaconDb(sinon);
     syncStub = sinon.createStubInstance(BeaconSync);
     api = new BeaconApi({}, {
       config,

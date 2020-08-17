@@ -92,4 +92,6 @@ export interface IBeaconChain extends ChainEventEmitter {
 export interface IAttestationProcessor extends IService {
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
   receiveAttestation(attestation: Attestation): Promise<void>;
+  getPendingBlockAttestations(blockRootHex: string): Attestation[];
+  getPendingSlotAttestations(slot: Slot): Attestation[];
 }

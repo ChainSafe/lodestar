@@ -88,7 +88,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
-    this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
+    this.attestationProcessor = new AttestationProcessor(this, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
       config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
     );
