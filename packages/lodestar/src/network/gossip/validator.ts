@@ -13,30 +13,21 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
-  computeSubnetForAttestation,
   getCurrentSlot,
   getDomain,
-  isValidAttesterSlashing,
-  isValidIndexedAttestation,
+  isValidAttesterSlashing, isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots,} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../chain";
-import {verify} from "@chainsafe/bls";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
-import {
-  hasValidatorAttestedForThatTargetEpoch,
-  hasValidAttestationSlot,
-  isAttestingToValidBlock,
-  isUnaggregatedAttestation
-} from "../../util/validation/attestation";
 import {ExtendedValidatorResult} from "./constants";
-import {validateGossipBlock} from "./validation";
-
+import {validateGossipAttestation, validateGossipBlock} from "./validation";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
+import {verify} from "@chainsafe/bls";
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
   chain: IBeaconChain;
@@ -69,30 +60,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingCommitteeAttestation =
   async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
-    if(!hasValidAttestationSlot(this.config, this.chain.getGenesisTime(), attestation)) {
+    try {
+      return await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
+    } catch (e) {
+      this.logger.error("Error while validating gossip attestation", e);
       return ExtendedValidatorResult.ignore;
     }
-    if (!await isAttestingToValidBlock(this.db, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    if (state.slot < attestation.data.slot) {
-      processSlots(epochCtx, state, attestation.data.slot);
-    }
-    if (subnet !== computeSubnetForAttestation(this.config, state, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    // Make sure this is unaggregated attestation
-    if (!isUnaggregatedAttestation(this.config, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.reject;
-    }
-    if (await hasValidatorAttestedForThatTargetEpoch(this.config, this.db, state, epochCtx, attestation)) {
-      return ExtendedValidatorResult.ignore;
-    }
-    if (!isValidIndexedAttestation(this.config, state, epochCtx.getIndexedAttestation(attestation))) {
-      return ExtendedValidatorResult.reject;
-    }
-    return ExtendedValidatorResult.accept;
   };
 
   public isValidIncomingAggregateAndProof =
@@ -172,6 +145,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       aggregatorSigningRoot,
       signedAggregationAndProof.signature.valueOf() as Uint8Array,
     )) {
+      this.logger.warn("Invalid agg and proof sig");
       return ExtendedValidatorResult.reject;
     }
 
@@ -228,4 +202,5 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     return ExtendedValidatorResult.accept;
   };
+
 }

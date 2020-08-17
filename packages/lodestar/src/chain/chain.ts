@@ -9,7 +9,7 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest, Number64,
+  ForkDigest, Number64, Root,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -88,7 +88,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
-    this.attestationProcessor = new AttestationProcessor(this, this.forkChoice, {config, db, logger});
+    this.attestationProcessor = new AttestationProcessor(this, {config, db, logger});
     this.blockProcessor = new BlockProcessor(
       config, logger, db, this.forkChoice, metrics, this, this.attestationProcessor,
     );
@@ -129,6 +129,18 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     return this.db.block.get(summary.blockRoot);
   }
 
+  public async getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
+    const blockSummary = this.forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
+    if(!blockSummary) {
+      return null;
+    }
+    const stateContext = await this.db.stateCache.get(blockSummary.stateRoot);
+    if(!stateContext) {
+      return null;
+    }
+    return stateContext;
+  }
+
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
     if (!slots) {
       return null;
@@ -161,6 +173,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     await this.clock.start();
     this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
+    await this.attestationProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkVersion", this.handleForkVersionChanged);
     await this.restoreHeadState(state, epochCtx);
@@ -174,6 +187,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
       await this.clock.stop();
     }
 
+    await this.attestationProcessor.stop();
     await this.blockProcessor.stop();
     this.removeListener("forkVersion", this.handleForkVersionChanged);
   }

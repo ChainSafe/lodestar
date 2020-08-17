@@ -5,7 +5,7 @@ import {
   Checkpoint,
   ENRForkID,
   ForkDigest,
-  Number64,
+  Number64, Root,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -114,6 +114,10 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
 
   stop(): Promise<void> {
     return undefined;
+  }
+
+  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
+    return Promise.resolve(undefined);
   }
 
 }
