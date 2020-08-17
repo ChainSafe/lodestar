@@ -44,7 +44,6 @@ import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {validateGossipAttestation} from "../../../network/gossip/validation";
 
 export class ValidatorApi implements IValidatorApi {
 

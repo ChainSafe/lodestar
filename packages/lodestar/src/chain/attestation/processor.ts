@@ -1,7 +1,9 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {getAttestationPreState} from "../../network/gossip/utils";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {
+  isValidIndexedAttestation
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
