@@ -43,6 +43,7 @@ import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
+import {ApiError} from "../errors/api";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 export class ValidatorApi implements IValidatorApi {
@@ -75,6 +76,7 @@ export class ValidatorApi implements IValidatorApi {
     randaoReveal: Bytes96,
     graffiti = ""
   ): Promise<BeaconBlock> {
+    await this.checkSyncStatus();
     const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
     if (validatorIndex === undefined) {
       throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
@@ -96,6 +98,7 @@ export class ValidatorApi implements IValidatorApi {
     slot: Slot,
   ): Promise<Attestation> {
     try {
+      await this.checkSyncStatus();
       const [headBlockRoot, {state: headState, epochCtx}] = await Promise.all([
         this.chain.forkChoice.headBlockRoot(),
         this.chain.getHeadStateContext(),
@@ -123,6 +126,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    await this.checkSyncStatus();
     await Promise.all([
       this.chain.receiveBlock(signedBlock),
       this.network.gossip.publishBlock(signedBlock)
@@ -130,6 +134,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
+    await this.checkSyncStatus();
     //it could discard attestations that would can be valid a bit later
     // await validateGossipAttestation(
     //   this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation
@@ -141,8 +146,9 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
+    await this.checkSyncStatus();
     assert.gte(epoch, 0, "Epoch must be positive");
+    const {state, epochCtx} = await this.chain.getHeadStateContext();
     assert.lte(
       epoch,
       computeEpochAtSlot(this.config, state.slot) + 2,
@@ -162,6 +168,8 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
+    await this.checkSyncStatus();
+    if (!validatorPubKeys || validatorPubKeys.length === 0) throw new Error("No validator to get attester duties");
     const {epochCtx, state} = await this.chain.getHeadStateContext();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     if(state.slot < currentSlot) {
@@ -191,6 +199,7 @@ export class ValidatorApi implements IValidatorApi {
   public async publishAggregateAndProof(
     signedAggregateAndProof: SignedAggregateAndProof,
   ): Promise<void> {
+    await this.checkSyncStatus();
     await Promise.all([
       this.db.aggregateAndProof.add(signedAggregateAndProof.message),
       this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof)
@@ -204,6 +213,7 @@ export class ValidatorApi implements IValidatorApi {
   public async produceAggregateAndProof(
     attestationData: AttestationData, aggregator: BLSPubkey
   ): Promise<AggregateAndProof> {
+    await this.checkSyncStatus();
     const attestations = (await this.getWireAttestations(
       computeEpochAtSlot(this.config, attestationData.slot),
       attestationData.index
@@ -252,6 +262,7 @@ export class ValidatorApi implements IValidatorApi {
   public async subscribeCommitteeSubnet(
     slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
   ): Promise<void> {
+    await this.checkSyncStatus();
     const state = await this.chain.getHeadState();
     const domain = getDomain(
       this.config,
@@ -273,6 +284,13 @@ export class ValidatorApi implements IValidatorApi {
     );
     const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
     await this.network.searchSubnetPeers(String(subnet));
+  }
+
+  private async checkSyncStatus(): Promise<void> {
+    if (!this.sync.isSynced()) {
+      const syncStatus = this.config.types.SyncingStatus.toJson(await this.sync.getSyncStatus());
+      throw new ApiError(503, `Node is syncing, status: ${JSON.stringify(syncStatus)}`);
+    }
   }
 
 }

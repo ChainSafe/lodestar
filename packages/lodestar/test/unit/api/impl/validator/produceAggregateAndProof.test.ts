@@ -10,6 +10,7 @@ import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
+import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 
 
 describe("produce aggregate and proof api implementation", function () {
@@ -18,18 +19,22 @@ describe("produce aggregate and proof api implementation", function () {
 
   let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let syncStub: SinonStubbedInstance<IBeaconSync>;
 
   let api: IValidatorApi;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     dbStub = new StubbedBeaconDb(sinon, config);
+    syncStub = sandbox.createStubInstance(BeaconSync);
+
 
     api = new ValidatorApi(
       {},
       // @ts-ignore
       {
         chain: chainStub,
+        sync: syncStub,
         db: dbStub,
         config
       }
@@ -41,6 +46,7 @@ describe("produce aggregate and proof api implementation", function () {
   });
 
   it("should get aggregated attestation", async function () {
+    syncStub.isSynced.returns(true);
     dbStub.attestation.getCommiteeAttestations.resolves([
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)

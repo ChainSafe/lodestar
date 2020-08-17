@@ -23,7 +23,10 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
 
       const nodes: BeaconNode[] = [];
       const validators: Validator[] = [];
-      const genesisTime = Math.floor(Date.now() / 1000);
+      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+      const minGenesisTime = Math.floor(Date.now() / 1000);
+      const genesisDelay = 2 * beaconParams.SECONDS_PER_SLOT;
+      const genesisTime = minGenesisTime + genesisDelay;
       const logger = new WinstonLogger();
 
       for (let i=0; i<nodeCount; i++) {
@@ -46,12 +49,13 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       }
 
       onDoneHandlers.push(async () => {
-        for (const node of nodes) {
-          await node.stop();
-        }
-        for (const validator of validators) {
-          await validator.stop();
-        }
+        await Promise.all(validators.map(validator => validator.stop()));
+        logger.info("Stopped all validators");
+        // wait for 1 slot
+        await new Promise(r => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
+
+        await Promise.all(nodes.map(node => node.stop()));
+        logger.info("Stopped all nodes");
         // Wait a bit for nodes to shutdown
         await new Promise(r => setTimeout(r, 3000));
       });
@@ -74,15 +78,16 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       // Uncomment this to visualize validator dutties and attestations
       // printBeaconCliMetrics(nodes[0]);
 
-      // Wait for finalized checkpoint on all nodes
+      // Wait for justified checkpoint on all nodes
       await Promise.all(nodes.map(node =>
         waitForEvent<Checkpoint>(node.chain, checkpointEvent, 240000)
       ));
+      logger.info("All nodes reached justified checkpoint");
     });
   }
 
   afterEach("Stop nodes and validators", async function () {
-    this.timeout(10000);
+    this.timeout(20000);
     for (const onDoneHandler of onDoneHandlers) {
       await onDoneHandler();
     }

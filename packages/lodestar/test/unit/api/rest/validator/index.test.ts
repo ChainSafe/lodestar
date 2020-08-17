@@ -22,6 +22,7 @@ import {
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {ApiError} from "../../../../../src/api/impl/errors/api";
 
 describe("Test validator rest API", function () {
 
@@ -50,6 +51,15 @@ describe("Test validator rest API", function () {
   afterEach(async function () {
     await restApi.stop();
     sandbox.restore();
+  });
+
+  it("should return 503", async function() {
+    validatorApi.getProposerDuties.throws(new ApiError(503, "Node is syncing"));
+    await supertest(restApi.server.server)
+      .get(
+        "/validator/duties/2/proposer",
+      )
+      .expect(503);
   });
 
   it("should return proposer duties", async function () {

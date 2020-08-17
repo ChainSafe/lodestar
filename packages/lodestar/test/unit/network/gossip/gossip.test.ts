@@ -145,6 +145,18 @@ describe("Network Gossip", function() {
       expect(anotherSpy.callCount).to.be.equal(3);
     });
 
+    it("should ignore unsubscribing strange listener", () => {
+      const spy = sandbox.spy();
+      const strangeListener = sandbox.spy();
+      gossip.subscribeToBlock(chain.currentForkDigest, spy);
+      const block = generateEmptySignedBlock();
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      expect(spy.callCount).to.be.equal(1);
+      gossip.unsubscribe(chain.currentForkDigest, GossipEvent.BLOCK, strangeListener, new Map());
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      expect(spy.callCount).to.be.equal(2);
+    });
+
     // other topics are the same
 
     it("should handle fork digest changed", async () => {
