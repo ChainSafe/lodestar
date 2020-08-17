@@ -19,7 +19,8 @@ module.exports = {
   plugins: [
     "@typescript-eslint",
     "eslint-plugin-import",
-    "eslint-plugin-node"
+    "eslint-plugin-node",
+    "no-only-tests"
   ],
   extends: [
     "eslint:recommended",
@@ -81,7 +82,10 @@ module.exports = {
     "no-prototype-builtins": 0,
     "prefer-const": "error",
     "quotes": ["error", "double"],
-    "semi": "off"
+    "semi": "off",
+
+    // Prevents accidentally pushing a commit with .only in Mocha tests
+    "no-only-tests/no-only-tests": "error"
   },
   "overrides": [
     {

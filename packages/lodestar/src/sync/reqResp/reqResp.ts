@@ -290,7 +290,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
         this.reps.get(peerId.toB58String()).supportedProtocols = [Method.Status, ...supportedProtocols];
       } catch (e) {
-        this.logger.error(`Failed to get peer ${peerId.toB58String()} latest status`, e);
+        this.logger.warn(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
         await this.network.disconnect(peerId);
       }
     }

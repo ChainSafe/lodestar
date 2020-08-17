@@ -11,6 +11,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
+    "build:docs": "lerna run clean && lerna run build && lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
@@ -39,6 +40,7 @@
     "codecov": "^3.6.5",
     "eslint": "^6.8.0",
     "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-no-only-tests": "^2.4.0",
     "eslint-plugin-node": "^11.1.0",
     "lerna": "^3.20.2",
     "mocha": "^6.2.2",

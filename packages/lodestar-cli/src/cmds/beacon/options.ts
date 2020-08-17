@@ -10,7 +10,7 @@ interface IBeaconExtraArgs {
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
-    description: "Genesis state in ssz-encoded format",
+    description: "Genesis state file path in ssz-encoded format",
     type: "string",
     normalize: true,
   }
@@ -18,7 +18,7 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 
 const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   beaconDir: {
-    description: "Beacon root dir",
+    description: "Beacon root directory",
     defaultDescription: defaultBeaconPaths.beaconDir,
     hidden: true,
     type: "string",
@@ -26,7 +26,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   dbDir: {
     alias: ["db.dir", "db.name"],
-    description: "Beacon DB dir",
+    description: "Beacon DB directory",
     defaultDescription: defaultBeaconPaths.dbDir,
     hidden: true,
     normalize: true,
@@ -35,7 +35,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   configFile: {
     alias: ["config"],
-    description: "Beacon node configuration file",
+    description: "Beacon node configuration file path",
     defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
     normalize: true,
@@ -43,7 +43,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   peerStoreDir: {
     hidden: true,
-    description: "Peer store dir",
+    description: "Peer store directory",
     defaultDescription: defaultBeaconPaths.peerStoreDir,
     normalize: true,
     type: "string",
@@ -51,7 +51,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   peerIdFile: {
     hidden: true,
-    description: "Peer ID file",
+    description: "Peer ID file path",
     defaultDescription: defaultBeaconPaths.peerIdFile,
     normalize: true,
     type: "string",
@@ -59,13 +59,14 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   enrFile: {
     hidden: true,
-    description: "ENR file",
+    description: "ENR file path",
     defaultDescription: defaultBeaconPaths.enrFile,
     normalize: true,
     type: "string",
   },
 
   logFile: {
+    description: "Path to output all logs to a persistent log file",
     alias: ["log.file"],
     type: "string",
     normalize: true,

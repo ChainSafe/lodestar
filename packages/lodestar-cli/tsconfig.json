@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src","test"],
+  "include": ["src","test","docsgen"],
   "compilerOptions": {
     "typeRoots": [
       "../lodestar/types",

@@ -21,6 +21,10 @@ export class DepositDataRepository extends Repository<number, DepositData> {
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
-    await this.batchDelete(Array.from({length: depositCount}, (_, i) => i));
+    const firstDepositIndex = await this.firstKey();
+    if(firstDepositIndex !== 0 && !firstDepositIndex) {
+      return;
+    }
+    await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
   }
 }
