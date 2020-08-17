@@ -7,7 +7,7 @@ import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 
-describe("no eth1 sim (multi-node test)", function () {
+describe.skip("no eth1 sim (multi-node test)", function () {
 
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
