@@ -28,6 +28,8 @@ export interface IEthersEth1Modules {
 }
 
 const ETH1_BLOCK_RETRY = 3;
+// Ideally if it's 1024 blocks to genesis, then we check block 512 -> 256 -> ... 2 -> 1 -> 0 until genesis.
+const CHECKPOINT_STEP = 2;
 
 /**
  * The EthersEth1Notifier watches the eth1 chain using ethers.js
@@ -282,7 +284,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
           " to genesis time if there is enough validators");
         // if it's too close to genesis time then always getBlock(), keep old checkpoint
       } else {
-        this.checkpoint = block.number + Math.floor(numBlocksToGenesis / 2);
+        this.checkpoint = block.number + Math.floor(numBlocksToGenesis / CHECKPOINT_STEP);
         this.logger.info(`Set checkpoint to ${this.checkpoint}`);
       }
       return false;

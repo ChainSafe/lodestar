@@ -145,10 +145,7 @@ export class BeaconSync implements IBeaconSync {
   private async onSyncCompleted(): Promise<void> {
     this.stopSyncTimer();
     const state = await this.chain.getHeadState();
-    const eth1Votes = state.eth1DataVotes;
-    const blockHash = (eth1Votes && eth1Votes.length > 0)?
-      eth1Votes[eth1Votes.length - 1].blockHash : state.eth1Data.blockHash;
-    await this.eth1.collectEth1Data(toHexString(blockHash));
+    await this.eth1.collectEth1Data(toHexString(state.eth1Data.blockHash));
   }
 
   private startSyncTimer(interval: number): void {
