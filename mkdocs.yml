@@ -12,7 +12,6 @@ theme:
   favicon: images/favicon.ico
   palette:
     scheme: preference
-    primary: black
     accent: black
   nav_style: dark
 

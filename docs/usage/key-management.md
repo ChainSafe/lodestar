@@ -37,7 +37,7 @@ Validators are represented by a BLS keypair. It is recommended to generate valid
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a validator for a testnet, you need to add `--testnet $TESTNET_NAME` to all of the following commands
+    If you want to create a validator for a testnet, you need to add `--testnet $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
 <!-- prettier-ignore-end -->
 
 ### Create validator keypair
