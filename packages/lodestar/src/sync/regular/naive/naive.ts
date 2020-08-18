@@ -54,17 +54,17 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   public async start(): Promise<void> {
     this.chain.on("processedBlock", this.onProcessedBlock);
-    const headSlot = this.chain.forkChoice.headBlockSlot();
+    const {slot: lastSlot} = this.chain.forkChoice.latest();
     const state = await this.chain.getHeadState();
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
-    this.logger.info("Started regular syncing", {currentSlot, headSlot});
-    if (headSlot >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+    this.logger.info("Started regular syncing", {currentSlot, lastSlot});
+    if (lastSlot >= currentSlot) {
+      this.logger.info(`Regular Sync: node is up to date, lastSlot=${lastSlot}`);
       this.emit("syncCompleted");
       await this.stop();
       return;
     }
-    this.currentTarget = headSlot;
+    this.currentTarget = lastSlot;
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
