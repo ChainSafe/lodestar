@@ -4,17 +4,11 @@ import {EpochContext} from "../util";
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
 
-
-export {
-  processSlot,
-};
+export {processSlot};
 
 export function processSlots(epochCtx: EpochContext, state: BeaconState, slot: Slot): void {
   if (!(state.slot < slot)) {
-    throw new Error(
-      "State slot must transition to a future slot: " +
-      `stateSlot=${state.slot} slot=${slot}`
-    );
+    throw new Error("State slot must transition to a future slot: " + `stateSlot=${state.slot} slot=${slot}`);
   }
   while (state.slot < slot) {
     processSlot(epochCtx, state);

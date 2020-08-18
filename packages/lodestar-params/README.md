@@ -23,7 +23,7 @@ import {IBeaconParams} from "@chainsafe/lodestar-params";
 
 const testnetParams: IBeaconParams = {
   ...mainnetParams,
-  SHARD_COUNT: 4
+  SHARD_COUNT: 4,
 };
 ```
 

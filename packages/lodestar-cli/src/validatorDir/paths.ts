@@ -13,14 +13,26 @@ export const LOCK_FILE = ".lock";
 
 // Dynamic paths computed from the validator pubkey
 
-export function getValidatorDirPath(
-  {keystoresDir, pubkey, prefixed}: {keystoresDir: string; pubkey: string; prefixed?: boolean}
-): string {
+export function getValidatorDirPath({
+  keystoresDir,
+  pubkey,
+  prefixed,
+}: {
+  keystoresDir: string;
+  pubkey: string;
+  prefixed?: boolean;
+}): string {
   return path.join(keystoresDir, prefixed ? add0xPrefix(pubkey) : pubkey);
 }
 
-export function getValidatorPassphrasePath(
-  {secretsDir, pubkey, prefixed}: {secretsDir: string; pubkey: string; prefixed?: boolean}
-): string {
+export function getValidatorPassphrasePath({
+  secretsDir,
+  pubkey,
+  prefixed,
+}: {
+  secretsDir: string;
+  pubkey: string;
+  prefixed?: boolean;
+}): string {
   return path.join(secretsDir, prefixed ? add0xPrefix(pubkey) : pubkey);
 }

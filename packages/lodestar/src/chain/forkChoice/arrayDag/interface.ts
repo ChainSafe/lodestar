@@ -13,4 +13,3 @@ export interface NodeInfo {
   finalizedCheckpoint: HexCheckpoint;
   stateRoot: Root;
 }
-

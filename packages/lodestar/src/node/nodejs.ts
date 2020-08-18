@@ -55,14 +55,10 @@ export class BeaconNode {
   private logger: ILogger;
 
   public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
-    this.conf = deepmerge(
-      defaultConf,
-      opts,
-      {
-        //clone doesn't work very vell on classes like ethers.Provider
-        isMergeableObject: isPlainObject
-      }
-    );
+    this.conf = deepmerge(defaultConf, opts, {
+      //clone doesn't work very vell on classes like ethers.Provider
+      isMergeableObject: isPlainObject,
+    });
     this.config = config;
     this.logger = logger.child(this.conf.logger.node);
     this.metrics = new BeaconMetrics(this.conf.metrics, {
@@ -70,7 +66,7 @@ export class BeaconNode {
     });
     this.metricsServer = new HttpMetricsServer(this.conf.metrics, {
       metrics: this.metrics,
-      logger: logger.child(this.conf.logger.metrics)
+      logger: logger.child(this.conf.logger.metrics),
     });
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
@@ -79,11 +75,13 @@ export class BeaconNode {
         logger: logger.child(this.conf.logger.db),
       }),
     });
-    this.eth1 = eth1 || new EthersEth1Notifier(this.conf.eth1, {
-      config,
-      db: this.db,
-      logger: logger.child(this.conf.logger.eth1),
-    });
+    this.eth1 =
+      eth1 ||
+      new EthersEth1Notifier(this.conf.eth1, {
+        config,
+        db: this.db,
+        logger: logger.child(this.conf.logger.eth1),
+      });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
@@ -96,7 +94,7 @@ export class BeaconNode {
       chain: this.chain,
       db: this.db,
       config,
-      logger: logger.child(this.conf.logger.network)
+      logger: logger.child(this.conf.logger.network),
     });
     this.network = new Libp2pNetwork(this.conf.network, this.reps, {
       config,
@@ -114,27 +112,21 @@ export class BeaconNode {
       reputationStore: this.reps,
       logger: logger.child(this.conf.logger.sync),
     });
-    this.api = new ApiService(
-      this.conf.api,
-      {
-        config,
-        logger: this.logger.child(this.conf.logger.api),
-        db: this.db,
-        sync: this.sync,
-        network: this.network,
-        chain: this.chain,
-      }
-    );
-    this.chores = new TasksService(
-      this.config,
-      {
-        db: this.db,
-        chain: this.chain,
-        sync: this.sync,
-        network: this.network,
-        logger: this.logger.child(this.conf.logger.chores)
-      }
-    );
+    this.api = new ApiService(this.conf.api, {
+      config,
+      logger: this.logger.child(this.conf.logger.api),
+      db: this.db,
+      sync: this.sync,
+      network: this.network,
+      chain: this.chain,
+    });
+    this.chores = new TasksService(this.config, {
+      db: this.db,
+      chain: this.chain,
+      sync: this.sync,
+      network: this.network,
+      logger: this.logger.child(this.conf.logger.chores),
+    });
   }
 
   public async start(): Promise<void> {

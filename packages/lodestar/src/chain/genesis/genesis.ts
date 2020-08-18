@@ -3,18 +3,10 @@
  */
 
 import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
-import {
-  BeaconState,
-  Deposit,
-  Number64,
-  Bytes32,
-  Root,
-} from "@chainsafe/lodestar-types";
+import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {
-  getTemporaryBlockHeader,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
 import {IEth1Notifier, Eth1Block, Eth1EventsBlock} from "../../eth1";
@@ -26,7 +18,8 @@ import {
   applyDeposits,
   applyTimestamp,
   applyEth1BlockHash,
-  isValidGenesisState} from "./util";
+  isValidGenesisState,
+} from "./util";
 
 export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
@@ -40,10 +33,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.state = getGenesisBeaconState(
       config,
       config.types.Eth1Data.defaultValue(),
-      getTemporaryBlockHeader(
-        config,
-        getEmptyBlock()
-      )
+      getTemporaryBlockHeader(config, getEmptyBlock())
     );
     this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
     this.config = config;
@@ -58,22 +48,18 @@ export class GenesisBuilder implements IGenesisBuilder {
   public async waitForGenesis(): Promise<TreeBacked<BeaconState>> {
     await this.initialize();
     const eth1DataStream = await this.eth1.getEth1BlockAndDepositEventsSource();
-    const state = await pipe(
-      eth1DataStream,
-      this.processDepositEvents(),
-      this.assembleGenesisState()
-    );
+    const state = await pipe(eth1DataStream, this.processDepositEvents(), this.assembleGenesisState());
     await this.eth1.endEth1BlockAndDepositEventsSource();
     return state;
   }
 
-  private assembleGenesisState():
-  (source: AsyncIterable<[Deposit[], Eth1Block]>) => Promise<TreeBacked<BeaconState>> {
+  private assembleGenesisState(): (source: AsyncIterable<[Deposit[], Eth1Block]>) => Promise<TreeBacked<BeaconState>> {
     return async (source) => {
       for await (const [deposits, block] of source) {
         applyDeposits(this.config, this.state, deposits, this.depositTree);
-        this.logger.verbose(`Found ${this.depositTree.length} deposits and ` +
-          `${this.state.validators.length} validators so far`);
+        this.logger.verbose(
+          `Found ${this.depositTree.length} deposits and ` + `${this.state.validators.length} validators so far`
+        );
         if (!block) {
           continue;
         }
@@ -88,11 +74,10 @@ export class GenesisBuilder implements IGenesisBuilder {
     };
   }
 
-  private processDepositEvents():
-  (source: AsyncIterable<Eth1EventsBlock>) => AsyncGenerator<[Deposit[], Eth1Block]> {
-    return ((source) => {
+  private processDepositEvents(): (source: AsyncIterable<Eth1EventsBlock>) => AsyncGenerator<[Deposit[], Eth1Block]> {
+    return (source) => {
       const {depositTree, config} = this;
-      return async function * () {
+      return (async function* () {
         for await (const {events, block} of source) {
           const newDeposits: Deposit[] = events.map((depositEvent) => {
             depositTree.push(config.types.DepositData.hashTreeRoot(depositEvent));
@@ -103,13 +88,13 @@ export class GenesisBuilder implements IGenesisBuilder {
           });
           yield [newDeposits, block] as [Deposit[], Eth1Block];
         }
-      }();
-    });
+      })();
+    };
   }
 
   private async initialize(): Promise<void> {
-    const depositDatas = await this.db.depositData.values() || [];
-    const depositDataRoots = await this.db.depositDataRoot.values() || [];
+    const depositDatas = (await this.db.depositData.values()) || [];
+    const depositDataRoots = (await this.db.depositDataRoot.values()) || [];
     depositDatas.map((event, index) => {
       this.depositTree.push(depositDataRoots[index]);
       return {
@@ -118,7 +103,6 @@ export class GenesisBuilder implements IGenesisBuilder {
       };
     });
   }
-
 }
 
 /**
@@ -132,14 +116,12 @@ export function initializeBeaconStateFromEth1(
   config: IBeaconConfig,
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
-  deposits: Deposit[]): TreeBacked<BeaconState> {
+  deposits: Deposit[]
+): TreeBacked<BeaconState> {
   const state = getGenesisBeaconState(
     config,
     config.types.Eth1Data.defaultValue(),
-    getTemporaryBlockHeader(
-      config,
-      getEmptyBlock()
-    )
+    getTemporaryBlockHeader(config, getEmptyBlock())
   );
 
   applyTimestamp(config, state, eth1Timestamp);
@@ -150,5 +132,3 @@ export function initializeBeaconStateFromEth1(
 
   return state;
 }
-
-

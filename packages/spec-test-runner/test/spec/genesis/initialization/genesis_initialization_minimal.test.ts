@@ -16,7 +16,7 @@ interface IGenesisInitSpecTest {
     depositsCount: Uint64;
   };
   state: BeaconState;
-  [k: string]: Deposit|unknown|null|undefined;
+  [k: string]: Deposit | unknown | null | undefined;
 }
 
 describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
@@ -24,7 +24,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/genesis/initialization/pyspec_tests"),
   (testcase) => {
     const deposits: Deposit[] = [];
-    for(let i= 0; i < Number(testcase.meta.depositsCount); i++) {
+    for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
       deposits.push(testcase[`deposits_${i}`] as Deposit);
     }
     return initializeBeaconStateFromEth1(config, testcase.eth1_block_hash, Number(testcase.eth1_timestamp), deposits);
@@ -33,25 +33,25 @@ describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
     // @ts-ignore
     inputTypes: {
       meta: InputType.YAML,
-      eth1_timestamp: InputType.YAML
+      eth1_timestamp: InputType.YAML,
     },
     // @ts-ignore
     sszTypes: {
       eth1_block_hash: config.types.Root,
       state: config.types.BeaconState,
-      ...generateDepositSSZTypeMapping(192, config)
+      ...generateDepositSSZTypeMapping(192, config),
     },
     timeout: 60000,
-    getExpected: (testCase => testCase.state),
+    getExpected: (testCase) => testCase.state,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
 
 function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): object {
   const depositMappings = {};
-  for(let i = 0; i<n; i++) {
+  for (let i = 0; i < n; i++) {
     depositMappings[`deposits_${i}`] = config.types.Deposit;
   }
   return depositMappings;

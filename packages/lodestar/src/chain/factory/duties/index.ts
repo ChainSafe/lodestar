@@ -3,13 +3,12 @@ import {AttesterDuty, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodesta
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
-
 export function assembleAttesterDuty(
   config: IBeaconConfig,
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   epochCtx: EpochContext,
   epoch: Epoch
-): AttesterDuty  {
+): AttesterDuty {
   let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
   const committeeAssignment = epochCtx.getCommitteeAssignment(epoch, validator.index);
   if (committeeAssignment) {
@@ -33,6 +32,6 @@ export function generateEmptyAttesterDuty(publicKey: BLSPubkey, duty?: Partial<A
     aggregatorModulo: 1,
     attestationSlot: null,
     committeeIndex: null,
-    ...duty
+    ...duty,
   };
 }

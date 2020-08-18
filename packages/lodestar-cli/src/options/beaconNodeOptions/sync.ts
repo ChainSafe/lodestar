@@ -7,5 +7,5 @@ export const syncOptions = {
     description: "Minimum number of peers before the beacon chain starts syncing",
     defaultDescription: String(defaultOptions.sync.minPeers),
     group: "sync",
-  } as Options
+  } as Options,
 };

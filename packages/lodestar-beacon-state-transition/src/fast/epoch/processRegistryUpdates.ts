@@ -3,12 +3,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {computeActivationExitEpoch} from "../../util";
 import {EpochContext, IEpochProcess} from "../util";
 
-
-export function processRegistryUpdates(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: BeaconState
-): void {
+export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
   const config = epochCtx.config;
   let exitEnd = process.exitQueueEnd;
   let endChurn = process.exitQueueEndChurn;

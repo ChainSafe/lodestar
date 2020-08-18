@@ -1,5 +1,4 @@
 declare module "v8-profile-next" {
-
   interface IProfileResult {
     export(profile: (error: Error, result: string) => void): void;
   }

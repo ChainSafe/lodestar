@@ -5,23 +5,9 @@
 
 import {BitVector, List, Vector} from "@chainsafe/ssz";
 
-import {
-  Bytes32,
-  Gwei,
-  Root,
-  Number64,
-  Slot,
-} from "./primitive";
+import {Bytes32, Gwei, Root, Number64, Slot} from "./primitive";
 
-import {
-  BeaconBlockHeader,
-  Checkpoint,
-  Eth1Data,
-  Fork,
-  PendingAttestation,
-  Validator,
-} from "./misc";
-
+import {BeaconBlockHeader, Checkpoint, Eth1Data, Fork, PendingAttestation, Validator} from "./misc";
 
 export interface BeaconState {
   // Misc
@@ -35,12 +21,12 @@ export interface BeaconState {
   blockRoots: Vector<Root>;
   stateRoots: Vector<Root>;
   historicalRoots: List<Root>;
-  
+
   // Eth1
   eth1Data: Eth1Data;
   eth1DataVotes: List<Eth1Data>;
   eth1DepositIndex: Number64;
-  
+
   // Registry
   validators: List<Validator>;
   balances: List<Gwei>;
@@ -50,7 +36,7 @@ export interface BeaconState {
 
   // Slashings
   slashings: Vector<Gwei>; // Balances penalized at every withdrawal period
-  
+
   // Attestations
   previousEpochAttestations: List<PendingAttestation>;
   currentEpochAttestations: List<PendingAttestation>;

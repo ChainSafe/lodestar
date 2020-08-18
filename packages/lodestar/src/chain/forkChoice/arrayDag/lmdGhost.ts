@@ -8,7 +8,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
-  getCurrentSlot
+  getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -83,7 +83,7 @@ export class Node {
    * Compare two nodes for equality
    */
   public equals(other: Node): boolean {
-    return other? this.blockRoot === other.blockRoot : false;
+    return other ? this.blockRoot === other.blockRoot : false;
   }
 
   public unassignBestChild(): void {
@@ -91,11 +91,11 @@ export class Node {
   }
 
   public hasBestChild(): boolean {
-    return typeof(this.bestChild) === "number" && this.bestChild >= 0;
+    return typeof this.bestChild === "number" && this.bestChild >= 0;
   }
 
   public hasParent(): boolean {
-    return typeof(this.parent) === "number" && this.parent >= 0;
+    return typeof this.parent === "number" && this.parent >= 0;
   }
 
   public shiftIndex(oldNodes: Node[], newNodeIndexes: Map<RootHex, number>): void {
@@ -112,9 +112,8 @@ export class Node {
       const bestTargetRoot = oldNodes[this.bestTarget].blockRoot;
       this.bestTarget = newNodeIndexes.get(bestTargetRoot);
     }
-    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.get(blockRoot));
+    Object.keys(this.children).forEach((blockRoot) => (this.children[blockRoot] = newNodeIndexes.get(blockRoot)));
   }
-
 }
 
 /**
@@ -123,10 +122,9 @@ export class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#array-based-stateful-dag-proto_array
  */
-export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventEmitter }) implements ILMDGHOST {
+export class ArrayDagLMDGHOST extends (EventEmitter as {new (): ForkChoiceEventEmitter}) implements ILMDGHOST {
   private readonly config: IBeaconConfig;
   private genesisTime: Number64;
-
 
   /**
    * Aggregated attestations
@@ -146,12 +144,12 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   /**
    * Last finalized block
    */
-  private finalized: { node: Node; epoch: Epoch } | null;
+  private finalized: {node: Node; epoch: Epoch} | null;
 
   /**
    * Last justified block
    */
-  private justified: { node: Node; epoch: Epoch } | null;
+  private justified: {node: Node; epoch: Epoch} | null;
   /**
    * Best justified checkpoint.
    */
@@ -188,19 +186,27 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   }
 
   public onTick(): void {
-    if (this.bestJustifiedCheckpoint && (!this.justified ||
-      this.bestJustifiedCheckpoint.epoch > this.justified.epoch)) {
+    if (
+      this.bestJustifiedCheckpoint &&
+      (!this.justified || this.bestJustifiedCheckpoint.epoch > this.justified.epoch)
+    ) {
       this.setJustified(this.bestJustifiedCheckpoint);
       this.ensureCorrectBestTargets();
     }
   }
 
-  public addBlock({slot, blockRoot, stateRoot, parentRoot,
-    justifiedCheckpoint, finalizedCheckpoint}: BlockSummary): void {
+  public addBlock({
+    slot,
+    blockRoot,
+    stateRoot,
+    parentRoot,
+    justifiedCheckpoint,
+    finalizedCheckpoint,
+  }: BlockSummary): void {
     this.synced = false;
     const blockRootHex = toHexString(blockRoot);
     const parentRootHex = toHexString(parentRoot);
-    if(this.getNode(blockRoot)) {
+    if (this.getNode(blockRoot)) {
       // existing block
       return;
     }
@@ -227,7 +233,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       assert.equal(
         this.getAncestorHex(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`,
+        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`
       );
     }
 
@@ -247,9 +253,11 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
       // Update justified if new justified is later than store justified
       // or if store justified is not in chain with finalized checkpoint
-      if (justifiedCheckpoint.epoch > this.justified.epoch ||
+      if (
+        justifiedCheckpoint.epoch > this.justified.epoch ||
         (this.finalized.node &&
-          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
+          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)
+      ) {
         this.setJustified(justifiedCheckpoint);
       }
     }
@@ -293,11 +301,12 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   // Make sure bestTarget has correct justified_checkpoint and finalized_checkpoint
   public ensureCorrectBestTargets(): void {
-    const leafNodeIdxs = this.nodes.filter((n) => Object.values(n.children).length === 0)
-      .map(n => this.nodeIndices.get(n.blockRoot));
-    const incorrectBestTargets = leafNodeIdxs.filter(idx => !this.isCandidateForBestTarget(idx));
+    const leafNodeIdxs = this.nodes
+      .filter((n) => Object.values(n.children).length === 0)
+      .map((n) => this.nodeIndices.get(n.blockRoot));
+    const incorrectBestTargets = leafNodeIdxs.filter((idx) => !this.isCandidateForBestTarget(idx));
     // step down as best targets
-    incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, BigInt(0)));
+    incorrectBestTargets.forEach((idx) => this.propagateWeightChange(idx, BigInt(0)));
   }
 
   public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {
@@ -334,17 +343,17 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     if (!this.synced) {
       this.syncChanges();
     }
-    return this.justified.node? this.nodes[this.justified.node.bestTarget] : null;
+    return this.justified.node ? this.nodes[this.justified.node.bestTarget] : null;
   }
 
   public headBlockRoot(): Uint8Array {
     const head = this.head();
-    return head? head.blockRoot : ZERO_HASH;
+    return head ? head.blockRoot : ZERO_HASH;
   }
 
   public headBlockSlot(): Slot {
     const head = this.head();
-    return head? head.slot : GENESIS_SLOT;
+    return head ? head.slot : GENESIS_SLOT;
   }
 
   public headStateRoot(): Uint8Array {
@@ -362,7 +371,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       return null;
     }
     // navigate from the head node, up the chain until either the slot is found or the slot is passed
-    while(node.slot !== slot) {
+    while (node.slot !== slot) {
       if (node.slot < slot || !node.hasParent()) {
         return null;
       }
@@ -379,19 +388,17 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
     const node = this.getNode(blockRoot);
-    return (node)? this.toBlockSummary(node) : null;
+    return node ? this.toBlockSummary(node) : null;
   }
 
   public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
     return Object.values(this.nodes)
       .filter((node) => {
-        return node.hasParent()
-          && this.config.types.Root.equals(
-            fromHexString(this.nodes[node.parent].blockRoot),
-            blockRoot
-          );
+        return (
+          node.hasParent() && this.config.types.Root.equals(fromHexString(this.nodes[node.parent].blockRoot), blockRoot)
+        );
       })
-      .map(node => this.toBlockSummary(node));
+      .map((node) => this.toBlockSummary(node));
   }
 
   public hasBlock(blockRoot: Uint8Array): boolean {
@@ -404,8 +411,10 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     if (!this.justified) {
       return true;
     }
-    if (computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) <
-      this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED) {
+    if (
+      computeSlotsSinceEpochStart(this.config, getCurrentSlot(this.config, this.genesisTime)) <
+      this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED
+    ) {
       return true;
     }
     const hexBlockRoot = toHexString(blockRoot);
@@ -438,7 +447,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
    */
   public getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null {
     const ancestor = this.getAncestorHex(toHexString(root), slot);
-    return ancestor? fromHexString(ancestor) : null;
+    return ancestor ? fromHexString(ancestor) : null;
   }
 
   /**
@@ -450,10 +459,9 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   private propagateWeightChange(nodeIndex: number, delta: Gwei): void {
     const node = this.nodes[nodeIndex];
     node.weight += delta;
-    const isAddWeight = (delta > 0)? true :
-      (delta < 0)? false : this.isCandidateForBestTarget(node.bestTarget);
+    const isAddWeight = delta > 0 ? true : delta < 0 ? false : this.isCandidateForBestTarget(node.bestTarget);
     if (node.hasParent()) {
-      isAddWeight? this.onAddWeight(nodeIndex) : this.onRemoveWeight(nodeIndex);
+      isAddWeight ? this.onAddWeight(nodeIndex) : this.onRemoveWeight(nodeIndex);
       this.propagateWeightChange(node.parent, delta);
     }
   }
@@ -466,10 +474,12 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     if (!this.getJustifiedCheckpoint() || !this.getFinalizedCheckpoint()) {
       return true;
     }
-    return node.justifiedCheckpoint.epoch === this.getJustifiedCheckpoint().epoch &&
-    node.justifiedCheckpoint.rootHex === this.getJustifiedCheckpoint().rootHex &&
-    node.finalizedCheckpoint.epoch === this.getFinalizedCheckpoint().epoch &&
-    node.finalizedCheckpoint.rootHex === this.getFinalizedCheckpoint().rootHex;
+    return (
+      node.justifiedCheckpoint.epoch === this.getJustifiedCheckpoint().epoch &&
+      node.justifiedCheckpoint.rootHex === this.getJustifiedCheckpoint().rootHex &&
+      node.finalizedCheckpoint.epoch === this.getFinalizedCheckpoint().epoch &&
+      node.finalizedCheckpoint.rootHex === this.getFinalizedCheckpoint().rootHex
+    );
   }
 
   /**
@@ -478,10 +488,9 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
   private onAddWeight(nodeIndex: number): void {
     const node = this.nodes[nodeIndex];
     const parentNode: Node = this.nodes[node.parent];
-    const isFirstBestChild = !parentNode.hasBestChild() &&
-      this.isCandidateForBestTarget(node.bestTarget);
-    const needUpdateBestTarget = parentNode.hasBestChild() &&
-      (this.isBestChildOfParent(node) || this.betterThan(nodeIndex, parentNode.bestChild));
+    const isFirstBestChild = !parentNode.hasBestChild() && this.isCandidateForBestTarget(node.bestTarget);
+    const needUpdateBestTarget =
+      parentNode.hasBestChild() && (this.isBestChildOfParent(node) || this.betterThan(nodeIndex, parentNode.bestChild));
     if (isFirstBestChild || needUpdateBestTarget) {
       parentNode.bestChild = this.nodeIndices.get(node.blockRoot);
       parentNode.bestTarget = node.bestTarget;
@@ -496,8 +505,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
     const parentNode = this.nodes[node.parent];
     // if this node is the best child it may lose that position
     if (this.isBestChildOfParent(node)) {
-      const newBest = Object.values(parentNode.children)
-        .reduce((a, b) => this.betterThan(a, b) ? a : b);
+      const newBest = Object.values(parentNode.children).reduce((a, b) => (this.betterThan(a, b) ? a : b));
       // no longer the best
       if (nodeIndex !== newBest) {
         parentNode.bestChild = newBest;
@@ -614,17 +622,17 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   private prune(): void {
     if (this.finalized && this.finalized.node) {
-      const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot);
-      const blockSummariesToDel = nodesToDel.map(node => this.toBlockSummary(node));
-      const blockRootsToDel = nodesToDel.map(node => node.blockRoot);
+      const nodesToDel = this.nodes.filter((node) => node.slot < this.finalized.node.slot);
+      const blockSummariesToDel = nodesToDel.map((node) => this.toBlockSummary(node));
+      const blockRootsToDel = nodesToDel.map((node) => node.blockRoot);
       const oldNodes = this.nodes;
-      this.nodes = this.nodes.filter(node => !blockRootsToDel.includes(node.blockRoot));
-      blockRootsToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
+      this.nodes = this.nodes.filter((node) => !blockRootsToDel.includes(node.blockRoot));
+      blockRootsToDel.forEach((blockRoot) => this.nodeIndices.delete(blockRoot));
       // Update indexes in nodeIndices
       this.nodeIndices = new Map();
       this.nodes.forEach((node, index) => this.nodeIndices.set(node.blockRoot, index));
       // Update indexes in node
-      this.nodes.forEach(node => node.shiftIndex(oldNodes, this.nodeIndices));
+      this.nodes.forEach((node) => node.shiftIndex(oldNodes, this.nodeIndices));
       this.finalized.node.parent = NO_NODE;
       this.emit("prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
     }
@@ -632,7 +640,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
 
   private toBlockSummary(node: Node): BlockSummary {
     let parentRootBuf: Uint8Array;
-    if(node.hasParent()) {
+    if (node.hasParent()) {
       parentRootBuf = fromHexString(this.nodes[node.parent].blockRoot);
     } else {
       parentRootBuf = ZERO_HASH;
@@ -644,13 +652,12 @@ export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventE
       stateRoot: node.stateRoot.valueOf() as Uint8Array,
       justifiedCheckpoint: {
         epoch: node.justifiedCheckpoint.epoch,
-        root: fromHexString(node.justifiedCheckpoint.rootHex)
+        root: fromHexString(node.justifiedCheckpoint.rootHex),
       },
       finalizedCheckpoint: {
         epoch: node.finalizedCheckpoint.epoch,
-        root: fromHexString(node.finalizedCheckpoint.rootHex)
-      }
+        root: fromHexString(node.finalizedCheckpoint.rootHex),
+      },
     };
   }
-
 }

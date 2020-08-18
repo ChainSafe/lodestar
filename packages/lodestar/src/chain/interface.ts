@@ -6,7 +6,8 @@ import {
   BeaconState,
   Checkpoint,
   ENRForkID,
-  ForkDigest, Number64,
+  ForkDigest,
+  Number64,
   Root,
   SignedBeaconBlock,
   Slot,
@@ -63,15 +64,15 @@ export interface IBeaconChain extends ChainEventEmitter {
   getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
 
-  getHeadBlock(): Promise<SignedBeaconBlock|null>;
+  getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
-  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext|null>;
+  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
-  getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
+  getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
 
   /**
    * Add attestation to the fork-choice rule

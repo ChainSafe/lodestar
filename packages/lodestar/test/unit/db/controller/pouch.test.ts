@@ -2,7 +2,7 @@ import {assert, expect} from "chai";
 import {PouchDbController} from "../../../../src/db/controller";
 
 describe("PouchDB controller", () => {
-  const db = new PouchDbController({name: 'testDb'});
+  const db = new PouchDbController({name: "testDb"});
 
   before(async () => {
     await db.start();
@@ -27,11 +27,11 @@ describe("PouchDB controller", () => {
     await db.batchPut([
       {
         key: k1,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
       {
         key: k2,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
     ]);
     expect(await db.get(k1)).to.not.be.null;
@@ -44,11 +44,11 @@ describe("PouchDB controller", () => {
     await db.batchPut([
       {
         key: k1,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
       {
         key: k2,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
     ]);
     expect((await db.entries()).length).to.be.equal(2);
@@ -64,15 +64,14 @@ describe("PouchDB controller", () => {
     await db.batchPut([
       {
         key: k1,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
       {
         key: k2,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
     ]);
     const result = await db.entries();
     expect(result.length).to.be.equal(2);
   });
-
 });

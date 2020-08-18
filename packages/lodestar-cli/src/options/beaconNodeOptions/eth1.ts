@@ -17,8 +17,7 @@ export const eth1Options = {
   } as Options,
 
   "eth1.depositContract.deployedAt": {
-    description:
-      "Block number at which the deposit contract contract was deployed",
+    description: "Block number at which the deposit contract contract was deployed",
     type: "number",
     defaultDescription: String(defaultOptions.eth1.depositContract.deployedAt),
     group: "eth1",

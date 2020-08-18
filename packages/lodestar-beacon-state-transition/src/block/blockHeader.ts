@@ -8,11 +8,7 @@ import {assert} from "@chainsafe/lodestar-utils";
 
 import {getTemporaryBlockHeader, getBeaconProposerIndex} from "../util";
 
-export function processBlockHeader(
-  config: IBeaconConfig,
-  state: BeaconState,
-  block: BeaconBlock,
-): void {
+export function processBlockHeader(config: IBeaconConfig, state: BeaconState, block: BeaconBlock): void {
   // Verify that the slots match
   assert.equal(block.slot, state.slot, "Slots do not match");
   // Verify that the block is newer than latest block header
@@ -20,10 +16,10 @@ export function processBlockHeader(
   // Verify that proposer index is the correct index
   assert.equal(block.proposerIndex, getBeaconProposerIndex(config, state), "Incorrect proposer index");
   // Verify that the parent matches
-  assert.true(config.types.Root.equals(
-    block.parentRoot,
-    config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
-  ), "Parent block roots do not match");
+  assert.true(
+    config.types.Root.equals(block.parentRoot, config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)),
+    "Parent block roots do not match"
+  );
   // Save current block as the new latest block
   state.latestBlockHeader = getTemporaryBlockHeader(config, block);
 

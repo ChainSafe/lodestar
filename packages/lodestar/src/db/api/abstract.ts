@@ -8,9 +8,8 @@ export interface IDatabaseApiOptions {
 }
 
 export abstract class DatabaseService implements IService {
-
   protected config: IBeaconConfig;
-  protected db: IDatabaseController<Buffer,Buffer>;
+  protected db: IDatabaseController<Buffer, Buffer>;
 
   protected constructor(opts: IDatabaseApiOptions) {
     this.config = opts.config;
@@ -24,5 +23,4 @@ export abstract class DatabaseService implements IService {
   public async stop(): Promise<void> {
     await this.db.stop();
   }
-
 }

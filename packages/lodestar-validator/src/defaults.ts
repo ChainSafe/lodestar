@@ -1,9 +1,8 @@
-
 export default {
   db: {
-    name: "LodestarValidatorDB"
+    name: "LodestarValidatorDB",
   },
   rpc: {
-    rpcUrl: "http://127.0.0.1:9545"
+    rpcUrl: "http://127.0.0.1:9545",
   },
 };

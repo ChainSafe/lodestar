@@ -13,7 +13,7 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
   try {
     const signedAggregateAndProof = obj as SignedAggregateAndProof;
     this.logger.verbose(
-      `Received AggregateAndProof from validator #${signedAggregateAndProof.message.aggregatorIndex}`+
+      `Received AggregateAndProof from validator #${signedAggregateAndProof.message.aggregatorIndex}` +
         ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
     );
     this.emit(GossipEvent.AGGREGATE_AND_PROOF, signedAggregateAndProof);
@@ -23,7 +23,9 @@ export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipO
 }
 
 export async function publishAggregatedAttestation(
-  this: Gossip, signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
+  this: Gossip,
+  signedAggregateAndProof: SignedAggregateAndProof
+): Promise<void> {
   const forkDigestValue = await this.getForkDigest(signedAggregateAndProof.message.aggregate.data.slot);
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigestValue),
@@ -31,7 +33,7 @@ export async function publishAggregatedAttestation(
   );
 
   this.logger.verbose(
-    `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}`
-        + ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
+    `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}` +
+      ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
   );
 }

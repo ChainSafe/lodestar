@@ -8,7 +8,6 @@ function isObjectObject(val: unknown): boolean {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isPlainObject(o: any): boolean {
-
   if (isObjectObject(o) === false) return false;
 
   // If has modified constructor

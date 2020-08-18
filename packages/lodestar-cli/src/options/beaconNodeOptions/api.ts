@@ -41,5 +41,5 @@ export const apiOptions = {
     description: "Set port for HTTP API",
     defaultDescription: String(defaultOptions.api.rest.port),
     group: "api",
-  } as Options
+  } as Options,
 };

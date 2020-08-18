@@ -32,7 +32,6 @@ class TestRepository extends Repository<string, TestType> {
 }
 
 describe("database repository", function () {
-
   const sandbox = sinon.createSandbox();
 
   let repository: TestRepository, controller: SinonStubbedInstance<LevelDbController>;
@@ -42,7 +41,7 @@ describe("database repository", function () {
     repository = new TestRepository(controller);
   });
 
-  it("should get single item", async function() {
+  it("should get single item", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.get("id");
@@ -50,14 +49,14 @@ describe("database repository", function () {
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it("should return null if item not found", async function() {
+  it("should return null if item not found", async function () {
     controller.get.resolves(null);
     const result = await repository.get("id");
     expect(result).to.be.deep.equal(null);
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it("should return true if item exists", async function() {
+  it("should return true if item exists", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     controller.get.resolves(TestSSZType.serialize(item) as Buffer);
     const result = await repository.has("id");
@@ -65,26 +64,26 @@ describe("database repository", function () {
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it("should return false if item doesnt exists", async function() {
+  it("should return false if item doesnt exists", async function () {
     controller.get.resolves(null);
     const result = await repository.has("id");
     expect(result).to.be.false;
     expect(controller.get.calledOnce).to.be.true;
   });
 
-  it("should store with hashTreeRoot as id", async function() {
+  it("should store with hashTreeRoot as id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.add(item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 
-  it("should store with given id", async function() {
+  it("should store with given id", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await expect(repository.put("1", item)).to.not.be.rejected;
     expect(controller.put.calledOnce).to.be.true;
   });
 
-  it("should delete", async function() {
+  it("should delete", async function () {
     await expect(repository.delete("1")).to.not.be.rejected;
     expect(controller.delete.calledOnce).to.be.true;
   });
@@ -106,25 +105,13 @@ describe("database repository", function () {
 
   it("should delete given items", async function () {
     await repository.batchDelete(["1", "2", "3"]);
-    expect(
-      controller
-        .batchDelete
-        .withArgs(
-          sinon.match((criteria) => criteria.length === 3)
-        ).calledOnce
-    ).to.be.true;
+    expect(controller.batchDelete.withArgs(sinon.match((criteria) => criteria.length === 3)).calledOnce).to.be.true;
   });
 
   it("should delete given items by value", async function () {
     const item = {bool: true, bytes: Buffer.alloc(32)};
     await repository.batchRemove([item, item]);
-    expect(
-      controller
-        .batchDelete
-        .withArgs(
-          sinon.match((criteria) => criteria.length === 2)
-        ).calledOnce
-    ).to.be.true;
+    expect(controller.batchDelete.withArgs(sinon.match((criteria) => criteria.length === 2)).calledOnce).to.be.true;
   });
 
   it("should add multiple values", async function () {
@@ -132,7 +119,7 @@ describe("database repository", function () {
       {bool: true, bytes: Buffer.alloc(32)},
       {bool: false, bytes: Buffer.alloc(32)},
     ]);
-    expect(controller.batchPut.withArgs(sinon.match(criteria => criteria.length === 2)).calledOnce).to.be.true;
+    expect(controller.batchPut.withArgs(sinon.match((criteria) => criteria.length === 2)).calledOnce).to.be.true;
   });
 
   it("should fetch values stream", async function () {

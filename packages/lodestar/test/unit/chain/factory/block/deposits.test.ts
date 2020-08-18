@@ -10,8 +10,7 @@ import {generateDepositData} from "../../../../utils/deposit";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {DepositDataRepository} from "../../../../../src/db/api/beacon/repositories";
 
-describe("blockAssembly - deposits", function() {
-
+describe("blockAssembly - deposits", function () {
   const sandbox = sinon.createSandbox();
 
   let dbStub: StubbedBeaconDb;
@@ -24,7 +23,7 @@ describe("blockAssembly - deposits", function() {
     sandbox.restore();
   });
 
-  it("return empty array if no pending deposits", async function() {
+  it("return empty array if no pending deposits", async function () {
     const result = await generateDeposits(
       config,
       dbStub,
@@ -34,14 +33,14 @@ describe("blockAssembly - deposits", function() {
       {
         depositCount: 1,
         blockHash: ZERO_HASH,
-        depositRoot: ZERO_HASH
+        depositRoot: ZERO_HASH,
       },
       config.types.DepositDataRootList.tree.defaultValue()
     );
     expect(result).to.be.deep.equal([]);
   });
 
-  it("return deposits with valid proofs", async function() {
+  it("return deposits with valid proofs", async function () {
     const deposits = [generateDepositData(), generateDepositData()];
     dbStub.depositData.values.resolves(deposits);
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
@@ -52,7 +51,7 @@ describe("blockAssembly - deposits", function() {
     const eth1 = {
       depositCount: 2,
       blockHash: ZERO_HASH,
-      depositRoot: tree.root
+      depositRoot: tree.root,
     };
     const result = await generateDeposits(
       config,
@@ -61,7 +60,7 @@ describe("blockAssembly - deposits", function() {
         eth1DepositIndex: 0,
       }),
       eth1,
-      config.types.DepositDataRootList.tree.defaultValue(),
+      config.types.DepositDataRootList.tree.defaultValue()
     );
     expect(result.length).to.be.equal(2);
     result.forEach((deposit, index) => {

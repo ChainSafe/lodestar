@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {Attestation, BeaconState, PendingAttestation,} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 

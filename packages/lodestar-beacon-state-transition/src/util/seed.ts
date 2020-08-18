@@ -3,16 +3,10 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {
-  Epoch,
-  BeaconState,
-  Bytes32,
-} from "@chainsafe/lodestar-types";
+import {Epoch, BeaconState, Bytes32} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {assert, bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
-
-
 
 /**
  * Return the shuffled validator index corresponding to ``seed`` (and ``index_count``).
@@ -22,30 +16,20 @@ import {DomainType} from "../constants";
  *
  * See the 'generalized domain' algorithm on page 3.
  */
-export function computeShuffledIndex(
-  config: IBeaconConfig,
-  index: number,
-  indexCount: number,
-  seed: Bytes32
-): number {
+export function computeShuffledIndex(config: IBeaconConfig, index: number, indexCount: number, seed: Bytes32): number {
   let permuted = index;
   assert.lt(index, indexCount, "indexCount must be less than index");
   assert.lte(indexCount, 2 ** 40, "indexCount too big");
   const _seed = seed.valueOf() as Uint8Array;
   for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
-    const pivot = Number(bytesToBigInt(
-      hash(Buffer.concat([_seed, intToBytes(i, 1)]))
-        .slice(0, 8)
-    ) % BigInt(indexCount));
+    const pivot = Number(
+      bytesToBigInt(hash(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
+    );
     const flip = (pivot + indexCount - permuted) % indexCount;
     const position = Math.max(permuted, flip);
-    const source = hash(Buffer.concat([
-      _seed,
-      intToBytes(i, 1),
-      intToBytes(intDiv(position, 256), 4),
-    ]));
+    const source = hash(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(intDiv(position, 256), 4)]));
     const byte = source[intDiv(position % 256, 8)];
-    const bit = (byte >> (position % 8)) % 2;
+    const bit = (byte >> position % 8) % 2;
     permuted = bit ? flip : permuted;
   }
   return permuted;
@@ -68,9 +52,5 @@ export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch,
     epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
   );
 
-  return hash(Buffer.concat([
-    intToBytes(domainType, 4),
-    intToBytes(epoch, 8),
-    mix.valueOf() as Uint8Array,
-  ]));
+  return hash(Buffer.concat([intToBytes(domainType, 4), intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
 }

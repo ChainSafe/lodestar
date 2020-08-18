@@ -11,7 +11,7 @@ import {randomPassword} from "../util";
 
 /**
  * @chainsafe/bls-keystore@1.0.0-beta8 requires a pubKey argument
- * While the library is not agnostic use this empty value 
+ * While the library is not agnostic use this empty value
  */
 
 export interface IWalletKeystoreJson {
@@ -63,7 +63,7 @@ export class Wallet extends Keystore {
       name: this.name || "",
       nextaccount: this.nextaccount,
       version: this.version,
-      type: this.type
+      type: this.type,
     };
   }
 
@@ -84,10 +84,12 @@ export class Wallet extends Keystore {
    */
   async nextValidator(
     walletPassword: string,
-    passwords: { [key in keyof IEth2ValidatorKeys]: string }
-  ): Promise<{
+    passwords: {[key in keyof IEth2ValidatorKeys]: string}
+  ): Promise<
+    {
       [key in keyof IEth2ValidatorKeys]: Keystore;
-    }> {
+    }
+  > {
     const masterKey = await this.decrypt(walletPassword);
     const validatorIndex = this.nextaccount;
     const privKeys = deriveEth2ValidatorKeys(masterKey, validatorIndex);
@@ -103,7 +105,7 @@ export class Wallet extends Keystore {
     // Update nextaccount last in case Keystore generation throws
     this.nextaccount += 1;
 
-    const resolved = (await Promise.all(values(keystores)));
+    const resolved = await Promise.all(values(keystores));
     return {
       withdrawal: resolved[0],
       signing: resolved[1],
@@ -113,10 +115,10 @@ export class Wallet extends Keystore {
   /**
    * Utility function to generate passwords for the two eth2 pair keystores
    */
-  randomPasswords(): { [key in keyof IEth2ValidatorKeys]: string } {
+  randomPasswords(): {[key in keyof IEth2ValidatorKeys]: string} {
     return {
       signing: randomPassword(),
-      withdrawal: randomPassword()
+      withdrawal: randomPassword(),
     };
   }
 }

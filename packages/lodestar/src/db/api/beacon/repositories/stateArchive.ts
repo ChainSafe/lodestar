@@ -8,11 +8,8 @@ import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
 export class StateArchiveRepository extends Repository<Epoch, TreeBacked<BeaconState>> {
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
-    super(config, db, Bucket.state, config.types.BeaconState as unknown as CompositeType<TreeBacked<BeaconState>>);
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
+    super(config, db, Bucket.state, (config.types.BeaconState as unknown) as CompositeType<TreeBacked<BeaconState>>);
   }
 
   public getId(state: TreeBacked<BeaconState>): Epoch {
@@ -20,6 +17,6 @@ export class StateArchiveRepository extends Repository<Epoch, TreeBacked<BeaconS
   }
 
   public decodeValue(data: Buffer): TreeBacked<BeaconState> {
-    return (this.type as unknown as CompositeType<BeaconState>).tree.deserialize(data);
+    return ((this.type as unknown) as CompositeType<BeaconState>).tree.deserialize(data);
   }
 }

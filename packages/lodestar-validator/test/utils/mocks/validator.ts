@@ -13,7 +13,7 @@ import {
   ValidatorIndex,
   Slot,
   SignedBeaconBlock,
-  SignedAggregateAndProof
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../src/api/interface/validators";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
@@ -35,14 +35,15 @@ export class MockValidatorApi implements IValidatorApi {
   private head: SignedBeaconBlock;
 
   public constructor(opts?: IMockValidatorAPIOpts) {
-    this.attestations = opts && opts.pendingAttestations || [];
-    this.head = opts && opts.head || {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
-    this.chainId = opts && opts.chainId || 0;
-    this.validatorIndex = opts && opts.validatorIndex || 1;
+    this.attestations = (opts && opts.pendingAttestations) || [];
+    this.head = (opts && opts.head) || {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
+    this.chainId = (opts && opts.chainId) || 0;
+    this.validatorIndex = (opts && opts.validatorIndex) || 1;
   }
 
   public async produceAggregateAndProof(
-    attestationData: AttestationData, aggregator: BLSPubkey
+    attestationData: AttestationData,
+    aggregator: BLSPubkey
   ): Promise<AggregateAndProof> {
     throw new Error("Method not implemented.");
   }
@@ -80,7 +81,10 @@ export class MockValidatorApi implements IValidatorApi {
   }
 
   subscribeCommitteeSubnet(
-    slot: number, slotSignature: Buffer, committeeIndex: number, aggregatorPubkey: Buffer
+    slot: number,
+    slotSignature: Buffer,
+    committeeIndex: number,
+    aggregatorPubkey: Buffer
   ): Promise<void> {
     throw Error("not implemented");
   }

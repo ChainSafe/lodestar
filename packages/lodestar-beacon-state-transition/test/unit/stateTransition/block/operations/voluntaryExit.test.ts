@@ -1,9 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {
-  FAR_FUTURE_EPOCH,
-} from "../../../../../src/constants";
+import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
 import * as validatorUtils from "../../../../../src/util/validator";
 import {processVoluntaryExit} from "../../../../../src/block/operations";
@@ -13,7 +11,6 @@ import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits
 import {generateState} from "../../../../utils/state";
 
 describe("process block - voluntary exits", function () {
-
   const sandbox = sinon.createSandbox();
 
   let isActiveValidatorStub: any, initiateValidatorExitStub: any;

@@ -8,6 +8,6 @@ export function generateFork(): Fork {
   return {
     currentVersion: intToBytes(1, 4),
     previousVersion: intToBytes(0, 4),
-    epoch: 1
+    epoch: 1,
   };
 }

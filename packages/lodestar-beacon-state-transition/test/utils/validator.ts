@@ -17,8 +17,8 @@ export interface ValidatorGeneratorOpts {
  * @returns {Validator}
  */
 export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator {
-  const randNum = () =>  Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch = (opts.activation || opts.activation === 0) ? opts.activation : FAR_FUTURE_EPOCH;
+  const randNum = () => Math.floor(Math.random() * Math.floor(4));
+  const activationEpoch = opts.activation || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
@@ -27,7 +27,7 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator 
     exitEpoch: opts.exit || randNum(),
     withdrawableEpoch: randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.balance || 0n
+    effectiveBalance: opts.balance || 0n,
   };
 }
 
@@ -37,5 +37,5 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator 
  * @returns {Validator[]}
  */
 export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): List<Validator> {
-  return Array.from({ length: n }, () => generateValidator(opts)) as List<Validator>;
+  return Array.from({length: n}, () => generateValidator(opts)) as List<Validator>;
 }

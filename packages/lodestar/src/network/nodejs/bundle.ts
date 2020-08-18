@@ -12,7 +12,6 @@ import PeerId from "peer-id";
 import {ENRInput, Discv5Discovery} from "@chainsafe/discv5";
 import {Adapter} from "interface-datastore";
 
-
 export interface ILibp2pOptions {
   peerId: PeerId;
   addresses: {
@@ -39,17 +38,13 @@ export class NodejsNode extends LibP2p {
       addresses: {
         listen: options.addresses.listen,
         announce: options.addresses.announce || [],
-        noAnnounce: options.addresses.noAnnounce || []
+        noAnnounce: options.addresses.noAnnounce || [],
       },
       modules: {
         connEncryption: [NOISE],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: options.peerDiscovery || [
-          Bootstrap,
-          MDNS,
-          Discv5Discovery,
-        ],
+        peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS, Discv5Discovery],
       },
       connectionManager: {
         maxConnections: options.maxConnections,
@@ -57,20 +52,20 @@ export class NodejsNode extends LibP2p {
       datastore: options.datastore,
       peerStore: {
         persistence: !!options.datastore,
-        threshold: 10
+        threshold: 10,
       },
       config: {
         relay: {
           enabled: false,
           hop: {
             enabled: false,
-            active: false
-          }
+            active: false,
+          },
         },
         peerDiscovery: {
           autoDial: options.autoDial,
           mdns: {
-            peerId: options.peerId
+            peerId: options.peerId,
           },
           bootstrap: {
             enabled: !!(options.bootnodes && options.bootnodes.length),
@@ -82,8 +77,8 @@ export class NodejsNode extends LibP2p {
             bindAddr: options.discv5.bindAddr,
             bootEnrs: options.discv5.bootEnrs || [],
           },
-        }
-      }
+        },
+      },
     };
     super(defaults);
   }

@@ -1,8 +1,8 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";import { computeSlotsSinceEpochStart } from "../../../../src/util";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {computeSlotsSinceEpochStart} from "../../../../src/util";
 import {Slot} from "@chainsafe/lodestar-types";
-
 
 describe("computeSlotsSinceEpochStart", () => {
   const pairs = [

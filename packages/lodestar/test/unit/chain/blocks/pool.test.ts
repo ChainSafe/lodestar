@@ -7,9 +7,8 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 describe("block pool", function () {
-
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
-  let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>>&AsyncIterable<IBlockProcessJob>;
+  let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>> & AsyncIterable<IBlockProcessJob>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
   beforeEach(function () {
@@ -18,7 +17,7 @@ describe("block pool", function () {
     sourceStub = {
       ...pushable<IBlockProcessJob>(),
       push: sinon.stub(),
-      end: sinon.stub()
+      end: sinon.stub(),
     };
   });
 
@@ -45,7 +44,8 @@ describe("block pool", function () {
 
     expect(
       // @ts-ignore
-      eventBusStub.emit.withArgs("unknownBlockRoot", config.types.SignedBeaconBlock.defaultValue().message.parentRoot).callCount
+      eventBusStub.emit.withArgs("unknownBlockRoot", config.types.SignedBeaconBlock.defaultValue().message.parentRoot)
+        .callCount
     ).to.be.equal(1);
     expect(
       // @ts-ignore
@@ -112,8 +112,10 @@ describe("block pool", function () {
     pool.onProcessedBlock(requiredBlock);
 
     expect(sourceStub.push.calledTwice).to.be.true;
-    expect(sourceStub.push.firstCall.calledWith({signedBlock: pendingBlock2, trusted: false, reprocess: false,})).to.be.true;
-    expect(sourceStub.push.secondCall.calledWith({signedBlock: pendingBlock, trusted: false, reprocess: false})).to.be.true;
+    expect(sourceStub.push.firstCall.calledWith({signedBlock: pendingBlock2, trusted: false, reprocess: false})).to.be
+      .true;
+    expect(sourceStub.push.secondCall.calledWith({signedBlock: pendingBlock, trusted: false, reprocess: false})).to.be
+      .true;
   });
 
   it("should proceed without pending blocks", function () {

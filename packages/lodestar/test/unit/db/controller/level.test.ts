@@ -12,7 +12,6 @@ describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
   const db = new LevelDbController({name: dbLocation}, {logger});
 
-
   before(async () => {
     logger.silent = true;
     await db.start();
@@ -39,11 +38,11 @@ describe("LevelDB controller", () => {
     await db.batchPut([
       {
         key: k1,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
       {
         key: k2,
-        value: Buffer.from("value")
+        value: Buffer.from("value"),
       },
     ]);
     expect(await db.get(k1)).to.not.be.null;
@@ -62,7 +61,7 @@ describe("LevelDB controller", () => {
       {
         key: k2,
         value: Buffer.from("value"),
-      }
+      },
     ]);
     expect((await db.entries()).length).to.equal(2);
     await db.batchDelete([k1, k2]);
@@ -79,7 +78,7 @@ describe("LevelDB controller", () => {
       {
         key: k2,
         value: Buffer.from("value"),
-      }
+      },
     ]);
     const result = await db.entries({
       gte: k1,
@@ -99,7 +98,7 @@ describe("LevelDB controller", () => {
       {
         key: k2,
         value: Buffer.from("value"),
-      }
+      },
     ]);
     const resultStream = db.entriesStream({
       gte: k1,

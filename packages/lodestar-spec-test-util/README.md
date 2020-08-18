@@ -13,14 +13,14 @@ Compares actual vs expected for all test cases
 
 #### Parameters
 
--   `testYamlPath` **[string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** path to yaml spec test
--   `testFunc` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to use to generate output
--   `getInput` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into input array (optional, default `testCase=>testCase.input`)
--   `getExpected` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a comparable expected output (optional, default `testCase=>testCase.output`)
--   `getActual` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert function output into comparable actual output (optional, default `result=>result`)
--   `shouldError` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a boolean, if the case should result in an error (optional, default `(testCase,index,testSpec)=>false`)
--   `shouldSkip` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a boolean, if the case should be skipped (optional, default `(testCase,index,testSpec)=>false`)
--   `expectFunc` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to run expectations against expected and actual output (optional, default `(testCase,expect,expected,actual)=>expect(actual).to.be.equal(expected)`)
+- `testYamlPath` **[string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** path to yaml spec test
+- `testFunc` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to use to generate output
+- `getInput` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into input array (optional, default `testCase=>testCase.input`)
+- `getExpected` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a comparable expected output (optional, default `testCase=>testCase.output`)
+- `getActual` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert function output into comparable actual output (optional, default `result=>result`)
+- `shouldError` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a boolean, if the case should result in an error (optional, default `(testCase,index,testSpec)=>false`)
+- `shouldSkip` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to convert test case into a boolean, if the case should be skipped (optional, default `(testCase,index,testSpec)=>false`)
+- `expectFunc` **[Function](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Statements/function)** function to run expectations against expected and actual output (optional, default `(testCase,expect,expected,actual)=>expect(actual).to.be.equal(expected)`)
 
 ## Profiling
 

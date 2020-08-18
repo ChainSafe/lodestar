@@ -1,12 +1,7 @@
 /**
  * @module chain/stateTransition/util
  */
-import {
-  Epoch,
-  Version,
-  BeaconState,
-  Root,
-} from "@chainsafe/lodestar-types";
+import {Epoch, Version, BeaconState, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType, ZERO_HASH} from "../constants";
@@ -22,15 +17,13 @@ export function computeDomain(
   config: IBeaconConfig,
   domainType: DomainType,
   forkVersion?: Version,
-  genesisValidatorRoot: Root = ZERO_HASH): Buffer {
+  genesisValidatorRoot: Root = ZERO_HASH
+): Buffer {
   if (!forkVersion) {
     forkVersion = config.params.GENESIS_FORK_VERSION;
   }
   const forkDataRoot = computeForkDataRoot(config, forkVersion, genesisValidatorRoot);
-  return Buffer.concat([
-    intToBytes(domainType, 4),
-    (forkDataRoot.valueOf() as Uint8Array).slice(0,28),
-  ]);
+  return Buffer.concat([intToBytes(domainType, 4), (forkDataRoot.valueOf() as Uint8Array).slice(0, 28)]);
 }
 
 /**
@@ -43,8 +36,6 @@ export function getDomain(
   messageEpoch: Epoch | null = null
 ): Buffer {
   const epoch = messageEpoch || getCurrentEpoch(config, state);
-  const forkVersion = epoch < state.fork.epoch
-    ? state.fork.previousVersion
-    : state.fork.currentVersion;
+  const forkVersion = epoch < state.fork.epoch ? state.fork.previousVersion : state.fork.currentVersion;
   return computeDomain(config, domainType, forkVersion, state.genesisValidatorsRoot);
 }

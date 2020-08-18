@@ -5,12 +5,7 @@ import {GENESIS_EPOCH} from "../../constants";
 import {EpochContext, IEpochProcess} from "../util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
-
-export function processRewardsAndPenalties(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: BeaconState
-): void {
+export function processRewardsAndPenalties(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
   if (process.currentEpoch === GENESIS_EPOCH) {
     return;
   }

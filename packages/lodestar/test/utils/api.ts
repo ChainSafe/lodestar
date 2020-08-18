@@ -9,12 +9,16 @@ export function generateSignedBeaconHeaderResponse(
   override: Partial<SignedBeaconHeaderResponse> = {}
 ): SignedBeaconHeaderResponse {
   const signedBlock = generateEmptySignedBlock();
-  return deepmerge({
-    canonical: true,
-    root: Buffer.alloc(32, 0),
-    header: {
-      message: blockToHeader(config, signedBlock.message),
-      signature: signedBlock.signature
-    }
-  }, override, {isMergeableObject: isPlainObject});
+  return deepmerge(
+    {
+      canonical: true,
+      root: Buffer.alloc(32, 0),
+      header: {
+        message: blockToHeader(config, signedBlock.message),
+        signature: signedBlock.signature,
+      },
+    },
+    override,
+    {isMergeableObject: isPlainObject}
+  );
 }

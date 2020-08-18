@@ -9,13 +9,13 @@ import {
   ProposerSlashing,
   SignedBeaconBlock,
   SignedVoluntaryExit,
-  SignedAggregateAndProof
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
 import {Message} from "libp2p-gossipsub/src/message";
 import {IBeaconChain} from "../../chain";
@@ -62,22 +62,25 @@ export interface IGossip extends IService, GossipEventEmitter {
   publishProposerSlashing(proposerSlashing: ProposerSlashing): Promise<void>;
   subscribeToBlock(forkDigest: ForkDigest, callback: (signedBlock: SignedBeaconBlock) => void): void;
   subscribeToAggregateAndProof(forkDigest: ForkDigest, callback: (aggregate: SignedAggregateAndProof) => void): void;
-  subscribeToVoluntaryExit(
-    forkDigest: ForkDigest, callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
+  subscribeToVoluntaryExit(forkDigest: ForkDigest, callback: (voluntaryExit: SignedVoluntaryExit) => void): void;
   subscribeToProposerSlashing(forkDigest: ForkDigest, callback: (slashing: ProposerSlashing) => void): void;
   subscribeToAttesterSlashing(forkDigest: ForkDigest, callback: (slashing: AttesterSlashing) => void): void;
   subscribeToAttestationSubnet(
     forkDigest: ForkDigest,
-    subnet: number|string,
-    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+    subnet: number | string,
+    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void;
   unsubscribeFromAttestationSubnet(
     forkDigest: ForkDigest,
-    subnet: number|string,
-    callback?: (attestation:  {attestation: Attestation; subnet: number}) => void
+    subnet: number | string,
+    callback?: (attestation: {attestation: Attestation; subnet: number}) => void
   ): void;
   unsubscribe(
-    forkDigest: ForkDigest, event: keyof IGossipEvents, listener: unknown, params?: Map<string, string>): void;
+    forkDigest: ForkDigest,
+    event: keyof IGossipEvents,
+    listener: unknown,
+    params?: Map<string, string>
+  ): void;
 }
 
 export interface IGossipMessageValidator {
@@ -89,11 +92,16 @@ export interface IGossipMessageValidator {
   isValidIncomingAttesterSlashing(attesterSlashing: AttesterSlashing): Promise<ExtendedValidatorResult>;
 }
 
-export type GossipObject = SignedBeaconBlock | Attestation | SignedAggregateAndProof |
-SignedVoluntaryExit | ProposerSlashing | AttesterSlashing;
+export type GossipObject =
+  | SignedBeaconBlock
+  | Attestation
+  | SignedAggregateAndProof
+  | SignedVoluntaryExit
+  | ProposerSlashing
+  | AttesterSlashing;
 
 export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<ExtendedValidatorResult>;
 
-export interface ILodestarGossipMessage extends Message{
+export interface ILodestarGossipMessage extends Message {
   messageId: string;
 }

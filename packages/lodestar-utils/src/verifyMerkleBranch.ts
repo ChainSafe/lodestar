@@ -10,11 +10,11 @@ export function verifyMerkleBranch(
   proof: Uint8Array[],
   depth: number,
   index: number,
-  root: Uint8Array,
+  root: Uint8Array
 ): boolean {
   let value = leaf;
   for (let i = 0; i < depth; i++) {
-    if (intDiv(index, 2**i) % 2) {
+    if (intDiv(index, 2 ** i) % 2) {
       value = hash(Buffer.concat([proof[i], value]));
     } else {
       value = hash(Buffer.concat([value, proof[i]]));

@@ -10,7 +10,6 @@ import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 describe("gossip handlers - aggregate and proof", function () {
-
   const sandbox = sinon.createSandbox();
 
   let gossipStub: any;
@@ -29,7 +28,7 @@ describe("gossip handlers - aggregate and proof", function () {
     const aggregate: AggregateAndProof = {
       aggregatorIndex: 0,
       selectionProof: Buffer.alloc(0),
-      aggregate: generateEmptyAttestation()
+      aggregate: generateEmptyAttestation(),
     };
     const signedAggregate: SignedAggregateAndProof = {
       message: aggregate,
@@ -38,5 +37,4 @@ describe("gossip handlers - aggregate and proof", function () {
     await handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
     expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, signedAggregate).calledOnce).to.be.true;
   });
-    
 });

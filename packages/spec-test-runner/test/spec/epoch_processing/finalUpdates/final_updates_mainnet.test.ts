@@ -25,10 +25,9 @@ describeDirectorySpecTest<StateTestCase, BeaconState>(
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
     },
-    getExpected: (testCase => testCase.post),
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

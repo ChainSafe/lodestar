@@ -17,7 +17,6 @@ import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../lib/sync";
 
 describe("sync", function () {
-
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let reqRespStub: SinonStubbedInstance<IReqRespHandler>;
   let attestationCollectorStub: SinonStubbedInstance<AttestationCollector>;
@@ -29,21 +28,19 @@ describe("sync", function () {
   let clock: SinonFakeTimers;
 
   const getSync = (opts: ISyncOptions): IBeaconSync => {
-    return new BeaconSync(
-      opts,
-      {
-        chain: chainStub,
-        config,
-        db: sinon.createStubInstance(BeaconDb),
-        regularSync: regularSyncStub,
-        initialSync: initialSyncStub,
-        network: networkStub,
-        reqRespHandler: reqRespStub,
-        gossipHandler: gossipStub,
-        reputationStore: sinon.createStubInstance(ReputationStore),
-        attestationCollector: attestationCollectorStub as unknown as AttestationCollector,
-        logger: loggerStub,
-      });
+    return new BeaconSync(opts, {
+      chain: chainStub,
+      config,
+      db: sinon.createStubInstance(BeaconDb),
+      regularSync: regularSyncStub,
+      initialSync: initialSyncStub,
+      network: networkStub,
+      reqRespHandler: reqRespStub,
+      gossipHandler: gossipStub,
+      reputationStore: sinon.createStubInstance(ReputationStore),
+      attestationCollector: (attestationCollectorStub as unknown) as AttestationCollector,
+      logger: loggerStub,
+    });
   };
 
   beforeEach(function () {
@@ -144,5 +141,4 @@ describe("sync", function () {
     expect(status.headSlot.toString()).to.be.deep.equal("0");
     expect(status.syncDistance.toString()).to.be.deep.equal("1");
   });
-
 });

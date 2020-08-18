@@ -11,7 +11,6 @@ import {generateEmptySignedBlock} from "../../../../../utils/block";
 use(chaiAsPromised);
 
 describe("api - beacon - getBlock", function () {
-
   const sandbox = sinon.createSandbox();
 
   let blockApi: BeaconBlockApi;
@@ -26,11 +25,14 @@ describe("api - beacon - getBlock", function () {
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     resolveBlockIdStub = sandbox.stub(blockUtils, "resolveBlockId");
-    blockApi = new BeaconBlockApi({}, {
-      chain: chainStub,
-      config,
-      db: dbStub
-    });
+    blockApi = new BeaconBlockApi(
+      {},
+      {
+        chain: chainStub,
+        config,
+        db: dbStub,
+      }
+    );
   });
 
   afterEach(function () {
@@ -44,12 +46,12 @@ describe("api - beacon - getBlock", function () {
   });
 
   it("invalid block id", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"abc").throwsException();
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "abc").throwsException();
     await expect(blockApi.getBlock("abc")).to.eventually.be.rejected;
   });
 
   it("success for non finalized block", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"head").resolves(generateEmptySignedBlock());
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const result = await blockApi.getBlock("head");
     expect(result).to.not.be.null;
     expect(() => config.types.SignedBeaconBlock.assertValidValue(result)).to.not.throw();
@@ -60,6 +62,4 @@ describe("api - beacon - getBlock", function () {
     const result = await blockApi.getBlock("0");
     expect(result).to.not.be.null;
   });
-
-
 });

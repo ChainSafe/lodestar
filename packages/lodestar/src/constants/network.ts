@@ -37,33 +37,33 @@ export const Methods = {
   [Method.Status]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Status,
     responseSSZType: (config: IBeaconConfig) => config.types.Status,
-    responseType: MethodResponseType.SingleResponse
+    responseType: MethodResponseType.SingleResponse,
   },
   [Method.Goodbye]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Goodbye,
     responseSSZType: (config: IBeaconConfig) => config.types.Goodbye,
-    responseType: MethodResponseType.SingleResponse
+    responseType: MethodResponseType.SingleResponse,
   },
   [Method.Ping]: {
     requestSSZType: (config: IBeaconConfig) => config.types.Ping,
     responseSSZType: (config: IBeaconConfig) => config.types.Ping,
-    responseType: MethodResponseType.SingleResponse
+    responseType: MethodResponseType.SingleResponse,
   },
   [Method.Metadata]: {
     requestSSZType: (): null => null,
     responseSSZType: (config: IBeaconConfig) => config.types.Metadata,
-    responseType: MethodResponseType.SingleResponse
+    responseType: MethodResponseType.SingleResponse,
   },
   [Method.BeaconBlocksByRange]: {
     requestSSZType: (config: IBeaconConfig) => config.types.BeaconBlocksByRangeRequest,
     responseSSZType: (config: IBeaconConfig) => config.types.SignedBeaconBlock,
-    responseType: MethodResponseType.Stream
+    responseType: MethodResponseType.Stream,
   },
   [Method.BeaconBlocksByRoot]: {
     requestSSZType: (config: IBeaconConfig) => config.types.BeaconBlocksByRootRequest,
     responseSSZType: (config: IBeaconConfig) => config.types.SignedBeaconBlock,
-    responseType: MethodResponseType.Stream
-  }
+    responseType: MethodResponseType.Stream,
+  },
 };
 
 export enum ReqRespEncoding {
@@ -77,9 +77,7 @@ export enum RpcResponseStatus {
   SERVER_ERROR = 2,
 }
 
-
-export const GOSSIP_MAX_SIZE = 2**20;
-export const MAX_CHUNK_SIZE = 2**20;
+export const GOSSIP_MAX_SIZE = 2 ** 20;
+export const MAX_CHUNK_SIZE = 2 ** 20;
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
-

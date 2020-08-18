@@ -6,7 +6,7 @@ import {
   Genesis,
   Root,
   Uint64,
-  ValidatorResponse
+  ValidatorResponse,
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient, urlJoin} from "../../../../util";
@@ -15,7 +15,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
 
 export class RestBeaconApi implements IBeaconApi {
-
   private readonly client: HttpClient;
   private readonly clientV2: HttpClient;
 
@@ -30,18 +29,15 @@ export class RestBeaconApi implements IBeaconApi {
     this.config = config;
   }
 
-
-  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
-    return this.config.types.ValidatorResponse.fromJson(
-      await this.client.get(`/validators/${toHexString(pubkey)}`)
-    );
+  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
+    return this.config.types.ValidatorResponse.fromJson(await this.client.get(`/validators/${toHexString(pubkey)}`));
   }
 
   public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
     return this.config.types.ForkResponse.fromJson(await this.client.get<Json>("/fork"), {case: "snake"});
   }
 
-  public async getGenesis(): Promise<Genesis|null> {
+  public async getGenesis(): Promise<Genesis | null> {
     try {
       const genesisResponse = await this.clientV2.get<{data: Json}>("/genesis");
       return this.config.types.Genesis.fromJson(genesisResponse.data, {case: "snake"});

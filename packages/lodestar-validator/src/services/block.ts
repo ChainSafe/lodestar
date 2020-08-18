@@ -2,15 +2,7 @@
  * @module validator
  */
 
-import {
-  BeaconState,
-  BLSPubkey,
-  Epoch,
-  Fork,
-  Root,
-  SignedBeaconBlock,
-  Slot
-} from "@chainsafe/lodestar-types";
+import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -20,13 +12,12 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   DomainType,
-  getDomain
+  getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 
 export default class BlockProposingService {
-
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   //validators private keys (order is important)
@@ -66,42 +57,34 @@ export default class BlockProposingService {
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
-    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch(e => {
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
     });
-    if(!proposerDuties) {
+    if (!proposerDuties) {
       return;
     }
     proposerDuties.forEach((duty) => {
-      if(!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
+      if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.proposerPubkey)});
         this.nextProposals.set(duty.slot, duty.proposerPubkey);
       }
     });
   };
 
-  public onNewSlot = async(slot: Slot): Promise<void> => {
-    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
+  public onNewSlot = async (slot: Slot): Promise<void> => {
+    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
     const proposerPubKey = this.nextProposals.get(slot);
-    if(proposerPubKey && slot !== 0) {
+    if (proposerPubKey && slot !== 0) {
       this.nextProposals.delete(slot);
-      this.logger.info(
-        "Validator is proposer!",
-        {
-          slot,
-          validator: toHexString(proposerPubKey)
-        }
-      );
-      const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
-      await this.createAndPublishBlock(
-        this.getPubKeyIndex(proposerPubKey),
+      this.logger.info("Validator is proposer!", {
         slot,
-        fork,
-        genesisValidatorsRoot
-      );
+        validator: toHexString(proposerPubKey),
+      });
+      const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+      await this.createAndPublishBlock(this.getPubKeyIndex(proposerPubKey), slot, fork, genesisValidatorsRoot);
     }
   };
 
@@ -109,33 +92,30 @@ export default class BlockProposingService {
    * IFF a validator is selected construct a block to propose.
    */
   public async createAndPublishBlock(
-    proposerIndex: number, slot: Slot, fork: Fork, genesisValidatorsRoot: Root): Promise<SignedBeaconBlock | null> {
-    if(await this.hasProposedAlready(proposerIndex, slot)) {
+    proposerIndex: number,
+    slot: Slot,
+    fork: Fork,
+    genesisValidatorsRoot: Root
+  ): Promise<SignedBeaconBlock | null> {
+    if (await this.hasProposedAlready(proposerIndex, slot)) {
       this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
       return null;
     }
     const epoch = computeEpochAtSlot(this.config, slot);
-    const randaoDomain = getDomain(
-      this.config,
-      {fork, genesisValidatorsRoot} as BeaconState,
-      DomainType.RANDAO,
-      epoch
-    );
+    const randaoDomain = getDomain(this.config, {fork, genesisValidatorsRoot} as BeaconState, DomainType.RANDAO, epoch);
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
     let block;
     try {
       block = await this.provider.validator.produceBlock(
         slot,
         this.publicKeys[proposerIndex],
-        this.privateKeys[proposerIndex].signMessage(
-          randaoSigningRoot
-        ).toBytesCompressed(),
+        this.privateKeys[proposerIndex].signMessage(randaoSigningRoot).toBytesCompressed(),
         this.graffiti || ""
       );
     } catch (e) {
       this.logger.error(`Failed to produce block for slot ${slot}`, e);
     }
-    if(!block) {
+    if (!block) {
       return null;
     }
     const proposerDomain = getDomain(
@@ -169,7 +149,7 @@ export default class BlockProposingService {
   private async hasProposedAlready(proposerIndex: number, slot: Slot): Promise<boolean> {
     // get last proposed block from database and check if belongs in same slot
     const lastProposedBlock = await this.db.getBlock(this.publicKeys[proposerIndex]);
-    if(!lastProposedBlock) return  false;
+    if (!lastProposedBlock) return false;
     return this.config.types.Slot.equals(lastProposedBlock.message.slot, slot);
   }
 

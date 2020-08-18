@@ -12,9 +12,7 @@ import {generateValidator} from "../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 
-
 describe("produce aggregate and proof api implementation", function () {
-
   const sandbox = sinon.createSandbox();
 
   let dbStub: StubbedBeaconDb;
@@ -28,7 +26,6 @@ describe("produce aggregate and proof api implementation", function () {
     dbStub = new StubbedBeaconDb(sinon, config);
     syncStub = sandbox.createStubInstance(BeaconSync);
 
-
     api = new ValidatorApi(
       {},
       // @ts-ignore
@@ -36,7 +33,7 @@ describe("produce aggregate and proof api implementation", function () {
         chain: chainStub,
         sync: syncStub,
         db: dbStub,
-        config
+        config,
       }
     );
   });
@@ -49,14 +46,14 @@ describe("produce aggregate and proof api implementation", function () {
     syncStub.isSynced.returns(true);
     dbStub.attestation.getCommiteeAttestations.resolves([
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(1), 1),
-      getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2)
+      getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2),
     ]);
     const state = generateState({
       validators: [
         generateValidator({
-          pubkey: Buffer.alloc(48, 0)
+          pubkey: Buffer.alloc(48, 0),
         }),
-      ]
+      ],
     });
     const epochCtx = new EpochContext(config);
     epochCtx.syncPubkeys(state);
@@ -67,29 +64,35 @@ describe("produce aggregate and proof api implementation", function () {
     expect(result.aggregate.aggregationBits[0]).to.be.false;
     expect(result.aggregate.aggregationBits[1]).to.be.true;
     expect(result.aggregate.aggregationBits[2]).to.be.true;
-    expect(verifyAggregate(
-      [
-        PrivateKey.fromInt(1).toPublicKey().toBytesCompressed(),
-        PrivateKey.fromInt(2).toPublicKey().toBytesCompressed(),
-      ],
-      computeSigningRoot(
-        config,
-        config.types.AttestationData,
-        generateEmptyAttestation().data,
-        computeDomain(config, DomainType.BEACON_ATTESTER)
-      ),
-      result.aggregate.signature.valueOf() as Uint8Array
-    )).to.be.true;
+    expect(
+      verifyAggregate(
+        [
+          PrivateKey.fromInt(1).toPublicKey().toBytesCompressed(),
+          PrivateKey.fromInt(2).toPublicKey().toBytesCompressed(),
+        ],
+        computeSigningRoot(
+          config,
+          config.types.AttestationData,
+          generateEmptyAttestation().data,
+          computeDomain(config, DomainType.BEACON_ATTESTER)
+        ),
+        result.aggregate.signature.valueOf() as Uint8Array
+      )
+    ).to.be.true;
   });
-
 });
 
 function getCommitteeAttestation(attestation: Attestation, validator: PrivateKey, index: number): Attestation {
-  attestation.signature = validator.signMessage(
-    computeSigningRoot(
-      config, config.types.AttestationData, attestation.data, computeDomain(config, DomainType.BEACON_ATTESTER)
+  attestation.signature = validator
+    .signMessage(
+      computeSigningRoot(
+        config,
+        config.types.AttestationData,
+        attestation.data,
+        computeDomain(config, DomainType.BEACON_ATTESTER)
+      )
     )
-  ).toBytesCompressed();
+    .toBytesCompressed();
   attestation.aggregationBits[index] = true;
   return attestation;
 }

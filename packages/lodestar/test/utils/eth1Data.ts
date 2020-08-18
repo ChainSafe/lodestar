@@ -5,6 +5,6 @@ export function generateEth1Data(blockHash = ZERO_HASH, depositCount = 0, deposi
   return {
     blockHash,
     depositCount,
-    depositRoot
+    depositRoot,
   };
 }

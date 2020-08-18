@@ -2,7 +2,6 @@
  * @module util/math
  */
 
-
 /**
  * Return the min number between two big numbers.
  */
@@ -36,10 +35,10 @@ export function intSqrt(n: number): number {
 
 export function bigIntSqrt(n: bigint): bigint {
   let x = n;
-  let y = (x + 1n)/ 2n;
+  let y = (x + 1n) / 2n;
   while (y < x) {
     x = y;
-    y = (x + n / x)/ 2n;
+    y = (x + n / x) / 2n;
   }
   return x;
 }

@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [Unreleased]
 
 #### Breaking change
+
 - presets now export {params: IBeaconParams} instead of {...IBeaconParams}
 
 ## [0.2.0]
+
 ### Added
+
 - `RANDOM_SUBNETS_PER_VALIDATOR` and `EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION` constant params
 - TODO: check what else is added

@@ -1,7 +1,12 @@
 import pipe from "it-pipe";
 import AbortController from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
-import {eth2ResponseDecode, eth2ResponseEncode, encodeP2pErrorMessage, decodeP2pErrorMessage} from "../../../../src/network/encoders/response";
+import {
+  eth2ResponseDecode,
+  eth2ResponseEncode,
+  encodeP2pErrorMessage,
+  decodeP2pErrorMessage,
+} from "../../../../src/network/encoders/response";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -18,7 +23,6 @@ import {randomRequestId} from "../../../../src/network";
 
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {
-
   let loggerStub: SinonStubbedInstance<ILogger>;
 
   beforeEach(function () {
@@ -67,7 +71,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple- ssz", async function () {
     const responses = await pipe(
-      [{status: 0, body:BigInt(1)}],
+      [{status: 0, body: BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
@@ -78,7 +82,7 @@ describe("response decoders", function () {
 
   it("should work - single response simple - ssz_snappy", async function () {
     const responses = await pipe(
-      [{status: 0, body:BigInt(1)}],
+      [{status: 0, body: BigInt(1)}],
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
@@ -90,7 +94,14 @@ describe("response decoders", function () {
   it("should work - single response simple (sent multiple)- ssz", async function () {
     const controller = new AbortController();
     const responses = await pipe(
-      abortSource([{status: 0, body:BigInt(1)}, {status: 0, body:BigInt(1)}], controller.signal, {returnOnAbort: true}),
+      abortSource(
+        [
+          {status: 0, body: BigInt(1)},
+          {status: 0, body: BigInt(1)},
+        ],
+        controller.signal,
+        {returnOnAbort: true}
+      ),
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc", controller),
       collect
@@ -102,7 +113,14 @@ describe("response decoders", function () {
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
     const controller = new AbortController();
     const responses = await pipe(
-      abortSource([{status: 0, body:BigInt(1)}, {status: 0, body:BigInt(1)}], controller.signal, {returnOnAbort: true}),
+      abortSource(
+        [
+          {status: 0, body: BigInt(1)},
+          {status: 0, body: BigInt(1)},
+        ],
+        controller.signal,
+        {returnOnAbort: true}
+      ),
       eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", controller),
       collect
@@ -137,33 +155,38 @@ describe("response decoders", function () {
 
   it("should work - response stream- ssz", async function () {
     const chunks = generateBlockChunks(10);
-    const responses = await pipe(
+    const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
-    ) as ResponseBody[];
+    )) as ResponseBody[];
     expect(responses.length).to.be.equal(10);
     responses.forEach((response, i) => {
-      expect(
-        config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock)
-      ).to.be.true;
+      expect(config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock))
+        .to.be.true;
     });
   });
 
   it("should work - response stream - ssz_snappy", async function () {
     const chunks = generateBlockChunks(10);
-    const responses = await pipe(
+    const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseDecode(
+        config,
+        loggerStub,
+        Method.BeaconBlocksByRange,
+        ReqRespEncoding.SSZ_SNAPPY,
+        "abc",
+        fakeController
+      ),
       collect
-    ) as ResponseBody[];
+    )) as ResponseBody[];
     expect(responses.length).to.be.equal(10);
     responses.forEach((response, i) => {
-      expect(
-        config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock)
-      ).to.be.true;
+      expect(config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock))
+        .to.be.true;
     });
   });
 
@@ -172,24 +195,31 @@ describe("response decoders", function () {
     const chunks = generateBlockChunks(10);
     chunks[4].status = RpcResponseStatus.ERR_INVALID_REQ;
     chunks[4].body = encodeP2pErrorMessage(config, "Invalid request");
-    const responses = await pipe(
+    const responses = (await pipe(
       abortSource(chunks, controller.signal, {returnOnAbort: true}),
       eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", controller),
       collect
-    ) as ResponseBody[];
+    )) as ResponseBody[];
     expect(responses.length).to.be.equal(4);
   });
 
   it("should work - response stream with error - ssz_snappy", async function () {
     const chunks = generateBlockChunks(10);
     chunks[5].status = RpcResponseStatus.ERR_INVALID_REQ;
-    const responses = await pipe(
+    const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseDecode(
+        config,
+        loggerStub,
+        Method.BeaconBlocksByRange,
+        ReqRespEncoding.SSZ_SNAPPY,
+        "abc",
+        fakeController
+      ),
       collect
-    ) as ResponseBody[];
+    )) as ResponseBody[];
     expect(responses.length).to.be.equal(5);
   });
 
@@ -198,12 +228,21 @@ describe("response decoders", function () {
       try {
         await pipe(
           [Buffer.concat([Buffer.alloc(1), Buffer.from(encode(99999999999999999999999))])],
-          eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, randomRequestId(), fakeController),
+          eth2ResponseDecode(
+            config,
+            loggerStub,
+            Method.BeaconBlocksByRange,
+            ReqRespEncoding.SSZ_SNAPPY,
+            randomRequestId(),
+            fakeController
+          ),
           collect
         );
         fail("expect error here");
       } catch (err) {
-        expect(err.message).to.be.equal("eth2ResponseDecode: Invalid number of bytes for protobuf varint 11, method beacon_blocks_by_range");
+        expect(err.message).to.be.equal(
+          "eth2ResponseDecode: Invalid number of bytes for protobuf varint 11, method beacon_blocks_by_range"
+        );
       }
     });
 
@@ -211,7 +250,14 @@ describe("response decoders", function () {
       try {
         await pipe(
           [Buffer.concat([Buffer.alloc(1), Buffer.alloc(12, 0)])],
-          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY, randomRequestId(), fakeController),
+          eth2ResponseDecode(
+            config,
+            loggerStub,
+            Method.Status,
+            ReqRespEncoding.SSZ_SNAPPY,
+            randomRequestId(),
+            fakeController
+          ),
           collect
         );
         fail("expect error here");
@@ -223,9 +269,13 @@ describe("response decoders", function () {
     it("should throw Error if it read more than maxEncodedLen", async function () {
       try {
         await pipe(
-          [Buffer.concat([Buffer.alloc(1),
-            Buffer.from(encode(config.types.Status.minSize())),
-            Buffer.alloc(config.types.Status.minSize() + 10)])],
+          [
+            Buffer.concat([
+              Buffer.alloc(1),
+              Buffer.from(encode(config.types.Status.minSize())),
+              Buffer.alloc(config.types.Status.minSize() + 10),
+            ]),
+          ],
           eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
           collect
         );
@@ -238,10 +288,21 @@ describe("response decoders", function () {
     it("should throw Error if there is remaining data after all", async function () {
       try {
         await pipe(
-          [Buffer.concat([Buffer.alloc(1),
-            Buffer.from(encode(config.types.Status.minSize())),
-            Buffer.alloc(config.types.Status.minSize())])],
-          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY, randomRequestId(), fakeController),
+          [
+            Buffer.concat([
+              Buffer.alloc(1),
+              Buffer.from(encode(config.types.Status.minSize())),
+              Buffer.alloc(config.types.Status.minSize()),
+            ]),
+          ],
+          eth2ResponseDecode(
+            config,
+            loggerStub,
+            Method.Status,
+            ReqRespEncoding.SSZ_SNAPPY,
+            randomRequestId(),
+            fakeController
+          ),
           collect
         );
         fail("expect error here");
@@ -254,15 +315,18 @@ describe("response decoders", function () {
       const status: Status = config.types.Status.defaultValue();
       status.finalizedEpoch = 100;
       const response = await pipe(
-        [Buffer.concat([Buffer.alloc(1),
-          Buffer.from(encode(config.types.Status.minSize())),
-          config.types.Status.serialize(status)])],
+        [
+          Buffer.concat([
+            Buffer.alloc(1),
+            Buffer.from(encode(config.types.Status.minSize())),
+            config.types.Status.serialize(status),
+          ]),
+        ],
         eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
         collect
       );
       expect(response).to.be.deep.equal([status]);
     });
-
   });
 
   describe("encodeP2pErrorMessage", () => {
@@ -271,7 +335,6 @@ describe("response decoders", function () {
       expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid request");
     });
   });
-
 });
 
 function generateBlockChunks(n = 3): IResponseChunk[] {

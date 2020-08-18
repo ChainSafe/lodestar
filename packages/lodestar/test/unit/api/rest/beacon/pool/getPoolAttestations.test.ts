@@ -14,44 +14,42 @@ import {generateAttestation} from "../../../../../utils/attestation";
 import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
 
 describe("rest - beacon - getPoolAttestations", function () {
-
   let api: RestApi;
   let beaconApiStub: StubbedBeaconApi;
 
   beforeEach(async function () {
     beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      node: new StubbedNodeApi(),
-      beacon: beaconApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        node: new StubbedNodeApi(),
+        beacon: beaconApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
   it("should succeed", async function () {
-    beaconApiStub.pool.getAttestations.withArgs({committeeIndex: 1, slot: 1}).resolves([
-      generateAttestation()
-    ]);
+    beaconApiStub.pool.getAttestations.withArgs({committeeIndex: 1, slot: 1}).resolves([generateAttestation()]);
     const response = await supertest(api.server.server)
       .get(getPoolAttestations.url)
-    // eslint-disable-next-line @typescript-eslint/camelcase
+      // eslint-disable-next-line @typescript-eslint/camelcase
       .query({slot: "1", committee_index: "1"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data.length).to.be.equal(1);
   });
-
-
 });

@@ -4,18 +4,12 @@ import {List} from "@chainsafe/ssz";
 import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
-import {
-  increaseBalance,
-  decreaseBalance,
-  getTotalBalance,
-} from "../../../../src/util";
+import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../../src/util";
 
 import {generateValidators} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
 
-
 describe("getTotalBalance", () => {
-
   it("should return correct balances", () => {
     const num = 500;
     const validatorBalance = 1000000000000n;
@@ -52,7 +46,7 @@ describe("increaseBalance", () => {
     const delta = 5n;
     for (let i = 1n; i < 10n; i++) {
       increaseBalance(state, 0, delta);
-      assert(state.balances[0] === delta * i );
+      assert(state.balances[0] === delta * i);
     }
   });
 });
@@ -61,12 +55,12 @@ describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    const initial = 100n
+    const initial = 100n;
     state.balances = [initial] as List<Gwei>;
-    const delta = 5n
+    const delta = 5n;
     for (let i = 1n; i < 10n; i++) {
       decreaseBalance(state, 0, delta);
-      assert(state.balances[0] === (initial - (delta * i)));
+      assert(state.balances[0] === initial - delta * i);
     }
   });
   it("should not make a validators balance < 0", () => {
@@ -74,7 +68,7 @@ describe("decreaseBalance", () => {
     state.validators = generateValidators(1);
     const initial = 10n;
     state.balances = [initial] as List<Gwei>;
-    const delta = 11n
+    const delta = 11n;
     decreaseBalance(state, 0, delta);
     assert(state.balances[0] === 0n);
   });

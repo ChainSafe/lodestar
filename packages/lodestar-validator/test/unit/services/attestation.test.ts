@@ -14,20 +14,17 @@ import {generateFork} from "../../utils/fork";
 import {
   generateAttestation,
   generateAttestationData,
-  generateEmptyAttestation
+  generateEmptyAttestation,
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
-
 describe("validator attestation service", function () {
-
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub: any, dbStub: any, eventSourceSpy: SinonSpy;
   const logger: ILogger = sinon.createStubInstance(WinstonLogger);
-
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
@@ -44,91 +41,65 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - no duty", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
-    rpcClientStub.validator = {
-      getAttesterDuties: sinon.stub()
-    };
-    rpcClientStub.beacon = {
-      getFork: sinon.stub()
-    };
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
-    rpcClientStub.validator.getAttesterDuties.resolves([]);
-    rpcClientStub.beacon.getFork.resolves({fol: Buffer.alloc(8)});
-    await service.onNewEpoch(1);
-    expect(
-      rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce
-    ).to.be.true;
-  });
-
-  it("on new epoch - with duty", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
     };
     rpcClientStub.beacon = {
-      getFork: sinon.stub()
+      getFork: sinon.stub(),
     };
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    rpcClientStub.validator.getAttesterDuties.resolves([]);
+    rpcClientStub.beacon.getFork.resolves({fol: Buffer.alloc(8)});
+    await service.onNewEpoch(1);
+    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
+      .be.true;
+  });
+
+  it("on new epoch - with duty", async function () {
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    rpcClientStub.validator = {
+      getAttesterDuties: sinon.stub(),
+    };
+    rpcClientStub.beacon = {
+      getFork: sinon.stub(),
+    };
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
       aggregatorModulo: 0,
-      validatorPubkey: keypair.publicKey.toBytesCompressed()
+      validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     await service.onNewEpoch(1);
-    expect(
-      rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce
-    ).to.be.true;
+    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
+      .be.true;
     expect(rpcClientStub.beacon.getFork.calledOnce).to.be.true;
   });
 
   it("on  new slot - without duty", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     await service.onNewSlot(0);
   });
 
   it("on  new slot - with duty - not aggregator", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
-      getFork: sinon.stub()
+      getFork: sinon.stub(),
     };
     rpcClientStub.validator = {
       produceAttestation: sinon.stub(),
-      publishAttestation: sinon.stub()
+      publishAttestation: sinon.stub(),
     };
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
       aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed()
+      validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
@@ -139,100 +110,65 @@ describe("validator attestation service", function () {
     const promise = service.onNewSlot(1);
     clock.tick(4000);
     await Promise.resolve(promise);
-    expect(
-      rpcClientStub.validator
-        .produceAttestation.withArgs(
-          sinon.match.any,
-          1,
-          1
-        ).calledOnce
-    ).to.be.true;
-    expect(
-      rpcClientStub.validator
-        .publishAttestation.calledOnce
-    ).to.be.true;
-    expect(
-      dbStub.getAttestations.calledTwice
-    ).to.be.true;
-    expect(
-      dbStub.setAttestation.calledOnce
-    ).to.be.true;
+    expect(rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, 1, 1).calledOnce).to.be.true;
+    expect(rpcClientStub.validator.publishAttestation.calledOnce).to.be.true;
+    expect(dbStub.getAttestations.calledTwice).to.be.true;
+    expect(dbStub.setAttestation.calledOnce).to.be.true;
   });
 
   it("on  new slot - with duty - conflicting attestation", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
-      getFork: sinon.stub()
+      getFork: sinon.stub(),
     };
     rpcClientStub.validator = {
       produceAttestation: sinon.stub(),
-      publishAttestation: sinon.stub()
+      publishAttestation: sinon.stub(),
     };
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
       aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed()
+      validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
     rpcClientStub.validator.produceAttestation.resolves(
       generateAttestation({
-        data: generateAttestationData(0, 1)
+        data: generateAttestationData(0, 1),
       })
     );
     rpcClientStub.validator.publishAttestation.resolves();
     dbStub.getAttestations.resolves([
       {
-        data: generateAttestationData(0, 1)
-      }
+        data: generateAttestationData(0, 1),
+      },
     ]);
     dbStub.setAttestation.resolves();
     const promise = service.onNewSlot(1);
     clock.tick(4000);
     await Promise.resolve(promise);
-    expect(
-      rpcClientStub.validator
-        .produceAttestation.withArgs(
-          keypair.publicKey.toBytesCompressed(),
-          1,
-          1
-        ).calledOnce
-    ).to.be.true;
-    expect(
-      rpcClientStub.validator
-        .publishAttestation.notCalled
-    ).to.be.true;
+    expect(rpcClientStub.validator.produceAttestation.withArgs(keypair.publicKey.toBytesCompressed(), 1, 1).calledOnce)
+      .to.be.true;
+    expect(rpcClientStub.validator.publishAttestation.notCalled).to.be.true;
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
-    const  keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
     rpcClientStub.beacon = {
-      getFork: sinon.stub()
+      getFork: sinon.stub(),
     };
     rpcClientStub.validator = {
       produceAttestation: sinon.stub(),
-      publishAttestation: sinon.stub()
+      publishAttestation: sinon.stub(),
     };
-    const service = new AttestationService(
-      config,
-      [keypair],
-      rpcClientStub,
-      dbStub,
-      logger
-    );
+    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     const duty: AttesterDuty = {
       attestationSlot: 10,
       committeeIndex: 1,
       aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed()
+      validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(10, [{...duty, attesterIndex: 0, isAggregator: false}]);
     rpcClientStub.beacon.getFork.resolves({fork: generateFork()});
@@ -248,20 +184,12 @@ describe("validator attestation service", function () {
       eventSource.onmessage({
         data: JSON.stringify(config.types.SignedBeaconBlock.toJson(signedBlock, {case: "snake"})),
         lastEventId: "10",
-        origin: ""
+        origin: "",
       } as MessageEvent);
     }, 1000);
     // don't need to wait for 1/3 slot time which is 4000
     clock.tick(1001);
     await promise;
-    expect(
-      rpcClientStub.validator
-        .produceAttestation.withArgs(
-          sinon.match.any,
-          1,
-          10
-        ).calledOnce
-    ).to.be.true;
+    expect(rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, 1, 10).calledOnce).to.be.true;
   });
-
 });

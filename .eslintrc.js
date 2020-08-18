@@ -46,7 +46,6 @@ module.exports = {
       "allowExpressions": true
     }],
     "@typescript-eslint/func-call-spacing": "error",
-    "@typescript-eslint/indent": ["error", 2],
     "@typescript-eslint/interface-name-prefix": ["error", "always"],
     "@typescript-eslint/member-ordering": "error",
     "@typescript-eslint/no-explicit-any": "error",

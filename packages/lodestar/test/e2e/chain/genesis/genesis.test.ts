@@ -13,7 +13,7 @@ import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../../../src/util/sleep";
 
-describe("BeaconChain", function() {
+describe("BeaconChain", function () {
   this.timeout(10 * 60 * 1000);
 
   let eth1Notifier: IEth1Notifier;
@@ -27,7 +27,7 @@ describe("BeaconChain", function() {
     depositContract: {
       ...defaults.depositContract,
       deployedAt: 2917810,
-    }
+    },
   };
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
@@ -45,13 +45,14 @@ describe("BeaconChain", function() {
     DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x16e82D77882A663454Ef92806b7DeCa1D394810f"),
   });
 
-
   const sandbox = sinon.createSandbox();
 
   before(async () => {
     await fs.promises.rmdir(dbPath, {recursive: true});
     expect(altonaConfig.params.MIN_GENESIS_TIME).to.be.not.equal(config.params.MIN_GENESIS_TIME);
-    expect(altonaConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT).to.be.not.equal(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
+    expect(altonaConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT).to.be.not.equal(
+      config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
+    );
     db = new BeaconDb({
       config: altonaConfig,
       controller: new LevelDbController({name: dbPath}, {logger}),
@@ -64,9 +65,9 @@ describe("BeaconChain", function() {
         config: altonaConfig,
         db,
         logger: logger.child({module: "eth1"}),
-      });
+      }
+    );
   });
-
 
   beforeEach(async function () {
     builder = new GenesisBuilder(altonaConfig, {eth1: eth1Notifier, db, logger: logger.child({module: "genesis"})});
@@ -81,11 +82,13 @@ describe("BeaconChain", function() {
     await fs.promises.rmdir(dbPath, {recursive: true});
   });
 
-  it("should detect altona genesis state", async function() {
+  it("should detect altona genesis state", async function () {
     logger.profile("detect altona genesis state");
     const headState = await builder.waitForGenesis();
     // https://github.com/goerli/altona/tree/master/altona
-    expect(toHexString(altonaConfig.types.BeaconState.hashTreeRoot(headState))).to.be.equal("0x939d98077986a9f6eccae33614e2da1008a2f300f1aac36bc65ef710550eec4a");
+    expect(toHexString(altonaConfig.types.BeaconState.hashTreeRoot(headState))).to.be.equal(
+      "0x939d98077986a9f6eccae33614e2da1008a2f300f1aac36bc65ef710550eec4a"
+    );
     expect(headState.genesisTime).to.be.equal(1593433805);
     const forkDigest = computeForkDigest(altonaConfig, headState.fork.currentVersion, headState.genesisValidatorsRoot);
     expect(toHexString(forkDigest)).to.be.equal("0xfdca39b0");

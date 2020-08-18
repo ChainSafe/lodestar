@@ -20,7 +20,6 @@ export interface IApiClientEvents {
 export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientEvents>;
 
 export interface IApiClient extends ApiClientEventEmitter {
-
   beacon: IBeaconApi;
 
   node: INodeApi;
@@ -48,12 +47,10 @@ export interface IApiClient extends ApiClientEventEmitter {
    */
   onNewSlot(cb: INewSlotCallback): void;
 
-
   /**
    * Invokes callback on new epoch.
    * Depending on implementation it will poll for new epoch or getting notified(Websockets)
    * @param cb
    */
   onNewEpoch(cb: INewEpochCallback): void;
-
 }

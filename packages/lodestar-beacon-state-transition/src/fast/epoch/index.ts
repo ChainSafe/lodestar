@@ -16,7 +16,6 @@ export {
   processFinalUpdates,
 };
 
-
 export function processEpoch(epochCtx: EpochContext, state: BeaconState): void {
   const process = prepareEpochProcessState(epochCtx, state);
   processJustificationAndFinalization(epochCtx, process, state);

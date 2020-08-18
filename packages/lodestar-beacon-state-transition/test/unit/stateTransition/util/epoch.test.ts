@@ -13,7 +13,6 @@ import {
 
 import {generateState} from "../../../utils/state";
 
-
 describe("computeEpochAtSlot", () => {
   const pairs = [
     {test: 0, expected: 0},
@@ -53,7 +52,6 @@ describe("computeStartSlotAtEpoch", () => {
 });
 
 describe("getPreviousEpoch", () => {
-
   it("epoch should return previous epoch", () => {
     const state: BeaconState = generateState({slot: 512});
     const expected: Epoch = 15;

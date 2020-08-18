@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {SignedBeaconBlock,} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 import {
   AggregateAndProofRepository,
@@ -28,7 +28,6 @@ import {SeenAttestationCache} from "./seenAttestationCache";
  * but instead expose relevent beacon chain objects
  */
 export interface IBeaconDb {
-
   // bad blocks
   badBlock: BadBlockRepository;
 

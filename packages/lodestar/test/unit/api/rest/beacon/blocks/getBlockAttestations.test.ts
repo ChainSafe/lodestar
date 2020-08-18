@@ -13,44 +13,44 @@ import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockAttestations", function () {
-
   let api: RestApi;
   let beaconApiStub: StubbedBeaconApi;
 
   beforeEach(async function () {
     beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      node: new StubbedNodeApi(),
-      beacon: beaconApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        node: new StubbedNodeApi(),
+        beacon: beaconApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
   it("should succeed", async function () {
-    beaconApiStub.blocks.getBlock.withArgs("head")
-      .resolves(generateSignedBlock({
+    beaconApiStub.blocks.getBlock.withArgs("head").resolves(
+      generateSignedBlock({
         message: {
           body: {
-            attestations: [
-              generateEmptyAttestation(),
-              generateEmptyAttestation(),
-            ]
-          }
-        }
-      }));
+            attestations: [generateEmptyAttestation(), generateEmptyAttestation()],
+          },
+        },
+      })
+    );
     const response = await supertest(api.server.server)
       .get(getBlockAttestations.url.replace(":blockId", "head"))
       .expect(200)
@@ -61,9 +61,7 @@ describe("rest - beacon - getBlockAttestations", function () {
 
   it("should not found block", async function () {
     beaconApiStub.blocks.getBlock.withArgs("4").resolves(null);
-    await supertest(api.server.server)
-      .get(getBlockAttestations.url.replace(":blockId", "4"))
-      .expect(404);
+    await supertest(api.server.server).get(getBlockAttestations.url.replace(":blockId", "4")).expect(404);
   });
 
   it("should fail validation", async function () {
@@ -73,5 +71,4 @@ describe("rest - beacon - getBlockAttestations", function () {
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
-
 });

@@ -6,8 +6,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {NodeApi} from "@chainsafe/lodestar/lib/api/impl/node/node";
 
 export function getValidatorApiClient(url: string, logger: ILogger, node: BeaconNode): IApiClient {
-
-  if(url === "memory") {
+  if (url === "memory") {
     return new ApiClientOverInstance({
       config: node.config,
       validator: new ValidatorApi({}, {...node, logger}),
@@ -17,5 +16,4 @@ export function getValidatorApiClient(url: string, logger: ILogger, node: Beacon
   } else {
     return new ApiClientOverRest(node.config, url, logger);
   }
-
 }

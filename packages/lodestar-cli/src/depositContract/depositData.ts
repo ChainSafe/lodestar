@@ -6,7 +6,6 @@ import bls, {PrivateKey, PublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import eth1Options from "@chainsafe/lodestar/lib/eth1/options";
 
-
 function getDepositInterface(): ethers.utils.Interface {
   return new ethers.utils.Interface(eth1Options.depositContract.abi);
 }
@@ -18,9 +17,7 @@ export function decodeEth1TxData(
 ): {depositData: DepositData; root: string} {
   const depositContract = getDepositInterface();
   const inputs: Json = depositContract.decodeFunctionData("deposit", bytes);
-  const {
-    deposit_data_root: root,
-  } = inputs;
+  const {deposit_data_root: root} = inputs;
 
   const depositData: DepositData = config.types.DepositData.fromJson(
     // attach `amount` to decoded deposit inputs so it can be parsed to a DepositData
@@ -30,12 +27,10 @@ export function decodeEth1TxData(
 
   // Sanity check
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
-  if (toHexString(depositDataRoot) !== root)
-    throw Error("deposit data root mismatch");
+  if (toHexString(depositDataRoot) !== root) throw Error("deposit data root mismatch");
 
   return {depositData, root: root as string};
 }
-
 
 export function encodeDepositData(
   amount: bigint,
@@ -54,15 +49,12 @@ export function encodeDepositData(
     pubkey,
     withdrawalCredentials,
     amount,
-    signature: Buffer.alloc(96)
+    signature: Buffer.alloc(96),
   };
 
   const domain = computeDomain(config, DomainType.DEPOSIT);
   const signingroot = computeSigningRoot(config, config.types.DepositMessage, depositData, domain);
-  depositData.signature = bls.sign(
-    signingKey.toBytes(),
-    signingroot
-  );
+  depositData.signature = bls.sign(signingKey.toBytes(), signingroot);
 
   const depositDataRoot = config.types.DepositData.hashTreeRoot(depositData);
 
@@ -71,6 +63,6 @@ export function encodeDepositData(
     pubkey,
     withdrawalCredentials,
     depositData.signature,
-    depositDataRoot
+    depositDataRoot,
   ]);
 }

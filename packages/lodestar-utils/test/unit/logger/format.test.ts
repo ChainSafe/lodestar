@@ -2,7 +2,6 @@ import {serializeContext} from "../../../src/logger";
 import {expect} from "chai";
 
 describe("log format", function () {
-
   describe("serialize context", function () {
     it("should serialize context", function () {
       const serialized = serializeContext({
@@ -15,12 +14,9 @@ describe("log format", function () {
         number: 3,
         bool: true,
       });
-      expect(serialized)
-        .to.equal(
-          "object={\"foo\":\"bar\",\"baz\":1},"
-          +" array=[\"a\",\"small\",\"array\"],"
-          +" string=test, number=3, bool=true"
-        );
+      expect(serialized).to.equal(
+        'object={"foo":"bar","baz":1},' + ' array=["a","small","array"],' + " string=test, number=3, bool=true"
+      );
     });
 
     it("should serialize string context", function () {
@@ -29,5 +25,4 @@ describe("log format", function () {
       expect(serialized).to.equal(context);
     });
   });
-
 });

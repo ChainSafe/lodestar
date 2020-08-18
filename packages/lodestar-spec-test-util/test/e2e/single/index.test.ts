@@ -8,7 +8,6 @@ import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/ssz/generators/pr
 import {loadYamlFile} from "@chainsafe/lodestar-utils/lib/nodejs";
 import {describeDirectorySpecTest} from "../../../src/single";
 
-
 export interface ISimpleStruct {
   test: boolean;
   number: number;
@@ -23,26 +22,14 @@ const inputSchema = new ContainerType({
   fields: {
     test: Boolean,
     number: Number64,
-  }
+  },
 });
 
 before(() => {
-  yamlToSSZ(
-    join(__dirname, "../_test_files/single/case0/input.yaml"),
-    inputSchema
-  );
-  yamlToSSZ(
-    join(__dirname, "../_test_files/single/case0/output.yaml"),
-    Number64
-  );
-  yamlToSSZ(
-    join(__dirname, "../_test_files/single/case1/input.yaml"),
-    inputSchema
-  );
-  yamlToSSZ(
-    join(__dirname, "../_test_files/single/case1/output.yaml"),
-    Number64
-  );
+  yamlToSSZ(join(__dirname, "../_test_files/single/case0/input.yaml"), inputSchema);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), Number64);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case1/input.yaml"), inputSchema);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), Number64);
 });
 
 after(() => {
@@ -61,16 +48,16 @@ describeDirectorySpecTest<ISimpleCase, number>(
   {
     sszTypes: {
       input: inputSchema,
-      output: Number64
+      output: Number64,
     },
-    shouldError: (testCase => !testCase.input.test),
+    shouldError: (testCase) => !testCase.input.test,
     getExpected: (testCase) => testCase.output,
   }
 );
 
 function yamlToSSZ(file: string, sszSchema: Type<any>): void {
   const input: any = sszSchema.fromJson(loadYamlFile(file) as Json);
-  if(input.number) {
+  if (input.number) {
     input.number = Number(input.number);
   }
   writeFileSync(file.replace(".yaml", ".ssz"), sszSchema.serialize(input));

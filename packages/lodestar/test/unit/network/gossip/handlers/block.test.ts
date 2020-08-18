@@ -9,7 +9,6 @@ import {generateEmptySignedBlock} from "../../../../utils/block";
 import {handleIncomingBlock} from "../../../../../src/network/gossip/handlers/block";
 
 describe("gossip handlers - block", function () {
-
   const sandbox = sinon.createSandbox();
 
   let gossipStub: any;
@@ -29,5 +28,4 @@ describe("gossip handlers - block", function () {
     await handleIncomingBlock.bind(gossipStub)(block);
     expect(gossipStub.emit.withArgs(GossipEvent.BLOCK, block).calledOnce).to.be.true;
   });
-
 });

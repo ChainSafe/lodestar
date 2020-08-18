@@ -8,4 +8,3 @@ export interface IAttestationFilters {
 export interface IBeaconPoolApi {
   getAttestations(filters?: Partial<IAttestationFilters>): Promise<Attestation[]>;
 }
-

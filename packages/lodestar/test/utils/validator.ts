@@ -6,9 +6,8 @@ import {FAR_FUTURE_EPOCH} from "../../src/constants";
  * @param opts
  */
 export function generateValidator(opts: Partial<Validator> = {}): Validator {
-  const randNum = (): number =>  Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch =
-      (opts.activationEpoch || opts.activationEpoch === 0) ? opts.activationEpoch : FAR_FUTURE_EPOCH;
+  const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
+  const activationEpoch = opts.activationEpoch || opts.activationEpoch === 0 ? opts.activationEpoch : FAR_FUTURE_EPOCH;
   return {
     pubkey: opts.pubkey || Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
@@ -17,7 +16,7 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
     exitEpoch: opts.exitEpoch || randNum(),
     withdrawableEpoch: randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.effectiveBalance ||BigInt(0)
+    effectiveBalance: opts.effectiveBalance || BigInt(0),
   };
 }
 

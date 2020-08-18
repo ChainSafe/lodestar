@@ -8,7 +8,7 @@ import {computeSigningRoot} from "./signingRoot";
 export function verifyBlockSignature(
   config: IBeaconConfig,
   state: BeaconState,
-  signedBlock: SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock
 ): boolean {
   const domain = getDomain(config, state, DomainType.BEACON_PROPOSER);
   const signingRoot = computeSigningRoot(config, config.types.BeaconBlock, signedBlock.message, domain);
@@ -16,6 +16,6 @@ export function verifyBlockSignature(
   return bls.verify(
     proposer.pubkey.valueOf() as Uint8Array,
     signingRoot,
-    signedBlock.signature.valueOf() as Uint8Array,
+    signedBlock.signature.valueOf() as Uint8Array
   );
 }

@@ -9,7 +9,6 @@ import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 
 describe("process block - proposer slashings", function () {
-
   const sandbox = sinon.createSandbox();
 
   let isSlashableValidatorStub: any, slashValidatorStub: any;
@@ -31,8 +30,7 @@ describe("process block - proposer slashings", function () {
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
-    } catch (e) {
-    }
+    } catch (e) {}
   });
 
   it("should fail to process - same headers", function () {
@@ -43,8 +41,7 @@ describe("process block - proposer slashings", function () {
     try {
       processProposerSlashing(config, state, proposerSlashing);
       expect.fail();
-    } catch (e) {
-    }
+    } catch (e) {}
   });
 
   it("should fail to process - same headers", function () {
@@ -106,5 +103,4 @@ describe("process block - proposer slashings", function () {
       expect.fail(e.stack);
     }
   });
-
 });

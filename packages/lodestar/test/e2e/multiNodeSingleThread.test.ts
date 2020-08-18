@@ -12,7 +12,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
     SECONDS_PER_SLOT: 3,
-    SLOTS_PER_EPOCH: 8
+    SLOTS_PER_EPOCH: 8,
   };
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
@@ -29,43 +29,47 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const genesisTime = minGenesisTime + genesisDelay;
       const logger = new WinstonLogger();
 
-      for (let i=0; i<nodeCount; i++) {
+      for (let i = 0; i < nodeCount; i++) {
         const node = await getDevBeaconNode({
           params: beaconParams,
           options: {sync: {minPeers: 1}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
-          logger: logger.child({module: `Node ${i}`})
+          logger: logger.child({module: `Node ${i}`}),
         });
 
-        validators.push(getDevValidator({
-          node,
-          startIndex: i * validatorsPerNode,
-          count: validatorsPerNode,
-          logger: logger.child({module: `Validator ${i*validatorsPerNode}-${(i*validatorsPerNode)+validatorsPerNode}`})
-        }));
+        validators.push(
+          getDevValidator({
+            node,
+            startIndex: i * validatorsPerNode,
+            count: validatorsPerNode,
+            logger: logger.child({
+              module: `Validator ${i * validatorsPerNode}-${i * validatorsPerNode + validatorsPerNode}`,
+            }),
+          })
+        );
 
         nodes.push(node);
       }
 
       onDoneHandlers.push(async () => {
-        await Promise.all(validators.map(validator => validator.stop()));
+        await Promise.all(validators.map((validator) => validator.stop()));
         logger.info("Stopped all validators");
         // wait for 1 slot
-        await new Promise(r => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
+        await new Promise((r) => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
 
-        await Promise.all(nodes.map(node => node.stop()));
+        await Promise.all(nodes.map((node) => node.stop()));
         logger.info("Stopped all nodes");
         // Wait a bit for nodes to shutdown
-        await new Promise(r => setTimeout(r, 3000));
+        await new Promise((r) => setTimeout(r, 3000));
       });
 
       // Start all nodes at once
-      await Promise.all(nodes.map(node => node.start()));
+      await Promise.all(nodes.map((node) => node.start()));
 
       // Connect all nodes with each other
-      for (let i=0; i<nodeCount; i++) {
-        for (let j=0; j<nodeCount; j++) {
+      for (let i = 0; i < nodeCount; i++) {
+        for (let j = 0; j < nodeCount; j++) {
           if (i !== j) {
             await nodes[i].network.connect(nodes[j].network.peerId, nodes[j].network.multiaddrs);
           }
@@ -73,15 +77,13 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       }
 
       // Start all validators at once.
-      await Promise.all(validators.map(validator => validator.start()));
+      await Promise.all(validators.map((validator) => validator.start()));
 
       // Uncomment this to visualize validator dutties and attestations
       // printBeaconCliMetrics(nodes[0]);
 
       // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map(node =>
-        waitForEvent<Checkpoint>(node.chain, checkpointEvent, 240000)
-      ));
+      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain, checkpointEvent, 240000)));
       logger.info("All nodes reached justified checkpoint");
     });
   }

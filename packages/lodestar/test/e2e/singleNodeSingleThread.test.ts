@@ -3,17 +3,17 @@ import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
-import { expect } from "chai";
+import {expect} from "chai";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
   const testParams: Partial<IBeaconParams> = {
     SECONDS_PER_SLOT: 2,
-    SLOTS_PER_EPOCH: 8
+    SLOTS_PER_EPOCH: 8,
   };
   const manyValidatorParams: Partial<IBeaconParams> = {
     ...testParams,
-    TARGET_AGGREGATORS_PER_COMMITTEE: 1
+    TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
 
   const testCases: {
@@ -33,12 +33,12 @@ describe("Run single node single thread interop validators (no eth1) until check
       const bn = await getDevBeaconNode({
         params: testCase.params,
         options: {sync: {minPeers: 0}},
-        validatorCount: testCase.vc * testCase.validators
+        validatorCount: testCase.vc * testCase.validators,
       });
       const justificationEventListener = waitForEvent<Checkpoint>(bn.chain, testCase.event, timeout - 10 * 1000);
       const validators = getDevValidators(bn, testCase.validators, testCase.vc);
       await bn.start();
-      await Promise.all(validators.map(v => v.start()));
+      await Promise.all(validators.map((v) => v.start()));
       try {
         await justificationEventListener;
       } catch (e) {

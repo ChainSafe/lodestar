@@ -18,7 +18,7 @@ import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 
-describe("Network Gossip", function() {
+describe("Network Gossip", function () {
   let gossip: Gossip;
   const sandbox = sinon.createSandbox();
   let pubsub: IGossipSub;
@@ -42,9 +42,9 @@ describe("Network Gossip", function() {
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId:BigInt(0),
+      networkId: BigInt(0),
       state: state as TreeBacked<BeaconState>,
-      config
+      config,
     });
     pubsub = new MockGossipSub();
     gossip = new Gossip(networkOpts, {config, libp2p, logger, validator, chain, pubsub});
@@ -176,5 +176,4 @@ describe("Network Gossip", function() {
       await received;
     });
   });
-
 });

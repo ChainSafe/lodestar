@@ -2,16 +2,11 @@
  * @module chain/stateTransition/util
  */
 
-import {
-  BeaconState,
-  Gwei,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCurrentEpoch} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -20,8 +15,7 @@ import {bigIntMax} from "@chainsafe/lodestar-utils";
 export function getTotalBalance(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
     config.params.EFFECTIVE_BALANCE_INCREMENT,
-    indices.reduce((total: Gwei, index: ValidatorIndex): Gwei =>
-      total + state.validators[index].effectiveBalance, 0n)
+    indices.reduce((total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance, 0n)
   );
 }
 
@@ -47,7 +41,5 @@ export function increaseBalance(state: BeaconState, index: ValidatorIndex, delta
  */
 export function decreaseBalance(state: BeaconState, index: ValidatorIndex, delta: Gwei): void {
   const currentBalance = state.balances[index];
-  state.balances[index] = delta > currentBalance
-    ? 0n
-    : currentBalance - delta;
+  state.balances[index] = delta > currentBalance ? 0n : currentBalance - delta;
 }

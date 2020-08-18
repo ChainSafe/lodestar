@@ -9,7 +9,7 @@ import {
   getMatchingHeadAttestations,
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
-  getUnslashedAttestingIndices
+  getUnslashedAttestingIndices,
 } from "../../../../src/epoch/util";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
@@ -18,8 +18,7 @@ import {getAttestingIndices} from "../../../../src/util";
 import {generateValidator} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
 
-describe('process epoch - crosslinks', function () {
-
+describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
   let getActiveValidatorIndicesStub: any,
@@ -40,7 +39,7 @@ describe('process epoch - crosslinks', function () {
     sandbox.restore();
   });
 
-  it('should get total active balance', function () {
+  it("should get total active balance", function () {
     const validatorIndices = [1, 2];
     getActiveValidatorIndicesStub.returns(validatorIndices);
     try {
@@ -50,17 +49,17 @@ describe('process epoch - crosslinks', function () {
     }
   });
 
-  it('should get matching source attestation - for current epoch', function () {
+  it("should get matching source attestation - for current epoch", function () {
     const pendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: pendingAttestations as List<PendingAttestation>
+      currentEpochAttestations: pendingAttestations as List<PendingAttestation>,
     });
     try {
       const result = getMatchingSourceAttestations(config, state, 1);
@@ -68,28 +67,27 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should get matching source attestation - for previous epoch', function () {
+  it("should get matching source attestation - for previous epoch", function () {
     const currentPendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     const previousPendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 2
-      }
+        proposerIndex: 2,
+      },
     ];
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
-      previousEpochAttestations: previousPendingAttestations as List<PendingAttestation>
+      previousEpochAttestations: previousPendingAttestations as List<PendingAttestation>,
     });
     try {
       const result = getMatchingSourceAttestations(config, state, 0);
@@ -97,27 +95,26 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should get matching target attestation', function () {
+  it("should get matching target attestation", function () {
     const blockRoot = Buffer.alloc(36, 2);
     const currentPendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
+        proposerIndex: 1,
       },
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     currentPendingAttestations[0].data.target.root = blockRoot;
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>
+      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
     });
     getBlockRootStub.returns(blockRoot);
     try {
@@ -127,27 +124,26 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should get matching head attestation', function () {
+  it("should get matching head attestation", function () {
     const blockRoot = Buffer.alloc(32, 2);
     const currentPendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
+        proposerIndex: 1,
       },
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     currentPendingAttestations[0].data.beaconBlockRoot = blockRoot;
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH,
-      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>
+      currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
     });
     getBlockRootAtSlotStub.returns(blockRoot);
     getBlockRootStub.returns(Buffer.alloc(32));
@@ -158,21 +154,20 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should get unslashed attesting indices', function () {
+  it("should get unslashed attesting indices", function () {
     const pendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
+        proposerIndex: 1,
       },
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
@@ -185,21 +180,20 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should get attesting balance', function () {
+  it("should get attesting balance", function () {
     const pendingAttestations = [
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
+        proposerIndex: 1,
       },
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     getAttestingIndicesStub.returns([0, 1]);
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
@@ -213,6 +207,5 @@ describe('process epoch - crosslinks', function () {
     } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 });

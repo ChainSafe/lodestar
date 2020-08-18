@@ -6,25 +6,23 @@ import {generateAttestation, generateAttestationData} from "../../../../../utils
 import {expect} from "chai";
 
 describe("beacon pool api impl", function () {
-
   let poolApi: BeaconPoolApi;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sinon, config);
-    poolApi = new BeaconPoolApi({}, {
-      config,
-      db: dbStub
-    });
+    poolApi = new BeaconPoolApi(
+      {},
+      {
+        config,
+        db: dbStub,
+      }
+    );
   });
 
   describe("getAttestations", function () {
-
     it("no filters", async function () {
-      dbStub.attestation.values.resolves([
-        generateAttestation(),
-        generateAttestation()
-      ]);
+      dbStub.attestation.values.resolves([generateAttestation(), generateAttestation()]);
       const attestations = await poolApi.getAttestations();
       expect(attestations.length).to.be.equal(2);
     });
@@ -33,12 +31,10 @@ describe("beacon pool api impl", function () {
       dbStub.attestation.values.resolves([
         generateAttestation({data: generateAttestationData(0, 1, 0, 1)}),
         generateAttestation({data: generateAttestationData(0, 1, 1, 0)}),
-        generateAttestation({data: generateAttestationData(0, 1, 3, 2)})
+        generateAttestation({data: generateAttestationData(0, 1, 3, 2)}),
       ]);
       const attestations = await poolApi.getAttestations({slot: 1, committeeIndex: 0});
       expect(attestations.length).to.be.equal(1);
     });
-
   });
-
 });

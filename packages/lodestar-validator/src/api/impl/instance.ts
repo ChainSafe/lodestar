@@ -13,7 +13,6 @@ export interface IApiClientOverInstanceOpts {
 }
 
 export class ApiClientOverInstance extends AbstractApiClient {
-
   public url = "inmemory";
 
   public beacon: IBeaconApi;
@@ -36,5 +35,4 @@ export class ApiClientOverInstance extends AbstractApiClient {
   public async disconnect(): Promise<void> {
     await super.disconnect();
   }
-
 }

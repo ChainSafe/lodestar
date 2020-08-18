@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessAttestationTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/attestation/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
     processAttestation(config, state, testcase.attestation, verify);
     return state;
   },
@@ -23,11 +23,10 @@ describeDirectorySpecTest<IProcessAttestationTestCase, BeaconState>(
       attestation: config.types.Attestation,
     },
     timeout: 100000000,
-    shouldError: testCase => !testCase.post,
-    getExpected: (testCase => testCase.post),
+    shouldError: (testCase) => !testCase.post,
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

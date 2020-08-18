@@ -21,13 +21,12 @@ describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
   {
     inputTypes: {
       is_valid: InputType.YAML,
-      genesis: InputType.SSZ
+      genesis: InputType.SSZ,
     },
     // @ts-ignore
     sszTypes: {
-      genesis: config.types.BeaconState
+      genesis: config.types.BeaconState,
     },
-    getExpected: (testCase => testCase.is_valid)
+    getExpected: (testCase) => testCase.is_valid,
   }
 );
-

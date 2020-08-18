@@ -28,10 +28,10 @@ import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
-    return super.get(toHexString(key) as unknown as ByteVector);
+    return super.get((toHexString(key) as unknown) as ByteVector);
   }
   set(key: ByteVector, value: ValidatorIndex): this {
-    return super.set(toHexString(key) as unknown as ByteVector, value);
+    return super.set((toHexString(key) as unknown) as ByteVector, value);
   }
 }
 
@@ -62,12 +62,15 @@ export class EpochContext {
     const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
     const nextEpoch = currentEpoch + 1;
 
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
-      i, v.activationEpoch, v.exitEpoch,
-    ]));
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => [
+      i,
+      v.activationEpoch,
+      v.exitEpoch,
+    ]);
 
     this.currentShuffling = computeEpochShuffling(this.config, state, indicesBounded, currentEpoch);
-    if (previousEpoch === currentEpoch) { // in case of genesis
+    if (previousEpoch === currentEpoch) {
+      // in case of genesis
       this.previousShuffling = this.currentShuffling;
     } else {
       this.previousShuffling = computeEpochShuffling(this.config, state, indicesBounded, previousEpoch);
@@ -112,9 +115,11 @@ export class EpochContext {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => ([
-      i, v.activationEpoch, v.exitEpoch,
-    ]));
+    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => [
+      i,
+      v.activationEpoch,
+      v.exitEpoch,
+    ]);
     this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
     this._resetProposers(state);
   }
@@ -139,7 +144,7 @@ export class EpochContext {
     return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
   }
 
-  public getIndexedAttestation (attestation: Attestation): IndexedAttestation {
+  public getIndexedAttestation(attestation: Attestation): IndexedAttestation {
     const data = attestation.data;
     const bits = readOnlyMap(attestation.aggregationBits, (b) => b);
     const committee = this.getBeaconCommittee(data.slot, data.index);
@@ -161,10 +166,7 @@ export class EpochContext {
 
   public getAttestingIndices(data: AttestationData, bits: BitList): ValidatorIndex[] {
     const committee = this.getBeaconCommittee(data.slot, data.index);
-    return getAttestingIndicesFromCommittee(
-      committee,
-      readOnlyMap(bits, (b) => b) as List<boolean>,
-    );
+    return getAttestingIndicesFromCommittee(committee, readOnlyMap(bits, (b) => b) as List<boolean>);
   }
 
   /**
@@ -176,7 +178,6 @@ export class EpochContext {
    * Return null if no assignment..
    */
   getCommitteeAssignment(epoch: Epoch, validatorIndex: ValidatorIndex): CommitteeAssignment | null {
-
     const nextEpoch = this.currentShuffling.epoch + 1;
     assert.lte(epoch, nextEpoch, "Cannot get committee assignment for epoch more than 1 ahead");
 
@@ -213,7 +214,7 @@ export class EpochContext {
           this.config,
           state,
           this.currentShuffling.activeIndices,
-          hash(Buffer.concat([epochSeed, intToBytes(slot, 8)])),
+          hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
         )
       );
     }

@@ -12,29 +12,31 @@ import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockHeader", function () {
-
   let api: RestApi;
   let beaconApiStub: StubbedBeaconApi;
 
   beforeEach(async function () {
     beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      node: new StubbedNodeApi(),
-      beacon: beaconApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        node: new StubbedNodeApi(),
+        beacon: beaconApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
@@ -49,9 +51,7 @@ describe("rest - beacon - getBlockHeader", function () {
 
   it("should not found block header", async function () {
     beaconApiStub.blocks.getBlockHeader.withArgs("4").resolves(null);
-    await supertest(api.server.server)
-      .get(getBlockHeader.url.replace(":blockId", "4"))
-      .expect(404);
+    await supertest(api.server.server).get(getBlockHeader.url.replace(":blockId", "4")).expect(404);
   });
 
   it("should fail validation", async function () {
@@ -61,5 +61,4 @@ describe("rest - beacon - getBlockHeader", function () {
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
-
 });

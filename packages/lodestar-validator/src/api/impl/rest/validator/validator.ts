@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/camelcase */
+
 import {
   AggregateAndProof,
   Attestation,
@@ -21,7 +23,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
 
 export class RestValidatorApi implements IValidatorApi {
-
   private readonly client: HttpClient;
 
   private readonly config: IBeaconConfig;
@@ -34,33 +35,32 @@ export class RestValidatorApi implements IValidatorApi {
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
     const url = `/duties/${epoch.toString()}/proposer`;
     const responseData = await this.client.get<Json[]>(url);
-    return responseData.map(value => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
+    return responseData.map((value) => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
   }
 
   public async getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
     const url = `/duties/${epoch.toString()}/attester`;
     const query = {
-      "validator_pubkeys": validatorPubKeys.map(toHexString)
+      validator_pubkeys: validatorPubKeys.map(toHexString),
     };
     const responseData = await this.client.get<Json[]>(url, query);
-    return responseData.map(value => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
+    return responseData.map((value) => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
-    return this.client.post(
-      "/aggregate_and_proof",
-      [this.config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof, {case: "snake"})]
-    );
+    return this.client.post("/aggregate_and_proof", [
+      this.config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof, {case: "snake"}),
+    ]);
   }
 
   public async getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]> {
     const url = "/wire_attestations";
     const query = {
-      "epoch": epoch, 
-      "committee_index": committeeIndex
+      epoch: epoch,
+      committee_index: committeeIndex,
     };
     const responseData = await this.client.get<Json[]>(url, query);
-    return responseData.map(value => this.config.types.Attestation.fromJson(value, {case: "snake"}));
+    return responseData.map((value) => this.config.types.Attestation.fromJson(value, {case: "snake"}));
   }
 
   public async produceBlock(
@@ -70,12 +70,12 @@ export class RestValidatorApi implements IValidatorApi {
     graffiti: string
   ): Promise<BeaconBlock> {
     const url = "/block";
-    const query = ({
-      "slot": slot, 
-      "proposer_pubkey": toHexString(proposerPubkey), 
-      "randao_reveal": toHexString(randaoReveal),
-      "graffiti": graffiti
-    });
+    const query = {
+      slot: slot,
+      proposer_pubkey: toHexString(proposerPubkey),
+      randao_reveal: toHexString(randaoReveal),
+      graffiti: graffiti,
+    };
     const responseData = await this.client.get<Json>(url, query);
     return this.config.types.BeaconBlock.fromJson(responseData, {case: "snake"});
   }
@@ -86,22 +86,23 @@ export class RestValidatorApi implements IValidatorApi {
     slot: Slot
   ): Promise<Attestation> {
     const url = "/attestation";
-    const query = ({
-      "slot": slot,
-      "attestation_committee_index": committeeIndex,
-      "validator_pubkey": toHexString(validatorPubKey), 
-    });
+    const query = {
+      slot: slot,
+      attestation_committee_index: committeeIndex,
+      validator_pubkey: toHexString(validatorPubKey),
+    };
     return this.config.types.Attestation.fromJson(await this.client.get<Json>(url, query), {case: "snake"});
   }
 
   public async produceAggregateAndProof(
-    attestationData: AttestationData, aggregator: BLSPubkey
+    attestationData: AttestationData,
+    aggregator: BLSPubkey
   ): Promise<AggregateAndProof> {
     const url = "/aggregate_and_proof";
-    const query = ({
-      "aggregator_pubkey": toHexString(aggregator),
-      "attestation_data": toHexString(this.config.types.AttestationData.serialize(attestationData)),
-    });
+    const query = {
+      aggregator_pubkey: toHexString(aggregator),
+      attestation_data: toHexString(this.config.types.AttestationData.serialize(attestationData)),
+    };
     return this.config.types.AggregateAndProof.fromJson(await this.client.get<Json>(url, query), {case: "snake"});
   }
 
@@ -121,12 +122,15 @@ export class RestValidatorApi implements IValidatorApi {
   ): Promise<void> {
     return this.client.post(
       "/beacon_committee_subscription",
-      this.config.types.SubscribeToCommitteeSubnetPayload.toJson({
-        slot,
-        slotSignature,
-        attestationCommitteeIndex,
-        aggregatorPubkey
-      }, {case: "snake"})
+      this.config.types.SubscribeToCommitteeSubnetPayload.toJson(
+        {
+          slot,
+          slotSignature,
+          attestationCommitteeIndex,
+          aggregatorPubkey,
+        },
+        {case: "snake"}
+      )
     );
   }
 }

@@ -9,17 +9,16 @@ describeDirectorySpecTest<ShufflingTestCase, number[]>(
   "shuffling mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/shuffling/core/shuffle"),
   (testcase) => {
-    const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""),"hex");
+    const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""), "hex");
     const output = Array.from({length: Number(testcase.mapping.count)}, (_, i) => i);
     unshuffleList(config, output, seed);
     return output;
   },
   {
     inputTypes: {
-      mapping: InputType.YAML
+      mapping: InputType.YAML,
     },
     timeout: 10000,
-    getExpected: (testCase => testCase.mapping.mapping.map((value) => Number(value)))
+    getExpected: (testCase) => testCase.mapping.mapping.map((value) => Number(value)),
   }
 );
-

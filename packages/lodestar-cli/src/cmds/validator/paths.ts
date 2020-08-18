@@ -28,7 +28,7 @@ export function getValidatorPaths(options: Partial<IValidatorPaths> & Pick<IGlob
   return {
     ...options,
     validatorsDbDir,
-    validatorDbDir: (pubkey: string) => path.join(validatorsDbDir, pubkey)
+    validatorDbDir: (pubkey: string) => path.join(validatorsDbDir, pubkey),
   } as IValidatorPaths;
 }
 

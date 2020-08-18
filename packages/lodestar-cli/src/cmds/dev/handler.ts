@@ -47,15 +47,13 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
     logger,
   });
 
-  if(options.genesisValidators) {
+  if (options.genesisValidators) {
     const state = await initDevChain(node, options.genesisValidators);
     storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
-  }else if (options.genesisStateFile) {
+  } else if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
       config.types.BeaconState.tree.deserialize(
-        await fs.promises.readFile(
-          join(options.rootDir, options.genesisStateFile)
-        )
+        await fs.promises.readFile(join(options.rootDir, options.genesisStateFile))
       )
     );
   }
@@ -63,12 +61,10 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
   await node.start();
 
   let validators: Validator[];
-  if(options.startValidators) {
-    const range = options.startValidators.split(":").map(s => parseInt(s));
+  if (options.startValidators) {
+    const range = options.startValidators.split(":").map((s) => parseInt(s));
     const api = getValidatorApiClient(options.server, logger, node);
-    validators = Array.from(
-      {length:range[1] + range[0]},(v,i)=>i+range[0]
-    ).map((index) => {
+    validators = Array.from({length: range[1] + range[0]}, (v, i) => i + range[0]).map((index) => {
       return getInteropValidator(
         node.config,
         validatorsDir,
@@ -87,7 +83,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
     await Promise.all(validators.map((v) => v.stop()));
     logger.info("Stopping BN");
     await node.stop();
-    if(options.reset) {
+    if (options.reset) {
       logger.info("Cleaning directories");
       //delete db directory
       rimraf.sync(chainDir);

@@ -5,7 +5,7 @@
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../constants";
+import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../constants";
 import {computeDomain, increaseBalance} from "../../util";
 import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot} from "../../util/signingRoot";
@@ -13,19 +13,18 @@ import {computeSigningRoot} from "../../util/signingRoot";
 /**
  * Process an Eth1 deposit, registering a validator or increasing its balance.
  */
-export function processDeposit(
-  config: IBeaconConfig,
-  state: BeaconState,
-  deposit: Deposit
-): void {
+export function processDeposit(config: IBeaconConfig, state: BeaconState, deposit: Deposit): void {
   // Verify the Merkle branch
-  assert.true(verifyMerkleBranch(
-    config.types.DepositData.hashTreeRoot(deposit.data),
-    Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
-    DEPOSIT_CONTRACT_TREE_DEPTH + 1,
-    state.eth1DepositIndex,
-    state.eth1Data.depositRoot.valueOf() as Uint8Array,
-  ), "Invalid deposit merkle branch");
+  assert.true(
+    verifyMerkleBranch(
+      config.types.DepositData.hashTreeRoot(deposit.data),
+      Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
+      DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+      state.eth1DepositIndex,
+      state.eth1Data.depositRoot.valueOf() as Uint8Array
+    ),
+    "Invalid deposit merkle branch"
+  );
 
   // Deposits must be processed in order
   state.eth1DepositIndex += 1;
@@ -39,11 +38,7 @@ export function processDeposit(
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
-    if (!verify(
-      pubkey.valueOf() as Uint8Array,
-      signingRoot,
-      deposit.data.signature.valueOf() as Uint8Array,
-    )) {
+    if (!verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
       return;
     }
     // Add validator and balance entries

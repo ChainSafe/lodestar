@@ -1,7 +1,5 @@
 import {IBeaconParams} from "./interface";
-import {
-  ContainerType, BigIntUintType, NumberUintType, ByteVectorType,
-} from "@chainsafe/ssz";
+import {ContainerType, BigIntUintType, NumberUintType, ByteVectorType} from "@chainsafe/ssz";
 
 const Number64 = new NumberUintType({byteLength: 8});
 const BigInt64 = new BigIntUintType({byteLength: 8});

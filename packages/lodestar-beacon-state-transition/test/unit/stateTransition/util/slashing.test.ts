@@ -6,13 +6,12 @@ import {randBetween} from "../../../utils/misc";
 import {isSlashableAttestationData} from "../../../../src/util";
 import {generateAttestationData} from "../../../utils/attestation";
 
-
 describe("isSlashableAttestationData", () => {
   it("Attestation data with the same target epoch should return true", () => {
     const epoch1: Epoch = randBetween(1, 1000);
     const epoch2: Epoch = epoch1 + 1;
     const a1 = generateAttestationData(epoch1, epoch2);
-    const a2 = generateAttestationData(epoch1-1, epoch2);
+    const a2 = generateAttestationData(epoch1 - 1, epoch2);
     assert.isTrue(isSlashableAttestationData(config, a1, a2));
   });
 

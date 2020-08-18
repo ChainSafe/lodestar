@@ -12,14 +12,14 @@ export async function generateDeposits(
   db: IBeaconDb,
   state: TreeBacked<BeaconState>,
   eth1Data: Eth1Data,
-  depositDataRootList: TreeBacked<List<Root>>,
+  depositDataRootList: TreeBacked<List<Root>>
 ): Promise<Deposit[]> {
-  if(eth1Data.depositCount > state.eth1DepositIndex) {
+  if (eth1Data.depositCount > state.eth1DepositIndex) {
     const eth1DepositIndex = state.eth1DepositIndex;
     const upperIndex = eth1DepositIndex + Math.min(config.params.MAX_DEPOSITS, eth1Data.depositCount);
     const depositDatas = await db.depositData.values({
       gt: eth1DepositIndex,
-      lt: upperIndex
+      lt: upperIndex,
     });
     //add all deposits to the tree before getting proof
     depositDataRootList.push(...depositDatas.map((data) => config.types.DepositData.hashTreeRoot(data)));

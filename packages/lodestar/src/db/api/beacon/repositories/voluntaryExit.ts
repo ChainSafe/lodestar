@@ -6,10 +6,7 @@ import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
 export class VoluntaryExitRepository extends Repository<ValidatorIndex, SignedVoluntaryExit> {
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.exit, config.types.SignedVoluntaryExit);
   }
 

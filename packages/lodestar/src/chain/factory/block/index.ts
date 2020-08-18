@@ -12,7 +12,6 @@ import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
-
 export async function assembleBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
@@ -20,12 +19,9 @@ export async function assembleBlock(
   slot: Slot,
   proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
-  graffiti = ZERO_HASH,
+  graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
-  const [parentBlock, stateContext] = await Promise.all([
-    chain.getHeadBlock(),
-    chain.getHeadStateContext()
-  ]);
+  const [parentBlock, stateContext] = await Promise.all([chain.getHeadBlock(), chain.getHeadStateContext()]);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
   const headState = stateContext.state.clone();
   headState.slot = slot;
@@ -38,7 +34,7 @@ export async function assembleBlock(
   };
 
   let epochCtx: EpochContext;
-  if(!stateContext.epochCtx) {
+  if (!stateContext.epochCtx) {
     epochCtx = new EpochContext(config);
     epochCtx.loadState(stateContext.state);
   } else {

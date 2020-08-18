@@ -14,13 +14,13 @@ export function createIBeaconParams(input: Record<string, unknown>): Partial<IBe
 }
 
 export const schema = new Schema({
-  include: [
-    FAILSAFE_SCHEMA
-  ],
+  include: [FAILSAFE_SCHEMA],
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
-      construct: function (data) { return data !== null ? data : ""; }
-    })
-  ]
+      construct: function (data) {
+        return data !== null ? data : "";
+      },
+    }),
+  ],
 });

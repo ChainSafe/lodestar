@@ -10,12 +10,12 @@ import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
 
-
 describe("get proposers api impl", function () {
-
   const sandbox = sinon.createSandbox();
 
-  let dbStub: StubbedBeaconDb, chainStub: SinonStubbedInstance<IBeaconChain>, syncStub: SinonStubbedInstance<IBeaconSync>;
+  let dbStub: StubbedBeaconDb,
+    chainStub: SinonStubbedInstance<IBeaconChain>,
+    syncStub: SinonStubbedInstance<IBeaconSync>;
 
   let api: IValidatorApi;
 
@@ -31,11 +31,11 @@ describe("get proposers api impl", function () {
     sandbox.restore();
   });
 
-  it("should throw error when node is syncing", async function() {
+  it("should throw error when node is syncing", async function () {
     syncStub.isSynced.returns(false);
     syncStub.getSyncStatus.resolves({
       headSlot: BigInt(1000),
-      syncDistance: BigInt(2000)
+      syncDistance: BigInt(2000),
     });
     try {
       await api.getProposerDuties(1);
@@ -48,46 +48,42 @@ describe("get proposers api impl", function () {
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
-    const state = generateState(
-      {
-        slot: 0,
-        validators: generateValidators(
-          25,
-          {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
-        ),
-        balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
-      });
+    const state = generateState({
+      slot: 0,
+      validators: generateValidators(25, {
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+        activationEpoch: 0,
+        exitEpoch: FAR_FUTURE_EPOCH,
+      }),
+      balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE),
+    });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves(
-      {
-        state,
-        epochCtx
-      }
-    );
+    chainStub.getHeadStateContext.resolves({
+      state,
+      epochCtx,
+    });
     const result = await api.getProposerDuties(1);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 
   it("should get future proposers", async function () {
     syncStub.isSynced.returns(true);
-    const state =       generateState(
-      {
-        slot: config.params.SLOTS_PER_EPOCH - 3,
-        validators: generateValidators(
-          25,
-          {effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE, activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH}
-        ),
-        balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE)
-      });
+    const state = generateState({
+      slot: config.params.SLOTS_PER_EPOCH - 3,
+      validators: generateValidators(25, {
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
+        activationEpoch: 0,
+        exitEpoch: FAR_FUTURE_EPOCH,
+      }),
+      balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE),
+    });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves(
-      {
-        state,
-        epochCtx
-      }
-    );
+    chainStub.getHeadStateContext.resolves({
+      state,
+      epochCtx,
+    });
 
     const result = await api.getProposerDuties(2);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);

@@ -23,7 +23,7 @@ export function safeType(type: Type<any>): Type<any> {
       }
     }
     if (props.fields) {
-      Object.keys(props.fields.value).forEach(fieldName => {
+      Object.keys(props.fields.value).forEach((fieldName) => {
         props.fields.value[fieldName] = safeType(props.fields.value[fieldName]);
       });
     }

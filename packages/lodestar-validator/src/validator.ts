@@ -63,10 +63,7 @@ export class Validator {
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     // Run both services at once to prevent missing first attestation
-    await Promise.all([
-      this.blockService.start(),
-      this.attestationService.start()
-    ]);
+    await Promise.all([this.blockService.start(), this.attestationService.start()]);
   };
 
   /**
@@ -78,7 +75,7 @@ export class Validator {
   }
 
   private initApiClient(api: string | IApiClient): IApiClient {
-    if(typeof api === "string") {
+    if (typeof api === "string") {
       return new ApiClientOverRest(this.config, api, this.logger);
     }
     return api;
@@ -114,5 +111,4 @@ export class Validator {
     await this.apiClient.connect();
     this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
   }
-
 }

@@ -11,11 +11,11 @@ import {generateState} from "../../../utils/state";
 import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
-  generateEmptySignedVoluntaryExit
+  generateEmptySignedVoluntaryExit,
 } from "../../../utils/attestation";
 import {
   generateEmptyAttesterSlashing,
-  generateEmptyProposerSlashing
+  generateEmptyProposerSlashing,
 } from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
@@ -31,16 +31,21 @@ import {ExtendedValidatorResult} from "../../../../src/network/gossip/constants"
 describe.skip("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
-  let dbStub: StubbedBeaconDb, logger: any, isValidIndexedAttestationStub: any,
-    isValidIncomingVoluntaryExitStub: any, isValidIncomingProposerSlashingStub: any,
-    isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain, isBlsVerifyStub: SinonStub;
+  let dbStub: StubbedBeaconDb,
+    logger: any,
+    isValidIndexedAttestationStub: any,
+    isValidIncomingVoluntaryExitStub: any,
+    isValidIncomingProposerSlashingStub: any,
+    isValidIncomingAttesterSlashingStub: any,
+    chainStub: StubbedChain,
+    isBlsVerifyStub: SinonStub;
 
   beforeEach(() => {
     isValidIndexedAttestationStub = sandbox.stub(attestationUtils, "isValidIndexedAttestation");
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
-    chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
+    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     isBlsVerifyStub = sandbox.stub(bls, "verify");
 
@@ -49,8 +54,9 @@ describe.skip("GossipMessageValidator", () => {
     logger.silent = true;
     validator = new GossipMessageValidator({
       chain: chainStub,
-      db: dbStub as unknown as IBeaconDb,
-      config, logger,
+      db: (dbStub as unknown) as IBeaconDb,
+      config,
+      logger,
     });
   });
 
@@ -59,17 +65,18 @@ describe.skip("GossipMessageValidator", () => {
   });
 
   describe("validate signed aggregate and proof", () => {
-
     it("should return invalid signed aggregation and proof - invalid slot", async () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       const state = generateState({
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -78,7 +85,9 @@ describe.skip("GossipMessageValidator", () => {
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.ignore);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.ignore
+      );
     });
 
     it("should return invalid signed aggregation and proof - existed", async () => {
@@ -86,10 +95,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -99,7 +110,9 @@ describe.skip("GossipMessageValidator", () => {
       });
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.hasAttestation.resolves(true);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.ignore);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.ignore
+      );
       expect(dbStub.aggregateAndProof.hasAttestation.calledOnce).to.be.true;
     });
 
@@ -108,10 +121,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -122,7 +137,9 @@ describe.skip("GossipMessageValidator", () => {
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.hasAttestation.resolves(false);
       dbStub.aggregateAndProof.getByAggregatorAndEpoch.resolves([generateEmptyAttestation()]);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.ignore);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.ignore
+      );
       expect(dbStub.aggregateAndProof.getByAggregatorAndEpoch.calledOnce).to.be.true;
       expect(chainStub.forkChoice.hasBlock.calledOnce).to.be.false;
     });
@@ -132,10 +149,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -145,8 +164,10 @@ describe.skip("GossipMessageValidator", () => {
       });
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
-      epochCtx.getAttestingIndices = () => ([]);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      epochCtx.getAttestingIndices = () => [];
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
     });
 
     it("should return invalid signed aggregation and proof - block not existed", async () => {
@@ -154,10 +175,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -167,9 +190,11 @@ describe.skip("GossipMessageValidator", () => {
       });
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
-      epochCtx.getAttestingIndices = () => ([0,1]);
+      epochCtx.getAttestingIndices = () => [0, 1];
       chainStub.forkChoice.hasBlock.returns(false);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(chainStub.forkChoice.hasBlock.calledOnce).to.be.true;
       expect(dbStub.badBlock.has.calledOnce).to.be.false;
     });
@@ -179,10 +204,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -192,10 +219,12 @@ describe.skip("GossipMessageValidator", () => {
       });
       const aggregateProof = generateEmptySignedAggregateAndProof();
       dbStub.aggregateAndProof.has.resolves(false);
-      epochCtx.getAttestingIndices = () => ([0,1]);
+      epochCtx.getAttestingIndices = () => [0, 1];
       chainStub.forkChoice.hasBlock.returns(true);
       dbStub.badBlock.has.resolves(true);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(dbStub.badBlock.has.calledOnce).to.be.true;
     });
 
@@ -208,20 +237,24 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
       epochCtx.isAggregator = () => false;
-      epochCtx.getAttestingIndices = () => ([0,1]);
+      epochCtx.getAttestingIndices = () => [0, 1];
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
     });
 
     it("should return invalid signed aggregation and proof - not beacon committee", async () => {
@@ -233,21 +266,25 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      epochCtx.isAggregator = () => (true);
-      epochCtx.getBeaconCommittee = () => ([1000]);
-      epochCtx.getAttestingIndices = () => ([0,1]);
+      epochCtx.isAggregator = () => true;
+      epochCtx.getBeaconCommittee = () => [1000];
+      epochCtx.getAttestingIndices = () => [0, 1];
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(isBlsVerifyStub.calledOnce).to.be.false;
     });
 
@@ -261,22 +298,26 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      epochCtx.getBeaconCommittee = () => ([0]);
-      epochCtx.getAttestingIndices = () => ([0,1]);
-      epochCtx.isAggregator = () => (true);
+      epochCtx.getBeaconCommittee = () => [0];
+      epochCtx.getAttestingIndices = () => [0, 1];
+      epochCtx.isAggregator = () => true;
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
       isBlsVerifyStub.returns(false);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(isBlsVerifyStub.calledOnce).to.be.true;
     });
 
@@ -290,23 +331,27 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      epochCtx.getBeaconCommittee = () => ([0]);
-      epochCtx.getAttestingIndices = () => ([0,1]);
-      epochCtx.isAggregator = () => (true);
+      epochCtx.getBeaconCommittee = () => [0];
+      epochCtx.getAttestingIndices = () => [0, 1];
+      epochCtx.isAggregator = () => true;
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
       isBlsVerifyStub.onFirstCall().returns(true);
       isBlsVerifyStub.onSecondCall().returns(false);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(isBlsVerifyStub.calledTwice).to.be.true;
       expect(isValidIndexedAttestationStub.calledOnce).to.be.false;
     });
@@ -321,16 +366,18 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      epochCtx.getAttestingIndices = () => ([0,1]);
-      epochCtx.getBeaconCommittee = () => ([0]);
-      epochCtx.isAggregator = () => (true);
+      epochCtx.getAttestingIndices = () => [0, 1];
+      epochCtx.getBeaconCommittee = () => [0];
+      epochCtx.isAggregator = () => true;
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
@@ -338,7 +385,9 @@ describe.skip("GossipMessageValidator", () => {
       isBlsVerifyStub.onFirstCall().returns(true);
       isBlsVerifyStub.onSecondCall().returns(true);
       isValidIndexedAttestationStub.returns(false);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.reject);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.reject
+      );
       expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
     });
 
@@ -352,27 +401,30 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      epochCtx.getBeaconCommittee = () => ([0]);
-      epochCtx.getAttestingIndices = () => ([0,1]);
-      epochCtx.isAggregator = () => (true);
+      epochCtx.getBeaconCommittee = () => [0];
+      epochCtx.getAttestingIndices = () => [0, 1];
+      epochCtx.isAggregator = () => true;
       chainStub.getHeadStateContext.resolves({
         state: state as TreeBacked<BeaconState>,
         epochCtx: epochCtx,
       });
       isBlsVerifyStub.returns(true);
       isValidIndexedAttestationStub.returns(true);
-      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(ExtendedValidatorResult.accept);
+      expect(await validator.isValidIncomingAggregateAndProof(aggregateProof)).to.be.equal(
+        ExtendedValidatorResult.accept
+      );
       expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
     });
   });
-
 
   describe("validate voluntary exit", () => {
     it("should return invalid Voluntary Exit - existing", async () => {
@@ -382,10 +434,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -401,10 +455,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -421,10 +477,12 @@ describe.skip("GossipMessageValidator", () => {
         genesisTime: Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT,
         validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
           activationEpoch: 0,
-          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+          effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE),
+        balances: Array.from(
+          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+          () => config.params.MAX_EFFECTIVE_BALANCE
+        ),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -489,5 +547,4 @@ describe.skip("GossipMessageValidator", () => {
       expect(await validator.isValidIncomingAttesterSlashing(slashing)).to.be.equal(ExtendedValidatorResult.accept);
     });
   });
-
 });

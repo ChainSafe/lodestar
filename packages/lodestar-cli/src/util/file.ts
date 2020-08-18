@@ -5,15 +5,15 @@ import {Json} from "@chainsafe/ssz";
 import {ensureDirExists} from "./fs";
 
 export const yamlSchema = new Schema({
-  include: [
-    FAILSAFE_SCHEMA
-  ],
+  include: [FAILSAFE_SCHEMA],
   implicit: [
     new Type("tag:yaml.org,2002:str", {
       kind: "scalar",
-      construct: function (data) { return data !== null ? data : ""; }
-    })
-  ]
+      construct: function (data) {
+        return data !== null ? data : "";
+      },
+    }),
+  ],
 });
 
 /**
@@ -29,9 +29,7 @@ export enum FileFormat {
   toml = "toml",
 }
 
-
-
-export function parse<T=Json>(contents: string, fileFormat: FileFormat): T {
+export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
   switch (fileFormat) {
     case FileFormat.json:
       return JSON.parse(contents);
@@ -41,7 +39,7 @@ export function parse<T=Json>(contents: string, fileFormat: FileFormat): T {
       throw new Error("Invalid filetype");
   }
 }
-export function stringify<T=Json>(obj: T, fileFormat: FileFormat): string {
+export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
   let contents: string;
   switch (fileFormat) {
     case FileFormat.json:
@@ -67,19 +65,18 @@ export async function writeFile(filename: string, obj: Json): Promise<void> {
   await fs.promises.writeFile(filename, stringify(obj, fileFormat as FileFormat), "utf-8");
 }
 
-
 /**
  * Read a JSON serializable object from a file
  *
  * Parse either from json, yaml, or toml
  */
-export async function readFile<T=Json>(filename: string): Promise<T> {
+export async function readFile<T = Json>(filename: string): Promise<T> {
   const fileFormat = path.extname(filename).substr(1);
   const contents = await fs.promises.readFile(filename, "utf-8");
   return parse(contents, fileFormat as FileFormat);
 }
 
-export function readFileSync<T=Json>(filename: string): T {
+export function readFileSync<T = Json>(filename: string): T {
   const fileFormat = path.extname(filename).substr(1);
   const contents = fs.readFileSync(filename, "utf-8");
   return parse(contents, fileFormat as FileFormat);

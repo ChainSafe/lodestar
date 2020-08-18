@@ -12,7 +12,6 @@ import {MockValidatorDB} from "../../utils/mocks/MockValidatorDB";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("block proposing service", function () {
-
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub: any, dbStub: any, logger: any;
@@ -31,9 +30,7 @@ describe("block proposing service", function () {
     const lastBlock = generateEmptySignedBlock();
     lastBlock.message.slot = 1;
     dbStub.getBlock.resolves(lastBlock);
-    const service = new BlockProposingService(
-      config, [Keypair.generate()], rpcClientStub, dbStub, logger
-    );
+    const service = new BlockProposingService(config, [Keypair.generate()], rpcClientStub, dbStub, logger);
     const result = await service.createAndPublishBlock(0, 1, generateFork(), ZERO_HASH);
     expect(result).to.be.null;
   });
@@ -44,13 +41,9 @@ describe("block proposing service", function () {
       produceBlock: sandbox.stub(),
       publishBlock: sandbox.stub(),
     };
-    rpcClientStub.validator.produceBlock
-      .withArgs(slot, sinon.match.any)
-      .resolves(generateEmptyBlock());
+    rpcClientStub.validator.produceBlock.withArgs(slot, sinon.match.any).resolves(generateEmptyBlock());
     dbStub.getBlock.resolves(null);
-    const service = new BlockProposingService(
-      config, [Keypair.generate()], rpcClientStub, dbStub, logger
-    );
+    const service = new BlockProposingService(config, [Keypair.generate()], rpcClientStub, dbStub, logger);
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
     expect(rpcClientStub.validator.publishBlock.calledOnce).to.be.true;
@@ -63,14 +56,12 @@ describe("block proposing service", function () {
       publishBlock: sandbox.stub(),
     };
     rpcClientStub.validator.produceBlock
-        .withArgs(slot, sinon.match.any, sinon.match.any).resolves(generateEmptyBlock());
+      .withArgs(slot, sinon.match.any, sinon.match.any)
+      .resolves(generateEmptyBlock());
     dbStub.getBlock.resolves(generateEmptySignedBlock());
-    const service = new BlockProposingService(
-      config, [Keypair.generate()], rpcClientStub, dbStub, logger as ILogger
-    );
+    const service = new BlockProposingService(config, [Keypair.generate()], rpcClientStub, dbStub, logger as ILogger);
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
     expect(rpcClientStub.validator.publishBlock.calledOnce).to.be.true;
   });
-
 });

@@ -16,11 +16,9 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     super(opts);
   }
 
-  public async getBlock(pubKey: BLSPubkey): Promise<SignedBeaconBlock|null> {
-    const data = await this.db.get(
-      encodeKey(Bucket.lastProposedBlock, toHexString(pubKey))
-    );
-    if(!data) {
+  public async getBlock(pubKey: BLSPubkey): Promise<SignedBeaconBlock | null> {
+    const data = await this.db.get(encodeKey(Bucket.lastProposedBlock, toHexString(pubKey)));
+    if (!data) {
       return null;
     }
     return this.config.types.SignedBeaconBlock.deserialize(data);
@@ -33,13 +31,11 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
     );
   }
 
-  public async getAttestations(
-    pubKey: BLSPubkey,
-    options: IAttestationSearchOptions): Promise<Attestation[]> {
+  public async getAttestations(pubKey: BLSPubkey, options: IAttestationSearchOptions): Promise<Attestation[]> {
     options = deepmerge({gt: 0, lt: Number.MAX_SAFE_INTEGER}, options);
     const data = await this.db.values({
       gt: encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + options.gt),
-      lt: encodeKey(Bucket.proposedAttestations, "" + toHexString(this.incrementPubKey(pubKey)) + options.lt)
+      lt: encodeKey(Bucket.proposedAttestations, "" + toHexString(this.incrementPubKey(pubKey)) + options.lt),
     });
     return data.map((data) => this.config.types.Attestation.deserialize(data));
   }
@@ -62,5 +58,4 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   private incrementPubKey(pubKey: BLSPubkey): BLSPubkey {
     return bigIntToBytes(bytesToBigInt(pubKey.valueOf() as Uint8Array) + BigInt(1), this.config.types.BLSPubkey.length);
   }
-
 }

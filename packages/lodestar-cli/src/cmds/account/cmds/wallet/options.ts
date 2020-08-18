@@ -11,5 +11,5 @@ export const accountWalletsOptions: ICliCommandOptions<IAccountWalletArgs> = {
     defaultDescription: defaultAccountPaths.walletsDir,
     normalize: true,
     type: "string",
-  }
+  },
 };

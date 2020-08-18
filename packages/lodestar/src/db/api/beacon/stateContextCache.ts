@@ -47,13 +47,13 @@ export class StateContextCache {
    * @param epoch
    */
   public async valuesUnsafe(): Promise<ITreeStateContext[]> {
-    return Object.values(this.cache).map(item => this.clone(item));
+    return Object.values(this.cache).map((item) => this.clone(item));
   }
 
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy()
+      epochCtx: item.epochCtx.copy(),
     };
   }
 }

@@ -9,7 +9,9 @@ import {IBeaconDb} from "../../db/api";
 import {TreeBacked} from "@chainsafe/ssz";
 
 export async function initDevChain(
-  node: BeaconNode, validatorCount: number, genesisTime?: number
+  node: BeaconNode,
+  validatorCount: number,
+  genesisTime?: number
 ): Promise<TreeBacked<BeaconState>> {
   const deposits = interopDeposits(
     node.config,

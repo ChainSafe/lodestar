@@ -35,5 +35,5 @@ export const metricsOptions = {
     description: "How often metrics should be probed",
     defaultDescription: String(defaultOptions.metrics.timeout),
     group: "metrics",
-  } as Options
+  } as Options,
 };

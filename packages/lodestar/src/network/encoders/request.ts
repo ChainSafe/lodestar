@@ -8,14 +8,17 @@ import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import {IValidatedRequestBody} from "./interface";
 
 export function eth2RequestEncode(
-  config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
-): (source: AsyncIterable<RequestBody|null>) => AsyncGenerator<Buffer> {
-  return (source => {
-    return (async function*() {
+  config: IBeaconConfig,
+  logger: ILogger,
+  method: Method,
+  encoding: ReqRespEncoding
+): (source: AsyncIterable<RequestBody | null>) => AsyncGenerator<Buffer> {
+  return (source) => {
+    return (async function* () {
       const type = Methods[method].requestSSZType(config);
       let compressor = getCompressor(encoding);
       for await (const request of source) {
-        if(!type || request === null) continue;
+        if (!type || request === null) continue;
         let serialized: Uint8Array;
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,16 +33,19 @@ export function eth2RequestEncode(
         compressor = getCompressor(encoding);
       }
     })();
-  });
+  };
 }
 
 export function eth2RequestDecode(
-  config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer|BufferList>) => AsyncGenerator<IValidatedRequestBody> {
+  config: IBeaconConfig,
+  logger: ILogger,
+  method: Method,
+  encoding: ReqRespEncoding
+): (source: AsyncIterable<Buffer | BufferList>) => AsyncGenerator<IValidatedRequestBody> {
   return (source) => {
-    return (async function*() {
+    return (async function* () {
       const type = Methods[method].requestSSZType(config);
-      if(!type) {
+      if (!type) {
         //method has no body, emit null to trigger response
         yield {isValid: true, body: null};
         return;
@@ -48,19 +54,20 @@ export function eth2RequestDecode(
       const decompressor = getDecompressor(encoding);
       const buffer = new BufferList();
       for await (let chunk of source) {
-        if(!chunk || chunk.length === 0) {
+        if (!chunk || chunk.length === 0) {
           continue;
         }
-        if(sszDataLength === null) {
+        if (sszDataLength === null) {
           sszDataLength = decode(chunk.slice());
           if (decode.bytes > 10) {
-            logger.error(`eth2RequestDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` +
-            `, method ${method}`);
+            logger.error(
+              `eth2RequestDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` + `, method ${method}`
+            );
             yield {isValid: false};
             break;
           }
           chunk = chunk.slice(decode.bytes);
-          if(chunk.length === 0) {
+          if (chunk.length === 0) {
             continue;
           }
         }
@@ -70,8 +77,10 @@ export function eth2RequestDecode(
           break;
         }
         if (chunk.length > maxEncodedLen(sszDataLength, encoding)) {
-          logger.error(`eth2RequestDecode: too much bytes read (${chunk.length}) for method ${method}, ` +
-            `sszLength ${sszDataLength}`);
+          logger.error(
+            `eth2RequestDecode: too much bytes read (${chunk.length}) for method ${method}, ` +
+              `sszLength ${sszDataLength}`
+          );
           yield {isValid: false};
           break;
         }
@@ -83,13 +92,13 @@ export function eth2RequestDecode(
           yield {isValid: false};
           break;
         }
-        if(uncompressed) {
+        if (uncompressed) {
           buffer.append(uncompressed);
         }
-        if(buffer.length < sszDataLength) {
+        if (buffer.length < sszDataLength) {
           continue;
         }
-        if(buffer.length > sszDataLength) {
+        if (buffer.length > sszDataLength) {
           logger.error("Too long message received for method " + method);
           yield {isValid: false};
           break;

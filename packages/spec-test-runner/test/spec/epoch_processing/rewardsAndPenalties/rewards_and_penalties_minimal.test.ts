@@ -13,7 +13,7 @@ describeDirectorySpecTest<StateTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processRewardsAndPenalties(config, state)
+    processRewardsAndPenalties(config, state);
     return state;
   },
   {
@@ -25,10 +25,9 @@ describeDirectorySpecTest<StateTestCase, BeaconState>(
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
     },
-    getExpected: (testCase => testCase.post),
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

@@ -11,9 +11,7 @@ import {GossipObject} from "../interface";
 export async function handleIncomingAttesterSlashing(this: Gossip, obj: GossipObject): Promise<void> {
   try {
     const attesterSlashing = obj as AttesterSlashing;
-    this.logger.verbose(
-      "Received attester slashing"
-    );
+    this.logger.verbose("Received attester slashing");
     this.emit(GossipEvent.ATTESTER_SLASHING, attesterSlashing);
   } catch (e) {
     this.logger.warn("Incoming attester slashing error", e);
@@ -26,7 +24,5 @@ export async function publishAttesterSlashing(this: Gossip, attesterSlashing: At
     getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkDigestValue),
     Buffer.from(this.config.types.AttesterSlashing.serialize(attesterSlashing))
   );
-  this.logger.verbose(
-    "Publishing attester slashing"
-  );
+  this.logger.verbose("Publishing attester slashing");
 }

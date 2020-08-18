@@ -5,20 +5,9 @@
 
 import {BitList, Vector} from "@chainsafe/ssz";
 
-import {
-  BLSSignature,
-  Bytes32,
-  Epoch,
-  ValidatorIndex,
-} from "./primitive";
+import {BLSSignature, Bytes32, Epoch, ValidatorIndex} from "./primitive";
 
-import {
-  AttestationData,
-  SignedBeaconBlockHeader,
-  DepositData,
-  IndexedAttestation,
-} from "./misc";
-
+import {AttestationData, SignedBeaconBlockHeader, DepositData, IndexedAttestation} from "./misc";
 
 export interface ProposerSlashing {
   // First block header

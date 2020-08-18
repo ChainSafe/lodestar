@@ -2,7 +2,7 @@ import {RequestId, RpcResponseStatus} from "../../constants";
 import {ResponseBody, RequestBody} from "@chainsafe/lodestar-types";
 
 export interface IDecompressor {
-  uncompress(chunk: Buffer): Buffer|null;
+  uncompress(chunk: Buffer): Buffer | null;
 
   reset(): void;
 }

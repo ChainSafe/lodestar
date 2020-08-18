@@ -11,9 +11,7 @@ import {BeaconBlockHeader, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 describe("sync - block utils", function () {
-
   describe("get block range from multiple peers", function () {
-
     const sandbox = sinon.createSandbox();
 
     let rpcStub: SinonStubbedInstance<ReqResp>;
@@ -44,12 +42,8 @@ describe("sync - block utils", function () {
       const peer1 = await PeerId.create();
       const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
-      rpcStub.beaconBlocksByRange
-        .onFirstCall()
-        .resolves(null);
-      rpcStub.beaconBlocksByRange
-        .onSecondCall()
-        .resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
+      rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
+      rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blockPromise = getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
       await timer.tickAsync(1000);
       const blocks = await blockPromise;
@@ -64,7 +58,6 @@ describe("sync - block utils", function () {
       const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 4, end: 4}, 2);
       expect(blocks.length).to.be.equal(0);
     });
-
   });
 
   describe("Chunkify block range", function () {
@@ -88,7 +81,6 @@ describe("sync - block utils", function () {
   });
 
   describe("verify header chain", function () {
-
     it("Should verify correct chain of blocks", function () {
       const startHeader = blockToHeader(config, generateEmptyBlock());
       const blocks = generateValidChain(startHeader);
@@ -122,29 +114,20 @@ describe("sync - block utils", function () {
   });
 
   describe("get blocks from peer", function () {
-
     it("should get block range from peer", async function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
-      rpcStub.beaconBlocksByRange
-        .withArgs(sinon.match.any, sinon.match.any)
-        .resolves([generateEmptySignedBlock()]);
-      const result = await getBlockRangeFromPeer(
-        rpcStub,
-        sinon.createStubInstance(PeerId),
-        {start: 1, end: 4}
-      );
+      rpcStub.beaconBlocksByRange.withArgs(sinon.match.any, sinon.match.any).resolves([generateEmptySignedBlock()]);
+      const result = await getBlockRangeFromPeer(rpcStub, sinon.createStubInstance(PeerId), {start: 1, end: 4});
       expect(result.length).to.be.greaterThan(0);
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
     });
-
   });
-
 });
 
 function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[] {
   const blocks = [];
   let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
-  for(let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i++) {
     const block = generateEmptySignedBlock();
     block.message.parentRoot = parentRoot;
     block.message.slot = i;

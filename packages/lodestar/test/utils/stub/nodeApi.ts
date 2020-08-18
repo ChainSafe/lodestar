@@ -3,8 +3,6 @@ import {ApiNamespace} from "../../../src/api";
 import {INodeApi} from "../../../src/api/impl/node";
 
 export class StubbedNodeApi implements SinonStubbedInstance<INodeApi> {
-
-
   namespace: ApiNamespace.NODE;
 
   getNodeIdentity: Sinon.SinonStubbedMember<INodeApi["getNodeIdentity"]>;
@@ -22,6 +20,4 @@ export class StubbedNodeApi implements SinonStubbedInstance<INodeApi> {
     this.getSyncingStatus = sandbox.stub();
     this.getVersion = sandbox.stub();
   }
-
-
 }

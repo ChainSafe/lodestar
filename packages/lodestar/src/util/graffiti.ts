@@ -5,8 +5,5 @@ import {GRAFFITI_SIZE} from "../constants";
  * @param graffiti
  */
 export function toGraffitiBuffer(graffiti: string): Buffer {
-  return Buffer.concat([
-    Buffer.from(graffiti, "utf8"),
-    Buffer.alloc(GRAFFITI_SIZE, 0)
-  ], GRAFFITI_SIZE);
+  return Buffer.concat([Buffer.from(graffiti, "utf8"), Buffer.alloc(GRAFFITI_SIZE, 0)], GRAFFITI_SIZE);
 }

@@ -13,19 +13,20 @@ import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("block assembly", function () {
-
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any, chainStub: StubbedChain,
-    forkChoiceStub: any, stateTransitionStub: any, beaconDB: StubbedBeaconDb;
+  let assembleBodyStub: any,
+    chainStub: StubbedChain,
+    forkChoiceStub: any,
+    stateTransitionStub: any,
+    beaconDB: StubbedBeaconDb;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
-
     forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    chainStub = sandbox.createStubInstance(BeaconChain) as unknown as StubbedChain;
+    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     chainStub.forkChoice = forkChoiceStub;
 
     beaconDB = new StubbedBeaconDb(sandbox);
@@ -38,7 +39,8 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     chainStub.getHeadStateContext.resolves({
-      state: generateState({slot: 1}), epochCtx: new EpochContext(config)
+      state: generateState({slot: 1}),
+      epochCtx: new EpochContext(config),
     });
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);

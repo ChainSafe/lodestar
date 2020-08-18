@@ -18,9 +18,7 @@ export function readPassphraseFile(passphraseFile: string): string {
     // 512 is an arbitrary high number that should be longer than any actual passphrase
     if (passphrase.length > 512) throw Error("is really long");
   } catch (e) {
-    throw new Error(
-      `passphraseFile ${passphraseFile} ${e.message}. Is this a well-formated passphraseFile?`
-    );
+    throw new Error(`passphraseFile ${passphraseFile} ${e.message}. Is this a well-formated passphraseFile?`);
   }
 
   return passphrase;
@@ -36,11 +34,14 @@ export function readValidatorPassphrase({secretsDir, pubkey}: {secretsDir: strin
   }
 }
 
-export function writeValidatorPassphrase(
-  {secretsDir, pubkey, passphrase}: {secretsDir: string; pubkey: string; passphrase: string}
-): void {
-  writeFile600Perm(
-    getValidatorPassphrasePath({secretsDir, pubkey}),
-    passphrase
-  );
+export function writeValidatorPassphrase({
+  secretsDir,
+  pubkey,
+  passphrase,
+}: {
+  secretsDir: string;
+  pubkey: string;
+  passphrase: string;
+}): void {
+  writeFile600Perm(getValidatorPassphrasePath({secretsDir, pubkey}), passphrase);
 }

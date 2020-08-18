@@ -1,9 +1,7 @@
 import {assert} from "chai";
 import {bigIntMin, bigIntMax, intDiv, intSqrt, bigIntSqrt} from "../../src";
 
-
-describe("util/maths", function() {
-
+describe("util/maths", function () {
   describe("bigIntMin", () => {
     it("if a is lt should return a", () => {
       const a = 1n;

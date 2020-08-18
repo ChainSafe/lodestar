@@ -1,9 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {
-  Attestation,
-  AttestationData,
-  Epoch,
-} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationData, Epoch} from "@chainsafe/lodestar-types";
 
 /**
  * Generates a fake attestation data for test purposes.

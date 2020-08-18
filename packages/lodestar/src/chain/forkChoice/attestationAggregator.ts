@@ -11,7 +11,6 @@ import {RootHex, AggregatedAttestation, ForkChoiceAttestation} from "./interface
  * as well as aggregated attestations per block root
  */
 export class AttestationAggregator {
-
   /**
    * aggregation: target -> sum of all attestations
    */
@@ -48,10 +47,12 @@ export class AttestationAggregator {
       }
       const prevAgg = this.ensureAggregate(prevA.target);
       const newAgg = this.ensureAggregate(a.target);
-      if (prevAgg.target !== newAgg.target) { // new attestation target
-        prevAgg.weight -=  prevA.weight;
+      if (prevAgg.target !== newAgg.target) {
+        // new attestation target
+        prevAgg.weight -= prevA.weight;
         newAgg.weight += a.weight;
-      } else if (!(prevA.weight === a.weight)) { // new attestation weight
+      } else if (!(prevA.weight === a.weight)) {
+        // new attestation weight
         newAgg.weight += a.weight - prevA.weight;
       } else {
         return;
@@ -72,7 +73,7 @@ export class AttestationAggregator {
    */
   public prune(): void {
     const aliveTargets: Record<RootHex, boolean> = {};
-    Object.values(this.latestAttestations).forEach((a) => aliveTargets[a.target] = true);
+    Object.values(this.latestAttestations).forEach((a) => (aliveTargets[a.target] = true));
     Object.values(this.latestAggregates).forEach((agg) => {
       if (agg.prevWeight === agg.weight || !aliveTargets[agg.target]) {
         delete this.latestAggregates[agg.target];

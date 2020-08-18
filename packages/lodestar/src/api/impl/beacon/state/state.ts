@@ -12,7 +12,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   private readonly db: IBeaconDb;
   private readonly forkChoice: ILMDGHOST;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"db"|"chain">) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
     this.config = modules.config;
     this.db = modules.db;
     this.forkChoice = modules.chain.forkChoice;
@@ -21,5 +21,4 @@ export class BeaconStateApi implements IBeaconStateApi {
   public async getState(stateId: StateId): Promise<BeaconState | null> {
     return resolveStateId(this.config, this.db, this.forkChoice, stateId);
   }
-
 }

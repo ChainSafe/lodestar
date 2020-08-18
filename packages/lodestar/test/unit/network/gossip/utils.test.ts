@@ -6,7 +6,7 @@ import {
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   mapGossipEvent,
-  topicToGossipEvent
+  topicToGossipEvent,
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
@@ -22,9 +22,7 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 const forkValue = Buffer.alloc(4);
 describe("gossip utils", function () {
-
   describe("getGossipTopic", function () {
-
     it("should get gossip topic with default encoding", function () {
       const topic = getGossipTopic(GossipEvent.BLOCK, forkValue);
       expect(topic).to.be.equal("/eth2/00000000/beacon_block/ssz_snappy");
@@ -40,7 +38,10 @@ describe("gossip utils", function () {
         "{param1}/{param2}" as GossipEvent,
         forkValue,
         GossipEncoding.SSZ,
-        new Map([["param1", "test"], ["param2", "test2"]])
+        new Map([
+          ["param1", "test"],
+          ["param2", "test2"],
+        ])
       );
       expect(topic).to.be.equal("/eth2/00000000/test/test2/ssz");
     });
@@ -55,7 +56,6 @@ describe("gossip utils", function () {
       );
       expect(topic).to.be.equal("/eth2/00000000/beacon_attestation_10/ssz_snappy");
     });
-
   });
 
   describe("isAttestationSubnetTopic", () => {
@@ -65,7 +65,7 @@ describe("gossip utils", function () {
           GossipEvent.ATTESTATION_SUBNET,
           forkValue,
           GossipEncoding.SSZ,
-          new Map([["subnet", subnet.toString()]]),
+          new Map([["subnet", subnet.toString()]])
         );
         expect(isAttestationSubnetTopic(topic)).to.be.equal(true);
       }
@@ -92,18 +92,18 @@ describe("gossip utils", function () {
   describe("topicToGossipEvent", () => {
     it("should get correct GossipEvent from topic", () => {
       expect(topicToGossipEvent(getGossipTopic(GossipEvent.BLOCK, forkValue))).to.be.equal(GossipEvent.BLOCK);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))
-      ).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))
-      ).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkValue))
-      ).to.be.equal(GossipEvent.PROPOSER_SLASHING);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkValue))
-      ).to.be.equal(GossipEvent.ATTESTER_SLASHING);
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))).to.be.equal(
+        GossipEvent.AGGREGATE_AND_PROOF
+      );
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))).to.be.equal(
+        GossipEvent.VOLUNTARY_EXIT
+      );
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.PROPOSER_SLASHING, forkValue))).to.be.equal(
+        GossipEvent.PROPOSER_SLASHING
+      );
+      expect(topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkValue))).to.be.equal(
+        GossipEvent.ATTESTER_SLASHING
+      );
     });
   });
 
@@ -114,7 +114,7 @@ describe("gossip utils", function () {
           GossipEvent.ATTESTATION_SUBNET,
           forkValue,
           GossipEncoding.SSZ,
-          new Map([["subnet", subnet.toString()]]),
+          new Map([["subnet", subnet.toString()]])
         );
         expect(getSubnetFromAttestationSubnetTopic(topic)).to.be.equal(subnet);
       }
@@ -122,7 +122,6 @@ describe("gossip utils", function () {
   });
 
   describe("get block state context", function () {
-
     let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
     let dbStub: StubbedBeaconDb;
 
@@ -139,9 +138,7 @@ describe("gossip utils", function () {
       expect(
         forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
       ).to.be.true;
-      expect(
-        dbStub.stateCache.get.calledOnce
-      ).to.be.false;
+      expect(dbStub.stateCache.get.calledOnce).to.be.false;
     });
 
     it("missing state", async function () {
@@ -154,9 +151,7 @@ describe("gossip utils", function () {
       expect(
         forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
       ).to.be.true;
-      expect(
-        dbStub.stateCache.get.withArgs(stateRoot).calledOnce
-      ).to.be.true;
+      expect(dbStub.stateCache.get.withArgs(stateRoot).calledOnce).to.be.true;
     });
 
     it("found state", async function () {
@@ -165,7 +160,7 @@ describe("gossip utils", function () {
       forkChoiceStub.getBlockSummaryByBlockRoot.returns(generateBlockSummary({stateRoot}));
       dbStub.stateCache.get.resolves({
         state: generateState(),
-        epochCtx: new EpochContext(config)
+        epochCtx: new EpochContext(config),
       });
       const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot, 5);
       expect(stateContext).to.not.be.null;
@@ -173,11 +168,7 @@ describe("gossip utils", function () {
       expect(
         forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
       ).to.be.true;
-      expect(
-        dbStub.stateCache.get.withArgs(stateRoot).calledOnce
-      ).to.be.true;
+      expect(dbStub.stateCache.get.withArgs(stateRoot).calledOnce).to.be.true;
     });
-
   });
-
 });

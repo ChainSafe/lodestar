@@ -3,16 +3,18 @@
  */
 import {
   AggregateAndProof,
-  Attestation, AttestationData,
+  Attestation,
+  AttestationData,
   AttesterDuty,
   BeaconBlock,
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
-  Epoch, ProposerDuty,
+  Epoch,
+  ProposerDuty,
   SignedBeaconBlock,
   Slot,
-  SignedAggregateAndProof
+  SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 import {IApi} from "../../interface";
 
@@ -20,7 +22,6 @@ import {IApi} from "../../interface";
  * The API interface defines the calls that can be made from a Validator
  */
 export interface IValidatorApi extends IApi {
-
   getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]>;
 
   getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]>;
@@ -41,8 +42,7 @@ export interface IValidatorApi extends IApi {
    * Requests that the BeaconNode produce an IndexedAttestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
-  Promise<Attestation>;
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block
@@ -56,16 +56,16 @@ export interface IValidatorApi extends IApi {
    */
   publishAttestation(attestation: Attestation): Promise<void>;
 
-  publishAggregateAndProof(
-    signedAggregateAndProof: SignedAggregateAndProof
-  ): Promise<void>;
+  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
 
   produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
 
   getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
 
   subscribeCommitteeSubnet(
-    slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
+    slot: Slot,
+    slotSignature: BLSSignature,
+    committeeIndex: CommitteeIndex,
+    aggregatorPubkey: BLSPubkey
   ): Promise<void>;
-  
 }

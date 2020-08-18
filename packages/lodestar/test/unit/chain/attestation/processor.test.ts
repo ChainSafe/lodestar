@@ -14,7 +14,6 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 
 describe("chain attestation processor", function () {
-
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<ILMDGHOST>;
   let db: StubbedBeaconDb;
@@ -41,9 +40,8 @@ describe("chain attestation processor", function () {
     const attestation = generateAttestation({});
     forkChoice.getAncestor.returns(null);
     await processAttestation(config, chain, logger, db, attestation);
-    expect(
-      forkChoice.getAncestor.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, 0)
-    ).to.be.true;
+    expect(forkChoice.getAncestor.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, 0)).to.be
+      .true;
     expect(forkChoice.addAttestation.notCalled).to.be.true;
   });
 
@@ -52,9 +50,7 @@ describe("chain attestation processor", function () {
     forkChoice.getAncestor.returns(attestation.data.target.root.valueOf() as Uint8Array);
     attestationPrestateStub.resolves(null);
     await processAttestation(config, chain, logger, db, attestation);
-    expect(
-      attestationPrestateStub.calledOnceWith(config, chain, db, attestation.data.target)
-    ).to.be.true;
+    expect(attestationPrestateStub.calledOnceWith(config, chain, db, attestation.data.target)).to.be.true;
     expect(forkChoice.addAttestation.notCalled).to.be.true;
   });
 
@@ -62,16 +58,14 @@ describe("chain attestation processor", function () {
     const attestation = generateAttestation({});
     forkChoice.getAncestor.returns(attestation.data.target.root.valueOf() as Uint8Array);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
-    epochCtxStub.getIndexedAttestation.returns(attestation as unknown as IndexedAttestation);
+    epochCtxStub.getIndexedAttestation.returns((attestation as unknown) as IndexedAttestation);
     attestationPrestateStub.resolves({
       state: generateState(),
-      epochCtx: epochCtxStub
+      epochCtx: epochCtxStub,
     });
     isValidIndexedAttestationStub.returns(false);
     await processAttestation(config, chain, logger, db, attestation);
-    expect(
-      isValidIndexedAttestationStub.calledOnceWith(epochCtxStub, sinon.match.any, attestation)
-    ).to.be.true;
+    expect(isValidIndexedAttestationStub.calledOnceWith(epochCtxStub, sinon.match.any, attestation)).to.be.true;
     expect(forkChoice.addAttestation.notCalled).to.be.true;
   });
 
@@ -79,12 +73,12 @@ describe("chain attestation processor", function () {
     const attestation = generateAttestation({});
     forkChoice.getAncestor.returns(attestation.data.target.root.valueOf() as Uint8Array);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
-    epochCtxStub.getIndexedAttestation.returns(attestation as unknown as IndexedAttestation);
+    epochCtxStub.getIndexedAttestation.returns((attestation as unknown) as IndexedAttestation);
     attestationPrestateStub.resolves({
-      state: generateState( {
-        balances: [BigInt(32), BigInt(32), BigInt(32), BigInt(32)]
+      state: generateState({
+        balances: [BigInt(32), BigInt(32), BigInt(32), BigInt(32)],
       }),
-      epochCtx: epochCtxStub
+      epochCtx: epochCtxStub,
     });
     isValidIndexedAttestationStub.returns(true);
     epochCtxStub.getAttestingIndices.returns([1, 3]);

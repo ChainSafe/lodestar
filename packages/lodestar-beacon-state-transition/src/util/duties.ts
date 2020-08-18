@@ -3,11 +3,11 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex,} from "@chainsafe/lodestar-types";
+import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch,} from "./epoch";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "./epoch";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getBeaconProposerIndex} from "./proposer";
 
@@ -25,7 +25,6 @@ export function getCommitteeAssignment(
   epoch: Epoch,
   validatorIndex: ValidatorIndex
 ): CommitteeAssignment | null {
-
   const next2Epoch = getCurrentEpoch(config, state) + 2;
   assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
 
@@ -54,8 +53,8 @@ export function isProposerAtSlot(
   config: IBeaconConfig,
   state: BeaconState,
   slot: Slot,
-  validatorIndex: ValidatorIndex): boolean {
-
+  validatorIndex: ValidatorIndex
+): boolean {
   state = {...state, slot};
   const currentEpoch = getCurrentEpoch(config, state);
   assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "Must request for current epoch");

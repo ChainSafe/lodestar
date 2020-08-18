@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {BeaconBlock, BeaconState,} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {processEth1Data} from "./eth1Data";

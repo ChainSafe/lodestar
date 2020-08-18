@@ -27,7 +27,7 @@ export function processBlock(
   epochCtx: EpochContext,
   state: BeaconState,
   block: BeaconBlock,
-  verifySignatures = true,
+  verifySignatures = true
 ): void {
   processBlockHeader(epochCtx, state, block);
   processRandao(epochCtx, state, block.body, verifySignatures);

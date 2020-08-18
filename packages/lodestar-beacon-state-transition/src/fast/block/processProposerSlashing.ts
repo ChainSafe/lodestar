@@ -6,12 +6,11 @@ import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator}
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
 
-
 export function processProposerSlashing(
   epochCtx: EpochContext,
   state: BeaconState,
   proposerSlashing: ProposerSlashing,
-  verifySignatures = true,
+  verifySignatures = true
 ): void {
   const config = epochCtx.config;
   const {BeaconBlockHeader} = config.types;
@@ -20,16 +19,13 @@ export function processProposerSlashing(
 
   // verify header slots match
   if (header1.slot !== header2.slot) {
-    throw new Error(
-      "ProposerSlashing slots do not match: " +
-      `slot1=${header1.slot} slot2=${header2.slot}`
-    );
+    throw new Error("ProposerSlashing slots do not match: " + `slot1=${header1.slot} slot2=${header2.slot}`);
   }
   // verify header proposer indices match
   if (header1.proposerIndex !== header2.proposerIndex) {
     throw new Error(
       "ProposerSlashing proposer indices do not match: " +
-      `proposerIndex1=${header1.proposerIndex} slot2=${header2.proposerIndex}`
+        `proposerIndex1=${header1.proposerIndex} slot2=${header2.proposerIndex}`
     );
   }
   // verify headers are different
@@ -52,10 +48,12 @@ export function processProposerSlashing(
         computeEpochAtSlot(config, signedHeader.message.slot)
       );
       const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
-      if (!pubkey.verifyMessage(
-        Signature.fromCompressedBytes(signedHeader.signature.valueOf() as Uint8Array),
-        signingRoot
-      )) {
+      if (
+        !pubkey.verifyMessage(
+          Signature.fromCompressedBytes(signedHeader.signature.valueOf() as Uint8Array),
+          signingRoot
+        )
+      ) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     });

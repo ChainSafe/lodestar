@@ -1,22 +1,19 @@
 import {assert} from "chai";
 
-import {
-  AttestationAggregator,
-} from "../../../../src/chain/forkChoice/attestationAggregator";
-
+import {AttestationAggregator} from "../../../../src/chain/forkChoice/attestationAggregator";
 
 describe("AttestationAggregator", () => {
   const blockSlots: Record<string, number> = {
-    "a": 1,
-    "b": 1,
-    "c": 1,
-    "d": 2,
-  }
+    a: 1,
+    b: 1,
+    c: 1,
+    d: 2,
+  };
   const blockToSlot: any = (b: string) => blockSlots[b];
   it("should add attestations to the same target", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target = "a";
-    const weightPerAttestation =BigInt(1);
+    const weightPerAttestation = BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -25,14 +22,14 @@ describe("AttestationAggregator", () => {
         weight: weightPerAttestation,
       });
     }
-    assert(agg.latestAggregates[target].weight === (weightPerAttestation * BigInt(numberOfAttestations)));
+    assert(agg.latestAggregates[target].weight === weightPerAttestation * BigInt(numberOfAttestations));
   });
 
   it("should track attestations from one attester to different targets", () => {
     const agg = new AttestationAggregator(blockToSlot);
-    const target1= "a";
-    const target2= "d";
-    const weightPerAttestation =BigInt(1);
+    const target1 = "a";
+    const target2 = "d";
+    const weightPerAttestation = BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -55,10 +52,10 @@ describe("AttestationAggregator", () => {
 
   it("should track attestations from one attester with different weights", () => {
     const agg = new AttestationAggregator(blockToSlot);
-    const target= "a";
-    const weightPerAttestation1 =BigInt(1);
-    const weightPerAttestation2 =BigInt(10);
-    const weightPerAttestation3 =BigInt(5);
+    const target = "a";
+    const weightPerAttestation1 = BigInt(1);
+    const weightPerAttestation2 = BigInt(10);
+    const weightPerAttestation3 = BigInt(5);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -91,7 +88,7 @@ describe("AttestationAggregator", () => {
     const agg = new AttestationAggregator(blockToSlot);
     const target1 = "d"; // slot 2
     const target2 = "a"; // slot 1
-    const weightPerAttestation =BigInt(1);
+    const weightPerAttestation = BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -121,9 +118,9 @@ describe("AttestationAggregator", () => {
 
   it("should prune aggregated attestations that no longer have attesters", () => {
     const agg = new AttestationAggregator(blockToSlot);
-    const target1= "a";
-    const target2= "d";
-    const weightPerAttestation =BigInt(1);
+    const target1 = "a";
+    const target2 = "d";
+    const weightPerAttestation = BigInt(1);
     const numberOfAttestations = 10;
     for (let i = 0; i < numberOfAttestations; i++) {
       agg.addAttestation({
@@ -142,5 +139,4 @@ describe("AttestationAggregator", () => {
     agg.prune();
     assert(agg.latestAggregates[target1] === undefined);
   });
-
 });

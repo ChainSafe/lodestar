@@ -4,7 +4,6 @@ import {decreaseBalance, increaseBalance} from "../../util";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
-
 export function slashValidator(
   epochCtx: EpochContext,
   state: BeaconState,

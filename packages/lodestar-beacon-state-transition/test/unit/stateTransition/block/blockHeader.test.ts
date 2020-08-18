@@ -10,7 +10,6 @@ import {generateEmptyBlock} from "../../../utils/block";
 import {generateValidator} from "../../../utils/validator";
 
 describe("process block - block header", function () {
-
   const sandbox = sinon.createSandbox();
 
   let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any;
@@ -31,8 +30,7 @@ describe("process block - block header", function () {
     try {
       processBlockHeader(config, state, block);
       expect.fail();
-    } catch (e) {
-    }
+    } catch (e) {}
   });
 
   it("fail to process header - invalid parent header", function () {
@@ -55,8 +53,7 @@ describe("process block - block header", function () {
     try {
       processBlockHeader(config, state, block);
       expect.fail();
-    } catch (e) {
-    }
+    } catch (e) {}
   });
 
   it("should process block", function () {

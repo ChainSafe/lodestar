@@ -13,7 +13,6 @@ import {expect} from "chai";
 import {SyncStats} from "../../../../src/sync/stats";
 
 describe("fast sync", function () {
-
   const sandbox = sinon.createSandbox();
 
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -45,11 +44,11 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: sinon.createStubInstance(SyncStats),
-        reputationStore: repsStub
+        reputationStore: repsStub,
       }
     );
     getTargetStub.returns({
-      epoch: 0
+      epoch: 0,
     });
     networkStub.getPeers.returns([]);
     await sync.start();
@@ -74,12 +73,12 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
-        reputationStore: repsStub
+        reputationStore: repsStub,
       }
     );
     const target: Checkpoint = {
       epoch: 2,
-      root: Buffer.alloc(32, 1)
+      root: Buffer.alloc(32, 1),
     };
     getTargetStub.returns(target);
     networkStub.getPeers.returns([]);
@@ -114,16 +113,16 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
-        reputationStore: repsStub
+        reputationStore: repsStub,
       }
     );
     const target1: Checkpoint = {
       epoch: 2,
-      root: Buffer.alloc(32, 1)
+      root: Buffer.alloc(32, 1),
     };
     const target2: Checkpoint = {
       epoch: 4,
-      root: Buffer.alloc(32, 1)
+      root: Buffer.alloc(32, 1),
     };
     getTargetStub.onFirstCall().returns(target1).onSecondCall().returns(target2).onThirdCall().returns(target2);
     networkStub.getPeers.returns([]);
@@ -138,5 +137,4 @@ describe("fast sync", function () {
     chainEventEmitter.emit("processedCheckpoint", target1);
     chainEventEmitter.emit("processedCheckpoint", target2);
   });
-
 });

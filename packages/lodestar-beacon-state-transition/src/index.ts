@@ -46,11 +46,11 @@ export function stateTransition(
   // Process block
   processBlock(config, postState, signedBlock.message, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
-  if (validateStateRoot){
-    assert.true(config.types.Root.equals(
-      signedBlock.message.stateRoot,
-      config.types.BeaconState.hashTreeRoot(postState)
-    ), "State root is not valid");
+  if (validateStateRoot) {
+    assert.true(
+      config.types.Root.equals(signedBlock.message.stateRoot, config.types.BeaconState.hashTreeRoot(postState)),
+      "State root is not valid"
+    );
   }
 
   // Return post-state

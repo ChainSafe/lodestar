@@ -29,23 +29,27 @@ describe("[network] rpc", () => {
     connectTimeout: 5000,
     disconnectTimeout: 5000,
   };
-  beforeEach(async function() {
+  beforeEach(async function () {
     this.timeout(10000);
     loggerStub = sandbox.createStubInstance(WinstonLogger);
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
-    await Promise.all([
-      nodeA.start(),
-      nodeB.start()
-    ]);
+    await Promise.all([nodeA.start(), nodeB.start()]);
 
-    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger: loggerStub, peerReputations: new ReputationStore()});
-    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger: loggerStub, peerReputations: new ReputationStore()});
-    await Promise.all([
-      rpcA.start(),
-      rpcB.start(),
-    ]);
+    rpcA = new ReqResp(networkOptions, {
+      config,
+      libp2p: nodeA,
+      logger: loggerStub,
+      peerReputations: new ReputationStore(),
+    });
+    rpcB = new ReqResp(networkOptions, {
+      config,
+      libp2p: nodeB,
+      logger: loggerStub,
+      peerReputations: new ReputationStore(),
+    });
+    await Promise.all([rpcA.start(), rpcB.start()]);
     try {
       nodeA.peerStore.addressBook.add(nodeB.peerId, nodeB.multiaddrs);
       await Promise.all([
@@ -56,7 +60,7 @@ describe("[network] rpc", () => {
             clearTimeout(t);
             resolve();
           });
-        })
+        }),
       ]);
     } catch (e) {
       assert.fail(e, null, "connection event not triggered");
@@ -65,14 +69,8 @@ describe("[network] rpc", () => {
   afterEach(async function () {
     // teardown
     this.timeout(10000);
-    await Promise.all([
-      nodeA.stop(),
-      nodeB.stop()
-    ]);
-    await Promise.all([
-      rpcA.stop(),
-      rpcB.stop(),
-    ]);
+    await Promise.all([nodeA.stop(), nodeB.stop()]);
+    await Promise.all([rpcA.stop(), rpcB.stop()]);
     sandbox.restore();
   });
 
@@ -131,23 +129,27 @@ describe("[network] rpc", () => {
     rpcB.on("request", (peerInfo, method, id, body) => {
       const requestBody = body as BeaconBlocksByRangeRequest;
       const blocks: SignedBeaconBlock[] = [];
-      for (let i = requestBody.startSlot; i < + requestBody.startSlot + requestBody.count; i++) {
+      for (let i = requestBody.startSlot; i < +requestBody.startSlot + requestBody.count; i++) {
         blocks.push(generateBlockForSlot(i));
       }
-      rpcB.sendResponseStream(id, null, async function*() {
-        yield * blocks;
-      }());
+      rpcB.sendResponseStream(
+        id,
+        null,
+        (async function* () {
+          yield* blocks;
+        })()
+      );
     });
     try {
       const reqs: BeaconBlocksByRangeRequest[] = [];
       for (let i = 0; i < NUM_REQUEST; i++) {
         reqs.push({
-          startSlot: i*100,
+          startSlot: i * 100,
           count: 10,
-          step: 1
+          step: 1,
         });
       }
-      const resps = await Promise.all(reqs.map(req => rpcA.beaconBlocksByRange(nodeB.peerId, req)));
+      const resps = await Promise.all(reqs.map((req) => rpcA.beaconBlocksByRange(nodeB.peerId, req)));
       let reqIndex = 0;
       for (const resp of resps) {
         let blockIndex = 0;
@@ -155,39 +157,42 @@ describe("[network] rpc", () => {
           assert.deepEqual(block, generateBlockForSlot(reqs[reqIndex].startSlot + blockIndex));
           blockIndex++;
         }
-        reqIndex ++;
+        reqIndex++;
       }
-
     } catch (e) {
       assert.fail(`Cannot receive response, error: ${e.message}`);
     }
   });
 
-  it("allow empty lists in streamed response", async function() {
+  it("allow empty lists in streamed response", async function () {
     this.timeout(6000);
     rpcB.on("request", (peerInfo, method, id) => {
-      rpcB.sendResponseStream(id, null, async function* (): any {
-        if(id === "-1") yield null;
-      }());
+      rpcB.sendResponseStream(
+        id,
+        null,
+        (async function* (): any {
+          if (id === "-1") yield null;
+        })()
+      );
     });
 
     const request: BeaconBlocksByRangeRequest = {
       startSlot: 100,
       count: 10,
-      step: 1
+      step: 1,
     };
 
     const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
     assert.deepEqual(response, []);
   });
 
-  it("should handle response timeout - TTFB", async function() {
+  it("should handle response timeout - TTFB", async function () {
     this.timeout(400);
     const timer = sinon.useFakeTimers({shouldAdvanceTime: true});
     const request: BeaconBlocksByRangeRequest = {
       startSlot: 100,
       count: 10,
-      step: 1
+      step: 1,
     };
     rpcB.once("request", async () => {
       timer.tick(TTFB_TIMEOUT);
@@ -202,29 +207,30 @@ describe("[network] rpc", () => {
     timer.restore();
   });
 
-  it("should handle response timeout - suspended dialProtocol", async function() {
+  it("should handle response timeout - suspended dialProtocol", async function () {
     const timer = sinon.useFakeTimers();
     const request: BeaconBlocksByRangeRequest = {
       startSlot: 100,
       count: 10,
-      step: 1
+      step: 1,
     };
     const libP2pMock = await createNode(multiaddr);
-    libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal} ) => {
+    libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal}) => {
       timer.tick(TTFB_TIMEOUT);
       return null;
     };
-    const rpcC = new ReqResp(
-      networkOptions,
-      {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()}
-    );
+    const rpcC = new ReqResp(networkOptions, {
+      config,
+      libp2p: libP2pMock,
+      logger: loggerStub,
+      peerReputations: new ReputationStore(),
+    });
     try {
-      await rpcC.beaconBlocksByRange(nodeB.peerId, request)
+      await rpcC.beaconBlocksByRange(nodeB.peerId, request);
       expect.fail();
     } catch (e) {
       expect(e.toString().startsWith("Error: Failed to dial")).to.be.true;
     }
     timer.restore();
   });
-
 });

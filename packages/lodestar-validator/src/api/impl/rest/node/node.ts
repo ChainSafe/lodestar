@@ -6,7 +6,6 @@ import {SyncingStatus} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz/lib/interface";
 
 export class RestNodeApi implements INodeApi {
-
   private readonly client: HttpClient;
 
   private readonly config: IBeaconConfig;
@@ -21,11 +20,8 @@ export class RestNodeApi implements INodeApi {
   }
 
   public async getSyncingStatus(): Promise<SyncingStatus> {
-    return this.config.types.SyncingStatus.fromJson(
-      (await this.client.get<{data: Json}>("/syncing")).data,
-      {case: "snake"}
-    );
+    return this.config.types.SyncingStatus.fromJson((await this.client.get<{data: Json}>("/syncing")).data, {
+      case: "snake",
+    });
   }
-
-
 }

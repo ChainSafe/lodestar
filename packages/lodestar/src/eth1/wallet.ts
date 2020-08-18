@@ -13,9 +13,7 @@ import {IEthersAbi} from "./interface";
 import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
-
 export class Eth1Wallet {
-
   private wallet: Wallet;
 
   private contractAbi: IEthersAbi;
@@ -29,11 +27,11 @@ export class Eth1Wallet {
     contractAbi: IEthersAbi,
     config: IBeaconConfig,
     logger: ILogger,
-    provider?: ethers.providers.Provider,
+    provider?: ethers.providers.Provider
   ) {
     this.config = config;
     this.logger = logger;
-    if(!provider) {
+    if (!provider) {
       provider = ethers.getDefaultProvider();
     }
     this.wallet = new Wallet(eth1PrivateKey, provider);
@@ -68,15 +66,12 @@ export class Eth1Wallet {
       pubkey,
       withdrawalCredentials,
       amount,
-      signature: Buffer.alloc(96)
+      signature: Buffer.alloc(96),
     };
 
     const domain = computeDomain(this.config, DomainType.DEPOSIT);
     const signingroot = computeSigningRoot(this.config, this.config.types.DepositMessage, depositData, domain);
-    depositData.signature = bls.sign(
-      signingKey.toBytes(),
-      signingroot
-    );
+    depositData.signature = bls.sign(signingKey.toBytes(), signingroot);
 
     const depositDataRoot = this.config.types.DepositData.hashTreeRoot(depositData);
 
@@ -91,5 +86,4 @@ export class Eth1Wallet {
     await tx.wait();
     return tx.hash || "";
   }
-
 }

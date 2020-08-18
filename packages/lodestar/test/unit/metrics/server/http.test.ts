@@ -9,9 +9,7 @@ describe("HttpMetricsServer", () => {
     const server = new HttpMetricsServer(options, {metrics, logger});
     await metrics.start();
     await server.start();
-    await request(server.http)
-      .get("/metrics")
-      .expect(200);
+    await request(server.http).get("/metrics").expect(200);
     await server.stop();
     await metrics.stop();
   });

@@ -1,4 +1,3 @@
-
 import {Deposit, DepositData} from "@chainsafe/lodestar-types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
 
@@ -16,7 +15,7 @@ export function generateDeposit(): Deposit {
 
 export function generateDepositData(): DepositData {
   return {
-    amount:BigInt(32) *BigInt(10) *BigInt(9),
+    amount: BigInt(32) * BigInt(10) * BigInt(9),
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
     signature: EMPTY_SIGNATURE,

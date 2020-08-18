@@ -27,12 +27,12 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
     return 0;
   }
   public async getEth1Data(blockHash: string): Promise<Eth1Data> {
-    return null as unknown as Eth1Data;
+    return (null as unknown) as Eth1Data;
   }
   public async getDepositEvents(blockTag: string | number): Promise<IDepositEvent[]> {
     return [];
   }
   public async getBlock(blockTag: string | number): Promise<ethers.providers.Block> {
-    return null as unknown as ethers.providers.Block;
+    return (null as unknown) as ethers.providers.Block;
   }
 }

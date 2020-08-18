@@ -10,14 +10,9 @@ export function getInteropState(
   config: IBeaconConfig,
   depositDataRootList: TreeBacked<List<Root>>,
   genesisTime: number,
-  deposits: Deposit[],
+  deposits: Deposit[]
 ): TreeBacked<BeaconState> {
-  const state = initializeBeaconStateFromEth1(
-    config,
-    INTEROP_BLOCK_HASH,
-    INTEROP_TIMESTAMP,
-    deposits,
-  );
+  const state = initializeBeaconStateFromEth1(config, INTEROP_BLOCK_HASH, INTEROP_TIMESTAMP, deposits);
   state.genesisTime = genesisTime;
   return state;
 }

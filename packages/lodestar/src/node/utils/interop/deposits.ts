@@ -16,19 +16,13 @@ export function interopDeposits(
     // create DepositData
     const data: DepositData = {
       pubkey,
-      withdrawalCredentials: Buffer.concat([
-        config.params.BLS_WITHDRAWAL_PREFIX,
-        hash(pubkey).slice(1),
-      ]),
+      withdrawalCredentials: Buffer.concat([config.params.BLS_WITHDRAWAL_PREFIX, hash(pubkey).slice(1)]),
       amount: config.params.MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };
     const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, data, domain);
-    data.signature = sign(
-      privkey,
-      signingRoot
-    );
+    data.signature = sign(privkey, signingRoot);
     // Add to merkle tree
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));
     return {

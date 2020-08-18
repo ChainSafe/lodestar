@@ -13,7 +13,7 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Genesis state file path in ssz-encoded format",
     type: "string",
     normalize: true,
-  }
+  },
 };
 
 const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
@@ -70,16 +70,12 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     alias: ["log.file"],
     type: "string",
     normalize: true,
-  }
+  },
 };
 
-export type IBeaconArgs =
-  IBeaconNodeOptions &
-  IBeaconPaths &
-  IENRArgs &
-  IBeaconExtraArgs;
+export type IBeaconArgs = IBeaconNodeOptions & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
 
-export const beaconOptions: { [k: string]: Options } = {
+export const beaconOptions: {[k: string]: Options} = {
   ...beaconPathsOptions,
   ...beaconExtraOptions,
   ...beaconNodeOptions,

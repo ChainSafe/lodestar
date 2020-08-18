@@ -2,14 +2,10 @@
  * @module chain/stateTransition/block
  */
 
-import {BeaconBlockBody, BeaconState,} from "@chainsafe/lodestar-types";
+import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-export function processEth1Data(
-  config: IBeaconConfig,
-  state: BeaconState,
-  body: BeaconBlockBody
-): void {
+export function processEth1Data(config: IBeaconConfig, state: BeaconState, body: BeaconBlockBody): void {
   const blockEth1Data = body.eth1Data;
   state.eth1DataVotes.push(blockEth1Data);
   let occurances = 0;

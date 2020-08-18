@@ -17,7 +17,6 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 
 describe("gossip handler", function () {
-
   const logger = new WinstonLogger();
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<INetwork>;
@@ -88,9 +87,9 @@ describe("gossip handler", function () {
     const chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId:BigInt(0),
+      networkId: BigInt(0),
       state: state as TreeBacked<BeaconState>,
-      config
+      config,
     });
     const oldForkDigest = chain.currentForkDigest;
     const handler = new BeaconGossipHandler(chain, networkStub, dbStub, logger);
@@ -103,5 +102,4 @@ describe("gossip handler", function () {
     expect(gossipStub.unsubscribe.callCount).to.be.equal(5);
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(2);
   });
-
 });

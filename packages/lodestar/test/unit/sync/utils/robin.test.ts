@@ -3,7 +3,6 @@ import {RoundRobinArray} from "../../../../src/sync/utils";
 import {expect} from "chai";
 
 describe("Round robin array", function () {
-
   it("should return item", function () {
     const robin = new RoundRobinArray([1, 2, 3]);
     const item = robin.next();

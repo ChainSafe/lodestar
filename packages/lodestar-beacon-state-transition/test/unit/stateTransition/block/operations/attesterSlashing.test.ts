@@ -8,7 +8,6 @@ import {processAttesterSlashing} from "../../../../../src/block/operations";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 
 describe("process block - attester slashings", function () {
-
   const sandbox = sinon.createSandbox();
 
   let isSlashableAttestationStub: any,
@@ -20,7 +19,7 @@ describe("process block - attester slashings", function () {
     isSlashableAttestationStub = sandbox.stub(utils, "isSlashableAttestationData");
     validateIndexedAttestationStub = sandbox.stub(utils, "isValidIndexedAttestation");
     isSlashableValidatorStub = sandbox.stub(utils, "isSlashableValidator");
-    slashValidatorStub =sandbox.stub(utils, "slashValidator");
+    slashValidatorStub = sandbox.stub(utils, "slashValidator");
   });
 
   afterEach(() => {
@@ -46,8 +45,9 @@ describe("process block - attester slashings", function () {
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.callCount).equals(1);
-      expect(validateIndexedAttestationStub.getCall(0)
-        .calledWithExactly(config, state, attesterSlashing.attestation1, true)).to.be.true;
+      expect(
+        validateIndexedAttestationStub.getCall(0).calledWithExactly(config, state, attesterSlashing.attestation1, true)
+      ).to.be.true;
     }
   });
 
@@ -65,7 +65,6 @@ describe("process block - attester slashings", function () {
     } catch (e) {
       expect(validateIndexedAttestationStub.calledOnce).to.be.true;
     }
-
   });
 
   it("should fail to process slashings - nothing slashed", function () {
@@ -81,7 +80,6 @@ describe("process block - attester slashings", function () {
     } catch (e) {
       expect(validateIndexedAttestationStub.calledTwice).to.be.true;
     }
-
   });
 
   it("should process slashings", function () {
@@ -95,5 +93,4 @@ describe("process block - attester slashings", function () {
     processAttesterSlashing(config, state, attesterSlashing);
     expect(slashValidatorStub.calledTwice).to.be.true;
   });
-
 });

@@ -17,17 +17,19 @@ export function postProcess(
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor
-): (source: AsyncIterable<{
+): (
+  source: AsyncIterable<{
     preStateContext: ITreeStateContext;
     postStateContext: ITreeStateContext;
     block: SignedBeaconBlock;
     finalized: boolean;
-  }>) => Promise<void> {
+  }>
+) => Promise<void> {
   return async (source) => {
-    return (async function() {
-      for await(const {block, preStateContext, postStateContext, finalized} of source) {
+    return (async function () {
+      for await (const {block, preStateContext, postStateContext, finalized} of source) {
         await db.processBlockOperations(block);
-        if(!finalized) {
+        if (!finalized) {
           await attestationProcessor.receiveBlock(block);
         }
         metrics.currentSlot.set(block.message.slot);
@@ -37,10 +39,10 @@ export function postProcess(
         const preJustifiedEpoch = preStateContext.state.currentJustifiedCheckpoint.epoch;
         const currentEpoch = computeEpochAtSlot(config, postStateContext.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
-          eventBus.emit(
-            "processedCheckpoint",
-            {epoch: currentEpoch, root: forkChoice.getCanonicalBlockSummaryAtSlot(preSlot).blockRoot},
-          );
+          eventBus.emit("processedCheckpoint", {
+            epoch: currentEpoch,
+            root: forkChoice.getCanonicalBlockSummaryAtSlot(preSlot).blockRoot,
+          });
           // newly justified epoch
           if (preJustifiedEpoch < postStateContext.state.currentJustifiedCheckpoint.epoch) {
             newJustifiedEpoch(logger, metrics, eventBus, postStateContext.state);
@@ -49,9 +51,7 @@ export function postProcess(
           if (preFinalizedEpoch < postStateContext.state.finalizedCheckpoint.epoch) {
             newFinalizedEpoch(logger, metrics, eventBus, postStateContext.state);
           }
-          metrics.currentEpochLiveValidators.set(
-            postStateContext.epochCtx.currentShuffling.activeIndices.length
-          );
+          metrics.currentEpochLiveValidators.set(postStateContext.epochCtx.currentShuffling.activeIndices.length);
         }
       }
       return;

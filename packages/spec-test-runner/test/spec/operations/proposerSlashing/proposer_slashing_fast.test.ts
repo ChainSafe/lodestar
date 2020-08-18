@@ -15,7 +15,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
     const state = testcase.pre;
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
     processProposerSlashing(epochCtx, state, testcase.proposer_slashing);
     return state;
   },
@@ -27,11 +27,10 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
       proposer_slashing: config.types.ProposerSlashing,
     },
     timeout: 100000000,
-    shouldError: testCase => !testCase.post,
-    getExpected: (testCase => testCase.post),
+    shouldError: (testCase) => !testCase.post,
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

@@ -1,6 +1,14 @@
 import {List} from "@chainsafe/ssz";
-import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,
-  SignedVoluntaryExit, SignedAggregateAndProof,} from "@chainsafe/lodestar-types";
+import {
+  Attestation,
+  AttestationData,
+  CommitteeIndex,
+  Epoch,
+  Slot,
+  VoluntaryExit,
+  SignedVoluntaryExit,
+  SignedAggregateAndProof,
+} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
 import {DeepPartial} from "./misc";
@@ -16,7 +24,12 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
  * @param slot
  */
 
-export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch, index: CommitteeIndex = 1, slot: Slot = 1): AttestationData {
+export function generateAttestationData(
+  sourceEpoch: Epoch,
+  targetEpoch: Epoch,
+  index: CommitteeIndex = 1,
+  slot: Slot = 1
+): AttestationData {
   return {
     slot: slot,
     index: index,
@@ -33,24 +46,27 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch, 
 }
 
 export function generateAttestation(override: DeepPartial<Attestation> = {}): Attestation {
-  return deepmerge<Attestation, DeepPartial<Attestation>>({
-    aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
-    data: {
-      slot: 0,
-      index: 0,
-      beaconBlockRoot: Buffer.alloc(32),
-      source: {
-        epoch: 0,
-        root: Buffer.alloc(32),
+  return deepmerge<Attestation, DeepPartial<Attestation>>(
+    {
+      aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
+      data: {
+        slot: 0,
+        index: 0,
+        beaconBlockRoot: Buffer.alloc(32),
+        source: {
+          epoch: 0,
+          root: Buffer.alloc(32),
+        },
+        target: {
+          epoch: 0,
+          root: Buffer.alloc(32),
+        },
       },
-      target: {
-        epoch: 0,
-        root: Buffer.alloc(32),
-      },
+      signature: Buffer.alloc(96),
     },
-    signature: Buffer.alloc(96),
-
-  },override, {isMergeableObject: isPlainObject});
+    override,
+    {isMergeableObject: isPlainObject}
+  );
 }
 
 export function generateEmptyAttestation(): Attestation {

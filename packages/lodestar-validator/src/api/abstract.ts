@@ -9,12 +9,8 @@ import {sleep} from "../util";
 import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
-
-export abstract class AbstractApiClient
-  extends (EventEmitter as { new(): ApiClientEventEmitter })
+export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
-
-
   protected config: IBeaconConfig;
   protected logger: ILogger;
 
@@ -51,7 +47,7 @@ export abstract class AbstractApiClient
   }
 
   public async connect(): Promise<void> {
-    if(!this.beaconNodeInterval) {
+    if (!this.beaconNodeInterval) {
       this.running = true;
       await this.pollBeaconNode();
       this.beaconNodeInterval = setInterval(this.pollBeaconNode.bind(this), 3000);
@@ -60,10 +56,10 @@ export abstract class AbstractApiClient
 
   public async disconnect(): Promise<void> {
     this.running = false;
-    if(this.beaconNodeInterval) {
+    if (this.beaconNodeInterval) {
       clearInterval(this.beaconNodeInterval);
     }
-    if(this.slotCountingTimeout) {
+    if (this.slotCountingTimeout) {
       clearTimeout(this.slotCountingTimeout);
     }
   }
@@ -78,7 +74,7 @@ export abstract class AbstractApiClient
     }
 
     this.logger.info("Checking genesis time and beacon node connection");
-    const genesis =  await this.beacon.getGenesis();
+    const genesis = await this.beacon.getGenesis();
     if (genesis && Math.floor(Date.now() / 1000) >= genesis.genesisTime) {
       this.emit("beaconChainStarted");
       if (this.beaconNodeInterval) {
@@ -87,8 +83,8 @@ export abstract class AbstractApiClient
       this.startSlotCounting(Number(genesis.genesisTime));
     } else {
       let waitTime = "unknown";
-      if(genesis) {
-        waitTime = (genesis.genesisTime - BigInt(Math.floor(Date.now() / 1000))) + "s";
+      if (genesis) {
+        waitTime = genesis.genesisTime - BigInt(Math.floor(Date.now() / 1000)) + "s";
       }
       this.logger.info("Waiting for genesis time", {waitTime});
     }
@@ -98,10 +94,9 @@ export abstract class AbstractApiClient
     this.genesisTime = genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
 
-
     //subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch);
-    if(!this.slotCountingTimeout) {
+    if (!this.slotCountingTimeout) {
       this.slotCountingTimeout = setTimeout(
         this.updateSlot,
         //delay to prevent validator requesting duties too early since we don't account for millis diff
@@ -110,13 +105,13 @@ export abstract class AbstractApiClient
     }
   }
 
-  private updateSlot = async(): Promise<void> => {
-    if(!this.running) {
+  private updateSlot = async (): Promise<void> => {
+    if (!this.running) {
       return;
     }
     //to prevent sometime being updated prematurely
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    if(this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
+    if (this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
       await sleep(this.getDiffTillNextSlot());
     }
     this.currentSlot++;
@@ -124,10 +119,7 @@ export abstract class AbstractApiClient
       cb(this.currentSlot);
     });
     //recursively invoke update slot after SECONDS_PER_SLOT
-    this.slotCountingTimeout = setTimeout(
-      this.updateSlot,
-      this.getDiffTillNextSlot()
-    );
+    this.slotCountingTimeout = setTimeout(this.updateSlot, this.getDiffTillNextSlot());
   };
 
   private updateEpoch = (slot: Slot): void => {
@@ -145,8 +137,8 @@ export abstract class AbstractApiClient
    */
   private getDiffTillNextSlot(): number {
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    const diffInSeconds = Math.floor((Date.now() / 1000) - this.genesisTime);
+    const diffInSeconds = Math.floor(Date.now() / 1000 - this.genesisTime);
     //update slot after remaining seconds until next slot
-    return (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
+    return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
   }
 }

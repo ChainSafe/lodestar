@@ -12,12 +12,11 @@ import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
 import {MockNodeApi} from "../utils/mocks/node";
 
 describe("Validator", () => {
-
   it("Should be able to connect with the beacon chain", async () => {
     const apiClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
       validator: new MockValidatorApi(),
@@ -28,7 +27,7 @@ describe("Validator", () => {
       keypairs: [Keypair.generate()],
       config,
       db: sinon.createStubInstance(MockValidatorDB),
-      logger: sinon.createStubInstance(WinstonLogger)
+      logger: sinon.createStubInstance(WinstonLogger),
     };
 
     const validator = new Validator(validatorCtx);
@@ -37,5 +36,4 @@ describe("Validator", () => {
     setTimeout(async () => validator.stop(), 1100);
     setTimeout(() => expect(runSpy.calledOnce).to.be.true, 1100);
   });
-
 });

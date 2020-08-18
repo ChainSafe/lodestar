@@ -11,20 +11,22 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
 
 describe("process block - deposits", function () {
-
   const sandbox = sinon.createSandbox();
   const verifyMerkleBranchStub = sinon.stub();
-  let processDeposit: Function, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub, blsStub = sinon.stub();
+  let processDeposit: Function,
+    getTemporaryBlockHeaderStub,
+    getBeaconProposeIndexStub,
+    blsStub = sinon.stub();
 
   before(function () {
     mockery.registerMock("@chainsafe/lodestar-utils", {
-      "verifyMerkleBranch": verifyMerkleBranchStub,
-      "bigIntMin": bigIntMin,
-      "intToBytes": intToBytes,
-      "assert": assert
+      verifyMerkleBranch: verifyMerkleBranchStub,
+      bigIntMin: bigIntMin,
+      intToBytes: intToBytes,
+      assert: assert,
     });
     mockery.registerMock("@chainsafe/bls", {
-      verify: blsStub
+      verify: blsStub,
     });
     mockery.enable({useCleanCache: true, warnOnReplace: false, warnOnUnregistered: false});
   });
@@ -112,5 +114,4 @@ describe("process block - deposits", function () {
       expect.fail(e);
     }
   });
-
 });

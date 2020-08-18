@@ -28,10 +28,7 @@ export function createResponseEvent(id: RequestId): string {
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
 export function createRpcProtocol(method: string, encoding: string, version = 1): string {
-  return REQ_PROTOCOL
-    .replace("{method}", method)
-    .replace("{encoding}", encoding)
-    .replace("{version}", String(version));
+  return REQ_PROTOCOL.replace("{method}", method).replace("{encoding}", encoding).replace("{version}", String(version));
 }
 
 // peers
@@ -43,15 +40,11 @@ export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
 }
 
-export function getRequestMethodSSZType(
-  config: IBeaconConfig, method: Method
-): Type<any> {
+export function getRequestMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {
   return Methods[method].requestSSZType(config);
 }
 
-export function getResponseMethodSSZType(
-  config: IBeaconConfig, method: Method
-): Type<any> {
+export function getResponseMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {
   return Methods[method].responseSSZType(config);
 }
 
@@ -80,8 +73,8 @@ export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   const ipStr = isIPv4
     ? Array.from(ip).join(".")
     : Array.from(Uint16Array.from(ip))
-      .map((n) => n.toString(16))
-      .join(":");
+        .map((n) => n.toString(16))
+        .join(":");
   const localIpStrs = Object.values(interfaces)
     .reduce((finalArr, val) => finalArr.concat(val), [])
     .filter((networkInterface) => networkInterface.family === family)
@@ -113,8 +106,8 @@ export function eth2ResponseTimer<T>(
     clearTimeout(responseTimer);
   };
   return (source) => {
-    return (async function*() {
-      for await(const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
+    return (async function* () {
+      for await (const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
         renewTimer();
         yield item;
       }
@@ -135,12 +128,12 @@ export async function dialProtocol(
   }, timeout);
   try {
     const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
-    if(!conn) {
+    if (!conn) {
       throw new Error("timeout");
     }
     return conn;
     // eslint-disable-next-line no-useless-catch
-  } catch(e) {
+  } catch (e) {
     const err = new Error(e.code || e.message);
     err.stack = e.stack;
     throw err;

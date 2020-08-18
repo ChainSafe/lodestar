@@ -23,11 +23,7 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-    bucket: Bucket,
-    type: Type<T>) {
+  protected constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, bucket: Bucket, type: Type<T>) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
@@ -47,13 +43,13 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public decodeKey(key: Buffer): I {
-    return key.slice(1) as Uint8Array as I;
+    return (key.slice(1) as Uint8Array) as I;
   }
 
   public async get(id: I): Promise<T | null> {
     try {
       const value = await this.db.get(this.encodeKey(id));
-      if(!value) return null;
+      if (!value) return null;
       return this.decodeValue(value);
     } catch (e) {
       return null;
@@ -61,7 +57,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public async has(id: I): Promise<boolean> {
-    return await this.get(id) !== null;
+    return (await this.get(id)) !== null;
   }
 
   public async put(id: I, value: T): Promise<void> {
@@ -86,10 +82,12 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
-    await this.db.batchPut(Array.from({length: items.length}, (_, i) => ({
-      key: this.encodeKey(items[i].key),
-      value: this.encodeValue(items[i].value),
-    })));
+    await this.db.batchPut(
+      Array.from({length: items.length}, (_, i) => ({
+        key: this.encodeKey(items[i].key),
+        value: this.encodeValue(items[i].value),
+      }))
+    );
   }
 
   public async batchDelete(ids: ArrayLike<I>): Promise<void> {
@@ -97,10 +95,12 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public async batchAdd(values: ArrayLike<T>): Promise<void> {
-    await this.batchPut(Array.from({length: values.length}, (_, i) => ({
-      key: this.getId(values[i]),
-      value: values[i],
-    })));
+    await this.batchPut(
+      Array.from({length: values.length}, (_, i) => ({
+        key: this.getId(values[i]),
+        value: values[i],
+      }))
+    );
   }
 
   public async batchRemove(values: ArrayLike<T>): Promise<void> {
@@ -114,7 +114,7 @@ export abstract class Repository<I extends Id, T> {
   public keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
-    return (async function * () {
+    return (async function* () {
       for await (const key of keysStream) {
         yield decodeKey(key);
       }
@@ -127,7 +127,7 @@ export abstract class Repository<I extends Id, T> {
   public valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
     const decodeValue = this.decodeValue.bind(this);
-    return (async function * () {
+    return (async function* () {
       for await (const value of valuesStream) {
         yield decodeValue(value);
       }
@@ -144,7 +144,7 @@ export abstract class Repository<I extends Id, T> {
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     const decodeValue = this.decodeValue.bind(this);
-    return (async function * () {
+    return (async function* () {
       for await (const entry of entriesStream) {
         yield {
           key: decodeKey(entry.key),

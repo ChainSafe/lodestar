@@ -23,7 +23,7 @@ export function processOperations(
   epochCtx: EpochContext,
   state: BeaconState,
   body: BeaconBlockBody,
-  verifySignatures = true,
+  verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
   const maxDeposits = Math.min(
@@ -32,8 +32,7 @@ export function processOperations(
   );
   if (body.deposits.length !== maxDeposits) {
     throw new Error(
-      "Block contains incorrect number of deposits: " +
-      `depositCount=${body.deposits.length} expected=${maxDeposits}`
+      "Block contains incorrect number of deposits: " + `depositCount=${body.deposits.length} expected=${maxDeposits}`
     );
   }
 

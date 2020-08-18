@@ -1,6 +1,15 @@
 import {
-  BigIntUintType, BitListType, BooleanType, ByteVectorType,
-  ContainerType, List, ListType, NumberUintType, Vector, VectorType, BitVectorType,
+  BigIntUintType,
+  BitListType,
+  BooleanType,
+  ByteVectorType,
+  ContainerType,
+  List,
+  ListType,
+  NumberUintType,
+  Vector,
+  VectorType,
+  BitVectorType,
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
@@ -169,5 +178,5 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "AttesterDuty",
   "ProposerDuty",
   "ValidatorResponse",
-  "Genesis"
+  "Genesis",
 ];

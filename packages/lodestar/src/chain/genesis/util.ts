@@ -18,11 +18,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {
-  EMPTY_SIGNATURE,
-  GENESIS_SLOT,
-  ZERO_HASH,
-} from "../../constants";
+import {EMPTY_SIGNATURE, GENESIS_SLOT, ZERO_HASH} from "../../constants";
 import {
   computeEpochAtSlot,
   getActiveValidatorIndices,
@@ -66,7 +62,6 @@ export function applyDeposits(
   newDeposits: Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): void {
-
   const depositDataRootList: Root[] = [];
   if (fullDepositDataRootList) {
     for (let index = 0; index < state.eth1Data.depositCount; index++) {
@@ -74,7 +69,7 @@ export function applyDeposits(
     }
   }
   const initDepositCount = depositDataRootList.length;
-  const depositDatas: DepositData[] = fullDepositDataRootList? null : newDeposits.map((deposit) => deposit.data);
+  const depositDatas: DepositData[] = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
   newDeposits.forEach((deposit, index) => {
     if (fullDepositDataRootList) {
       depositDataRootList.push(fullDepositDataRootList[index + initDepositCount]);
@@ -92,9 +87,11 @@ export function applyDeposits(
   // Process activations
   state.validators.forEach((validator, index) => {
     const balance = state.balances[index];
-    validator.effectiveBalance = bigIntMin(balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
-      config.params.MAX_EFFECTIVE_BALANCE);
-    if(validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
+    validator.effectiveBalance = bigIntMin(
+      balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
+      config.params.MAX_EFFECTIVE_BALANCE
+    );
+    if (validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
     }
@@ -118,12 +115,13 @@ export function calculateStateTime(config: IBeaconConfig, eth1Timestamp: number)
  * @param state
  */
 export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
-  if(state.genesisTime < config.params.MIN_GENESIS_TIME) {
+  if (state.genesisTime < config.params.MIN_GENESIS_TIME) {
     return false;
   }
-  return getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length
-      >=
-      config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT;
+  return (
+    getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length >=
+    config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
+  );
 }
 
 /**

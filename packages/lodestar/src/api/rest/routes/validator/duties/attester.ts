@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/camelcase */
+
 import fastify, {DefaultParams, DefaultQuery} from "fastify";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromHexString} from "@chainsafe/ssz";
@@ -8,10 +10,8 @@ interface IParams extends DefaultParams {
 }
 
 interface IQuery extends DefaultQuery {
-  // eslint-disable-next-line camelcase
   validator_pubkeys: string[];
 }
-
 
 const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerResponse, IQuery, IParams> = {
   schema: {
@@ -21,43 +21,39 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
       properties: {
         epoch: {
           type: "integer",
-          minimum: 0
-        }
-      }
+          minimum: 0,
+        },
+      },
     },
     querystring: {
       type: "object",
       required: ["validator_pubkeys"],
       properties: {
-        "validator_pubkeys": {
+        validator_pubkeys: {
           type: "array",
           maxItems: 5,
           items: {
-            type: "string"
-          }
-        }
-      }
+            type: "string",
+          },
+        },
+      },
     },
-  }
+  },
 };
 
 export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
-  fastify.get<IQuery, IParams>(
-    "/duties/:epoch/attester",
-    opts,
-    async (request, reply) => {
-      const responseValue = await api.validator.getAttesterDuties(
-        request.params.epoch,
-        request.query.validator_pubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
+  fastify.get<IQuery, IParams>("/duties/:epoch/attester", opts, async (request, reply) => {
+    const responseValue = await api.validator.getAttesterDuties(
+      request.params.epoch,
+      request.query.validator_pubkeys.map((pubKeyHex) => fromHexString(pubKeyHex))
+    );
+    reply
+      .code(200)
+      .type("application/json")
+      .send(
+        responseValue.map((value) => {
+          return config.types.AttesterDuty.toJson(value, {case: "snake"});
+        })
       );
-      reply
-        .code(200)
-        .type("application/json")
-        .send(responseValue.map((value) => {
-          return config.types.AttesterDuty.toJson(
-            value, {case: "snake"}
-          );
-        }));
-    }
-  );
+  });
 };

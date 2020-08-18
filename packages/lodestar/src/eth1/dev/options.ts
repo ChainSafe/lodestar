@@ -8,7 +8,7 @@ const config: IEth1Options = {
   enabled: true,
   provider: defaultEth1.provider,
   providerInstance: new ethers.providers.JsonRpcProvider("http://localhost:8545", 200),
-  depositContract: defaultEth1.depositContract
+  depositContract: defaultEth1.depositContract,
 };
 
 export default config;

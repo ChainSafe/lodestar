@@ -43,7 +43,8 @@ describe("ArrayDagLMDGHOST", () => {
     stateRoot: Uint8Array,
     parentRoot: Uint8Array,
     justifiedCheckpoint: Checkpoint,
-    finalizedCheckpoint: Checkpoint): void => lmd.addBlock({slot, blockRoot, stateRoot, parentRoot, justifiedCheckpoint, finalizedCheckpoint});
+    finalizedCheckpoint: Checkpoint
+  ): void => lmd.addBlock({slot, blockRoot, stateRoot, parentRoot, justifiedCheckpoint, finalizedCheckpoint});
 
   beforeEach(() => {
     clock = sinon.useFakeTimers();
@@ -87,7 +88,15 @@ describe("ArrayDagLMDGHOST", () => {
      *         \
      *           e
      */
-    addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+    addBlock(
+      lmd,
+      GENESIS_SLOT,
+      genesis,
+      genesisState,
+      Buffer.alloc(32),
+      {root: genesis, epoch: GENESIS_EPOCH},
+      {root: genesis, epoch: GENESIS_EPOCH}
+    );
     addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockC, stateC, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
@@ -110,7 +119,15 @@ describe("ArrayDagLMDGHOST", () => {
      *           e
      */
     let head: Uint8Array;
-    addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+    addBlock(
+      lmd,
+      GENESIS_SLOT,
+      genesis,
+      genesisState,
+      Buffer.alloc(32),
+      {root: genesis, epoch: GENESIS_EPOCH},
+      {root: genesis, epoch: GENESIS_EPOCH}
+    );
     addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockC, stateC, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
@@ -118,15 +135,15 @@ describe("ArrayDagLMDGHOST", () => {
     addBlock(lmd, 3, blockE, stateE, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 4, blockF, stateF, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     // add vote to e
-    lmd.addAttestation(blockE, 1,BigInt(3));
+    lmd.addAttestation(blockE, 1, BigInt(3));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockE, "head should be e");
     // recast e vote to f
-    lmd.addAttestation(blockF, 1,BigInt(3));
+    lmd.addAttestation(blockF, 1, BigInt(3));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockF, "head should be f");
     // add vote to d
-    lmd.addAttestation(blockD, 2,BigInt(5));
+    lmd.addAttestation(blockD, 2, BigInt(5));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockD, "head should be d");
     // add g block
@@ -134,15 +151,15 @@ describe("ArrayDagLMDGHOST", () => {
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockG, "head should be g");
     // add vote to c
-    lmd.addAttestation(blockC, 3,BigInt(2));
+    lmd.addAttestation(blockC, 3, BigInt(2));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockG, "head should be g");
     // add vote to c
-    lmd.addAttestation(blockC, 4,BigInt(1));
+    lmd.addAttestation(blockC, 4, BigInt(1));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockF, "head should be f");
     // recast co vote to g
-    lmd.addAttestation(blockG, 3,BigInt(1));
+    lmd.addAttestation(blockG, 3, BigInt(1));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockG, "head should be g");
     const headStateRoot = lmd.headStateRoot();
@@ -159,7 +176,15 @@ describe("ArrayDagLMDGHOST", () => {
      *
      */
     let head: Uint8Array;
-    addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+    addBlock(
+      lmd,
+      GENESIS_SLOT,
+      genesis,
+      genesisState,
+      Buffer.alloc(32),
+      {root: genesis, epoch: GENESIS_EPOCH},
+      {root: genesis, epoch: GENESIS_EPOCH}
+    );
     addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockC, stateC, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
@@ -167,10 +192,10 @@ describe("ArrayDagLMDGHOST", () => {
     addBlock(lmd, 5, blockE, stateE, blockD, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockF, stateF, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockG, stateG, blockF, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
-    lmd.addAttestation(blockE, 1,BigInt(3));
+    lmd.addAttestation(blockE, 1, BigInt(3));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockE, "head should be e");
-    lmd.addAttestation(blockG, 2,BigInt(4));
+    lmd.addAttestation(blockG, 2, BigInt(4));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockG, "head should be g");
     const headStateRoot = lmd.headStateRoot();
@@ -193,7 +218,15 @@ describe("ArrayDagLMDGHOST", () => {
      *           g
      */
     let head: Uint8Array;
-    addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+    addBlock(
+      lmd,
+      GENESIS_SLOT,
+      genesis,
+      genesisState,
+      Buffer.alloc(32),
+      {root: genesis, epoch: GENESIS_EPOCH},
+      {root: genesis, epoch: GENESIS_EPOCH}
+    );
     addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockC, stateC, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
@@ -201,12 +234,12 @@ describe("ArrayDagLMDGHOST", () => {
     addBlock(lmd, 5, blockE, stateE, blockB, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 2, blockF, stateF, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
     addBlock(lmd, 3, blockG, stateG, blockC, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
-    lmd.addAttestation(blockE, 1,BigInt(3));
+    lmd.addAttestation(blockE, 1, BigInt(3));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockE, "head should be e");
     const headStateRoot = lmd.headStateRoot();
     assert.deepEqual(headStateRoot, stateE);
-    lmd.addAttestation(blockG, 2,BigInt(4));
+    lmd.addAttestation(blockG, 2, BigInt(4));
     head = lmd.headBlockRoot();
     assert.deepEqual(head, blockG, "head should be g");
   });
@@ -218,9 +251,19 @@ describe("ArrayDagLMDGHOST", () => {
     });
 
     it("should update justified block within SAFE_SLOTS_TO_UPDATE_JUSTIFIED", () => {
-      const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
       lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       addBlock(lmd, 2, blockB, stateB, blockA, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockB) === true, "should return true");
@@ -238,13 +281,23 @@ describe("ArrayDagLMDGHOST", () => {
      *        c
      */
     it("should not update justified block because conflict justified check point", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       const blockBSlot = 1 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockBSlot, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
-      const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === false, "should return false because not on same branch");
@@ -255,14 +308,24 @@ describe("ArrayDagLMDGHOST", () => {
      * a -- b -- c
      */
     it("should not update justified block because conflict justified check point", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
       const blockBSlot = 1 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockBSlot, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockB, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
-      const genesisTime = Math.floor(Date.now() / 1000) - (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime, new LocalClock(config, Math.round(new Date().getTime() /1000)));
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd.start(genesisTime, new LocalClock(config, Math.round(new Date().getTime() / 1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === true, "should be able to update justified checkpoint");
     });
@@ -270,22 +333,62 @@ describe("ArrayDagLMDGHOST", () => {
 
   describe("update justified checkpoint after finalized checkpoint is set", () => {
     /**
-       *              b -- d -- e
-       *             / \
-       *            /   c -- f -- g
-       * genesis - a
-       */
+     *              b -- d -- e
+     *             / \
+     *            /   c -- f -- g
+     * genesis - a
+     */
     // shouldUpdateJustifiedCheckpoint returns false but we still update justified checkpoint finally
     it("should update justified checkpoint - new justified is conflict to the previous justified", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotE, blockE, stateE, blockD, {root: blockD, epoch: 4}, {root: blockA, epoch: 1});
       assert.deepEqual(lmd.getFinalized(), {root: blockA, epoch: 1});
@@ -309,30 +412,78 @@ describe("ArrayDagLMDGHOST", () => {
 
   describe("ensure bestTarget has same finalized/justified checkpoint like the store", () => {
     /**
-       *                g
-       *               /
-       *              d -- e -- h
-       *             /
-       *            /
-       * a -- b -- c
-       *            \
-       *             \
-       *              f
-       */
+     *                g
+     *               /
+     *              d -- e -- h
+     *             /
+     *            /
+     * a -- b -- c
+     *            \
+     *             \
+     *              f
+     */
     it("should switch best target - bad best target has no sibling", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockC, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockC,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotE,
+        blockE,
+        stateE,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       // add vote for d
-      lmd.addAttestation(blockD, 1,BigInt(3));
+      lmd.addAttestation(blockD, 1, BigInt(3));
       assert(lmd.isBestTarget(lmd.getNode(blockD), lmd.getNode(blockE)), "e should be best target of d");
       assert(lmd.isBestTarget(lmd.getNode(blockC), lmd.getNode(blockE)), "e should be best target of c too");
       assert(lmd.isBestTarget(lmd.getNode(blockB), lmd.getNode(blockE)), "e should be best target of b too");
@@ -344,7 +495,11 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, slotF, blockF, stateF, blockC, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
       assert(lmd.getNode(blockD).hasBestChild() === false, "e is not best target so d has no best child");
       // so e is not best target anymore although d has more votes
-      assert.deepEqual(lmd.headBlockRoot(), blockF, "f should be the only possible head since it has no conflict justified/finalized epoch");
+      assert.deepEqual(
+        lmd.headBlockRoot(),
+        blockF,
+        "f should be the only possible head since it has no conflict justified/finalized epoch"
+      );
 
       // add g as head candidate with good justified/finalized
       const slotG = 7 * config.params.SLOTS_PER_EPOCH;
@@ -356,7 +511,7 @@ describe("ArrayDagLMDGHOST", () => {
       const slotH = 8 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotH, blockH, stateH, blockE, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
       // make e has more votes than g
-      lmd.addAttestation(blockE, 2,BigInt(3));
+      lmd.addAttestation(blockE, 2, BigInt(3));
       // e branch is used to be not eligible for bestTarget but now it's good thanks for h
       assert.deepEqual(lmd.headBlockRoot(), blockH, "h should be the head because e has more votes");
       const headStateRoot = lmd.headStateRoot();
@@ -375,21 +530,77 @@ describe("ArrayDagLMDGHOST", () => {
      *              g (conflict epochs)
      */
     it("should switch best target - bad best target has bad sibling too", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockC, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockC,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotE,
+        blockE,
+        stateE,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotF, blockF, stateF, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotF,
+        blockF,
+        stateF,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       // add vote for e
-      lmd.addAttestation(blockE, 1,BigInt(3));
+      lmd.addAttestation(blockE, 1, BigInt(3));
       assert.deepEqual(lmd.headBlockRoot(), blockE, "e should be the head initially");
 
       // g is added with conflict epochs
@@ -417,23 +628,87 @@ describe("ArrayDagLMDGHOST", () => {
      *             h (conflict epochs)
      */
     it("should switch best target - all best targets have conflict epochs", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockC, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockC,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotE,
+        blockE,
+        stateE,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotF, blockF, stateF, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotF,
+        blockF,
+        stateF,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotG = 7 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotG, blockG, stateG, blockC, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotG,
+        blockG,
+        stateG,
+        blockC,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       // add vote for g
-      lmd.addAttestation(blockG, 1,BigInt(3));
+      lmd.addAttestation(blockG, 1, BigInt(3));
       assert.deepEqual(lmd.headBlockRoot(), blockG, "g should be the head initially");
 
       // h is added with conflict epochs
@@ -445,7 +720,7 @@ describe("ArrayDagLMDGHOST", () => {
       const slotI = 9 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotI, blockI, stateI, blockE, {root: blockC, epoch: 3}, {root: blockB, epoch: 2});
       // add vote for e
-      lmd.addAttestation(blockE, 2,BigInt(6));
+      lmd.addAttestation(blockE, 2, BigInt(6));
       assert.deepEqual(lmd.headBlockRoot(), blockI, "i should be the head");
       const headStateRoot = lmd.headStateRoot();
       assert.deepEqual(headStateRoot, stateI);
@@ -457,13 +732,45 @@ describe("ArrayDagLMDGHOST", () => {
      * genesis - a - b -c
      */
     it("should return correct ancestor", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       expect(Buffer.from(lmd.getAncestor(blockC, slotA))).to.be.deep.equal(blockA);
       expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1))).to.be.deep.equal(blockA);
       expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
@@ -479,20 +786,60 @@ describe("ArrayDagLMDGHOST", () => {
      * genesis - a
      */
     it("should update indices after setting new finalized check point", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       expect(lmd.getNode(blockD)).to.be.deep.equal({
         slot: 4 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockD),
         stateRoot: stateD,
-        weight:BigInt(0),
+        weight: BigInt(0),
         parent: 2,
         bestChild: null,
         bestTarget: 4,
@@ -509,10 +856,10 @@ describe("ArrayDagLMDGHOST", () => {
         slot: 4 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockD),
         stateRoot: stateD,
-        weight:BigInt(0),
-        parent: 1,//B = 2 - 1
+        weight: BigInt(0),
+        parent: 1, //B = 2 - 1
         bestChild: 4, // E = 5 - 1
-        bestTarget: 4,// E
+        bestTarget: 4, // E
         justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         children: {[toHexString(blockE)]: 4}, // E
@@ -527,10 +874,10 @@ describe("ArrayDagLMDGHOST", () => {
         slot: 4 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockD),
         stateRoot: stateD,
-        weight:BigInt(0),
-        parent: 0,//B = 1 - 1
+        weight: BigInt(0),
+        parent: 0, //B = 1 - 1
         bestChild: NO_NODE, // unassign best child due to conflict checkpoints
-        bestTarget: 3,// E = 4 - 1
+        bestTarget: 3, // E = 4 - 1
         justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         children: {[toHexString(blockE)]: 3}, // E
@@ -548,18 +895,66 @@ describe("ArrayDagLMDGHOST", () => {
      * When set d as finalized, b c should be removed
      */
     it("should update indices after setting new finalized check point - not in normal order", () => {
-      addBlock(lmd, GENESIS_SLOT, genesis, genesisState, Buffer.alloc(32), {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        GENESIS_SLOT,
+        genesis,
+        genesisState,
+        Buffer.alloc(32),
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotA = 1 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotA, blockA, stateA, genesis, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotA,
+        blockA,
+        stateA,
+        genesis,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotD = 4 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotD, blockD, stateD, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotD,
+        blockD,
+        stateD,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotE = 5 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotE, blockE, stateE, blockD, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotE,
+        blockE,
+        stateE,
+        blockD,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       // add B, C after the above
       const slotB = 2 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotB, blockB, stateB, blockA, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotB,
+        blockB,
+        stateB,
+        blockA,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       const slotC = 3 * config.params.SLOTS_PER_EPOCH;
-      addBlock(lmd, slotC, blockC, stateC, blockB, {root: genesis, epoch: GENESIS_EPOCH}, {root: genesis, epoch: GENESIS_EPOCH});
+      addBlock(
+        lmd,
+        slotC,
+        blockC,
+        stateC,
+        blockB,
+        {root: genesis, epoch: GENESIS_EPOCH},
+        {root: genesis, epoch: GENESIS_EPOCH}
+      );
       // block D is finalized
       const slotF = 6 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, slotF, blockF, stateF, blockE, {root: blockE, epoch: 5}, {root: blockD, epoch: 4});
@@ -572,10 +967,10 @@ describe("ArrayDagLMDGHOST", () => {
         slot: 4 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockD),
         stateRoot: stateD,
-        weight:BigInt(0),
-        parent: NO_NODE,// finalized
+        weight: BigInt(0),
+        parent: NO_NODE, // finalized
         bestChild: 1, // E
-        bestTarget: 2,// F
+        bestTarget: 2, // F
         justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         children: {[toHexString(blockE)]: 1}, // E
@@ -584,10 +979,10 @@ describe("ArrayDagLMDGHOST", () => {
         slot: 5 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockE),
         stateRoot: stateE,
-        weight:BigInt(0),
+        weight: BigInt(0),
         parent: 0, // D
         bestChild: 2, // F
-        bestTarget: 2,// F
+        bestTarget: 2, // F
         justifiedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         finalizedCheckpoint: {rootHex: toHexString(genesis), epoch: GENESIS_EPOCH},
         children: {[toHexString(blockF)]: 2}, // E
@@ -596,15 +991,14 @@ describe("ArrayDagLMDGHOST", () => {
         slot: 6 * config.params.SLOTS_PER_EPOCH,
         blockRoot: toHexString(blockF),
         stateRoot: stateF,
-        weight:BigInt(0),
+        weight: BigInt(0),
         parent: 1, // E
         bestChild: null, // no child
-        bestTarget: 2,// itself
+        bestTarget: 2, // itself
         justifiedCheckpoint: {rootHex: toHexString(blockE), epoch: 5},
         finalizedCheckpoint: {rootHex: toHexString(blockD), epoch: 4},
         children: {}, // no child
       });
     });
   });
-
 });

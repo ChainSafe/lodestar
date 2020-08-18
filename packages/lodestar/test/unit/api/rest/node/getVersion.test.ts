@@ -11,29 +11,31 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {getVersion} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getVersion", function () {
-
   let api: RestApi;
   let nodeApiStub: StubbedNodeApi;
 
   beforeEach(async function () {
     nodeApiStub = new StubbedNodeApi();
-    api = new RestApi({
-      api: [ApiNamespace.NODE],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      beacon: sinon.createStubInstance(BeaconApi),
-      node: nodeApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.NODE],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        beacon: sinon.createStubInstance(BeaconApi),
+        node: nodeApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
@@ -47,5 +49,4 @@ describe("rest - node - getVersion", function () {
     expect(response.body.data).to.not.be.empty;
     expect(response.body.data.version).to.equal("test");
   });
-
 });

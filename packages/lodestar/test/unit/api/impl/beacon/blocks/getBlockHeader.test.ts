@@ -11,7 +11,6 @@ import {generateEmptySignedBlock} from "../../../../../utils/block";
 use(chaiAsPromised);
 
 describe("api - beacon - getBlockHeader", function () {
-
   const sandbox = sinon.createSandbox();
 
   let blockApi: BeaconBlockApi;
@@ -26,11 +25,14 @@ describe("api - beacon - getBlockHeader", function () {
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     resolveBlockIdStub = sandbox.stub(blockUtils, "resolveBlockId");
-    blockApi = new BeaconBlockApi({}, {
-      chain: chainStub,
-      config,
-      db: dbStub
-    });
+    blockApi = new BeaconBlockApi(
+      {},
+      {
+        chain: chainStub,
+        config,
+        db: dbStub,
+      }
+    );
   });
 
   afterEach(function () {
@@ -44,15 +46,14 @@ describe("api - beacon - getBlockHeader", function () {
   });
 
   it("invalid block id", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"abc").throwsException();
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "abc").throwsException();
     await expect(blockApi.getBlockHeader("abc")).to.eventually.be.rejected;
   });
 
   it("success for block", async function () {
-    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any,"head").resolves(generateEmptySignedBlock());
+    resolveBlockIdStub.withArgs(config, sinon.match.any, sinon.match.any, "head").resolves(generateEmptySignedBlock());
     const result = await blockApi.getBlockHeader("head");
     expect(result).to.not.be.null;
     expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(result)).to.not.throw();
   });
-
 });

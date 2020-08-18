@@ -8,7 +8,7 @@ export function errorHandler(e: Error, req: FastifyRequest, resp: FastifyReply<S
     resp.status(400).send((e as FastifyError).validation);
     return;
   }
-  const statusCode = (e instanceof ApiError)? (e as ApiError).statusCode : 500;
+  const statusCode = e instanceof ApiError ? (e as ApiError).statusCode : 500;
   req.log.error(`Request ${req.id} failed with unexpected error: `, e.message, e.stack);
   resp.status(statusCode).send(e);
 }

@@ -77,7 +77,7 @@ export function computeEpochShuffling(
   const committeeCount = committeesPerSlot * config.params.SLOTS_PER_EPOCH;
 
   const sliceCommittee = (slot: number, committeeIndex: number): ValidatorIndex[] => {
-    const index = (slot * committeesPerSlot) + committeeIndex;
+    const index = slot * committeesPerSlot + committeeIndex;
     const startOffset = intDiv(activeValidatorCount * index, committeeCount);
     const endOffset = intDiv(activeValidatorCount * (index + 1), committeeCount);
     if (!(startOffset <= endOffset)) {
@@ -99,4 +99,3 @@ export function computeEpochShuffling(
     committees,
   };
 }
-

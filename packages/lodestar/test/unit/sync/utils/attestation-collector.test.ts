@@ -11,8 +11,7 @@ import {BeaconDb} from "../../../../src/db";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import {generateState} from "../../../utils/state";
 
-describe("Attestation collector",function() {
-
+describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
 
   it("should subscribe and collect attestations", async function () {
@@ -21,45 +20,34 @@ describe("Attestation collector",function() {
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const dbStub = sandbox.createStubInstance(BeaconDb);
     const computeSubnetStub = sandbox.stub(attestationUtils, "computeSubnetForSlot");
-    const realClock = new LocalClock(config, Math.round(new Date().getTime() /1000));
-    const collector = new AttestationCollector(
-      config,
-      {
-        // @ts-ignore
-        chain: {
-          clock: realClock,
-          getHeadState: () => Promise.resolve(generateState()),
-        },
-        // @ts-ignore
-        network: {
-          gossip: fakeGossip
-        },
-        db: dbStub,
-        logger: loggerStub,
-      }
-    );
+    const realClock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
+    const collector = new AttestationCollector(config, {
+      // @ts-ignore
+      chain: {
+        clock: realClock,
+        getHeadState: () => Promise.resolve(generateState()),
+      },
+      // @ts-ignore
+      network: {
+        gossip: fakeGossip,
+      },
+      db: dbStub,
+      logger: loggerStub,
+    });
     await realClock.start();
     await collector.start();
     computeSubnetStub.returns(10);
     await collector.subscribeToCommitteeAttestations(1, 1);
-    expect(
-      fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce
-    ).to.be.true;
+    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
     clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     await new Promise((resolve) => {
       fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
     });
-    expect(
-      fakeGossip.subscribeToAttestationSubnet.withArgs(
-        sinon.match.any, 10, sinon.match.func
-      ).calledOnce
-    ).to.be.true;
+    expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
+      .true;
     clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-    expect(
-      fakeGossip.unsubscribeFromAttestationSubnet.withArgs(
-        sinon.match.any, 10, sinon.match.func
-      ).calledOnce
-    ).to.be.true;
+    expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
+      .true;
     await collector.stop();
     await realClock.stop();
   });
@@ -67,23 +55,20 @@ describe("Attestation collector",function() {
   it("should skip if there is no duties", async function () {
     const clock = sandbox.useFakeTimers();
     const loggerStub = sandbox.createStubInstance(WinstonLogger);
-    const realClock = new LocalClock(config, Math.round(new Date().getTime() /1000));
+    const realClock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
     const fakeGossip = sandbox.createStubInstance(Gossip);
-    const collector = new AttestationCollector(
-      config,
-      {
-        // @ts-ignore
-        chain: {
-          clock: realClock,
-          getHeadState: () => Promise.resolve(generateState())
-        },
-        // @ts-ignore
-        network: {
-          gossip: fakeGossip
-        },
-        logger: loggerStub,
-      }
-    );
+    const collector = new AttestationCollector(config, {
+      // @ts-ignore
+      chain: {
+        clock: realClock,
+        getHeadState: () => Promise.resolve(generateState()),
+      },
+      // @ts-ignore
+      network: {
+        gossip: fakeGossip,
+      },
+      logger: loggerStub,
+    });
     await realClock.start();
     await collector.start();
     clock.tick(config.params.SECONDS_PER_SLOT * 1000);
@@ -91,5 +76,4 @@ describe("Attestation collector",function() {
     await collector.stop();
     await realClock.stop();
   });
-
 });

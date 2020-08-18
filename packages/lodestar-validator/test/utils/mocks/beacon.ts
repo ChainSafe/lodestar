@@ -6,7 +6,8 @@ import {
   Number64,
   SyncingStatus,
   Root,
-  Uint64, Genesis
+  Uint64,
+  Genesis,
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
@@ -26,10 +27,9 @@ export class MockBeaconApi implements IBeaconApi {
   private genesisTime: Number64;
 
   public constructor(opts?: IMockBeaconApiOpts) {
-    this.version = opts && opts.version || Buffer.alloc(0);
-    this.fork = opts && opts.fork
-      || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
-    this.head = opts && opts.head || generateEmptyBlock();
+    this.version = (opts && opts.version) || Buffer.alloc(0);
+    this.fork = (opts && opts.fork) || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
+    this.head = (opts && opts.head) || generateEmptyBlock();
     this.genesisTime = (opts && opts.genesisTime) || Math.floor(Date.now() / 1000);
   }
 
@@ -49,7 +49,7 @@ export class MockBeaconApi implements IBeaconApi {
     return {
       genesisTime: BigInt(this.genesisTime),
       genesisForkVersion: Buffer.alloc(8, 1),
-      genesisValidatorsRoot: Buffer.alloc(32, 1)
+      genesisValidatorsRoot: Buffer.alloc(32, 1),
     };
   }
 
@@ -64,5 +64,4 @@ export class MockBeaconApi implements IBeaconApi {
   public async getBeaconState(): Promise<BeaconState> {
     throw new Error("Method not implemented.");
   }
-
 }

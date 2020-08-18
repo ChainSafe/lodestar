@@ -12,7 +12,6 @@ import {generateBlockSummary} from "../../../../../utils/block";
 use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
-
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
@@ -107,12 +106,12 @@ describe("beacon state api utils", function () {
   });
 
   it("resolve state by slot", async function () {
-    forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123)
+    forkChoiceStub.getCanonicalBlockSummaryAtSlot
+      .withArgs(123)
       .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "123");
     expect(state).to.not.be.null;
     expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
   });
-
 });

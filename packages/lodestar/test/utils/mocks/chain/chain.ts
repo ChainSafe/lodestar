@@ -5,11 +5,12 @@ import {
   Checkpoint,
   ENRForkID,
   ForkDigest,
-  Number64, Root,
+  Number64,
+  Root,
   SignedBeaconBlock,
   Slot,
   Uint16,
-  Uint64
+  Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -33,29 +34,29 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   public networkId: Uint64;
   public clock: IBeaconClock;
 
-  private state: TreeBacked<BeaconState>|null;
+  private state: TreeBacked<BeaconState> | null;
   private config: IBeaconConfig;
 
   public constructor({chainId, networkId, state, config}: Partial<IMockChainParams>) {
     super();
     this.chainId = chainId || 0;
-    this.networkId = networkId ||BigInt(0);
+    this.networkId = networkId || BigInt(0);
     this.state = state;
     this.config = config;
   }
 
-  getHeadBlock(): Promise<| null> {
+  getHeadBlock(): Promise<null> {
     return undefined;
   }
 
-  public async getHeadStateContext(): Promise<ITreeStateContext| null> {
+  public async getHeadStateContext(): Promise<ITreeStateContext | null> {
     return {
       state: this.state,
-      epochCtx: new EpochContext(this.config)
+      epochCtx: new EpochContext(this.config),
     };
   }
 
-  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null> {
+  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
@@ -69,7 +70,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return (await this.getHeadStateContext()).state;
   }
 
-  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null> {
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {
     if (!slots) {
       return [];
     }
@@ -119,5 +120,4 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
     return Promise.resolve(undefined);
   }
-
 }

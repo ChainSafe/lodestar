@@ -5,7 +5,7 @@ import {
   AttesterSlashing,
   Attestation,
   Deposit,
-  SignedVoluntaryExit
+  SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
@@ -13,7 +13,6 @@ import {BlockSummary} from "../../src/chain";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {DeepPartial} from "./misc";
-
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
@@ -29,11 +28,11 @@ export function generateEmptyBlock(): BeaconBlock {
         depositCount: 0,
       },
       graffiti: Buffer.alloc(32),
-      proposerSlashings: [] as ProposerSlashing[] as List<ProposerSlashing>,
-      attesterSlashings: [] as AttesterSlashing[] as List<AttesterSlashing>,
-      attestations: [] as Attestation[] as List<Attestation>,
-      deposits: [] as Deposit[] as List<Deposit>,
-      voluntaryExits: [] as SignedVoluntaryExit[] as List<SignedVoluntaryExit>,
+      proposerSlashings: ([] as ProposerSlashing[]) as List<ProposerSlashing>,
+      attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
+      attestations: ([] as Attestation[]) as List<Attestation>,
+      deposits: ([] as Deposit[]) as List<Deposit>,
+      voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
     },
   };
 }
@@ -46,11 +45,9 @@ export function generateEmptySignedBlock(): SignedBeaconBlock {
 }
 
 export function generateSignedBlock(override: DeepPartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
-  return deepmerge<SignedBeaconBlock, DeepPartial<SignedBeaconBlock>>(
-    generateEmptySignedBlock(),
-    override,
-    {isMergeableObject: isPlainObject}
-  );
+  return deepmerge<SignedBeaconBlock, DeepPartial<SignedBeaconBlock>>(generateEmptySignedBlock(), override, {
+    isMergeableObject: isPlainObject,
+  });
 }
 
 export function generateEmptyBlockSummary(): BlockSummary {
@@ -65,9 +62,7 @@ export function generateEmptyBlockSummary(): BlockSummary {
 }
 
 export function generateBlockSummary(overrides: DeepPartial<BlockSummary> = {}): BlockSummary {
-  return deepmerge<BlockSummary, DeepPartial<BlockSummary>>(
-    generateEmptyBlockSummary(),
-    overrides,
-    {isMergeableObject: isPlainObject}
-  );
+  return deepmerge<BlockSummary, DeepPartial<BlockSummary>>(generateEmptyBlockSummary(), overrides, {
+    isMergeableObject: isPlainObject,
+  });
 }

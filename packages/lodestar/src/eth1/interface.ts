@@ -4,7 +4,6 @@
  * @module eth1
  */
 
-
 import {DepositData} from "@chainsafe/lodestar-types";
 import {ethers} from "ethers";
 import {Pushable} from "it-pushable";
@@ -15,7 +14,6 @@ export interface IDepositEvent extends DepositData {
   blockNumber: number;
   index: number;
 }
-
 
 /**
  * The IEth1Notifier service watches the Eth1 chain for IEth1Events

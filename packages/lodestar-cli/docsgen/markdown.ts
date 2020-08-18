@@ -8,16 +8,18 @@ export interface IMarkdownSection {
  * Render IMarkdownSection recursively tracking its level depth
  */
 export function renderMarkdownSections(sections: IMarkdownSection[], level = 1): string {
-  return sections.map(section => {
-    const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
-    if (section.body) {
-      parts.push(Array.isArray(section.body) ? section.body.join("\n\n") : section.body);
-    }
-    if (section.subsections) {
-      parts.push(renderMarkdownSections(section.subsections, level + 1));
-    }
-    return parts.join(section.title ? "\n" : "");
-  }).join("\n");
+  return sections
+    .map((section) => {
+      const parts = section.title ? [`${"\n" + "#".repeat(level)} ${section.title}`] : [""];
+      if (section.body) {
+        parts.push(Array.isArray(section.body) ? section.body.join("\n\n") : section.body);
+      }
+      if (section.subsections) {
+        parts.push(renderMarkdownSections(section.subsections, level + 1));
+      }
+      return parts.join(section.title ? "\n" : "");
+    })
+    .join("\n");
 }
 
 /**
@@ -27,7 +29,7 @@ export function toMarkdownTable<T extends {[key: string]: string}>(rows: T[], he
   return [
     toMarkdownTableRow(headers as string[]),
     toMarkdownTableRow(headers.map(() => "---")),
-    ...rows.map(row => toMarkdownTableRow(headers.map(key => row[key])))
+    ...rows.map((row) => toMarkdownTableRow(headers.map((key) => row[key]))),
   ].join("\n");
 }
 

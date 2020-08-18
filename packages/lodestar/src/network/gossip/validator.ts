@@ -15,7 +15,8 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
   getDomain,
-  isValidAttesterSlashing, isValidIndexedAttestation,
+  isValidAttesterSlashing,
+  isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -58,8 +59,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
   };
 
-  public isValidIncomingCommitteeAttestation =
-  async (attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingCommitteeAttestation = async (
+    attestation: Attestation,
+    subnet: number
+  ): Promise<ExtendedValidatorResult> => {
     try {
       return await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
     } catch (e) {
@@ -68,8 +71,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
   };
 
-  public isValidIncomingAggregateAndProof =
-  async (signedAggregationAndProof: SignedAggregateAndProof): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingAggregateAndProof = async (
+    signedAggregationAndProof: SignedAggregateAndProof
+  ): Promise<ExtendedValidatorResult> => {
     const aggregateAndProof = signedAggregationAndProof.message;
     const aggregate = aggregateAndProof.aggregate;
     const attestationData = aggregate.data;
@@ -78,8 +82,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const currentSlot = getCurrentSlot(this.config, state.genesisTime);
     const milliSecPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
     const currentSlotTime = currentSlot * milliSecPerSlot;
-    if (!((slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY
-        >= currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY)) {
+    if (
+      !(
+        (slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY >=
+          currentSlotTime && currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY
+      )
+    ) {
       return ExtendedValidatorResult.ignore;
     }
     if (state.slot < slot) {
@@ -91,23 +99,18 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
 
     const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-    const existingAttestations = await this.db.aggregateAndProof.getByAggregatorAndEpoch(
-      aggregatorIndex, attestationData.target.epoch) || [];
+    const existingAttestations =
+      (await this.db.aggregateAndProof.getByAggregatorAndEpoch(aggregatorIndex, attestationData.target.epoch)) || [];
     if (existingAttestations.length > 0) {
       return ExtendedValidatorResult.ignore;
     }
 
-    if (
-      epochCtx.getAttestingIndices(
-        attestationData,
-        aggregate.aggregationBits
-      ).length < 1
-    ) {
+    if (epochCtx.getAttestingIndices(attestationData, aggregate.aggregationBits).length < 1) {
       return ExtendedValidatorResult.reject;
     }
 
     const blockRoot = aggregate.data.beaconBlockRoot.valueOf() as Uint8Array;
-    if (!this.chain.forkChoice.hasBlock(blockRoot) || await this.db.badBlock.has(blockRoot)) {
+    if (!this.chain.forkChoice.hasBlock(blockRoot) || (await this.db.badBlock.has(blockRoot))) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -124,13 +127,19 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     const epoch = computeEpochAtSlot(this.config, slot);
     const selectionProofDomain = getDomain(this.config, state, DomainType.SELECTION_PROOF, epoch);
     const selectionProofSigningRoot = computeSigningRoot(
-      this.config, this.config.types.Slot, slot, selectionProofDomain);
+      this.config,
+      this.config.types.Slot,
+      slot,
+      selectionProofDomain
+    );
     const validatorPubKey = state.validators[aggregatorIndex].pubkey;
-    if (!verify(
-      validatorPubKey.valueOf() as Uint8Array,
-      selectionProofSigningRoot,
-      selectionProof.valueOf() as Uint8Array,
-    )) {
+    if (
+      !verify(
+        validatorPubKey.valueOf() as Uint8Array,
+        selectionProofSigningRoot,
+        selectionProof.valueOf() as Uint8Array
+      )
+    ) {
       return ExtendedValidatorResult.reject;
     }
 
@@ -139,12 +148,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       this.config,
       this.config.types.AggregateAndProof,
       aggregateAndProof,
-      aggregatorDomain);
-    if (!verify(
-      validatorPubKey.valueOf() as Uint8Array,
-      aggregatorSigningRoot,
-      signedAggregationAndProof.signature.valueOf() as Uint8Array,
-    )) {
+      aggregatorDomain
+    );
+    if (
+      !verify(
+        validatorPubKey.valueOf() as Uint8Array,
+        aggregatorSigningRoot,
+        signedAggregationAndProof.signature.valueOf() as Uint8Array
+      )
+    ) {
       this.logger.warn("Invalid agg and proof sig");
       return ExtendedValidatorResult.reject;
     }
@@ -156,7 +168,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     return ExtendedValidatorResult.accept;
   };
 
-  public isValidIncomingVoluntaryExit = async(voluntaryExit: SignedVoluntaryExit): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingVoluntaryExit = async (
+    voluntaryExit: SignedVoluntaryExit
+  ): Promise<ExtendedValidatorResult> => {
     // skip voluntary exit if it already exists
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return ExtendedValidatorResult.ignore;
@@ -172,8 +186,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     return ExtendedValidatorResult.accept;
   };
 
-  public isValidIncomingProposerSlashing =
-  async(proposerSlashing: ProposerSlashing): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingProposerSlashing = async (
+    proposerSlashing: ProposerSlashing
+  ): Promise<ExtendedValidatorResult> => {
     // skip proposer slashing if it already exists
     if (await this.db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
       return ExtendedValidatorResult.ignore;
@@ -185,8 +200,9 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     return ExtendedValidatorResult.accept;
   };
 
-  public isValidIncomingAttesterSlashing =
-  async (attesterSlashing: AttesterSlashing): Promise<ExtendedValidatorResult> => {
+  public isValidIncomingAttesterSlashing = async (
+    attesterSlashing: AttesterSlashing
+  ): Promise<ExtendedValidatorResult> => {
     const attesterSlashedIndices = arrayIntersection<ValidatorIndex>(
       attesterSlashing.attestation1.attestingIndices.valueOf() as ValidatorIndex[],
       attesterSlashing.attestation2.attestingIndices.valueOf() as ValidatorIndex[],
@@ -202,5 +218,4 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     }
     return ExtendedValidatorResult.accept;
   };
-
 }

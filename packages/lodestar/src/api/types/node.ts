@@ -14,6 +14,6 @@ export type NodePeer = {
   peerId: string;
   enr: string;
   address: string;
-  state: "disconnected"|"connecting"|"connected"|"disconnecting";
-  direction: "inbound"|"outbound";
+  state: "disconnected" | "connecting" | "connected" | "disconnecting";
+  direction: "inbound" | "outbound";
 };

@@ -9,7 +9,6 @@ import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits
 import {handleIncomingVoluntaryExit} from "../../../../../src/network/gossip/handlers/voluntaryExit";
 
 describe("gossip handlers - voluntaryExit", function () {
-
   const sandbox = sinon.createSandbox();
 
   let gossipStub: any;
@@ -28,7 +27,5 @@ describe("gossip handlers - voluntaryExit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
     await handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
     expect(gossipStub.emit.withArgs(GossipEvent.VOLUNTARY_EXIT, voluntaryExit).calledOnce).to.be.true;
-
   });
-    
 });

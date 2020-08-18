@@ -15,7 +15,7 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
     const state = testcase.pre;
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
     processVoluntaryExit(epochCtx, state, testcase.voluntary_exit);
     return state;
   },
@@ -27,11 +27,10 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
       voluntary_exit: config.types.SignedVoluntaryExit,
     },
     timeout: 100000000,
-    shouldError: testCase => !testCase.post,
-    getExpected: (testCase => testCase.post),
+    shouldError: (testCase) => !testCase.post,
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

@@ -8,9 +8,7 @@ import {readFileSync, writeFile, getSubObject, setSubObject} from "../util";
 import {IBeaconArgs, beaconOptions} from "../cmds/beacon/options";
 
 export function createBeaconConfig(args: Partial<IBeaconNodeOptions>): Partial<IBeaconNodeOptions> {
-  const cliDefaults = _yargs().default(args)
-    .options(beaconOptions)
-    .parse([]) as Partial<IBeaconNodeOptions>;
+  const cliDefaults = _yargs().default(args).options(beaconOptions).parse([]) as Partial<IBeaconNodeOptions>;
   // cliDefaults contains a bunch of extra keys created from yargs' leniency
   // don't create hidden options
   const config: Partial<IBeaconNodeOptions> = {};
@@ -49,16 +47,12 @@ export function mergeConfigOptions<T extends IBeaconArgs>(options: T): T {
   const optionsFromFile = readBeaconConfig(options.configFile) as IBeaconArgs;
 
   return deepmerge(
-    deepmerge(
-      defaultOptions as Partial<IBeaconArgs>,
-      optionsFromFile,
-      {
-        arrayMerge
-      }
-    ),
+    deepmerge(defaultOptions as Partial<IBeaconArgs>, optionsFromFile, {
+      arrayMerge,
+    }),
     options,
     {
-      arrayMerge
+      arrayMerge,
     }
   ) as T;
 }
@@ -76,7 +70,7 @@ export async function initBeaconConfig(filename: string, args: Partial<IBeaconNo
  * @param source
  */
 function arrayMerge(target: unknown[], source: unknown[]): unknown[] {
-  if(source.length === 0) {
+  if (source.length === 0) {
     return target;
   }
   return source;

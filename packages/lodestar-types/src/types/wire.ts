@@ -1,28 +1,15 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 import {List} from "@chainsafe/ssz";
 
-import {
-  Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8
-} from "./primitive";
+import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "./primitive";
 import {SignedBeaconBlock} from "./block";
 import {AttestationSubnets} from "./misc";
 
 export type RequestId = string;
 
-export type RequestBody =
-  Status |
-  Goodbye |
-  Ping |
-  BeaconBlocksByRangeRequest |
-  BeaconBlocksByRootRequest;
+export type RequestBody = Status | Goodbye | Ping | BeaconBlocksByRangeRequest | BeaconBlocksByRootRequest;
 
-export type ResponseBody =
-  Status |
-  Goodbye |
-  Ping |
-  Metadata |
-  SignedBeaconBlock |
-  P2pErrorMessage;
+export type ResponseBody = Status | Goodbye | Ping | Metadata | SignedBeaconBlock | P2pErrorMessage;
 
 export interface Status {
   forkDigest: ForkDigest;

@@ -1,7 +1,6 @@
 import {FastifyInstance} from "fastify";
 import {getHealth, getNetworkIdentity, getPeer, getPeers, getSyncingStatus, getVersion} from "../controllers/node";
 
-
 export function registerNodeRoutes(server: FastifyInstance): void {
   server.get(getNetworkIdentity.url, getNetworkIdentity.opts, getNetworkIdentity.handler);
   server.get(getPeers.url, getPeers.opts, getPeers.handler);

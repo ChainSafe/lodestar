@@ -10,7 +10,8 @@ import {
   getBlockHeaders,
   getBlockRoot,
   getGenesis,
-  getPoolAttestations, getStateFinalityCheckpoints
+  getPoolAttestations,
+  getStateFinalityCheckpoints,
 } from "../../controllers/beacon";
 
 //old

@@ -20,23 +20,25 @@ describe("Test beacon rest api", function () {
 
   let restApi: any, beaconApi: SinonStubbedInstance<BeaconApi>, validatorApi: SinonStubbedInstance<ValidatorApi>;
 
-
   beforeEach(async function () {
     validatorApi = sinon.createStubInstance(ValidatorApi);
     beaconApi = sinon.createStubInstance(BeaconApi);
-    restApi = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      logger: sinon.createStubInstance(WinstonLogger),
-      beacon: beaconApi,
-      validator: validatorApi,
-      node: new StubbedNodeApi(),
-      config
-    });
+    restApi = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        logger: sinon.createStubInstance(WinstonLogger),
+        beacon: beaconApi,
+        validator: validatorApi,
+        node: new StubbedNodeApi(),
+        config,
+      }
+    );
     return await restApi.start();
   });
 
@@ -44,16 +46,15 @@ describe("Test beacon rest api", function () {
     return await restApi.stop();
   });
 
-  it("should get block stream",  function (done) {
+  it("should get block stream", function (done) {
     const server = restApi.server.server.address();
-    const source
-        = pushable<SignedBeaconBlock>() as LodestarEventIterator<SignedBeaconBlock>&Pushable<SignedBeaconBlock>;
+    const source = pushable<SignedBeaconBlock>() as LodestarEventIterator<SignedBeaconBlock> &
+      Pushable<SignedBeaconBlock>;
     source.stop = sinon.stub();
     beaconApi.getBlockStream.returns(source);
-    const eventSource = new EventSource(
-      `http://${server.address}:${server.port}/lodestar/blocks/stream`,
-      {https: {rejectUnauthorized: false}}
-    );
+    const eventSource = new EventSource(`http://${server.address}:${server.port}/lodestar/blocks/stream`, {
+      https: {rejectUnauthorized: false},
+    });
     eventSource.addEventListener("open", function () {
       source.push(generateEmptySignedBlock());
       source.push(generateEmptySignedBlock());
@@ -61,12 +62,11 @@ describe("Test beacon rest api", function () {
     let count = 0;
     eventSource.addEventListener("message", function () {
       count++;
-      if(count === 2) {
+      if (count === 2) {
         source.end();
         eventSource.close();
         done();
       }
     });
   });
-
 });

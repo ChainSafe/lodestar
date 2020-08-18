@@ -10,9 +10,7 @@ import {createStatus} from "./utils";
 import {encode} from "varint";
 import {Status} from "@chainsafe/lodestar-types";
 
-
 describe("request encoders", function () {
-
   let loggerStub: SinonStubbedInstance<ILogger>;
 
   beforeEach(function () {
@@ -27,7 +25,7 @@ describe("request encoders", function () {
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body,BigInt(0))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
   });
 
   it("should work - basic request - ssz_snappy", async function () {
@@ -38,7 +36,7 @@ describe("request encoders", function () {
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body,BigInt(0))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
   });
 
   it("should work - container request - ssz", async function () {
@@ -67,24 +65,24 @@ describe("request encoders", function () {
 
   it("should work - multiple request - ssz", async function () {
     const requests = await pipe(
-      [BigInt(1),BigInt(2)],
+      [BigInt(1), BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body,BigInt(1))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
   });
 
   it("should work - multiple request - ssz_snappy", async function () {
     const requests = await pipe(
-      [BigInt(1),BigInt(2)],
+      [BigInt(1), BigInt(2)],
       eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body,BigInt(1))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
   });
 
   it("should work - no request body - ssz", async function () {
@@ -137,7 +135,6 @@ describe("request encoders", function () {
       const err = "eth2RequestDecode: Invalid szzLength of 0 for method status";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
-
 
     it("should yield {isValid: false} if it read more than maxEncodedLen", async function () {
       const validatedRequestBody: unknown[] = await pipe(

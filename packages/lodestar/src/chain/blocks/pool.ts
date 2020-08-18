@@ -7,7 +7,6 @@ import {ChainEventEmitter} from "../interface";
 import {ILMDGHOST} from "../forkChoice";
 
 export class BlockPool {
-
   private pool = new Map<string, IBlockProcessJob[]>();
 
   private readonly config: IBeaconConfig;
@@ -16,8 +15,10 @@ export class BlockPool {
   private readonly forkChoice: ILMDGHOST;
 
   constructor(
-    config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>,
-    eventBus: ChainEventEmitter, forkChoice: ILMDGHOST
+    config: IBeaconConfig,
+    blockProcessorSource: Pushable<IBlockProcessJob>,
+    eventBus: ChainEventEmitter,
+    forkChoice: ILMDGHOST
   ) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;
@@ -28,12 +29,12 @@ export class BlockPool {
   public addPendingBlock(job: IBlockProcessJob): void {
     const key = this.getKey(job.signedBlock);
     const pendingBlockPool = this.pool.get(key);
-    if(pendingBlockPool) {
+    if (pendingBlockPool) {
       pendingBlockPool.push(job);
     } else {
       this.pool.set(key, [job]);
       //this prevents backward syncing, tolerance is 20 blocks
-      if(job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 20) {
+      if (job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 20) {
         this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
       }
     }
@@ -42,7 +43,7 @@ export class BlockPool {
   public onProcessedBlock(block: SignedBeaconBlock): void {
     const key = toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
     const jobs = this.pool.get(key);
-    if(jobs) {
+    if (jobs) {
       this.pool.delete(key);
       jobs
         .sort((a, b) => a.signedBlock.message.slot - b.signedBlock.message.slot)

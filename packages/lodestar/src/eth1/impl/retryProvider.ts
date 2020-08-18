@@ -5,11 +5,7 @@ import {ethers} from "ethers";
 export class RetryProvider extends ethers.providers.JsonRpcProvider {
   public attempts: number;
 
-  constructor(
-    attempts: number,
-    url?: ethers.utils.ConnectionInfo | string,
-    network?: ethers.providers.Networkish
-  ) {
+  constructor(attempts: number, url?: ethers.utils.ConnectionInfo | string, network?: ethers.providers.Networkish) {
     super(url, network);
     this.attempts = attempts;
   }
@@ -20,7 +16,7 @@ export class RetryProvider extends ethers.providers.JsonRpcProvider {
     return ethers.utils.poll(() => {
       attempts++;
       return super.perform(method, params).then(
-        result => {
+        (result) => {
           return result;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

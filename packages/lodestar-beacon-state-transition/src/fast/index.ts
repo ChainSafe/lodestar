@@ -5,18 +5,14 @@ import {EpochContext, IStateContext} from "./util";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
 
-
-export {
-  IStateContext,
-  EpochContext,
-};
+export {IStateContext, EpochContext};
 
 export function fastStateTransition(
   {state, epochCtx}: IStateContext,
   signedBlock: SignedBeaconBlock,
   verifyStateRoot = true,
   verifyProposer = true,
-  verifySignatures = true,
+  verifySignatures = true
 ): IStateContext {
   const types = epochCtx.config.types;
 
@@ -35,15 +31,12 @@ export function fastStateTransition(
   processBlock(epochCtx, postState, block, verifySignatures);
   // verify state root
   if (verifyStateRoot) {
-    if (!types.Root.equals(
-      block.stateRoot,
-      types.BeaconState.hashTreeRoot(postState)
-    )) {
+    if (!types.Root.equals(block.stateRoot, types.BeaconState.hashTreeRoot(postState))) {
       throw new Error("Invalid state root");
     }
   }
   return {
     state: postState,
-    epochCtx: epochCtx
+    epochCtx: epochCtx,
   };
 }

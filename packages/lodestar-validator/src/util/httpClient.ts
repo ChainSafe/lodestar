@@ -17,7 +17,7 @@ export class HttpClient {
 
   public constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
     this.client = Axios.create({
-      baseURL: opt.urlPrefix || ""
+      baseURL: opt.urlPrefix || "",
     });
     this.logger = logger;
   }
@@ -28,7 +28,7 @@ export class HttpClient {
       const result: AxiosResponse<T> = await this.client.get<T>(url, opts);
       this.logger.verbose(`HttpClient GET url=${url} result=${JSON.stringify(result.data)}`);
       return result.data;
-    } catch(reason) {
+    } catch (reason) {
       this.logger.verbose(`HttpClient GET error url=${url}`);
       throw this.handleError(reason);
     }
@@ -40,7 +40,7 @@ export class HttpClient {
       const result: AxiosResponse<T2> = await this.client.post(url, data);
       this.logger.verbose(`HttpClient POST url=${url} result=${JSON.stringify(result.data)}`);
       return result.data;
-    } catch(reason) {
+    } catch (reason) {
       this.logger.verbose(`HttpClient POST error url=${url}`);
       throw this.handleError(reason);
     }
@@ -48,7 +48,7 @@ export class HttpClient {
 
   private handleError = (error: AxiosError & NodeJS.ErrnoException): Error => {
     if (error.response) {
-      if(error.response.status === 404) {
+      if (error.response.status === 404) {
         error.message = "Endpoint not found";
         if (error.request && error.request.path) {
           error.message += `: ${error.request.path}`;
@@ -63,4 +63,3 @@ export class HttpClient {
     return error;
   };
 }
-

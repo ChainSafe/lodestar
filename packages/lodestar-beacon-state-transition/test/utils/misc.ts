@@ -1,4 +1,3 @@
-
 /**
  * Renerates a random integer between min (included) and max (excluded).
  */
