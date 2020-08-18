@@ -7,7 +7,7 @@ import {getDevValidator} from "../utils/node/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 
-describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
+describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
