@@ -170,9 +170,13 @@ export class AttestationService {
     }
 
     if (duty.isAggregator) {
-      setTimeout(() => {
-        if (attestation) {
-          this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+      setTimeout(async () => {
+        try {
+          if (attestation) {
+            await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+          }
+        } catch (e) {
+          this.logger.error("Failed to aggregate attestations", e);
         }
       }, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
     }

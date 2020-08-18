@@ -171,7 +171,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock(this.config, state.genesisTime);
     await this.clock.start();
-    this.forkChoice.start(state.genesisTime, this.clock);
+    await this.forkChoice.start(state.genesisTime, this.clock);
     await this.blockProcessor.start();
     await this.attestationProcessor.start();
     this._currentForkDigest =  computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
@@ -283,7 +283,7 @@ export class BeaconChain extends (EventEmitter as { new(): ChainEventEmitter }) 
     const finalizedRoot = finalizedCheckpoint.root;
     this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
     this.logger.profile("restoreHeadState");
-    this.db.stateCache.add({state: lastKnownState, epochCtx});
+    await this.db.stateCache.add({state: lastKnownState, epochCtx});
     // there might be blocks in the archive we need to reprocess
     const finalizedBlocks = await this.db.blockArchive.values({gte: lastKnownState.slot});
     // the block respective to finalized epoch still in block db

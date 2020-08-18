@@ -56,14 +56,17 @@ export class Validator {
     this.apiClient.once("beaconChainStarted", this.run);
   }
 
-  public run = (): void => {
+  public run = async (): Promise<void> => {
     this.logger.info("Chain start has occured!");
     if (!this.blockService) throw Error("blockService not setup");
     if (!this.attestationService) throw Error("attestationService not setup");
     this.apiClient.onNewSlot(this.blockService.onNewSlot);
     this.apiClient.onNewSlot(this.attestationService.onNewSlot);
-    this.blockService.start();
-    this.attestationService.start();
+    // Run both services at once to prevent missing first attestation
+    await Promise.all([
+      this.blockService.start(),
+      this.attestationService.start()
+    ]);
   };
 
   /**

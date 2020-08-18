@@ -21,11 +21,11 @@ export const registerPublishAggregateAndProofEndpoint: LodestarRestApiEndpoint =
     opts,
     async (request, reply) => {
       await Promise.all(
-        request.body.map((payload) => {
+        request.body.map((payload) => 
           api.validator.publishAggregateAndProof(
             config.types.SignedAggregateAndProof.fromJson(payload, {case: "snake"})
-          );
-        })
+          )
+        )
       );
       reply
         .code(200)

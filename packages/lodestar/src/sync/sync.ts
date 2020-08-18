@@ -123,11 +123,11 @@ export class BeaconSync implements IBeaconSync {
     return this.mode === SyncMode.SYNCED;
   }
 
-  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
+  public async collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
     if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
       throw new Error("Cannot collect attestations before regular sync");
     }
-    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+    await this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private async startInitialSync(): Promise<void> {
@@ -151,7 +151,9 @@ export class BeaconSync implements IBeaconSync {
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
     this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain));
+      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain)).catch(e => {
+        this.logger.error("Error on syncPeersStatus", e);
+      });
     }, interval);
   }
 
