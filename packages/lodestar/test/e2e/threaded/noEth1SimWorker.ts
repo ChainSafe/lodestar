@@ -1,6 +1,7 @@
 import {parentPort, workerData} from "worker_threads";
 
 import {initBLS} from "@chainsafe/bls";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {getDevBeaconNode} from "../../utils/node/beacon";
@@ -10,15 +11,16 @@ import {getDevValidator} from "../../utils/node/validator";
   await initBLS();
 
   const {
-    index,
+    nodeIndex,
     validatorsPerNode,
     startIndex,
+    checkpointEvent
   } = workerData.options;
 
   const logger = new WinstonLogger();
   const node = await getDevBeaconNode({
     ...workerData.options,
-    logger: logger.child({module: `Node ${index}`})
+    logger: logger.child({module: `Node ${nodeIndex}`})
   });
 
   const validator = getDevValidator({
@@ -31,11 +33,13 @@ import {getDevValidator} from "../../utils/node/validator";
   await node.start();
   await validator.start();
 
-  node.chain.on("justifiedCheckpoint", () => {
+  node.chain.on(checkpointEvent, (checkpoint) => {
     validator.stop().then(() =>
       node.stop().then(() =>
         parentPort.postMessage({
-          event: "justifiedCheckpoint",
+          event: checkpointEvent,
+          checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
+
         })
       )
     );
