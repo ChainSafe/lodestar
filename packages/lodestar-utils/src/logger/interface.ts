@@ -14,8 +14,7 @@ export enum LogLevel {
   silly = "silly",
 }
 
-// @ts-ignore
-export const LogLevels = Object.keys(LogLevel).map(key => LogLevel[key]);
+export const LogLevels = Object.values(LogLevel);
 
 
 export const customColors = {

@@ -3,7 +3,6 @@
  * @module eth1/dev
  */
 
-//@ts-ignore
 import ganache from "ganache-core";
 import {promisify} from "util";
 import deepmerge from "deepmerge";

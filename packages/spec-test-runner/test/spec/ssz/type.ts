@@ -3,5 +3,6 @@ export interface IBaseSSZStaticTestCase<T> {
     root: string;
   };
   serialized: T;
+  serialized_raw: Uint8Array;
   value: T;
 }
