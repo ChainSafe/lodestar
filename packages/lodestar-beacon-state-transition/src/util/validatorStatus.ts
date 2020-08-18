@@ -167,7 +167,7 @@ export function isValidVoluntaryExit(
   // Exits must specify an epoch when they become valid; they are not valid before then
   (currentEpoch >= signedExit.message.epoch) &&
   // Verify the validator has been active long enough
-  (currentEpoch >= validator.activationEpoch + config.params.PERSISTENT_COMMITTEE_PERIOD) &&
+  (currentEpoch >= validator.activationEpoch + config.params.SHARD_COMMITTEE_PERIOD) &&
   // Verify signature
   (!verifySignature || bls.verify(
     validator.pubkey.valueOf() as Uint8Array,

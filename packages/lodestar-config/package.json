@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-config",
-  "version": "0.9.0",
+  "version": "0.11.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -18,10 +18,12 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
-    "build:release": "yarn run clean && yarn run build && yarn run build:docs",
+    "build:release": "yarn run clean && yarn run build && yarn run build:typedocs",
     "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "build:lib": "babel src -x .ts -d lib --source-maps",
-    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "check-types": "tsc --noEmit",
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
@@ -39,8 +41,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/lodestar-params": "^0.9.0",
-    "@chainsafe/lodestar-types": "^0.9.0"
+    "@chainsafe/lodestar-params": "^0.11.0",
+    "@chainsafe/lodestar-types": "^0.11.0"
   },
   "devDependencies": {
     "@types/chai": "4.2.0",

@@ -13,12 +13,13 @@ export interface INetworkOptions {
 
 const config: INetworkOptions = {
   maxPeers: 25,
-  multiaddrs: [],
+  multiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootnodes: [],
   discv5: {
-    bindAddr: "/ip4/0.0.0.0/udp/5500",
+    bindAddr: "/ip4/0.0.0.0/udp/9000",
     enr: new ENR(),
     bootEnrs: [],
+    enrUpdate: true,
   },
   rpcTimeout: 5000,
   connectTimeout: 3000,

@@ -5,6 +5,7 @@
 import {ContainerType, BigIntUintType, ListType} from "@chainsafe/ssz";
 
 import {IBeaconSSZTypes} from "../interface";
+import {MAX_REQUEST_BLOCKS, P2P_ERROR_MESSAGE_MAX_LENGTH} from "..";
 
 export const Status = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
@@ -37,5 +38,10 @@ export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType 
 
 export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): ListType => new ListType({
   elementType: ssz.Root,
-  limit: 32000,
+  limit: MAX_REQUEST_BLOCKS,
+});
+
+export const P2pErrorMessage = (ssz: IBeaconSSZTypes): ListType => new ListType({
+  elementType: ssz.Uint8,
+  limit: P2P_ERROR_MESSAGE_MAX_LENGTH,
 });

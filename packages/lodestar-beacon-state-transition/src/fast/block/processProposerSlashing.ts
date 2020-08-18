@@ -1,8 +1,8 @@
-import {verify} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
 import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
-import {isSlashableValidator, getDomain, computeEpochAtSlot, computeSigningRoot} from "../../util";
+import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
 
@@ -43,6 +43,7 @@ export function processProposerSlashing(
   }
   // verify signatures
   if (verifySignatures) {
+    const pubkey = epochCtx.index2pubkey[header1.proposerIndex];
     [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].forEach((signedHeader, i) => {
       const domain = getDomain(
         config,
@@ -51,10 +52,9 @@ export function processProposerSlashing(
         computeEpochAtSlot(config, signedHeader.message.slot)
       );
       const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
-      if (!verify(
-        proposer.pubkey.valueOf() as Uint8Array,
-        signingRoot,
-        signedHeader.signature.valueOf() as Uint8Array
+      if (!pubkey.verifyMessage(
+        Signature.fromCompressedBytes(signedHeader.signature.valueOf() as Uint8Array),
+        signingRoot
       )) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }

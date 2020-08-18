@@ -1,4 +1,4 @@
-import {ArrayLike} from "@chainsafe/ssz";
+import {ArrayLike, TreeBacked} from "@chainsafe/ssz";
 import {Attestation, AggregateAndProof, BeaconState, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -22,14 +22,14 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
     super(config, db, Bucket.aggregateAndProof, config.types.AggregateAndProof);
   }
 
-  public async getBlockAttestations(state: BeaconState): Promise<Attestation[]> {
+  public async getBlockAttestations(state: TreeBacked<BeaconState>): Promise<Attestation[]> {
     const aggregates: AggregateAndProof[] = await this.values();
     return aggregates.map(aggregate => aggregate.aggregate).filter((a: Attestation) => {
       //TODO: filter out duplicates
       return isValidAttestationSlot(this.config, a.data.slot, state.slot);
     }).sort((a, b) => {
       //prefer aggregated attestations
-      return a.aggregationBits.length - b.aggregationBits.length;
+      return b.aggregationBits.length - a.aggregationBits.length;
     });
   }
 
@@ -59,7 +59,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
     }));
   }
 
-  public async removeOld(state: BeaconState): Promise<void> {
+  public async removeOld(state: TreeBacked<BeaconState>): Promise<void> {
     const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
     const aggregates: AggregateAndProof[] = await this.values();
     await this.batchRemove(aggregates.filter((a) => {

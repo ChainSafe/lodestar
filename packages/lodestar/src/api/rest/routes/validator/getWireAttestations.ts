@@ -40,7 +40,7 @@ export const registerGetWireAttestationEndpoint: LodestarRestApiEndpoint = (fast
       reply
         .code(200)
         .type("application/json")
-        .send(responseValue.map(value => config.types.Attestation.toJson(value)));
+        .send(responseValue.map(value => config.types.Attestation.toJson(value, {case: "snake"})));
     }
   );
 };

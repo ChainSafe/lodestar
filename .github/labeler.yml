@@ -1,12 +1,34 @@
-BeaconChain:
-- packages/lodestar/**/*
+StateTransition:
+  - packages/lodestar-beacon-state-transition/**/*
+  - packages/spec-test-runner/**/*
+  - packages/lodestar-spec-test-util/**/*
+
+CLI:
+  - packages/lodestar-cli/**/*
+
+Types:
+  - packages/lodestar-types/**/*
+
+Config:
+  - packages/lodestar-config/**/*
+  - packages/lodestar-params/**/*
 
 Validator:
-- packages/lodestar-validator/**/*
+  - packages/lodestar-validator/**/*
+
+Api:
+  - packages/lodestar/src/api/**/*
+
+Network:
+  - packages/lodestar/src/network/**/*
+  - packages/lodestar/src/sync/**/*
+
+Eth1:
+  - packages/lodestar/src/eth1/**/*
 
 Benchmarks:
-- packages/benchmark-utils/**/*
-- packages/lodestar/test/benchmarks/**/*
+  - packages/benchmark-utils/**/*
+  - packages/lodestar/test/benchmarks/**/*
 
 CI:
-- .github/**/*
+  - .github/**/*

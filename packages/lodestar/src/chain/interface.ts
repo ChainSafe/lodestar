@@ -5,17 +5,21 @@ import {
   Attestation,
   BeaconState,
   Checkpoint,
+  ENRForkID,
+  ForkDigest, Number64,
   Root,
   SignedBeaconBlock,
+  Slot,
   Uint16,
   Uint64,
-  ForkDigest,
-  ENRForkID,
-  Slot,
 } from "@chainsafe/lodestar-types";
 
 import {ILMDGHOST} from "./forkChoice";
 import {IBeaconClock} from "./clock/interface";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
+import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {IService} from "../node";
 
 export interface IChainEvents {
   unknownBlockRoot: (root: Root) => void;
@@ -24,7 +28,7 @@ export interface IChainEvents {
   processedAttestation: (attestation: Attestation) => void;
   justifiedCheckpoint: (checkpoint: Checkpoint) => void;
   finalizedCheckpoint: (checkpoint: Checkpoint) => void;
-  forkDigestChanged: () => void;
+  forkVersion: () => void;
   forkDigest: (forkDigest: ForkDigest) => void;
 }
 
@@ -54,14 +58,20 @@ export interface IBeaconChain extends ChainEventEmitter {
    * Return ENRForkID.
    */
   getENRForkID(): Promise<ENRForkID>;
-
-  getHeadState(): Promise<BeaconState|null>;
+  getGenesisTime(): Number64;
+  getHeadStateContext(): Promise<ITreeStateContext>;
+  getHeadState(): Promise<TreeBacked<BeaconState>>;
+  getHeadEpochContext(): Promise<EpochContext>;
 
   getHeadBlock(): Promise<SignedBeaconBlock|null>;
+
+  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext|null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
   getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock|null>;
+
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]|null>;
 
   /**
    * Add attestation to the fork-choice rule
@@ -76,10 +86,12 @@ export interface IBeaconChain extends ChainEventEmitter {
   /**
    * Initialize the chain with a genesis state
    */
-  initializeBeaconChain(genesisState: BeaconState): Promise<void>;
+  initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void>;
 }
 
-export interface IAttestationProcessor {
+export interface IAttestationProcessor extends IService {
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
   receiveAttestation(attestation: Attestation): Promise<void>;
+  getPendingBlockAttestations(blockRootHex: string): Attestation[];
+  getPendingSlotAttestations(slot: Slot): Attestation[];
 }

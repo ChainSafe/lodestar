@@ -1,14 +1,16 @@
-import {IReputation} from "../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
+import PeerId from "peer-id";
+import {IReputation, IReputationStore} from "../IReputation";
+import {Checkpoint, SignedBeaconBlock, Slot, Status, Root, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReqResp} from "../../network";
+import {IReqResp, INetwork} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
-import {chunkify, getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
+import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../util/sleep";
+import {GENESIS_EPOCH, ZERO_HASH, Method} from "../../constants";
 
 export function getHighestCommonSlot(peers: IReputation[]): Slot {
   const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
@@ -21,7 +23,17 @@ export function getHighestCommonSlot(peers: IReputation[]): Slot {
   }, new Map<Slot, number>());
   if(slotStatuses.size) {
     const best =  [...slotStatuses.entries()]
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => {
+        const aVotes = a[1];
+        const bVotes = b[1];
+        if(aVotes > bVotes) return -1;
+        if(aVotes < bVotes) return 1;
+        const aSlot = a[0];
+        const bSlot = b[0];
+        if(aSlot > bSlot) return -1;
+        if(aSlot < bSlot) return 1;
+        return 0;
+      });
     return best[0][0];
   } else {
     return 0;
@@ -47,55 +59,37 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
       }
       return current;
     }, new Map());
-
   if(checkpointVotes.size > 0) {
     return Array.from(checkpointVotes.values())
       .sort((voteA, voteB) => {
-        return voteB.votes - voteA.votes;
+        if (voteA.votes > voteB.votes) return -1;
+        if (voteA.votes < voteB.votes) return 1;
+        if(voteA.checkpoint.epoch > voteB.checkpoint.epoch) return -1;
+        if(voteA.checkpoint.epoch < voteB.checkpoint.epoch) return 1;
+        return 0;
       }).shift().checkpoint;
   } else {
     return null;
   }
 }
 
-
-
-export function targetSlotToBlockChunks(
-  config: IBeaconConfig, chain: IBeaconChain, getInitialSyncPeers: (minSlot: Slot) => Promise<PeerInfo[]>
-): (source: AsyncIterable<Slot>) => AsyncGenerator<ISlotRange> {
-  return (source) => {
-    return (async function*() {
-      for await (const targetSlot of source) {
-        await getInitialSyncPeers(targetSlot);
-        yield* chunkify(config.params.SLOTS_PER_EPOCH, (await chain.getHeadState()).slot + 1, targetSlot);
-      }
-    })();
-  };
-}
-
-
-
 export function fetchBlockChunks(
   logger: ILogger,
   chain: IBeaconChain,
   reqResp: IReqResp,
-  getPeers: (minSlot: Slot) => Promise<PeerInfo[]>,
+  getPeers: () => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   maxBlocksPerChunk?: number
 ): (source: AsyncIterable<ISlotRange>,) => AsyncGenerator<SignedBeaconBlock[]> {
   return (source) => {
     return (async function*() {
       for await (const slotRange of source) {
-        let peers = await getPeers(
-          slotRange.end
-        );
+        let peers = await getPeers();
         let retry = 0;
         while (peers.length === 0 && retry < 5) {
           logger.info("Waiting for peers...");
           await sleep(6000);
-          peers = await getPeers(
-            slotRange.end
-          );
+          peers = await getPeers();
           retry++;
         }
         if(peers.length === 0) {
@@ -152,38 +146,134 @@ export function validateBlocks(
 
 /**
  * Bufferes and orders block and passes them to chain.
- * Returns last processed slot.
+ * Returns last processed slot if it was successful,
+ * current head slot if there was consensus split
+ * or null if there was no slots
  * @param config
  * @param chain
  * @param logger
+ * @param isInitialSync
  * @param trusted
  */
 export function processSyncBlocks(
-  config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, trusted = false
+  config: IBeaconConfig, chain: IBeaconChain, logger: ILogger, isInitialSync: boolean, trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot|null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
-    let headRoot = chain.forkChoice.headBlockRoot();
     let lastProcessedSlot: Slot|null = null;
     for await (const blocks of source) {
       logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
       blockBuffer.push(...blocks);
-      blockBuffer = sortBlocks(blockBuffer);
-
-      while(blockBuffer.length > 0) {
-        const block = blockBuffer.shift();
-        if(config.types.Root.equals(headRoot, block.message.parentRoot)) {
-          await chain.receiveBlock(block, trusted);
-          headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block.message));
-          if(block.message.slot > lastProcessedSlot) {
-            lastProcessedSlot = block.message.slot;
-          }
-        } else {
-          blockBuffer.unshift(block);
-          break;
+    }
+    blockBuffer = sortBlocks(blockBuffer);
+    let headRoot = chain.forkChoice.headBlockRoot();
+    let headSlot = chain.forkChoice.headBlockSlot();
+    while(blockBuffer.length > 0) {
+      const signedBlock = blockBuffer.shift();
+      const block = signedBlock.message;
+      if(!isInitialSync ||
+        (isInitialSync && block.slot > headSlot && config.types.Root.equals(headRoot, block.parentRoot))) {
+        await chain.receiveBlock(signedBlock, trusted);
+        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+        headSlot = block.slot;
+        if(block.slot > lastProcessedSlot) {
+          lastProcessedSlot = block.slot;
         }
+      } else {
+        logger.warn(
+          "Received block parent root doesn't match our head",
+          {
+            head: toHexString(headRoot),
+            headSlot,
+            blockParent: toHexString(block.parentRoot),
+            blockSlot: block.slot
+          }
+        );
+        //this will trigger sync to retry to fetch this chunk again
+        lastProcessedSlot = lastProcessedSlot || chain.forkChoice.headBlockSlot();
+        break;
       }
     }
     return lastProcessedSlot;
   };
+}
+
+export function createStatus(chain: IBeaconChain): Status {
+  const head = chain.forkChoice.head();
+  return {
+    forkDigest: chain.currentForkDigest,
+    finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
+    finalizedEpoch: head.finalizedCheckpoint.epoch,
+    headRoot: head.blockRoot,
+    headSlot: head.slot,
+  };
+}
+
+export async function syncPeersStatus(reps: IReputationStore, network: INetwork, status: Status): Promise<void> {
+  await Promise.all(network.getPeers().map(async (peerId) => {
+    try {
+      reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+      // eslint-disable-next-line no-empty
+    } catch {}
+  }));
+}
+
+/**
+ * Check supportedProtocols.
+ */
+export async function getPeerSupportedProtocols(
+  config: IBeaconConfig, reps: IReputationStore, peerId: PeerId, reqResp: IReqResp): Promise<Method[]> {
+  const latestStatus = reps.getFromPeerId(peerId).latestStatus;
+  if (!latestStatus || latestStatus.finalizedEpoch === GENESIS_EPOCH) {
+    return [];
+  }
+  const finalizedBlock = await reqResp.beaconBlocksByRoot(peerId, [latestStatus.finalizedRoot]);
+  if (!finalizedBlock || finalizedBlock.length !== 1) {
+    return [];
+  }
+  const parentRoot = finalizedBlock[0].message.parentRoot;
+  const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot]);
+  if(!parentBlock || parentBlock.length !== 1) {
+    return [];
+  }
+  const supportedProtocols = [Method.BeaconBlocksByRoot];
+  const testReqResp: BeaconBlocksByRangeRequest = {
+    startSlot: parentBlock[0].message.slot,
+    count: 2,
+    step: finalizedBlock[0].message.slot - parentBlock[0].message.slot
+  };
+  const blocks = await reqResp.beaconBlocksByRange(peerId, testReqResp);
+  if (blocks && blocks.length === 2) {
+    const block0Root = config.types.BeaconBlock.hashTreeRoot(blocks[0].message);
+    const block1Root = config.types.BeaconBlock.hashTreeRoot(blocks[1].message);
+    if (config.types.Root.equals(parentRoot, block0Root) &&
+      config.types.Root.equals(latestStatus.finalizedRoot, block1Root)) {
+      supportedProtocols.push(Method.BeaconBlocksByRange);
+    }
+  }
+  return supportedProtocols;
+}
+
+/**
+ * Get best head from peers that support beacon_blocks_by_range.
+ */
+export function getBestHead(peers: PeerId[], reps: IReputationStore):
+{slot: number; root: Root; supportedProtocols: Method[]} {
+  return peers.map((peerId) => {
+    const {latestStatus, supportedProtocols} = reps.get(peerId.toB58String());
+    return latestStatus? {slot: latestStatus.headSlot, root: latestStatus.headRoot, supportedProtocols} :
+      {slot: 0, root: ZERO_HASH, supportedProtocols};
+  }).reduce((head, peerStatus) => {
+    return (peerStatus.supportedProtocols.includes(Method.BeaconBlocksByRange) && peerStatus.slot >= head.slot) ?
+      peerStatus : head;
+  }, {slot: 0, root: ZERO_HASH, supportedProtocols: []});
+}
+
+/**
+ * Get best peer that support beacon_blocks_by_range.
+ */
+export function getBestPeer(config: IBeaconConfig, peers: PeerId[], reps: IReputationStore): PeerId {
+  const {root} = getBestHead(peers, reps);
+  return peers.find(peerId =>
+    config.types.Root.equals(root, reps.get(peerId.toB58String()).latestStatus?.headRoot || ZERO_HASH));
 }

@@ -35,12 +35,12 @@ export const registerAggregateAndProofProductionEndpoint: LodestarRestApiEndpoin
       const serialized = fromHex(request.query.attestation_data);
       const aggregate = await api.validator.produceAggregateAndProof(
         config.types.AttestationData.deserialize(serialized),
-        config.types.BLSPubkey.fromJson(request.query.aggregator_pubkey)
+        config.types.BLSPubkey.fromJson(request.query.aggregator_pubkey, {case: "snake"})
       );
       reply
         .code(200)
         .type("application/json")
-        .send(config.types.AggregateAndProof.toJson(aggregate));
+        .send(config.types.AggregateAndProof.toJson(aggregate, {case: "snake"}));
     }
   );
 };

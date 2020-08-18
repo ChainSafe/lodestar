@@ -1,0 +1,10 @@
+.md-header-nav__button.md-logo img,
+.md-nav__button.md-logo img {
+  display: block;
+  width: auto;
+  height: 23px;
+}
+
+.md-content {
+  margin-bottom: 5rem;
+}

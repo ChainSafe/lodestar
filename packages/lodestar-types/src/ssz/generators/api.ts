@@ -1,11 +1,19 @@
 import {IBeaconSSZTypes} from "../interface";
 import {ContainerType} from "@chainsafe/ssz";
 
+export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    root: ssz.Root,
+    canonical: ssz.Boolean,
+    header: ssz.SignedBeaconBlockHeader
+  },
+});
+
 export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
     slot: ssz.Slot,
     slotSignature: ssz.BLSSignature,
-    committeeIndex: ssz.CommitteeIndex,
+    attestationCommitteeIndex: ssz.CommitteeIndex,
     aggregatorPubkey: ssz.BLSPubkey
   },
 });
@@ -36,9 +44,8 @@ export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType => new Contain
 
 export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
   fields: {
-    startingBlock: ssz.Uint64,
-    currentBlock: ssz.Uint64,
-    highestBlock: ssz.Uint64,
+    headSlot: ssz.Uint64,
+    syncDistance: ssz.Uint64
   },
 });
 
@@ -48,6 +55,16 @@ export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType => new Co
     pubkey: ssz.BLSPubkey,
     balance: ssz.Gwei,
     validator: ssz.Validator
+  },
+});
+
+
+
+export const Genesis = (ssz: IBeaconSSZTypes): ContainerType => new ContainerType({
+  fields: {
+    genesisValidatorsRoot: ssz.Root,
+    genesisTime: ssz.Uint64,
+    genesisForkVersion: ssz.Version
   },
 });
 

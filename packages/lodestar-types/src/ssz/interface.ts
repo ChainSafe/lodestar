@@ -51,7 +51,7 @@ export interface IBeaconSSZTypes {
   DepositEvent: ContainerType<t.DepositEvent>;
   BeaconBlockHeader: ContainerType<t.BeaconBlockHeader>;
   SignedBeaconBlockHeader: ContainerType<t.SignedBeaconBlockHeader>;
-  SigningRoot: ContainerType<t.SigningRoot>;
+  SigningData: ContainerType<t.SigningData>;
   DepositDataRootList: ContainerType<List<t.Root>>;
   AttestationSubnets: BitVectorType;
   // operations
@@ -82,10 +82,13 @@ export interface IBeaconSSZTypes {
   Metadata: ContainerType<t.Metadata>;
   BeaconBlocksByRangeRequest: ContainerType<t.BeaconBlocksByRangeRequest>;
   BeaconBlocksByRootRequest: ContainerType<t.BeaconBlocksByRootRequest>;
+  P2pErrorMessage: ListType<t.P2pErrorMessage>;
   //api
+  SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
   ForkResponse: ContainerType<t.ForkResponse>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
+  Genesis: ContainerType<t.Genesis>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -129,7 +132,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "DepositEvent",
   "BeaconBlockHeader",
   "SignedBeaconBlockHeader",
-  "SigningRoot",
+  "SigningData",
   "DepositDataRootList",
   "AttestationSubnets",
   // operations
@@ -157,11 +160,14 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "Metadata",
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
+  "P2pErrorMessage",
   //api
+  "SignedBeaconHeaderResponse",
   "SubscribeToCommitteeSubnetPayload",
   "ForkResponse",
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
-  "ValidatorResponse"
+  "ValidatorResponse",
+  "Genesis"
 ];

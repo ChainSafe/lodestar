@@ -16,4 +16,8 @@ package-lock.json
 LodestarValidatorDB/
 benchmark-reports/
 validators/
-.lodecli
+keystores/
+.lodestar
+
+# Wallet CLI artifacts
+.pass

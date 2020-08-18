@@ -5,6 +5,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch,} from "@chainsafe/lodestar-
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
+import {TreeBacked} from "@chainsafe/ssz";
 
 /**
  * Attestation indexed by root
@@ -26,7 +27,7 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
       return attestation.data.index === committeeIndex
           && computeEpochAtSlot(this.config, attestation.data.slot) === epoch
           //filter out aggregated attestations
-          && attestation.aggregationBits.length === 1;
+          && Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1;
     });
   }
 
@@ -35,7 +36,7 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
     return attestations.filter((attestation) => attestation.data.target.epoch === epoch);
   }
 
-  public async removeOld(state: BeaconState): Promise<void> {
+  public async removeOld(state: TreeBacked<BeaconState>): Promise<void> {
     const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
     const attestations: Attestation[] = await this.values();
     await this.batchRemove(attestations.filter((a) => {

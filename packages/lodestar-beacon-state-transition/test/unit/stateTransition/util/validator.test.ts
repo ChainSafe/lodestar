@@ -1,5 +1,6 @@
 import {assert} from "chai";
 
+import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 
 import {
@@ -22,7 +23,7 @@ describe("getActiveValidatorIndices", () => {
     const activationEpoch = 1;
     const exitEpoch = 10;
     state.validators = Array.from({length: 10},
-      () => generateValidator({activation: activationEpoch, exit: exitEpoch }));
+      () => generateValidator({activation: activationEpoch, exit: exitEpoch })) as List<Validator>;
     const allActiveIndices = Array.from(state.validators).map((_, i) => i);
     const allInactiveIndices: any = [];
     assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);

@@ -1,31 +1,32 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {SignedBeaconBlock, BLSPubkey, ValidatorIndex} from "@chainsafe/lodestar-types";
-
-import {BeaconDb, LevelDbController} from "../../../src/db";
+import {BeaconDb, IBeaconDb, LevelDbController} from "../../../src/db";
 import {
-  AttesterSlashingRepository,
   AggregateAndProofRepository,
   AttestationRepository,
+  AttesterSlashingRepository,
   BadBlockRepository,
-  BlockRepository,
   BlockArchiveRepository,
+  BlockRepository,
   DepositDataRepository,
   DepositDataRootRepository,
-  ProposerSlashingRepository,
-  VoluntaryExitRepository,
   Eth1DataRepository,
+  ProposerSlashingRepository,
   StateArchiveRepository,
+  VoluntaryExitRepository,
 } from "../../../src/db/api/beacon/repositories";
-import {StateCache} from "../../../src/db/api/beacon/stateCache";
+import {StateContextCache} from "../../../src/db/api/beacon/stateContextCache";
+import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
+import {CheckpointStateCache} from "../../../src/db/api/beacon/stateContextCheckpointsCache";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 export class StubbedBeaconDb extends BeaconDb {
   public db: SinonStubbedInstance<LevelDbController>;
 
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
-  public stateCache: SinonStubbedInstance<StateCache> & StateCache;
+  public stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
   public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -39,24 +40,20 @@ export class StubbedBeaconDb extends BeaconDb {
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  public getValidatorIndex:
-  SinonStubbedInstance<(publicKey: BLSPubkey) => Promise<ValidatorIndex>>
-  &
-  ((publicKey: BLSPubkey) => Promise<ValidatorIndex>);
+  public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
+  public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
 
   public processBlockOperations:
   SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>>
   &
   ((signedBlock: SignedBeaconBlock) => Promise<void>);
 
-  constructor(sinon: SinonSandbox, config = mainnetConfig) {
-    super({
-      config,
-      controller: sinon.createStubInstance(LevelDbController),
-    });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(sinon: SinonSandbox, config = minimalConfig) {
+    super({config, controller: null});
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
-    this.stateCache = sinon.createStubInstance(StateCache) as any;
+    this.stateCache = sinon.createStubInstance(StateContextCache) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
     this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;
 
@@ -69,8 +66,8 @@ export class StubbedBeaconDb extends BeaconDb {
 
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
-
-    this.getValidatorIndex = sinon.stub(this, "getValidatorIndex") as any;
+    this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
+    this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
   }
 }

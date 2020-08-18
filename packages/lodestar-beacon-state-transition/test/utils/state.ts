@@ -1,6 +1,5 @@
-import {
-  BeaconState,
-} from "@chainsafe/lodestar-types";
+import {List, Vector} from "@chainsafe/ssz";
+import {BeaconState, PendingAttestation, Eth1Data, Validator} from "@chainsafe/lodestar-types";
 
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 
@@ -38,20 +37,20 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     },
     blockRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: config.params.SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    historicalRoots: [],
+    historicalRoots: [] as Vector<number>[] as List<Vector<number>>,
     eth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
       depositCount: 0,
     },
-    eth1DataVotes: [],
+    eth1DataVotes: [] as Eth1Data[] as List<Eth1Data>,
     eth1DepositIndex: 0,
-    validators: [],
-    balances: [],
+    validators: [] as Validator[] as List<Validator>,
+    balances: [] as bigint[] as List<bigint>,
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
-    previousEpochAttestations: [],
-    currentEpochAttestations: [],
+    previousEpochAttestations: [] as PendingAttestation[] as List<PendingAttestation>,
+    currentEpochAttestations: [] as PendingAttestation[] as List<PendingAttestation>,
     justificationBits: [false, false, false, false],
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,

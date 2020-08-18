@@ -3,14 +3,13 @@
  */
 
 import {ContractTransaction, ethers, Wallet} from "ethers";
-import {Provider} from "ethers/providers";
-import {BigNumber, ParamType} from "ethers/utils";
 import bls, {PrivateKey} from "@chainsafe/bls";
 import {hash} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {DomainType} from "../constants";
+import {IEthersAbi} from "./interface";
 import {computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 
@@ -19,7 +18,7 @@ export class Eth1Wallet {
 
   private wallet: Wallet;
 
-  private contractAbi: string|ParamType[];
+  private contractAbi: IEthersAbi;
 
   private config: IBeaconConfig;
 
@@ -27,10 +26,10 @@ export class Eth1Wallet {
 
   public constructor(
     eth1PrivateKey: string,
-    contractAbi: string|ParamType[],
+    contractAbi: IEthersAbi,
     config: IBeaconConfig,
     logger: ILogger,
-    provider?: Provider,
+    provider?: ethers.providers.Provider,
   ) {
     this.config = config;
     this.logger = logger;
@@ -45,15 +44,17 @@ export class Eth1Wallet {
    * Will deposit 32 ETH to eth2.0 deposit contract.
    * @param address address of deposit contract
    * @param value amount to wei to deposit on contract
+   * @param signingKey
+   * @param withdrawalKey
    */
 
   public async submitValidatorDeposit(
-    address: string, 
-    value: BigNumber, 
-    signingKey: PrivateKey, 
+    address: string,
+    value: ethers.BigNumber,
+    signingKey: PrivateKey,
     withdrawalKey: PrivateKey
   ): Promise<string> {
-    const amount = BigInt(value.toString()) / 1000000000n;
+    const amount = BigInt(value.toString()) / BigInt(1000000000);
 
     const contract = new ethers.Contract(address, this.contractAbi, this.wallet);
     const pubkey = signingKey.toPublicKey().toBytesCompressed();

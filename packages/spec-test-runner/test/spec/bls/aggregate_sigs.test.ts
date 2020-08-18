@@ -20,10 +20,17 @@ describeDirectorySpecTest<IAggregateSigsTestCase, string>(
     "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate/small"
   ),
   (testCase => {
-    const result =  bls.aggregateSignatures(testCase.data.input.map(pubKey => {
-      return Buffer.from(pubKey.replace("0x", ""), "hex");
-    }));
-    return `0x${Buffer.from(result).toString("hex")}`;
+    try {
+      const result = bls.aggregateSignatures(testCase.data.input.map(pubKey => {
+        return Buffer.from(pubKey.replace("0x", ""), "hex");
+      }));
+      return `0x${Buffer.from(result).toString("hex")}`;
+    } catch (e) {
+      if(e.message === "signatures is null or undefined or empty array") {
+        return null;
+      }
+      throw e;
+    }
   }),
   {
     inputTypes: {

@@ -1,6 +1,23 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {BLSPubkey, BLSSignature, CommitteeIndex, Gwei, Number64, Slot, Uint64, ValidatorIndex, Root} from "./primitive";
-import {Fork, Validator} from "./misc";
+import {
+  BLSPubkey,
+  BLSSignature,
+  CommitteeIndex,
+  Gwei,
+  Number64,
+  Slot,
+  Uint64,
+  ValidatorIndex,
+  Root,
+  Version
+} from "./primitive";
+import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
+
+export interface SignedBeaconHeaderResponse {
+  root: Root;
+  canonical: boolean;
+  header: SignedBeaconBlockHeader;
+}
 
 export interface SubscribeToCommitteeSubnetPayload {
   slot: Slot;
@@ -32,12 +49,10 @@ export interface ProposerDuty {
 }
 
 export interface SyncingStatus {
-  // The block at which syncing started (will only be reset, after the sync reached his head)
-  startingBlock: Uint64;
-  // Current Block
-  currentBlock: Uint64;
-  // The estimated highest block, or current target block number
-  highestBlock: Uint64;
+  // Head slot node is trying to reach
+  headSlot: Uint64;
+  // How many slots node needs to process to reach head. 0 if synced.
+  syncDistance: Uint64;
 }
 
 export interface ValidatorResponse {
@@ -46,4 +61,10 @@ export interface ValidatorResponse {
   pubkey: BLSPubkey;
   balance: Gwei;
   validator: Validator;
+}
+
+export interface Genesis {
+  genesisTime: Uint64;
+  genesisValidatorsRoot: Root;
+  genesisForkVersion: Version;
 }

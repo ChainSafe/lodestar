@@ -5,6 +5,14 @@ import {intDiv} from "@chainsafe/lodestar-utils";
 import {getSeed, unshuffleList} from "../../util";
 import {DomainType} from "../../constants";
 
+/**
+ * Readonly interface for IEpochShuffling.
+ */
+export interface IReadonlyEpochShuffling {
+  readonly epoch: Epoch;
+  readonly committees: Readonly<ValidatorIndex[][][]>;
+}
+
 export interface IEpochShuffling {
   /**
    * Epoch being shuffled

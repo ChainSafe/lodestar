@@ -1,7 +1,6 @@
 import pushable from "it-pushable";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
 import abortable from "abortable-iterator";
 import {AbortController} from "abort-controller";
@@ -17,13 +16,13 @@ import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
 import {ChainEventEmitter, IAttestationProcessor} from "../interface";
+import {convertBlock} from "./convertBlock";
 
 export class BlockProcessor implements IService {
 
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
-  private readonly epochCtx: EpochContext;
   private readonly forkChoice: ILMDGHOST;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
@@ -42,7 +41,6 @@ export class BlockProcessor implements IService {
     config: IBeaconConfig,
     logger: ILogger,
     db: IBeaconDb,
-    epochCtx: EpochContext,
     forkChoice: ILMDGHOST,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
@@ -51,7 +49,6 @@ export class BlockProcessor implements IService {
     this.config = config;
     this.logger = logger;
     this.db = db;
-    this.epochCtx = epochCtx;
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
@@ -61,7 +58,9 @@ export class BlockProcessor implements IService {
 
   public async start(): Promise<void> {
     const abortSignal = this.controller.signal;
-    pipe(
+    // TODO: Add more robust error handling of this pipe
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    void pipe(
       //source of blocks
       this.blockProcessingSource,
       //middleware to allow to stop block processing
@@ -69,12 +68,12 @@ export class BlockProcessor implements IService {
         //use onAbort to collect and save pending blocks
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
+      convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice),
       processBlock(
         this.config,
         this.logger,
         this.db,
-        this.epochCtx,
         this.forkChoice,
         this.pendingBlocks,
         this.eventBus
@@ -83,7 +82,6 @@ export class BlockProcessor implements IService {
         this.config,
         this.logger,
         this.db,
-        this.epochCtx,
         this.forkChoice,
         this.metrics,
         this.eventBus,

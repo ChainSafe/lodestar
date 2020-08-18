@@ -1,6 +1,7 @@
 import {assert} from "chai";
 import {NodejsNode} from "../../../../src/network/nodejs";
 import {createNode} from "../../../utils/network";
+import {sleep} from "../../../../src/util/sleep";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -25,33 +26,36 @@ describe("[network] nodejs libp2p", () => {
       nodeB.start(),
     ]);
 
+    nodeA.peerStore.addressBook.add(nodeB.peerId, nodeB.multiaddrs);
+
     // connect
     await Promise.all(
       [
         new Promise((resolve, reject) => {
           const t = setTimeout(reject, 1000, "connection timed out");
-          nodeB.once("peer:connect", () => {
+          nodeB.connectionManager.once("peer:connect", () => {
             clearTimeout(t);
             resolve();
           });
         }),
-        nodeA.dial(nodeB.peerInfo),
+        nodeA.dial(nodeB.peerId),
       ]
     );
 
     // test connection
-    assert(nodeA.registrar.getConnection(nodeB.peerInfo));
-    assert(nodeB.registrar.getConnection(nodeA.peerInfo));
+    assert(nodeA.connectionManager.get(nodeB.peerId), "nodeA should have connection to nodeB");
+    assert(nodeB.connectionManager.get(nodeA.peerId), "nodeB should have connection to nodeA");
 
     // disconnect
-    const p = new Promise(resolve => nodeB.once("peer:disconnect", resolve));
+    const p = new Promise(resolve => nodeB.connectionManager.once("peer:disconnect", resolve));
     await new Promise(resolve => setTimeout(resolve, 100));
-    await nodeA.hangUp(nodeB.peerInfo);
+    await nodeA.hangUp(nodeB.peerId);
     await p;
 
     // test disconnection
-    assert(!nodeA.registrar.getConnection(nodeB.peerInfo));
-    assert(!nodeB.registrar.getConnection(nodeA.peerInfo));
+    assert(!nodeA.connectionManager.get(nodeB.peerId), "nodeA should NOT have connection to nodeB");
+    await sleep(200);
+    assert(!nodeB.connectionManager.get(nodeA.peerId), "nodeB should NOT have connection to nodeA");
     // teardown
     await Promise.all([
       nodeA.stop(),

@@ -1,7 +1,7 @@
 import {describe, it} from "mocha";
 import {
   getAttestationSubnetEvent,
-  getAttestationSubnetTopic,
+  getBlockStateContext,
   getGossipTopic,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
@@ -10,9 +10,15 @@ import {
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {expect} from "chai";
-import {generateEmptyAttestation} from "../../../utils/attestation";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {ArrayDagLMDGHOST, ILMDGHOST} from "../../../../src/chain";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
+import {generateState} from "../../../utils/state";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 const forkValue = Buffer.alloc(4);
 describe("gossip utils", function () {
@@ -40,8 +46,14 @@ describe("gossip utils", function () {
     });
 
     it("get attestation subnet topic", function () {
-      const topic = getAttestationSubnetTopic(generateEmptyAttestation(), forkValue);
-      expect(topic).to.be.equal("/eth2/00000000/committee_index0_beacon_attestation/ssz_snappy");
+      const subnet = 10;
+      const topic = getGossipTopic(
+        GossipEvent.ATTESTATION_SUBNET,
+        forkValue,
+        GossipEncoding.SSZ_SNAPPY,
+        new Map([["subnet", String(subnet)]])
+      );
+      expect(topic).to.be.equal("/eth2/00000000/beacon_attestation_10/ssz_snappy");
     });
 
   });
@@ -70,7 +82,6 @@ describe("gossip utils", function () {
       expect(mapGossipEvent(getAttestationSubnetEvent(0))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
       expect(mapGossipEvent(getAttestationSubnetEvent(1))).to.be.equal(GossipEvent.ATTESTATION_SUBNET);
       expect(mapGossipEvent(GossipEvent.BLOCK)).to.be.equal(GossipEvent.BLOCK);
-      expect(mapGossipEvent(GossipEvent.ATTESTATION)).to.be.equal(GossipEvent.ATTESTATION);
       expect(mapGossipEvent(GossipEvent.AGGREGATE_AND_PROOF)).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
       expect(mapGossipEvent(GossipEvent.VOLUNTARY_EXIT)).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
       expect(mapGossipEvent(GossipEvent.PROPOSER_SLASHING)).to.be.equal(GossipEvent.PROPOSER_SLASHING);
@@ -84,9 +95,6 @@ describe("gossip utils", function () {
       expect(
         topicToGossipEvent(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkValue))
       ).to.be.equal(GossipEvent.AGGREGATE_AND_PROOF);
-      expect(
-        topicToGossipEvent(getGossipTopic(GossipEvent.ATTESTATION, forkValue))
-      ).to.be.equal(GossipEvent.ATTESTATION);
       expect(
         topicToGossipEvent(getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkValue))
       ).to.be.equal(GossipEvent.VOLUNTARY_EXIT);
@@ -111,6 +119,65 @@ describe("gossip utils", function () {
         expect(getSubnetFromAttestationSubnetTopic(topic)).to.be.equal(subnet);
       }
     });
+  });
+
+  describe("get block state context", function () {
+
+    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    let dbStub: StubbedBeaconDb;
+
+    beforeEach(function () {
+      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+      dbStub = new StubbedBeaconDb(sinon, config);
+    });
+
+    it("missing parent summary", async function () {
+      const block = generateSignedBlock();
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(null);
+      const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot);
+      expect(stateContext).to.be.null;
+      expect(
+        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
+      ).to.be.true;
+      expect(
+        dbStub.stateCache.get.calledOnce
+      ).to.be.false;
+    });
+
+    it("missing state", async function () {
+      const block = generateSignedBlock();
+      const stateRoot = Buffer.alloc(32, 3);
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(generateBlockSummary({stateRoot}));
+      dbStub.stateCache.get.resolves(null);
+      const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot);
+      expect(stateContext).to.be.null;
+      expect(
+        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
+      ).to.be.true;
+      expect(
+        dbStub.stateCache.get.withArgs(stateRoot).calledOnce
+      ).to.be.true;
+    });
+
+    it("found state", async function () {
+      const block = generateSignedBlock();
+      const stateRoot = Buffer.alloc(32, 3);
+      forkChoiceStub.getBlockSummaryByBlockRoot.returns(generateBlockSummary({stateRoot}));
+      dbStub.stateCache.get.resolves({
+        state: generateState(),
+        epochCtx: new EpochContext(config)
+      });
+      const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot, 5);
+      expect(stateContext).to.not.be.null;
+      expect(stateContext.state.slot).to.be.equal(5);
+      expect(
+        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
+      ).to.be.true;
+      expect(
+        dbStub.stateCache.get.withArgs(stateRoot).calledOnce
+      ).to.be.true;
+    });
+
   });
 
 });

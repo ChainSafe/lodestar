@@ -2,7 +2,7 @@
  * @module db/api/beacon
  */
 
-import {BLSPubkey, ValidatorIndex, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IBeaconDb} from "./interface";
 import {
@@ -10,8 +10,8 @@ import {
   AttestationRepository,
   AttesterSlashingRepository,
   BadBlockRepository,
-  BlockRepository,
   BlockArchiveRepository,
+  BlockRepository,
   DepositDataRepository,
   DepositDataRootRepository,
   Eth1DataRepository,
@@ -19,13 +19,17 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository
 } from "./repositories";
-import {StateCache} from "./stateCache";
+import {StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {SeenAttestationCache} from "./seenAttestationCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
-  public stateCache: StateCache;
+  public stateCache: StateContextCache;
+  public checkpointStateCache: CheckpointStateCache;
+  public seenAttestationCache: SeenAttestationCache;
   public blockArchive: BlockArchiveRepository;
   public stateArchive: StateArchiveRepository;
 
@@ -43,7 +47,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     super(opts);
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
-    this.stateCache = new StateCache();
+    this.stateCache = new StateContextCache();
+    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    this.seenAttestationCache = new SeenAttestationCache(5000);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);
@@ -56,11 +62,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
-  public async getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex> {
-    const state = await this.stateArchive.lastValue();
-    //TODO: cache this (hashmap)
-    return state.validators.findIndex(value => this.config.types.BLSPubkey.equals(value.pubkey, publicKey));
-  }
 
   /**
    * Remove stored operations based on a newly processed block

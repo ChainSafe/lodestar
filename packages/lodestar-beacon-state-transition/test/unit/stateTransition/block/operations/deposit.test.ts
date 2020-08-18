@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
-import {bigIntMin, intToBytes} from "@chainsafe/lodestar-utils";
+import {bigIntMin, intToBytes, assert} from "@chainsafe/lodestar-utils";
 import {generateState} from "../../../../utils/state";
 import {generateDeposit} from "../../../../utils/deposit";
 import {generateValidator} from "../../../../utils/validator";
@@ -20,7 +20,8 @@ describe("process block - deposits", function () {
     mockery.registerMock("@chainsafe/lodestar-utils", {
       "verifyMerkleBranch": verifyMerkleBranchStub,
       "bigIntMin": bigIntMin,
-      "intToBytes": intToBytes
+      "intToBytes": intToBytes,
+      "assert": assert
     });
     mockery.registerMock("@chainsafe/bls", {
       verify: blsStub

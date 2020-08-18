@@ -2,13 +2,13 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
 import {
   BeaconState,
   AttesterSlashing,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   getCurrentEpoch,
@@ -27,7 +27,7 @@ export function processAttesterSlashing(
   verifySignatures = true,
 ): void {
   // Check that the attestations are conflicting
-  assert(isValidAttesterSlashing(config, state, attesterSlashing, verifySignatures));
+  assert.true(isValidAttesterSlashing(config, state, attesterSlashing, verifySignatures), "Invalid attester slashing");
 
   const attestation1 = attesterSlashing.attestation1;
   const attestation2 = attesterSlashing.attestation2;
@@ -45,5 +45,5 @@ export function processAttesterSlashing(
     }
   });
 
-  assert(slashedAny);
+  assert.true(slashedAny, "No slashable validators for attester slashing found");
 }

@@ -1,0 +1,53 @@
+site_name: Lodestar documentation
+site_description: Lodestar documentation - Typescript Eth2.0 client
+site_url: https://chainsafe.github.io/lodestar
+
+repo_name: chainsafe/lodestar
+repo_url: https://github.com/chainsafe/lodestar
+
+# Configuration
+theme:
+  name: material
+  logo: assets/300ppi/short-LS-hookS-WHITE.png
+  favicon: images/favicon.ico
+  palette:
+    scheme: preference
+    accent: black
+  nav_style: dark
+
+markdown_extensions:
+  - meta
+  - codehilite:
+      guess_lang: false
+  - admonition
+  - toc:
+      permalink: true
+extra_css:
+  - stylesheets/extras.css
+
+# Socials
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/ChainSafe/lodestar
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ChainSafe
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/yjyvFRP
+    - icon: fontawesome/brands/medium
+      link: https://medium.com/ChainSafe
+
+# Customize left navigation menu
+nav:
+  - Getting started: index.md
+  - Installation: installation.md
+  - Usage:
+      - Medalla testnet: usage/medalla.md
+      - Altona testnet: usage/altona.md
+      - Local testnet: usage/local.md
+      - Key management: usage/key-management.md
+      - Prometheus & Grafana Setup: usage/prometheus-grafana.md
+  - Reference:
+      - Command line: reference/cli.md
+  - Packages: packages.md
+  - Contributing: contributing.md

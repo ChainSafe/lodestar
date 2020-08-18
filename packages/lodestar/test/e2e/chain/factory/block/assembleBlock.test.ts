@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateEmptySignedBlock} from "../../../../utils/block";
@@ -10,7 +10,8 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {
   getBeaconProposerIndex,
   signedBlockToSignedHeader,
-  stateTransition
+  EpochContext,
+  fastStateTransition
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -25,7 +26,8 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 
 describe("produce block", function () {
-  this.timeout(0);
+  this.timeout("10 min");
+
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -51,7 +53,9 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    chainStub.getHeadState.resolves(config.types.BeaconState.clone(state));
+    const epochCtx = new EpochContext(config);
+    epochCtx.loadState(state);
+    chainStub.getHeadStateContext.resolves({state: state.clone(), epochCtx});
     chainStub.getHeadBlock.resolves(parentBlock);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
@@ -70,8 +74,8 @@ describe("produce block", function () {
       // @ts-ignore
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(1, state.fork, ZERO_HASH);
-    expect(() => stateTransition(config, state, block, false)).to.not.throw();
+    const block = await blockProposingService.createAndPublishBlock(0,1, state.fork, ZERO_HASH);
+    expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
@@ -80,7 +84,7 @@ describe("produce block", function () {
     const validatorDbStub = sinon.createStubInstance(ValidatorDB);
     return new BlockProposingService(
       config,
-      keypair,
+      [keypair],
       rpcClientStub,
       validatorDbStub as unknown as IValidatorDB,
       sinon.createStubInstance(WinstonLogger)

@@ -4,53 +4,53 @@
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  BeaconState,
   BLSPubkey,
-  Bytes32,
   ForkResponse,
-  Number64,
+  Genesis,
   SignedBeaconBlock,
-  SyncingStatus,
-  ValidatorResponse,
-  Uint64
+  Uint64,
+  ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IApiModules} from "../../interface";
 import {ApiNamespace} from "../../index";
-import EventIterator from "event-iterator";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
+import {LodestarEventIterator} from "../../../util/events";
+import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
+import {IBeaconStateApi} from "./state/interface";
+import {BeaconStateApi} from "./state/state";
 
 export class BeaconApi implements IBeaconApi {
 
   public namespace: ApiNamespace;
+  public state: IBeaconStateApi;
+  public blocks: IBeaconBlocksApi;
+  public pool: IBeaconPoolApi;
 
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"chain"|"db"|"sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
     this.sync = modules.sync;
+    this.state = new BeaconStateApi(opts, modules);
+    this.blocks = new BeaconBlockApi(opts, modules);
+    this.pool = new BeaconPoolApi(opts, modules);
   }
-
-  public async getClientVersion(): Promise<Bytes32> {
-    return Buffer.from(`lodestar-${process.env.npm_package_version}`, "utf-8");
-  }
-
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
-    const state = await this.chain.getHeadState();
-    const index = state.validators.findIndex((v) => {
-      return this.config.types.BLSPubkey.equals(pubkey, v.pubkey);
-    });
-    if(index !==-1) {
+    const {epochCtx, state} = await this.chain.getHeadStateContext();
+    const index = epochCtx.pubkey2index.get(pubkey);
+    if(index) {
       return {
         validator: state.validators[index],
         balance: state.balances[index],
@@ -63,7 +63,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<ForkResponse> {
-    const state: BeaconState = await this.chain.getHeadState();
+    const state = await this.chain.getHeadState();
     const networkId: Uint64 = this.chain.networkId;
     const fork = state? state.fork : {
       previousVersion: Buffer.alloc(4),
@@ -77,27 +77,24 @@ export class BeaconApi implements IBeaconApi {
     };
   }
 
-  public async getGenesisTime(): Promise<Number64> {
+  public async getGenesis(): Promise<Genesis|null> {
     const state = await this.chain.getHeadState();
     if(state) {
-      return state.genesisTime;
+      return {
+        genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
+        genesisTime: BigInt(state.genesisTime),
+        genesisValidatorsRoot: state.genesisValidatorsRoot
+      };
     }
-    return 0;
+    return null;
   }
 
-  public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    const status = await this.sync.getSyncStatus();
-    if(!status) {
-      return false;
-    }
-    return status;
-  }
-
-  public getBlockStream(): AsyncIterable<SignedBeaconBlock> {
-    return new EventIterator<SignedBeaconBlock>((push) => {
-      this.chain.on("processedBlock", (block) => {
-        push(block);
-      });
+  public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
+    return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
+      this.chain.on("processedBlock", push);
+      return () => {
+        this.chain.off("processedBlock", push);
+      };
     });
   }
 }

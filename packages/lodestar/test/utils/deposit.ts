@@ -16,7 +16,7 @@ export function generateDeposit(): Deposit {
 
 export function generateDepositData(): DepositData {
   return {
-    amount: 32n * 10n * 9n,
+    amount:BigInt(32) *BigInt(10) *BigInt(9),
     pubkey: Buffer.alloc(48),
     withdrawalCredentials: Buffer.alloc(32),
     signature: EMPTY_SIGNATURE,

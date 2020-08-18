@@ -161,7 +161,7 @@ export interface SignedBeaconBlockHeader {
   signature: BLSSignature;
 }
 
-export interface SigningRoot {
+export interface SigningData {
   objectRoot: Root;
   domain: Domain;
 }

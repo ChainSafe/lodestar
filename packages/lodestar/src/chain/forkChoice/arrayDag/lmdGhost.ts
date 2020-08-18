@@ -2,22 +2,23 @@
  * @module chain/forkChoice
  */
 
-import assert from "assert";
-
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ValidatorIndex, Number64, Checkpoint, Epoch, Root} from "@chainsafe/lodestar-types";
+import {Checkpoint, Epoch, Gwei, Number64, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSlotsSinceEpochStart,
-  getCurrentSlot,
-  computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeSlotsSinceEpochStart,
+  computeStartSlotAtEpoch,
+  getCurrentSlot
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {assert} from "@chainsafe/lodestar-utils";
 
-import {ILMDGHOST, BlockSummary, NO_NODE} from "../interface";
+import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex, ForkChoiceEventEmitter} from "../interface";
 
 import {NodeInfo} from "./interface";
-import {RootHex, HexCheckpoint} from "../interface";
-import {GENESIS_EPOCH, ZERO_HASH, GENESIS_SLOT} from "../../../constants";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
 import {IBeaconClock} from "../../clock/interface";
+import {EventEmitter} from "events";
 
 /**
  * A block root with additional metadata required to form a DAG
@@ -72,7 +73,7 @@ export class Node {
     this.justifiedCheckpoint = justifiedCheckpoint;
     this.finalizedCheckpoint = finalizedCheckpoint;
 
-    this.weight = 0n;
+    this.weight = BigInt(0);
     this.bestChild = null;
     this.bestTarget = null;
     this.children = {};
@@ -97,18 +98,21 @@ export class Node {
     return typeof(this.parent) === "number" && this.parent >= 0;
   }
 
-  public shiftIndex(n: number): void {
-    assert(n >= 0, "invalid value to shift index: " + n);
+  public shiftIndex(oldNodes: Node[], newNodeIndexes: Map<RootHex, number>): void {
     if (this.hasBestChild()) {
-      this.bestChild = this.bestChild - n;
+      const bestChildRoot = oldNodes[this.bestChild].blockRoot;
+      this.bestChild = newNodeIndexes.get(bestChildRoot);
     }
     if (this.hasParent()) {
-      this.parent = this.parent - n;
+      const parentRoot = oldNodes[this.parent].blockRoot;
+      // this may be undefined because its parent is deleted from node
+      this.parent = newNodeIndexes.get(parentRoot);
     }
     if (this.bestTarget) {
-      this.bestTarget = this.bestTarget - n;
+      const bestTargetRoot = oldNodes[this.bestTarget].blockRoot;
+      this.bestTarget = newNodeIndexes.get(bestTargetRoot);
     }
-    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = this.children[blockRoot] - n);
+    Object.keys(this.children).forEach(blockRoot => this.children[blockRoot] = newNodeIndexes.get(blockRoot));
   }
 
 }
@@ -119,7 +123,7 @@ export class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#array-based-stateful-dag-proto_array
  */
-export class ArrayDagLMDGHOST implements ILMDGHOST {
+export class ArrayDagLMDGHOST extends (EventEmitter as { new(): ForkChoiceEventEmitter }) implements ILMDGHOST {
   private readonly config: IBeaconConfig;
   private genesisTime: Number64;
 
@@ -156,6 +160,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   private clock: IBeaconClock;
 
   public constructor(config: IBeaconConfig) {
+    super();
     const slotFinder = (hex: string): Slot | null =>
       this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
@@ -179,7 +184,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public async stop(): Promise<void> {
-    this.clock.unsubscribeFromNewEpoch(this.onTick);
+    this.clock && this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {
@@ -217,13 +222,13 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
     if (this.finalized && this.finalized.node) {
       const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-      assert(node.slot > finalizedSlot,
-        `Fork choice: node slot ${node.slot} should be bigger than finalized slot ${finalizedSlot}`);
+      assert.gt(node.slot, finalizedSlot, "Fork choice: node slot should be bigger than finalized slot");
       // Check block is a descendant of the finalized block at the checkpoint finalized slot
       assert.equal(
-        this.getAncestor(blockRootHex, finalizedSlot),
+        this.getAncestorHex(blockRootHex, finalizedSlot),
         this.finalized.node.blockRoot,
-        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`);
+        `Fork choice: Block slot ${node.slot} is not on the same chain, finalized slot=${finalizedSlot}`,
+      );
     }
 
     let shouldCheckBestTarget = false;
@@ -244,7 +249,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       // or if store justified is not in chain with finalized checkpoint
       if (justifiedCheckpoint.epoch > this.justified.epoch ||
         (this.finalized.node &&
-          this.getAncestor(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
+          this.getAncestorHex(this.justified.node.blockRoot, finalizedSlot) !== this.finalized.node.blockRoot)) {
         this.setJustified(justifiedCheckpoint);
       }
     }
@@ -268,7 +273,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     if (!parent.hasBestChild()) {
       // propagate itself as best target as far as necessary
       parent.bestChild = childIndex;
-      this.propagateWeightChange(childIndex, 0n);
+      this.propagateWeightChange(childIndex, BigInt(0));
     }
   }
 
@@ -292,7 +297,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       .map(n => this.nodeIndices.get(n.blockRoot));
     const incorrectBestTargets = leafNodeIdxs.filter(idx => !this.isCandidateForBestTarget(idx));
     // step down as best targets
-    incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, 0n));
+    incorrectBestTargets.forEach(idx => this.propagateWeightChange(idx, BigInt(0)));
   }
 
   public addAttestation(blockRootBuf: Uint8Array, attester: ValidatorIndex, weight: Gwei): void {
@@ -325,7 +330,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headNode(): Node {
-    assert(this.justified);
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -343,7 +348,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   }
 
   public headStateRoot(): Uint8Array {
-    assert(this.justified);
+    assert.true(Boolean(this.justified), "Justified checkpoint does not exist");
     if (!this.synced) {
       this.syncChanges();
     }
@@ -351,9 +356,8 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     return bestTarget.stateRoot.valueOf() as Uint8Array;
   }
 
-  public getBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
-    const head = this.headNode();
-    let node = head;
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null {
+    let node = this.headNode();
     if (!node) {
       return null;
     }
@@ -367,9 +371,27 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     return this.toBlockSummary(node);
   }
 
+  public getBlockSummariesAtSlot(slot: Slot): BlockSummary[] {
+    return this.nodes
+      .filter((node) => this.config.types.Slot.equals(node.slot, slot))
+      .map((node) => this.toBlockSummary(node));
+  }
+
   public getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null {
     const node = this.getNode(blockRoot);
     return (node)? this.toBlockSummary(node) : null;
+  }
+
+  public getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[] {
+    return Object.values(this.nodes)
+      .filter((node) => {
+        return node.hasParent()
+          && this.config.types.Root.equals(
+            fromHexString(this.nodes[node.parent].blockRoot),
+            blockRoot
+          );
+      })
+      .map(node => this.toBlockSummary(node));
   }
 
   public hasBlock(blockRoot: Uint8Array): boolean {
@@ -388,7 +410,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     }
     const hexBlockRoot = toHexString(blockRoot);
     const justifiedSlot = computeStartSlotAtEpoch(this.config, this.justified.epoch);
-    if (this.justified.node && this.getAncestor(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
+    if (this.justified.node && this.getAncestorHex(hexBlockRoot, justifiedSlot) !== this.justified.node.blockRoot) {
       return false;
     }
 
@@ -407,6 +429,16 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       return null;
     }
     return {root: fromHexString(this.finalized.node.blockRoot), epoch: this.finalized.epoch};
+  }
+
+  /**
+   * Get ancestor of a root until a slot
+   * @param root the starting root to look for ancestor
+   * @param slot target slot - normally slot < slotOf(root)
+   */
+  public getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null {
+    const ancestor = this.getAncestorHex(toHexString(root), slot);
+    return ancestor? fromHexString(ancestor) : null;
   }
 
   /**
@@ -558,7 +590,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     this.justified = {node: this.nodes[idx], epoch};
   }
 
-  private getAncestor(root: RootHex, slot: Slot): RootHex | null {
+  private getAncestorHex(root: RootHex, slot: Slot): RootHex | null {
     const idx = this.nodeIndices.get(root);
     if (idx === undefined) {
       return null;
@@ -567,7 +599,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     if (node.slot > slot) {
       if (node.hasParent()) {
         const parentNode = this.nodes[node.parent];
-        return this.getAncestor(parentNode.blockRoot, slot);
+        return this.getAncestorHex(parentNode.blockRoot, slot);
       } else {
         return null;
       }
@@ -582,18 +614,19 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
 
   private prune(): void {
     if (this.finalized && this.finalized.node) {
-      const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot).map(node => node.blockRoot);
-      const numDelete = nodesToDel.length;
-      this.nodes = this.nodes.slice(numDelete);
-      // Update indexes in node
-      this.nodes.forEach(node => node.shiftIndex(numDelete));
-      nodesToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
+      const nodesToDel = this.nodes.filter(node => node.slot < this.finalized.node.slot);
+      const blockSummariesToDel = nodesToDel.map(node => this.toBlockSummary(node));
+      const blockRootsToDel = nodesToDel.map(node => node.blockRoot);
+      const oldNodes = this.nodes;
+      this.nodes = this.nodes.filter(node => !blockRootsToDel.includes(node.blockRoot));
+      blockRootsToDel.forEach(blockRoot => this.nodeIndices.delete(blockRoot));
       // Update indexes in nodeIndices
-      for (const key of this.nodeIndices.keys()) {
-        const value = this.nodeIndices.get(key);
-        this.nodeIndices.set(key, value - numDelete);
-      }
+      this.nodeIndices = new Map();
+      this.nodes.forEach((node, index) => this.nodeIndices.set(node.blockRoot, index));
+      // Update indexes in node
+      this.nodes.forEach(node => node.shiftIndex(oldNodes, this.nodeIndices));
       this.finalized.node.parent = NO_NODE;
+      this.emit("prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
     }
   }
 

@@ -1,8 +1,11 @@
-import assert from "assert";
-import Gossipsub, {IGossipMessage, Options, Registrar} from "libp2p-gossipsub";
+import PeerId from "peer-id";
+import Gossipsub from "libp2p-gossipsub";
+import {Registrar, Peer} from "libp2p-gossipsub/src/peer";
+import {Message} from "libp2p-gossipsub/src/message";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {assert} from "@chainsafe/lodestar-utils";
 import {compress, uncompress} from "snappyjs";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
@@ -13,7 +16,7 @@ import {
   normalizeInRpcMessage,
   topicToGossipEvent
 } from "./utils";
-import {GossipEvent} from "./constants";
+import {GossipEvent, ExtendedValidatorResult} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {getTopicEncoding, GossipEncoding} from "./encoding";
 
@@ -29,9 +32,9 @@ export class LodestarGossipsub extends Gossipsub {
   private timeToLive: number;
   private readonly  logger: ILogger;
 
-  constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerInfo: PeerInfo,
-    registrar: Registrar, options: Options = {}) {
-    super(peerInfo, registrar, Object.assign(options, {msgIdFn: getMessageId}));
+  constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerId: PeerId,
+    registrar: Registrar, options = {}) {
+    super(peerId, registrar, Object.assign(options, {msgIdFn: getMessageId}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -62,34 +65,50 @@ export class LodestarGossipsub extends Gossipsub {
     }
   }
 
-  public async validate(rawMessage: IGossipMessage): Promise<boolean> {
+  public async validate(rawMessage: Message, peer: Peer): Promise<boolean> {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
-    assert(message.topicIDs && message.topicIDs.length === 1, `Invalid topicIDs: ${message.topicIDs}`);
-    assert(message.data.length <= GOSSIP_MAX_SIZE, `Message exceeds size limit of ${GOSSIP_MAX_SIZE} bytes`);
+    assert.true(Boolean(message.topicIDs), "topicIds is not defined");
+    assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
+    assert.lte(message.data.length, GOSSIP_MAX_SIZE, "Message exceeds byte size limit");
     const topic = message.topicIDs[0];
     // avoid duplicate
     if (this.transformedObjects.get(message.messageId)) {
       return false;
     }
 
-    let isValid;
+    let validationResult;
     let transformedObj: GossipObject;
     try {
       const validatorFn = this.getTopicValidator(topic);
       const objSubnet = this.deserializeGossipMessage(topic, message);
       transformedObj = objSubnet.object;
-      isValid = await validatorFn(transformedObj, objSubnet.subnet);
+      validationResult = await validatorFn(transformedObj, objSubnet.subnet);
     } catch (err) {
-      isValid = false;
+      validationResult = ExtendedValidatorResult.reject;
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
+    const isValid = this._processTopicValidatorResult(topic, peer, message, validationResult);
     if (isValid && transformedObj) {
       this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj});
     }
     return isValid;
   }
 
-  public _emitMessage(topics: string[], message: IGossipMessage): void {
+  /**
+   * TODO: Should be removed in gossip 1.1
+   * @param topic
+   * @param peer
+   * @param message
+   * @param result
+   */
+  public _processTopicValidatorResult (topic: string, peer: Peer, message: Message, result: unknown): boolean {
+    if (result === ExtendedValidatorResult.accept) {
+      return true;
+    }
+    return false;
+  }
+
+  public _emitMessage(topics: string[], message: Message): void {
     const subscribedTopics = super.getTopics();
     topics.forEach((topic) => {
       if (subscribedTopics.includes(topic)) {
@@ -101,7 +120,7 @@ export class LodestarGossipsub extends Gossipsub {
     });
   }
 
-  publish(topic: string, data: Buffer): Promise<void> {
+  publish(topic: string, data: Buffer): void {
     const encoding = getTopicEncoding(topic);
     if(encoding === GossipEncoding.SSZ_SNAPPY) {
       data = compress(data);
@@ -119,9 +138,6 @@ export class LodestarGossipsub extends Gossipsub {
     switch(gossipEvent) {
       case GossipEvent.BLOCK:
         result = this.validator.isValidIncomingBlock;
-        break;
-      case GossipEvent.ATTESTATION:
-        result =  this.validator.isValidIncomingUnaggregatedAttestation;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
         result =  this.validator.isValidIncomingAggregateAndProof;
@@ -141,7 +157,7 @@ export class LodestarGossipsub extends Gossipsub {
     return result as GossipMessageValidatorFn;
   }
 
-  private deserializeGossipMessage(topic: string, message: IGossipMessage): { object: GossipObject; subnet?: number} {
+  private deserializeGossipMessage(topic: string, message: Message): { object: GossipObject; subnet?: number} {
     if(getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
       message.data = uncompress(message.data);
     }
@@ -155,9 +171,6 @@ export class LodestarGossipsub extends Gossipsub {
     switch(gossipEvent) {
       case GossipEvent.BLOCK:
         objType = this.config.types.SignedBeaconBlock;
-        break;
-      case GossipEvent.ATTESTATION:
-        objType = this.config.types.Attestation;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
         objType = this.config.types.SignedAggregateAndProof;

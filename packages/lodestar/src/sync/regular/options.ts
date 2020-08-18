@@ -4,5 +4,5 @@ export interface IRegularSyncOptions {
 }
 
 export const defaultOptions: IRegularSyncOptions = {
-  blockPerChunk: 5
+  blockPerChunk: 64
 };

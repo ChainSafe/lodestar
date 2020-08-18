@@ -28,7 +28,7 @@ export const registerProposerDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
     opts,
     async (request, reply) => {
       const responseValue = await api.validator.getProposerDuties(request.params.epoch);
-      const response = responseValue.map(duty => config.types.ProposerDuty.toJson(duty));
+      const response = responseValue.map(duty => config.types.ProposerDuty.toJson(duty, {case: "snake"}));
       reply
         .code(200)
         .type("application/json")

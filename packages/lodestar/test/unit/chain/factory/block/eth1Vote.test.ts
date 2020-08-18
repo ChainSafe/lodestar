@@ -3,10 +3,10 @@ import {beforeEach, describe, it} from "mocha";
 import {getEth1Vote} from "../../../../../src/chain/factory/block/eth1Vote";
 import {generateState} from "../../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Block} from "ethers/providers";
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {StubbedBeaconDb} from "../../../../utils/stub";
+import crypto from "crypto";
 
 describe("eth1 vote", function () {
 
@@ -72,6 +72,33 @@ describe("eth1 vote", function () {
     );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote1)).to.be.true;
+  });
+
+  it("get eth1 vote - Ensure eth1data voting can't move to past eth1data states", async function () {
+    const expectedVote1: Eth1Data = {
+      blockHash: crypto.randomBytes(32),
+      depositRoot: crypto.randomBytes(32),
+      depositCount: 10
+    };
+    const expectedVote2: Eth1Data = {
+      blockHash: crypto.randomBytes(32),
+      depositRoot: crypto.randomBytes(32),
+      depositCount: 12
+    };
+    db.eth1Data.values.resolves([expectedVote2, expectedVote1]);
+    const stateEth1Data: Eth1Data = {
+      blockHash: crypto.randomBytes(32),
+      depositRoot: crypto.randomBytes(32),
+      depositCount: 11
+    };
+    // only expectedVote2 is eligible due to depositCount
+    const eth1Vote = await getEth1Vote(
+      config,
+      db,
+      generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1], eth1Data: stateEth1Data}),
+    );
+    expect(db.eth1Data.values.callCount).to.be.equal(1);
+    expect(config.types.Eth1Data.equals(eth1Vote, expectedVote2)).to.be.true;
   });
 
   it("get eth1 vote - no vote in state", async function () {

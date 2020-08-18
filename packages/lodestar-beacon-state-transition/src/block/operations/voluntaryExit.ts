@@ -2,10 +2,9 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
-
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 
 import {initiateValidatorExit, isValidVoluntaryExit,} from "../../util";
@@ -20,7 +19,7 @@ export function processVoluntaryExit(
   signedExit: SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  assert(isValidVoluntaryExit(config, state, signedExit, verifySignature));
+  assert.true(isValidVoluntaryExit(config, state, signedExit, verifySignature), "Invalid voluntary exit");
   // Initiate exit
   initiateValidatorExit(config, state, signedExit.message.validatorIndex);
 }

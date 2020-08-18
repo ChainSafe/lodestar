@@ -2,28 +2,31 @@ import {
   BeaconBlock,
   BeaconState,
   BLSPubkey,
-  Bytes32,
   Fork,
-  Number64,
-  SyncingStatus,
-  Uint64,
+  Genesis,
   Root,
+  Uint64,
   ValidatorResponse
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
-import {HttpClient} from "../../../../util";
+import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {toHexString} from "@chainsafe/ssz";
+import {Json, toHexString} from "@chainsafe/ssz";
 
 export class RestBeaconApi implements IBeaconApi {
 
   private readonly client: HttpClient;
+  private readonly clientV2: HttpClient;
+
+  private readonly logger: ILogger;
 
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: `${restUrl}/validator`}, {logger});
+    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
+    this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/v1/beacon")}, {logger});
+    this.logger = logger;
     this.config = config;
   }
 
@@ -34,20 +37,18 @@ export class RestBeaconApi implements IBeaconApi {
     );
   }
 
-  public async getClientVersion(): Promise<Bytes32> {
-    return this.client.get<Bytes32>("/version");
-  }
-
   public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
-    return this.client.get<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}>("/fork");
+    return this.config.types.ForkResponse.fromJson(await this.client.get<Json>("/fork"), {case: "snake"});
   }
 
-  public async getGenesisTime(): Promise<Number64> {
-    return this.client.get<Number64>("/genesis_time");
-  }
-
-  public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    return this.client.get<boolean | SyncingStatus>("/syncing");
+  public async getGenesis(): Promise<Genesis|null> {
+    try {
+      const genesisResponse = await this.clientV2.get<{data: Json}>("/genesis");
+      return this.config.types.Genesis.fromJson(genesisResponse.data, {case: "snake"});
+    } catch (e) {
+      this.logger.error("Failed to obtain genesis time", {reason: e.message});
+      return null;
+    }
   }
 
   public async getChainHead(): Promise<BeaconBlock> {

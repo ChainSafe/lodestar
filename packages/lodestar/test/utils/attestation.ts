@@ -1,7 +1,11 @@
+import {List} from "@chainsafe/ssz";
 import {Attestation, AttestationData, CommitteeIndex, Epoch, Slot, VoluntaryExit,
   SignedVoluntaryExit, SignedAggregateAndProof,} from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
+import {DeepPartial} from "./misc";
+import deepmerge from "deepmerge";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -28,9 +32,9 @@ export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch, 
   };
 }
 
-export function generateAttestation(override: Partial<Attestation> = {}): Attestation {
-  return {
-    aggregationBits: Array.from({length: 64}, () => false),
+export function generateAttestation(override: DeepPartial<Attestation> = {}): Attestation {
+  return deepmerge<Attestation, DeepPartial<Attestation>>({
+    aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
     data: {
       slot: 0,
       index: 0,
@@ -45,8 +49,8 @@ export function generateAttestation(override: Partial<Attestation> = {}): Attest
       },
     },
     signature: Buffer.alloc(96),
-    ...override
-  };
+
+  },override, {isMergeableObject: isPlainObject});
 }
 
 export function generateEmptyAttestation(): Attestation {

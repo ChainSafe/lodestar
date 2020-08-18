@@ -18,6 +18,15 @@ export enum Method {
   BeaconBlocksByRoot = "beacon_blocks_by_root",
 }
 
+export enum MethodRequestType {
+  "status" = "Status",
+  "goodbye" = "Goodbye",
+  "ping" = "Ping",
+  "metadata" = "Metadata",
+  "beacon_blocks_by_range" = "BeaconBlocksByRangeRequest",
+  "beacon_blocks_by_root" = "BeaconBlocksByRootRequest",
+}
+
 export enum MethodResponseType {
   SingleResponse = "SingleResponse",
   NoResponse = "NoResponse",
@@ -65,8 +74,9 @@ export enum ReqRespEncoding {
 export enum RpcResponseStatus {
   SUCCESS = 0,
   ERR_INVALID_REQ = 1,
-  ERR_RESP_TIMEOUT = 2,
+  SERVER_ERROR = 2,
 }
+
 
 export const GOSSIP_MAX_SIZE = 2**20;
 export const MAX_CHUNK_SIZE = 2**20;

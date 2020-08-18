@@ -1,14 +1,13 @@
 /**
  * @module util/objects
  */
-import assert from "assert";
 import {hash} from "@chainsafe/ssz";
 import {
   ValidatorIndex,
   Bytes32,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToBigInt} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt} from "@chainsafe/lodestar-utils";
 
 
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
@@ -85,7 +84,7 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
   // as we do a lot of bit math on it, which cannot be done as fast on more bits.
   const listSize = input.length >>> 0;
   // check if list size fits in uint32
-  assert(listSize == input.length);
+  assert.equal(listSize, input.length, "input length does not fit uint32");
 
   const buf = Buffer.alloc(_SHUFFLE_H_TOTAL_SIZE);
   let r = 0;
@@ -97,7 +96,7 @@ function innerShuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: 
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
   const _seed = seed.valueOf() as Uint8Array;
-  new Buffer(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
+  Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
 
   function setPositionUint32(value: number): void {
     // Little endian, optimized version

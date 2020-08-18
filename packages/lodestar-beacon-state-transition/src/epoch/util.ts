@@ -2,8 +2,6 @@
  * @module chain/stateTransition/epoch/util
  */
 
-import assert from "assert";
-
 import {
   BeaconState,
   Epoch,
@@ -12,6 +10,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {
   getAttestingIndices,
@@ -29,7 +28,10 @@ export function getMatchingSourceAttestations(
   epoch: Epoch
 ): PendingAttestation[] {
   const currentEpoch = getCurrentEpoch(config, state);
-  assert(epoch === currentEpoch || epoch === getPreviousEpoch(config, state));
+  assert.true(
+    epoch === currentEpoch || epoch === getPreviousEpoch(config, state), 
+    `Too old epoch ${epoch}, current=${currentEpoch}`
+  );
   return Array.from(
     epoch === currentEpoch
       ? state.currentEpochAttestations

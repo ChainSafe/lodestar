@@ -1,19 +1,17 @@
 /* eslint-disable max-len */
 import {Number64} from "@chainsafe/lodestar-types";
-import {BaseProvider} from "ethers/providers";
-import {EventFragment, FunctionFragment, Interface, ParamType} from "ethers/utils";
+import {ethers} from "ethers";
+import {IEthersAbi} from "./interface";
 
 export interface IEth1Options {
   enabled: boolean;
   provider: {
     url: string;
-    network: Number64;
   };
-  providerInstance?: BaseProvider;
+  providerInstance?: ethers.providers.Provider;
   depositContract: {
     deployedAt: Number64;
-    address: string;
-    abi: (string | ParamType | EventFragment | FunctionFragment)[] | string | Interface;
+    abi: IEthersAbi;
     bytecode: string;
   };
 }
@@ -22,12 +20,10 @@ const config: IEth1Options = {
   enabled: true,
   provider: {
     url: "http://localhost:8545",
-    network: 200
   },
   depositContract: {
     //block at which contract is deployed
     deployedAt: 0,
-    address: "TBD",
     // eslint-disable-next-line max-len
     // taken from https://raw.githubusercontent.com/ethereum/lodestar-specs/dev/deposit_contract/contracts/validator_registration.json
     // @ts-ignore

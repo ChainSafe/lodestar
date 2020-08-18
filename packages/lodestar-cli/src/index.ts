@@ -1,38 +1,55 @@
-/* eslint-disable no-console */
-/**
- * @module cli
- */
-// NOTE :: All commands are stubbed as examples
-// Useful repo https://github.com/tsantef/commander-starter
-import program from "commander";
-import * as commands from "./commands";
+#!/usr/bin/env node
 
-program
-  .version("0.0.1");
+// Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
+import yargs from "yargs";
+import {cmds} from "./cmds";
+import {globalOptions} from "./options";
+import {YargsError, registerCommandToYargs} from "./util";
 
+const topBanner = "🌟 Lodestar: Ethereum 2.0 TypeScript Implementation of the Beacon Chain";
+const bottomBanner = "For more information, check the CLI reference https://chainsafe.github.io/lodestar/reference/cli";
 
-//register all exported commands
-Object.keys(commands)
-  .forEach(commandName => {
-    // @ts-ignore
-    // eslint-disable-next-line import/namespace
-    new commands[commandName]().register(program);
+const lodestar = yargs
+  .env("LODESTAR")
+  .options(globalOptions)
+  // blank scriptName so that help text doesn't display the cli name before each command
+  .scriptName("")
+  .demandCommand(1)
+  // Control show help behaviour below on .fail()
+  .showHelpOnFail(false)
+  .usage(topBanner)
+  .epilogue(bottomBanner)
+  .alias("h", "help")
+  .alias("v", "version")
+  .recommendCommands()
+  .help()
+  .wrap(yargs.terminalWidth())
+  .fail((msg, err) => {
+    if (msg) {
+      // Show command help message when no command is provided
+      if (msg.includes("Not enough non-option arguments")) {
+        yargs.showHelp();
+        // eslint-disable-next-line no-console
+        console.log("\n");
+      }
+    }
+
+    const errorMessage = err
+      ? err instanceof YargsError
+        ? err.message
+        : err.stack
+      : msg || "Unknown error";
+    
+    // eslint-disable-next-line no-console
+    console.error(` ✖ ${errorMessage}\n`);
+    process.exit(1);
   });
 
-program.on("command:*", function () {
-  console.error("Invalid command: %s \n", program.args.join(" "));
-  program.help();
-});
-try {
-  // CLI ends after being parsed
-  program.parse(process.argv);
-} catch (e) {
-  // logger.error(e.message + '\n' + e.stack);
-  console.error(e.message + "\n" + e.stack);
+// yargs.command and all ./cmds
+for (const cmd of cmds) {
+  registerCommandToYargs(lodestar, cmd);
 }
-
-
-// This catches all other statements
-if (!program.args.length) program.help();
+  
+lodestar.parse();
 
 

@@ -2,27 +2,25 @@
  * @module db/api/beacon
  */
 
-import {
-  BLSPubkey,
-  ValidatorIndex,
-  SignedBeaconBlock,
-} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock,} from "@chainsafe/lodestar-types";
 
 import {
+  AggregateAndProofRepository,
   AttestationRepository,
   AttesterSlashingRepository,
+  BadBlockRepository,
+  BlockArchiveRepository,
   BlockRepository,
   DepositDataRepository,
   DepositDataRootRepository,
+  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  AggregateAndProofRepository,
-  BlockArchiveRepository,
-  BadBlockRepository,
-  Eth1DataRepository,
 } from "./repositories";
-import {StateCache} from "./stateCache";
+import {StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {SeenAttestationCache} from "./seenAttestationCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -38,7 +36,11 @@ export interface IBeaconDb {
   block: BlockRepository;
 
   // unfinalized states
-  stateCache: StateCache;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
+
+  //cache
+  seenAttestationCache: SeenAttestationCache;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
@@ -59,12 +61,6 @@ export interface IBeaconDb {
   // all deposit data roots and merkle tree
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
-  /**
-   * Returns validator index coresponding to validator
-   * public key in registry,
-   * @param publicKey
-   */
-  getValidatorIndex(publicKey: BLSPubkey): Promise<ValidatorIndex | null>;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

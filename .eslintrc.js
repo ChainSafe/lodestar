@@ -19,6 +19,8 @@ module.exports = {
   plugins: [
     "@typescript-eslint",
     "eslint-plugin-import",
+    "eslint-plugin-node",
+    "no-only-tests",
     "prettier"
   ],
   extends: [
@@ -56,6 +58,7 @@ module.exports = {
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
+    "@typescript-eslint/no-floating-promises": "error",
     //it doesn't recognize module/lib/something (like mainnet & minimal presets)
     "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": ["error", {
@@ -69,6 +72,7 @@ module.exports = {
     }],
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
+    "node/no-deprecated-api": "error",
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",
@@ -81,7 +85,10 @@ module.exports = {
     "no-prototype-builtins": 0,
     "prefer-const": "error",
     "quotes": ["error", "double"],
-    "semi": "off"
+    "semi": "off",
+
+    // Prevents accidentally pushing a commit with .only in Mocha tests
+    "no-only-tests/no-only-tests": "error"
   },
   "overrides": [
     {

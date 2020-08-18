@@ -1,26 +1,21 @@
-// eslint-disable-next-line import/default
-import camelcase from "camelcase";
+import {toExpectedCase} from "@chainsafe/ssz/lib/backings/utils";
 
-export function objectToCamelCase(obj: object): object {
+export function objectToExpectedCase(obj: Record<string, unknown>, expectedCase: "snake"|"camel" = "camel"): object {
   if (Object(obj) === obj) {
     Object.getOwnPropertyNames(obj).forEach((name) => {
-      const newName = camelcase(name);
+      const newName = toExpectedCase(name, expectedCase);
       if (newName !== name) {
-        // @ts-ignore
         if (obj.hasOwnProperty(newName)) {
           throw new Error(`object already has a ${newName} property`);
         }
-        // @ts-ignore
         obj[newName] = obj[name];
-        // @ts-ignore
         delete obj[name];
       }
-      // @ts-ignore
-      objectToCamelCase(obj[newName]);
+      objectToExpectedCase(obj[newName] as Record<string, unknown>, expectedCase);
     });
   } else if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++) {
-      obj[i] = objectToCamelCase(obj[i]);
+      obj[i] = objectToExpectedCase(obj[i], expectedCase);
     }
   }
   return obj;

@@ -15,7 +15,7 @@ export class StateArchiveRepository extends Repository<Epoch, TreeBacked<BeaconS
     super(config, db, Bucket.state, config.types.BeaconState as unknown as CompositeType<TreeBacked<BeaconState>>);
   }
 
-  public getId(state: BeaconState): Epoch {
+  public getId(state: TreeBacked<BeaconState>): Epoch {
     return computeEpochAtSlot(this.config, state.slot);
   }
 

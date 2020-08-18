@@ -1,4 +1,4 @@
-import {List} from "@chainsafe/ssz";
+import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
@@ -20,8 +20,7 @@ export interface IEpochProcess {
   statuses: IAttesterStatus[];
   totalActiveStake: Gwei;
   prevEpochUnslashedStake: IEpochStakeSummary;
-  prevEpochTargetStake: Gwei;
-  currEpochTargetStake: Gwei;
+  currEpochUnslashedTargetStake: Gwei;
   indicesToSlash: ValidatorIndex[];
   indicesToSetActivationEligibility: ValidatorIndex[];
   // ignores churn, apply churn-limit manually.
@@ -45,8 +44,7 @@ export function createIEpochProcess(): IEpochProcess {
       targetStake: BigInt(0),
       headStake: BigInt(0),
     },
-    prevEpochTargetStake: BigInt(0),
-    currEpochTargetStake: BigInt(0),
+    currEpochUnslashedTargetStake: BigInt(0),
     indicesToSlash: [],
     indicesToSetActivationEligibility: [],
     indicesToMaybeActivate: [],
@@ -77,8 +75,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  // TODO fast read-only iteration here
-  state.validators.forEach((validator, i) => {
+  readOnlyForEach(state.validators, (validator, i) => {
     const v = createIFlatValidator(validator);
     const status = createIAttesterStatus(v);
 
@@ -167,7 +164,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     sourceFlag: number, targetFlag: number, headFlag: number,
   ): void => {
     const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
-    attestations.forEach((att) => {
+    readOnlyForEach(attestations, (att) => {
       // Load all the attestation details from the state tree once, do not reload for each participant
       const aggregationBits = att.aggregationBits;
       const attData = att.data;
@@ -178,7 +175,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       const attBeaconBlockRoot = attData.beaconBlockRoot;
       const attTarget = attData.target;
 
-      const attBits = Array.from(aggregationBits);
+      const attBits = readOnlyMap(aggregationBits, (b) => b);
       const attVotedTargetRoot = Root.equals(attTarget.root, actualTargetBlockRoot);
       const attVotedHeadRoot = Root.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
 
@@ -222,7 +219,6 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       });
     });
   };
-  // TODO fast read-only iteration here
   statusProcessEpoch(
     out.statuses, state.previousEpochAttestations, prevEpoch,
     FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER,
@@ -236,8 +232,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   let prevTargetUnslStake = BigInt(0);
   let prevHeadUnslStake = BigInt(0);
 
-  let prevTargetStake = BigInt(0);
-  let currTargetStake = BigInt(0);
+  let currTargetUnslStake = BigInt(0);
 
   out.statuses.forEach((status) => {
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
@@ -249,19 +244,23 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
         }
       }
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
-      prevTargetStake += status.validator.effectiveBalance;
-    }
-    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER)) {
-      currTargetStake += status.validator.effectiveBalance;
+    if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
+      currTargetUnslStake += status.validator.effectiveBalance;
     }
   });
+  // As per spec of `get_total_balance`:
+  // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
+  // Math safe up to ~10B ETH, afterwhich this overflows uint64.
+  const increment = config.params.EFFECTIVE_BALANCE_INCREMENT;
+  if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
+  if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
+  if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
+  if (currTargetUnslStake < increment) currTargetUnslStake = increment;
 
   out.prevEpochUnslashedStake.sourceStake = prevSourceUnslStake;
   out.prevEpochUnslashedStake.targetStake = prevTargetUnslStake;
   out.prevEpochUnslashedStake.headStake = prevHeadUnslStake;
-  out.prevEpochTargetStake = prevTargetStake;
-  out.currEpochTargetStake = currTargetStake;
+  out.currEpochUnslashedTargetStake = currTargetUnslStake;
 
   return out;
 }

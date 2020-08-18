@@ -1,4 +1,5 @@
-version: "2"         # required to adjust maintainability checks
+version: "2"  # required to adjust maintainability checks
+
 checks:
   argument-count:
     config:
@@ -30,3 +31,9 @@ checks:
   identical-code:
     config:
       threshold: 95
+exclude_patterns:
+  - "**/node_modules/"
+  - "**/dist"
+  - "**/test"
+  - "**/lib"
+  - "**/*.d.ts"

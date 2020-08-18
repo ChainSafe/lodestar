@@ -1,12 +1,9 @@
-import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
+import fastify, {DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {Json} from "@chainsafe/ssz";
 import {LodestarRestApiEndpoint} from "../../interface";
 
-interface IBody extends DefaultBody {
-  // eslint-disable-next-line camelcase
-  beacon_block: Json;
-}
+type IBody = Json;
 
 
 //TODO: add validation
@@ -16,11 +13,7 @@ Server, IncomingMessage, ServerResponse, DefaultQuery, DefaultParams, DefaultHea
     = {
       schema: {
         body: {
-          type: "object",
-          requiredKeys: ["beacon_block"],
-          "beacon_block": {
-            type: "object"
-          }
+          type: "object"
         }
       }
     };
@@ -32,7 +25,7 @@ export const registerBlockPublishEndpoint: LodestarRestApiEndpoint = (fastify, {
     async (request, reply) => {
       await api.validator.publishBlock(
         config.types.SignedBeaconBlock.fromJson(
-          request.body.beacon_block
+          request.body, {case: "snake"}
         )
       );
       reply

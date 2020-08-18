@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {ISyncOptions} from "./options";
 import {INetwork} from "../network";
@@ -9,9 +10,10 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, RoundRobinArray} from "./utils";
+import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -24,6 +26,7 @@ export enum SyncMode {
 export class BeaconSync implements IBeaconSync {
 
   private readonly opts: ISyncOptions;
+  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
@@ -35,11 +38,13 @@ export class BeaconSync implements IBeaconSync {
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
-
   private startingBlock: Slot = 0;
+
+  private statusSyncTimer: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
+    this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
@@ -75,6 +80,8 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
     await this.attestationCollector.stop();
@@ -82,20 +89,33 @@ export class BeaconSync implements IBeaconSync {
     await this.gossip.stop();
   }
 
-  public async getSyncStatus(): Promise<SyncingStatus|null> {
-    if(this.isSynced()) {
-      return null;
-    }
-    let target: Slot = 0;
-    if(this.mode === SyncMode.INITIAL_SYNCING) {
-      target = await this.initialSync.getHighestBlock();
-    } else {
-      target = await this.regularSync.getHighestBlock();
+  public async getSyncStatus(): Promise<SyncingStatus> {
+    const headSlot = (await this.chain.getHeadBlock()).message.slot;
+    let target: Slot;
+    let syncDistance: bigint;
+    switch (this.mode) {
+      case SyncMode.WAITING_PEERS:
+        target = 0;
+        syncDistance = BigInt(1);
+        break;
+      case SyncMode.INITIAL_SYNCING:
+        target = await this.initialSync.getHighestBlock();
+        syncDistance = BigInt(target) - BigInt(headSlot);
+        break;
+      case SyncMode.REGULAR_SYNCING:
+        target = await this.regularSync.getHighestBlock();
+        syncDistance = BigInt(target) - BigInt(headSlot);
+        break;
+      case SyncMode.SYNCED:
+        target = headSlot;
+        syncDistance = BigInt(0);
+        break;
+      default:
+        throw new Error("Node is stopped, cannot get sync status");
     }
     return {
-      startingBlock: BigInt(this.startingBlock),
-      currentBlock: BigInt((await this.chain.getHeadBlock()).message.slot),
-      highestBlock: BigInt(target)
+      headSlot: BigInt(target),
+      syncDistance: (syncDistance < 0)? BigInt(0) : syncDistance,
     };
   }
 
@@ -103,13 +123,17 @@ export class BeaconSync implements IBeaconSync {
     return this.mode === SyncMode.SYNCED;
   }
 
-  public collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): void {
-    this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
+  public async collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
+    if (!(this.mode === SyncMode.REGULAR_SYNCING || this.mode === SyncMode.SYNCED)) {
+      throw new Error("Cannot collect attestations before regular sync");
+    }
+    await this.attestationCollector.subscribeToCommitteeAttestations(slot, committeeIndex);
   }
 
   private async startInitialSync(): Promise<void> {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.INITIAL_SYNCING;
+    this.startSyncTimer(this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000);
     await this.regularSync.stop();
     await this.initialSync.start();
   }
@@ -118,10 +142,23 @@ export class BeaconSync implements IBeaconSync {
     if(this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
-    await Promise.all([
-      this.gossip.start(),
-      this.regularSync.start()
-    ]);
+    this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
+    this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
+    await this.gossip.start();
+    await this.regularSync.start();
+  }
+
+  private startSyncTimer(interval: number): void {
+    this.stopSyncTimer();
+    this.statusSyncTimer = setInterval(() => {
+      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain)).catch(e => {
+        this.logger.error("Error on syncPeersStatus", e);
+      });
+    }, interval);
+  }
+
+  private stopSyncTimer(): void {
+    if(this.statusSyncTimer) clearInterval(this.statusSyncTimer);
   }
 
   private async waitForPeers(): Promise<void> {
@@ -132,10 +169,10 @@ export class BeaconSync implements IBeaconSync {
     }
   }
 
-  private getPeers(): PeerInfo[] {
+  private getPeers(): PeerId[] {
     return this.network.getPeers()
       .filter((peer) => {
-        return !!this.peerReputations.getFromPeerInfo(peer).latestStatus;
+        return !!this.peerReputations.getFromPeerId(peer).latestStatus;
       });
   }
 

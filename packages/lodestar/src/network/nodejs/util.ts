@@ -7,9 +7,11 @@ import PeerId from "peer-id";
 import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import {NodejsNode} from ".";
-import {initializePeerInfo} from "../util";
 import {INetworkOptions} from "../options";
 import defaults from "../defaults";
+import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
+import {ENR} from "@chainsafe/discv5";
+import LevelDatastore from "datastore-level";
 
 /**
  * Save a peer id to disk
@@ -30,15 +32,32 @@ export async function loadPeerIdFromJsonFile(path: string): Promise<PeerId> {
  *
  * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
  * @param network
+ * @param peerStoreDir
+ * @param autoDial
  */
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
   network: Partial<INetworkOptions> = {},
+  peerStoreDir?: string,
   autoDial = true
 ): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
   const multiaddrs = network.multiaddrs || defaults.multiaddrs;
   const bootnodes = network.bootnodes || defaults.bootnodes;
-  const peerInfo = await initializePeerInfo(peerId, multiaddrs);
-  return new NodejsNode({peerInfo, autoDial, bootnodes: bootnodes, discv5: network.discv5});
+  const enr = network.discv5?.enr;
+  if (enr && typeof enr !== "string") {
+    const enrInstance = enr as ENR;
+    if (enrInstance.multiaddrUDP && !isLocalMultiAddr(enrInstance.multiaddrUDP)) {
+      clearMultiaddrUDP(enrInstance);
+    }
+  }
+  return new NodejsNode({
+    peerId,
+    addresses: {listen: multiaddrs},
+    autoDial,
+    datastore: peerStoreDir? new LevelDatastore(peerStoreDir) : null,
+    bootnodes: bootnodes,
+    discv5: network.discv5,
+    maxConnections: network.maxPeers,
+  });
 }

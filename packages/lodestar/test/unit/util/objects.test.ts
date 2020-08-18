@@ -7,9 +7,9 @@ import {describe, it} from "mocha";
 describe("Objects helper", () => {
 
   it("return most frequent objects", () => {
-    const obj1 = 1n;
-    const obj2 = 2n;
-    const obj3 = 3n;
+    const obj1 =BigInt(1);
+    const obj2 =BigInt(2);
+    const obj3 =BigInt(3);
     const array = [];
     array.push(obj1);
     array.push(obj1);
@@ -21,7 +21,7 @@ describe("Objects helper", () => {
     const result = mostFrequent<Uint64>(config.types.Uint64, array);
     expect(result).to.be.deep.equal([obj1, obj3]);
   });
-  
+
   it("should return array intersection", function () {
     const array1 = [2, 5, 7, 8];
     const array2 = [1, 5, 7, 9];

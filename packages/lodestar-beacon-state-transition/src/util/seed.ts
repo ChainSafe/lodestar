@@ -2,16 +2,14 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
 import {hash} from "@chainsafe/ssz";
 import {
   Epoch,
-  ValidatorIndex,
   BeaconState,
   Bytes32,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
+import {assert, bytesToBigInt, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
 
 
@@ -26,13 +24,13 @@ import {DomainType} from "../constants";
  */
 export function computeShuffledIndex(
   config: IBeaconConfig,
-  index: ValidatorIndex,
+  index: number,
   indexCount: number,
   seed: Bytes32
 ): number {
   let permuted = index;
-  assert(index < indexCount);
-  assert(indexCount <= 2 ** 40);
+  assert.lt(index, indexCount, "indexCount must be less than index");
+  assert.lte(indexCount, 2 ** 40, "indexCount too big");
   const _seed = seed.valueOf() as Uint8Array;
   for (let i = 0; i < config.params.SHUFFLE_ROUND_COUNT; i++) {
     const pivot = Number(bytesToBigInt(

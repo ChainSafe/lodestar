@@ -1,4 +1,3 @@
-import assert from "assert";
 import {List} from "@chainsafe/ssz";
 import {
   Attestation,
@@ -10,6 +9,7 @@ import {
   SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {processProposerSlashing} from "./proposerSlashing";
 import {processAttesterSlashing} from "./attesterSlashing";
@@ -34,9 +34,13 @@ export function processOperations(
   verifySignatures = true,
 ): void {
   // Verify that outstanding deposits are processed up to the maximum number of deposits
-  assert.equal(body.deposits.length, Math.min(
-    config.params.MAX_DEPOSITS,
-    state.eth1Data.depositCount - state.eth1DepositIndex));
+  assert.true(
+    body.deposits.length === Math.min(
+      config.params.MAX_DEPOSITS,
+      state.eth1Data.depositCount - state.eth1DepositIndex),
+    "Outstanding deposits are not processed"
+  );
+
   [{
     operations: body.proposerSlashings,
     maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
@@ -74,7 +78,7 @@ export function processOperations(
     func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
     verifySignatures: boolean;
   }) => {
-    assert(operations.length <= maxOperations);
+    assert.lte(operations.length, maxOperations, "Too many operations");
     operations.forEach((operation) => {
       func(config, state, operation, verifySignatures);
     });

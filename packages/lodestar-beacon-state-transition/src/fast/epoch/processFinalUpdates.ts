@@ -1,4 +1,5 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {readOnlyMap, List} from "@chainsafe/ssz";
+import {BeaconState, Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getRandaoMix} from "../../util";
@@ -30,12 +31,11 @@ export function processFinalUpdates(
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = [];
+    state.eth1DataVotes = [] as Eth1Data[] as List<Eth1Data>;
   }
 
   // update effective balances with hysteresis
-  // TODO fast read-only iteration
-  const balances = Array.from(state.balances);
+  const balances = readOnlyMap(state.balances, (balance) => balance);
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     const balance = balances[i];
@@ -66,5 +66,5 @@ export function processFinalUpdates(
 
   // rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = [];
+  state.currentEpochAttestations = [] as PendingAttestation[] as List<PendingAttestation>;
 }

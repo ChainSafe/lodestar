@@ -2,10 +2,9 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
-
 import {BeaconState, ProposerSlashing,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {slashValidator, isValidProposerSlashing} from "../../util";
 
@@ -15,6 +14,6 @@ export function processProposerSlashing(
   proposerSlashing: ProposerSlashing,
   verifySignatures = true,
 ): void {
-  assert(isValidProposerSlashing(config, state, proposerSlashing, verifySignatures));
+  assert.true(isValidProposerSlashing(config, state, proposerSlashing, verifySignatures), "Invalid proposer slashing");
   slashValidator(config, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }

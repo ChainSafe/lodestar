@@ -47,7 +47,7 @@ export const registerAttestationProductionEndpoint: LodestarRestApiEndpoint = (f
       reply
         .code(200)
         .type("application/json")
-        .send(config.types.Attestation.toJson(responseValue));
+        .send(config.types.Attestation.toJson(responseValue, {case: "snake"}));
     }
   );
 };

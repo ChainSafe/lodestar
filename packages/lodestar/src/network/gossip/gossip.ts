@@ -14,7 +14,6 @@ import {GossipEvent} from "./constants";
 import {handleIncomingBlock, publishBlock} from "./handlers/block";
 import {
   getCommitteeAttestationHandler,
-  handleIncomingAttestation,
   publishCommiteeAttestation
 } from "./handlers/attestation";
 import {handleIncomingAttesterSlashing, publishAttesterSlashing} from "./handlers/attesterSlashing";
@@ -35,7 +34,6 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
-import {MetadataController} from "../metadata";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
 
@@ -51,21 +49,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   protected readonly  logger: ILogger;
 
   private handlers: Map<string, GossipHandlerFn>;
-  private metadata: MetadataController;
   //TODO: make this configurable
   private supportedEncodings = [GossipEncoding.SSZ_SNAPPY, GossipEncoding.SSZ];
+  private statusInterval?: NodeJS.Timeout;
 
   public constructor(
     opts: INetworkOptions,
-    metadata: MetadataController,
     {config, libp2p, logger, validator, chain, pubsub}: IGossipModules) {
     super();
     this.opts = opts;
-    this.metadata = metadata;
     this.config = config;
     this.logger = logger.child({module: "gossip", level: LogLevel[logger.level]});
+    // need to improve Gossipsub type to implement EventEmitter to avoid this cast
     this.pubsub = pubsub || new LodestarGossipsub(config, validator, this.logger,
-      libp2p.peerInfo, libp2p.registrar, {gossipIncoming: true});
+      libp2p.peerId, libp2p.registrar, {gossipIncoming: true}) as unknown as IGossipSub;
     this.chain = chain;
   }
 
@@ -73,12 +70,20 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     await this.pubsub.start();
     this.registerHandlers(this.chain.currentForkDigest);
     this.chain.on("forkDigest", this.handleForkDigest);
+    this.emit("gossip:start");
+    this.logger.verbose("Gossip is started");
+    this.statusInterval = setInterval(this.logSubscriptions, 60000);
   }
 
   public async stop(): Promise<void> {
+    this.emit("gossip:stop");
     this.unregisterHandlers();
     this.chain.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();
+    if(this.statusInterval) {
+      clearInterval(this.statusInterval);
+    }
+    this.logger.verbose("Gossip is stopped");
   }
 
   public publishBlock = publishBlock.bind(this);
@@ -100,11 +105,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
   public subscribeToAggregateAndProof(
     forkDigest: ForkDigest, callback: (signedAggregate: SignedAggregateAndProof) => void): void {
     this.subscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, callback);
-  }
-
-  public subscribeToAttestation(
-    forkDigest: ForkDigest, callback: (attestation: Attestation) => void): void {
-    this.subscribe(forkDigest, GossipEvent.ATTESTATION, callback);
   }
 
   public subscribeToVoluntaryExit(
@@ -130,13 +130,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
     this.subscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
       new Map([["subnet", subnet.toString()]]));
-
-    // Metadata
-    const attnets = this.metadata.attnets;
-    if (!attnets[subnetNum]) {
-      attnets[subnetNum] = true;
-      this.metadata.attnets = attnets;
-    }
   }
 
   public unsubscribeFromAttestationSubnet(
@@ -147,12 +140,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     const subnetNum: number = (typeof subnet === "string")? parseInt(subnet) : subnet as number;
     this.unsubscribe(forkDigest, getAttestationSubnetEvent(subnetNum), callback,
       new Map([["subnet", subnet.toString()]]));
-    // Metadata
-    const attnets = this.metadata.attnets;
-    if (attnets[subnetNum]) {
-      attnets[subnetNum] = false;
-      this.metadata.attnets = attnets;
-    }
   }
 
   public unsubscribe(
@@ -160,6 +147,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
+    if (!this.listeners(event as keyof IGossipEvents).includes(listener as (...args: unknown[]) => void)) return;
     if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
       this.supportedEncodings.forEach((encoding) => {
         this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
@@ -227,8 +215,6 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     this.supportedEncodings.forEach((encoding) => {
       handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, encoding),
         handleIncomingBlock.bind(that));
-      handlers.set(getGossipTopic(GossipEvent.ATTESTATION, forkDigest, encoding),
-        handleIncomingAttestation.bind(that));
       handlers.set(getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, encoding),
         handleIncomingAggregateAndProof.bind(that));
       handlers.set(getGossipTopic(GossipEvent.ATTESTER_SLASHING, forkDigest, encoding),
@@ -257,6 +243,14 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
 
   private emitGossipHeartbeat = (): void => {
     this.emit("gossipsub:heartbeat");
+  };
+
+  private logSubscriptions = (): void => {
+    if (this.pubsub && this.pubsub.subscriptions) {
+      this.logger.info("Current gossip subscriptions: " + Array.from(this.pubsub.subscriptions).join(","));
+    } else {
+      this.logger.info("Gossipsub not started");
+    }
   };
 
 }

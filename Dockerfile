@@ -11,4 +11,4 @@ RUN yarn install --force --network-timeout 1000000 --non-interactive --ignore-op
 
 WORKDIR /usr/app/packages/lodestar-cli/bin
 
-ENTRYPOINT ["node", "lodecli"]
+ENTRYPOINT ["node", "lodestar"]

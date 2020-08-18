@@ -1,3 +1,4 @@
+import {readOnlyEntries} from "@chainsafe/ssz";
 import {Gwei, Epoch, Validator} from "@chainsafe/lodestar-types";
 
 /**
@@ -12,15 +13,15 @@ export interface IFlatValidator {
   withdrawableEpoch: Epoch;
 }
 
+/**
+ * Convert a Validator (most likely with a tree-backing)
+ * into a IFlatValidator
+ */
 export function createIFlatValidator(v: Validator): IFlatValidator {
-  return {
-    effectiveBalance: v.effectiveBalance,
-    slashed: v.slashed,
-    activationEligibilityEpoch: v.activationEligibilityEpoch,
-    activationEpoch: v.activationEpoch,
-    exitEpoch: v.exitEpoch,
-    withdrawableEpoch: v.withdrawableEpoch,
-  };
+  return readOnlyEntries(v).reduce((flat, [k, v]) => {
+    flat[k] = v;
+    return flat;
+  }, {} as Record<string, Validator[keyof Validator]>) as unknown as IFlatValidator;
 }
 
 export function isActiveIFlatValidator(v: IFlatValidator, epoch: Epoch): boolean {

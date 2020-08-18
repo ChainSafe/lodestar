@@ -4,7 +4,6 @@ import {IReputation, ReputationStore} from "../../../src/sync/IReputation";
 import {AttestationSubnets} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-
 describe("syncing", function () {
   let sandbox = sinon.createSandbox();
   let reps: ReputationStore;
@@ -24,6 +23,7 @@ describe("syncing", function () {
       latestStatus: null,
       score: 0,
       encoding: null,
+      supportedProtocols: []
     };
     try {
       const result = reps.add("lodestar");
@@ -47,7 +47,7 @@ describe("syncing", function () {
     const attnets: AttestationSubnets = config.types.AttestationSubnets.defaultValue();
     attnets[10] = true;
     const rep1 = reps.add("lodestar");
-    rep1.latestMetadata = {attnets, seqNumber: 0n};
+    rep1.latestMetadata = {attnets, seqNumber:BigInt(0)};
     const peerIds = reps.getPeerIdsBySubnet("10");
     expect(peerIds.length).to.be.equal(1);
     expect(peerIds[0]).to.be.equal("lodestar");

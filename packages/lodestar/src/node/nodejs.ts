@@ -31,7 +31,7 @@ interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
   eth1?: IEth1Notifier;
-  libp2p?: LibP2p;
+  libp2p: LibP2p;
 }
 
 // TODO move into src/node/beacon
@@ -118,7 +118,7 @@ export class BeaconNode {
       this.conf.api,
       {
         config,
-        logger: this.logger,
+        logger: this.logger.child(this.conf.logger.api),
         db: this.db,
         sync: this.sync,
         network: this.network,
@@ -145,9 +145,12 @@ export class BeaconNode {
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
-    await this.eth1.start();
+    // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
+    // TODO: refactor the sync module to respect the "start should resolve quickly" interface
+    // Now if sync.start() is awaited it will stall the node start process
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.sync.start();
     await this.api.start();
     await this.chores.start();

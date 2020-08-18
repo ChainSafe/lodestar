@@ -2,16 +2,20 @@
  * @module network/gossip
  */
 
-import assert from "assert";
-import {Attestation, ForkDigest} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {GossipEvent, AttestationSubnetRegExp, GossipTopicRegExp} from "./constants";
-import {CommitteeIndex} from "@chainsafe/lodestar-types/lib";
-import {IGossipMessage} from "libp2p-gossipsub";
+import {Checkpoint, ForkDigest, Root, Slot} from "@chainsafe/lodestar-types";
+import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
+import {assert} from "@chainsafe/lodestar-utils";
+import {Message} from "libp2p-gossipsub/src/message";
 import {utils} from "libp2p-pubsub";
-import {ILodestarGossipMessage, IGossipEvents} from "./interface";
+import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
+import {IBeaconChain, ILMDGHOST} from "../../chain";
+import {IBeaconDb} from "../../db/api";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -26,21 +30,6 @@ export function getGossipTopic(
   return topic;
 }
 
-export function getAttestationSubnetTopic(
-  attestation: Attestation,
-  forkDigestValue: ForkDigest,
-  encoding = GossipEncoding.SSZ_SNAPPY): string {
-  return getGossipTopic(
-    GossipEvent.ATTESTATION_SUBNET,
-    forkDigestValue,
-    encoding,
-    new Map([["subnet", getAttestationSubnet(attestation)]])
-  );
-}
-
-export function getAttestationSubnet(attestation: Attestation): string {
-  return getCommitteeIndexSubnet(attestation.data.index);
-}
 
 export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
   if (isAttestationSubnetEvent(event)) {
@@ -55,9 +44,6 @@ export function topicToGossipEvent(topic: string): GossipEvent {
   return topicName as GossipEvent;
 }
 
-export function getCommitteeIndexSubnet(committeeIndex: CommitteeIndex): string {
-  return String(committeeIndex % ATTESTATION_SUBNET_COUNT);
-}
 
 export function getAttestationSubnetEvent(subnet: number): string {
   return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
@@ -72,20 +58,57 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 }
 
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
-  assert(isAttestationSubnetTopic(topic), "should be an attestation topic");
+  assert.true(isAttestationSubnetTopic(topic), "Should be an attestation topic");
   const groups = topic.match(AttestationSubnetRegExp);
   const subnetStr = groups[4];
   return parseInt(subnetStr);
 }
 
-export function normalizeInRpcMessage(rawMessage: IGossipMessage): ILodestarGossipMessage {
-  const message: IGossipMessage = utils.normalizeInRpcMessage(rawMessage);
+export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessage {
+  const message: Message = utils.normalizeInRpcMessage(rawMessage);
   return {
     ...message,
     messageId: getMessageId(message)
   };
 }
 
-export function getMessageId(rawMessage: IGossipMessage): string {
+export function getMessageId(rawMessage: Message): string {
   return Buffer.from(hash(rawMessage.data)).toString("base64");
+}
+
+export async function getBlockStateContext(
+  forkChoice: ILMDGHOST, db: IBeaconDb, blockRoot: Root, slot?: Slot
+): Promise<ITreeStateContext|null> {
+  const parentSummary =
+      forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
+  if(!parentSummary) {
+    return null;
+  }
+  const stateEpochCtx = await db.stateCache.get(parentSummary.stateRoot);
+  if(!stateEpochCtx) return null;
+  //only advance state transition if asked for future block
+  slot = slot ?? parentSummary.slot;
+  if (stateEpochCtx.state.slot < slot) {
+    processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, slot);
+  }
+  return stateEpochCtx;
+}
+
+export async function getAttestationPreState(
+  config: IBeaconConfig, chain: IBeaconChain, db: IBeaconDb, cp: Checkpoint
+): Promise<ITreeStateContext|null> {
+  const preStateContext  = await db.checkpointStateCache.get(cp);
+  if(preStateContext) {
+    return preStateContext;
+  }
+  const baseState = await chain.getStateContextByBlockRoot(cp.root);
+  if(!baseState) {
+    return null;
+  }
+  const epochStartSlot = computeStartSlotAtEpoch(config, cp.epoch);
+  if(epochStartSlot > baseState.state.slot) {
+    processSlots(baseState.epochCtx, baseState.state, epochStartSlot);
+    await db.checkpointStateCache.add(cp, baseState);
+  }
+  return baseState;
 }

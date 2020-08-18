@@ -2,9 +2,9 @@
  * @module chain/stateTransition/slot
  */
 
-import assert from "assert";
 import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "./constants";
 
@@ -15,7 +15,7 @@ export function processSlots(
   state: BeaconState,
   slot: Slot,
 ): void{
-  assert(state.slot <= slot);
+  assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);
 
   while (state.slot < slot){
     processSlot(config, state);

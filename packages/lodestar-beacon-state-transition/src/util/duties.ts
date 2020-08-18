@@ -2,9 +2,10 @@
  * @module chain/stateTransition/util
  */
 
-import assert from "assert";
+import {List} from "@chainsafe/ssz";
 import {BeaconState, CommitteeAssignment, Epoch, Slot, ValidatorIndex,} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch,} from "./epoch";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
@@ -23,10 +24,10 @@ export function getCommitteeAssignment(
   state: BeaconState,
   epoch: Epoch,
   validatorIndex: ValidatorIndex
-): CommitteeAssignment {
+): CommitteeAssignment | null {
 
   const next2Epoch = getCurrentEpoch(config, state) + 2;
-  assert(epoch <= next2Epoch);
+  assert.lte(epoch, next2Epoch, "Cannot get committee assignment for epoch more than two ahead");
 
   const epochStartSlot = computeStartSlotAtEpoch(config, epoch);
   for (let slot = epochStartSlot; slot < epochStartSlot + config.params.SLOTS_PER_EPOCH; slot++) {
@@ -35,7 +36,7 @@ export function getCommitteeAssignment(
       const committee = getBeaconCommittee(config, state, slot, i);
       if (committee.includes(validatorIndex)) {
         return {
-          validators: committee,
+          validators: committee as List<number>,
           committeeIndex: i,
           slot,
         };
@@ -57,7 +58,7 @@ export function isProposerAtSlot(
 
   state = {...state, slot};
   const currentEpoch = getCurrentEpoch(config, state);
-  assert(computeEpochAtSlot(config, slot) === currentEpoch);
+  assert.equal(computeEpochAtSlot(config, slot), currentEpoch, "Must request for current epoch");
 
   return getBeaconProposerIndex(config, state) === validatorIndex;
 }

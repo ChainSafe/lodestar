@@ -1,6 +1,5 @@
 import {PrivateEth1Network} from "../../../../src/eth1/dev";
-import {Wallet} from "ethers";
-import * as ethers from "ethers/ethers";
+import {ethers, Wallet} from "ethers";
 import {expect} from "chai";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {describe, before, after, it} from "mocha";

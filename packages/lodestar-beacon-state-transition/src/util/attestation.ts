@@ -2,10 +2,11 @@
  * @module chain/stateTransition/util
  */
 
-import {BitList} from "@chainsafe/ssz";
+import {BitList, List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {
   Attestation,
+  ATTESTATION_SUBNET_COUNT,
   AttestationData,
   BeaconState,
   IndexedAttestation,
@@ -16,9 +17,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DomainType,} from "../constants";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {getDomain} from "./domain";
-import {getBeaconCommittee} from "./committee";
+import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {computeSigningRoot} from "./signingRoot";
-
+import {computeSlotsSinceEpochStart} from "./slot";
 
 
 /**
@@ -83,6 +84,17 @@ export function getAttestingIndices(
 ): ValidatorIndex[] {
   const committee = getBeaconCommittee(config, state, data.slot, data.index);
   // Find the participating attesters in the committee
+  return getAttestingIndicesFromCommittee(committee, bits);
+}
+
+/**
+ * Return the sorted attesting indices corresponding to [[data]] and [[bits]].
+ */
+export function getAttestingIndicesFromCommittee(
+  committee: ValidatorIndex[],
+  bits: BitList
+): ValidatorIndex[] {
+  // Find the participating attesters in the committee
   return committee.filter((_, i) => bits[i]).sort((a, b) => a - b);
 }
 
@@ -99,7 +111,7 @@ export function getIndexedAttestation(
   const sortedAttestingIndices = attestingIndices.sort(
     (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
   return {
-    attestingIndices: sortedAttestingIndices,
+    attestingIndices: sortedAttestingIndices as List<number>,
     data: attestation.data,
     signature: attestation.signature,
   };
@@ -125,4 +137,23 @@ export function isUnaggregatedAttestation(attestation: Attestation): boolean {
     }
   }
   return count === 1;
+}
+
+/**
+ * Compute the correct subnet for an attestation for Phase 0.
+ */
+export function computeSubnetForAttestation
+(config: IBeaconConfig, state: BeaconState, attestation: Attestation): number {
+  const {slot, index} = attestation.data;
+  return computeSubnetForSlot(config, state, slot, index);
+}
+
+/**
+ * Compute the correct subnet for a slot/committee index for Phase 0.
+ */
+export function computeSubnetForSlot
+(config: IBeaconConfig, state: BeaconState, slot: number, committeeIndex: number): number {
+  const slotsSinceEpochStart = computeSlotsSinceEpochStart(config, slot);
+  const committeesSinceEpochStart = getCommitteeCountAtSlot(config, state, slot) * slotsSinceEpochStart;
+  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

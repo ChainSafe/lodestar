@@ -1,5 +1,5 @@
 import chainOpts from "../../../src/chain/options";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {expect} from "chai";
 import {IEth1Notifier} from "../../../src/eth1";
@@ -9,7 +9,10 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
-import { generateValidator } from "../../utils/validator";
+import {generateValidator} from "../../utils/validator";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked} from "@chainsafe/ssz";
+import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("BeaconChain", function() {
   const sandbox = sinon.createSandbox();
@@ -18,13 +21,13 @@ describe("BeaconChain", function() {
   let chain: IBeaconChain;
 
   beforeEach(async () => {
-    dbStub = new StubbedBeaconDb(sandbox, config);
+    dbStub = new StubbedBeaconDb(sandbox);
     eth1 = new InteropEth1Notifier();
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
-    const state = generateState();
+    const state: BeaconState = generateState();
     state.validators = Array.from({length: 5}, () => generateValidator({activationEpoch: 0}));
-    dbStub.stateCache.get.resolves(state as any);
+    dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
     await chain.start();
@@ -63,7 +66,7 @@ describe("BeaconChain", function() {
     });
   });
 
-  describe("forkDigestChanged event", () => {
+  describe("forkVersion event", () => {
     it("should should receive forkDigest event", async () => {
       const spy = sinon.spy();
       const received = new Promise((resolve) => {
@@ -72,7 +75,7 @@ describe("BeaconChain", function() {
           resolve();
         });
       });
-      chain.emit("forkDigestChanged");
+      chain.emit("forkVersion");
       await received;
       expect(spy.callCount).to.be.equal(1);
     });

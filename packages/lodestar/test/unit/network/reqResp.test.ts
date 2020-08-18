@@ -1,4 +1,4 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
 
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -10,17 +10,28 @@ import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {TTFB_TIMEOUT} from "../../../src/constants";
+import {AbortSignal} from "abort-controller/dist/abort-controller";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] rpc", () => {
+  const sandbox = sinon.createSandbox();
+  let nodeA: NodejsNode, nodeB: NodejsNode, rpcA: ReqResp, rpcB: ReqResp;
+  let loggerStub: SinonStubbedInstance<ILogger>;
 
-  let nodeA: NodejsNode, nodeB: NodejsNode,
-    rpcA: ReqResp, rpcB: ReqResp;
-  const logger: ILogger = new WinstonLogger();
-
+  const networkOptions: INetworkOptions = {
+    maxPeers: 10,
+    multiaddrs: [],
+    bootnodes: [],
+    rpcTimeout: 5000,
+    connectTimeout: 5000,
+    disconnectTimeout: 5000,
+  };
   beforeEach(async function() {
     this.timeout(10000);
+    loggerStub = sandbox.createStubInstance(WinstonLogger);
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
@@ -28,26 +39,20 @@ describe("[network] rpc", () => {
       nodeA.start(),
       nodeB.start()
     ]);
-    const networkOptions: INetworkOptions = {
-      maxPeers: 10,
-      multiaddrs: [],
-      bootnodes: [],
-      rpcTimeout: 5000,
-      connectTimeout: 5000,
-      disconnectTimeout: 5000,
-    };
-    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger, peerReputations: new ReputationStore()});
-    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger, peerReputations: new ReputationStore()});
+
+    rpcA = new ReqResp(networkOptions, {config, libp2p: nodeA, logger: loggerStub, peerReputations: new ReputationStore()});
+    rpcB = new ReqResp(networkOptions, {config, libp2p: nodeB, logger: loggerStub, peerReputations: new ReputationStore()});
     await Promise.all([
       rpcA.start(),
       rpcB.start(),
     ]);
     try {
+      nodeA.peerStore.addressBook.add(nodeB.peerId, nodeB.multiaddrs);
       await Promise.all([
-        nodeA.dial(nodeB.peerInfo),
+        nodeA.dial(nodeB.peerId),
         new Promise((resolve, reject) => {
           const t = setTimeout(reject, 2000);
-          nodeB.once("peer:connect", () => {
+          nodeB.connectionManager.once("peer:connect", () => {
             clearTimeout(t);
             resolve();
           });
@@ -68,10 +73,11 @@ describe("[network] rpc", () => {
       rpcA.stop(),
       rpcB.stop(),
     ]);
+    sandbox.restore();
   });
 
   it("can send/receive status messages from connected peers", async function () {
-    this.timeout(6000);
+    this.timeout(10000);
     // send status from A to B, await status response
     rpcB.once("request", (peerInfo, method, id, body) => {
       setTimeout(() => {
@@ -86,7 +92,7 @@ describe("[network] rpc", () => {
         headRoot: Buffer.alloc(32),
         headSlot: 0,
       };
-      const statusActual = await rpcA.status(nodeB.peerInfo, statusExpected);
+      const statusActual = await rpcA.status(nodeB.peerId, statusExpected);
       assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
       assert.fail("status not received");
@@ -106,7 +112,7 @@ describe("[network] rpc", () => {
         headSlot: 0,
       };
 
-      const statusActual = await rpcB.status(nodeA.peerInfo, statusExpected);
+      const statusActual = await rpcB.status(nodeA.peerId, statusExpected);
       assert.deepEqual(statusActual, statusExpected);
     } catch (e) {
       assert.fail("status not received");
@@ -141,7 +147,7 @@ describe("[network] rpc", () => {
           step: 1
         });
       }
-      const resps = await Promise.all(reqs.map(req => rpcA.beaconBlocksByRange(nodeB.peerInfo, req)));
+      const resps = await Promise.all(reqs.map(req => rpcA.beaconBlocksByRange(nodeB.peerId, req)));
       let reqIndex = 0;
       for (const resp of resps) {
         let blockIndex = 0;
@@ -171,7 +177,54 @@ describe("[network] rpc", () => {
       step: 1
     };
 
-    const response = await rpcA.beaconBlocksByRange(nodeB.peerInfo, request);
+    const response = await rpcA.beaconBlocksByRange(nodeB.peerId, request);
     assert.deepEqual(response, []);
   });
+
+  it("should handle response timeout - TTFB", async function() {
+    this.timeout(400);
+    const timer = sinon.useFakeTimers({shouldAdvanceTime: true});
+    const request: BeaconBlocksByRangeRequest = {
+      startSlot: 100,
+      count: 10,
+      step: 1
+    };
+    rpcB.once("request", async () => {
+      timer.tick(TTFB_TIMEOUT);
+      timer.tick(TTFB_TIMEOUT);
+    });
+    try {
+      await rpcA.beaconBlocksByRange(nodeB.peerId, request);
+      expect.fail();
+    } catch (e) {
+      expect(e.toString().startsWith("Error: response timeout")).to.be.true;
+    }
+    timer.restore();
+  });
+
+  it("should handle response timeout - suspended dialProtocol", async function() {
+    const timer = sinon.useFakeTimers();
+    const request: BeaconBlocksByRangeRequest = {
+      startSlot: 100,
+      count: 10,
+      step: 1
+    };
+    const libP2pMock = await createNode(multiaddr);
+    libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal} ) => {
+      timer.tick(TTFB_TIMEOUT);
+      return null;
+    };
+    const rpcC = new ReqResp(
+      networkOptions,
+      {config, libp2p: libP2pMock, logger: loggerStub, peerReputations: new ReputationStore()}
+    );
+    try {
+      await rpcC.beaconBlocksByRange(nodeB.peerId, request)
+      expect.fail();
+    } catch (e) {
+      expect(e.toString().startsWith("Error: Failed to dial")).to.be.true;
+    }
+    timer.restore();
+  });
+
 });

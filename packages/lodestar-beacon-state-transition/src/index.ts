@@ -2,10 +2,9 @@
  * @module chain/stateTransition
  */
 
-import assert from "assert";
-
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {assert} from "@chainsafe/lodestar-utils";
 
 import {verifyBlockSignature} from "./util/block";
 import {processBlock} from "./block";
@@ -48,10 +47,10 @@ export function stateTransition(
   processBlock(config, postState, signedBlock.message, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
   if (validateStateRoot){
-    assert(config.types.Root.equals(
+    assert.true(config.types.Root.equals(
       signedBlock.message.stateRoot,
       config.types.BeaconState.hashTreeRoot(postState)
-    ));
+    ), "State root is not valid");
   }
 
   // Return post-state

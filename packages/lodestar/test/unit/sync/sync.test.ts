@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance, SinonFakeTimers} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
@@ -26,6 +26,7 @@ describe("sync", function () {
   let loggerStub: SinonStubbedInstance<ILogger>;
   let regularSyncStub: SinonStubbedInstance<IRegularSync>;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
+  let clock: SinonFakeTimers;
 
   const getSync = (opts: ISyncOptions): IBeaconSync => {
     return new BeaconSync(
@@ -54,6 +55,11 @@ describe("sync", function () {
     loggerStub = sinon.createStubInstance(WinstonLogger);
     regularSyncStub = sinon.createStubInstance(NaiveRegularSync);
     initialSyncStub = sinon.createStubInstance(FastSync);
+    clock = sinon.useFakeTimers();
+  });
+
+  afterEach(() => {
+    clock.restore();
   });
 
   it("is synced should be true", async function () {
@@ -79,7 +85,7 @@ describe("sync", function () {
     networkStub.getPeers.returns([]);
     await sync.start();
     const status = await sync.getSyncStatus();
-    expect(status).to.be.null;
+    expect(status.syncDistance.toString()).to.be.equal("0");
   });
 
   it("get sync status - regular sync", async function () {
@@ -93,9 +99,8 @@ describe("sync", function () {
     sync.mode = SyncMode.REGULAR_SYNCING;
     regularSyncStub.getHighestBlock.resolves(15);
     const status = await sync.getSyncStatus();
-    expect(status.highestBlock.toString()).to.be.deep.equal("15");
-    expect(status.startingBlock.toString()).to.be.deep.equal("0");
-    expect(status.currentBlock.toString()).to.be.deep.equal("10");
+    expect(status.headSlot.toString()).to.be.deep.equal("15");
+    expect(status.syncDistance.toString()).to.be.deep.equal("5");
   });
 
   it("get sync status - initial sync", async function () {
@@ -109,9 +114,35 @@ describe("sync", function () {
     sync.mode = SyncMode.INITIAL_SYNCING;
     initialSyncStub.getHighestBlock.resolves(15);
     const status = await sync.getSyncStatus();
-    expect(status.highestBlock.toString()).to.be.deep.equal("15");
-    expect(status.startingBlock.toString()).to.be.deep.equal("0");
-    expect(status.currentBlock.toString()).to.be.deep.equal("10");
+    expect(status.headSlot.toString()).to.be.deep.equal("15");
+    expect(status.syncDistance.toString()).to.be.deep.equal("5");
+  });
+
+  it("get sync status - initial sync - target less than our head", async function () {
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
+    const block = generateEmptySignedBlock();
+    block.message.slot = 10;
+    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
+    networkStub.getPeers.returns([]);
+    await sync.start();
+    // @ts-ignore
+    sync.mode = SyncMode.INITIAL_SYNCING;
+    initialSyncStub.getHighestBlock.resolves(5);
+    const status = await sync.getSyncStatus();
+    expect(status.headSlot.toString()).to.be.deep.equal("5");
+    expect(status.syncDistance.toString()).to.be.deep.equal("0");
+  });
+
+  it("get sync status - waiting for peers", async function () {
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
+    const block = generateEmptySignedBlock();
+    block.message.slot = 10;
+    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
+    // @ts-ignore
+    sync.mode = SyncMode.WAITING_PEERS;
+    const status = await sync.getSyncStatus();
+    expect(status.headSlot.toString()).to.be.deep.equal("0");
+    expect(status.syncDistance.toString()).to.be.deep.equal("1");
   });
 
 });

@@ -17,6 +17,11 @@ export function processBlockHeader(
       `blockSlot=${block.slot} stateSlot=${slot}`
     );
   }
+  // Verify that the block is newer than latest block header
+  if (!(block.slot > state.latestBlockHeader.slot)) {
+    throw new Error("Block is not newer than latest block header" +
+    `blockSlot=${block.slot} latestBlockHeader.slot=${state.latestBlockHeader.slot}`);
+  }
   // verify that proposer index is the correct index
   const proposerIndex = epochCtx.getBeaconProposer(slot);
   if (block.proposerIndex !== proposerIndex) {

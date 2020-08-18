@@ -2,14 +2,15 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockHeader, Bytes96, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconBlockHeader, Bytes96, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {processSlots, stateTransition, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 
 export async function assembleBlock(
@@ -20,25 +21,40 @@ export async function assembleBlock(
   proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH,
-): Promise<BeaconBlock | null> {
-  const parentBlock = await chain.getHeadBlock();
-  const currentState = await chain.getHeadState();
-
-  if (slot > currentState.slot) {
-    processSlots(config, currentState, slot);
-  }
+): Promise<BeaconBlock> {
+  const [parentBlock, stateContext] = await Promise.all([
+    chain.getHeadBlock(),
+    chain.getHeadStateContext()
+  ]);
   const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
+  const headState = stateContext.state.clone();
+  headState.slot = slot;
   const block: BeaconBlock = {
     slot,
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: undefined,
-    body: await assembleBody(config, db, currentState, randaoReveal, graffiti),
+    body: await assembleBody(config, db, headState, randaoReveal, graffiti),
   };
 
-  block.stateRoot = config.types.BeaconState.hashTreeRoot(
-    stateTransition(config, currentState, {message: block, signature: EMPTY_SIGNATURE}, false, false, true),
-  );
+  let epochCtx: EpochContext;
+  if(!stateContext.epochCtx) {
+    epochCtx = new EpochContext(config);
+    epochCtx.loadState(stateContext.state);
+  } else {
+    epochCtx = stateContext.epochCtx;
+  }
+  block.stateRoot = computeNewStateRoot(config, {state: stateContext.state, epochCtx}, block);
 
   return block;
+}
+
+function computeNewStateRoot(config: IBeaconConfig, stateContext: IStateContext, block: BeaconBlock): Root {
+  // state is cloned from the cache already
+  const signedBlock = {
+    message: block,
+    signature: EMPTY_SIGNATURE,
+  };
+  const newState = fastStateTransition(stateContext, signedBlock, false, false, true);
+  return config.types.BeaconState.hashTreeRoot(newState.state);
 }

@@ -3,6 +3,7 @@
   "include": ["src","test"],
   "exclude": [],
   "compilerOptions": {
+    "target": "es2020",
     "typeRoots": [
       "../../node_modules/@types",
       "../../node_modules/libp2p-ts/types",
@@ -10,7 +11,8 @@
     ],
     "outDir": "lib",
     /* Redirect output structure to the directory. */
-    "rootDirs": ["./src","./test"]
+    "rootDirs": ["./src","./test"],
     /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
+    "strictNullChecks": true
   }
 }

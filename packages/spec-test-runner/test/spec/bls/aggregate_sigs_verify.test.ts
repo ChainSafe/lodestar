@@ -5,10 +5,8 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 interface AggregateSigsVerifyTestCase {
   data: {
     input: {
-      pairs: [{
-        pubkey: string;
-        message: string;
-      }];
+      pubkeys: string[];
+      messages: string[];
       signature: string;
     };
     output: boolean;
@@ -30,11 +28,11 @@ describeDirectorySpecTest<AggregateSigsVerifyTestCase, boolean>(
     "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_verify/small"
   ),
   (testCase => {
-    const pubkeys = testCase.data.input.pairs.map(pair => {
-      return Buffer.from(pair.pubkey.replace("0x", ""), "hex");
+    const pubkeys = testCase.data.input.pubkeys.map(pubkey => {
+      return Buffer.from(pubkey.replace("0x", ""), "hex");
     });
-    const messages = testCase.data.input.pairs.map(pair => {
-      return Buffer.from(pair.message.replace("0x", ""), "hex");
+    const messages = testCase.data.input.messages.map(message => {
+      return Buffer.from(message.replace("0x", ""), "hex");
     });
     return bls.verifyMultiple(
       pubkeys,

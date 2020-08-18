@@ -33,7 +33,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
           type: "array",
           maxItems: 5,
           items: {
-            types: "string"
+            type: "string"
           }
         }
       }
@@ -55,7 +55,7 @@ export const registerAttesterDutiesEndpoint: LodestarRestApiEndpoint = (fastify,
         .type("application/json")
         .send(responseValue.map((value) => {
           return config.types.AttesterDuty.toJson(
-            value
+            value, {case: "snake"}
           );
         }));
     }

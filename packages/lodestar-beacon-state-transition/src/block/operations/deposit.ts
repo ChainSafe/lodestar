@@ -2,13 +2,12 @@
  * @module chain/stateTransition/block
  */
 
-import assert from "assert";
 import {verify} from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH,} from "../../constants";
 import {computeDomain, increaseBalance} from "../../util";
-import {bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {assert, bigIntMin, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {computeSigningRoot} from "../../util/signingRoot";
 
 /**
@@ -20,13 +19,13 @@ export function processDeposit(
   deposit: Deposit
 ): void {
   // Verify the Merkle branch
-  assert(verifyMerkleBranch(
+  assert.true(verifyMerkleBranch(
     config.types.DepositData.hashTreeRoot(deposit.data),
     Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
     DEPOSIT_CONTRACT_TREE_DEPTH + 1,
     state.eth1DepositIndex,
     state.eth1Data.depositRoot.valueOf() as Uint8Array,
-  ));
+  ), "Invalid deposit merkle branch");
 
   // Deposits must be processed in order
   state.eth1DepositIndex += 1;

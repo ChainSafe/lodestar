@@ -3,19 +3,17 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-
 import {
   BeaconState,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {intToBytes,intDiv} from "@chainsafe/lodestar-utils";
+import {assert, intToBytes,intDiv} from "@chainsafe/lodestar-utils";
 
 import {getCurrentEpoch} from "./epoch";
 import {getSeed, computeShuffledIndex} from "./seed";
 import {DomainType} from "../constants";
 import {getActiveValidatorIndices} from ".";
-import assert from "assert";
 
 
 
@@ -42,7 +40,7 @@ export function computeProposerIndex(
   indices: ValidatorIndex[], 
   seed: Uint8Array
 ): ValidatorIndex {
-  assert(indices.length > 0);
+  assert.gt(indices.length, 0, "Validator indices must not be empty");
   const MAX_RANDOM_BYTE = BigInt(2**8 - 1);
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */

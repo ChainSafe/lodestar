@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.9.0",
+  "version": "0.11.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -20,10 +20,12 @@
   ],
   "scripts": {
     "build": "yarn build:lib && yarn build:types",
-    "build:docs": "typedoc --exclude src/index.ts --out docs src",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
-    "build:release": "yarn clean && yarn build && yarn build:docs",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:release": "yarn clean && yarn build && yarn build:typedocs",
     "build:types": "tsc --incremental --project tsconfig.build.json --declaration --outDir lib --emitDeclarationOnly",
+    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "lint": "eslint --color --ext .ts src/",
@@ -34,7 +36,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^0.6.5",
+    "@chainsafe/ssz": "^0.6.13",
     "bigint-buffer": "^1.1.5",
     "camelcase": "^5.3.1",
     "chalk": "^2.4.2",

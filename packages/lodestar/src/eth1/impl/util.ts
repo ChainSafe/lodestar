@@ -2,19 +2,15 @@ import {IDepositEvent} from "../interface";
 
 /**
  * Return deposit events of blocks grouped/sorted by block number and deposit index
+ * Put [] as deposit events for blocks without events
  * @param depositEvents range deposit events
  */
-export function groupDepositEventsByBlock(rangeDepositEvents: IDepositEvent[]): Map<number, IDepositEvent[]> {
-  if (!rangeDepositEvents || rangeDepositEvents.length === 0) {
-    return new Map();
-  }
+export function groupDepositEventsByBlock(
+  rangeDepositEvents: IDepositEvent[], fromNumber: number, toNumber: number): Map<number, IDepositEvent[]> {
   rangeDepositEvents.sort((event1, event2) => event1.index - event2.index);
-  return rangeDepositEvents.reduce<Map<number, IDepositEvent[]>>((groupedEvents, event) => {
-    const blockNumber = event.blockNumber;
-    if (!groupedEvents.get(blockNumber)) {
-      groupedEvents.set(blockNumber, []);
-    }
-    groupedEvents.get(blockNumber).push(event);
-    return groupedEvents;
-  }, new Map());
+  const groupedEvents = new Map();
+  for (let blockNumber = fromNumber; blockNumber <= toNumber; blockNumber++) {
+    groupedEvents.set(blockNumber, rangeDepositEvents.filter((event) => event.blockNumber === blockNumber));
+  }
+  return groupedEvents;
 }

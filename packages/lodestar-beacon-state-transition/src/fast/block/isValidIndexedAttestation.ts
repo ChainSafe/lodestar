@@ -1,8 +1,8 @@
-import {verifyAggregate} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
-import {getDomain, computeSigningRoot} from "../../util";
+import {computeSigningRoot, getDomain} from "../../util";
 import {EpochContext} from "../util";
 
 
@@ -20,11 +20,17 @@ export function isValidIndexedAttestation(
   if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
     return false;
   }
-  // verify indices are sorted and unique
-  if (!config.types.CommitteeIndices.equals(
-    indices,
-    [...(new Set(indices)).values()].sort((a, b) => a - b))
-  ) {
+  // verify indices are sorted and unique.
+  // Just check if they are monotonically increasing,
+  // instead of creating a set and sorting it. Should be (O(n)) instead of O(n log(n))
+  let prev = -1;
+  for (const index of indices) {
+    if (index <= prev)
+      return false;
+    prev = index;
+  }
+  // check if indices are out of bounds, by checking the highest index (since it is sorted)
+  if (indices[indices.length-1] >= state.validators.length) {
     return false;
   }
   // verify aggregate signature
@@ -34,9 +40,14 @@ export function isValidIndexedAttestation(
   const pubkeys = indices.map((i) => epochCtx.index2pubkey[i]);
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
-  return verifyAggregate(
-    pubkeys,
-    signingRoot,
-    indexedAttestation.signature.valueOf() as Uint8Array,
+  const firstPubkey = pubkeys.shift();
+  if (firstPubkey === undefined) throw Error("pubkeys is empty");
+  return pubkeys.reduce(
+    (aggregate, pubkey) => {
+      return aggregate.add(pubkey);
+    }, firstPubkey
+  ).verifyMessage(
+    Signature.fromCompressedBytes(indexedAttestation.signature.valueOf() as Uint8Array),
+    signingRoot
   );
 }
