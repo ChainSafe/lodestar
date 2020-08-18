@@ -21,7 +21,11 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       console.log("OS CPUs", os.cpus().map(cpu => cpu.model));
 
       const workers = [];
-      const genesisTime = Math.floor(Date.now() / 1000);
+      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+      const minGenesisTime = Math.floor(Date.now() / 1000);
+      // it takes more time to detect peers in threaded test
+      const genesisDelay = 20 * beaconParams.SECONDS_PER_SLOT;
+      const genesisTime = minGenesisTime + genesisDelay;
 
       for (let i=0; i<nodeCount; i++) {
         const options = {

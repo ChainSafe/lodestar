@@ -147,6 +147,7 @@ export class Gossip extends (EventEmitter as { new(): GossipEventEmitter }) impl
     event: keyof IGossipEvents | string,
     listener?: unknown,
     params: Map<string, string> = new Map()): void {
+    if (!this.listeners(event as keyof IGossipEvents).includes(listener as (...args: unknown[]) => void)) return;
     if(this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
       this.supportedEncodings.forEach((encoding) => {
         this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
