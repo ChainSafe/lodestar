@@ -56,26 +56,26 @@ export class ValidatorDirBuilder {
     this.secretsDir = secretsDir;
   }
 
-  build({
+  async build({
     keystores,
     passwords,
     storeWithdrawalKeystore,
     depositGwei,
     config
-  }: IValidatorDirBuildOptions): ValidatorDir {
+  }: IValidatorDirBuildOptions): Promise<ValidatorDir> {
     const keystoresDir = this.keystoresDir;
     const secretsDir = this.secretsDir;
     const pubkey = keystores.signing.pubkey;
     if (!pubkey) throw Error("signing keystore has no pubkey");
     
-    const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+    const dir = getValidatorDirPath({keystoresDir, pubkey});
     if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
       throw new YargsError(`validator dir for ${pubkey} already exists`);
     }
     fs.mkdirSync(dir, {recursive: true});
 
     const withdrawalPublicKey = PublicKey.fromHex(keystores.withdrawal.pubkey);
-    const votingPrivateKey = PrivateKey.fromBytes(keystores.signing.decrypt(passwords.signing));
+    const votingPrivateKey = PrivateKey.fromBytes(await keystores.signing.decrypt(passwords.signing));
 
     // Save `ETH1_DEPOSIT_DATA_FILE` to file.
     // This allows us to know the RLP data for the eth1 transaction without needing to know
@@ -94,12 +94,12 @@ export class ValidatorDirBuilder {
 
     // Only the withdrawal keystore if explicitly required.
     if (storeWithdrawalKeystore) {
-      fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), keystores.withdrawal.toJSON());
+      fs.writeFileSync(path.join(dir, WITHDRAWAL_KEYSTORE_FILE), keystores.withdrawal.stringify());
       writeValidatorPassphrase({secretsDir, pubkey: keystores.withdrawal.pubkey, passphrase: passwords.withdrawal});
     }
 
     // Always store voting credentials
-    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystores.signing.toJSON());
+    fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystores.signing.stringify());
     writeValidatorPassphrase({secretsDir, pubkey, passphrase: passwords.signing});
 
     return new ValidatorDir(this.keystoresDir, pubkey);

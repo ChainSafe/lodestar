@@ -100,13 +100,13 @@ has the '.json' extension will be attempted to be imported.",
     }
 
     for (const keystorePath of keystorePaths) {
-      const keystore = Keystore.fromJSON(fs.readFileSync(keystorePath, "utf8"));
+      const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
       const pubkey = keystore.pubkey;
       const uuid = keystore.uuid;
       if (!pubkey) {
         throw Error("Invalid keystore, must contain .pubkey property");
       }
-      const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
+      const dir = getValidatorDirPath({keystoresDir, pubkey});
       if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
         console.log(`Skipping existing validator ${pubkey}`);
         continue;
@@ -119,7 +119,7 @@ has the '.json' extension will be attempted to be imported.",
       const passphrase = await getKeystorePassphrase(keystore, passphrasePaths);
       fs.mkdirSync(secretsDir, {recursive: true});
       fs.mkdirSync(dir, {recursive: true});
-      fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.toJSON());
+      fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.stringify());
       writeValidatorPassphrase({secretsDir, pubkey, passphrase});
 
       console.log(`Successfully imported validator ${pubkey}`);

@@ -32,7 +32,7 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
   const logger = new WinstonLogger();
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
-  const validatorKeypairs = validatorDirManager.decryptAllValidators({force});
+  const validatorKeypairs = await validatorDirManager.decryptAllValidators({force});
 
   if (validatorKeypairs.length === 0)
     throw new YargsError("No validator keystores found");

@@ -28,7 +28,7 @@ export function readPassphraseFile(passphraseFile: string): string {
 
 export function readValidatorPassphrase({secretsDir, pubkey}: {secretsDir: string; pubkey: string}): string {
   const notPrefixedPath = getValidatorPassphrasePath({secretsDir, pubkey});
-  const prefixedPath = getValidatorPassphrasePath({secretsDir, pubkey, prefixed: true});
+  const prefixedPath = getValidatorPassphrasePath({secretsDir, pubkey});
   if (fs.existsSync(notPrefixedPath)) {
     return readPassphraseFile(notPrefixedPath);
   } else {
@@ -40,7 +40,7 @@ export function writeValidatorPassphrase(
   {secretsDir, pubkey, passphrase}: {secretsDir: string; pubkey: string; passphrase: string}
 ): void {
   writeFile600Perm(
-    getValidatorPassphrasePath({secretsDir, pubkey, prefixed: true}),
+    getValidatorPassphrasePath({secretsDir, pubkey}),
     passphrase
   );
 }

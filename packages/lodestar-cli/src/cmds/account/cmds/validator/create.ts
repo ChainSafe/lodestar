@@ -86,8 +86,8 @@ and pre-computed deposit RPL data",
   
     for (let i = 0; i < count; i++) {
       const passwords = wallet.randomPasswords();
-      const keystores = wallet.nextValidator(walletPassword, passwords);
-      validatorDirBuilder.build({keystores, passwords, storeWithdrawalKeystore, depositGwei, config});
+      const keystores = await wallet.nextValidator(walletPassword, passwords);
+      await validatorDirBuilder.build({keystores, passwords, storeWithdrawalKeystore, depositGwei, config});
   
       // Persist the nextaccount index after successfully creating the validator directory
       walletManager.writeWallet(wallet);
@@ -97,4 +97,3 @@ and pre-computed deposit RPL data",
     }
   }
 };
-

@@ -6,6 +6,7 @@ import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
+import {initBLS} from "@chainsafe/bls";
 
 export const command = "create";
 
@@ -63,6 +64,8 @@ wallets are supported presently.",
   },
 
   handler: async (options) => {
+    await initBLS();
+    
     const {name, type, passphraseFile, mnemonicOutputPath} = options;
     const accountPaths = getAccountPaths(options);
 
@@ -72,13 +75,15 @@ wallets are supported presently.",
     if (path.parse(passphraseFile).ext !== ".pass") {
       throw new YargsError("passphraseFile must end with .pass, make sure to not provide the actual password");
     }
+    
     if (!fs.existsSync(passphraseFile)) {
       writeFile600Perm(passphraseFile, randomPassword());
     }
+
     const password = readPassphraseFile(passphraseFile);
 
     const walletManager = new WalletManager(accountPaths);
-    const wallet = walletManager.createWallet(name, type, mnemonic, password);
+    const wallet = await walletManager.createWallet(name, type, mnemonic, password);
 
     if (mnemonicOutputPath) {
       writeFile600Perm(mnemonicOutputPath, mnemonic);
