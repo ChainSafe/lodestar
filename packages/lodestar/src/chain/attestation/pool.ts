@@ -98,7 +98,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       return;
     }
     //don't wait for this to resolve
-    processAttestation(this.config, this.chain, this.logger, this.db, attestation).catch(e => {
+    processAttestation(this.config, this.chain, this.logger, this.db, attestation).catch((e) => {
       this.logger.error("Error processing attestation", e);
     });
   }

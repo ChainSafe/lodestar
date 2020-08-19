@@ -96,7 +96,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   private setTarget = (newTarget?: Slot, triggerSync = true): void => {
     newTarget = newTarget || this.getNewTarget();
-    if(triggerSync && newTarget > this.currentTarget) {
+    if (triggerSync && newTarget > this.currentTarget) {
       this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
@@ -108,8 +108,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       if (await this.checkSyncComplete()) {
         return;
       }
-      this.logger.info(`Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
-        `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`);
+      this.logger.info(
+        `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
+          `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
+      );
       this.setTarget();
     }
   };
@@ -139,30 +141,27 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
     const {getSyncPeers, setTarget, handleEmptyRange} = this;
-    await pipe(
-      this.targetSlotRangeSource,
-      (source) => {
-        return(async function() {
-          for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
-            const lastFetchedSlot = await pipe(
-              [range],
-              fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
-              processSyncBlocks(config, chain, logger, false)
-            );
-            if(lastFetchedSlot) {
-              // not trigger sync until after we process lastFetchedSlot
-              setTarget(lastFetchedSlot, false);
-            } else {
-              // no block, retry expanded range with same start slot
-              await handleEmptyRange(range);
-            }
+    await pipe(this.targetSlotRangeSource, (source) => {
+      return (async function () {
+        for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
+          const lastFetchedSlot = await pipe(
+            [range],
+            fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
+            processSyncBlocks(config, chain, logger, false)
+          );
+          if (lastFetchedSlot) {
+            // not trigger sync until after we process lastFetchedSlot
+            setTarget(lastFetchedSlot, false);
+          } else {
+            // no block, retry expanded range with same start slot
+            await handleEmptyRange(range);
           }
         }
       })();
     });
   }
 
-  private handleEmptyRange = async(range: ISlotRange): Promise<void> => {
+  private handleEmptyRange = async (range: ISlotRange): Promise<void> => {
     const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus.headSlot;
     this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
     if (range.end <= peerHeadSlot) {
@@ -211,5 +210,4 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       }
     }
   };
-
 }
