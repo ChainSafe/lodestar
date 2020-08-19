@@ -14,7 +14,10 @@ import {
   Fork,
   SignedBeaconBlock,
   Root,
-  DepositData,
+  AttesterSlashing,
+  ProposerSlashing,
+  Attestation,
+  SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -69,15 +72,15 @@ export function applyDeposits(
     }
   }
   const initDepositCount = depositDataRootList.length;
-  const depositDatas: DepositData[] = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
+  const depositDatas = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
   newDeposits.forEach((deposit, index) => {
     if (fullDepositDataRootList) {
       depositDataRootList.push(fullDepositDataRootList[index + initDepositCount]);
-      state.eth1Data.depositRoot = config.types.DepositDataRootList.hashTreeRoot(depositDataRootList);
-    } else {
+      state.eth1Data.depositRoot = config.types.DepositDataRootList.hashTreeRoot(depositDataRootList as List<Root>);
+    } else if (depositDatas) {
       const depositDataList = depositDatas.slice(0, index + 1);
       state.eth1Data.depositRoot = config.types.DepositDataRootList.hashTreeRoot(
-        depositDataList.map((d) => config.types.DepositData.hashTreeRoot(d))
+        depositDataList.map((d) => config.types.DepositData.hashTreeRoot(d)) as List<Root>
       );
     }
     state.eth1Data.depositCount += 1;
@@ -165,11 +168,11 @@ export function getEmptyBlockBody(): BeaconBlockBody {
       blockHash: ZERO_HASH,
     },
     graffiti: ZERO_HASH,
-    proposerSlashings: [],
-    attesterSlashings: [],
-    attestations: [],
-    deposits: [],
-    voluntaryExits: [],
+    proposerSlashings: ([] as ProposerSlashing[]) as List<ProposerSlashing>,
+    attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
+    attestations: ([] as Attestation[]) as List<Attestation>,
+    deposits: ([] as Deposit[]) as List<Deposit>,
+    voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
   };
 }
 
