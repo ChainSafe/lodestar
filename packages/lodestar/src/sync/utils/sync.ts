@@ -298,5 +298,5 @@ export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INet
   if (!network.getPeers().includes(peer)) return false;
   if (!reps.getFromPeerId(peer).latestStatus) return false;
   const headSlot = forkChoice.headBlockSlot();
-  return reps.getFromPeerId(peer).latestStatus.headSlot > headSlot;
+  return reps.getFromPeerId(peer).latestStatus!.headSlot > headSlot;
 }
