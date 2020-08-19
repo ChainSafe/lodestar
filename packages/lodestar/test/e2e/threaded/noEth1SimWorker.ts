@@ -31,10 +31,7 @@ import {getDevValidator} from "../../utils/node/validator";
   node.chain.on(checkpointEvent, (checkpoint) => {
     validator.stop().then(() =>
       node.stop().then(() => {
-        if (!parentPort) {
-          throw Error("parentPort is null, this script must be run a worker");
-        }
-        parentPort.postMessage({
+        parentPort!.postMessage({
           event: checkpointEvent,
           checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
         });
