@@ -1,10 +1,10 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {assembleAttestationData} from "../../../../../src/chain/factory/attestation/data";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateValidators} from "../../../../utils/validator";
+import {generateInitialMaxBalances} from "../../../../utils/balances";
 
 describe("assemble attestation data", function () {
   it("should produce attestation", async function () {
@@ -14,10 +14,7 @@ describe("assemble attestation data", function () {
         activationEpoch: 0,
         effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
       }),
-      balances: Array.from(
-        {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-        () => config.params.MAX_EFFECTIVE_BALANCE
-      ),
+      balances: generateInitialMaxBalances(config),
     });
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(generateEmptyBlock());
     const result = await assembleAttestationData(config, state, blockRoot, 2, 1);

@@ -9,11 +9,11 @@ import {generateAttestation} from "../../../utils/attestation";
 import * as attestationProcessMethods from "../../../../src/chain/attestation/processor";
 import {expect} from "chai";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, List} from "@chainsafe/ssz";
 import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
-import {Slot} from "@chainsafe/lodestar-types";
+import {Slot, Attestation} from "@chainsafe/lodestar-types";
 
 describe("attestation pool", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -114,7 +114,7 @@ describe("attestation pool", function () {
     const block = generateSignedBlock({
       message: {
         body: {
-          attestations: [blockAttestation],
+          attestations: [blockAttestation] as List<Attestation>,
         },
       },
     });

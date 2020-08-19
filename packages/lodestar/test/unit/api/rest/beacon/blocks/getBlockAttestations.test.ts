@@ -1,4 +1,6 @@
 import {RestApi} from "../../../../../../src/api/rest";
+import {List} from "@chainsafe/ssz";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ValidatorApi} from "../../../../../../src/api/impl/validator";
@@ -46,7 +48,7 @@ describe("rest - beacon - getBlockAttestations", function () {
       generateSignedBlock({
         message: {
           body: {
-            attestations: [generateEmptyAttestation(), generateEmptyAttestation()],
+            attestations: [generateEmptyAttestation(), generateEmptyAttestation()] as List<Attestation>,
           },
         },
       })

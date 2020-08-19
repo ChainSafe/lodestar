@@ -177,7 +177,7 @@ describe("[sync] rpc", function () {
   });
 
   it("beacon block by root", async function () {
-    const request: BeaconBlocksByRootRequest = [Buffer.alloc(32)];
+    const request = [Buffer.alloc(32)] as BeaconBlocksByRootRequest;
     await netA.connect(netB.peerId, netB.multiaddrs);
     const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
     expect(response.length).to.equal(1);

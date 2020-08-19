@@ -2,6 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {generateState} from "../../../../../utils/state";
 import {generateValidators} from "../../../../../utils/validator";
+import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {expect} from "chai";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
@@ -55,7 +56,7 @@ describe("get proposers api impl", function () {
         activationEpoch: 0,
         exitEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE),
+      balances: generateInitialMaxBalances(config, 25),
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
@@ -76,7 +77,7 @@ describe("get proposers api impl", function () {
         activationEpoch: 0,
         exitEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: Array.from({length: 25}, () => config.params.MAX_EFFECTIVE_BALANCE),
+      balances: generateInitialMaxBalances(config, 25),
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
