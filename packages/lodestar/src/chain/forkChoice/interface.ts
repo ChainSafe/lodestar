@@ -18,16 +18,16 @@ export interface ILMDGHOST extends ForkChoiceEventEmitter {
   stop(): Promise<void>;
   addBlock(info: BlockSummary): void;
   addAttestation(blockRoot: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
-  head(): BlockSummary;
+  head(): BlockSummary | null;
   headBlockSlot(): Slot;
   headBlockRoot(): Uint8Array;
   headStateRoot(): Uint8Array;
-  getJustified(): Checkpoint;
-  getFinalized(): Checkpoint;
+  getJustified(): Checkpoint | null;
+  getFinalized(): Checkpoint | null;
   getAncestor(root: Uint8Array, slot: Slot): Uint8Array | null;
   getBlockSummariesAtSlot(slot: Slot): BlockSummary[];
   getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null;
-  getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary;
+  getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null;
   getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[];
   hasBlock(blockRoot: Uint8Array): boolean;
 }

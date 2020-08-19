@@ -116,7 +116,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       isSuccess = true;
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
-      this.network.reqResp.sendResponse(id, e, null);
+      this.network.reqResp.sendResponse(id, e);
     }
     if (isSuccess) {
       // response Status request first
@@ -154,7 +154,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     } else {
       // we're on a further (or equal) finalized epoch
       // but the peer's block root at that epoch may not match match ours
-      const headSummary = this.chain.forkChoice.head();
+      const headSummary = this.chain.forkChoice.head()!;
       const finalizedCheckpoint = headSummary.finalizedCheckpoint;
       const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
 
@@ -229,7 +229,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       this.logger.error(
         `Invalid request id ${id} start: ${request.startSlot} step: ${request.step}` + ` count: ${request.count}`
       );
-      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"), null);
+      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"));
       return;
     }
     if (request.count > 1000) {
@@ -252,7 +252,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       this.network.reqResp.sendResponseStream(id, null, responseStream);
     } catch (e) {
       this.logger.error(`Error processing request id ${id}: ${e.message}`);
-      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.SERVER_ERROR, e.message), null);
+      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.SERVER_ERROR, e.message));
     }
   }
 
@@ -271,7 +271,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       })();
       this.network.reqResp.sendResponseStream(id, null, blockGenerator);
     } catch (e) {
-      this.network.reqResp.sendResponse(id, e, null);
+      this.network.reqResp.sendResponse(id, e);
     }
   }
 

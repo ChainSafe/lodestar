@@ -28,7 +28,7 @@ export interface IEth1Notifier {
    * Returns block by block hash or number
    * @param blockTag
    */
-  getBlock(blockTag: string | number): Promise<Eth1Block>;
+  getBlock(blockTag: string | number): Promise<Eth1Block | null>;
 
   /**
    * Return deposit events at a block

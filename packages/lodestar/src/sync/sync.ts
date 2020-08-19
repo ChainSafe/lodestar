@@ -1,11 +1,11 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
-import {ISyncOptions} from "./options";
+import defaultOptions, {ISyncOptions} from "./options";
 import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {CommitteeIndex, Root, SignedBeaconBlock, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
@@ -14,6 +14,7 @@ import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} fr
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {List} from "@chainsafe/ssz";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -39,7 +40,7 @@ export class BeaconSync implements IBeaconSync {
   private attestationCollector: AttestationCollector;
   private startingBlock: Slot = 0;
 
-  private statusSyncTimer: NodeJS.Timeout;
+  private statusSyncTimer?: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -70,7 +71,7 @@ export class BeaconSync implements IBeaconSync {
     await this.startInitialSync();
     await this.startRegularSync();
     this.mode = SyncMode.SYNCED;
-    this.startingBlock = (await this.chain.getHeadBlock()).message.slot;
+    this.startingBlock = (await this.chain.getHeadBlock())!.message.slot;
   }
 
   public async stop(): Promise<void> {
@@ -89,7 +90,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public async getSyncStatus(): Promise<SyncingStatus> {
-    const headSlot = (await this.chain.getHeadBlock()).message.slot;
+    const headSlot = (await this.chain.getHeadBlock())!.message.slot;
     let target: Slot;
     let syncDistance: bigint;
     switch (this.mode) {
@@ -162,8 +163,9 @@ export class BeaconSync implements IBeaconSync {
 
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...");
-    while (this.mode !== SyncMode.STOPPED && this.getPeers().length < this.opts.minPeers) {
-      this.logger.warn(`Current peerCount=${this.getPeers().length}, required = ${this.opts.minPeers}`);
+    const minPeers = this.opts.minPeers ?? defaultOptions.minPeers;
+    while (this.mode !== SyncMode.STOPPED && this.getPeers().length < minPeers) {
+      this.logger.warn(`Current peerCount=${this.getPeers().length}, required = ${minPeers}`);
       await sleep(3000);
     }
   }
@@ -176,14 +178,16 @@ export class BeaconSync implements IBeaconSync {
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     const peerBalancer = new RoundRobinArray(this.getPeers());
-    let peer = peerBalancer.next();
-    let block: SignedBeaconBlock;
-    while (!block && peer) {
-      block = (await this.network.reqResp.beaconBlocksByRoot(peer, [root]))[0];
-      peer = peerBalancer.next();
-    }
-    if (block) {
-      await this.chain.receiveBlock(block);
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const peer = peerBalancer.next();
+      if (!peer) {
+        return;
+      }
+      const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
+      if (blocks && blocks[0]) {
+        return await this.chain.receiveBlock(blocks[0]);
+      }
     }
   };
 }

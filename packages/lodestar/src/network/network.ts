@@ -30,7 +30,7 @@ interface ILibp2pModules {
 
 export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
-  public multiaddrs: Multiaddr[];
+  public multiaddrs!: Multiaddr[];
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
@@ -67,7 +67,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.multiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
     const enr = this.getEnr();
-    await this.metadata.start(enr);
+    await this.metadata.start(enr!);
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
@@ -141,11 +141,12 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       // we'll dial thru sendRequest so don't need to do connect() like in the spec
       try {
         const metadata = await this.reqResp.metadata(peerId);
+        if (metadata === null) throw Error("No metadata");
         if (metadata.attnets[subnet]) {
           count++;
         }
       } catch (err) {
-        this.logger.warn(`Cannot get metadata from ${peerId.toB58String()}`);
+        this.logger.warn(`Cannot get metadata from ${peerId.toB58String()}: ${err.message}`);
       }
       if (count < 10) {
         // TODO: decide max peers per subnet to connect?
@@ -164,14 +165,14 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         .filter((enr: ENR) => enr.get("attnets"))
         .filter((enr: ENR) => {
           try {
-            return this.config.types.AttestationSubnets.deserialize(enr.get("attnets"))[subnet];
+            return this.config.types.AttestationSubnets.deserialize(enr.get("attnets")!)[subnet];
           } catch (err) {
             return false;
           }
         })
         .map((enr: ENR) =>
           enr.peerId().then((peerId) => {
-            this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP]);
+            this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP!]);
             return peerId;
           })
         )

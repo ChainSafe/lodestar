@@ -7,7 +7,7 @@ import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, List} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../util/sleep";
 import {GENESIS_EPOCH, ZERO_HASH, Method} from "../../constants";
@@ -15,7 +15,7 @@ import {GENESIS_EPOCH, ZERO_HASH, Method} from "../../constants";
 export function getHighestCommonSlot(peers: IReputation[]): Slot {
   const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
     if (peer.latestStatus && current.has(peer.latestStatus.headSlot)) {
-      current.set(peer.latestStatus.headSlot, current.get(peer.latestStatus.headSlot) + 1);
+      current.set(peer.latestStatus.headSlot, current.get(peer.latestStatus.headSlot)! + 1);
     } else if (peer.latestStatus) {
       current.set(peer.latestStatus.headSlot, 1);
     }
@@ -51,7 +51,7 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
     const peerCheckpoint = getStatusFinalizedCheckpoint(peer.latestStatus);
     const root = toHexString(config.types.Checkpoint.hashTreeRoot(peerCheckpoint));
     if (current.has(root)) {
-      current.get(root).votes++;
+      current.get(root)!.votes++;
     } else {
       current.set(root, {checkpoint: peerCheckpoint, votes: 1});
     }
@@ -66,7 +66,7 @@ export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IRepu
         if (voteA.checkpoint.epoch < voteB.checkpoint.epoch) return 1;
         return 0;
       })
-      .shift().checkpoint;
+      .shift()!.checkpoint;
   } else {
     return null;
   }
@@ -118,7 +118,7 @@ export function validateBlocks(
         if (blockChunk.length === 0) {
           continue;
         }
-        const head = blockToHeader(config, (await chain.getHeadBlock()).message);
+        const head = blockToHeader(config, (await chain.getHeadBlock())!.message);
         if (isValidChainOfBlocks(config, head, blockChunk)) {
           yield blockChunk;
         } else {
@@ -164,7 +164,7 @@ export function processSyncBlocks(
     let headRoot = chain.forkChoice.headBlockRoot();
     let headSlot = chain.forkChoice.headBlockSlot();
     while (blockBuffer.length > 0) {
-      const signedBlock = blockBuffer.shift();
+      const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;
       if (
         !isInitialSync ||
@@ -173,7 +173,7 @@ export function processSyncBlocks(
         await chain.receiveBlock(signedBlock, trusted);
         headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
         headSlot = block.slot;
-        if (block.slot > lastProcessedSlot) {
+        if (block.slot > lastProcessedSlot!) {
           lastProcessedSlot = block.slot;
         }
       } else {
@@ -193,7 +193,7 @@ export function processSyncBlocks(
 }
 
 export function createStatus(chain: IBeaconChain): Status {
-  const head = chain.forkChoice.head();
+  const head = chain.forkChoice.head()!;
   return {
     forkDigest: chain.currentForkDigest,
     finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
@@ -223,16 +223,16 @@ export async function getPeerSupportedProtocols(
   peerId: PeerId,
   reqResp: IReqResp
 ): Promise<Method[]> {
-  const latestStatus = reps.getFromPeerId(peerId).latestStatus;
+  const latestStatus = reps.getFromPeerId(peerId).latestStatus!;
   if (!latestStatus || latestStatus.finalizedEpoch === GENESIS_EPOCH) {
     return [];
   }
-  const finalizedBlock = await reqResp.beaconBlocksByRoot(peerId, [latestStatus.finalizedRoot]);
+  const finalizedBlock = await reqResp.beaconBlocksByRoot(peerId, [latestStatus.finalizedRoot] as List<Root>);
   if (!finalizedBlock || finalizedBlock.length !== 1) {
     return [];
   }
   const parentRoot = finalizedBlock[0].message.parentRoot;
-  const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot]);
+  const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot] as List<Root>);
   if (!parentBlock || parentBlock.length !== 1) {
     return [];
   }
@@ -287,5 +287,5 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], reps: IReput
   const {root} = getBestHead(peers, reps);
   return peers.find((peerId) =>
     config.types.Root.equals(root, reps.get(peerId.toB58String()).latestStatus?.headRoot || ZERO_HASH)
-  );
+  )!;
 }

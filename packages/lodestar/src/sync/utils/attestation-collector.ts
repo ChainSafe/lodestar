@@ -47,7 +47,7 @@ export class AttestationCollector implements IService {
     try {
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
       if (this.aggregationDuties.has(slot)) {
-        this.aggregationDuties.get(slot).add(committeeIndex);
+        this.aggregationDuties.get(slot)!.add(committeeIndex);
       } else {
         this.aggregationDuties.set(slot, new Set([committeeIndex]));
       }

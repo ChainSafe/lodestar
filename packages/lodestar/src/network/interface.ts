@@ -37,8 +37,8 @@ export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
 export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 
 export interface IReqResp extends ReqEventEmitter {
-  sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void;
-  sendResponse(id: RequestId, err: RpcError, response?: ResponseBody): void;
+  sendResponseStream(id: RequestId, err: RpcError | null, chunkIter: AsyncIterable<ResponseBody>): void;
+  sendResponse(id: RequestId, err: RpcError | null, response?: ResponseBody): void;
   status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
   ping(peerId: PeerId, request: Ping): Promise<Ping | null>;

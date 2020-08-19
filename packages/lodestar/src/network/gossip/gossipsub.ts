@@ -28,7 +28,7 @@ export class LodestarGossipsub extends Gossipsub {
   private transformedObjects: Map<string, {createdAt: Date; object: GossipObject}>;
   private config: IBeaconConfig;
   private validator: IGossipMessageValidator;
-  private interval: NodeJS.Timeout;
+  private interval?: NodeJS.Timeout;
   private timeToLive: number;
   private readonly logger: ILogger;
 
@@ -74,6 +74,7 @@ export class LodestarGossipsub extends Gossipsub {
     const message: ILodestarGossipMessage = normalizeInRpcMessage(rawMessage);
     assert.true(Boolean(message.topicIDs), "topicIds is not defined");
     assert.equal(message.topicIDs.length, 1, "topicIds array must contain one item");
+    if (!message.data) throw Error("Message has not data");
     assert.lte(message.data.length, GOSSIP_MAX_SIZE, "Message exceeds byte size limit");
     const topic = message.topicIDs[0];
     // avoid duplicate
@@ -93,8 +94,8 @@ export class LodestarGossipsub extends Gossipsub {
       this.logger.error(`Cannot validate message from ${message.from}, topic ${message.topicIDs}, error: ${err}`);
     }
     const isValid = this._processTopicValidatorResult(topic, peer, message, validationResult);
-    if (isValid && transformedObj) {
-      this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj});
+    if (isValid && transformedObj!) {
+      this.transformedObjects.set(message.messageId, {createdAt: new Date(), object: transformedObj!});
     }
     return isValid;
   }
@@ -164,11 +165,11 @@ export class LodestarGossipsub extends Gossipsub {
 
   private deserializeGossipMessage(topic: string, message: Message): {object: GossipObject; subnet?: number} {
     if (getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
-      message.data = uncompress(message.data);
+      message.data = uncompress(message.data!);
     }
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: this.config.types.Attestation.deserialize(message.data), subnet};
+      return {object: this.config.types.Attestation.deserialize(message.data!), subnet};
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
@@ -192,7 +193,7 @@ export class LodestarGossipsub extends Gossipsub {
       default:
         throw new Error(`Don't know how to deserialize object received under topic ${topic}`);
     }
-    return {object: objType.deserialize(message.data)};
+    return {object: objType.deserialize(message.data!)};
   }
 
   private cleanUp(): void {

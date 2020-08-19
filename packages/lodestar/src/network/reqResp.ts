@@ -252,7 +252,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
-      this.emit("request", peerId, method, requestId, request);
+      this.emit("request", peerId, method, requestId, request!);
     });
 
     return (async function* () {

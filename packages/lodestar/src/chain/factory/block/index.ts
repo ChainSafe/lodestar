@@ -22,25 +22,25 @@ export async function assembleBlock(
   graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
   const [parentBlock, stateContext] = await Promise.all([chain.getHeadBlock(), chain.getHeadStateContext()]);
-  const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock.message);
-  const headState = stateContext.state.clone();
+  const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock!.message);
+  const headState = stateContext!.state.clone();
   headState.slot = slot;
   const block: BeaconBlock = {
     slot,
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
-    stateRoot: undefined,
+    stateRoot: ZERO_HASH,
     body: await assembleBody(config, db, headState, randaoReveal, graffiti),
   };
 
   let epochCtx: EpochContext;
-  if (!stateContext.epochCtx) {
+  if (!stateContext!.epochCtx) {
     epochCtx = new EpochContext(config);
-    epochCtx.loadState(stateContext.state);
+    epochCtx.loadState(stateContext!.state);
   } else {
-    epochCtx = stateContext.epochCtx;
+    epochCtx = stateContext!.epochCtx;
   }
-  block.stateRoot = computeNewStateRoot(config, {state: stateContext.state, epochCtx}, block);
+  block.stateRoot = computeNewStateRoot(config, {state: stateContext!.state, epochCtx}, block);
 
   return block;
 }

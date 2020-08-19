@@ -7,7 +7,7 @@ import {IBeaconChain} from "../../../chain";
 import {IReputationStore} from "../../IReputation";
 import {INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ISyncOptions} from "../../options";
+import defaultOptions, {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
@@ -31,7 +31,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * Targeted finalized checkpoint. Initial sync should only sync up to that point.
    */
-  private targetCheckpoint: Checkpoint;
+  private targetCheckpoint: Checkpoint | null = null;
   /**
    * Target slot for block import, we won't download blocks past that point.
    */
@@ -90,16 +90,17 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   }
 
   public getHighestBlock(): Slot {
-    return computeStartSlotAtEpoch(this.config, this.targetCheckpoint.epoch);
+    return computeStartSlotAtEpoch(this.config, this.targetCheckpoint!.epoch);
   }
 
   private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    if (fromSlot + this.opts.maxSlotImport > finalizedTargetSlot) {
+    const maxSlotImport = this.opts.maxSlotImport ?? defaultOptions.maxSlotImport;
+    if (fromSlot + maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
       return fromSlot + this.config.params.SLOTS_PER_EPOCH;
     } else {
-      return fromSlot + this.opts.maxSlotImport;
+      return fromSlot + maxSlotImport;
     }
   }
 
@@ -168,10 +169,10 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     );
     this.logger.important(
       `Sync progress - currentEpoch=${processedCheckpoint.epoch},` +
-        ` targetEpoch=${this.targetCheckpoint.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s` +
+        ` targetEpoch=${this.targetCheckpoint!.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s` +
         `, estimateTillComplete=${Math.round((estimate / 3600) * 10) / 10} hours`
     );
-    if (processedCheckpoint.epoch === this.targetCheckpoint.epoch) {
+    if (processedCheckpoint.epoch === this.targetCheckpoint!.epoch) {
       //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
       // while our processed checkpoint has root of last slot of that epoch
       // if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
@@ -182,13 +183,13 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       const newTarget = getCommonFinalizedCheckpoint(
         this.config,
         this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
-      );
-      if (newTarget.epoch > this.targetCheckpoint.epoch) {
+      )!;
+      if (newTarget.epoch > this.targetCheckpoint!.epoch) {
         this.targetCheckpoint = newTarget;
         this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
         return;
       }
-      this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint.epoch}`);
+      this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint!.epoch}`);
       //finished initial sync
       await this.stop();
     }
@@ -204,7 +205,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         rep &&
         rep.supportedProtocols.includes(Method.BeaconBlocksByRange) &&
         rep.latestStatus &&
-        rep.latestStatus.finalizedEpoch >= this.targetCheckpoint.epoch
+        rep.latestStatus.finalizedEpoch >= this.targetCheckpoint!.epoch
       ) {
         validPeers.push(peer);
       }

@@ -36,7 +36,7 @@ export async function resolveBlockId(
     return db.blockArchive.get(GENESIS_SLOT);
   }
   if (blockId === "finalized") {
-    return db.block.get(forkChoice.getFinalized().root.valueOf() as Uint8Array);
+    return db.block.get(forkChoice.getFinalized()!.root.valueOf() as Uint8Array);
   }
   if (blockId.startsWith("0x")) {
     const root = fromHexString(blockId);

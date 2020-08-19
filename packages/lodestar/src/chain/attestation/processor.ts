@@ -28,7 +28,7 @@ export async function processAttestation(
     if (
       !config.types.Root.equals(
         target.root,
-        chain.forkChoice.getAncestor(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, targetSlot)
+        chain.forkChoice.getAncestor(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, targetSlot)!
       )
     ) {
       logger.verbose("Dropping attestation from processing", {

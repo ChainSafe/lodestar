@@ -20,10 +20,10 @@ export async function resolveStateId(
     return db.stateArchive.get(0);
   }
   if (stateId === "finalized") {
-    return (await db.stateCache.get(forkChoice.getFinalized()?.root))?.state ?? null;
+    return (await db.stateCache.get(forkChoice.getFinalized()?.root!))?.state ?? null;
   }
   if (stateId === "justified") {
-    return (await db.stateCache.get(forkChoice.getJustified()?.root))?.state ?? null;
+    return (await db.stateCache.get(forkChoice.getJustified()?.root!))?.state ?? null;
   }
   if (stateId.startsWith("0x")) {
     //TODO: support getting finalized states by root as well

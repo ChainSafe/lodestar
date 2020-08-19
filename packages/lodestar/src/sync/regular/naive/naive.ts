@@ -33,13 +33,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   private readonly opts: IRegularSyncOptions;
 
-  private bestPeer: PeerId;
+  private bestPeer: PeerId | undefined;
 
   private currentTarget: Slot = 0;
   private targetSlotRangeSource: Pushable<ISlotRange>;
-  private gossipParentBlockRoot: Root;
+  private gossipParentBlockRoot: Root | undefined;
   // only subscribe to gossip when we're up to this
-  private controller: AbortController;
+  private controller!: AbortController;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     super();
@@ -167,12 +167,12 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private getSyncPeers = async (): Promise<PeerId[]> => {
-    if (!this.network.getPeers().includes(this.bestPeer)) {
+    if (!this.network.getPeers().includes(this.bestPeer!)) {
       // bestPeer disconnected
       this.bestPeer = undefined;
       await this.waitForBestPeer(this.controller.signal);
     }
-    return [this.bestPeer];
+    return [this.bestPeer!];
   };
 
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
