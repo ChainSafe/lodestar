@@ -157,6 +157,7 @@ describe("block archive repository", function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
+    if (!retrieved) throw Error("getByRoot returned null");
     expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 
@@ -171,6 +172,7 @@ describe("block archive repository", function () {
     const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const retrieved = await blockArchive.getByParentRoot(block.message.parentRoot);
+    if (!retrieved) throw Error("getByRoot returned null");
     expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 });

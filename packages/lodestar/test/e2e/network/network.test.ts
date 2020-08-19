@@ -162,7 +162,7 @@ describe("[network] network", function () {
       netB.reqResp.sendResponse(requestId, null, netB.metadata.seqNumber);
     });
     const seqNumber = await netA.reqResp.ping(netB.peerId, netA.metadata.seqNumber);
-    expect(seqNumber.toString()).to.equal(netB.metadata.seqNumber.toString());
+    expect(seqNumber!.toString()).to.equal(netB.metadata.seqNumber.toString());
   });
   it("should send/receive metadata messages", async function () {
     const connected = Promise.all([
@@ -238,7 +238,7 @@ describe("[network] network", function () {
     await netB.gossip.publishCommiteeAttestation(attestation);
     await received;
     expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(1);
-    netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback);
+    netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback!);
     expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(0);
   });
   it("should connect to new peer by subnet", async function () {

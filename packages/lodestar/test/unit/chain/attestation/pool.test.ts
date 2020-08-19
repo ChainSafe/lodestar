@@ -157,7 +157,7 @@ describe("attestation pool", function () {
     const receiveAttestationStub = sinon.stub();
     pool.receiveAttestation = receiveAttestationStub;
     await pool.start();
-    await newSlotCallback(computeStartSlotAtEpoch(config, attestation.data.target.epoch));
+    await newSlotCallback!(computeStartSlotAtEpoch(config, attestation.data.target.epoch));
     expect(receiveAttestationStub.withArgs(attestation).calledOnce).to.be.true;
     expect(
       pool.getPendingSlotAttestations(computeStartSlotAtEpoch(config, attestation.data.target.epoch)).length

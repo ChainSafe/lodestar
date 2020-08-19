@@ -75,7 +75,7 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
-    expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
+    expect(() => fastStateTransition({state, epochCtx}, block!, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {

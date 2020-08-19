@@ -62,7 +62,7 @@ describe("BeaconChain", function () {
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
       config.types.ENRForkID.hashTreeRoot(enrForkID);
-      config.params.ALL_FORKS = undefined;
+      config.params.ALL_FORKS = undefined!;
     });
   });
 
