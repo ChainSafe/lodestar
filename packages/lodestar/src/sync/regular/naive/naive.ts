@@ -12,7 +12,7 @@ import {IReputationStore} from "../../IReputation";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {fetchBlockChunks, processSyncBlocks, getBestHead, getBestPeer} from "../../utils";
+import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEvent} from "../../../network/gossip/constants";
@@ -69,7 +69,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
     await this.waitForBestPeer(this.controller.signal);
-    const newTarget = await this.getNewTarget();
+    const newTarget = this.getNewTarget();
     this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
     await Promise.all([this.sync(), this.setTarget()]);
@@ -88,15 +88,14 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     return this.currentTarget;
   }
 
-  private async getNewTarget(): Promise<Slot> {
-    const state = await this.chain.getHeadState();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+  private getNewTarget(): Slot {
+    const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
     // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
     return Math.min(this.currentTarget + this.opts.blockPerChunk, currentSlot + 1);
   }
 
-  private setTarget = async (newTarget?: Slot, triggerSync = true): Promise<void> => {
-    newTarget = newTarget || (await this.getNewTarget());
+  private setTarget = (newTarget?: Slot, triggerSync = true): void => {
+    newTarget = newTarget || this.getNewTarget();
     if (triggerSync && newTarget > this.currentTarget) {
       this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
@@ -113,7 +112,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
           `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
       );
-      await this.setTarget();
+      this.setTarget();
     }
   };
 
@@ -141,8 +140,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private async sync(): Promise<void> {
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
-    const getSyncPeers = this.getSyncPeers;
-    const setTarget = this.setTarget;
+    const {getSyncPeers, setTarget, handleEmptyRange} = this;
     await pipe(this.targetSlotRangeSource, (source) => {
       return (async function () {
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
@@ -153,23 +151,38 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
           );
           if (lastFetchedSlot) {
             // not trigger sync until after we process lastFetchedSlot
-            await setTarget(lastFetchedSlot, false);
+            setTarget(lastFetchedSlot, false);
           } else {
-            // no block, retry the range again next slot
-            await setTarget(range.start - 1, false);
-            logger.verbose(`Not found any blocks for range ${JSON.stringify(range)}, will retry at next slot`);
-            await sleep(config.params.SECONDS_PER_SLOT * 1000);
-            await setTarget();
+            // no block, retry expanded range with same start slot
+            await handleEmptyRange(range);
           }
         }
       })();
     });
   }
 
+  private handleEmptyRange = async (range: ISlotRange): Promise<void> => {
+    const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus.headSlot;
+    this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
+    if (range.end <= peerHeadSlot) {
+      // range contains skipped slots, query for next range
+      this.logger.verbose(`Range ${JSON.stringify(range)} is behind peer head ${peerHeadSlot}, fetch next range`);
+      this.setTarget();
+    } else {
+      this.logger.verbose(`Range ${JSON.stringify(range)} passed peer head ${peerHeadSlot}, sleep then try again`);
+      // don't want to disturb our peer if we pass peer head
+      await sleep(this.config.params.SECONDS_PER_SLOT * 1000);
+      this.setTarget(range.start - 1, false);
+      this.setTarget();
+    }
+  };
+
+  /**
+   * Make sure the best peer is not disconnected and it's better than us.
+   */
   private getSyncPeers = async (): Promise<PeerId[]> => {
-    if (!this.network.getPeers().includes(this.bestPeer)) {
-      // bestPeer disconnected
-      this.bestPeer = undefined;
+    if (!checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
+      this.logger.info("Regular Sync: wait for best peer");
       await this.waitForBestPeer(this.controller.signal);
     }
     return [this.bestPeer];
@@ -178,7 +191,6 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
     // statusSyncTimer is per slot
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
-    const state = await this.chain.getHeadState();
     let isAborted = false;
     signal.addEventListener("abort", () => {
       this.logger.verbose("RegularSync: Abort waitForBestPeer");
@@ -187,17 +199,14 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     while (!this.bestPeer && !isAborted) {
       // wait first to make sure we have latest status
       await sleep(waitingTime);
-      const previousSlot = getCurrentSlot(this.config, state.genesisTime) - 1;
       const peers = this.network.getPeers();
-      const {slot: maxHeadSlot} = getBestHead(peers, this.reps);
-      if (maxHeadSlot >= previousSlot) {
-        this.bestPeer = getBestPeer(this.config, peers, this.reps);
-        this.logger.verbose(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}, headSlot=${maxHeadSlot}`);
+      this.bestPeer = getBestPeer(this.config, peers, this.reps);
+      if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
+        const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus.headSlot;
+        this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()} with head slot ${peerHeadSlot}`);
       } else {
-        this.logger.verbose(
-          `Regular Sync: Not found peer with headSlot >= ${previousSlot} num peers=${peers.length}` +
-            ` maxHeadSlot=${maxHeadSlot}`
-        );
+        // continue to find best peer
+        this.bestPeer = null;
       }
     }
   };

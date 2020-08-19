@@ -99,6 +99,7 @@ describe("attestation pool", function () {
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT);
     forkChoice.getBlockSummaryByBlockRoot.returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
+    processAttestationStub.resolves();
     await pool.receiveAttestation(attestation);
     expect(processAttestationStub.calledOnce).to.be.true;
   });
