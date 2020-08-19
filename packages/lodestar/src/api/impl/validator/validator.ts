@@ -257,7 +257,12 @@ export class ValidatorApi implements IValidatorApi {
 
   private async checkSyncStatus(): Promise<void> {
     if (!this.sync.isSynced()) {
-      const syncStatus = this.config.types.SyncingStatus.toJson(await this.sync.getSyncStatus());
+      let syncStatus;
+      try {
+        syncStatus = this.config.types.SyncingStatus.toJson(await this.sync.getSyncStatus());
+      } catch (e) {
+        throw new ApiError(503, "Node is stopped");
+      }
       throw new ApiError(503, `Node is syncing, status: ${JSON.stringify(syncStatus)}`);
     }
   }

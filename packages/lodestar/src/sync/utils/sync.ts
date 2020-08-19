@@ -4,7 +4,7 @@ import {Checkpoint, SignedBeaconBlock, Slot, Status, Root, BeaconBlocksByRangeRe
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, INetwork} from "../../network";
 import {ISlotRange} from "../interface";
-import {IBeaconChain} from "../../chain";
+import {IBeaconChain, ILMDGHOST} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString, List} from "@chainsafe/ssz";
@@ -288,4 +288,15 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], reps: IReput
   return peers.find((peerId) =>
     config.types.Root.equals(root, reps.get(peerId.toB58String()).latestStatus?.headRoot || ZERO_HASH)
   )!;
+}
+
+/**
+ * Check if a peer is good to be a best peer.
+ */
+export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INetwork, reps: IReputationStore): boolean {
+  if (!peer) return false;
+  if (!network.getPeers().includes(peer)) return false;
+  if (!reps.getFromPeerId(peer).latestStatus) return false;
+  const headSlot = forkChoice.headBlockSlot();
+  return reps.getFromPeerId(peer).latestStatus.headSlot > headSlot;
 }
