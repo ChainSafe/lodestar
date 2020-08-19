@@ -8,11 +8,7 @@ import {Repository} from "./abstract";
  * bad block roots
  */
 export class BadBlockRepository extends Repository<Uint8Array, boolean> {
-
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.invalidBlock, config.types.Boolean);
   }
 

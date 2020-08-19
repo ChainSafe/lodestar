@@ -23,8 +23,7 @@ import {IResponseChunk} from "./encoders/interface";
 import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5/lib";
 
-
-export type ResponseCallbackFn = ((responseIter: AsyncIterable<IResponseChunk>) => void);
+export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
 
 interface IRespEvents {
   [responseEvent: string]: ResponseCallbackFn;
@@ -40,18 +39,18 @@ export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 export interface IReqResp extends ReqEventEmitter {
   sendResponseStream(id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>): void;
   sendResponse(id: RequestId, err: RpcError, response?: ResponseBody): void;
-  status(peerId: PeerId, request: Status): Promise<Status|null>;
+  status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
-  ping(peerId: PeerId, request: Ping): Promise<Ping|null>;
-  metadata(peerId: PeerId): Promise<Metadata|null>;
-  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]|null>;
-  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]|null>;
+  ping(peerId: PeerId, request: Ping): Promise<Ping | null>;
+  metadata(peerId: PeerId): Promise<Metadata | null>;
+  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
+  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
 }
 
 // network
 
 export interface INetworkEvents {
-  ["peer:connect"]: (peerId: PeerId, direction: "inbound"|"outbound") => void;
+  ["peer:connect"]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
   ["peer:disconnect"]: (peerId: PeerId) => void;
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
@@ -65,9 +64,9 @@ export interface INetwork extends NetworkEventEmitter {
    */
   peerId: PeerId;
   multiaddrs: Multiaddr[];
-  getEnr(): ENR|undefined;
+  getEnr(): ENR | undefined;
   getPeers(): PeerId[];
-  getPeerConnection(peerId: PeerId): LibP2pConnection|null;
+  getPeerConnection(peerId: PeerId): LibP2pConnection | null;
   hasPeer(peerId: PeerId): boolean;
   connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void>;
   disconnect(peerId: PeerId): Promise<void>;

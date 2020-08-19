@@ -94,7 +94,6 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
           expectFunc(testCase, expect, expected, actual);
         }
       });
-
     });
   });
 }

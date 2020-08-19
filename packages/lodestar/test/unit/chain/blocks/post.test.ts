@@ -14,7 +14,6 @@ import {generateEmptyAttestation} from "../../../utils/attestation";
 import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("post block process stream", function () {
-
   let epochCtxStub: SinonStubbedInstance<EpochContext>;
   let forkChoiceStub: SinonStubbedInstance<StatefulDagLMDGHOST>;
   let dbStub: StubbedBeaconDb;
@@ -34,11 +33,11 @@ describe("post block process stream", function () {
     slotMetricsStub = sinon.createStubInstance(Gauge);
     currentEpochLiveValidatorsMetricsStub = sinon.createStubInstance(Gauge);
     metricsStub = sinon.createStubInstance(BeaconMetrics);
-    metricsStub.currentSlot = slotMetricsStub as unknown as Gauge;
-    metricsStub.currentEpochLiveValidators = currentEpochLiveValidatorsMetricsStub as unknown as Gauge;
-    metricsStub.currentFinalizedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
-    metricsStub.currentJustifiedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
-    metricsStub.previousJustifiedEpoch = sinon.createStubInstance(Gauge) as unknown as Gauge;
+    metricsStub.currentSlot = (slotMetricsStub as unknown) as Gauge;
+    metricsStub.currentEpochLiveValidators = (currentEpochLiveValidatorsMetricsStub as unknown) as Gauge;
+    metricsStub.currentFinalizedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
+    metricsStub.currentJustifiedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
+    metricsStub.previousJustifiedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
     eventBusStub = sinon.createStubInstance(BeaconChain);
     attestationProcessorStub = sinon.createStubInstance(AttestationProcessor);
     forkChoiceStub.getCanonicalBlockSummaryAtSlot.returns({
@@ -49,16 +48,16 @@ describe("post block process stream", function () {
   });
 
   it("no epoch transition", async function () {
-    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const preStateContext = {state: generateState(), epochCtx: (epochCtxStub as unknown) as EpochContext};
     const postStateContext = {
       state: generateState(),
-      epochCtx: epochCtxStub as unknown as EpochContext
+      epochCtx: (epochCtxStub as unknown) as EpochContext,
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
     const item = {
       preStateContext,
       postStateContext,
-      block
+      block,
     };
     await pipe(
       [item],
@@ -69,24 +68,24 @@ describe("post block process stream", function () {
         forkChoiceStub,
         metricsStub,
         eventBusStub,
-        attestationProcessorStub,
-      ),
+        attestationProcessorStub
+      )
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
   });
 
   it("epoch transition", async function () {
-    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const preStateContext = {state: generateState(), epochCtx: (epochCtxStub as unknown) as EpochContext};
     const postStateContext = {
       state: generateState({slot: config.params.SLOTS_PER_EPOCH}),
-      epochCtx: epochCtxStub as unknown as EpochContext
+      epochCtx: (epochCtxStub as unknown) as EpochContext,
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
       preStateContext,
       postStateContext,
-      block
+      block,
     };
     await pipe(
       [item],
@@ -97,8 +96,8 @@ describe("post block process stream", function () {
         forkChoiceStub,
         metricsStub,
         eventBusStub,
-        attestationProcessorStub,
-      ),
+        attestationProcessorStub
+      )
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
@@ -109,21 +108,21 @@ describe("post block process stream", function () {
   });
 
   it("epoch transition - justified and finalized", async function () {
-    const preStateContext = {state: generateState(), epochCtx: epochCtxStub as unknown as EpochContext};
+    const preStateContext = {state: generateState(), epochCtx: (epochCtxStub as unknown) as EpochContext};
     const postStateContext = {
       state: generateState({
         slot: config.params.SLOTS_PER_EPOCH,
         currentJustifiedCheckpoint: {epoch: 1, root: Buffer.alloc(1)},
-        finalizedCheckpoint: {epoch: 1, root: Buffer.alloc(1)}
+        finalizedCheckpoint: {epoch: 1, root: Buffer.alloc(1)},
       }),
-      epochCtx: epochCtxStub as unknown as EpochContext
+      epochCtx: (epochCtxStub as unknown) as EpochContext,
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.body.attestations = [generateEmptyAttestation()];
     const item = {
       preStateContext,
       postStateContext,
-      block
+      block,
     };
     dbStub.block.get.resolves(block);
     await pipe(
@@ -135,8 +134,8 @@ describe("post block process stream", function () {
         forkChoiceStub,
         metricsStub,
         eventBusStub,
-        attestationProcessorStub,
-      ),
+        attestationProcessorStub
+      )
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
@@ -145,5 +144,4 @@ describe("post block process stream", function () {
     expect(dbStub.processBlockOperations.calledOnce).to.be.true;
     expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
   });
-
 });

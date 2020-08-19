@@ -9,12 +9,12 @@ export function getBlockSummary(overide: Partial<BlockSummary>): BlockSummary {
     stateRoot: ZERO_HASH,
     finalizedCheckpoint: {
       epoch: 0,
-      root: ZERO_HASH
+      root: ZERO_HASH,
     },
     justifiedCheckpoint: {
       epoch: 0,
-      root: ZERO_HASH
+      root: ZERO_HASH,
     },
-    ...overide
+    ...overide,
   };
 }

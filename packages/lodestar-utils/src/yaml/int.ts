@@ -3,17 +3,22 @@
 import {Type} from "js-yaml";
 
 function isHexCode(c: number): boolean {
-  return ((0x30/* 0 */ <= c) && (c <= 0x39/* 9 */)) ||
-        ((0x41/* A */ <= c) && (c <= 0x46/* F */)) ||
-        ((0x61/* a */ <= c) && (c <= 0x66/* f */));
+  return (
+    // 0, 9
+    (0x30 <= c && c <= 0x39) ||
+    // A, F
+    (0x41 <= c && c <= 0x46) ||
+    // a, f
+    (0x61 <= c && c <= 0x66)
+  );
 }
 
 function isOctCode(c: number): boolean {
-  return ((0x30/* 0 */ <= c) && (c <= 0x37/* 7 */));
+  return 0x30 /* 0 */ <= c && c <= 0x37 /* 7 */;
 }
 
 function isDecCode(c: number): boolean {
-  return ((0x30/* 0 */ <= c) && (c <= 0x39/* 9 */));
+  return 0x30 /* 0 */ <= c && c <= 0x39 /* 9 */;
 }
 
 function resolveYamlInteger(data: string): boolean {
@@ -52,7 +57,6 @@ function resolveYamlInteger(data: string): boolean {
       }
       return hasDigits && ch !== "_";
     }
-
 
     if (ch === "x") {
       // base 16
@@ -103,7 +107,10 @@ function resolveYamlInteger(data: string): boolean {
 }
 
 function constructYamlInteger(data: string): bigint {
-  let value: string|bigint= data, sign = 1, ch, base: number|bigint;
+  let value: string | bigint = data,
+    sign = 1,
+    ch,
+    base: number | bigint;
   const digits: number[] = [];
 
   if (value.indexOf("_") !== -1) {
@@ -138,7 +145,6 @@ function constructYamlInteger(data: string): bigint {
     });
 
     return value * BigInt(sign);
-
   }
 
   return BigInt(value) * BigInt(sign);
@@ -157,25 +163,27 @@ export const intType = new Type("tag:yaml.org,2002:int", {
   // @ts-ignore
   represent: {
     // @ts-ignore
-    binary:      function (obj: number) {
+    binary: function (obj: number) {
       return obj >= 0 ? "0b" + obj.toString(2) : "-0b" + obj.toString(2).slice(1);
     },
     // @ts-ignore
-    octal:       function (obj: number) {
-      return obj >= 0 ? "0"  + obj.toString(8) : "-0"  + obj.toString(8).slice(1);
+    octal: function (obj: number) {
+      return obj >= 0 ? "0" + obj.toString(8) : "-0" + obj.toString(8).slice(1);
     },
     // @ts-ignore
-    decimal:     function (obj: number) { return obj.toString(10); },
+    decimal: function (obj: number) {
+      return obj.toString(10);
+    },
     // @ts-ignore
     hexadecimal: function (obj: number) {
-      return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() :  "-0x" + obj.toString(16).toUpperCase().slice(1);
-    }
+      return obj >= 0 ? "0x" + obj.toString(16).toUpperCase() : "-0x" + obj.toString(16).toUpperCase().slice(1);
+    },
   },
   defaultStyle: "decimal",
   styleAliases: {
-    binary:      [ 2,  "bin" ],
-    octal:       [ 8,  "oct" ],
-    decimal:     [ 10, "dec" ],
-    hexadecimal: [ 16, "hex" ]
-  }
+    binary: [2, "bin"],
+    octal: [8, "oct"],
+    decimal: [10, "dec"],
+    hexadecimal: [16, "hex"],
+  },
 });

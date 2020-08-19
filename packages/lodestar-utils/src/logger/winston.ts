@@ -12,7 +12,7 @@ import {Writable} from "stream";
 export const consoleTransport: TransportStream = new winstonTransports.Console({
   debugStdout: true,
   level: "silly",
-  handleExceptions: true
+  handleExceptions: true,
 });
 
 export const fileTransport = (filename: string): TransportStream => {
@@ -40,10 +40,8 @@ export class WinstonLogger implements ILogger {
         module: options.module || "",
       },
       format: defaultLogFormat,
-      transports: transports || [
-        consoleTransport
-      ],
-      exitOnError: false
+      transports: transports || [consoleTransport],
+      exitOnError: false,
     });
     this._level = options.level || LogLevel.info;
     this._silent = false;
@@ -64,11 +62,11 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
   }
 
-  public error(message: string, context?: Context|Error): void {
+  public error(message: string, context?: Context | Error): void {
     this.createLogEntry(LogLevel.error, message, context);
   }
 
-  public warn(message: string, context?: Context|Error): void {
+  public warn(message: string, context?: Context | Error): void {
     this.createLogEntry(LogLevel.warn, message, context);
   }
 
@@ -116,11 +114,10 @@ export class WinstonLogger implements ILogger {
     });
   }
 
-  private createLogEntry(level: LogLevel, message: string, context?: Context|Error): void {
+  private createLogEntry(level: LogLevel, message: string, context?: Context | Error): void {
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
     this.winston[level](message, {context});
   }
-
 }

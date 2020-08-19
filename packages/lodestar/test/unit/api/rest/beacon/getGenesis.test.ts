@@ -12,28 +12,29 @@ import {expect} from "chai";
 import {getGenesis} from "../../../../../lib/api/rest/controllers/beacon";
 
 describe("rest - beacon - getGenesis", function () {
-
   let restApi: RestApi,
     beaconApiStub: SinonStubbedInstance<BeaconApi>,
     validatorApiStub: SinonStubbedInstance<ValidatorApi>;
 
-
   beforeEach(async function () {
     validatorApiStub = sinon.createStubInstance(ValidatorApi);
     beaconApiStub = sinon.createStubInstance(BeaconApi);
-    restApi = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      logger: sinon.createStubInstance(WinstonLogger),
-      beacon: beaconApiStub,
-      validator: validatorApiStub,
-      node: new StubbedNodeApi(),
-      config
-    });
+    restApi = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        logger: sinon.createStubInstance(WinstonLogger),
+        beacon: beaconApiStub,
+        validator: validatorApiStub,
+        node: new StubbedNodeApi(),
+        config,
+      }
+    );
     return await restApi.start();
   });
 
@@ -41,11 +42,11 @@ describe("rest - beacon - getGenesis", function () {
     return await restApi.stop();
   });
 
-  it("should get genesis object",  async function () {
+  it("should get genesis object", async function () {
     beaconApiStub.getGenesis.resolves({
-      genesisForkVersion:config.params.GENESIS_FORK_VERSION,
+      genesisForkVersion: config.params.GENESIS_FORK_VERSION,
       genesisTime: BigInt(0),
-      genesisValidatorsRoot: Buffer.alloc(32)
+      genesisValidatorsRoot: Buffer.alloc(32),
     });
     const response = await supertest(restApi.server.server)
       .get(getGenesis.url)
@@ -56,11 +57,8 @@ describe("rest - beacon - getGenesis", function () {
     expect(response.body.data.genesis_validators_root).to.not.be.empty;
   });
 
-  it("should return 404 if no genesis",  async function () {
+  it("should return 404 if no genesis", async function () {
     beaconApiStub.getGenesis.resolves(null);
-    await supertest(restApi.server.server)
-      .get(getGenesis.url)
-      .expect(404);
+    await supertest(restApi.server.server).get(getGenesis.url).expect(404);
   });
-
 });

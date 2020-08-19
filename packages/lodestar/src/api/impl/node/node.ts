@@ -14,7 +14,7 @@ export class NodeApi implements INodeApi {
   private readonly network: INetwork;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "network"|"sync">) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "network" | "sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.network = modules.network;
     this.sync = modules.sync;
@@ -31,7 +31,7 @@ export class NodeApi implements INodeApi {
       enr: enr?.encodeTxt(keypair.privateKey) || "",
       discoveryAddresses,
       p2pAddresses: this.network.multiaddrs.map((m) => m.toString()),
-      metadata: this.network.metadata
+      metadata: this.network.metadata,
     };
   }
 
@@ -39,7 +39,7 @@ export class NodeApi implements INodeApi {
     return (await this.sync.isSynced()) ? "ready" : "syncing";
   }
 
-  public async getPeer(peerId: string): Promise<NodePeer|null> {
+  public async getPeer(peerId: string): Promise<NodePeer | null> {
     return (await this.getPeers()).find((peer) => peer.peerId === peerId) || null;
   }
 
@@ -54,7 +54,7 @@ export class NodeApi implements INodeApi {
           enr: "",
           address: conn.remoteAddr.toString(),
           direction: conn.stat.direction,
-          state: getPeerState(conn.stat.status)
+          state: getPeerState(conn.stat.status),
         });
       }
     }
@@ -68,5 +68,4 @@ export class NodeApi implements INodeApi {
   public async getVersion(): Promise<string> {
     return `Lodestar/${process.env.npm_package_version || "dev"}`;
   }
-
 }

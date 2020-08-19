@@ -11,9 +11,10 @@ export async function assembleAttestation(
   headBlockRoot: Uint8Array,
   validatorIndex: ValidatorIndex,
   index: CommitteeIndex,
-  slot: Slot): Promise<Attestation> {
+  slot: Slot
+): Promise<Attestation> {
   const committee = epochCtx.getBeaconCommittee(slot, index);
-  if(committee.find((c) => c === validatorIndex) === undefined) {
+  if (committee.find((c) => c === validatorIndex) === undefined) {
     throw new Error("Validator not in given committee");
   }
   const aggregationBits = getAggregationBits(committee, validatorIndex);
@@ -21,7 +22,7 @@ export async function assembleAttestation(
   return {
     aggregationBits,
     data,
-    signature: EMPTY_SIGNATURE
+    signature: EMPTY_SIGNATURE,
   };
 }
 

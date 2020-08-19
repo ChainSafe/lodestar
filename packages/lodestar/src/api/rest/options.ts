@@ -13,5 +13,5 @@ export default {
   api: [ApiNamespace.BEACON, ApiNamespace.NODE, ApiNamespace.VALIDATOR],
   host: "127.0.0.1",
   port: 9596,
-  cors: "*"
+  cors: "*",
 };

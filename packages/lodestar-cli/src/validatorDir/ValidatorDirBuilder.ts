@@ -12,12 +12,12 @@ import {
   WITHDRAWAL_KEYSTORE_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
-  getValidatorDirPath
+  getValidatorDirPath,
 } from "./paths";
 
 interface IValidatorDirBuildOptions {
-  keystores: { [key in keyof IEth2ValidatorKeys]: Keystore };
-  passwords: { [key in keyof IEth2ValidatorKeys]: string };
+  keystores: {[key in keyof IEth2ValidatorKeys]: Keystore};
+  passwords: {[key in keyof IEth2ValidatorKeys]: string};
   /**
    * If `should_store == true`, the validator keystore will be saved in the `ValidatorDir` (and
    * the password to it stored in the `password_dir`). If `should_store == false`, the
@@ -38,7 +38,6 @@ interface IValidatorDirBuildOptions {
   config: IBeaconConfig;
 }
 
-
 /**
  * A builder for creating a `ValidatorDir`.
  */
@@ -49,7 +48,7 @@ export class ValidatorDirBuilder {
   /**
    * Instantiate a new builder.
    */
-  constructor ({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
+  constructor({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
     ensureDirExists(keystoresDir);
     ensureDirExists(secretsDir);
     this.keystoresDir = keystoresDir;
@@ -61,13 +60,13 @@ export class ValidatorDirBuilder {
     passwords,
     storeWithdrawalKeystore,
     depositGwei,
-    config
+    config,
   }: IValidatorDirBuildOptions): Promise<ValidatorDir> {
     const keystoresDir = this.keystoresDir;
     const secretsDir = this.secretsDir;
     const pubkey = keystores.signing.pubkey;
     if (!pubkey) throw Error("signing keystore has no pubkey");
-    
+
     const dir = getValidatorDirPath({keystoresDir, pubkey});
     if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
       throw new YargsError(`validator dir for ${pubkey} already exists`);
@@ -80,12 +79,7 @@ export class ValidatorDirBuilder {
     // Save `ETH1_DEPOSIT_DATA_FILE` to file.
     // This allows us to know the RLP data for the eth1 transaction without needing to know
     // the withdrawal/voting keypairs again at a later date.
-    const depositDataRlp = encodeDepositData(
-      depositGwei,
-      withdrawalPublicKey,
-      votingPrivateKey,
-      config
-    );
+    const depositDataRlp = encodeDepositData(depositGwei, withdrawalPublicKey, votingPrivateKey, config);
     fs.writeFileSync(path.join(dir, ETH1_DEPOSIT_DATA_FILE), depositDataRlp);
 
     // Save `ETH1_DEPOSIT_AMOUNT_FILE` to file.

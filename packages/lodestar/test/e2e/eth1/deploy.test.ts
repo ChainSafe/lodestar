@@ -14,7 +14,6 @@ import pipe from "it-pipe";
 import {sleep} from "../../../src/util/sleep";
 
 describe("Eth1Notifier - using goerli known deployed contract", () => {
-
   let eth1Notifier: IEth1Notifier;
   let provider: ethers.providers.JsonRpcProvider;
   // Use topaz deposit contract
@@ -27,7 +26,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     depositContract: {
       ...defaults.depositContract,
       deployedAt: 2524641,
-    }
+    },
   };
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
@@ -35,11 +34,12 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   // chain can't receive eth1Data that's not qualified genesis condition so we need this test config
   const testConfig = Object.assign({}, {params: config.params}, config);
   // 1586833385 is timestamp of the contract's block
-  testConfig.params = Object.assign({}, config.params,
-    {
-      MIN_GENESIS_TIME: 1586833385, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1, ETH1_FOLLOW_DISTANCE: 0,
-      DEPOSIT_CONTRACT_ADDRESS:  fromHexString("0x5cA1e00004366Ac85f492887AAab12d0e6418876"),
-    });
+  testConfig.params = Object.assign({}, config.params, {
+    MIN_GENESIS_TIME: 1586833385,
+    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1,
+    ETH1_FOLLOW_DISTANCE: 0,
+    DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x5cA1e00004366Ac85f492887AAab12d0e6418876"),
+  });
   beforeEach(async function () {
     this.timeout(10000);
     rimraf.sync(dbPath);
@@ -56,7 +56,8 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
         config: testConfig,
         db,
         logger,
-      });
+      }
+    );
     await db.start();
   });
 
@@ -98,7 +99,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
 
   async function waitForEth1Block(targetBlockNumber: number): Promise<void> {
     const eth1DataStream = await eth1Notifier.getEth1BlockAndDepositEventsSource();
-    await pipe(eth1DataStream, async function(source: AsyncIterable<Eth1EventsBlock>) {
+    await pipe(eth1DataStream, async function (source: AsyncIterable<Eth1EventsBlock>) {
       for await (const {block} of source) {
         if (block && block.number === targetBlockNumber) {
           return;
@@ -108,5 +109,4 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
     await eth1Notifier.endEth1BlockAndDepositEventsSource();
     await eth1Notifier.stop();
   }
-
 });

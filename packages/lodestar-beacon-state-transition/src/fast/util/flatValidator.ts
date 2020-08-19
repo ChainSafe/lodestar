@@ -18,10 +18,10 @@ export interface IFlatValidator {
  * into a IFlatValidator
  */
 export function createIFlatValidator(v: Validator): IFlatValidator {
-  return readOnlyEntries(v).reduce((flat, [k, v]) => {
+  return (readOnlyEntries(v).reduce((flat, [k, v]) => {
     flat[k] = v;
     return flat;
-  }, {} as Record<string, Validator[keyof Validator]>) as unknown as IFlatValidator;
+  }, {} as Record<string, Validator[keyof Validator]>) as unknown) as IFlatValidator;
 }
 
 export function isActiveIFlatValidator(v: IFlatValidator, epoch: Epoch): boolean {

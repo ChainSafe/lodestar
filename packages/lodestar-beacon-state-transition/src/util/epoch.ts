@@ -2,11 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import {
-  Epoch,
-  Slot,
-  BeaconState,
-} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {GENESIS_EPOCH} from "../constants";

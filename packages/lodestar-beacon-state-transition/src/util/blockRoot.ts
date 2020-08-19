@@ -15,11 +15,8 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {
-  ZERO_HASH,
-} from "../constants";
+import {ZERO_HASH} from "../constants";
 import {computeStartSlotAtEpoch} from "./epoch";
-
 
 /**
  * Return the block root at a recent [[slot]].
@@ -55,8 +52,8 @@ export function getTemporaryBlockHeader(config: IBeaconConfig, block: BeaconBloc
 }
 
 /**
-  * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
-  */
+ * Receives a BeaconBlock, and produces the corresponding BeaconBlockHeader.
+ */
 export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): BeaconBlockHeader {
   return {
     stateRoot: block.stateRoot,
@@ -68,11 +65,11 @@ export function blockToHeader(config: IBeaconConfig, block: BeaconBlock): Beacon
 }
 
 /**
-  * Receives a SignedBeaconBlock, and produces the corresponding SignedBeaconBlockHeader.
-  */
+ * Receives a SignedBeaconBlock, and produces the corresponding SignedBeaconBlockHeader.
+ */
 export function signedBlockToSignedHeader(
   config: IBeaconConfig,
-  signedBlock: SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock
 ): SignedBeaconBlockHeader {
   return {
     message: blockToHeader(config, signedBlock.message),

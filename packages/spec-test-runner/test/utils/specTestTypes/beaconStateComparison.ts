@@ -5,7 +5,7 @@ export interface BeaconStateComparisonCase extends BaseCase {
   post: any;
 }
 
-export interface OperationsCase extends  BeaconStateComparisonCase {
+export interface OperationsCase extends BeaconStateComparisonCase {
   bls_setting?: bigint;
 }
 

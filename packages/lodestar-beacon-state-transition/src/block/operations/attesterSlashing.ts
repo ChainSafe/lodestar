@@ -2,20 +2,11 @@
  * @module chain/stateTransition/block
  */
 
-import {
-  BeaconState,
-  AttesterSlashing,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {BeaconState, AttesterSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {
-  getCurrentEpoch,
-  isSlashableValidator,
-  slashValidator,
-  isValidAttesterSlashing,
-} from "../../util";
+import {getCurrentEpoch, isSlashableValidator, slashValidator, isValidAttesterSlashing} from "../../util";
 
 /**
  * Process ``AttesterSlashing`` operation.
@@ -24,7 +15,7 @@ export function processAttesterSlashing(
   config: IBeaconConfig,
   state: BeaconState,
   attesterSlashing: AttesterSlashing,
-  verifySignatures = true,
+  verifySignatures = true
 ): void {
   // Check that the attestations are conflicting
   assert.true(isValidAttesterSlashing(config, state, attesterSlashing, verifySignatures), "Invalid attester slashing");

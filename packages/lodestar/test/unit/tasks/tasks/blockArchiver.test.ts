@@ -11,7 +11,6 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("block archiver task", function () {
-
   const sandbox = sinon.createSandbox();
 
   let dbStub: StubbedBeaconDb, loggerStub: any;
@@ -48,14 +47,15 @@ describe("block archiver task", function () {
       config,
       {
         db: dbStub,
-        logger: loggerStub
-      }, {
+        logger: loggerStub,
+      },
+      {
         slot: finalizedBlock.message.slot,
         blockRoot: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
         parentRoot: finalizedBlock.message.parentRoot as Uint8Array,
         stateRoot: finalizedBlock.message.stateRoot as Uint8Array,
         justifiedCheckpoint: {epoch: 0, root: Buffer.alloc(32)},
-        finalizedCheckpoint: {epoch: 0, root: Buffer.alloc(32)}
+        finalizedCheckpoint: {epoch: 0, root: Buffer.alloc(32)},
       },
       []
     );
@@ -85,5 +85,4 @@ describe("block archiver task", function () {
       config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
     ]);
   });
-
 });

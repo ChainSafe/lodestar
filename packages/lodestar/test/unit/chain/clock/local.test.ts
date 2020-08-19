@@ -1,11 +1,10 @@
 import {describe, it} from "mocha";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon, { SinonFakeTimers } from "sinon";
+import sinon, {SinonFakeTimers} from "sinon";
 import {expect} from "chai";
 
-describe("LocalClock", function() {
-
+describe("LocalClock", function () {
   let realClock: SinonFakeTimers;
 
   beforeEach(() => {
@@ -35,5 +34,4 @@ describe("LocalClock", function() {
     expect(spy.calledOnce).to.be.true;
     await clock.stop();
   });
-
 });

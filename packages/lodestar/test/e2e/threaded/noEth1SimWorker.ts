@@ -10,24 +10,19 @@ import {getDevValidator} from "../../utils/node/validator";
 (async function () {
   await initBLS();
 
-  const {
-    nodeIndex,
-    validatorsPerNode,
-    startIndex,
-    checkpointEvent
-  } = workerData.options;
+  const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent} = workerData.options;
 
   const logger = new WinstonLogger();
   const node = await getDevBeaconNode({
     ...workerData.options,
-    logger: logger.child({module: `Node ${nodeIndex}`})
+    logger: logger.child({module: `Node ${nodeIndex}`}),
   });
 
   const validator = getDevValidator({
     node,
     startIndex,
     count: validatorsPerNode,
-    logger: logger.child({module: `Validator ${startIndex}-${startIndex+validatorsPerNode}`}),
+    logger: logger.child({module: `Validator ${startIndex}-${startIndex + validatorsPerNode}`}),
   });
 
   await node.start();
@@ -39,7 +34,6 @@ import {getDevValidator} from "../../utils/node/validator";
         parentPort.postMessage({
           event: checkpointEvent,
           checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
-
         })
       )
     );

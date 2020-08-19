@@ -34,12 +34,8 @@ const lodestar = yargs
       }
     }
 
-    const errorMessage = err
-      ? err instanceof YargsError
-        ? err.message
-        : err.stack
-      : msg || "Unknown error";
-    
+    const errorMessage = err ? (err instanceof YargsError ? err.message : err.stack) : msg || "Unknown error";
+
     // eslint-disable-next-line no-console
     console.error(` ✖ ${errorMessage}\n`);
     process.exit(1);
@@ -49,7 +45,5 @@ const lodestar = yargs
 for (const cmd of cmds) {
   registerCommandToYargs(lodestar, cmd);
 }
-  
+
 lodestar.parse();
-
-

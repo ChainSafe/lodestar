@@ -16,7 +16,6 @@ import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {Slot} from "@chainsafe/lodestar-types";
 
 describe("attestation pool", function () {
-
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
   let forkChoice: SinonStubbedInstance<ILMDGHOST>;
@@ -46,9 +45,7 @@ describe("attestation pool", function () {
 
   it("delay future attestation", async function () {
     const attestation = generateAttestation({data: {target: {epoch: 1}}});
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000)
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
     expect(
@@ -62,22 +59,20 @@ describe("attestation pool", function () {
       data: {
         beaconBlockRoot: Buffer.alloc(32, 1),
         target: {
-          root: Buffer.alloc(32, 2)
-        }
-      }
+          root: Buffer.alloc(32, 2),
+        },
+      },
     });
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000)
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.target.root.valueOf() as Uint8Array).returns(generateBlockSummary());
+      .withArgs(attestation.data.target.root.valueOf() as Uint8Array)
+      .returns(generateBlockSummary());
     forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.beaconBlockRoot.valueOf() as Uint8Array).returns(null);
+      .withArgs(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)
+      .returns(null);
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
-    expect(
-      pool.getPendingBlockAttestations(toHexString(attestation.data.beaconBlockRoot)).length
-    ).to.equal(1);
+    expect(pool.getPendingBlockAttestations(toHexString(attestation.data.beaconBlockRoot)).length).to.equal(1);
     expect(processAttestationStub.notCalled).to.be.true;
   });
 
@@ -87,27 +82,21 @@ describe("attestation pool", function () {
         slot: 2,
         beaconBlockRoot: Buffer.alloc(32, 1),
         target: {
-          root: Buffer.alloc(32, 2)
-        }
-      }
+          root: Buffer.alloc(32, 2),
+        },
+      },
     });
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000)
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     forkChoice.getBlockSummaryByBlockRoot.returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
-    expect(
-      pool.getPendingSlotAttestations(attestation.data.slot + 1).length
-    ).to.equal(1);
+    expect(pool.getPendingSlotAttestations(attestation.data.slot + 1).length).to.equal(1);
     expect(processAttestationStub.notCalled).to.be.true;
   });
 
   it("receive attestation", async function () {
     const attestation = generateAttestation({});
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT);
     forkChoice.getBlockSummaryByBlockRoot.returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
@@ -118,29 +107,26 @@ describe("attestation pool", function () {
     const blockAttestation = generateAttestation({
       data: {
         target: {
-          epoch: FAR_FUTURE_EPOCH
-        }
-      }
+          epoch: FAR_FUTURE_EPOCH,
+        },
+      },
     });
     const block = generateSignedBlock({
       message: {
         body: {
-          attestations: [
-            blockAttestation
-          ]
-        }
-      }
+          attestations: [blockAttestation],
+        },
+      },
     });
     const attestation = generateAttestation({
       data: {
-        beaconBlockRoot: config.types.BeaconBlock.hashTreeRoot(block.message)
-      }
+        beaconBlockRoot: config.types.BeaconBlock.hashTreeRoot(block.message),
+      },
     });
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT);
     forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.target.root.valueOf() as Uint8Array).returns(generateBlockSummary());
+      .withArgs(attestation.data.target.root.valueOf() as Uint8Array)
+      .returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
     const receiveAttestationStub = sinon.stub();
@@ -155,13 +141,11 @@ describe("attestation pool", function () {
     const attestation = generateAttestation({
       data: {
         target: {
-          epoch: 1
-        }
-      }
+          epoch: 1,
+        },
+      },
     });
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000)
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     const clock = sinon.createStubInstance(LocalClock);
     chain.clock = clock;
     let newSlotCallback: (slot: Slot) => void;

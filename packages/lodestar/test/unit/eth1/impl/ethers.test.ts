@@ -27,16 +27,18 @@ describe("Eth1Notifier", () => {
     contract = sandbox.createStubInstance(Contract) as any;
     provider = sandbox.createStubInstance(ethers.providers.JsonRpcProvider) as any;
     db = new StubbedBeaconDb(sandbox);
-    eth1 = new EthersEth1Notifier({
-      ...defaults,
-      contract: contract as any,
-      providerInstance: provider as any,
-    },
-    {
-      config,
-      db,
-      logger,
-    });
+    eth1 = new EthersEth1Notifier(
+      {
+        ...defaults,
+        contract: contract as any,
+        providerInstance: provider as any,
+      },
+      {
+        config,
+        db,
+        logger,
+      }
+    );
   });
 
   afterEach(async () => {
@@ -56,7 +58,6 @@ describe("Eth1Notifier", () => {
     const currentBlockNumber = lastProcessedBlock.number;
     db.eth1Data.lastValue.resolves(lastProcessedEth1Data);
 
-
     provider.getBlock.withArgs(toHexString(lastProcessedEth1Data.blockHash)).resolves(lastProcessedBlock);
     provider.getBlockNumber.resolves(currentBlockNumber);
 
@@ -67,17 +68,19 @@ describe("Eth1Notifier", () => {
   });
 
   it("should start eth1 to build genesis even it's disabled", async () => {
-    eth1 = new EthersEth1Notifier({
-      ...defaults,
-      enabled: false,
-      contract: contract as any,
-      providerInstance: provider as any,
-    },
-    {
-      config,
-      db,
-      logger,
-    });
+    eth1 = new EthersEth1Notifier(
+      {
+        ...defaults,
+        enabled: false,
+        contract: contract as any,
+        providerInstance: provider as any,
+      },
+      {
+        config,
+        db,
+        logger,
+      }
+    );
     await eth1.start();
     expect(provider.getBlock.called).to.be.false;
     // cannot start if subscribe=false
@@ -112,14 +115,17 @@ describe("Eth1Notifier", () => {
   });
 
   it("should fail to start because there isn't contract at given address", async function (): Promise<void> {
-    eth1 = new EthersEth1Notifier({
-      ...defaults,
-      providerInstance: provider as any,
-    }, {
-      config,
-      db,
-      logger,
-    });
+    eth1 = new EthersEth1Notifier(
+      {
+        ...defaults,
+        providerInstance: provider as any,
+      },
+      {
+        config,
+        db,
+        logger,
+      }
+    );
     await expect(
       // @ts-ignore
       eth1.startProcessEth1Blocks()
@@ -138,8 +144,13 @@ describe("Eth1Notifier", () => {
     expect(eth1.passCheckpoint(3001)).to.be.true;
     const setCheckpoint = (blockNumber: number): void => {
       // assuming 3000 is genesis, this is 1000 blocks to genesis
-      eth1.setCheckpoint({number: blockNumber, timestamp:
-        (config.params.MIN_GENESIS_TIME - config.params.GENESIS_DELAY) - (3000 - blockNumber) * config.params.SECONDS_PER_ETH1_BLOCK} as Eth1Block);
+      eth1.setCheckpoint({
+        number: blockNumber,
+        timestamp:
+          config.params.MIN_GENESIS_TIME -
+          config.params.GENESIS_DELAY -
+          (3000 - blockNumber) * config.params.SECONDS_PER_ETH1_BLOCK,
+      } as Eth1Block);
     };
     const expectCheckpoint = (blockNumber: number): void => {
       expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
@@ -177,8 +188,10 @@ describe("Eth1Notifier", () => {
     expect(eth1.passCheckpoint(3001)).to.be.true;
     const setCheckpoint = (blockNumber: number): void => {
       // assuming 3000 is genesis, this is 1000 blocks to genesis
-      eth1.setCheckpoint({number: blockNumber, timestamp:
-        (config.params.MIN_GENESIS_TIME - config.params.GENESIS_DELAY) - (3000 - blockNumber) * secPerBlock} as Eth1Block);
+      eth1.setCheckpoint({
+        number: blockNumber,
+        timestamp: config.params.MIN_GENESIS_TIME - config.params.GENESIS_DELAY - (3000 - blockNumber) * secPerBlock,
+      } as Eth1Block);
     };
     const expectCheckpoint = (blockNumber: number): void => {
       expect(eth1.passCheckpoint(blockNumber - 1)).to.be.false;
@@ -218,22 +231,22 @@ describe("Eth1Notifier", () => {
     contract.interface = sandbox.stub();
     // @ts-ignore
     contract.interface.parseLog = sandbox.stub().resolves({
-      values: [{
-        index: toHexString(Buffer.alloc(8)),
-        pubkey: toHexString(Buffer.alloc(48)),
-        withdrawalCredentials: toHexString(Buffer.alloc(32)),
-        amount: toHexString(Buffer.alloc(8)),
-        signature: toHexString(Buffer.alloc(96)),
-      }],
+      values: [
+        {
+          index: toHexString(Buffer.alloc(8)),
+          pubkey: toHexString(Buffer.alloc(48)),
+          withdrawalCredentials: toHexString(Buffer.alloc(32)),
+          amount: toHexString(Buffer.alloc(8)),
+          signature: toHexString(Buffer.alloc(96)),
+        },
+      ],
     });
     // @ts-ignore
     contract.interface.events = {
       DepositEvent: {
-        topic: ""
-      }
+        topic: "",
+      },
     };
-    expect(
-      await eth1.getDepositEvents(0)
-    ).to.not.be.null;
+    expect(await eth1.getDepositEvents(0)).to.not.be.null;
   });
 });

@@ -4,7 +4,6 @@ import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodes
 import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 
-
 import {writeFile, readFile} from "../util";
 
 export async function writeParamsConfig(filename: string, config: IBeaconConfig): Promise<void> {
@@ -31,10 +30,12 @@ export function getBeaconConfig(preset: string, additionalParams: Record<string,
 }
 
 export async function getMergedIBeaconConfig(
-  preset: string, paramsFile: string, options: Record<string, unknown>,
+  preset: string,
+  paramsFile: string,
+  options: Record<string, unknown>
 ): Promise<IBeaconConfig> {
   return getBeaconConfig(preset, {
-    ...(existsSync(paramsFile) ? (await readParamsConfig(paramsFile)) : {}),
+    ...(existsSync(paramsFile) ? await readParamsConfig(paramsFile) : {}),
     ...options,
   });
 }

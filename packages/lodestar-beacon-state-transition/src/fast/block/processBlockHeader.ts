@@ -2,32 +2,26 @@ import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
 
 import {EpochContext} from "../util";
 
-
-export function processBlockHeader(
-  epochCtx: EpochContext,
-  state: BeaconState,
-  block: BeaconBlock
-): void {
+export function processBlockHeader(epochCtx: EpochContext, state: BeaconState, block: BeaconBlock): void {
   const types = epochCtx.config.types;
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {
-    throw new Error(
-      "Block slot does not match state slot" +
-      `blockSlot=${block.slot} stateSlot=${slot}`
-    );
+    throw new Error("Block slot does not match state slot" + `blockSlot=${block.slot} stateSlot=${slot}`);
   }
   // Verify that the block is newer than latest block header
   if (!(block.slot > state.latestBlockHeader.slot)) {
-    throw new Error("Block is not newer than latest block header" +
-    `blockSlot=${block.slot} latestBlockHeader.slot=${state.latestBlockHeader.slot}`);
+    throw new Error(
+      "Block is not newer than latest block header" +
+        `blockSlot=${block.slot} latestBlockHeader.slot=${state.latestBlockHeader.slot}`
+    );
   }
   // verify that proposer index is the correct index
   const proposerIndex = epochCtx.getBeaconProposer(slot);
   if (block.proposerIndex !== proposerIndex) {
     throw new Error(
       "Block proposer index does not match state proposer index" +
-      `blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
+        `blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
     );
   }
   // verify that the parent matches

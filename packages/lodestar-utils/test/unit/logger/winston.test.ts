@@ -1,7 +1,6 @@
 import {ILogger, WinstonLogger} from "../../../src";
 
 describe("winston logger", () => {
-
   it("should log profile", () => {
     const logger: ILogger = new WinstonLogger();
 
@@ -15,5 +14,4 @@ describe("winston logger", () => {
       logger.profile("test");
     }, 1000);
   });
-
 });

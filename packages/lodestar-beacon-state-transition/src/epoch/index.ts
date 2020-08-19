@@ -18,9 +18,7 @@ export * from "./justification";
 export * from "./registryUpdates";
 export * from "./slashings";
 
-
 export function processEpoch(config: IBeaconConfig, state: BeaconState): BeaconState {
-
   // Justification
   processJustificationAndFinalization(config, state);
 

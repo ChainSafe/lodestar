@@ -1,7 +1,6 @@
 import {Version, Root, ForkData, ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-
 export function computeForkDataRoot(config: IBeaconConfig, currentVersion: Version, genesisValidatorsRoot: Root): Root {
   const forkData: ForkData = {
     currentVersion,
@@ -13,7 +12,8 @@ export function computeForkDataRoot(config: IBeaconConfig, currentVersion: Versi
 export function computeForkDigest(
   config: IBeaconConfig,
   currentVersion: Version,
-  genesisValidatorsRoot: Root): ForkDigest {
+  genesisValidatorsRoot: Root
+): ForkDigest {
   const root = computeForkDataRoot(config, currentVersion, genesisValidatorsRoot);
-  return (root.valueOf() as Uint8Array).slice(0,4);
+  return (root.valueOf() as Uint8Array).slice(0, 4);
 }

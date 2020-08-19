@@ -9,7 +9,6 @@ import {AggregateAndProof, Attestation} from "@chainsafe/lodestar-types";
  * attestation from same validator
  */
 export class SeenAttestationCache {
-
   private cache: Map<string, boolean>;
 
   private readonly maxSize: number;
@@ -41,7 +40,7 @@ export class SeenAttestationCache {
 
   private add(key: string): void {
     this.cache.set(key, true);
-    if(this.cache.size > this.maxSize) {
+    if (this.cache.size > this.maxSize) {
       //deletes oldest element added (map keep list of insert order)
       this.cache.delete(this.cache.keys().next().value);
     }
@@ -49,20 +48,19 @@ export class SeenAttestationCache {
 
   //serialize attestation key as concatenation of interested properties
   private attestationKey(attestation: Attestation): string {
-    return ""
-      + attestation.data.slot
-      + attestation.data.index
-      + Array.from(attestation.aggregationBits).reduce((result, item) => {
+    return (
+      "" +
+      attestation.data.slot +
+      attestation.data.index +
+      Array.from(attestation.aggregationBits).reduce((result, item) => {
         result += item ? "1" : "0";
         return result;
-      }, "");
+      }, "")
+    );
   }
 
   //serialize aggregate key as concatenation of interested properties
   private aggregateAndProofKey(aggreate: AggregateAndProof): string {
-    return ""
-      + aggreate.aggregatorIndex
-      + aggreate.aggregate.data.target.epoch;
+    return "" + aggreate.aggregatorIndex + aggreate.aggregate.data.target.epoch;
   }
-
 }

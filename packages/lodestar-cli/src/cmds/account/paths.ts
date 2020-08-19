@@ -10,7 +10,7 @@ export type IAccountPaths = IGlobalPaths & {
 
 /**
  * Defines the path structure of the account files
- * 
+ *
  * ```bash
  * $accountsRootDir
  * ├── secrets
@@ -45,7 +45,7 @@ export function getAccountPaths(options: Partial<IAccountPaths> & Pick<IGlobalAr
     ...options,
     keystoresDir,
     secretsDir,
-    walletsDir
+    walletsDir,
   } as IAccountPaths;
 }
 

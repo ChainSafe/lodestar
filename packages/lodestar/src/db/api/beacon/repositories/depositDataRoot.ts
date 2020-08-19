@@ -8,18 +8,14 @@ import {IDatabaseController, IKeyValue} from "../../../controller";
 import {Bucket} from "../../schema";
 
 export class DepositDataRootRepository extends Repository<number, Root> {
-
   private depositRootTree?: TreeBacked<List<Root>>;
 
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.depositDataRoot, config.types.Root);
   }
 
   public decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // depositDataRoots stored by depositData index
@@ -58,7 +54,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
 
   private async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
-      const values = await this.values() as List<Vector<number>>;
+      const values = (await this.values()) as List<Vector<number>>;
       this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(values);
     }
     return this.depositRootTree;

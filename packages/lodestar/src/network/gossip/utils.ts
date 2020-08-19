@@ -21,7 +21,8 @@ export function getGossipTopic(
   event: GossipEvent,
   forkDigestValue: ForkDigest,
   encoding = GossipEncoding.SSZ_SNAPPY,
-  params: Map<string, string> = new Map()): string {
+  params: Map<string, string> = new Map()
+): string {
   const forkDigestHash = toHexString(forkDigestValue).toLowerCase().substring(2);
   let topic = `/eth2/${forkDigestHash}/${event}/${encoding}`;
   params.forEach((value, key) => {
@@ -29,7 +30,6 @@ export function getGossipTopic(
   });
   return topic;
 }
-
 
 export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent {
   if (isAttestationSubnetEvent(event)) {
@@ -43,7 +43,6 @@ export function topicToGossipEvent(topic: string): GossipEvent {
   const topicName = groups[3] as keyof typeof GossipEvent;
   return topicName as GossipEvent;
 }
-
 
 export function getAttestationSubnetEvent(subnet: number): string {
   return GossipEvent.ATTESTATION_SUBNET + "_" + subnet;
@@ -68,7 +67,7 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
   const message: Message = utils.normalizeInRpcMessage(rawMessage);
   return {
     ...message,
-    messageId: getMessageId(message)
+    messageId: getMessageId(message),
   };
 }
 
@@ -77,15 +76,17 @@ export function getMessageId(rawMessage: Message): string {
 }
 
 export async function getBlockStateContext(
-  forkChoice: ILMDGHOST, db: IBeaconDb, blockRoot: Root, slot?: Slot
-): Promise<ITreeStateContext|null> {
-  const parentSummary =
-      forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
-  if(!parentSummary) {
+  forkChoice: ILMDGHOST,
+  db: IBeaconDb,
+  blockRoot: Root,
+  slot?: Slot
+): Promise<ITreeStateContext | null> {
+  const parentSummary = forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
+  if (!parentSummary) {
     return null;
   }
   const stateEpochCtx = await db.stateCache.get(parentSummary.stateRoot);
-  if(!stateEpochCtx) return null;
+  if (!stateEpochCtx) return null;
   //only advance state transition if asked for future block
   slot = slot ?? parentSummary.slot;
   if (stateEpochCtx.state.slot < slot) {
@@ -95,18 +96,21 @@ export async function getBlockStateContext(
 }
 
 export async function getAttestationPreState(
-  config: IBeaconConfig, chain: IBeaconChain, db: IBeaconDb, cp: Checkpoint
-): Promise<ITreeStateContext|null> {
-  const preStateContext  = await db.checkpointStateCache.get(cp);
-  if(preStateContext) {
+  config: IBeaconConfig,
+  chain: IBeaconChain,
+  db: IBeaconDb,
+  cp: Checkpoint
+): Promise<ITreeStateContext | null> {
+  const preStateContext = await db.checkpointStateCache.get(cp);
+  if (preStateContext) {
     return preStateContext;
   }
   const baseState = await chain.getStateContextByBlockRoot(cp.root);
-  if(!baseState) {
+  if (!baseState) {
     return null;
   }
   const epochStartSlot = computeStartSlotAtEpoch(config, cp.epoch);
-  if(epochStartSlot > baseState.state.slot) {
+  if (epochStartSlot > baseState.state.slot) {
     processSlots(baseState.epochCtx, baseState.state, epochStartSlot);
     await db.checkpointStateCache.add(cp, baseState);
   }

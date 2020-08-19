@@ -10,7 +10,6 @@ import {IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 
 export interface IBeaconApi extends IApi {
-
   blocks: IBeaconBlocksApi;
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;
@@ -20,9 +19,9 @@ export interface IBeaconApi extends IApi {
    */
   getFork(): Promise<ForkResponse>;
 
-  getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null>;
+  getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null>;
 
-  getGenesis(): Promise<Genesis|null>;
+  getGenesis(): Promise<Genesis | null>;
 
   getBlockStream(): LodestarEventIterator<SignedBeaconBlock>;
 }

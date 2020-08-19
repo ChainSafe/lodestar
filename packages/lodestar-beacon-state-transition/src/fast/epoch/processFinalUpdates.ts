@@ -5,11 +5,7 @@ import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 import {getRandaoMix} from "../../util";
 import {EpochContext, IEpochProcess} from "../util";
 
-export function processFinalUpdates(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: BeaconState
-): void {
+export function processFinalUpdates(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
   const config = epochCtx.config;
   const currentEpoch = process.currentEpoch;
   const nextEpoch = currentEpoch + 1;
@@ -31,7 +27,7 @@ export function processFinalUpdates(
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = [] as Eth1Data[] as List<Eth1Data>;
+    state.eth1DataVotes = ([] as Eth1Data[]) as List<Eth1Data>;
   }
 
   // update effective balances with hysteresis
@@ -42,8 +38,8 @@ export function processFinalUpdates(
     const effectiveBalance = status.validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
       state.validators[i].effectiveBalance = bigIntMin(
-        balance - balance % EFFECTIVE_BALANCE_INCREMENT,
-        MAX_EFFECTIVE_BALANCE,
+        balance - (balance % EFFECTIVE_BALANCE_INCREMENT),
+        MAX_EFFECTIVE_BALANCE
       );
     }
   }
@@ -52,7 +48,7 @@ export function processFinalUpdates(
   state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
 
   // set randao mix
-  state.randaoMixes[nextEpoch  % EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
+  state.randaoMixes[nextEpoch % EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
 
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {
@@ -66,5 +62,5 @@ export function processFinalUpdates(
 
   // rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = [] as PendingAttestation[] as List<PendingAttestation>;
+  state.currentEpochAttestations = ([] as PendingAttestation[]) as List<PendingAttestation>;
 }

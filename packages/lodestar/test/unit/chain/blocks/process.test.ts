@@ -14,7 +14,6 @@ import {StubbedBeaconDb} from "../../../utils/stub";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("block process stream", function () {
-
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
@@ -49,7 +48,7 @@ describe("block process stream", function () {
         sinon.createStubInstance(WinstonLogger),
         dbStub,
         forkChoiceStub,
-        blockPoolStub as unknown as BlockPool,
+        (blockPoolStub as unknown) as BlockPool,
         chainStub
       ),
       collect
@@ -74,7 +73,7 @@ describe("block process stream", function () {
         sinon.createStubInstance(WinstonLogger),
         dbStub,
         forkChoiceStub,
-        blockPoolStub as unknown as BlockPool,
+        (blockPoolStub as unknown) as BlockPool,
         chainStub
       ),
       collect
@@ -90,7 +89,8 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot
-      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
+      .resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.throws();
     const result = await pipe(
@@ -99,7 +99,9 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        forkChoiceStub, blockPoolStub as unknown as BlockPool, chainStub
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        chainStub
       ),
       collect
     );
@@ -115,20 +117,20 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot
-      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
+      .resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
-    forkChoiceStub.headBlockRoot.returns(
-      Buffer.alloc(32,1)
-    );
+    forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
       [receivedJob],
       processBlock(
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        forkChoiceStub, blockPoolStub as unknown as BlockPool,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
         chainStub
       ),
       collect
@@ -148,7 +150,8 @@ describe("block process stream", function () {
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlockSummaryByBlockRoot
-      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
+      .resolves(parentBlock);
     dbStub.stateCache.get.resolves(generateState() as any);
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
@@ -161,7 +164,8 @@ describe("block process stream", function () {
         config,
         sinon.createStubInstance(WinstonLogger),
         dbStub,
-        forkChoiceStub, blockPoolStub as unknown as BlockPool,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
         chainStub
       ),
       collect

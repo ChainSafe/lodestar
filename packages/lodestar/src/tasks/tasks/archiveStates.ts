@@ -6,7 +6,7 @@ import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {BlockSummary} from "../../chain";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -21,7 +21,6 @@ export interface IArchiveStatesModules {
  * Only the new finalized state is stored to disk
  */
 export class ArchiveStatesTask implements ITask {
-
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
@@ -30,7 +29,11 @@ export class ArchiveStatesTask implements ITask {
   private pruned: BlockSummary[];
 
   public constructor(
-    config: IBeaconConfig, modules: IArchiveStatesModules, finalized: BlockSummary, pruned: BlockSummary[]) {
+    config: IBeaconConfig,
+    modules: IArchiveStatesModules,
+    finalized: BlockSummary,
+    pruned: BlockSummary[]
+  ) {
     this.db = modules.db;
     this.logger = modules.logger;
     this.config = config;
@@ -40,9 +43,7 @@ export class ArchiveStatesTask implements ITask {
 
   public async run(): Promise<void> {
     const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
-    this.logger.info(
-      `Started archiving states (finalized epoch #${epoch})...`
-    );
+    this.logger.info(`Started archiving states (finalized epoch #${epoch})...`);
     this.logger.profile("Archive States");
     // store the state of finalized checkpoint
     const stateCache = await this.db.stateCache.get(this.finalized.stateRoot);
@@ -52,10 +53,9 @@ export class ArchiveStatesTask implements ITask {
     const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
-    const prunedStates = this.pruned.map(summary => summary.stateRoot);
+    const prunedStates = this.pruned.map((summary) => summary.stateRoot);
     await this.db.stateCache.batchDelete(prunedStates);
-    this.logger.info(
-      `Archiving of finalized states completed (finalized epoch #${epoch})`);
+    this.logger.info(`Archiving of finalized states completed (finalized epoch #${epoch})`);
     this.logger.profile("Archive States");
   }
 }

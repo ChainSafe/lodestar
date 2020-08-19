@@ -20,17 +20,19 @@ import {renderMarkdownSections, toMarkdownTable, IMarkdownSection} from "./markd
 const docsMarkdownPath = process.argv[2];
 if (!docsMarkdownPath) throw Error("Run script with output path: 'ts-node docsgen docs/cli.md'");
 
-const docsString = renderMarkdownSections([{
-  title: "Command Line Reference",
-  body: "This reference describes the syntax of the Lodestar CLI commands and their options.",
-  subsections: [
-    {
-      title: "Global Options",
-      body: getOptionsTable(globalOptions)
-    },
-    ...cmds.map(cmd => cmdToMarkdownSection(cmd))
-  ]
-}]);
+const docsString = renderMarkdownSections([
+  {
+    title: "Command Line Reference",
+    body: "This reference describes the syntax of the Lodestar CLI commands and their options.",
+    subsections: [
+      {
+        title: "Global Options",
+        body: getOptionsTable(globalOptions),
+      },
+      ...cmds.map((cmd) => cmdToMarkdownSection(cmd)),
+    ],
+  },
+]);
 
 fs.mkdirSync(path.parse(docsMarkdownPath).dir, {recursive: true});
 fs.writeFileSync(docsMarkdownPath, docsString);
@@ -61,9 +63,9 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
 
     // De-duplicate beaconOptions. If all beaconOptions exists in this command, skip them
     if (
-      cmds.some(c => c.command === "beacon") &&
+      cmds.some((c) => c.command === "beacon") &&
       commandJson !== "beacon" &&
-      Object.keys(beaconOptions).every(key => cmd.options[key])
+      Object.keys(beaconOptions).every((key) => cmd.options[key])
     ) {
       cmd.options = omit(cmd.options, Object.keys(beaconOptions));
       body.push(`Cmd \`${commandJson}\` has all the options from the [\`beacon\` cmd](#beacon).`);
@@ -72,21 +74,17 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
     body.push(getOptionsTable(cmd.options));
   }
   return {
-    title: `\`${commandJson}\``, 
+    title: `\`${commandJson}\``,
     body,
-    subsections: (cmd.subcommands || []).map(subcmd => cmdToMarkdownSection(subcmd, commandJson))
+    subsections: (cmd.subcommands || []).map((subcmd) => cmdToMarkdownSection(subcmd, commandJson)),
   };
 }
 
 /**
  * Render a Yargs options dictionary to a markdown table
  */
-function getOptionsTable(
-  options: Record<string, Options>,
-  {showHidden}: {showHidden?: boolean} = {}
-): string {
-  const visibleOptions = Object.entries(options)
-    .filter(([, opt]) => showHidden || !opt.hidden);
+function getOptionsTable(options: Record<string, Options>, {showHidden}: {showHidden?: boolean} = {}): string {
+  const visibleOptions = Object.entries(options).filter(([, opt]) => showHidden || !opt.hidden);
 
   if (visibleOptions.length === 0) {
     return "";
@@ -97,6 +95,8 @@ function getOptionsTable(
       Option: `\`--${key}\``,
       Type: opt.type,
       Description: opt.description,
-      Default: opt.defaultDescription || opt.default || ""
-    })), ["Option", "Type", "Description", "Default"]);
+      Default: opt.defaultDescription || opt.default || "",
+    })),
+    ["Option", "Type", "Description", "Default"]
+  );
 }

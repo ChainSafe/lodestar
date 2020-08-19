@@ -11,42 +11,42 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {getPeer} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getPeer", function () {
-
   let api: RestApi;
   let nodeApiStub: StubbedNodeApi;
 
   beforeEach(async function () {
     nodeApiStub = new StubbedNodeApi();
-    api = new RestApi({
-      api: [ApiNamespace.NODE],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      beacon: sinon.createStubInstance(BeaconApi),
-      node: nodeApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.NODE],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        beacon: sinon.createStubInstance(BeaconApi),
+        node: nodeApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
   it("should succeed", async function () {
-    nodeApiStub.getPeer.resolves(
-      {
-        address: "/ip4/127.0.0.1/tcp/36000",
-        direction: "inbound",
-        enr: "enr-",
-        peerId: "16",
-        state: "connected"
-      }
-    );
+    nodeApiStub.getPeer.resolves({
+      address: "/ip4/127.0.0.1/tcp/36000",
+      direction: "inbound",
+      enr: "enr-",
+      peerId: "16",
+      state: "connected",
+    });
     const response = await supertest(api.server.server)
       .get(getPeer.url.replace(":peerId", "16"))
       .expect(200)
@@ -58,9 +58,6 @@ describe("rest - node - getPeer", function () {
 
   it("peer not found", async function () {
     nodeApiStub.getPeer.resolves(null);
-    await supertest(api.server.server)
-      .get(getPeer.url.replace(":peerId", "16"))
-      .expect(404);
+    await supertest(api.server.server).get(getPeer.url.replace(":peerId", "16")).expect(404);
   });
-
 });

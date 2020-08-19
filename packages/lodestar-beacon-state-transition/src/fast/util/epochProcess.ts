@@ -5,10 +5,17 @@ import {intDiv} from "@chainsafe/lodestar-utils";
 import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../util";
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {
-  IAttesterStatus, createIAttesterStatus, hasMarkers,
-  FLAG_UNSLASHED, FLAG_ELIGIBLE_ATTESTER,
-  FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER,
-  FLAG_CURR_SOURCE_ATTESTER, FLAG_CURR_TARGET_ATTESTER, FLAG_CURR_HEAD_ATTESTER,
+  IAttesterStatus,
+  createIAttesterStatus,
+  hasMarkers,
+  FLAG_UNSLASHED,
+  FLAG_ELIGIBLE_ATTESTER,
+  FLAG_PREV_SOURCE_ATTESTER,
+  FLAG_PREV_TARGET_ATTESTER,
+  FLAG_PREV_HEAD_ATTESTER,
+  FLAG_CURR_SOURCE_ATTESTER,
+  FLAG_CURR_TARGET_ATTESTER,
+  FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {EpochContext} from "./epochContext";
@@ -87,7 +94,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveIFlatValidator(v, prevEpoch) || (v.slashed && (prevEpoch + 1 < v.withdrawableEpoch))) {
+    if (isActiveIFlatValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -98,32 +105,19 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
       activeCount += 1;
     }
 
-    if (
-      v.exitEpoch !== FAR_FUTURE_EPOCH &&
-      v.exitEpoch > exitQueueEnd
-    ) {
+    if (v.exitEpoch !== FAR_FUTURE_EPOCH && v.exitEpoch > exitQueueEnd) {
       exitQueueEnd = v.exitEpoch;
     }
 
-    if (
-      v.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
-      v.effectiveBalance === MAX_EFFECTIVE_BALANCE
-    ) {
+    if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       out.indicesToSetActivationEligibility.push(i);
     }
 
-    if (
-      v.activationEpoch === FAR_FUTURE_EPOCH &&
-      v.activationEligibilityEpoch <= currentEpoch
-    ) {
+    if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
       out.indicesToMaybeActivate.push(i);
     }
 
-    if (
-      status.active &&
-      v.exitEpoch === FAR_FUTURE_EPOCH &&
-      v.effectiveBalance <= EJECTION_BALANCE
-    ) {
+    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= EJECTION_BALANCE) {
       out.indicesToEject.push(i);
     }
 
@@ -135,10 +129,11 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
   }
 
   // order by sequence of activationEligibilityEpoch setting and then index
-  out.indicesToMaybeActivate.sort((a, b) => (
-    (out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch) ||
-    a - b
-  ));
+  out.indicesToMaybeActivate.sort(
+    (a, b) =>
+      out.statuses[a].validator.activationEligibilityEpoch - out.statuses[b].validator.activationEligibilityEpoch ||
+      a - b
+  );
 
   let exitQueueEndChurn = 0;
   out.statuses.forEach((status) => {
@@ -161,7 +156,9 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     statuses: IAttesterStatus[],
     attestations: List<PendingAttestation>,
     epoch: Epoch,
-    sourceFlag: number, targetFlag: number, headFlag: number,
+    sourceFlag: number,
+    targetFlag: number,
+    headFlag: number
   ): void => {
     const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
     readOnlyForEach(attestations, (att) => {
@@ -220,12 +217,20 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconSt
     });
   };
   statusProcessEpoch(
-    out.statuses, state.previousEpochAttestations, prevEpoch,
-    FLAG_PREV_SOURCE_ATTESTER, FLAG_PREV_TARGET_ATTESTER, FLAG_PREV_HEAD_ATTESTER,
+    out.statuses,
+    state.previousEpochAttestations,
+    prevEpoch,
+    FLAG_PREV_SOURCE_ATTESTER,
+    FLAG_PREV_TARGET_ATTESTER,
+    FLAG_PREV_HEAD_ATTESTER
   );
   statusProcessEpoch(
-    out.statuses, state.currentEpochAttestations, currentEpoch,
-    FLAG_CURR_SOURCE_ATTESTER, FLAG_CURR_TARGET_ATTESTER, FLAG_CURR_HEAD_ATTESTER,
+    out.statuses,
+    state.currentEpochAttestations,
+    currentEpoch,
+    FLAG_CURR_SOURCE_ATTESTER,
+    FLAG_CURR_TARGET_ATTESTER,
+    FLAG_CURR_HEAD_ATTESTER
   );
 
   let prevSourceUnslStake = BigInt(0);

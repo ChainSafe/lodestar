@@ -4,13 +4,13 @@ import {FastifyRequest} from "fastify";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class FastifyLogger {
-
   public readonly stream: Stream;
 
   public readonly serializers = {
-    req: (request: IncomingMessage&FastifyRequest) => {
+    req: (request: IncomingMessage & FastifyRequest) => {
       return {
-        msg: `Request: ${request.ip} -> ${request.hostname}\t${request.method}:${request.url}\tRequestId: ${request.id}`
+        // eslint-disable-next-line max-len
+        msg: `Request: ${request.ip} -> ${request.hostname}\t${request.method}:${request.url}\tRequestId: ${request.id}`,
       };
     },
   };
@@ -19,31 +19,33 @@ export class FastifyLogger {
 
   constructor(logger: ILogger) {
     this.log = logger;
-    this.stream = {
+    this.stream = ({
       write: this.handle,
-    } as unknown as Stream;
+    } as unknown) as Stream;
   }
 
-  private handle = (
-    chunk: string
-  ): void =>  {
+  private handle = (chunk: string): void => {
     const log: {
-      level: number; msg: string; responseTime: number; reqId: number; req?: {msg: string}; res?: {statusCode: number};
+      level: number;
+      msg: string;
+      responseTime: number;
+      reqId: number;
+      req?: {msg: string};
+      res?: {statusCode: number};
     } = JSON.parse(chunk);
-    if(log.req) {
+    if (log.req) {
       this.log.debug(log.req.msg);
-    } else if(log.res) {
-
-      this.log.debug(`Response: StatusCode: ${log.res.statusCode}\tResponseTime:`
-          +` ${log.responseTime} ms\tRequestId: ${log.reqId}`);
+    } else if (log.res) {
+      this.log.debug(
+        `Response: StatusCode: ${log.res.statusCode}\tResponseTime:` +
+          ` ${log.responseTime} ms\tRequestId: ${log.reqId}`
+      );
     } else {
-      if(log.level === 50) {
+      if (log.level === 50) {
         this.log.error(log.msg);
       } else {
         this.log.warn(log.msg);
       }
     }
-
   };
-
 }

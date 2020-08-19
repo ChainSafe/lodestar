@@ -15,15 +15,14 @@ export function getCompressor(encoding: ReqRespEncoding): (data: Buffer) => Asyn
       };
     }
     case ReqRespEncoding.SSZ:
-      return (data => {
-        return (async function*() {
+      return (data) => {
+        return (async function* () {
           //TODO: split into smaller chunks
           yield data;
         })();
-      });
+      };
   }
 }
-
 
 export function getDecompressor(encoding: ReqRespEncoding): IDecompressor {
   switch (encoding) {
@@ -36,12 +35,10 @@ export function getDecompressor(encoding: ReqRespEncoding): IDecompressor {
         },
         reset(): void {
           //nothing to ignore
-        }
+        },
       };
   }
 }
-
-
 
 export function encodeResponseStatus(status: number): Buffer {
   return Buffer.from([status]);

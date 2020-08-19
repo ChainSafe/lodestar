@@ -9,7 +9,6 @@ import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
 import {handleIncomingAttesterSlashing} from "../../../../../src/network/gossip/handlers/attesterSlashing";
 
 describe("gossip handlers - attesterSlashing", function () {
-
   const sandbox = sinon.createSandbox();
 
   let gossipStub: any;
@@ -29,5 +28,4 @@ describe("gossip handlers - attesterSlashing", function () {
     await handleIncomingAttesterSlashing.bind(gossipStub)(attesterSlashing);
     expect(gossipStub.emit.withArgs(GossipEvent.ATTESTER_SLASHING, attesterSlashing).calledOnce).to.be.true;
   });
-    
 });

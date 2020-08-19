@@ -10,15 +10,7 @@ import floatType from "js-yaml/lib/js-yaml/type/float";
 import {intType} from "./int";
 
 export const schema = new Schema({
-  include: [
-    failsafe
-  ],
-  implicit: [
-    nullType,
-    boolType,
-    intType,
-    floatType
-  ],
-  explicit: [
-  ]
+  include: [failsafe],
+  implicit: [nullType, boolType, intType, floatType],
+  explicit: [],
 });

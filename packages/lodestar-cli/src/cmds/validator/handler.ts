@@ -34,33 +34,37 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
   const validatorDirManager = new ValidatorDirManager(accountPaths);
   const validatorKeypairs = await validatorDirManager.decryptAllValidators({force});
 
-  if (validatorKeypairs.length === 0)
-    throw new YargsError("No validator keystores found");
+  if (validatorKeypairs.length === 0) throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
 
-  const validators: Validator[] = validatorKeypairs.map((keypair): Validator => {
-    const pubkey = keypair.publicKey.toHexString();
-    const loggerId = `Validator ${pubkey.slice(0, 10)}`;
-    const dbPath = validatorPaths.validatorDbDir(pubkey);
-    fs.mkdirSync(dbPath, {recursive: true});
+  const validators: Validator[] = validatorKeypairs.map(
+    (keypair): Validator => {
+      const pubkey = keypair.publicKey.toHexString();
+      const loggerId = `Validator ${pubkey.slice(0, 10)}`;
+      const dbPath = validatorPaths.validatorDbDir(pubkey);
+      fs.mkdirSync(dbPath, {recursive: true});
 
-    const api = new ApiClientOverRest(config, server, logger);
-    const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
+      const api = new ApiClientOverRest(config, server, logger);
+      const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
 
-    return new Validator({
-      config,
-      db: new ValidatorDB({
-        config: config,
-        controller: new LevelDbController({
-          name: dbPath
-        }, {logger: childLogger})
-      }),
-      api,
-      logger: childLogger,
-      keypairs: [keypair],
-      graffiti
-    });
-  });
+      return new Validator({
+        config,
+        db: new ValidatorDB({
+          config: config,
+          controller: new LevelDbController(
+            {
+              name: dbPath,
+            },
+            {logger: childLogger}
+          ),
+        }),
+        api,
+        logger: childLogger,
+        keypairs: [keypair],
+        graffiti,
+      });
+    }
+  );
 
   async function cleanup(): Promise<void> {
     logger.info("Stopping validators");
@@ -71,5 +75,5 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
   process.on("SIGTERM", cleanup);
   process.on("SIGINT", cleanup);
 
-  await Promise.all(validators.map(validator => validator.start()));
+  await Promise.all(validators.map((validator) => validator.start()));
 }

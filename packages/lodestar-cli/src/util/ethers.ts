@@ -10,7 +10,7 @@ export async function getEthersSigner({
   rpcUrl,
   rpcPassword,
   ipcPath,
-  chainId
+  chainId,
 }: {
   keystorePath?: string;
   keystorePassword?: string;
@@ -35,10 +35,10 @@ export async function getEthersSigner({
     }
     return signer;
   }
-  
+
   if (ipcPath) {
     return new ethers.providers.IpcProvider(ipcPath).getSigner();
   }
-  
+
   throw Error("Must supply either keystorePath, rpcUrl, or ipcPath");
 }

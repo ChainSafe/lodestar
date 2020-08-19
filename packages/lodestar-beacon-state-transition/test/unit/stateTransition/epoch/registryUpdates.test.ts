@@ -10,13 +10,10 @@ import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 
-describe('process epoch - slashings', function () {
-
+describe("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any,
-    isActiveValidatorStub: any,
-    initiateValidatorExitStub: any;
+  let getCurrentEpochStub: any, isActiveValidatorStub: any, initiateValidatorExitStub: any;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
@@ -30,7 +27,7 @@ describe('process epoch - slashings', function () {
     sandbox.restore();
   });
 
-  it('should make required registry updates', function () {
+  it("should make required registry updates", function () {
     getCurrentEpochStub.returns(1);
     const validatorEligble = generateValidator();
     validatorEligble.effectiveBalance = BigInt(config.params.MAX_EFFECTIVE_BALANCE);
@@ -47,5 +44,4 @@ describe('process epoch - slashings', function () {
       expect.fail(e.stack);
     }
   });
-
 });

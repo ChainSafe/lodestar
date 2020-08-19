@@ -25,5 +25,4 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
     this.getGenesis = sandbox.stub();
     this.getValidator = sandbox.stub();
   }
-
 }

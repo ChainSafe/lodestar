@@ -2,7 +2,6 @@
  * @module util/file
  */
 
-
 import fs from "fs";
 import path from "path";
 
@@ -22,13 +21,13 @@ export function ensureDirectoryExistence(filePath: string): boolean {
 
 export function rmDir(dir: string): void {
   const list = fs.readdirSync(dir);
-  for(let i = 0; i < list.length; i++) {
+  for (let i = 0; i < list.length; i++) {
     const filename = path.join(dir, list[i]);
     const stat = fs.statSync(filename);
-                
-    if(filename == "." || filename == "..") {
+
+    if (filename == "." || filename == "..") {
       // pass these files
-    } else if(stat.isDirectory()) {
+    } else if (stat.isDirectory()) {
       // rmdir recursively
       rmDir(filename);
     } else {
@@ -38,4 +37,3 @@ export function rmDir(dir: string): void {
   }
   fs.rmdirSync(dir);
 }
-

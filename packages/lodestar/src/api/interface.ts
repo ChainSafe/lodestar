@@ -20,16 +20,12 @@ export interface IApiModules {
 }
 
 export interface IApiConstructor {
-
-  new(opts: Partial<IApiOptions>, modules: IApiModules): IApi;
-
+  new (opts: Partial<IApiOptions>, modules: IApiModules): IApi;
 }
 
 export interface IApi {
-
   /**
-     * Name space for API commands
-     */
+   * Name space for API commands
+   */
   namespace: ApiNamespace;
-
 }

@@ -13,21 +13,27 @@ export interface IValidatorModules {
 }
 
 export function getInteropValidator(
-  config: IBeaconConfig, rootDir: string, modules: IValidatorModules, index: number
+  config: IBeaconConfig,
+  rootDir: string,
+  modules: IValidatorModules,
+  index: number
 ): Validator {
-  const logger= modules.logger.child({module: "Validator #" + index, level: modules.logger.level}) as ILogger;
+  const logger = modules.logger.child({module: "Validator #" + index, level: modules.logger.level}) as ILogger;
   const dbPath = join(rootDir, "validators", index.toString());
   mkdirSync(dbPath, {recursive: true});
   return new Validator({
     config,
     db: new ValidatorDB({
       config: config,
-      controller: new LevelDbController({
-        name: dbPath
-      }, {logger})
+      controller: new LevelDbController(
+        {
+          name: dbPath,
+        },
+        {logger}
+      ),
     }),
     api: modules.api,
     logger: logger,
-    keypairs: [new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))]
+    keypairs: [new Keypair(PrivateKey.fromBytes(interopKeypair(index).privkey))],
   });
 }

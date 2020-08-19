@@ -4,18 +4,14 @@ import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utilsEpoch from "../../../../../src/epoch/util";
 import * as utils from "../../../../../src/util";
-import * as baseReward
-  from "../../../../../src/epoch/balanceUpdates/util";
+import * as baseReward from "../../../../../src/epoch/balanceUpdates/util";
 
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
-import {getAttestationDeltas}
-  from "../../../../../src/epoch/balanceUpdates/attestation";
+import {getAttestationDeltas} from "../../../../../src/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
-
-describe('process epoch - balance updates', function () {
-
+describe("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
 
   let getAttestingBalanceStub: any,
@@ -46,8 +42,8 @@ describe('process epoch - balance updates', function () {
     sandbox.restore();
   });
 
-  it('should return rewards', function () {
-    const state  = generateState();
+  it("should return rewards", function () {
+    const state = generateState();
     state.validators = generateValidators(2);
     getPreviousEpochStub.returns(5);
     getTotalActiveBalanceStub.returns(32n);
@@ -57,8 +53,8 @@ describe('process epoch - balance updates', function () {
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 5,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     getUnslashedAttestingIndicesStub.returns([0, 1]);
     getMatchingSourceAttestationsStub.returns(emptyPendingAttestation);
@@ -68,20 +64,19 @@ describe('process epoch - balance updates', function () {
     getAttestingIndicesStub.returns([0, 1]);
 
     try {
-      const result  = getAttestationDeltas(config, state);
+      const result = getAttestationDeltas(config, state);
       const rewards = result[0];
       const penalties = result[1];
-      rewards.forEach((value)=>{
+      rewards.forEach((value) => {
         expect(value > 0n).to.be.true;
       });
-    }catch (e) {
+    } catch (e) {
       expect.fail(e.stack);
     }
-
   });
 
-  it('should return penalties', function () {
-    const state  = generateState();
+  it("should return penalties", function () {
+    const state = generateState();
     state.validators = generateValidators(4);
     getPreviousEpochStub.returns(5);
     getTotalActiveBalanceStub.returns(100n);
@@ -91,8 +86,8 @@ describe('process epoch - balance updates', function () {
       {
         ...generateEmptyAttestation(),
         inclusionDelay: 10,
-        proposerIndex: 1
-      }
+        proposerIndex: 1,
+      },
     ];
     getUnslashedAttestingIndicesStub.returns([2, 3]);
     getMatchingSourceAttestationsStub.returns(emptyPendingAttestation);
@@ -101,15 +96,14 @@ describe('process epoch - balance updates', function () {
     getBaseRewardStub.returns(2n);
     getAttestingIndicesStub.returns([2, 3]);
     try {
-      const result  = getAttestationDeltas(config, state);
+      const result = getAttestationDeltas(config, state);
       const rewards = result[0];
       const penalties = result[1];
-      penalties.forEach((value)=>{
+      penalties.forEach((value) => {
         expect(value > 0n).to.be.true;
       });
-    }catch (e) {
+    } catch (e) {
       expect.fail(e.stack);
     }
   });
-
 });

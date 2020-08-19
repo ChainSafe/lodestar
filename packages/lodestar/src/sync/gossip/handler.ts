@@ -7,7 +7,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SignedVoluntaryExit,
-  ForkDigest
+  ForkDigest,
 } from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
@@ -15,7 +15,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export class BeaconGossipHandler implements IGossipHandler {
-
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
@@ -59,15 +58,9 @@ export class BeaconGossipHandler implements IGossipHandler {
 
   private unsubscribe = (forkDigest: ForkDigest): void => {
     this.network.gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, this.onBlock);
-    this.network.gossip.unsubscribe(
-      forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation
-    );
-    this.network.gossip.unsubscribe(
-      forkDigest, GossipEvent.ATTESTER_SLASHING, this.onAttesterSlashing
-    );
-    this.network.gossip.unsubscribe(
-      forkDigest, GossipEvent.PROPOSER_SLASHING, this.onProposerSlashing
-    );
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.AGGREGATE_AND_PROOF, this.onAggregatedAttestation);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.ATTESTER_SLASHING, this.onAttesterSlashing);
+    this.network.gossip.unsubscribe(forkDigest, GossipEvent.PROPOSER_SLASHING, this.onProposerSlashing);
     this.network.gossip.unsubscribe(forkDigest, GossipEvent.VOLUNTARY_EXIT, this.onVoluntaryExit);
   };
 
@@ -78,7 +71,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   private onAggregatedAttestation = async (aggregate: SignedAggregateAndProof): Promise<void> => {
     await Promise.all([
       this.db.aggregateAndProof.add(aggregate.message),
-      this.chain.receiveAttestation(aggregate.message.aggregate)
+      this.chain.receiveAttestation(aggregate.message.aggregate),
     ]);
   };
 
@@ -93,5 +86,4 @@ export class BeaconGossipHandler implements IGossipHandler {
   private onVoluntaryExit = async (exit: SignedVoluntaryExit): Promise<void> => {
     await this.db.voluntaryExit.add(exit);
   };
-
 }

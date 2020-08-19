@@ -1,27 +1,28 @@
+/* eslint-disable @typescript-eslint/camelcase */
+
 import fastify, {DefaultBody, DefaultHeaders, DefaultParams, DefaultQuery} from "fastify";
 import {LodestarRestApiEndpoint} from "../../interface";
 import {fromHexString} from "@chainsafe/ssz";
-
 
 const opts: fastify.RouteShorthandOptions = {
   schema: {
     body: {
       type: "object",
       requiredKeys: ["committee_index", "slot", "slot_signature", "aggregator_pubkey"],
-      "attestation_committee_index": {
-        type: "string"
+      attestation_committee_index: {
+        type: "string",
       },
-      "slot": {
-        type: "string"
+      slot: {
+        type: "string",
       },
-      "slot_signature": {
-        type: "string"
+      slot_signature: {
+        type: "string",
       },
-      "aggregator_pubkey": {
-        type: "string"
+      aggregator_pubkey: {
+        type: "string",
       },
     },
-  }
+  },
 };
 
 interface IBody extends DefaultBody {
@@ -42,10 +43,7 @@ export const registerSubscribeToCommitteeSubnet: LodestarRestApiEndpoint = (fast
         Number(request.body.attestation_committee_index),
         fromHexString(request.body.aggregator_pubkey)
       );
-      reply
-        .code(200)
-        .type("application/json")
-        .send();
+      reply.code(200).type("application/json").send();
     }
   );
 };

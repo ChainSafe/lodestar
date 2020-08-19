@@ -11,9 +11,7 @@ import {GossipObject} from "../interface";
 export async function handleIncomingProposerSlashing(this: Gossip, obj: GossipObject): Promise<void> {
   try {
     const proposerSlashing = obj as ProposerSlashing;
-    this.logger.verbose(
-      `Received slashing for proposer #${proposerSlashing.signedHeader1.message.proposerIndex}`
-    );
+    this.logger.verbose(`Received slashing for proposer #${proposerSlashing.signedHeader1.message.proposerIndex}`);
     this.emit(GossipEvent.PROPOSER_SLASHING, proposerSlashing);
   } catch (e) {
     this.logger.warn("Incoming proposer slashing error", e);

@@ -2,7 +2,6 @@
  * Calculates increment rate in given time period
  */
 export class RateCounter {
-
   private readonly timePeriod: number;
 
   private count = 0;
@@ -10,11 +9,11 @@ export class RateCounter {
   private timer: NodeJS.Timeout;
 
   /**
-     *
-     * @param timePeriod in seconds
-     */
+   *
+   * @param timePeriod in seconds
+   */
   constructor(timePeriod: number) {
-    if(timePeriod < 1) {
+    if (timePeriod < 1) {
       throw "time period must be greater or equal 1 second";
     }
     this.timePeriod = timePeriod;
@@ -26,7 +25,7 @@ export class RateCounter {
   }
 
   public async stop(): Promise<void> {
-    if(this.timer) {
+    if (this.timer) {
       clearInterval(this.timer);
     }
   }
@@ -36,7 +35,7 @@ export class RateCounter {
   }
 
   public rate(): number {
-    if(this.count == 0) {
+    if (this.count == 0) {
       return 0;
     }
     const diff = new Date().getTime() - this.since;
@@ -47,5 +46,4 @@ export class RateCounter {
     this.since = new Date().getTime();
     this.count = 0;
   };
-
 }

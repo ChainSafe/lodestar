@@ -15,8 +15,7 @@ import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
 import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
 
-describe('process epoch - crosslinks', function () {
-
+describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
   let processJustificationAndFinalizationStub: any,
@@ -26,41 +25,32 @@ describe('process epoch - crosslinks', function () {
     processFinalUpdatesStub: any;
 
   beforeEach(() => {
-    processJustificationAndFinalizationStub =
-      sandbox.stub(justificationUtils, "processJustificationAndFinalization");
-    processRewardsAndPenaltiesStub = sandbox.stub(
-      balanceUpdateUtils, "processRewardsAndPenalties");
-    processRegistryUpdatesStub = sandbox.stub(
-      registryUpdateUtils, "processRegistryUpdates");
-    processSlashingsStub = sandbox.stub(
-      slashingUtils, "processSlashings");
-    processFinalUpdatesStub = sandbox.stub(
-      finalUtils, "processFinalUpdates");
+    processJustificationAndFinalizationStub = sandbox.stub(justificationUtils, "processJustificationAndFinalization");
+    processRewardsAndPenaltiesStub = sandbox.stub(balanceUpdateUtils, "processRewardsAndPenalties");
+    processRegistryUpdatesStub = sandbox.stub(registryUpdateUtils, "processRegistryUpdates");
+    processSlashingsStub = sandbox.stub(slashingUtils, "processSlashings");
+    processFinalUpdatesStub = sandbox.stub(finalUtils, "processFinalUpdates");
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it('should fail to process - genesis slot', function () {
+  it("should fail to process - genesis slot", function () {
     try {
       processEpoch(config, generateState({slot: GENESIS_SLOT}));
       expect.fail();
-    } catch (e) {
-
-    }
+    } catch (e) {}
   });
 
-  it('should fail to process - not epoch', function () {
+  it("should fail to process - not epoch", function () {
     try {
       processEpoch(config, generateState({slot: 1}));
       expect.fail();
-    } catch (e) {
-
-    }
+    } catch (e) {}
   });
 
-  it('should process epoch', function () {
+  it("should process epoch", function () {
     try {
       processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
       expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
@@ -72,5 +62,4 @@ describe('process epoch - crosslinks', function () {
       expect.fail(e.stack);
     }
   });
-
 });

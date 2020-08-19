@@ -14,7 +14,7 @@ import {compress} from "snappyjs";
 
 const forkValue = Buffer.alloc(4);
 
-describe("gossipsub", function() {
+describe("gossipsub", function () {
   const sandbox = sinon.createSandbox();
   let validator: IGossipMessageValidator;
   let gossipSub: LodestarGossipsub;
@@ -26,7 +26,7 @@ describe("gossipsub", function() {
       data: compress(Buffer.from(config.types.SignedBeaconBlock.serialize(signedBLock))),
       from: Buffer.from("0"),
       seqno: Buffer.from("0"),
-      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue)]
+      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue)],
     };
     validator = {} as IGossipMessageValidator;
     const registrar = {
@@ -35,29 +35,30 @@ describe("gossipsub", function() {
       unregister: (): boolean => false,
     };
     const peerId = await createPeerId();
-    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(),
-      peerId, registrar, {});
+    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(), peerId, registrar, {});
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-
   it("should return false because of failed validation", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.reject);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
+      Promise.resolve(ExtendedValidatorResult.reject);
     const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.false;
   });
 
   it("should return true if pass validator function", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.accept);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
+      Promise.resolve(ExtendedValidatorResult.accept);
     const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.true;
   });
 
   it("should return false because of duplicate", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> => Promise.resolve(ExtendedValidatorResult.accept);
+    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
+      Promise.resolve(ExtendedValidatorResult.accept);
     const result = await gossipSub.validate(message, undefined);
     expect(result).to.be.true;
     // receive again => duplicate

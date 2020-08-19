@@ -18,16 +18,12 @@ import {INodeApi} from "../impl/node";
 import {IncomingMessage, Server, ServerResponse} from "http";
 
 export class RestApi implements IService {
-
   public server: FastifyInstance;
 
   private opts: IRestApiOptions;
   private logger: ILogger;
 
-  public constructor(
-    opts: IRestApiOptions,
-    modules: IRestApiModules
-  ) {
+  public constructor(opts: IRestApiOptions, modules: IRestApiModules) {
     this.opts = opts;
     this.logger = modules.logger;
     this.server = this.setupServer(modules);
@@ -47,22 +43,19 @@ export class RestApi implements IService {
     await this.server.close();
   }
 
-  private  setupServer(modules: IRestApiModules): FastifyInstance {
+  private setupServer(modules: IRestApiModules): FastifyInstance {
     const server = fastify({
       logger: new FastifyLogger(this.logger),
       ajv: {
         customOptions: {
           coerceTypes: "array",
-        }
+        },
       },
-      querystringParser: querystring.parse
+      querystringParser: querystring.parse,
     });
     server.setErrorHandler(errorHandler);
-    if(this.opts.cors) {
-      server.register(fastifyCors as fastify.Plugin<
-      Server,
-      IncomingMessage,
-      ServerResponse, {}>, {
+    if (this.opts.cors) {
+      server.register(fastifyCors as fastify.Plugin<Server, IncomingMessage, ServerResponse, {}>, {
         origin: this.opts.cors,
       });
     }
@@ -70,7 +63,7 @@ export class RestApi implements IService {
     const api = {
       beacon: modules.beacon,
       node: modules.node,
-      validator: modules.validator
+      validator: modules.validator,
     };
     server.decorate("config", modules.config);
     server.decorate("api", api);
@@ -80,12 +73,11 @@ export class RestApi implements IService {
       registerRoutes(instance, enabledApiNamespaces);
     });
 
-
     //old api, remove once migrated
-    if(enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
+    if (enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
       server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
     }
-    if(enabledApiNamespaces.includes(ApiNamespace.VALIDATOR)) {
+    if (enabledApiNamespaces.includes(ApiNamespace.VALIDATOR)) {
       //TODO: enable when syncing status api working
       // applySyncingMiddleware(server, "/validator/*", modules);
       server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
@@ -96,7 +88,6 @@ export class RestApi implements IService {
 }
 
 declare module "fastify" {
-
   // eslint-disable-next-line @typescript-eslint/interface-name-prefix
   interface FastifyInstance<HttpServer, HttpRequest, HttpResponse, Config = {}> {
     //decorated properties on fastify server

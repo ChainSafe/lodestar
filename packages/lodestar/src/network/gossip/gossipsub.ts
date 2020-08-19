@@ -14,7 +14,7 @@ import {
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   normalizeInRpcMessage,
-  topicToGossipEvent
+  topicToGossipEvent,
 } from "./utils";
 import {GossipEvent, ExtendedValidatorResult} from "./constants";
 import {GOSSIP_MAX_SIZE} from "../../constants";
@@ -30,10 +30,16 @@ export class LodestarGossipsub extends Gossipsub {
   private validator: IGossipMessageValidator;
   private interval: NodeJS.Timeout;
   private timeToLive: number;
-  private readonly  logger: ILogger;
+  private readonly logger: ILogger;
 
-  constructor (config: IBeaconConfig, validator: IGossipMessageValidator, logger: ILogger, peerId: PeerId,
-    registrar: Registrar, options = {}) {
+  constructor(
+    config: IBeaconConfig,
+    validator: IGossipMessageValidator,
+    logger: ILogger,
+    peerId: PeerId,
+    registrar: Registrar,
+    options = {}
+  ) {
     super(peerId, registrar, Object.assign(options, {msgIdFn: getMessageId}));
     this.transformedObjects = new Map();
     this.config = config;
@@ -57,8 +63,7 @@ export class LodestarGossipsub extends Gossipsub {
 
     try {
       await super.stop();
-    }
-    catch(error) {
+    } catch (error) {
       if (error.code !== "ERR_HEARTBEAT_NO_RUNNING") {
         throw error;
       }
@@ -101,7 +106,7 @@ export class LodestarGossipsub extends Gossipsub {
    * @param message
    * @param result
    */
-  public _processTopicValidatorResult (topic: string, peer: Peer, message: Message, result: unknown): boolean {
+  public _processTopicValidatorResult(topic: string, peer: Peer, message: Message, result: unknown): boolean {
     if (result === ExtendedValidatorResult.accept) {
       return true;
     }
@@ -122,7 +127,7 @@ export class LodestarGossipsub extends Gossipsub {
 
   publish(topic: string, data: Buffer): void {
     const encoding = getTopicEncoding(topic);
-    if(encoding === GossipEncoding.SSZ_SNAPPY) {
+    if (encoding === GossipEncoding.SSZ_SNAPPY) {
       data = compress(data);
     }
     return super.publish(topic, data);
@@ -135,21 +140,21 @@ export class LodestarGossipsub extends Gossipsub {
 
     let result: Function;
     const gossipEvent = topicToGossipEvent(topic);
-    switch(gossipEvent) {
+    switch (gossipEvent) {
       case GossipEvent.BLOCK:
         result = this.validator.isValidIncomingBlock;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
-        result =  this.validator.isValidIncomingAggregateAndProof;
+        result = this.validator.isValidIncomingAggregateAndProof;
         break;
       case GossipEvent.ATTESTER_SLASHING:
-        result =  this.validator.isValidIncomingAttesterSlashing;
+        result = this.validator.isValidIncomingAttesterSlashing;
         break;
       case GossipEvent.PROPOSER_SLASHING:
         result = this.validator.isValidIncomingProposerSlashing;
         break;
       case GossipEvent.VOLUNTARY_EXIT:
-        result =  this.validator.isValidIncomingVoluntaryExit;
+        result = this.validator.isValidIncomingVoluntaryExit;
         break;
       default:
         throw new Error(`No validator for topic ${topic}`);
@@ -157,8 +162,8 @@ export class LodestarGossipsub extends Gossipsub {
     return result as GossipMessageValidatorFn;
   }
 
-  private deserializeGossipMessage(topic: string, message: Message): { object: GossipObject; subnet?: number} {
-    if(getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
+  private deserializeGossipMessage(topic: string, message: Message): {object: GossipObject; subnet?: number} {
+    if (getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
       message.data = uncompress(message.data);
     }
     if (isAttestationSubnetTopic(topic)) {
@@ -168,7 +173,7 @@ export class LodestarGossipsub extends Gossipsub {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
     const gossipEvent = topicToGossipEvent(topic);
-    switch(gossipEvent) {
+    switch (gossipEvent) {
       case GossipEvent.BLOCK:
         objType = this.config.types.SignedBeaconBlock;
         break;
@@ -201,5 +206,4 @@ export class LodestarGossipsub extends Gossipsub {
       this.transformedObjects.delete(key);
     }
   }
-
 }

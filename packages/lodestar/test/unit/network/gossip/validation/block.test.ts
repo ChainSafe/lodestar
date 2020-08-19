@@ -13,7 +13,6 @@ import {generateState} from "../../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("gossip block validation", function () {
-
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let dbStub: StubbedBeaconDb;
@@ -23,7 +22,7 @@ describe("gossip block validation", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    forkChoiceStub =sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     getBlockContextStub = sinon.stub(blockValidationUtils, "getBlockStateContext");
@@ -39,7 +38,7 @@ describe("gossip block validation", function () {
     const block = generateSignedBlock();
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 1,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
@@ -48,11 +47,11 @@ describe("gossip block validation", function () {
   });
 
   it("bad block", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(true);
     const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
@@ -64,11 +63,11 @@ describe("gossip block validation", function () {
   });
 
   it("already proposed", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getBlockAtSlot.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
@@ -82,11 +81,11 @@ describe("gossip block validation", function () {
   });
 
   it("missing parent", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getBlockAtSlot.resolves(null);
@@ -102,17 +101,17 @@ describe("gossip block validation", function () {
   });
 
   it("invalid signature", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getBlockAtSlot.resolves(null);
     getBlockContextStub.resolves({
       state: generateState(),
-      epochCtx: new EpochContext(config)
+      epochCtx: new EpochContext(config),
     });
     verifySignatureStub.returns(false);
     const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
@@ -127,18 +126,18 @@ describe("gossip block validation", function () {
   });
 
   it("wrong proposer", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     getBlockContextStub.resolves({
       state: generateState(),
-      epochCtx: epochCtxStub
+      epochCtx: epochCtxStub,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex + 1);
@@ -155,18 +154,18 @@ describe("gossip block validation", function () {
   });
 
   it("valid block", async function () {
-    chainStub.getGenesisTime.returns(Date.now()/1000 - config.params.SECONDS_PER_SLOT);
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
-      root: Buffer.alloc(32)
+      root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     getBlockContextStub.resolves({
       state: generateState(),
-      epochCtx: epochCtxStub
+      epochCtx: epochCtxStub,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
@@ -180,5 +179,4 @@ describe("gossip block validation", function () {
     expect(verifySignatureStub.calledOnce).to.be.true;
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
   });
-
 });

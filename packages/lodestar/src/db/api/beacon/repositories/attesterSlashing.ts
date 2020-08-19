@@ -12,19 +12,16 @@ import {Repository} from "./abstract";
  * Removed when included on chain or old
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterSlashing> {
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.attesterSlashing, config.types.AttesterSlashing);
   }
 
   public async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {
-    const attesterSlashings = await this.values() || [];
+    const attesterSlashings = (await this.values()) || [];
     const indices = new Set<ValidatorIndex>();
     for (const slashing of attesterSlashings) {
-      slashing.attestation1.attestingIndices.forEach(index => indices.add(index));
-      slashing.attestation2.attestingIndices.forEach(index => indices.add(index));
+      slashing.attestation1.attestingIndices.forEach((index) => indices.add(index));
+      slashing.attestation2.attestingIndices.forEach((index) => indices.add(index));
     }
     for (const attesterIndice of attesterIndices) {
       if (!indices.has(attesterIndice)) {

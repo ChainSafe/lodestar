@@ -27,23 +27,19 @@ describeDirectorySpecTest<AggregateSigsVerifyTestCase, boolean>(
     __dirname,
     "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/aggregate_verify/small"
   ),
-  (testCase => {
-    const pubkeys = testCase.data.input.pubkeys.map(pubkey => {
+  (testCase) => {
+    const pubkeys = testCase.data.input.pubkeys.map((pubkey) => {
       return Buffer.from(pubkey.replace("0x", ""), "hex");
     });
-    const messages = testCase.data.input.messages.map(message => {
+    const messages = testCase.data.input.messages.map((message) => {
       return Buffer.from(message.replace("0x", ""), "hex");
     });
-    return bls.verifyMultiple(
-      pubkeys,
-      messages,
-      Buffer.from(testCase.data.input.signature.replace("0x", ""), "hex"),
-    );
-  }),
+    return bls.verifyMultiple(pubkeys, messages, Buffer.from(testCase.data.input.signature.replace("0x", ""), "hex"));
+  },
   {
     inputTypes: {
       data: InputType.YAML,
     },
-    getExpected: (testCase => testCase.data.output)
+    getExpected: (testCase) => testCase.data.output,
   }
 );

@@ -9,17 +9,19 @@ import {generateState} from "../../../../../utils/state";
 import {expect} from "chai";
 
 describe("beacon api impl - states", function () {
-
   let api: IBeaconStateApi;
   let resolveStateIdStub: SinonStub;
 
   beforeEach(function () {
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
-    api = new BeaconStateApi({}, {
-      config,
-      chain: sinon.createStubInstance(BeaconChain),
-      db: new StubbedBeaconDb(sinon, config)
-    });
+    api = new BeaconStateApi(
+      {},
+      {
+        config,
+        chain: sinon.createStubInstance(BeaconChain),
+        db: new StubbedBeaconDb(sinon, config),
+      }
+    );
   });
 
   afterEach(function () {
@@ -37,5 +39,4 @@ describe("beacon api impl - states", function () {
     const state = await api.getState("something");
     expect(state).to.be.null;
   });
-
 });

@@ -8,12 +8,10 @@ import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 
-describe('process epoch - final updates', function () {
-
+describe("process epoch - final updates", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any,
-    getRandaoMixStub: any;
+  let getCurrentEpochStub: any, getRandaoMixStub: any;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
@@ -24,7 +22,7 @@ describe('process epoch - final updates', function () {
     sandbox.restore();
   });
 
-  it('should make required final updates', function () {
+  it("should make required final updates", function () {
     const state = generateState();
     state.slot = config.params.EPOCHS_PER_ETH1_VOTING_PERIOD - 1;
     state.validators.push(generateValidator());
@@ -37,10 +35,8 @@ describe('process epoch - final updates', function () {
       processFinalUpdates(config, state);
       expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
       expect(getRandaoMixStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
-
-    }catch (e) {
+    } catch (e) {
       expect.fail(e.stack);
     }
   });
-
 });

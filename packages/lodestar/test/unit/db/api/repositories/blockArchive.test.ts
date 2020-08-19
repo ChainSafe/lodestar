@@ -11,7 +11,6 @@ import sinon from "sinon";
 import {Bucket, encodeKey} from "../../../../../src/db/api/schema";
 
 describe("block archive repository", function () {
-
   const logger = new WinstonLogger();
   logger.silent = true;
   const testDir = "./.tmp";
@@ -20,10 +19,7 @@ describe("block archive repository", function () {
 
   beforeEach(async function () {
     controller = new LevelDbController({name: testDir}, {logger});
-    blockArchive = new BlockArchiveRepository(
-      config,
-      controller,
-    );
+    blockArchive = new BlockArchiveRepository(config, controller);
     await controller.start();
   });
   afterEach(async function () {
@@ -32,15 +28,17 @@ describe("block archive repository", function () {
   });
 
   it("should retrieve blocks in order", async function () {
-    await blockArchive.batchPut(Array.from({length: 1001}, (_, i) => {
-      const slot = i;
-      const block = generateEmptySignedBlock();
-      block.message.slot = slot;
-      return {
-        key: slot,
-        value: block,
-      };
-    }));
+    await blockArchive.batchPut(
+      Array.from({length: 1001}, (_, i) => {
+        const slot = i;
+        const block = generateEmptySignedBlock();
+        block.message.slot = slot;
+        return {
+          key: slot,
+          value: block,
+        };
+      })
+    );
     // test keys
     let lastSlot = 0;
     for await (const slot of blockArchive.keysStream()) {
@@ -118,19 +116,13 @@ describe("block archive repository", function () {
     await blockArchive.add(block);
     expect(
       spy.withArgs(
-        encodeKey(
-          Bucket.blockArchiveRootIndex,
-          config.types.BeaconBlock.hashTreeRoot(block.message)
-        ),
+        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(
-          Bucket.blockArchiveParentRootIndex,
-          block.message.parentRoot.valueOf() as Uint8Array
-        ),
+        encodeKey(Bucket.blockArchiveParentRootIndex, block.message.parentRoot.valueOf() as Uint8Array),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
@@ -142,19 +134,13 @@ describe("block archive repository", function () {
     await blockArchive.batchAdd(blocks);
     expect(
       spy.withArgs(
-        encodeKey(
-          Bucket.blockArchiveRootIndex,
-          config.types.BeaconBlock.hashTreeRoot(blocks[0].message)
-        ),
+        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(blocks[0].message)),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(
-          Bucket.blockArchiveParentRootIndex,
-          blocks[0].message.parentRoot.valueOf() as Uint8Array
-        ),
+        encodeKey(Bucket.blockArchiveParentRootIndex, blocks[0].message.parentRoot.valueOf() as Uint8Array),
         intToBytes(blocks[0].message.slot, 64, "be")
       ).calledTwice
     ).to.be.true;

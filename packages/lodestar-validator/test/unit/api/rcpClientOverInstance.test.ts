@@ -7,8 +7,7 @@ import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
 import {MockValidatorApi} from "../../utils/mocks/validator";
 
-describe("RpcClientOverInstance test", function() {
-
+describe("RpcClientOverInstance test", function () {
   let clock: any, sandbox: any;
 
   before(() => {
@@ -27,14 +26,14 @@ describe("RpcClientOverInstance test", function() {
     clock.restore();
   });
 
-  it("should not notify new slot because has not yet come", async function() {
+  it("should not notify new slot because has not yet come", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     await rpcClient.connect();
@@ -42,14 +41,14 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.notCalled).to.be.true;
   });
 
-  it("should properly notify on new slot", async function() {
+  it("should properly notify on new slot", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     rpcClient.onNewSlot(cb);
@@ -62,14 +61,14 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.withArgs(1).called).to.be.true;
   });
 
-  it("should properly notify on next slot", async function() {
+  it("should properly notify on next slot", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     rpcClient.onNewSlot(cb);
@@ -80,14 +79,14 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.withArgs(2).called).to.be.true;
   });
 
-  it("should not notify new epoch because has not yet come", async function() {
+  it("should not notify new epoch because has not yet come", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);
@@ -96,14 +95,14 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.notCalled).to.be.true;
   });
 
-  it("should properly notify on new epoch", async function() {
+  it("should properly notify on new epoch", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);
@@ -112,14 +111,14 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.withArgs(1).called).to.be.true;
   });
 
-  it("should properly notify on subsequent epoch", async function() {
+  it("should properly notify on subsequent epoch", async function () {
     const rpcClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
-        genesisTime: Math.floor(Date.now() / 1000)
+        genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
-      validator: new MockValidatorApi()
+      validator: new MockValidatorApi(),
     });
     const cb = sandbox.spy();
     rpcClient.onNewEpoch(cb);
@@ -129,6 +128,4 @@ describe("RpcClientOverInstance test", function() {
     expect(cb.withArgs(1).called).to.be.true;
     expect(cb.withArgs(2).called).to.be.true;
   });
-
 });
-

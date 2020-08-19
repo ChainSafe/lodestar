@@ -10,7 +10,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
 import {DomainType} from "../constants";
-import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix,} from "../util";
+import {getBeaconProposerIndex, getCurrentEpoch, getDomain, getRandaoMix} from "../util";
 import {computeSigningRoot} from "../util/signingRoot";
 
 export function processRandao(
@@ -24,14 +24,14 @@ export function processRandao(
   const domain = getDomain(config, state, DomainType.RANDAO);
   const signingRoot = computeSigningRoot(config, config.types.Epoch, currentEpoch, domain);
   // Verify RANDAO reveal
-  assert.true(!verifySignature || verify(
-    proposer.pubkey.valueOf() as Uint8Array,
-    signingRoot,
-    body.randaoReveal.valueOf() as Uint8Array,
-  ), "Invalid RANDAO reveal");
+  assert.true(
+    !verifySignature ||
+      verify(proposer.pubkey.valueOf() as Uint8Array, signingRoot, body.randaoReveal.valueOf() as Uint8Array),
+    "Invalid RANDAO reveal"
+  );
   // Mix it in
   state.randaoMixes[currentEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
     Buffer.from(getRandaoMix(config, state, currentEpoch) as Uint8Array),
-    Buffer.from(hash(body.randaoReveal.valueOf() as Uint8Array)),
+    Buffer.from(hash(body.randaoReveal.valueOf() as Uint8Array))
   );
 }

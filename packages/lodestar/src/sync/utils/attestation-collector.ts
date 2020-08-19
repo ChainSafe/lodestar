@@ -15,13 +15,12 @@ export interface IAttestationCollectorModules {
 }
 
 export class AttestationCollector implements IService {
-
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
-  private timers: (NodeJS.Timeout)[] = [];
+  private timers: NodeJS.Timeout[] = [];
   private aggregationDuties: Map<Slot, Set<CommitteeIndex>> = new Map();
 
   public constructor(config: IBeaconConfig, modules: IAttestationCollectorModules) {
@@ -47,7 +46,7 @@ export class AttestationCollector implements IService {
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
     try {
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
-      if(this.aggregationDuties.has(slot)) {
+      if (this.aggregationDuties.has(slot)) {
         this.aggregationDuties.get(slot).add(committeeIndex);
       } else {
         this.aggregationDuties.set(slot, new Set([committeeIndex]));
@@ -64,16 +63,14 @@ export class AttestationCollector implements IService {
     this.timers = [];
     committees.forEach((committeeIndex) => {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
-      this.network.gossip.subscribeToAttestationSubnet(
-        forkDigest,
-        subnet,
-        this.handleCommitteeAttestation
+      this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
+      this.timers.push(
+        (setTimeout(
+          this.unsubscribeSubnet,
+          this.config.params.SECONDS_PER_SLOT * 1000,
+          subnet
+        ) as unknown) as NodeJS.Timeout
       );
-      this.timers.push(setTimeout(
-        this.unsubscribeSubnet,
-        this.config.params.SECONDS_PER_SLOT * 1000,
-        subnet
-      ) as unknown as NodeJS.Timeout);
     });
     this.aggregationDuties.delete(slot);
   };

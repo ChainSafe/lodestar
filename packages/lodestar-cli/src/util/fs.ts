@@ -16,4 +16,3 @@ export function writeFile600Perm(filepath: string, data: string): void {
 export function ensureDirExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, {recursive: true});
 }
-

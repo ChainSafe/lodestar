@@ -7,10 +7,11 @@ import {networkOptions} from "./network";
 import {syncOptions} from "./sync";
 
 type RecursivePartial<T> = {
-  [P in keyof T]?:
-  T[P] extends (infer U)[] ? RecursivePartial<U>[] :
-    T[P] extends object ? RecursivePartial<T[P]> :
-      T[P];
+  [P in keyof T]?: T[P] extends (infer U)[]
+    ? RecursivePartial<U>[]
+    : T[P] extends object
+    ? RecursivePartial<T[P]>
+    : T[P];
 };
 
 // Re-export for convenience
@@ -23,5 +24,5 @@ export const beaconNodeOptions = {
   ...loggerOptions,
   ...metricsOptions,
   ...networkOptions,
-  ...syncOptions
+  ...syncOptions,
 };

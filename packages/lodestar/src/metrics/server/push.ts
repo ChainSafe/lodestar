@@ -9,7 +9,7 @@ import {IMetricsOptions} from "../options";
 export class PushMetricsServer implements IMetricsServer {
   private metrics: IMetrics;
   private opts: IMetricsOptions;
-  private gateway: Pushgateway|null = null;
+  private gateway: Pushgateway | null = null;
   public constructor(opts: IMetricsOptions, {metrics}: {metrics: IMetrics}) {
     this.opts = opts;
     this.metrics = metrics;

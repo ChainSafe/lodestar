@@ -2,19 +2,14 @@
  * @module util/objects
  */
 import {hash} from "@chainsafe/ssz";
-import {
-  ValidatorIndex,
-  Bytes32,
-} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, Bytes32} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, bytesToBigInt} from "@chainsafe/lodestar-utils";
-
 
 // ShuffleList shuffles a list, using the given seed for randomness. Mutates the input list.
 export function shuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: Bytes32): void {
   innerShuffleList(config, input, seed, true);
 }
-
 
 // UnshuffleList undoes a list shuffling using the seed of the shuffling. Mutates the input list.
 export function unshuffleList(config: IBeaconConfig, input: ValidatorIndex[], seed: Bytes32): void {
@@ -26,7 +21,6 @@ const _SHUFFLE_H_ROUND_SIZE = 1;
 const _SHUFFLE_H_POSITION_WINDOW_SIZE = 4;
 const _SHUFFLE_H_PIVOT_VIEW_SIZE = _SHUFFLE_H_SEED_SIZE + _SHUFFLE_H_ROUND_SIZE;
 const _SHUFFLE_H_TOTAL_SIZE = _SHUFFLE_H_SEED_SIZE + _SHUFFLE_H_ROUND_SIZE + _SHUFFLE_H_POSITION_WINDOW_SIZE;
-
 
 /*
 

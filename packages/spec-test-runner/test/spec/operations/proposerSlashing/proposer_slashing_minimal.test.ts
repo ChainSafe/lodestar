@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/proposer_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const verify = (!!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n);
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
     processProposerSlashing(config, state, testcase.proposer_slashing, verify);
     return state;
   },
@@ -24,11 +24,10 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
       proposer_slashing: config.types.ProposerSlashing,
     },
     timeout: 100000000,
-    shouldError: testCase => !testCase.post,
-    getExpected: (testCase => testCase.post),
+    shouldError: (testCase) => !testCase.post,
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );
-

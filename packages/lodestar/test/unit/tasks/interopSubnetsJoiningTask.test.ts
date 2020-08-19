@@ -32,7 +32,7 @@ describe("interopSubnetsJoiningTask", () => {
       currentVersion: 2,
       epoch: 1000,
       // GENESIS_FORK_VERSION is <Buffer 00 00 00 01> but previousVersion = 16777216 not 1 due to bytesToInt
-      previousVersion: bytesToInt(minimalConfig.params.GENESIS_FORK_VERSION)
+      previousVersion: bytesToInt(minimalConfig.params.GENESIS_FORK_VERSION),
     },
   ];
   const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
@@ -47,9 +47,9 @@ describe("interopSubnetsJoiningTask", () => {
     chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
-      networkId:BigInt(0),
+      networkId: BigInt(0),
       state: state as TreeBacked<BeaconState>,
-      config
+      config,
     });
     networkStub.metadata = new MetadataController({}, {config, chain, logger});
     task = new InteropSubnetsJoiningTask(config, {
@@ -66,7 +66,6 @@ describe("interopSubnetsJoiningTask", () => {
     clock.restore();
   });
 
-
   it("should handle fork digest change", async () => {
     const oldForkDigest = chain.currentForkDigest;
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
@@ -77,8 +76,9 @@ describe("interopSubnetsJoiningTask", () => {
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
     chain.emit("forkDigest", chain.currentForkDigest);
     await unSubscribePromise;
-    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount)
-      .to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
+    expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(
+      config.params.RANDOM_SUBNETS_PER_VALIDATOR
+    );
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
@@ -86,10 +86,13 @@ describe("interopSubnetsJoiningTask", () => {
     expect(Number(seqNumber)).to.be.gt(0);
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     const unsubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
-    clock.tick(2 * config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION
-      * config.params.SLOTS_PER_EPOCH
-      * config.params.SECONDS_PER_SLOT
-      * 1000);
+    clock.tick(
+      2 *
+        config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION *
+        config.params.SLOTS_PER_EPOCH *
+        config.params.SECONDS_PER_SLOT *
+        1000
+    );
     await unsubscribePromise;
     expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.gte(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
@@ -99,14 +102,19 @@ describe("interopSubnetsJoiningTask", () => {
   it("should prepare for a hard fork", async function () {
     // scheduleNextForkSubscription already get called after start
     const state = await chain.getHeadState();
-    const nextForkDigest =
-      computeForkDigest(config, intToBytes(ALL_FORKS[0].currentVersion, 4), state.genesisValidatorsRoot);
+    const nextForkDigest = computeForkDigest(
+      config,
+      intToBytes(ALL_FORKS[0].currentVersion, 4),
+      state.genesisValidatorsRoot
+    );
     const spy = sandbox.spy();
     gossipStub.subscribeToAttestationSubnet.callsFake(spy);
-    clock.tick((ALL_FORKS[0].epoch - config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1)
-      * config.params.SLOTS_PER_EPOCH
-      * config.params.SECONDS_PER_SLOT
-      * 1000);
+    clock.tick(
+      (ALL_FORKS[0].epoch - config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION + 1) *
+        config.params.SLOTS_PER_EPOCH *
+        config.params.SECONDS_PER_SLOT *
+        1000
+    );
     // at least 1 run right after start, 1 run in scheduleNextForkSubscription
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.gte(2 * config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // subscribe to next fork digest subnet

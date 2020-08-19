@@ -14,7 +14,7 @@ export const globalOptions = {
   rootDir: {
     description: "Lodestar root directory",
     normalize: true,
-    type: "string"
+    type: "string",
   } as Options,
 
   testnet: {
@@ -27,7 +27,7 @@ export const globalOptions = {
     description: "Specifies the default eth2 spec type",
     choices: ["mainnet", "minimal"],
     default: "mainnet",
-    type: "string"
+    type: "string",
   } as Options,
 
   paramsFile: {

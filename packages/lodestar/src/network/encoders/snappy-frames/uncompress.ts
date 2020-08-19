@@ -2,16 +2,13 @@ import BufferList from "bl";
 import {uncompress} from "snappyjs";
 import {IDecompressor} from "../interface";
 
-const IDENTIFIER = Buffer.from([
-  0x73, 0x4e, 0x61, 0x50, 0x70, 0x59
-]);
+const IDENTIFIER = Buffer.from([0x73, 0x4e, 0x61, 0x50, 0x70, 0x59]);
 
 export class SnappyFramesUncompress implements IDecompressor {
-
   private buffer = new BufferList();
 
   private state: IUncompressState = {
-    foundIdentifier: false
+    foundIdentifier: false,
   };
 
   /**
@@ -19,11 +16,11 @@ export class SnappyFramesUncompress implements IDecompressor {
    * @param chunk
    * @return Buffer if there is one or more whole frames, null if it's partial
    */
-  public uncompress(chunk: Buffer): Buffer|null {
+  public uncompress(chunk: Buffer): Buffer | null {
     this.buffer.append(chunk);
     const result = new BufferList();
-    while(this.buffer.length > 0) {
-      if(this.buffer.length < 4) break;
+    while (this.buffer.length > 0) {
+      if (this.buffer.length < 4) break;
 
       const type = getChunkType(this.buffer.get(0));
       const frameSize = getFrameSize(this.buffer, 1);
@@ -35,12 +32,12 @@ export class SnappyFramesUncompress implements IDecompressor {
 
       this.buffer.consume(4 + frameSize);
 
-      if(!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
+      if (!this.state.foundIdentifier && type !== ChunkType.IDENTIFIER) {
         throw "malformed input: must begin with an identifier";
       }
 
       if (type === ChunkType.IDENTIFIER) {
-        if(!data.equals(IDENTIFIER))  {
+        if (!data.equals(IDENTIFIER)) {
           throw "malformed input: bad identifier";
         }
         this.state.foundIdentifier = true;
@@ -49,13 +46,12 @@ export class SnappyFramesUncompress implements IDecompressor {
 
       if (type === ChunkType.COMPRESSED) {
         result.append(uncompress(data.slice(4)));
-
       }
-      if(type === ChunkType.UNCOMPRESSED) {
+      if (type === ChunkType.UNCOMPRESSED) {
         result.append(data.slice(4));
       }
     }
-    if(result.length === 0) {
+    if (result.length === 0) {
       return null;
     } else {
       return result.slice();
@@ -65,7 +61,7 @@ export class SnappyFramesUncompress implements IDecompressor {
   reset(): void {
     this.buffer = new BufferList();
     this.state = {
-      foundIdentifier: false
+      foundIdentifier: false,
     };
   }
 }
@@ -78,7 +74,7 @@ enum ChunkType {
   IDENTIFIER = 0xff,
   COMPRESSED = 0x00,
   UNCOMPRESSED = 0x01,
-  PADDING = 0xfe
+  PADDING = 0xfe,
 }
 
 function getFrameSize(buffer: BufferList, offset: number): number {

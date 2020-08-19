@@ -11,7 +11,7 @@ import {
   getBeaconProposerIndex,
   signedBlockToSignedHeader,
   EpochContext,
-  fastStateTransition
+  fastStateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -66,15 +66,13 @@ describe("produce block", function () {
     dbStub.eth1Data.values.resolves([{depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)}]);
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
-    const blockProposingService = getBlockProposingService(
-      keypairs[validatorIndex]
-    );
+    const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
       // @ts-ignore
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(0,1, state.fork, ZERO_HASH);
+    const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
     expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
   });
 
@@ -86,9 +84,8 @@ describe("produce block", function () {
       config,
       [keypair],
       rpcClientStub,
-      validatorDbStub as unknown as IValidatorDB,
+      (validatorDbStub as unknown) as IValidatorDB,
       sinon.createStubInstance(WinstonLogger)
     );
   }
-
 });

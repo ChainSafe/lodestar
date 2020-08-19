@@ -15,7 +15,7 @@ import {
   Root,
   SignedAggregateAndProof,
   SignedBeaconBlock,
-  Slot
+  Slot,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
@@ -37,7 +37,6 @@ import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 
 export class AttestationService {
-
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   //order is important
@@ -71,7 +70,7 @@ export class AttestationService {
     //get current epoch duties
     await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
 
-    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) !== slot) {
+    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) !== slot) {
       //trigger next epoch duties
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
@@ -85,8 +84,8 @@ export class AttestationService {
       this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
       return;
     }
-    const {fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork());
-    for(const duty of attesterDuties) {
+    const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+    for (const duty of attesterDuties) {
       const attesterIndex = this.publicKeys.findIndex((pubkey) => {
         return this.config.types.BLSPubkey.equals(pubkey, duty.validatorPubkey);
       });
@@ -97,15 +96,15 @@ export class AttestationService {
         modulo: duty.aggregatorModulo,
         validator: toHexString(duty.validatorPubkey),
         committee: duty.committeeIndex,
-        isAggregator: String(isAggregator)
+        isAggregator: String(isAggregator),
       });
       const nextDuty = {
         ...duty,
         attesterIndex,
-        isAggregator
+        isAggregator,
       };
       const attesterDuties = this.nextAttesterDuties.get(duty.attestationSlot);
-      if(attesterDuties) {
+      if (attesterDuties) {
         attesterDuties.push(nextDuty);
       } else {
         this.nextAttesterDuties.set(duty.attestationSlot, [nextDuty]);
@@ -126,32 +125,27 @@ export class AttestationService {
   };
 
   public onNewSlot = async (slot: Slot): Promise<void> => {
-    if(computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
+    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
     const duties = this.nextAttesterDuties.get(slot);
-    if(duties && duties.length > 0) {
+    if (duties && duties.length > 0) {
       this.nextAttesterDuties.delete(slot);
-      await Promise.all(
-        duties.map((duty) => this.handleDuty(duty))
-      );
+      await Promise.all(duties.map((duty) => this.handleDuty(duty)));
     }
   };
 
   private async handleDuty(duty: IAttesterDuty): Promise<void> {
-    this.logger.info(
-      "Handling attestation duty",
-      {
-        slot: duty.attestationSlot,
-        committee: duty.committeeIndex,
-        validator: toHexString(duty.validatorPubkey)
-      }
-    );
+    this.logger.info("Handling attestation duty", {
+      slot: duty.attestationSlot,
+      committee: duty.committeeIndex,
+      validator: toHexString(duty.validatorPubkey),
+    });
     await this.waitForAttestationBlock(duty.attestationSlot);
-    let attestation: Attestation|undefined;
+    let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
     try {
-      ({fork, genesisValidatorsRoot} = (await this.provider.beacon.getFork()));
+      ({fork, genesisValidatorsRoot} = await this.provider.beacon.getFork());
       attestation = await this.createAttestation(
         duty.attesterIndex,
         duty.attestationSlot,
@@ -160,12 +154,13 @@ export class AttestationService {
         genesisValidatorsRoot
       );
     } catch (e) {
-      this.logger.error(
-        "Failed to produce attestation",
-        {slot: duty.attestationSlot, committee: duty.committeeIndex, error: e.message}
-      );
+      this.logger.error("Failed to produce attestation", {
+        slot: duty.attestationSlot,
+        committee: duty.committeeIndex,
+        error: e.message,
+      });
     }
-    if(!attestation) {
+    if (!attestation) {
       return;
     }
 
@@ -178,7 +173,7 @@ export class AttestationService {
         } catch (e) {
           this.logger.error("Failed to aggregate attestations", e);
         }
-      }, this.config.params.SECONDS_PER_SLOT / 3 * 1000);
+      }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
     }
     try {
       await this.provider.validator.publishAttestation(attestation);
@@ -194,10 +189,9 @@ export class AttestationService {
 
   private async waitForAttestationBlock(slot: Slot): Promise<void> {
     this.logger.debug("Waiting for slot block", {slot});
-    const eventSource = new EventSource(
-      `${this.provider.url}/lodestar/blocks/stream`,
-      {https: {rejectUnauthorized: false}}
-    );
+    const eventSource = new EventSource(`${this.provider.url}/lodestar/blocks/stream`, {
+      https: {rejectUnauthorized: false},
+    });
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         this.logger.debug("Timed out slot block waiting");
@@ -206,11 +200,10 @@ export class AttestationService {
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
           this.logger.debug("received block!");
-          const signedBlock: SignedBeaconBlock =
-              this.config.types.SignedBeaconBlock.fromJson(
-                JSON.parse(evt.data), {case: "snake"}
-              );
-          if(signedBlock.message.slot === slot) {
+          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data), {
+            case: "snake",
+          });
+          if (signedBlock.message.slot === slot) {
             clearTimeout(timeout);
             this.logger.debug("Received slot block", {slot});
             resolve();
@@ -219,7 +212,6 @@ export class AttestationService {
           this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
         }
       };
-
     });
     eventSource.close();
   }
@@ -231,9 +223,7 @@ export class AttestationService {
     fork: Fork,
     genesisValidatorsRoot: Root
   ): Promise<void> => {
-    this.logger.info(
-      `Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`
-    );
+    this.logger.info(`Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`);
     let aggregateAndProof: AggregateAndProof;
     try {
       aggregateAndProof = await this.provider.validator.produceAggregateAndProof(
@@ -265,20 +255,21 @@ export class AttestationService {
         e
       );
     }
-
   };
 
   private getAggregateAndProofSignature(
     aggregatorIndex: number,
     fork: Fork,
     genesisValidatorsRoot: Root,
-    aggregateAndProof: AggregateAndProof): BLSSignature {
+    aggregateAndProof: AggregateAndProof
+  ): BLSSignature {
     const aggregate = aggregateAndProof.aggregate;
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.AGGREGATE_AND_PROOF,
-      computeEpochAtSlot(this.config, aggregate.data.slot));
+      computeEpochAtSlot(this.config, aggregate.data.slot)
+    );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
     return this.privateKeys[aggregatorIndex].signMessage(signingRoot).toBytesCompressed();
   }
@@ -299,7 +290,8 @@ export class AttestationService {
     slot: Slot,
     committeeIndex: CommitteeIndex,
     fork: Fork,
-    genesisValidatorsRoot: Root): Promise<Attestation> {
+    genesisValidatorsRoot: Root
+  ): Promise<Attestation> {
     let attestation;
     try {
       attestation = await this.provider.validator.produceAttestation(
@@ -312,47 +304,45 @@ export class AttestationService {
       throw e;
     }
     if (await this.isConflictingAttestation(attesterIndex, attestation.data)) {
-      throw Error("Avoided signing conflicting attestation! "
-        + `Source epoch: ${attestation.data.source.epoch}, `
-        + `Target epoch: ${attestation.data.target.epoch}`);
+      throw Error(
+        "Avoided signing conflicting attestation! " +
+          `Source epoch: ${attestation.data.source.epoch}, ` +
+          `Target epoch: ${attestation.data.target.epoch}`
+      );
     }
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.BEACON_ATTESTER,
-      attestation.data.target.epoch,
+      attestation.data.target.epoch
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestation.data, domain);
-    attestation.signature = this.privateKeys[attesterIndex].signMessage(
-      signingRoot
-    ).toBytesCompressed();
+    attestation.signature = this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed();
     await this.storeAttestation(attesterIndex, attestation);
     this.logger.info(
       `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
-            `and committee ${committeeIndex} at slot ${slot}`
+        `and committee ${committeeIndex} at slot ${slot}`
     );
     return attestation;
   }
 
   private async isConflictingAttestation(attesterIndex: number, other: AttestationData): Promise<boolean> {
-    const potentialAttestationConflicts = await this.db.getAttestations(
-      this.publicKeys[attesterIndex],
-      {gt: other.target.epoch - 1}
-    );
-    return potentialAttestationConflicts.some((attestation => {
+    const potentialAttestationConflicts = await this.db.getAttestations(this.publicKeys[attesterIndex], {
+      gt: other.target.epoch - 1,
+    });
+    return potentialAttestationConflicts.some((attestation) => {
       return isSlashableAttestationData(this.config, attestation.data, other);
-    }));
+    });
   }
 
   private async storeAttestation(attesterIndex: number, attestation: Attestation): Promise<void> {
     await this.db.setAttestation(this.publicKeys[attesterIndex], attestation);
 
     //cleanup
-    const unusedAttestations =
-            await this.db.getAttestations(
-              this.publicKeys[attesterIndex],
-              {gt: 0, lt: attestation.data.target.epoch}
-            );
+    const unusedAttestations = await this.db.getAttestations(this.publicKeys[attesterIndex], {
+      gt: 0,
+      lt: attestation.data.target.epoch,
+    });
     await this.db.deleteAttestations(this.publicKeys[attesterIndex], unusedAttestations);
   }
 }

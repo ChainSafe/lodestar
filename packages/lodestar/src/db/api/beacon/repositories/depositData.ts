@@ -12,17 +12,13 @@ import {Repository} from "./abstract";
  * Removed when included on chain or old
  */
 export class DepositDataRepository extends Repository<number, DepositData> {
-
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.depositData, config.types.DepositData);
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
     const firstDepositIndex = await this.firstKey();
-    if(firstDepositIndex !== 0 && !firstDepositIndex) {
+    if (firstDepositIndex !== 0 && !firstDepositIndex) {
       return;
     }
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));

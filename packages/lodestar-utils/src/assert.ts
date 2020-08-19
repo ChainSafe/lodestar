@@ -66,7 +66,7 @@ export const assert = {
     if (!(left > right)) {
       throw new AssertionError(`${message || "Expected value to be gt"}: ${left} > ${right}`);
     }
-  }
+  },
 };
 
 export class AssertionError extends Error {

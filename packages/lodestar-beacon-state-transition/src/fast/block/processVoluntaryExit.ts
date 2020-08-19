@@ -6,12 +6,11 @@ import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
-
 export function processVoluntaryExit(
   epochCtx: EpochContext,
   state: BeaconState,
   signedVoluntaryExit: SignedVoluntaryExit,
-  verifySignature = true,
+  verifySignature = true
 ): void {
   const config = epochCtx.config;
   const voluntaryExit = signedVoluntaryExit.message;
@@ -23,16 +22,12 @@ export function processVoluntaryExit(
   }
   // verify exit has not been initiated
   if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
-    throw new Error(
-      "VoluntaryExit validator exit has already been initiated: " +
-            `exitEpoch=${validator.exitEpoch}`
-    );
+    throw new Error("VoluntaryExit validator exit has already been initiated: " + `exitEpoch=${validator.exitEpoch}`);
   }
   // exits must specify an epoch when they become valid; they are not valid before then
   if (!(currentEpoch >= voluntaryExit.epoch)) {
     throw new Error(
-      "VoluntaryExit epoch is not yet valid: " +
-            `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
+      "VoluntaryExit epoch is not yet valid: " + `epoch=${voluntaryExit.epoch} currentEpoch=${currentEpoch}`
     );
   }
   // verify the validator had been active long enough
@@ -44,14 +39,15 @@ export function processVoluntaryExit(
     const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
     const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
     const pubkey = epochCtx.index2pubkey[voluntaryExit.validatorIndex];
-    if (!pubkey.verifyMessage(
-      Signature.fromCompressedBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array),
-      signingRoot,
-    )) {
+    if (
+      !pubkey.verifyMessage(
+        Signature.fromCompressedBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array),
+        signingRoot
+      )
+    ) {
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
   // initiate exit
   initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);
 }
-

@@ -7,10 +7,10 @@ import ganache from "ganache-core";
 import {promisify} from "util";
 import deepmerge from "deepmerge";
 import {ethers} from "ethers";
-import {ILogger} from  "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import devEth1Options from "./options";
 
-export const devNetworkOpts =  {
+export const devNetworkOpts = {
   port: 8545,
   networkId: 200,
   defaultBalance: 1000,
@@ -25,11 +25,10 @@ export interface IPrivateNetworkOpts {
   dbPath?: string;
   blockTime?: number;
   mnemonic?: string;
-  "total_accounts"?: number;
+  total_accounts?: number;
 }
 
 export class PrivateEth1Network {
-
   private server: any;
 
   private blockchain: any;
@@ -38,7 +37,7 @@ export class PrivateEth1Network {
 
   private logger: ILogger;
 
-  public constructor(opts: IPrivateNetworkOpts, {logger}: {logger: ILogger} ) {
+  public constructor(opts: IPrivateNetworkOpts, {logger}: {logger: ILogger}) {
     this.opts = deepmerge(devNetworkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({
@@ -49,17 +48,14 @@ export class PrivateEth1Network {
       // eslint-disable-next-line  @typescript-eslint/camelcase
       db_path: this.opts.dbPath,
       // eslint-disable-next-line @typescript-eslint/camelcase
-      network_id: 999
+      network_id: 999,
     });
   }
 
   public async start(): Promise<string> {
-    this.blockchain  =
-      await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
+    this.blockchain = await promisify(this.server.listen.bind(this.server))(this.opts.port, this.opts.host);
     this.logger.info(`Started private network node on ${this.opts.host}:${this.opts.port}`);
-    this.logger.info(
-      `Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`
-    );
+    this.logger.info(`Generating accounts with mnemonic: ${this.blockchain._provider.options.mnemonic}`);
     this.logger.info("List of accounts with eth balance (<address>:<privateKey>-<balance>):");
     Object.keys(this.blockchain.accounts).forEach((address) => {
       const privateKey = this.blockchain.accounts[address].secretKey.toString("hex");
@@ -77,9 +73,7 @@ export class PrivateEth1Network {
    * Returns array of private keys
    */
   public accounts(): string[] {
-    return Object
-      .values(this.blockchain.accounts as any[])
-      .map(account => account.secretKey);
+    return Object.values(this.blockchain.accounts as any[]).map((account) => account.secretKey);
   }
 
   public rpcUrl(): string {

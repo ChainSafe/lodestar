@@ -43,10 +43,8 @@ export class StubbedBeaconDb extends BeaconDb {
   public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
 
-  public processBlockOperations:
-  SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>>
-  &
-  ((signedBlock: SignedBeaconBlock) => Promise<void>);
+  public processBlockOperations: SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>> &
+    ((signedBlock: SignedBeaconBlock) => Promise<void>);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {

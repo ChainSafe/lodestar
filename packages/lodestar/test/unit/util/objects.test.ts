@@ -5,11 +5,10 @@ import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../../src/u
 import {describe, it} from "mocha";
 
 describe("Objects helper", () => {
-
   it("return most frequent objects", () => {
-    const obj1 =BigInt(1);
-    const obj2 =BigInt(2);
-    const obj3 =BigInt(3);
+    const obj1 = BigInt(1);
+    const obj2 = BigInt(2);
+    const obj3 = BigInt(3);
     const array = [];
     array.push(obj1);
     array.push(obj1);
@@ -27,7 +26,5 @@ describe("Objects helper", () => {
     const array2 = [1, 5, 7, 9];
     const result = arrayIntersection<number>(array1, array2, sszEqualPredicate(config.types.Number64));
     expect(result).to.be.deep.equal([5, 7]);
-
   });
-
 });

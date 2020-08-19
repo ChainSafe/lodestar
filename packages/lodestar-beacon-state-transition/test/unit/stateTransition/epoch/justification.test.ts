@@ -5,11 +5,9 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils1 from "../../../../src/util";
 import * as utils2 from "../../../../src/epoch/util";
 import {generateState} from "../../../utils/state";
-import {processJustificationAndFinalization}
-  from "../../../../src/epoch/justification";
+import {processJustificationAndFinalization} from "../../../../src/epoch/justification";
 
-describe('process epoch - justification and finalization', function () {
-
+describe("process epoch - justification and finalization", function () {
   const sandbox = sinon.createSandbox();
 
   let getBlockRootStub: any,
@@ -26,14 +24,13 @@ describe('process epoch - justification and finalization', function () {
     getAttestingBalanceStub = sandbox.stub(utils2, "getAttestingBalance");
     getMatchingTargetAttestationsStub = sandbox.stub(utils2, "getMatchingTargetAttestations");
     getTotalActiveBalanceStub = sandbox.stub(utils1, "getTotalActiveBalance");
-
   });
 
   afterEach(() => {
     sandbox.restore();
   });
 
-  it('should make required justification and finalization', function () {
+  it("should make required justification and finalization", function () {
     const state = generateState();
     let previousJustifiedEpoch;
     let currentJustifiedEpoch;
@@ -77,7 +74,5 @@ describe('process epoch - justification and finalization', function () {
     expect(getTotalActiveBalanceStub.callCount).to.be.equal(4);
     expect(getAttestingBalanceStub.callCount).to.be.equal(8);
     expect(getMatchingTargetAttestationsStub.callCount).to.be.equal(8);
-
   });
-
 });

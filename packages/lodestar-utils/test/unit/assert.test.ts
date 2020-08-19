@@ -8,8 +8,7 @@ describe("assert", () => {
       expect(() => assert.true(true)).to.not.throw();
     });
     it("Should throw with false", () => {
-      expect(() => assert.true(false, "something must be valid"))
-        .to.throw("something must be valid");
+      expect(() => assert.true(false, "something must be valid")).to.throw("something must be valid");
     });
   });
 
@@ -18,8 +17,7 @@ describe("assert", () => {
       expect(() => assert.equal(1, 1)).to.not.throw();
     });
     it("Should throw with different values", () => {
-      expect(() => assert.equal(1, 2, "something must be equal"))
-        .to.throw("something must be equal: 1 === 2");
+      expect(() => assert.equal(1, 2, "something must be equal")).to.throw("something must be equal: 1 === 2");
     });
   });
 

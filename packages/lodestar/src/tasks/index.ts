@@ -26,7 +26,6 @@ export interface ITasksModules {
  * periodically.
  */
 export class TasksService implements IService {
-
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly chain: IBeaconChain;
@@ -43,8 +42,11 @@ export class TasksService implements IService {
     this.logger = modules.logger;
     this.sync = modules.sync;
     this.network = modules.network;
-    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config,
-      {chain: this.chain, network: this.network, logger: this.logger});
+    this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {
+      chain: this.chain,
+      network: this.network,
+      logger: this.logger,
+    });
   }
 
   public async start(): Promise<void> {
@@ -72,5 +74,4 @@ export class TasksService implements IService {
     await new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
     await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
   };
-
 }

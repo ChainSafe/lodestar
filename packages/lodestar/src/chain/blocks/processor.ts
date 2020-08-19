@@ -19,7 +19,6 @@ import {ChainEventEmitter, IAttestationProcessor} from "../interface";
 import {convertBlock} from "./convertBlock";
 
 export class BlockProcessor implements IService {
-
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
@@ -29,8 +28,8 @@ export class BlockProcessor implements IService {
   private readonly attestationProcessor: IAttestationProcessor;
 
   /**
-     * map where key is required parent block root and value are blocks that require that parent block
-     */
+   * map where key is required parent block root and value are blocks that require that parent block
+   */
   private pendingBlocks: BlockPool;
 
   private blockProcessingSource = pushable<IBlockProcessJob>();
@@ -44,7 +43,7 @@ export class BlockProcessor implements IService {
     forkChoice: ILMDGHOST,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
-    attestationProcessor: IAttestationProcessor,
+    attestationProcessor: IAttestationProcessor
   ) {
     this.config = config;
     this.logger = logger;
@@ -70,14 +69,7 @@ export class BlockProcessor implements IService {
       },
       convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice),
-      processBlock(
-        this.config,
-        this.logger,
-        this.db,
-        this.forkChoice,
-        this.pendingBlocks,
-        this.eventBus
-      ),
+      processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus),
       postProcess(
         this.config,
         this.logger,
@@ -97,5 +89,4 @@ export class BlockProcessor implements IService {
   public receiveBlock(block: SignedBeaconBlock, trusted = false, reprocess = false): void {
     this.blockProcessingSource.push({signedBlock: block, trusted, reprocess});
   }
-
 }

@@ -1,4 +1,4 @@
-import { assert } from "chai";
+import {assert} from "chai";
 
 import {
   computeShuffledIndex,
@@ -6,7 +6,6 @@ import {
   computeCommittee,
   getBeaconCommittee,
 } from "../../../../src/util";
-
 
 /*
 describe("getEpochCommitteeCount", () => {

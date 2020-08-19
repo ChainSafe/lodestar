@@ -6,19 +6,19 @@ import {isValidIndexedAttestation} from "../../../../src/fast/block/isValidIndex
 import {EpochContext} from "../../../../src/fast";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE} from "../../../../src";
-import { generateState } from "../../../utils/state";
-import { generateValidators } from "../../../utils/validator";
+import {generateState} from "../../../utils/state";
+import {generateValidators} from "../../../utils/validator";
 
 describe("validate indexed attestation", () => {
   const epochCtx = new EpochContext(config);
   it("should return invalid indexed attestation - empty participants", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: generateValidators(100)
+      validators: generateValidators(100),
     });
 
     const indexedAttestation: IndexedAttestation = {
-      attestingIndices: [] as number[] as List<number>,
+      attestingIndices: ([] as number[]) as List<number>,
       data: attestationData,
       signature: EMPTY_SIGNATURE,
     };
@@ -28,7 +28,7 @@ describe("validate indexed attestation", () => {
   it("should return invalid indexed attestation - indexes not sorted", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: generateValidators(100)
+      validators: generateValidators(100),
     });
 
     const indexedAttestation: IndexedAttestation = {
@@ -42,7 +42,7 @@ describe("validate indexed attestation", () => {
   it("should return valid indexed attestation", () => {
     const attestationData = generateAttestationData(0, 1);
     const state = generateState({
-      validators: generateValidators(100)
+      validators: generateValidators(100),
     });
 
     const indexedAttestation: IndexedAttestation = {
@@ -53,6 +53,4 @@ describe("validate indexed attestation", () => {
 
     expect(isValidIndexedAttestation(epochCtx, state, indexedAttestation, false)).to.be.true;
   });
-
-
 });

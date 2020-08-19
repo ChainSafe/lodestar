@@ -14,17 +14,14 @@ import {generateAttestationData} from "../../../../utils/attestation";
 import {generateValidators} from "../../../../utils/validator";
 
 describe("assemble attestation", function () {
-
   const sandbox = sinon.createSandbox();
-  let assembleAttestationDataStub: SinonStub<[
-    IBeaconConfig, TreeBacked<BeaconState>, Uint8Array, number, number
-  ], Promise<AttestationData>>;
+  let assembleAttestationDataStub: SinonStub<
+    [IBeaconConfig, TreeBacked<BeaconState>, Uint8Array, number, number],
+    Promise<AttestationData>
+  >;
 
   beforeEach(() => {
-    assembleAttestationDataStub = sandbox.stub(
-      attestationDataProduction,
-      "assembleAttestationData"
-    );
+    assembleAttestationDataStub = sandbox.stub(attestationDataProduction, "assembleAttestationData");
   });
 
   afterEach(() => {
@@ -37,10 +34,12 @@ describe("assemble attestation", function () {
       slot: 1,
       validators: generateValidators(config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT, {
         activationEpoch: 0,
-        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE
+        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
       }),
-      balances: Array.from({length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-        () => config.params.MAX_EFFECTIVE_BALANCE),
+      balances: Array.from(
+        {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
+        () => config.params.MAX_EFFECTIVE_BALANCE
+      ),
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
@@ -48,14 +47,11 @@ describe("assemble attestation", function () {
     assembleAttestationDataStub.resolves(attestationData);
     const validatorIndex = epochCtx.getBeaconCommittee(2, 0)[0];
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(generateEmptyBlock());
-    const result = await assembleAttestation(
-      epochCtx, state, blockRoot, validatorIndex, 0, 2,
-    );
+    const result = await assembleAttestation(epochCtx, state, blockRoot, validatorIndex, 0, 2);
     //TODO: try to test if validator bit is correctly set
     expect(result).to.not.be.null;
     expect(result.data).to.be.equal(attestationData);
     expect(state.slot).to.be.equal(1);
     expect(assembleAttestationDataStub.calledOnceWith(config, state, blockRoot, 2, 0));
   });
-
 });

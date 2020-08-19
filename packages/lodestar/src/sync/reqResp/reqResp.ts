@@ -79,15 +79,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         } catch (e) {
           this.logger.verbose("Failed to send goodbye", {reason: e.message});
         }
-      }));
+      })
+    );
   }
 
-  public onRequest = async (
-    peerId: PeerId,
-    method: Method,
-    id: RequestId,
-    body?: RequestBody,
-  ): Promise<void> => {
+  public onRequest = async (peerId: PeerId, method: Method, id: RequestId, body?: RequestBody): Promise<void> => {
     switch (method) {
       case Method.Status:
         return await this.onStatus(peerId, id, body as Status);
@@ -125,8 +121,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     if (isSuccess) {
       // response Status request first
       try {
-        this.reps.get(peerId.toB58String()).supportedProtocols =
-          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+        this.reps.get(peerId.toB58String()).supportedProtocols = await getPeerSupportedProtocols(
+          this.config,
+          this.reps,
+          peerId,
+          this.network.reqResp
+        );
       } catch (e) {
         this.logger.error("Failed to get peer supported protocol", e.message);
       }
@@ -135,17 +135,19 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = this.chain.currentForkDigest;
-    if(!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.verbose("Fork digest mismatch "
-          + `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
+    if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
+      this.logger.verbose(
+        "Fork digest mismatch " +
+          `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
       );
       return true;
     }
 
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.verbose("Genesis finalized root must be zeroed "
-          + `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
+        this.logger.verbose(
+          "Genesis finalized root must be zeroed " +
+            `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
         );
         return true;
       }
@@ -158,24 +160,24 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
         if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.verbose("Status with same finalized epoch has different root "
-            + `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
+          this.logger.verbose(
+            "Status with same finalized epoch has different root " +
+              `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
           );
           return true;
         }
       } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
         // If it is within recent history, we can directly check against the block roots in the state
-        if((headSummary.slot - requestFinalizedSlot) < this.config.params.HISTORICAL_ROOTS_LIMIT) {
+        if (headSummary.slot - requestFinalizedSlot < this.config.params.HISTORICAL_ROOTS_LIMIT) {
           const headState = await this.chain.getHeadState();
           // This will get the latest known block at the start of the epoch.
           const expected = getBlockRoot(this.config, headState, request.finalizedEpoch);
           if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
-            this.logger.verbose(
-              "Status with different finalized root",
-              {
-                received: toHexString(request.finalizedRoot),
-                epected: toHexString(expected), epoch: request.finalizedEpoch}
-            );
+            this.logger.verbose("Status with different finalized root", {
+              received: toHexString(request.finalizedRoot),
+              epected: toHexString(expected),
+              epoch: request.finalizedEpoch,
+            });
             return true;
           }
         } else {
@@ -184,14 +186,14 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           // The problem is that the slot may be a skip slot.
           // And the block root may be from multiple epochs back even.
           // The epoch in the checkpoint is there to checkpoint the tail end of skip slots, even if there is no block.
-
           // TODO: accepted for now. Need to maintain either a list of finalized block roots,
           // or inefficiently loop from finalized slot backwards, until we find the block we need to check against.
         }
       } else {
         // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
-        this.logger.verbose("Status with future finalized epoch " +
-          `${request.finalizedEpoch}: ${toHexString(request.finalizedRoot)}`);
+        this.logger.verbose(
+          "Status with future finalized epoch " + `${request.finalizedEpoch}: ${toHexString(request.finalizedRoot)}`
+        );
       }
     }
     return false;
@@ -222,17 +224,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.sendResponse(id, null, this.network.metadata.metadata);
   }
 
-  public async onBeaconBlocksByRange(
-    id: RequestId,
-    request: BeaconBlocksByRangeRequest
-  ): Promise<void> {
+  public async onBeaconBlocksByRange(id: RequestId, request: BeaconBlocksByRangeRequest): Promise<void> {
     if (request.step < 1 || request.startSlot < GENESIS_SLOT || request.count < 1) {
-      this.logger.error(`Invalid request id ${id} start: ${request.startSlot} step: ${request.step}` +
-      ` count: ${request.count}`);
-      this.network.reqResp.sendResponse(
-        id,
-        new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"),
-        null);
+      this.logger.error(
+        `Invalid request id ${id} start: ${request.startSlot} step: ${request.step}` + ` count: ${request.count}`
+      );
+      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"), null);
       return;
     }
     if (request.count > 1000) {
@@ -241,8 +238,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     try {
       if (request.count > MAX_REQUEST_BLOCKS) {
-        this.logger.warn(`Request id ${id} asked for ${request.count} blocks, ` +
-          `just return ${MAX_REQUEST_BLOCKS} maximum`);
+        this.logger.warn(
+          `Request id ${id} asked for ${request.count} blocks, ` + `just return ${MAX_REQUEST_BLOCKS} maximum`
+        );
         request.count = MAX_REQUEST_BLOCKS;
       }
       const archiveBlocksStream = this.db.blockArchive.valuesStream({
@@ -258,36 +256,36 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
   }
 
-  public async onBeaconBlocksByRoot(
-    id: RequestId,
-    request: BeaconBlocksByRootRequest
-  ): Promise<void> {
+  public async onBeaconBlocksByRoot(id: RequestId, request: BeaconBlocksByRootRequest): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
       const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
-      const blockGenerator = async function* () {
+      const blockGenerator = (async function* () {
         for (const blockRoot of request) {
           const root = blockRoot.valueOf() as Uint8Array;
-          const block = await getBlock(root) || await getFinalizedBlock(root);
+          const block = (await getBlock(root)) || (await getFinalizedBlock(root));
           if (block) {
             yield block;
           }
         }
-      }();
+      })();
       this.network.reqResp.sendResponseStream(id, null, blockGenerator);
     } catch (e) {
       this.network.reqResp.sendResponse(id, e, null);
     }
   }
 
-
-  private handshake = async (peerId: PeerId, direction: "inbound"|"outbound"): Promise<void> => {
-    if(direction === "outbound") {
+  private handshake = async (peerId: PeerId, direction: "inbound" | "outbound"): Promise<void> => {
+    if (direction === "outbound") {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
-        const supportedProtocols =
-          await getPeerSupportedProtocols(this.config, this.reps, peerId, this.network.reqResp);
+        const supportedProtocols = await getPeerSupportedProtocols(
+          this.config,
+          this.reps,
+          peerId,
+          this.network.reqResp
+        );
         this.reps.get(peerId.toB58String()).supportedProtocols = [Method.Status, ...supportedProtocols];
       } catch (e) {
         this.logger.warn(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
@@ -303,24 +301,22 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     request: BeaconBlocksByRangeRequest
   ): AsyncGenerator<SignedBeaconBlock> {
     let slot = -1;
-    for await(const archiveBlock of archiveStream) {
+    for await (const archiveBlock of archiveStream) {
       yield archiveBlock;
       slot = archiveBlock.message.slot;
     }
-    slot = (slot === -1)? request.startSlot : slot + request.step;
+    slot = slot === -1 ? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
     const slots = [];
     while (slot < upperSlot) {
       slots.push(slot);
       slot += request.step;
     }
-    const blocks = await chain.getUnfinalizedBlocksAtSlots(slots) || [];
+    const blocks = (await chain.getUnfinalizedBlocksAtSlots(slots)) || [];
     for (const block of blocks) {
-      if(block) {
+      if (block) {
         yield block;
       }
     }
   };
 }
-
-

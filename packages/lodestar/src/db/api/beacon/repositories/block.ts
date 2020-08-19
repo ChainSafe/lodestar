@@ -11,10 +11,7 @@ import {Repository} from "./abstract";
  * Used to store unfinalized blocks
  */
 export class BlockRepository extends Repository<Uint8Array, SignedBeaconBlock> {
-
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.block, config.types.SignedBeaconBlock);
   }
 

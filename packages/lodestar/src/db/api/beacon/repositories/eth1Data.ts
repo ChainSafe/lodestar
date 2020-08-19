@@ -7,16 +7,12 @@ import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
 export class Eth1DataRepository extends Repository<number, Eth1Data> {
-
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.eth1Data, config.types.Eth1Data);
   }
 
   public decodeKey(data: Buffer): number {
-    return bytesToInt(super.decodeKey(data) as unknown as Uint8Array, "be");
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

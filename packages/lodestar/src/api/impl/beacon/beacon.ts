@@ -9,7 +9,7 @@ import {
   Genesis,
   SignedBeaconBlock,
   Uint64,
-  ValidatorResponse
+  ValidatorResponse,
 } from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface";
 import {IBeaconChain} from "../../../chain";
@@ -25,7 +25,6 @@ import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
 
 export class BeaconApi implements IBeaconApi {
-
   public namespace: ApiNamespace;
   public state: IBeaconStateApi;
   public blocks: IBeaconBlocksApi;
@@ -36,7 +35,7 @@ export class BeaconApi implements IBeaconApi {
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config"|"chain"|"db"|"sync">) {
+  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain" | "db" | "sync">) {
     this.namespace = ApiNamespace.BEACON;
     this.config = modules.config;
     this.chain = modules.chain;
@@ -47,15 +46,15 @@ export class BeaconApi implements IBeaconApi {
     this.pool = new BeaconPoolApi(opts, modules);
   }
 
-  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse|null> {
+  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
     const {epochCtx, state} = await this.chain.getHeadStateContext();
     const index = epochCtx.pubkey2index.get(pubkey);
-    if(index) {
+    if (index) {
       return {
         validator: state.validators[index],
         balance: state.balances[index],
         pubkey: pubkey,
-        index
+        index,
       };
     } else {
       return null;
@@ -65,11 +64,13 @@ export class BeaconApi implements IBeaconApi {
   public async getFork(): Promise<ForkResponse> {
     const state = await this.chain.getHeadState();
     const networkId: Uint64 = this.chain.networkId;
-    const fork = state? state.fork : {
-      previousVersion: Buffer.alloc(4),
-      currentVersion: Buffer.alloc(4),
-      epoch: 0
-    };
+    const fork = state
+      ? state.fork
+      : {
+          previousVersion: Buffer.alloc(4),
+          currentVersion: Buffer.alloc(4),
+          epoch: 0,
+        };
     return {
       fork,
       chainId: networkId,
@@ -77,13 +78,13 @@ export class BeaconApi implements IBeaconApi {
     };
   }
 
-  public async getGenesis(): Promise<Genesis|null> {
+  public async getGenesis(): Promise<Genesis | null> {
     const state = await this.chain.getHeadState();
-    if(state) {
+    if (state) {
       return {
         genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,
         genesisTime: BigInt(state.genesisTime),
-        genesisValidatorsRoot: state.genesisValidatorsRoot
+        genesisValidatorsRoot: state.genesisValidatorsRoot,
       };
     }
     return null;

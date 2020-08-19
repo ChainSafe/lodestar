@@ -63,10 +63,7 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
 export async function downloadFile(filepath: string, url: string): Promise<void> {
   if (!fs.existsSync(filepath)) {
     fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
-    await promisify(stream.pipeline)(
-      got.stream(url),
-      fs.createWriteStream(filepath)
-    );
+    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(filepath));
   }
 }
 
@@ -78,9 +75,11 @@ export async function downloadFile(filepath: string, url: string): Promise<void>
 export async function fetchBootnodes(testnet: TestnetName): Promise<string[]> {
   const bootnodesFileUrl = getBootnodesFileUrl(testnet);
   const bootnodesFile = await got.get(bootnodesFileUrl).text();
-  return bootnodesFile
-    .trim()
-    .split(/\r?\n/)
-    // File may contain a row with '### Ethereum Node Records'
-    .filter(enr => enr.trim() && enr.startsWith("enr:"));
+  return (
+    bootnodesFile
+      .trim()
+      .split(/\r?\n/)
+      // File may contain a row with '### Ethereum Node Records'
+      .filter((enr) => enr.trim() && enr.startsWith("enr:"))
+  );
 }

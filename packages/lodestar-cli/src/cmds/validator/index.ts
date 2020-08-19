@@ -7,11 +7,14 @@ import {validatorHandler} from "./handler";
 export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "validator",
   describe: "Run one or multiple validator clients",
-  examples: [{
-    command: "validator --testnet medalla",
-    description: "Run one validator client with all the keystores available in the directory" +
-      ` ${getAccountPaths({rootDir: ".medalla"}).keystoresDir}`
-  }],
+  examples: [
+    {
+      command: "validator --testnet medalla",
+      description:
+        "Run one validator client with all the keystores available in the directory" +
+        ` ${getAccountPaths({rootDir: ".medalla"}).keystoresDir}`,
+    },
+  ],
   options: validatorOptions,
-  handler: validatorHandler
+  handler: validatorHandler,
 };

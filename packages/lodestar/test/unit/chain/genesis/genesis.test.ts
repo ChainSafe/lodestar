@@ -15,7 +15,11 @@ import {toHexString} from "@chainsafe/ssz";
 
 describe("genesis builder", function () {
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
-  schlesiConfig.params = Object.assign({}, config.params, {MIN_GENESIS_TIME: 1587755000, MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4, MIN_GENESIS_DELAY: 3600});
+  schlesiConfig.params = Object.assign({}, config.params, {
+    MIN_GENESIS_TIME: 1587755000,
+    MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4,
+    MIN_GENESIS_DELAY: 3600,
+  });
   const sandbox = sinon.createSandbox();
   let genesisBuilder: GenesisBuilder;
   let eth1Stub: SinonStubbedInstance<EthersEth1Notifier>;
@@ -65,15 +69,17 @@ describe("genesis builder", function () {
     const lastEventIndex = schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1;
     const block = {
       number: lastEventIndex,
-      timestamp: Math.floor(Date.now()/1000),
-      hash: "0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8"
+      timestamp: Math.floor(Date.now() / 1000),
+      hash: "0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8",
     } as ethers.providers.Block;
     eth1Source.push({events: [events[lastEventIndex]], block});
 
     const state = await statePromise;
     expect(state.validators.length).to.be.equal(4);
 
-    expect(toHexString(state.eth1Data.blockHash)).to.be.equal("0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8");
+    expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
+      "0x54b9f905f15634d966690bd362381cfd7a28362d683f8d1616aa478b575152f8"
+    );
   });
 
   function generateDeposit(index: ValidatorIndex): DepositData {

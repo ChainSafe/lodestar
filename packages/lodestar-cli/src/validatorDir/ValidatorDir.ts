@@ -13,7 +13,7 @@ import {
   LOCK_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
-  ETH1_DEPOSIT_TX_HASH_FILE
+  ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
 
 export interface IValidatorDirOptions {
@@ -37,9 +37,9 @@ export interface IEth1DepositData {
 
 /**
  * Provides a wrapper around a directory containing validator information
- * Creates/deletes a lockfile in `self.dir` to attempt to prevent concurrent 
+ * Creates/deletes a lockfile in `self.dir` to attempt to prevent concurrent
  * access from multiple processes.
- * 
+ *
  * Example:
  * ```
  * 0x91494d3ac4c078049f37aa46934ba8cd...
@@ -62,8 +62,7 @@ export class ValidatorDir {
     this.dir = path.join(baseDir, pubkey);
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
-    if (!fs.existsSync(this.dir))
-      throw new YargsError(`Validator directory ${this.dir} does not exists`);
+    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exists`);
 
     try {
       lockFile.lockSync(this.lockfilePath);
@@ -88,7 +87,7 @@ export class ValidatorDir {
    * a password file in `password_dir`.
    * The password file that is used will be based upon the pubkey value in the keystore.
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
-   * @param secretsDir 
+   * @param secretsDir
    */
   async votingKeypair(secretsDir: string): Promise<Keypair> {
     const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
@@ -100,7 +99,7 @@ export class ValidatorDir {
    * a password file in `password_dir`.
    * The password file that is used will be based upon the pubkey value in the keystore.
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
-   * @param secretsDir 
+   * @param secretsDir
    */
   async withdrawalKeypair(secretsDir: string): Promise<Keypair> {
     const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
@@ -108,10 +107,10 @@ export class ValidatorDir {
   }
 
   /**
-  * Decrypts a keystore in the validator's dir
-  * @param keystorePath Path to a EIP-2335 keystore
-  * @param secretsDir Directory containing keystore passwords
-  */
+   * Decrypts a keystore in the validator's dir
+   * @param keystorePath Path to a EIP-2335 keystore
+   * @param secretsDir Directory containing keystore passwords
+   */
   async unlockKeypair(keystorePath: string, secretsDir: string): Promise<Keypair> {
     const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
@@ -136,8 +135,7 @@ export class ValidatorDir {
   saveEth1DepositTxHash(txHash: string): void {
     const filepath = path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE);
 
-    if (fs.existsSync(filepath))
-      throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
+    if (fs.existsSync(filepath)) throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
 
     fs.writeFileSync(filepath, txHash);
   }
@@ -155,7 +153,7 @@ export class ValidatorDir {
     // This acts as a sanity check to ensure that the amount from `ETH1_DEPOSIT_AMOUNT_FILE`
     // matches the value that `ETH1_DEPOSIT_DATA_FILE` was created with.
     const {depositData, root} = decodeEth1TxData(depositDataRlp, depositAmount, config);
-   
+
     return {rlp: depositDataRlp, depositData, root};
   }
 }

@@ -34,13 +34,13 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
-  }
+  },
 };
 
 /**
  * Add custom defaults different than the ones in `beaconOptions`:
- * - In dev command we don't wanna connect to other peers, 
- * - but we do wanna get out of syncing (min peers) 
+ * - In dev command we don't wanna connect to other peers,
+ * - but we do wanna get out of syncing (min peers)
  * - and have api enabled by default (as it's used by validator)
  * Note: use beaconNodeOptions and globalOptions to make sure option key is correct
  */
@@ -48,7 +48,7 @@ const externalOptionsOverrides: {[k: string]: Options} = {
   "sync.minPeers": {
     ...beaconNodeOptions["sync.minPeers"],
     defaultDescription: undefined,
-    default: 0
+    default: 0,
   },
   "network.maxPeers": {
     ...beaconNodeOptions["network.maxPeers"],
@@ -67,8 +67,8 @@ const externalOptionsOverrides: {[k: string]: Options} = {
   },
   preset: {
     ...globalOptions.preset,
-    default: "minimal"
-  }
+    default: "minimal",
+  },
 };
 
 export const devOptions = {
@@ -77,6 +77,4 @@ export const devOptions = {
   ...devOwnOptions,
 };
 
-export type IDevArgs =
-  IBeaconArgs &
-  IDevOwnArgs;
+export type IDevArgs = IBeaconArgs & IDevOwnArgs;

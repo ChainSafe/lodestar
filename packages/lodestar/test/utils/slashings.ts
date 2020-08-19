@@ -4,9 +4,7 @@ import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateEmptyAttestation} from "./attestation";
 
-
 export function generateEmptyProposerSlashing(): ProposerSlashing {
-
   return {
     signedHeader1: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
     signedHeader2: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
@@ -14,17 +12,16 @@ export function generateEmptyProposerSlashing(): ProposerSlashing {
 }
 
 export function generateEmptyAttesterSlashing(): AttesterSlashing {
-
   return {
     attestation1: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: []
+      attestingIndices: [],
     },
     attestation2: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: []
+      attestingIndices: [],
     },
   };
 }

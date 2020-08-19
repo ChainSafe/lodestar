@@ -10,10 +10,17 @@ import defaults from "../../src/network/options";
 export async function createNode(
   multiaddr: string,
   inPeerId?: PeerId,
-  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[]): Promise<NodejsNode> {
-  const peerId = inPeerId || await createPeerId();
+  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[]
+): Promise<NodejsNode> {
+  const peerId = inPeerId || (await createPeerId());
   const enr = ENR.createFromPeerId(peerId);
   const randomPort = Math.round(Math.random() * 40000) + 1000;
   const bindAddr = `/ip4/127.0.0.1/udp/${randomPort}`;
-  return new NodejsNode({peerId, addresses:{listen: [multiaddr]}, autoDial: false, discv5: {...defaults.discv5, enr, bindAddr}, peerDiscovery});
+  return new NodejsNode({
+    peerId,
+    addresses: {listen: [multiaddr]},
+    autoDial: false,
+    discv5: {...defaults.discv5, enr, bindAddr},
+    peerDiscovery,
+  });
 }

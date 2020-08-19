@@ -9,7 +9,6 @@ import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {handleIncomingProposerSlashing} from "../../../../../src/network/gossip/handlers/proposerSlashing";
 
 describe("gossip handlers - proposerSlashing", function () {
-
   const sandbox = sinon.createSandbox();
 
   let gossipStub: any;
@@ -29,5 +28,4 @@ describe("gossip handlers - proposerSlashing", function () {
     await handleIncomingProposerSlashing.bind(gossipStub)(proposerSlashing);
     expect(gossipStub.emit.withArgs(GossipEvent.PROPOSER_SLASHING, proposerSlashing).calledOnce).to.be.true;
   });
-    
 });

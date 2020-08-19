@@ -13,29 +13,31 @@ import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 
 describe("rest - beacon - getBlockHeaders", function () {
-
   let api: RestApi;
   let beaconApiStub: StubbedBeaconApi;
 
   beforeEach(async function () {
     beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      node: new StubbedNodeApi(),
-      beacon: beaconApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        node: new StubbedNodeApi(),
+        beacon: beaconApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
@@ -54,7 +56,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .resolves([generateSignedBeaconHeaderResponse()]);
     const response = await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"slot": "1"})
+      .query({slot: "1"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data.length).to.be.equal(1);
@@ -66,7 +68,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .resolves([generateSignedBeaconHeaderResponse()]);
     const response = await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"parent_root": toHexString(Buffer.alloc(32, 1))})
+      .query({parent_root: toHexString(Buffer.alloc(32, 1))})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data.length).to.be.equal(1);
@@ -75,7 +77,7 @@ describe("rest - beacon - getBlockHeaders", function () {
   it("should throw validation error on invalid slot", async function () {
     await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"slot": "abc"})
+      .query({slot: "abc"})
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
@@ -83,7 +85,7 @@ describe("rest - beacon - getBlockHeaders", function () {
   it.skip("should throw validation error on invalid parentRoot - not hex", async function () {
     await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"parentRoot": "0xb0e16cdb82ddf08b02aa3898d16a706997b11a69048c80525338d4a7b378d8eg"})
+      .query({parentRoot: "0xb0e16cdb82ddf08b02aa3898d16a706997b11a69048c80525338d4a7b378d8eg"})
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
@@ -91,7 +93,7 @@ describe("rest - beacon - getBlockHeaders", function () {
   it.skip("should throw validation error on invalid parentRoot - incorrect length", async function () {
     await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"parentRoot": "0xb0e"})
+      .query({parentRoot: "0xb0e"})
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
@@ -99,9 +101,8 @@ describe("rest - beacon - getBlockHeaders", function () {
   it.skip("should throw validation error on invalid parentRoot - missing 0x prefix", async function () {
     await supertest(api.server.server)
       .get(getBlockHeaders.url)
-      .query({"parentRoot": "b0e16cdb82ddf08b02aa3898d16a706997b11a69048c80525338d4a7b378d8eb"})
+      .query({parentRoot: "b0e16cdb82ddf08b02aa3898d16a706997b11a69048c80525338d4a7b378d8eb"})
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
   });
-
 });

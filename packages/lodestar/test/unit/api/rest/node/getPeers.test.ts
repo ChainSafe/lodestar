@@ -11,29 +11,31 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {getPeers} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getPeers", function () {
-
   let api: RestApi;
   let nodeApiStub: StubbedNodeApi;
 
   beforeEach(async function () {
     nodeApiStub = new StubbedNodeApi();
-    api = new RestApi({
-      api: [ApiNamespace.NODE],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      beacon: sinon.createStubInstance(BeaconApi),
-      node: nodeApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.NODE],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        beacon: sinon.createStubInstance(BeaconApi),
+        node: nodeApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
@@ -44,8 +46,8 @@ describe("rest - node - getPeers", function () {
         direction: "inbound",
         enr: "enr-",
         peerId: "16",
-        state: "connected"
-      }
+        state: "connected",
+      },
     ]);
     const response = await supertest(api.server.server)
       .get(getPeers.url)
@@ -56,5 +58,4 @@ describe("rest - node - getPeers", function () {
     expect(response.body.data.length).to.equal(1);
     expect(response.body.data[0].peer_id).to.equal("16");
   });
-
 });

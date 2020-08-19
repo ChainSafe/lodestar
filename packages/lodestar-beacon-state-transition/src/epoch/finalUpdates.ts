@@ -5,19 +5,15 @@
 import {List} from "@chainsafe/ssz";
 import {BeaconState, HistoricalBatch, Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  getCurrentEpoch,
-  getRandaoMix
-} from "../util";
+import {getCurrentEpoch, getRandaoMix} from "../util";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
-
 
 export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const nextEpoch = currentEpoch + 1;
   // Reset eth1 data votes
   if (nextEpoch % config.params.EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = [] as Eth1Data[] as List<Eth1Data>;
+    state.eth1DataVotes = ([] as Eth1Data[]) as List<Eth1Data>;
   }
   // Update effective balances with hysteresis
   state.validators.forEach((validator, index) => {
@@ -26,19 +22,19 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(config.params.HYSTERESIS_DOWNWARD_MULTIPLIER);
     const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * BigInt(config.params.HYSTERESIS_UPWARD_MULTIPLIER);
     if (
-      ((balance + DOWNWARD_THRESHOLD) < validator.effectiveBalance) ||
-      ((validator.effectiveBalance + UPWARD_THRESHOLD) < balance)
+      balance + DOWNWARD_THRESHOLD < validator.effectiveBalance ||
+      validator.effectiveBalance + UPWARD_THRESHOLD < balance
     ) {
       validator.effectiveBalance = bigIntMin(
         balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
-        config.params.MAX_EFFECTIVE_BALANCE);
+        config.params.MAX_EFFECTIVE_BALANCE
+      );
     }
   });
   // Reset slashings
   state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = 0n;
   // Set randao mix
-  state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] =
-    getRandaoMix(config, state, currentEpoch);
+  state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
   // Set historical root accumulator
   if (nextEpoch % intDiv(config.params.SLOTS_PER_HISTORICAL_ROOT, config.params.SLOTS_PER_EPOCH) === 0) {
     const historicalBatch: HistoricalBatch = {
@@ -49,5 +45,5 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
   }
   // Rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = [] as PendingAttestation[] as List<PendingAttestation>;
+  state.currentEpochAttestations = ([] as PendingAttestation[]) as List<PendingAttestation>;
 }

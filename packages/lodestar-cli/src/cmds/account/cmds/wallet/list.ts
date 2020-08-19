@@ -9,10 +9,12 @@ export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
 
   describe: "Lists the names of all wallets",
 
-  examples: [{
-    command: "account wallet list --walletsDir .testnet/wallets",
-    description: "List all wallets in .testnet/wallets"
-  }],
+  examples: [
+    {
+      command: "account wallet list --walletsDir .testnet/wallets",
+      description: "List all wallets in .testnet/wallets",
+    },
+  ],
 
   handler: async (options) => {
     const accountPaths = getAccountPaths(options);
@@ -21,6 +23,5 @@ export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
       // eslint-disable-next-line no-console
       console.log(name);
     }
-  }
+  },
 };
-

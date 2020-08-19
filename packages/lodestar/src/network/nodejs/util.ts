@@ -55,7 +55,7 @@ export async function createNodeJsLibp2p(
     peerId,
     addresses: {listen: multiaddrs},
     autoDial,
-    datastore: peerStoreDir? new LevelDatastore(peerStoreDir) : null,
+    datastore: peerStoreDir ? new LevelDatastore(peerStoreDir) : null,
     bootnodes: bootnodes,
     discv5: network.discv5,
     maxConnections: network.maxPeers,

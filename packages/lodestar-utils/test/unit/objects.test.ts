@@ -3,7 +3,6 @@ import {isPlainObject} from "../../src";
 import {describe, it} from "mocha";
 
 describe("Objects helper", () => {
-
   it("should be plain object", () => {
     expect(isPlainObject(Object.create({}))).to.be.true;
     expect(isPlainObject(Object.create(Object.create(Object.prototype)))).to.be.true;

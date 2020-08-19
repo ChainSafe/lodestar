@@ -3,7 +3,6 @@
  */
 
 export interface IBeaconParams {
-
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;

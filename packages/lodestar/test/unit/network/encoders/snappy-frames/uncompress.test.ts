@@ -3,7 +3,6 @@ import {SnappyFramesUncompress} from "../../../../../src/network/encoders/snappy
 import {expect} from "chai";
 
 describe("snappy frames uncompress", function () {
-
   it("should work with short input", function (done) {
     const compressStream = createCompressStream();
 
@@ -13,7 +12,7 @@ describe("snappy frames uncompress", function () {
 
     compressStream.on("data", function (data) {
       const result = decompress.uncompress(data);
-      if(result) {
+      if (result) {
         expect(result.toString()).to.be.equal(testData);
         done();
       }
@@ -31,7 +30,7 @@ describe("snappy frames uncompress", function () {
 
     compressStream.on("data", function (data) {
       const result = decompress.uncompress(data);
-      if(result) {
+      if (result) {
         expect(result.toString()).to.be.equal(testData);
         done();
       }
@@ -41,17 +40,14 @@ describe("snappy frames uncompress", function () {
   });
 
   it("should detect malformed input", function () {
-
     const decompress = new SnappyFramesUncompress();
 
     expect(() => decompress.uncompress(Buffer.alloc(32, 1))).to.throw;
   });
 
   it("should return null if not enough data", function () {
-
     const decompress = new SnappyFramesUncompress();
 
     expect(decompress.uncompress(Buffer.alloc(3, 1))).to.be.null;
   });
-
 });

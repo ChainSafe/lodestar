@@ -9,7 +9,7 @@ interface IBulkTestCase extends IBaseCase {
 describeMultiSpec<IBulkTestCase, string>(
   path.join(__dirname, "../_test_files/multi/bulk.yml"),
   (input) => input,
-  (testCase => [testCase.input]),
-  (testCase => testCase.output),
-  (result => result)
+  (testCase) => [testCase.input],
+  (testCase) => testCase.output,
+  (result) => result
 );

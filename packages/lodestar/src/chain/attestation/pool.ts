@@ -1,11 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getCurrentSlot,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {IAttestationProcessor, IBeaconChain} from "../interface";
@@ -25,7 +21,7 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public constructor(
     chain: IBeaconChain,
-    {config, db, logger}: { config: IBeaconConfig; db: IBeaconDb; logger: ILogger }
+    {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}
   ) {
     this.config = config;
     this.db = db;
@@ -52,7 +48,7 @@ export class AttestationProcessor implements IAttestationProcessor {
    */
   public async receiveAttestation(attestation: Attestation): Promise<void> {
     const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
-    const attestationLogContext  = {
+    const attestationLogContext = {
       attestationHash: toHexString(attestationHash),
       target: attestation.data.target.epoch,
     };
@@ -61,51 +57,48 @@ export class AttestationProcessor implements IAttestationProcessor {
     const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
     const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
-    if(target.epoch < previousEpoch) {
-      this.logger.warn(
-        "Attestation dropped from pool",
-        {reason: "target too old", currentEpoch, ...attestationLogContext}
-      );
+    if (target.epoch < previousEpoch) {
+      this.logger.warn("Attestation dropped from pool", {
+        reason: "target too old",
+        currentEpoch,
+        ...attestationLogContext,
+      });
     }
-    if(target.epoch > currentEpoch) {
-      this.logger.verbose(
-        "Delaying attestation",
-        {reason: "target ahead of current epoch", currentEpoch, ...attestationLogContext}
-      );
+    if (target.epoch > currentEpoch) {
+      this.logger.verbose("Delaying attestation", {
+        reason: "target ahead of current epoch",
+        currentEpoch,
+        ...attestationLogContext,
+      });
       return this.addPendingSlotAttestation(
         computeStartSlotAtEpoch(this.config, target.epoch),
         attestation,
         attestationHash
       );
     }
-    for(const blockRoot of [target.root, attestation.data.beaconBlockRoot]) {
-      if(!this.forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array)) {
-        this.logger.verbose(
-          "Delaying attestation",
-          {
-            reason: "missing either target or attestation block",
-            blockRoot: toHexString(blockRoot),
-            ...attestationLogContext
-          }
-        );
+    for (const blockRoot of [target.root, attestation.data.beaconBlockRoot]) {
+      if (!this.forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array)) {
+        this.logger.verbose("Delaying attestation", {
+          reason: "missing either target or attestation block",
+          blockRoot: toHexString(blockRoot),
+          ...attestationLogContext,
+        });
         this.addPendingBlockAttestation(blockRoot, attestation, attestationHash);
         return;
       }
     }
-    if(currentSlot < attestation.data.slot + 1) {
-      this.logger.verbose(
-        "Delaying attestation",
-        {
-          reason: "current slot less than attestation slot",
-          currentSlot,
-          attestationSlot: attestation.data.slot,
-          ...attestationLogContext
-        }
-      );
+    if (currentSlot < attestation.data.slot + 1) {
+      this.logger.verbose("Delaying attestation", {
+        reason: "current slot less than attestation slot",
+        currentSlot,
+        attestationSlot: attestation.data.slot,
+        ...attestationLogContext,
+      });
       this.addPendingSlotAttestation(attestation.data.slot + 1, attestation, attestationHash);
       return;
     }
     //don't wait for this to resolve
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     void processAttestation(this.config, this.chain, this.logger, this.db, attestation);
   }
 
@@ -115,8 +108,8 @@ export class AttestationProcessor implements IAttestationProcessor {
     await Promise.all(Array.from(attestations).map((a) => this.receiveAttestation(a)));
     // process pending attestations due to this block
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-    const blockPendingAttestations = this.pendingBlockAttestations.get(toHexString(blockRoot)) ||
-      new Map<AttestationRootHex, Attestation>();
+    const blockPendingAttestations =
+      this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
     for (const [_, attestation] of blockPendingAttestations) {
       try {
         await this.receiveAttestation(attestation);
@@ -137,15 +130,15 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   private addPendingBlockAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
     this.chain.emit("unknownBlockRoot", blockRoot);
-    const blockPendingAttestations = this.pendingBlockAttestations.get(toHexString(blockRoot)) ||
-      new Map<AttestationRootHex, Attestation>();
+    const blockPendingAttestations =
+      this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
     blockPendingAttestations.set(toHexString(attestationHash), attestation);
     this.pendingBlockAttestations.set(toHexString(blockRoot), blockPendingAttestations);
   }
 
   private addPendingSlotAttestation(slot: Slot, attestation: Attestation, attestationHash: Root): void {
-    const blockPendingAttestations = this.pendingSlotAttestations.get(slot) ??
-      new Map<AttestationRootHex, Attestation>();
+    const blockPendingAttestations =
+      this.pendingSlotAttestations.get(slot) ?? new Map<AttestationRootHex, Attestation>();
     blockPendingAttestations.set(toHexString(attestationHash), attestation);
     this.pendingSlotAttestations.set(slot, blockPendingAttestations);
   }

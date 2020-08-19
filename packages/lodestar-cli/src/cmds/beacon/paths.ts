@@ -47,7 +47,7 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
     peerStoreDir,
     peerIdFile,
     enrFile,
-    logFile
+    logFile,
   } as IBeaconPaths;
 }
 

@@ -3,30 +3,28 @@ import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
 export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
-
   url: "/v1/beacon/blocks/:blockId",
 
   handler: async function (req, resp) {
     try {
       const data = await this.api.beacon.blocks.getBlock(req.params.blockId);
-      if(!data) {
+      if (!data) {
         return resp.status(404).send();
       }
-      return resp.status(200)
-        .send({
-          data: this.config.types.SignedBeaconBlock.toJson(data, {case: "snake"})
-        });
+      return resp.status(200).send({
+        data: this.config.types.SignedBeaconBlock.toJson(data, {case: "snake"}),
+      });
     } catch (e) {
-      if(e.message === "Invalid block id") {
+      if (e.message === "Invalid block id") {
         //TODO: fix when unifying errors
         throw {
           statusCode: 400,
           validation: [
             {
               dataPath: "block_id",
-              message: e.message
-            }
-          ]
+              message: e.message,
+            },
+          ],
         } as FastifyError;
       }
       throw e;
@@ -40,10 +38,10 @@ export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
         required: ["blockId"],
         properties: {
           blockId: {
-            types: "string"
-          }
-        }
-      }
-    }
-  }
+            types: "string",
+          },
+        },
+      },
+    },
+  },
 };

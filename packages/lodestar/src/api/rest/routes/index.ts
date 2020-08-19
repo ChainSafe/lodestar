@@ -7,10 +7,10 @@ export * from "./beacon";
 export * from "./validator";
 
 export function registerRoutes(server: FastifyInstance, enabledNamespaces: ApiNamespace[]): void {
-  if(enabledNamespaces.includes(ApiNamespace.BEACON)) {
+  if (enabledNamespaces.includes(ApiNamespace.BEACON)) {
     registerBeaconRoutes(server);
   }
-  if(enabledNamespaces.includes(ApiNamespace.NODE)) {
+  if (enabledNamespaces.includes(ApiNamespace.NODE)) {
     registerNodeRoutes(server);
   }
 }

@@ -2,9 +2,14 @@ import {expect} from "chai";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/impl/util";
 import {IDepositEvent} from "../../../../src/eth1";
 
-describe("utils of eth1", function() {
+describe("utils of eth1", function () {
   it("should return deposit events by block", () => {
-    const depositData = {amount:BigInt(0), signature: Buffer.alloc(96), withdrawalCredentials: Buffer.alloc(32), pubkey: Buffer.alloc(48)};
+    const depositData = {
+      amount: BigInt(0),
+      signature: Buffer.alloc(96),
+      withdrawalCredentials: Buffer.alloc(32),
+      pubkey: Buffer.alloc(48),
+    };
     const depositEvents: IDepositEvent[] = [
       {blockNumber: 1, index: 0, ...depositData},
       {blockNumber: 2, index: 2, ...depositData},

@@ -15,7 +15,7 @@ export async function assembleBody(
   db: IBeaconDb,
   currentState: TreeBacked<BeaconState>,
   randaoReveal: Bytes96,
-  graffiti: Bytes32,
+  graffiti: Bytes32
 ): Promise<BeaconBlockBody> {
   const [
     proposerSlashings,
@@ -27,8 +27,9 @@ export async function assembleBody(
   ] = await Promise.all([
     db.proposerSlashing.values({limit: config.params.MAX_PROPOSER_SLASHINGS}),
     db.attesterSlashing.values({limit: config.params.MAX_ATTESTER_SLASHINGS}),
-    db.aggregateAndProof.getBlockAttestations(currentState)
-      .then(value => value.slice(0, config.params.MAX_ATTESTATIONS)),
+    db.aggregateAndProof
+      .getBlockAttestations(currentState)
+      .then((value) => value.slice(0, config.params.MAX_ATTESTATIONS)),
     db.voluntaryExit.values({limit: config.params.MAX_VOLUNTARY_EXITS}),
     db.depositDataRoot.getTreeBacked(currentState.eth1DepositIndex - 1),
     getEth1Vote(config, db, currentState),

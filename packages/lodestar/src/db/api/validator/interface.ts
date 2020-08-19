@@ -10,12 +10,11 @@ export interface IAttestationSearchOptions {
 }
 
 export interface IValidatorDB {
-
   /**
    * Obtains last proposed beacon block
    * by validator with given index
    */
-  getBlock(pubKey: BLSPubkey): Promise<SignedBeaconBlock|null>;
+  getBlock(pubKey: BLSPubkey): Promise<SignedBeaconBlock | null>;
 
   /**
    * Stores beacon block proposed by validator with given index
@@ -33,7 +32,6 @@ export interface IValidatorDB {
    * Stores attestation proposed by validator with given index
    */
   setAttestation(pubKey: BLSPubkey, attestation: Attestation): Promise<void>;
-
 
   deleteAttestations(pubKey: BLSPubkey, attestation: Attestation[]): Promise<void>;
 }

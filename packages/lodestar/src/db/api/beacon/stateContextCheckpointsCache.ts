@@ -10,7 +10,6 @@ import {ITreeStateContext} from "./stateContextCache";
  * Similar API to Repository
  */
 export class CheckpointStateCache {
-
   private readonly config: IBeaconConfig;
   private cache: Record<string, ITreeStateContext>;
   private epochIndex: Record<Epoch, string[]>;
@@ -31,11 +30,11 @@ export class CheckpointStateCache {
 
   public async add(cp: Checkpoint, item: ITreeStateContext): Promise<void> {
     const key = toHexString(this.config.types.Checkpoint.hashTreeRoot(cp));
-    if(this.cache[key]) {
+    if (this.cache[key]) {
       return;
     }
     this.cache[key] = this.clone(item);
-    if(this.epochIndex[cp.epoch]) {
+    if (this.epochIndex[cp.epoch]) {
       this.epochIndex[cp.epoch].push(key);
     } else {
       this.epochIndex[cp.epoch] = [key];
@@ -62,7 +61,7 @@ export class CheckpointStateCache {
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy()
+      epochCtx: item.epochCtx.copy(),
     };
   }
 }

@@ -13,10 +13,11 @@ import {initDevChain} from "../../../src/node/utils/state";
 import {IBeaconNodeOptions} from "../../../lib/node/options";
 
 type RecursivePartial<T> = {
-  [P in keyof T]?:
-  T[P] extends (infer U)[] ? RecursivePartial<U>[] :
-    T[P] extends object ? RecursivePartial<T[P]> :
-      T[P];
+  [P in keyof T]?: T[P] extends (infer U)[]
+    ? RecursivePartial<U>[]
+    : T[P] extends object
+    ? RecursivePartial<T[P]>
+    : T[P];
 };
 
 export async function getDevBeaconNode({
@@ -24,7 +25,7 @@ export async function getDevBeaconNode({
   options = {},
   validatorCount = 8,
   genesisTime,
-  logger
+  logger,
 }: {
   params: Partial<IBeaconParams>;
   options?: RecursivePartial<IBeaconNodeOptions>;
@@ -36,14 +37,17 @@ export async function getDevBeaconNode({
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createIBeaconConfig({...minimalParams, ...params});
   const node = new BeaconNode(
-    deepmerge({
-      db: {
-        name: tmpDir.name
+    deepmerge(
+      {
+        db: {
+          name: tmpDir.name,
+        },
+        sync: {
+          minPeers: 1,
+        },
       },
-      sync: {
-        minPeers: 1
-      },
-    }, options),
+      options
+    ),
     {
       config,
       logger: logger || new WinstonLogger({level: LogLevel.error}),
@@ -56,16 +60,15 @@ export async function getDevBeaconNode({
             enabled: false,
             enr: await createEnr(peerId),
             bindAddr: "/ip4/127.0.0.1/udp/0",
-            bootEnrs: []
+            bootEnrs: [],
           },
-          multiaddrs: [
-            "/ip4/127.0.0.1/tcp/0"
-          ]
+          multiaddrs: ["/ip4/127.0.0.1/tcp/0"],
         },
         null,
         true
-      )
-    });
+      ),
+    }
+  );
   await initDevChain(node, validatorCount, genesisTime);
   return node;
 }

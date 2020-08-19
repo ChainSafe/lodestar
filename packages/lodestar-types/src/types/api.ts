@@ -9,7 +9,7 @@ import {
   Uint64,
   ValidatorIndex,
   Root,
-  Version
+  Version,
 } from "./primitive";
 import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
 

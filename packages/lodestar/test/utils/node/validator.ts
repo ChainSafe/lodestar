@@ -12,13 +12,13 @@ import {NodeApi} from "../../../src/api/impl/node/node";
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
   const vcs = [];
-  while(count > 0) {
-    if(count > validatorsPerValidatorClient) {
+  while (count > 0) {
+    if (count > validatorsPerValidatorClient) {
       vcs.push(
         getDevValidator({
           node,
           startIndex: vcs.length * validatorsPerValidatorClient,
-          count: validatorsPerValidatorClient
+          count: validatorsPerValidatorClient,
         })
       );
     } else {
@@ -26,7 +26,7 @@ export function getDevValidators(node: BeaconNode, count = 8, validatorClientCou
         getDevValidator({
           node,
           startIndex: vcs.length * validatorsPerValidatorClient,
-          count
+          count,
         })
       );
     }
@@ -52,9 +52,12 @@ export function getDevValidator({
     config: node.config,
     db: new ValidatorDB({
       config: node.config,
-      controller: new LevelDbController({
-        name: tmpDir.name
-      }, {logger})
+      controller: new LevelDbController(
+        {
+          name: tmpDir.name,
+        },
+        {logger}
+      ),
     }),
     api: new ApiClientOverInstance({
       config: node.config,
@@ -63,8 +66,8 @@ export function getDevValidator({
       beacon: new BeaconApi({}, {...node}),
     }),
     logger: logger,
-    keypairs: Array.from({length: count},(_, i) => {
+    keypairs: Array.from({length: count}, (_, i) => {
       return new Keypair(PrivateKey.fromBytes(interopKeypair(i + startIndex).privkey));
-    })
+    }),
   });
 }

@@ -2,20 +2,13 @@
  * @module chain/stateTransition/util
  */
 
-import {
-  ValidatorIndex,
-  BeaconState,
-  CommitteeIndex,
-  Slot,
-  Bytes32,
-} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, BeaconState, CommitteeIndex, Slot, Bytes32} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeShuffledIndex, getSeed} from "./seed";
 import {getActiveValidatorIndices} from "./validator";
 import {computeEpochAtSlot} from "./epoch";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
-
 
 /**
  * Return the [[index]]'th shuffled committee out of a total [[count]]
@@ -30,9 +23,9 @@ export function computeCommittee(
 ): ValidatorIndex[] {
   const start = intDiv(indices.length * index, count);
   const end = intDiv(indices.length * (index + 1), count);
-  return Array.from({length: end - start},
-    (_, i) => i + start)
-    .map((i) => indices[computeShuffledIndex(config, i, indices.length, seed)]);
+  return Array.from({length: end - start}, (_, i) => i + start).map(
+    (i) => indices[computeShuffledIndex(config, i, indices.length, seed)]
+  );
 }
 
 /**
@@ -46,8 +39,8 @@ export function getCommitteeCountAtSlot(config: IBeaconConfig, state: BeaconStat
     1,
     Math.min(
       config.params.MAX_COMMITTEES_PER_SLOT,
-      intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE),
-    ),
+      intDiv(intDiv(activeValidatorIndices.length, config.params.SLOTS_PER_EPOCH), config.params.TARGET_COMMITTEE_SIZE)
+    )
   );
 }
 

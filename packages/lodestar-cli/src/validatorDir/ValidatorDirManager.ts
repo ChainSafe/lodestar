@@ -26,10 +26,8 @@ export class ValidatorDirManager {
    * Open a directory containing multiple validators.
    */
   constructor({keystoresDir, secretsDir}: {keystoresDir: string; secretsDir: string}) {
-    if (!fs.existsSync(keystoresDir))
-      throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
-    if (!fs.existsSync(secretsDir))
-      throw new YargsError(`secretsDir ${secretsDir} does not exist`);
+    if (!fs.existsSync(keystoresDir)) throw new YargsError(`keystoresDir ${keystoresDir} does not exist`);
+    if (!fs.existsSync(secretsDir)) throw new YargsError(`secretsDir ${secretsDir} does not exist`);
 
     this.keystoresDir = keystoresDir;
     this.secretsDir = secretsDir;
@@ -40,10 +38,9 @@ export class ValidatorDirManager {
    * a validator directory.
    */
   iterDir(): string[] {
-    return fs.readdirSync(this.keystoresDir)
-      .filter(pubkey => 
-        fs.statSync(path.join(this.keystoresDir, pubkey)).isDirectory()
-      );
+    return fs
+      .readdirSync(this.keystoresDir)
+      .filter((pubkey) => fs.statSync(path.join(this.keystoresDir, pubkey)).isDirectory());
   }
 
   /**
@@ -59,9 +56,7 @@ export class ValidatorDirManager {
    * *Note*: Returns an error if any of the directories is unable to be opened
    */
   openAllValidators(options?: IValidatorDirOptions): ValidatorDir[] {
-    return this.iterDir().map(
-      pubkey => this.openValidator(pubkey, options)
-    );
+    return this.iterDir().map((pubkey) => this.openValidator(pubkey, options));
   }
 
   /**
@@ -69,6 +64,6 @@ export class ValidatorDirManager {
    */
   async decryptAllValidators(options?: IValidatorDirOptions): Promise<Keypair[]> {
     const validators = this.openAllValidators(options);
-    return await Promise.all(validators.map(async validator => validator.votingKeypair(this.secretsDir)));
+    return await Promise.all(validators.map(async (validator) => validator.votingKeypair(this.secretsDir)));
   }
 }

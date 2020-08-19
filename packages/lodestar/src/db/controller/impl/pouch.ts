@@ -27,16 +27,12 @@ interface IPouchResult {
 }
 
 export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
-
   private db: PouchDB.Database;
 
   public constructor(opts: IDatabaseOptions) {
-    this.db = new PouchDB(
-      opts.name || "lodestar-beaconchain",
-      {
-        adapter: "memory",
-      }
-    );
+    this.db = new PouchDB(opts.name || "lodestar-beaconchain", {
+      adapter: "memory",
+    });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -66,13 +62,16 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
   public async put(key: Buffer, value: Buffer): Promise<void> {
     const existingDoc = await this._get(key);
     value = Buffer.from(value);
-    return this.db.put({
-      _id: toHexString(key),
-      _rev: existingDoc ? existingDoc._rev : BASE_REVISION,
-      value,
-    }, {
-      force: true
-    });
+    return this.db.put(
+      {
+        _id: toHexString(key),
+        _rev: existingDoc ? existingDoc._rev : BASE_REVISION,
+        value,
+      },
+      {
+        force: true,
+      }
+    );
   }
 
   public async delete(key: Buffer): Promise<void> {
@@ -86,16 +85,14 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
     const additions: Promise<void>[] = [];
     //Tried with bulkDocs method but trowing some weird `Invalid rev format` error
     items.map((item) => {
-      additions.push(
-        this.put(item.key, item.value)
-      );
+      additions.push(this.put(item.key, item.value));
     });
-    return Promise.all(additions) as unknown as Promise<void>;
+    return (Promise.all(additions) as unknown) as Promise<void>;
   }
 
   public async batchDelete(keys: Buffer[]): Promise<void> {
     //not really optimized,
-    await Promise.all(keys.map(key => this.delete(key)));
+    await Promise.all(keys.map((key) => this.delete(key)));
     //Search by key returns deleted documents, this line purges them completely
     await this.db.compact();
   }
@@ -107,9 +104,9 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public keysStream(opts?: IFilterOptions<Buffer>): AsyncIterable<Buffer> {
     const keys = this.keys;
-    return async function * () {
+    return (async function* () {
       yield* await keys(opts);
-    }();
+    })();
   }
 
   public async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
@@ -119,9 +116,9 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public valuesStream(opts?: IFilterOptions<Buffer>): AsyncIterable<Buffer> {
     const values = this.values;
-    return async function * () {
+    return (async function* () {
       yield* await values(opts);
-    }();
+    })();
   }
 
   public async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
@@ -134,9 +131,9 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
 
   public entriesStream(opts?: IFilterOptions<Buffer>): AsyncIterable<IKeyValue<Buffer, Buffer>> {
     const entries = this.entries;
-    return async function * () {
+    return (async function* () {
       yield* await entries(opts);
-    }();
+    })();
   }
 
   private toPouchOptions(opts?: IFilterOptions<Buffer>): object {
@@ -147,7 +144,7 @@ export class PouchDbController implements IDatabaseController<Buffer, Buffer> {
       inclusive_end: !(opts && opts.lt),
       descending: opts && opts.reverse,
       startkey: this.parseLogicOpts(opts?.gt, opts?.gte),
-      end: this.parseLogicOpts(opts?.lt, opts?.lte)
+      end: this.parseLogicOpts(opts?.lt, opts?.lte),
     };
   }
 

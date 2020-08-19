@@ -13,9 +13,7 @@ import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";
 use(chaiAsPromised);
 
 describe("block api utils", function () {
-
   describe("resolveBlockId", function () {
-
     let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
     let dbStub: StubbedBeaconDb;
@@ -64,7 +62,7 @@ describe("block api utils", function () {
       const expected = Buffer.alloc(32, 2);
       forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns({
         ...generateEmptyBlockSummary(),
-        blockRoot: expected
+        blockRoot: expected,
       });
       await resolveBlockId(config, forkChoiceStub, dbStub, "2");
       expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).calledOnce).to.be.true;
@@ -80,7 +78,5 @@ describe("block api utils", function () {
     it("should trow on invalid", async function () {
       await expect(resolveBlockId(config, forkChoiceStub, dbStub, "asbc")).to.eventually.be.rejected;
     });
-
   });
-
 });

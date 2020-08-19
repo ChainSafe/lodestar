@@ -11,14 +11,17 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
   const validatorsPerNode = 8;
   const beaconParams: Partial<IBeaconParams> = {
     SECONDS_PER_SLOT: 2,
-    SLOTS_PER_EPOCH: 8
+    SLOTS_PER_EPOCH: 8,
   };
 
   for (const nodeCount of [4]) {
     it(`${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${checkpointEvent}`, async function () {
       this.timeout("10 min");
 
-      console.log("OS CPUs", os.cpus().map(cpu => cpu.model));
+      console.log(
+        "OS CPUs",
+        os.cpus().map((cpu) => cpu.model)
+      );
 
       const workers = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
@@ -27,7 +30,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       const genesisDelay = 20 * beaconParams.SECONDS_PER_SLOT;
       const genesisTime = minGenesisTime + genesisDelay;
 
-      for (let i=0; i<nodeCount; i++) {
+      for (let i = 0; i < nodeCount; i++) {
         const options = {
           params: beaconParams,
           options: {sync: {minPeers: 1}},
@@ -36,15 +39,17 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
           nodeIndex: i,
           startIndex: i * validatorsPerNode,
           validatorsPerNode,
-          checkpointEvent
+          checkpointEvent,
         };
 
-        workers.push(new Worker(path.join(__dirname, "threaded", "worker.js"), {
-          workerData: {
-            path: "./noEth1SimWorker.ts",
-            options,
-          }
-        }));
+        workers.push(
+          new Worker(path.join(__dirname, "threaded", "worker.js"), {
+            workerData: {
+              path: "./noEth1SimWorker.ts",
+              options,
+            },
+          })
+        );
       }
 
       interface IJustifiedCheckpointEvent {
@@ -53,22 +58,24 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       }
       // Wait for finalized checkpoint on all nodes
       try {
-        await Promise.all(workers.map((worker, i) =>
-          waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
-            if (evt.event === checkpointEvent) {
-              const {epoch, root} = evt.checkpoint;
-              console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, root});
-              return true;
-            } else {
-              return false;
-            }
-          })
-        ));
+        await Promise.all(
+          workers.map((worker, i) =>
+            waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
+              if (evt.event === checkpointEvent) {
+                const {epoch, root} = evt.checkpoint;
+                console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, root});
+                return true;
+              } else {
+                return false;
+              }
+            })
+          )
+        );
         console.log("Success: Terminating workers");
-        await Promise.all(workers.map(worker => worker.terminate()));
+        await Promise.all(workers.map((worker) => worker.terminate()));
       } catch (e) {
         console.log("Failure: Terminating workers. Error:", e);
-        await Promise.all(workers.map(worker => worker.terminate()));
+        await Promise.all(workers.map((worker) => worker.terminate()));
         throw e;
       }
     });

@@ -6,10 +6,7 @@ import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
 export class ProposerSlashingRepository extends Repository<ValidatorIndex, ProposerSlashing> {
-  public constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-  ) {
+  public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     super(config, db, Bucket.proposerSlashing, config.types.ProposerSlashing);
   }
 

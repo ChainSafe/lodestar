@@ -37,6 +37,6 @@ export function registerCommandToYargs(yargs: Argv, cliCommand: ICliCommand<any,
       return yargs;
     },
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    handler: cliCommand.handler || function emptyHandler(): void {}
+    handler: cliCommand.handler || function emptyHandler(): void {},
   });
 }

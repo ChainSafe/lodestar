@@ -4,7 +4,6 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 import {EventEmitter} from "events";
 
 export class LocalClock extends EventEmitter implements IBeaconClock {
-
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
   private currentSlot: number;
@@ -22,10 +21,7 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
   public async start(): Promise<void> {
     this.isRunning = true;
     const diffTillNextSlot = this.getDiffTillNextSlot();
-    this.timeoutId = setTimeout(
-      this.updateSlot,
-      diffTillNextSlot
-    );
+    this.timeoutId = setTimeout(this.updateSlot, diffTillNextSlot);
   }
   public async stop(): Promise<void> {
     this.isRunning = false;
@@ -55,25 +51,22 @@ export class LocalClock extends EventEmitter implements IBeaconClock {
   }
 
   private updateSlot = (): void => {
-    if(!this.isRunning) {
+    if (!this.isRunning) {
       return;
     }
     const previousSlot = this.currentSlot;
     this.currentSlot++;
     this.emit("slot", this.currentSlot);
     const currentEpoch = computeEpochAtSlot(this.config, this.currentSlot);
-    if(computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
+    if (computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
       this.emit("epoch", currentEpoch);
     }
     //recursively invoke update slot
-    this.timeoutId = setTimeout(
-      this.updateSlot,
-      this.getDiffTillNextSlot()
-    );
+    this.timeoutId = setTimeout(this.updateSlot, this.getDiffTillNextSlot());
   };
 
   private getDiffTillNextSlot(): number {
-    const diffInSeconds = (Date.now() / 1000) - this.genesisTime;
-    return (this.config.params.SECONDS_PER_SLOT - diffInSeconds % this.config.params.SECONDS_PER_SLOT) * 1000;
+    const diffInSeconds = Date.now() / 1000 - this.genesisTime;
+    return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
   }
 }

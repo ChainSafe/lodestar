@@ -9,17 +9,20 @@ import BufferList from "bl";
 import {ResponseBody, P2pErrorMessage} from "@chainsafe/lodestar-types";
 
 export function eth2ResponseEncode(
-  config: IBeaconConfig, logger: ILogger, method: Method, encoding: ReqRespEncoding
+  config: IBeaconConfig,
+  logger: ILogger,
+  method: Method,
+  encoding: ReqRespEncoding
 ): (source: AsyncIterable<IResponseChunk>) => AsyncIterable<Buffer> {
-  return (source => {
-    return (async function*() {
+  return (source) => {
+    return (async function* () {
       const type = Methods[method].responseSSZType(config);
       let compressor = getCompressor(encoding);
-      if(!type) {
+      if (!type) {
         return;
       }
       for await (const chunk of source) {
-        if(chunk.status !== RpcResponseStatus.SUCCESS) {
+        if (chunk.status !== RpcResponseStatus.SUCCESS) {
           yield encodeResponseStatus(chunk.status);
           if (chunk.body) {
             yield Buffer.from(config.types.P2pErrorMessage.serialize(chunk.body as P2pErrorMessage));
@@ -44,7 +47,7 @@ export function eth2ResponseEncode(
         compressor = getCompressor(encoding);
       }
     })();
-  });
+  };
 }
 
 export function eth2ResponseDecode(
@@ -56,7 +59,7 @@ export function eth2ResponseDecode(
   controller: AbortController
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return (source) => {
-    return (async function*() {
+    return (async function* () {
       //floating buffer with current chunk
       let buffer = new BufferList();
       //holds uncompressed chunks
@@ -68,12 +71,12 @@ export function eth2ResponseDecode(
       const type = Methods[method].responseSSZType(config);
       for await (const chunk of source) {
         buffer.append(chunk);
-        if(status === null) {
+        if (status === null) {
           status = buffer.get(0);
           buffer.consume(1);
         }
-        if(buffer.length === 0) continue;
-        if(status && status !== RpcResponseStatus.SUCCESS) {
+        if (buffer.length === 0) continue;
+        if (status && status !== RpcResponseStatus.SUCCESS) {
           try {
             const err = config.types.P2pErrorMessage.deserialize(buffer.slice());
             errorMessage = decodeP2pErrorMessage(config, err);
@@ -81,16 +84,19 @@ export function eth2ResponseDecode(
           } catch (e) {
             logger.warn(`Failed to get error message from other node, method ${method}, error ${e.message}`);
           }
-          logger.warn(`eth2ResponseDecode: Received err status '${status}' with message ` +
-          `'${errorMessage}' for method ${method} and request ${requestId}`);
+          logger.warn(
+            `eth2ResponseDecode: Received err status '${status}' with message ` +
+              `'${errorMessage}' for method ${method} and request ${requestId}`
+          );
           controller.abort();
           continue;
         }
-        if(sszLength === null) {
+        if (sszLength === null) {
           sszLength = decode(buffer.slice());
           if (decode.bytes > 10) {
-            throw new Error(`eth2ResponseDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` +
-            `, method ${method}`);
+            throw new Error(
+              `eth2ResponseDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` + `, method ${method}`
+            );
           }
           buffer.consume(decode.bytes);
         }
@@ -98,10 +104,12 @@ export function eth2ResponseDecode(
           throw new Error(`eth2ResponseDecode: Invalid szzLength of ${sszLength} for method ${method}`);
         }
         if (buffer.length > maxEncodedLen(sszLength, encoding)) {
-          throw new Error(`eth2ResponseDecode: too much bytes read (${buffer.length}) for method ${method}, ` +
-            `sszLength ${sszLength}`);
+          throw new Error(
+            `eth2ResponseDecode: too much bytes read (${buffer.length}) for method ${method}, ` +
+              `sszLength ${sszLength}`
+          );
         }
-        if(buffer.length === 0) continue;
+        if (buffer.length === 0) continue;
         let uncompressed: Buffer;
         try {
           uncompressed = decompressor.uncompress(buffer.slice());
@@ -109,12 +117,12 @@ export function eth2ResponseDecode(
         } catch (e) {
           logger.warn(`Failed to uncompress data for method ${method}. Error: ${e.message}`, {requestId, encoding});
         }
-        if(uncompressed) {
+        if (uncompressed) {
           uncompressedData.append(uncompressed);
-          if(uncompressedData.length > sszLength) {
+          if (uncompressedData.length > sszLength) {
             throw new Error(`Received too much data for method ${method}`);
           }
-          if(uncompressedData.length === sszLength) {
+          if (uncompressedData.length === sszLength) {
             try {
               yield type.deserialize(uncompressedData.slice()) as ResponseBody;
               buffer = new BufferList();
@@ -122,15 +130,15 @@ export function eth2ResponseDecode(
               decompressor.reset();
               status = null;
               sszLength = null;
-              if(Methods[method].responseType === MethodResponseType.SingleResponse) {
+              if (Methods[method].responseType === MethodResponseType.SingleResponse) {
                 controller.abort();
                 continue;
               }
             } catch (e) {
-              logger.warn(
-                `Failed to ssz deserialize data for method ${method}. Error: ${e.message}`,
-                {requestId, encoding}
-              );
+              logger.warn(`Failed to ssz deserialize data for method ${method}. Error: ${e.message}`, {
+                requestId,
+                encoding,
+              });
             }
           }
         }

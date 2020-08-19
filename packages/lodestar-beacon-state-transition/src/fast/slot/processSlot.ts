@@ -2,7 +2,6 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 
 import {EpochContext} from "../util";
 
-
 export function processSlot(epochCtx: EpochContext, state: BeaconState): void {
   const config = epochCtx.config;
   const {SLOTS_PER_HISTORICAL_ROOT} = config.params;
@@ -14,6 +13,7 @@ export function processSlot(epochCtx: EpochContext, state: BeaconState): void {
     state.latestBlockHeader.stateRoot = prevStateRoot;
   }
   // cache block root
-  state.blockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] =
-    config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
+  state.blockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = config.types.BeaconBlockHeader.hashTreeRoot(
+    state.latestBlockHeader
+  );
 }

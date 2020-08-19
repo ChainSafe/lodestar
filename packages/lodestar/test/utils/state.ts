@@ -14,7 +14,7 @@ let treeBackedState: TreeBacked<BeaconState>;
 /**
  * Generate beaconState, by default it will use the initial state defined when the `ChainStart` log is emitted.
  * NOTE: All fields can be overridden through `opts`.
-*  should allow 1st test calling generateState more time since TreeBacked<BeaconState>.createValue api is expensive.
+ *  should allow 1st test calling generateState more time since TreeBacked<BeaconState>.createValue api is expensive.
  *
  * @param {TestBeaconState} opts
  * @param config
@@ -50,7 +50,7 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
     validators: [],
     balances: [],
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () =>BigInt(0)),
+    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     justificationBits: Array.from({length: 4}, () => false),

@@ -11,7 +11,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqResp";
 import {INetworkOptions} from "./options";
-import {INetwork, NetworkEventEmitter,} from "./interface";
+import {INetwork, NetworkEventEmitter} from "./interface";
 import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
@@ -28,9 +28,7 @@ interface ILibp2pModules {
   chain: IBeaconChain;
 }
 
-
-export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter }) implements INetwork {
-
+export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
   public multiaddrs: Multiaddr[];
   public reqResp: ReqResp;
@@ -44,8 +42,11 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
   private metrics: IBeaconMetrics;
   private peerReputations: IReputationStore;
 
-  public constructor(opts: INetworkOptions,
-    reps: IReputationStore, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
+  public constructor(
+    opts: INetworkOptions,
+    reps: IReputationStore,
+    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
+  ) {
     super();
     this.opts = opts;
     this.config = config;
@@ -56,7 +57,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.libp2p = libp2p;
     this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
-    this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain})) as unknown as IGossip;
+    this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
   }
 
   public async start(): Promise<void> {
@@ -80,16 +81,15 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     await this.libp2p.stop();
   }
 
-
-  public getEnr(): ENR|undefined {
+  public getEnr(): ENR | undefined {
     const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     return discv5Discovery?.discv5?.enr || undefined;
   }
 
   public getPeers(): PeerId[] {
-    const peers =  Array.from(this.libp2p.peerStore.peers.values())
-      .map(peerInfo => peerInfo.id)
-      .filter(peerId => !!this.getPeerConnection(peerId));
+    const peers = Array.from(this.libp2p.peerStore.peers.values())
+      .map((peerInfo) => peerInfo.id)
+      .filter((peerId) => !!this.getPeerConnection(peerId));
     return peers || [];
   }
 
@@ -97,7 +97,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     return !!this.getPeerConnection(peerId);
   }
 
-  public getPeerConnection(peerId: PeerId): LibP2pConnection|null {
+  public getPeerConnection(peerId: PeerId): LibP2pConnection | null {
     return this.libp2p.connectionManager.get(peerId);
   }
 
@@ -116,7 +116,7 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     }
   }
 
-  public async  searchSubnetPeers(subnet: string): Promise<void> {
+  public async searchSubnetPeers(subnet: string): Promise<void> {
     const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
     if (peerIds.length < 3) {
       // If an insufficient number of current peers are subscribed to the topic,
@@ -133,8 +133,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
    * @param inPeerIds peers already have this subnet
    */
   private async connectToNewPeersBySubnet(subnet: number, inPeerIds: string[] = []): Promise<number> {
-    const discv5Peers = await this.searchDiscv5Peers(subnet) || [];
-    const peerIds = discv5Peers.filter(peerId => !inPeerIds.includes(peerId.toB58String()));
+    const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
+    const peerIds = discv5Peers.filter((peerId) => !inPeerIds.includes(peerId.toB58String()));
     // make sure they still connect to same subnet
     let count = 0;
     for (const peerId of peerIds) {
@@ -159,7 +159,8 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const discv5: Discv5 = discovery.discv5;
     return await Promise.all(
-      discv5.kadValues()
+      discv5
+        .kadValues()
         .filter((enr: ENR) => enr.get("attnets"))
         .filter((enr: ENR) => {
           try {
@@ -168,10 +169,13 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
             return false;
           }
         })
-        .map((enr: ENR) => enr.peerId().then((peerId) => {
-          this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP]);
-          return peerId;
-        })));
+        .map((enr: ENR) =>
+          enr.peerId().then((peerId) => {
+            this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP]);
+            return peerId;
+          })
+        )
+    );
   };
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {
@@ -186,5 +190,4 @@ export class Libp2pNetwork extends (EventEmitter as { new(): NetworkEventEmitter
     this.metrics.peers.dec();
     this.emit("peer:disconnect", conn.remotePeer);
   };
-
 }

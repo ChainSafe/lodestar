@@ -2,14 +2,12 @@ import {ICliCommandOptions} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 
-export type IValidatorCliArgs = 
-  IAccountValidatorArgs &
-  {
-    validatorsDbDir?: string;
-    server: string;
-    force: boolean;
-    graffiti: string;
-  };
+export type IValidatorCliArgs = IAccountValidatorArgs & {
+  validatorsDbDir?: string;
+  server: string;
+  force: boolean;
+  graffiti: string;
+};
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
@@ -26,18 +24,17 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Address to connect to BeaconNode",
     default: "http://127.0.0.1:9596",
     alias: ["server"],
-    type: "string"
+    type: "string",
   },
 
   force: {
     description: "Open validators even if there's a lockfile. Use with caution",
-    type: "boolean"
+    type: "boolean",
   },
 
   graffiti: {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
-    type: "string"
-  }
+    type: "string",
+  },
 };
-

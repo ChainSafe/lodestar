@@ -20,6 +20,6 @@ export const loggerOptions = Object.keys(defaultOptions.logger).reduce(
       group: "log",
     };
     return options;
-  }, 
+  },
   {}
 );

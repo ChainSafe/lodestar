@@ -14,7 +14,7 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 
-describe("BeaconChain", function() {
+describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb, eth1: IEth1Notifier, metrics: any, forkChoice: any;
   const logger = new WinstonLogger();
@@ -53,8 +53,8 @@ describe("BeaconChain", function() {
         {
           currentVersion: 2,
           epoch: 100,
-          previousVersion: bytesToInt(config.params.GENESIS_FORK_VERSION)
-        }
+          previousVersion: bytesToInt(config.params.GENESIS_FORK_VERSION),
+        },
       ];
       forkChoice.headStateRoot.returns(Buffer.alloc(0));
       const enrForkID = await chain.getENRForkID();
@@ -80,6 +80,4 @@ describe("BeaconChain", function() {
       expect(spy.callCount).to.be.equal(1);
     });
   });
-
-
 });

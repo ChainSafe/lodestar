@@ -5,9 +5,7 @@ import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "../../src/util/blockRoot";
 import {generateEmptyAttestation} from "./attestation";
 
-
 export function generateEmptyProposerSlashing(): ProposerSlashing {
-
   return {
     signedHeader1: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
     signedHeader2: {message: getTemporaryBlockHeader(config, generateEmptyBlock()), signature: Buffer.alloc(96)},
@@ -15,17 +13,16 @@ export function generateEmptyProposerSlashing(): ProposerSlashing {
 }
 
 export function generateEmptyAttesterSlashing(): AttesterSlashing {
-
   return {
     attestation1: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: [] as number[] as List<number>
+      attestingIndices: ([] as number[]) as List<number>,
     },
     attestation2: {
       data: generateEmptyAttestation().data,
       signature: generateEmptyAttestation().signature,
-      attestingIndices: [] as number[] as List<number>
+      attestingIndices: ([] as number[]) as List<number>,
     },
   };
 }

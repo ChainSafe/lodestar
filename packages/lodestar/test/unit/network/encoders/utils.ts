@@ -7,6 +7,6 @@ export function createStatus(): Status {
     finalizedRoot: ZERO_HASH,
     forkDigest: Buffer.alloc(4),
     headRoot: ZERO_HASH,
-    headSlot: 10
+    headSlot: 10,
   };
 }

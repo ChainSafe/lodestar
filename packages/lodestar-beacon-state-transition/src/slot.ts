@@ -10,17 +10,13 @@ import {ZERO_HASH} from "./constants";
 
 import {processEpoch} from "./epoch";
 
-export function processSlots(
-  config: IBeaconConfig,
-  state: BeaconState,
-  slot: Slot,
-): void{
+export function processSlots(config: IBeaconConfig, state: BeaconState, slot: Slot): void {
   assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);
 
-  while (state.slot < slot){
+  while (state.slot < slot) {
     processSlot(config, state);
     // Process epoch on the first slot of the next epoch
-    if ((state.slot + 1) % config.params.SLOTS_PER_EPOCH === 0){
+    if ((state.slot + 1) % config.params.SLOTS_PER_EPOCH === 0) {
       processEpoch(config, state);
     }
     state.slot++;

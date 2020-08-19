@@ -1,4 +1,4 @@
-import {defaultLogLevel, ILoggerOptions, LogLevel} from  "@chainsafe/lodestar-utils/lib/logger";
+import {defaultLogLevel, ILoggerOptions, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;
@@ -47,12 +47,12 @@ const config: IBeaconLoggerOptions = {
   },
   metrics: {
     level: LogLevel[defaultLogLevel],
-    module: "metrics"
+    module: "metrics",
   },
   chores: {
     level: LogLevel[defaultLogLevel],
-    module: "chores"
-  }
+    module: "chores",
+  },
 };
 
 export default config;

@@ -7,14 +7,14 @@ import {
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
-  Epoch, ProposerDuty,
+  Epoch,
+  ProposerDuty,
   SignedBeaconBlock,
   Slot,
   SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
-
   getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
 
   getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]>;
@@ -30,8 +30,7 @@ export interface IValidatorApi {
    * Requests that the BeaconNode produce an Attestation,
    * with a blank signature field, which the ValidatorClient will then sign.
    */
-  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot):
-  Promise<Attestation>;
+  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block
@@ -52,6 +51,9 @@ export interface IValidatorApi {
   produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
 
   subscribeCommitteeSubnet(
-    slot: Slot, slotSignature: BLSSignature, committeeIndex: CommitteeIndex, aggregatorPubkey: BLSPubkey
+    slot: Slot,
+    slotSignature: BLSSignature,
+    committeeIndex: CommitteeIndex,
+    aggregatorPubkey: BLSPubkey
   ): Promise<void>;
 }

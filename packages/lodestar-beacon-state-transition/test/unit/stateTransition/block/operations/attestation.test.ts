@@ -9,11 +9,13 @@ import {generateState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
 describe("process block - attestation", function () {
-
   const sandbox = sinon.createSandbox();
 
-  let currentEpochStub: any, previousEpochStub: any, validateIndexedAttestationStub: any,
-    getBeaconProposerIndexStub: any, getBeaconComitteeStub: any;
+  let currentEpochStub: any,
+    previousEpochStub: any,
+    validateIndexedAttestationStub: any,
+    getBeaconProposerIndexStub: any,
+    getBeaconComitteeStub: any;
 
   beforeEach(() => {
     currentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
@@ -49,7 +51,7 @@ describe("process block - attestation", function () {
   it("should process attestation - currentEpoch === data.targetEpoch", function () {
     const state = generateState({
       slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
-      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}
+      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},
     });
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
@@ -69,7 +71,7 @@ describe("process block - attestation", function () {
   it("should process attestation - previousEpoch === data.targetEpoch", function () {
     const state = generateState({
       slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1,
-      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH}
+      currentJustifiedCheckpoint: {epoch: 1, root: ZERO_HASH},
     });
     currentEpochStub.returns(1);
     previousEpochStub.returns(0);
@@ -84,5 +86,4 @@ describe("process block - attestation", function () {
     expect(state.currentEpochAttestations.length).to.be.equal(0);
     expect(state.previousEpochAttestations.length).to.be.equal(1);
   });
-
 });

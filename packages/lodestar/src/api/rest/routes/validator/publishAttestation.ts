@@ -8,36 +8,26 @@ type IBody = Json[];
 const opts: fastify.RouteShorthandOptions = {
   schema: {
     body: {
-      type: "array"
+      type: "array",
     },
-  }
+  },
 };
 
 export const registerAttestationPublishEndpoint: LodestarRestApiEndpoint = (fastify, {api, config}): void => {
-  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>(
-    "/attestation",
-    opts,
-    async (request, reply) => {
-      try {
-        await Promise.all([
-          request.body.map((payload) => {
-            return api.validator.publishAttestation(
-              config.types.Attestation.fromJson(payload, {case: "snake"})
-            );
-          })
-        ]);
-
-      } catch (e) {
-        if(e instanceof ValidationError) {
-          reply.code(400).send();
-        }
-        reply.code(500).send();
-        return;
+  fastify.post<DefaultQuery, DefaultParams, DefaultHeaders, IBody>("/attestation", opts, async (request, reply) => {
+    try {
+      await Promise.all([
+        request.body.map((payload) => {
+          return api.validator.publishAttestation(config.types.Attestation.fromJson(payload, {case: "snake"}));
+        }),
+      ]);
+    } catch (e) {
+      if (e instanceof ValidationError) {
+        reply.code(400).send();
       }
-      reply
-        .code(200)
-        .type("application/json")
-        .send();
+      reply.code(500).send();
+      return;
     }
-  );
+    reply.code(200).type("application/json").send();
+  });
 };

@@ -6,11 +6,10 @@ import {collectDefaultMetrics, Registry} from "prom-client";
 import {IMetrics} from "./interface";
 import {IMetricsOptions} from "./options";
 
-
 export class Metrics implements IMetrics {
   public registry: Registry;
 
-  private defaultInterval: NodeJS.Timeout|null = null;
+  private defaultInterval: NodeJS.Timeout | null = null;
   private opts: IMetricsOptions;
 
   public constructor(opts: IMetricsOptions) {

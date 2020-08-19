@@ -6,22 +6,27 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 
 export function validateBlock(
-  config: IBeaconConfig, logger: ILogger, forkChoice: ILMDGHOST
+  config: IBeaconConfig,
+  logger: ILogger,
+  forkChoice: ILMDGHOST
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<IBlockProcessJob> {
   return (source) => {
-    return (async function*() {
-      for await(const job of source) {
+    return (async function* () {
+      for await (const job of source) {
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         if (forkChoice.hasBlock(blockHash)) {
           logger.debug(`Block ${toHexString(blockHash)} was already processed, skipping...`);
           continue;
         }
         const finalizedCheckpoint = forkChoice.getFinalized();
-        if (finalizedCheckpoint && finalizedCheckpoint.epoch > 0
-            && computeEpochAtSlot(config, job.signedBlock.message.slot) <= finalizedCheckpoint.epoch) {
+        if (
+          finalizedCheckpoint &&
+          finalizedCheckpoint.epoch > 0 &&
+          computeEpochAtSlot(config, job.signedBlock.message.slot) <= finalizedCheckpoint.epoch
+        ) {
           logger.debug(
             `Block ${toHexString(blockHash)} with slot ${job.signedBlock.message.slot} is not after ` +
-                        `finalized epoch (${finalizedCheckpoint.epoch}).`
+              `finalized epoch (${finalizedCheckpoint.epoch}).`
           );
           continue;
         }

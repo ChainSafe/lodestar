@@ -18,7 +18,6 @@ export interface ILevelDBOptions extends IDatabaseOptions {
  * The LevelDB implementation of DB
  */
 export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
-
   private db: LevelUp;
 
   private opts: ILevelDBOptions;
@@ -28,18 +27,12 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   public constructor(opts: ILevelDBOptions, {logger}: {logger: ILogger}) {
     this.opts = opts;
     this.logger = logger;
-    this.db =
-      opts.db
-      ||
-      level(
-        opts.name || "beaconchain",
-        {keyEncoding: "binary", valueEncoding: "binary"}
-      );
+    this.db = opts.db || level(opts.name || "beaconchain", {keyEncoding: "binary", valueEncoding: "binary"});
   }
 
   public async start(): Promise<void> {
     await this.db.open();
-    this.logger.info( `Connected to LevelDB database at ${this.opts.name}`);
+    this.logger.info(`Connected to LevelDB database at ${this.opts.name}`);
   }
 
   public async stop(): Promise<void> {
@@ -50,7 +43,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     try {
       return await this.db.get(key);
     } catch (e) {
-      if(e.notFound) {
+      if (e.notFound) {
         return null;
       }
       throw e;
@@ -67,27 +60,29 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
     const batch = this.db.batch();
-    items.forEach(item => batch.put(item.key, item.value));
+    items.forEach((item) => batch.put(item.key, item.value));
     await batch.write();
   }
 
   public async batchDelete(keys: Buffer[]): Promise<void> {
     const batch = this.db.batch();
-    keys.forEach(key => batch.del(key));
+    keys.forEach((key) => batch.del(key));
     await batch.write();
   }
 
   public keysStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
     const source: Pushable<Buffer> = pushable();
-    this.db.createKeyStream(
-      {...opts}
-    ).on("data", function (data) {
-      source.push(data);
-    }).on("close", function () {
-      source.end();
-    }).on("end", function () {
-      source.end();
-    });
+    this.db
+      .createKeyStream({...opts})
+      .on("data", function (data) {
+        source.push(data);
+      })
+      .on("close", function () {
+        source.end();
+      })
+      .on("end", function () {
+        source.end();
+      });
     return source;
   }
 
@@ -101,15 +96,17 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   public valuesStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
     const source: Pushable<Buffer> = pushable();
-    this.db.createValueStream(
-      {...opts}
-    ).on("data", function (data) {
-      source.push(data);
-    }).on("close", function () {
-      source.end();
-    }).on("end", function () {
-      source.end();
-    });
+    this.db
+      .createValueStream({...opts})
+      .on("data", function (data) {
+        source.push(data);
+      })
+      .on("close", function () {
+        source.end();
+      })
+      .on("end", function () {
+        source.end();
+      });
     return source;
   }
 
@@ -123,15 +120,17 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   public entriesStream(opts?: IFilterOptions<Buffer>): Pushable<IKeyValue<Buffer, Buffer>> {
     const source: Pushable<IKeyValue<Buffer, Buffer>> = pushable();
-    this.db.createReadStream(
-      {...opts}
-    ).on("data", function (data) {
-      source.push(data);
-    }).on("close", function () {
-      source.end();
-    }).on("end", function () {
-      source.end();
-    });
+    this.db
+      .createReadStream({...opts})
+      .on("data", function (data) {
+        source.push(data);
+      })
+      .on("close", function () {
+        source.end();
+      })
+      .on("end", function () {
+        source.end();
+      });
     return source;
   }
 

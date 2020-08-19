@@ -9,7 +9,6 @@ import {BLSSignature, Bytes32, Root, Slot, ValidatorIndex} from "./primitive";
 import {Eth1Data} from "./misc";
 import {Attestation, AttesterSlashing, Deposit, ProposerSlashing, SignedVoluntaryExit} from "./operations";
 
-
 export interface BeaconBlockBody {
   randaoReveal: BLSSignature;
   eth1Data: Eth1Data;

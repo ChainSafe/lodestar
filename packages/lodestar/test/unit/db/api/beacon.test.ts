@@ -15,10 +15,9 @@ import {
   ProposerSlashingRepository,
   VoluntaryExitRepository,
   AttestationRepository,
-  AggregateAndProofRepository
+  AggregateAndProofRepository,
 } from "../../../../src/db/api/beacon/repositories";
 import {generateValidators} from "../../../utils/validator";
-
 
 chai.use(chaiAsPromised);
 
@@ -26,8 +25,11 @@ describe("beacon db - post block processing", function () {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb;
 
-  beforeEach(()=>{
-    dbStub = new BeaconDb({config, controller: sandbox.createStubInstance(LevelDbController)}) as unknown as StubbedBeaconDb;
+  beforeEach(() => {
+    dbStub = (new BeaconDb({
+      config,
+      controller: sandbox.createStubInstance(LevelDbController),
+    }) as unknown) as StubbedBeaconDb;
     dbStub.depositData = sandbox.createStubInstance(DepositDataRepository) as any;
     dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as any;
     dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as any;
@@ -37,15 +39,18 @@ describe("beacon db - post block processing", function () {
     dbStub.stateArchive = sandbox.createStubInstance(StateArchiveRepository) as any;
 
     // Add to state
-    dbStub.stateArchive.lastValue.resolves(generateState(
-      {
-        validators: generateValidators(100, {activationEpoch: 0, effectiveBalance:BigInt(2) **BigInt(5) * BigInt(1e9)})
-      }
-    ) as any);
+    dbStub.stateArchive.lastValue.resolves(
+      generateState({
+        validators: generateValidators(100, {
+          activationEpoch: 0,
+          effectiveBalance: BigInt(2) ** BigInt(5) * BigInt(1e9),
+        }),
+      }) as any
+    );
   });
 
   it("should do cleanup after block processing", async function () {
-    const block  = generateEmptySignedBlock();
+    const block = generateEmptySignedBlock();
     dbStub.depositData.deleteOld.resolves();
     dbStub.voluntaryExit.batchRemove.resolves();
     dbStub.proposerSlashing.batchRemove.resolves();
@@ -58,6 +63,4 @@ describe("beacon db - post block processing", function () {
     expect(dbStub.proposerSlashing.batchRemove.calledOnce).to.be.true;
     expect(dbStub.attesterSlashing.batchRemove.calledOnce).to.be.true;
   });
-
 });
-

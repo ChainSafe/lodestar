@@ -7,6 +7,6 @@ export function generateAggregateAndProof(override: Partial<AggregateAndProof> =
     aggregatorIndex: 0,
     aggregate: generateEmptyAttestation(),
     selectionProof: EMPTY_SIGNATURE,
-    ...override
+    ...override,
   };
 }

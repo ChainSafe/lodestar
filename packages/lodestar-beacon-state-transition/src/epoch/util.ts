@@ -2,13 +2,7 @@
  * @module chain/stateTransition/epoch/util
  */
 
-import {
-  BeaconState,
-  Epoch,
-  Gwei,
-  PendingAttestation,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
+import {BeaconState, Epoch, Gwei, PendingAttestation, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
 
@@ -18,9 +12,8 @@ import {
   getBlockRootAtSlot,
   getCurrentEpoch,
   getPreviousEpoch,
-  getTotalBalance
+  getTotalBalance,
 } from "../util";
-
 
 export function getMatchingSourceAttestations(
   config: IBeaconConfig,
@@ -29,14 +22,10 @@ export function getMatchingSourceAttestations(
 ): PendingAttestation[] {
   const currentEpoch = getCurrentEpoch(config, state);
   assert.true(
-    epoch === currentEpoch || epoch === getPreviousEpoch(config, state), 
+    epoch === currentEpoch || epoch === getPreviousEpoch(config, state),
     `Too old epoch ${epoch}, current=${currentEpoch}`
   );
-  return Array.from(
-    epoch === currentEpoch
-      ? state.currentEpochAttestations
-      : state.previousEpochAttestations
-  );
+  return Array.from(epoch === currentEpoch ? state.currentEpochAttestations : state.previousEpochAttestations);
 }
 
 export function getMatchingTargetAttestations(
@@ -45,8 +34,9 @@ export function getMatchingTargetAttestations(
   epoch: Epoch
 ): PendingAttestation[] {
   const blockRoot = getBlockRoot(config, state, epoch);
-  return getMatchingSourceAttestations(config, state, epoch)
-    .filter((a) => config.types.Root.equals(a.data.target.root, blockRoot));
+  return getMatchingSourceAttestations(config, state, epoch).filter((a) =>
+    config.types.Root.equals(a.data.target.root, blockRoot)
+  );
 }
 
 export function getMatchingHeadAttestations(
@@ -54,11 +44,9 @@ export function getMatchingHeadAttestations(
   state: BeaconState,
   epoch: Epoch
 ): PendingAttestation[] {
-  return getMatchingTargetAttestations(config, state, epoch)
-    .filter((a) => config.types.Root.equals(
-      a.data.beaconBlockRoot,
-      getBlockRootAtSlot(config, state, a.data.slot)
-    ));
+  return getMatchingTargetAttestations(config, state, epoch).filter((a) =>
+    config.types.Root.equals(a.data.beaconBlockRoot, getBlockRootAtSlot(config, state, a.data.slot))
+  );
 }
 
 export function getUnslashedAttestingIndices(
@@ -68,9 +56,11 @@ export function getUnslashedAttestingIndices(
 ): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
   attestations.forEach((a) =>
-    getAttestingIndices(config, state, a.data, a.aggregationBits).forEach((index) =>
-      output.add(index)));
-  return Array.from(output).filter((index) => !state.validators[index].slashed).sort();
+    getAttestingIndices(config, state, a.data, a.aggregationBits).forEach((index) => output.add(index))
+  );
+  return Array.from(output)
+    .filter((index) => !state.validators[index].slashed)
+    .sort();
 }
 
 /**

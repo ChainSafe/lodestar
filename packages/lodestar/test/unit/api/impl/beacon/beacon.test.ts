@@ -8,7 +8,6 @@ import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 
 describe("beacon api implementation", function () {
-
   let api: BeaconApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
@@ -18,16 +17,18 @@ describe("beacon api implementation", function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     dbStub = new StubbedBeaconDb(sinon);
     syncStub = sinon.createStubInstance(BeaconSync);
-    api = new BeaconApi({}, {
-      config,
-      chain: chainStub,
-      db: dbStub,
-      sync: syncStub
-    });
+    api = new BeaconApi(
+      {},
+      {
+        config,
+        chain: chainStub,
+        db: dbStub,
+        sync: syncStub,
+      }
+    );
   });
 
   describe("getGenesis", function () {
-
     it("genesis has not yet occured", async function () {
       chainStub.getHeadState.resolves(null);
       const genesis = await api.getGenesis();
@@ -43,7 +44,5 @@ describe("beacon api implementation", function () {
       expect(genesis.genesisTime).to.not.be.undefined;
       expect(genesis.genesisValidatorsRoot).to.not.be.undefined;
     });
-
   });
-
 });

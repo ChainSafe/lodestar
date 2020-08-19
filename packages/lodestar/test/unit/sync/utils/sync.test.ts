@@ -29,7 +29,6 @@ import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
 import {Method} from "../../../../src/constants";
 
 describe("sync utils", function () {
-
   let timer: SinonFakeTimers;
 
   beforeEach(function () {
@@ -60,7 +59,7 @@ describe("sync utils", function () {
       const reps = [
         generateReputation({latestStatus: generateStatus({headSlot: 10})}),
         generateReputation({latestStatus: generateStatus({headSlot: 10})}),
-        generateReputation({latestStatus: generateStatus({headSlot: 12})})
+        generateReputation({latestStatus: generateStatus({headSlot: 12})}),
       ];
       const result = getHighestCommonSlot(reps);
       expect(result).to.be.equal(10);
@@ -81,7 +80,7 @@ describe("sync utils", function () {
   it("status to finalized checkpoint", function () {
     const checkpoint: Checkpoint = {
       epoch: 1,
-      root: Buffer.alloc(32, 4)
+      root: Buffer.alloc(32, 4),
     };
     const status = generateStatus({finalizedEpoch: checkpoint.epoch, finalizedRoot: checkpoint.root});
     const result = getStatusFinalizedCheckpoint(status);
@@ -89,7 +88,6 @@ describe("sync utils", function () {
   });
 
   describe("get common finalized checkpoint", function () {
-
     it("no peers", function () {
       const result = getCommonFinalizedCheckpoint(config, []);
       expect(result).to.be.null;
@@ -103,55 +101,49 @@ describe("sync utils", function () {
     it("single peer", function () {
       const checkpoint: Checkpoint = {
         epoch: 1,
-        root: Buffer.alloc(32, 4)
+        root: Buffer.alloc(32, 4),
       };
-      const result = getCommonFinalizedCheckpoint(
-        config,
-        [generateReputation({
+      const result = getCommonFinalizedCheckpoint(config, [
+        generateReputation({
           latestStatus: generateStatus({
             finalizedEpoch: checkpoint.epoch,
-            finalizedRoot: checkpoint.root
-          })
-        })]
-      );
+            finalizedRoot: checkpoint.root,
+          }),
+        }),
+      ]);
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
 
     it("majority", function () {
       const checkpoint: Checkpoint = {
         epoch: 1,
-        root: Buffer.alloc(32, 4)
+        root: Buffer.alloc(32, 4),
       };
-      const result = getCommonFinalizedCheckpoint(
-        config,
-        [
-          generateReputation({
-            latestStatus: generateStatus({
-              finalizedEpoch: checkpoint.epoch,
-              finalizedRoot: checkpoint.root
-            })
+      const result = getCommonFinalizedCheckpoint(config, [
+        generateReputation({
+          latestStatus: generateStatus({
+            finalizedEpoch: checkpoint.epoch,
+            finalizedRoot: checkpoint.root,
           }),
-          generateReputation({
-            latestStatus: generateStatus({
-              finalizedEpoch: checkpoint.epoch,
-              finalizedRoot: checkpoint.root
-            })
+        }),
+        generateReputation({
+          latestStatus: generateStatus({
+            finalizedEpoch: checkpoint.epoch,
+            finalizedRoot: checkpoint.root,
           }),
-          generateReputation({
-            latestStatus: generateStatus({
-              finalizedEpoch: 4,
-              finalizedRoot: Buffer.alloc(32)
-            })
-          })
-        ]
-      );
+        }),
+        generateReputation({
+          latestStatus: generateStatus({
+            finalizedEpoch: 4,
+            finalizedRoot: Buffer.alloc(32),
+          }),
+        }),
+      ]);
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
-
   });
 
   describe("fetchBlockChunk process", function () {
-
     const sandbox = sinon.createSandbox();
 
     let getPeersStub: SinonStub, getBlockRangeStub: SinonStub;
@@ -173,7 +165,9 @@ describe("sync utils", function () {
         fetchBlockChunks(
           sinon.createStubInstance(WinstonLogger),
           sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp), getPeersStub),
+          sinon.createStubInstance(ReqResp),
+          getPeersStub
+        ),
         collect
       );
       await timer.tickAsync(30000);
@@ -189,17 +183,17 @@ describe("sync utils", function () {
         fetchBlockChunks(
           sinon.createStubInstance(WinstonLogger),
           sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp), getPeersStub),
+          sinon.createStubInstance(ReqResp),
+          getPeersStub
+        ),
         collect
       );
       expect(result.length).to.be.equal(1);
       expect(getBlockRangeStub.calledOnce).to.be.true;
     });
-
   });
 
   describe("block process", function () {
-
     let chainStub: SinonStubbedInstance<IBeaconChain>;
     let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
@@ -219,12 +213,10 @@ describe("sync utils", function () {
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       await pipe(
         [[block2], [block1]],
-        processSyncBlocks(
-          config, chainStub, sinon.createStubInstance(WinstonLogger), true),
+        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true)
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
     });
-
   });
 
   describe("getBestHead and getBestPeer", () => {
@@ -243,7 +235,7 @@ describe("sync utils", function () {
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 1),
-        headSlot: 1000
+        headSlot: 1000,
       };
       reps.getFromPeerId(peer1).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer2).latestStatus = {
@@ -251,7 +243,7 @@ describe("sync utils", function () {
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 2),
-        headSlot: 2000
+        headSlot: 2000,
       };
       reps.getFromPeerId(peer2).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer4).latestStatus = {
@@ -259,12 +251,16 @@ describe("sync utils", function () {
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 2),
-        headSlot: 4000
+        headSlot: 4000,
       };
       // peer4 has highest slot but does not support sync
       reps.getFromPeerId(peer4).supportedProtocols = [];
 
-      expect(getBestHead(peers, reps)).to.be.deep.equal({slot: 2000, root: Buffer.alloc(32, 2), supportedProtocols: [Method.BeaconBlocksByRange]});
+      expect(getBestHead(peers, reps)).to.be.deep.equal({
+        slot: 2000,
+        root: Buffer.alloc(32, 2),
+        supportedProtocols: [Method.BeaconBlocksByRange],
+      });
       expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
     });
 
@@ -299,7 +295,7 @@ describe("sync utils", function () {
         finalizedRoot: Buffer.alloc(0),
         finalizedEpoch: 0,
         headRoot: Buffer.alloc(32, 1),
-        headSlot: 1000
+        headSlot: 1000,
       };
       reqRespStub.beaconBlocksByRoot.resolves([]);
       const protocols = await getPeerSupportedProtocols(config, reps, peer1, reqRespStub);
@@ -320,7 +316,7 @@ describe("sync utils", function () {
         finalizedRoot: config.types.BeaconBlock.hashTreeRoot(finallizedBlock.message),
         finalizedEpoch: 10,
         headRoot: Buffer.alloc(32, 1),
-        headSlot: 1000
+        headSlot: 1000,
       };
       reqRespStub.beaconBlocksByRoot.onFirstCall().resolves([finallizedBlock]);
       reqRespStub.beaconBlocksByRoot.onSecondCall().resolves([parentBlock]);
@@ -329,9 +325,6 @@ describe("sync utils", function () {
       expect(protocols).to.be.deep.equal([Method.BeaconBlocksByRoot, Method.BeaconBlocksByRange]);
     });
   });
-
-
-
 });
 
 function generateReputation(overiddes: Partial<IReputation>): IReputation {
@@ -344,8 +337,8 @@ function generateReputation(overiddes: Partial<IReputation>): IReputation {
         finalizedRoot: Buffer.alloc(1),
         headForkVersion: Buffer.alloc(4),
         headRoot: Buffer.alloc(1),
-        headSlot: 0
-      }
+        headSlot: 0,
+      },
     },
     overiddes,
     {isMergeableObject: isPlainObject}
@@ -359,7 +352,7 @@ function generateStatus(overiddes: Partial<Status>): Status {
       finalizedRoot: Buffer.alloc(1),
       headForkVersion: Buffer.alloc(4),
       headRoot: Buffer.alloc(1),
-      headSlot: 0
+      headSlot: 0,
     },
     overiddes,
     {isMergeableObject: isPlainObject}

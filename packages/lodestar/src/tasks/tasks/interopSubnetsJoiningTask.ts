@@ -14,7 +14,6 @@ export interface IInteropSubnetsJoiningModules {
 }
 
 export class InteropSubnetsJoiningTask {
-
   private readonly config: IBeaconConfig;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
@@ -23,8 +22,8 @@ export class InteropSubnetsJoiningTask {
   private nextForkSubnets: Set<number>;
   private currentForkDigest: ForkDigest;
 
-  private currentTimers: (NodeJS.Timeout)[] = [];
-  private nextForkTimers: (NodeJS.Timeout)[] = [];
+  private currentTimers: NodeJS.Timeout[] = [];
+  private nextForkTimers: NodeJS.Timeout[] = [];
   private nextForkSubsTimer?: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig, modules: IInteropSubnetsJoiningModules) {
@@ -62,21 +61,31 @@ export class InteropSubnetsJoiningTask {
   /**
    * Prepare for EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
    */
-  private scheduleNextForkSubscription = async(): Promise <void> => {
+  private scheduleNextForkSubscription = async (): Promise<void> => {
     const state = await this.chain.getHeadState();
     const currentForkVersion = state.fork.currentVersion;
-    const nextFork = this.config.params.ALL_FORKS && this.config.params.ALL_FORKS.find(
-      (fork) => this.config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4)));
+    const nextFork =
+      this.config.params.ALL_FORKS &&
+      this.config.params.ALL_FORKS.find((fork) =>
+        this.config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4))
+      );
     if (nextFork) {
       const preparedEpoch = nextFork.epoch - this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
       const timeToPreparedEpoch =
-      (computeStartSlotAtEpoch(this.config, preparedEpoch) - getCurrentSlot(this.config, state.genesisTime)) *
-        this.config.params.SECONDS_PER_SLOT * 1000;
+        (computeStartSlotAtEpoch(this.config, preparedEpoch) - getCurrentSlot(this.config, state.genesisTime)) *
+        this.config.params.SECONDS_PER_SLOT *
+        1000;
       if (timeToPreparedEpoch > 0) {
-        const nextForkDigest =
-          computeForkDigest(this.config, intToBytes(nextFork.currentVersion, 4), state.genesisValidatorsRoot);
-        this.nextForkSubsTimer =
-          setTimeout(this.run, timeToPreparedEpoch, nextForkDigest) as unknown as NodeJS.Timeout;
+        const nextForkDigest = computeForkDigest(
+          this.config,
+          intToBytes(nextFork.currentVersion, 4),
+          state.genesisValidatorsRoot
+        );
+        this.nextForkSubsTimer = (setTimeout(
+          this.run,
+          timeToPreparedEpoch,
+          nextForkDigest
+        ) as unknown) as NodeJS.Timeout;
       }
     }
   };
@@ -118,11 +127,7 @@ export class InteropSubnetsJoiningTask {
    */
   private subscribeToRandomSubnet(forkDigest: ForkDigest): number {
     const subnet = randBetween(0, ATTESTATION_SUBNET_COUNT);
-    this.network.gossip.subscribeToAttestationSubnet(
-      forkDigest,
-      subnet,
-      this.handleWireAttestation
-    );
+    this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleWireAttestation);
     const attnets = this.network.metadata.attnets;
     if (!attnets[subnet]) {
       attnets[subnet] = true;
@@ -130,24 +135,25 @@ export class InteropSubnetsJoiningTask {
     }
     const subscriptionLifetime = randBetween(
       this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
-      2 * this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
+      2 * this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION
     );
-    const timers = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
-      this.currentTimers : this.nextForkTimers;
-    timers.push(setTimeout(
-      this.handleChangeSubnets,
-      subscriptionLifetime
-            * this.config.params.SLOTS_PER_EPOCH
-            * this.config.params.SECONDS_PER_SLOT
-            * 1000,
-      forkDigest,
-      subnet
-    ) as unknown as NodeJS.Timeout);
+    const timers = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)
+      ? this.currentTimers
+      : this.nextForkTimers;
+    timers.push(
+      (setTimeout(
+        this.handleChangeSubnets,
+        subscriptionLifetime * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000,
+        forkDigest,
+        subnet
+      ) as unknown) as NodeJS.Timeout
+    );
     if (timers.length > this.config.params.RANDOM_SUBNETS_PER_VALIDATOR) {
       timers.shift();
     }
-    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
-      this.currentSubnets : this.nextForkSubnets;
+    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)
+      ? this.currentSubnets
+      : this.nextForkSubnets;
     subnets.add(subnet);
     return subnet;
   }
@@ -159,8 +165,9 @@ export class InteropSubnetsJoiningTask {
       attnets[subnet] = false;
       this.network.metadata.attnets = attnets;
     }
-    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)?
-      this.currentSubnets : this.nextForkSubnets;
+    const subnets = this.config.types.ForkDigest.equals(forkDigest, this.currentForkDigest)
+      ? this.currentSubnets
+      : this.nextForkSubnets;
     subnets.delete(subnet);
     this.subscribeToRandomSubnet(forkDigest);
   };
@@ -168,5 +175,4 @@ export class InteropSubnetsJoiningTask {
   private handleWireAttestation = (): void => {
     //ignore random committee attestations
   };
-
 }

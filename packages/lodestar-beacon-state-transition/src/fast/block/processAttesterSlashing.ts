@@ -5,12 +5,11 @@ import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
-
 export function processAttesterSlashing(
   epochCtx: EpochContext,
   state: BeaconState,
   attesterSlashing: AttesterSlashing,
-  verifySignatures = true,
+  verifySignatures = true
 ): void {
   const config = epochCtx.config;
   const attestation1 = attesterSlashing.attestation1;
@@ -35,12 +34,14 @@ export function processAttesterSlashing(
     }
   }
   const validators = state.validators;
-  indices.sort((a, b) => a - b).forEach((index) => {
-    if (isSlashableValidator(validators[index], epochCtx.currentShuffling.epoch)) {
-      slashValidator(epochCtx, state, index);
-      slashedAny = true;
-    }
-  });
+  indices
+    .sort((a, b) => a - b)
+    .forEach((index) => {
+      if (isSlashableValidator(validators[index], epochCtx.currentShuffling.epoch)) {
+        slashValidator(epochCtx, state, index);
+        slashedAny = true;
+      }
+    });
   if (!slashedAny) {
     throw new Error("AttesterSlashing did not result in any slashings");
   }

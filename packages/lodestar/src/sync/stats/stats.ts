@@ -4,7 +4,6 @@ import {RateCounter} from "./rate";
 import {ChainEventEmitter} from "../../chain";
 
 export class SyncStats implements ISyncStats {
-
   private readonly chainEvents: ChainEventEmitter;
   private readonly rateCounter: RateCounter;
 
@@ -25,11 +24,11 @@ export class SyncStats implements ISyncStats {
 
   public getEstimate(headSlot: Slot, targetSlot: Slot): number {
     const rate = this.getSyncSpeed();
-    if(rate === 0) {
+    if (rate === 0) {
       return Infinity;
     }
     const slotsToSync = targetSlot - headSlot;
-    if(slotsToSync > 0) {
+    if (slotsToSync > 0) {
       return Math.round(slotsToSync / rate);
     }
     return 0;

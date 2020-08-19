@@ -40,10 +40,8 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
 
   const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
   const libp2p = await createNodeJsLibp2p(peerId, options.network, options.peerStoreDir);
-  const loggerTransports = [
-    consoleTransport
-  ];
-  if(options.logFile && beaconPaths.logFile) {
+  const loggerTransports = [consoleTransport];
+  if (options.logFile && beaconPaths.logFile) {
     loggerTransports.push(fileTransport(beaconPaths.logFile));
   }
   const logger = new WinstonLogger({}, loggerTransports);

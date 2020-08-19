@@ -9,7 +9,7 @@ export async function waitForEvent<T>(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(reject, timeout);
     emitter.on(event, (e) => {
-      if(condition(e)) {
+      if (condition(e)) {
         clearTimeout(timer);
         resolve(e);
       }

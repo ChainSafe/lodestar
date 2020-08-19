@@ -10,21 +10,16 @@ describeDirectorySpecTest<ShufflingTestCase, number[]>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/shuffling/core/shuffle"),
   (testcase) => {
     const output = [];
-    const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""),"hex");
-    for(let i = 0; i < Number(testcase.mapping.count); i++) {
-      output[i] = computeShuffledIndex(
-        config,
-        i,
-        Number(testcase.mapping.count),
-        seed
-      );
+    const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""), "hex");
+    for (let i = 0; i < Number(testcase.mapping.count); i++) {
+      output[i] = computeShuffledIndex(config, i, Number(testcase.mapping.count), seed);
     }
     return output;
   },
   {
     inputTypes: {
-      mapping: InputType.YAML
+      mapping: InputType.YAML,
     },
-    getExpected: (testCase => testCase.mapping.mapping.map((value) => Number(value)))
+    getExpected: (testCase) => testCase.mapping.mapping.map((value) => Number(value)),
   }
 );

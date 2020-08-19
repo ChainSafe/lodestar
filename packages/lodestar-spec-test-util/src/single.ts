@@ -9,10 +9,9 @@ import {Type} from "@chainsafe/ssz";
 
 import {isDirectory} from "./util";
 
-
 export enum InputType {
-  SSZ= "ssz",
-  YAML= "yaml"
+  SSZ = "ssz",
+  YAML = "yaml",
 }
 
 export interface ISpecTestOptions<TestCase, Result> {
@@ -43,7 +42,6 @@ export interface ISpecTestOptions<TestCase, Result> {
   expectFunc?: (testCase: TestCase, expected, actual) => void;
 
   timeout?: number;
-
 }
 
 export interface ITestCaseMeta {
@@ -58,7 +56,7 @@ const defaultOptions: ISpecTestOptions<any, any> = {
   shouldError: () => false,
   shouldSkip: () => false,
   expectFunc: (testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
-  timeout: 4000
+  timeout: 4000,
 };
 
 export function describeDirectorySpecTest<TestCase, Result>(
@@ -68,29 +66,22 @@ export function describeDirectorySpecTest<TestCase, Result>(
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
   options = {...defaultOptions, ...options};
-  if(!isDirectory(testCaseDirectoryPath)) {
+  if (!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }
   describe(name, function () {
-    if(options.timeout) {
+    if (options.timeout) {
       this.timeout(options.timeout || "10 min");
     }
 
     const testCases = readdirSync(testCaseDirectoryPath)
-      .map(name => join(testCaseDirectoryPath, name))
+      .map((name) => join(testCaseDirectoryPath, name))
       .filter(isDirectory);
 
     testCases.forEach((testCaseDirectory, index) => {
-      generateTestCase(
-        testCaseDirectory,
-        index,
-        testFunction,
-        options
-      );
+      generateTestCase(testCaseDirectory, index, testFunction, options);
     });
-
   });
-
 }
 
 function generateTestCase<TestCase, Result>(
@@ -102,10 +93,10 @@ function generateTestCase<TestCase, Result>(
   const name = basename(testCaseDirectoryPath);
   it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if(options.shouldSkip && options.shouldSkip(testCase, name, index)) {
+    if (options.shouldSkip && options.shouldSkip(testCase, name, index)) {
       return this.skip();
     }
-    if(options.shouldError && options.shouldError(testCase)) {
+    if (options.shouldError && options.shouldError(testCase)) {
       try {
         testFunction(testCase, name);
       } catch (e) {
@@ -131,14 +122,12 @@ function generateTestCase<TestCase, Result>(
   });
 }
 
-function loadInputFiles<TestCase, Result>(
-  directory: string, options: ISpecTestOptions<TestCase, Result>
-): TestCase {
+function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestOptions<TestCase, Result>): TestCase {
   const testCase = {};
   readdirSync(directory)
-    .map(name => join(directory, name))
+    .map((name) => join(directory, name))
     .filter((file) => {
-      if(isDirectory(file)) {
+      if (isDirectory(file)) {
         return false;
       }
       if (!options.inputTypes) throw Error("inputTypes is not defined");
@@ -152,7 +141,7 @@ function loadInputFiles<TestCase, Result>(
         testCase[`${inputName}_raw`] = readFileSync(file);
       }
       if (!options.inputProcessing) throw Error("inputProcessing is not defined");
-      if(options.inputProcessing[inputName]) {
+      if (options.inputProcessing[inputName]) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
     });
@@ -164,7 +153,7 @@ function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTe
     if (!options.sszTypes) throw Error("sszTypes is not defined");
     return options.sszTypes[inputName].deserialize(readFileSync(file));
   } else {
-    return  loadYamlFile(file);
+    return loadYamlFile(file);
   }
 }
 
@@ -178,4 +167,3 @@ function generateProfileReport(profile, directory, profileId: string): void {
     });
   });
 }
-

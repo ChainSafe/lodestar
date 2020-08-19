@@ -17,14 +17,13 @@ import {
   Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
-  VoluntaryExitRepository
+  VoluntaryExitRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
-
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
   public stateCache: StateContextCache;
@@ -62,7 +61,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
-
   /**
    * Remove stored operations based on a newly processed block
    */
@@ -72,7 +70,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.depositData.deleteOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
-      this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations)
+      this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations),
     ]);
   }
 

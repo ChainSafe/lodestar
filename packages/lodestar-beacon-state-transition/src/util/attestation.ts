@@ -14,13 +14,12 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DomainType,} from "../constants";
+import {DomainType} from "../constants";
 import {isSorted} from "@chainsafe/lodestar-utils";
 import {getDomain} from "./domain";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
-
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
@@ -32,11 +31,9 @@ export function isSlashableAttestationData(
 ): boolean {
   return (
     // Double vote
-    (!config.types.AttestationData.equals(data1, data2)
-      && data1.target.epoch === data2.target.epoch) ||
+    (!config.types.AttestationData.equals(data1, data2) && data1.target.epoch === data2.target.epoch) ||
     // Surround vote
-    (data1.source.epoch < data2.source.epoch &&
-      data2.target.epoch < data1.target.epoch)
+    (data1.source.epoch < data2.source.epoch && data2.target.epoch < data1.target.epoch)
   );
 }
 
@@ -63,11 +60,10 @@ export function isValidIndexedAttestation(
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
   //  Verify aggregate signature
-  if (verifySignature && !bls.verifyAggregate(
-    pubKeys,
-    signingRoot,
-    indexedAttestation.signature.valueOf() as Uint8Array,
-  )) {
+  if (
+    verifySignature &&
+    !bls.verifyAggregate(pubKeys, signingRoot, indexedAttestation.signature.valueOf() as Uint8Array)
+  ) {
     return false;
   }
   return true;
@@ -90,10 +86,7 @@ export function getAttestingIndices(
 /**
  * Return the sorted attesting indices corresponding to [[data]] and [[bits]].
  */
-export function getAttestingIndicesFromCommittee(
-  committee: ValidatorIndex[],
-  bits: BitList
-): ValidatorIndex[] {
+export function getAttestingIndicesFromCommittee(committee: ValidatorIndex[], bits: BitList): ValidatorIndex[] {
   // Find the participating attesters in the committee
   return committee.filter((_, i) => bits[i]).sort((a, b) => a - b);
 }
@@ -106,10 +99,10 @@ export function getIndexedAttestation(
   state: BeaconState,
   attestation: Attestation
 ): IndexedAttestation {
-  const attestingIndices =
-    getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
+  const attestingIndices = getAttestingIndices(config, state, attestation.data, attestation.aggregationBits);
   const sortedAttestingIndices = attestingIndices.sort(
-    (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
+    (index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2
+  );
   return {
     attestingIndices: sortedAttestingIndices as List<number>,
     data: attestation.data,
@@ -117,11 +110,7 @@ export function getIndexedAttestation(
   };
 }
 
-export function isValidAttestationSlot(
-  config: IBeaconConfig,
-  attestationSlot: Slot,
-  currentSlot: Slot
-): boolean {
+export function isValidAttestationSlot(config: IBeaconConfig, attestationSlot: Slot, currentSlot: Slot): boolean {
   return (
     attestationSlot + config.params.MIN_ATTESTATION_INCLUSION_DELAY <= currentSlot &&
     currentSlot <= attestationSlot + config.params.SLOTS_PER_EPOCH
@@ -142,8 +131,11 @@ export function isUnaggregatedAttestation(attestation: Attestation): boolean {
 /**
  * Compute the correct subnet for an attestation for Phase 0.
  */
-export function computeSubnetForAttestation
-(config: IBeaconConfig, state: BeaconState, attestation: Attestation): number {
+export function computeSubnetForAttestation(
+  config: IBeaconConfig,
+  state: BeaconState,
+  attestation: Attestation
+): number {
   const {slot, index} = attestation.data;
   return computeSubnetForSlot(config, state, slot, index);
 }
@@ -151,8 +143,12 @@ export function computeSubnetForAttestation
 /**
  * Compute the correct subnet for a slot/committee index for Phase 0.
  */
-export function computeSubnetForSlot
-(config: IBeaconConfig, state: BeaconState, slot: number, committeeIndex: number): number {
+export function computeSubnetForSlot(
+  config: IBeaconConfig,
+  state: BeaconState,
+  slot: number,
+  committeeIndex: number
+): number {
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(config, slot);
   const committeesSinceEpochStart = getCommitteeCountAtSlot(config, state, slot) * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;

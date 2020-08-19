@@ -16,7 +16,6 @@ export enum LogLevel {
 
 export const LogLevels = Object.values(LogLevel);
 
-
 export const customColors = {
   error: "red",
   warn: "yellow",
@@ -39,8 +38,8 @@ export interface ILogger {
   level: LogLevel;
   silent: boolean;
 
-  error(message: string, context?: Context|Error): void;
-  warn(message: string, context?: Context|Error): void;
+  error(message: string, context?: Context | Error): void;
+  warn(message: string, context?: Context | Error): void;
   info(message: string, context?: Context): void;
   important(message: string, context?: Context): void;
   verbose(message: string, context?: Context): void;

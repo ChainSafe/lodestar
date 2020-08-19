@@ -22,10 +22,10 @@ describeDirectorySpecTest<ProcessDepositTestCase, BeaconState>(
       deposit: config.types.Deposit,
     },
     timeout: 100000000,
-    shouldError: testCase => !testCase.post,
-    getExpected: (testCase => testCase.post),
+    shouldError: (testCase) => !testCase.post,
+    getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expect(config.types.BeaconState.equals(actual, expected)).to.be.true;
-    }
+    },
   }
 );

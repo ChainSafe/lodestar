@@ -11,36 +11,38 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {getSyncingStatus} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getSyncingStatus", function () {
-
   let api: RestApi;
   let nodeApiStub: StubbedNodeApi;
 
   beforeEach(async function () {
     nodeApiStub = new StubbedNodeApi();
-    api = new RestApi({
-      api: [ApiNamespace.NODE],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0
-    }, {
-      config,
-      logger: sinon.createStubInstance(WinstonLogger),
-      validator: sinon.createStubInstance(ValidatorApi),
-      beacon: sinon.createStubInstance(BeaconApi),
-      node: nodeApiStub
-    });
+    api = new RestApi(
+      {
+        api: [ApiNamespace.NODE],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: sinon.createStubInstance(WinstonLogger),
+        validator: sinon.createStubInstance(ValidatorApi),
+        beacon: sinon.createStubInstance(BeaconApi),
+        node: nodeApiStub,
+      }
+    );
     await api.start();
   });
 
-  afterEach(async function() {
+  afterEach(async function () {
     await api.stop();
   });
 
   it("should succeed", async function () {
     nodeApiStub.getSyncingStatus.resolves({
       headSlot: BigInt(3),
-      syncDistance: BigInt(2)
+      syncDistance: BigInt(2),
     });
     const response = await supertest(api.server.server)
       .get(getSyncingStatus.url)
@@ -51,5 +53,4 @@ describe("rest - node - getSyncingStatus", function () {
     expect(response.body.data.head_slot).to.equal("3");
     expect(response.body.data.sync_distance).to.equal("2");
   });
-
 });

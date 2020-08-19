@@ -3,7 +3,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 describe("rate counter", function () {
-
   it("should throw if period less than one", function () {
     expect(() => new RateCounter(0)).to.throw();
   });
@@ -28,5 +27,4 @@ describe("rate counter", function () {
     expect(rate.rate()).to.equal(0.5);
     await rate.stop();
   });
-
 });

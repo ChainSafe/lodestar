@@ -7,12 +7,11 @@ import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain, getRandaoMix} from "../../util";
 import {EpochContext} from "../util";
 
-
 export function processRandao(
   epochCtx: EpochContext,
   state: BeaconState,
   body: BeaconBlockBody,
-  verifySignature = true,
+  verifySignature = true
 ): void {
   const config = epochCtx.config;
   const epoch = epochCtx.currentShuffling.epoch;
@@ -34,6 +33,6 @@ export function processRandao(
   // mix in RANDAO reveal
   state.randaoMixes[epoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = xor(
     Buffer.from(getRandaoMix(config, state, epoch) as Uint8Array),
-    Buffer.from(hash(randaoReveal)),
+    Buffer.from(hash(randaoReveal))
   );
 }

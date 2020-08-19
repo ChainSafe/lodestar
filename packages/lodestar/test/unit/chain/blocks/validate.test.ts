@@ -11,7 +11,6 @@ import {expect} from "chai";
 import {getBlockSummary} from "../../../utils/headBlockInfo";
 
 describe("block validate stream", function () {
-
   let blockDbStub: SinonStubbedInstance<BlockRepository>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
@@ -49,9 +48,7 @@ describe("block validate stream", function () {
     receivedBlock.message.slot = 0;
     forkChoiceStub.hasBlock.withArgs(config.types.BeaconBlock.hashTreeRoot(receivedBlock.message)).returns(false);
     forkChoiceStub.getFinalized.returns({epoch: 0, root: Buffer.alloc(0)});
-    forkChoiceStub.head.returns(
-      getBlockSummary({blockRoot: Buffer.alloc(32, 0), slot: 0})
-    );
+    forkChoiceStub.head.returns(getBlockSummary({blockRoot: Buffer.alloc(32, 0), slot: 0}));
     blockDbStub.get.resolves(config.types.SignedBeaconBlock.defaultValue());
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
@@ -60,5 +57,4 @@ describe("block validate stream", function () {
     );
     expect(result).to.have.length(1);
   });
-
 });
