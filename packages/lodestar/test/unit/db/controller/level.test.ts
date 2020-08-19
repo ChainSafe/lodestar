@@ -104,7 +104,7 @@ describe("LevelDB controller", () => {
       gte: k1,
       lte: k2,
     });
-    const result = [];
+    const result: any[] = [];
     for await (const item of resultStream) {
       result.push(item);
     }

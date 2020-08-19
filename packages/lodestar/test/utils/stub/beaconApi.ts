@@ -14,7 +14,7 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
   getFork: Sinon.SinonStubbedMember<IBeaconApi["getFork"]>;
   getValidator: Sinon.SinonStubbedMember<IBeaconApi["getValidator"]>;
   getGenesis: Sinon.SinonStubbedMember<IBeaconApi["getGenesis"]>;
-  namespace: ApiNamespace.BEACON;
+  namespace: ApiNamespace.BEACON = ApiNamespace.BEACON;
 
   constructor(sandbox: SinonSandbox = Sinon) {
     this.state = sandbox.createStubInstance(BeaconStateApi);

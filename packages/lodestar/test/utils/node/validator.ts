@@ -11,7 +11,7 @@ import {NodeApi} from "../../../src/api/impl/node/node";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
-  const vcs = [];
+  const vcs: Validator[] = [];
   while (count > 0) {
     if (count > validatorsPerValidatorClient) {
       vcs.push(

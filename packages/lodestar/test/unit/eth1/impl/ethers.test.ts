@@ -135,6 +135,7 @@ describe("Eth1Notifier", () => {
   it("should get block by hash", async function (): Promise<void> {
     provider.getBlock.withArgs(0).resolves({} as ethers.providers.Block);
     let block = await eth1.getBlock(0);
+    if (!block) throw Error("getBlock returned null");
     block = await eth1.getBlock(block.hash);
     expect(block).to.not.be.null;
   });

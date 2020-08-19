@@ -218,7 +218,7 @@ describe("sync req resp", function () {
       blockStream = chunkIter;
     });
     await syncRpc.onRequest(peerId, Method.BeaconBlocksByRange, "range", body);
-    const slots = [];
+    const slots: number[] = [];
     for await (const body of blockStream!) {
       slots.push((body as SignedBeaconBlock).message.slot);
     }

@@ -3,13 +3,12 @@ import os from "os";
 import {Worker} from "worker_threads";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {waitForEvent} from "../utils/events/resolver";
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
-  const beaconParams: Partial<IBeaconParams> = {
+  const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,
     SLOTS_PER_EPOCH: 8,
   };
@@ -23,7 +22,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
         os.cpus().map((cpu) => cpu.model)
       );
 
-      const workers = [];
+      const workers: Worker[] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
       const minGenesisTime = Math.floor(Date.now() / 1000);
       // it takes more time to detect peers in threaded test

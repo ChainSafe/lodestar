@@ -111,6 +111,7 @@ describe("sync utils", function () {
           }),
         }),
       ]);
+      if (!result) throw Error("getCommonFinalizedCheckpoint returned null");
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
 
@@ -139,6 +140,7 @@ describe("sync utils", function () {
           }),
         }),
       ]);
+      if (!result) throw Error("getCommonFinalizedCheckpoint returned null");
       expect(config.types.Checkpoint.equals(checkpoint, result)).to.be.true;
     });
   });

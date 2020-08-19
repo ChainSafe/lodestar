@@ -126,6 +126,7 @@ describe("node api implementation", function () {
         },
       } as LibP2pConnection);
       const peer = await api.getPeer(peer1.toB58String());
+      if (!peer) throw Error("getPeer returned no peer");
       expect(peer.peerId).to.equal(peer1.toB58String());
       expect(peer.address).not.empty;
       expect(peer.peerId).not.empty;

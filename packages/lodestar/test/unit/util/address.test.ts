@@ -11,6 +11,6 @@ describe("Eth address helper", () => {
   it("should not be valid address", () => {
     expect(isValidAddress("0x00")).to.be.false;
     expect(isValidAddress("TPB")).to.be.false;
-    expect(isValidAddress(null)).to.be.false;
+    expect(isValidAddress(null as any)).to.be.false;
   });
 });

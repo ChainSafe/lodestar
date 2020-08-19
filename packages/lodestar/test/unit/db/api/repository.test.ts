@@ -130,7 +130,7 @@ describe("database repository", function () {
     source.push(TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer);
     source.end();
 
-    const result = [];
+    const result: TestType[] = [];
     for await (const v of repository.valuesStream()) {
       result.push(v);
     }

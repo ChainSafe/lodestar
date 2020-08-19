@@ -9,7 +9,7 @@ describe("Objects helper", () => {
     const obj1 = BigInt(1);
     const obj2 = BigInt(2);
     const obj3 = BigInt(3);
-    const array = [];
+    const array: bigint[] = [];
     array.push(obj1);
     array.push(obj1);
     array.push(obj3);
