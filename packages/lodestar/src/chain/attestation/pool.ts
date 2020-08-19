@@ -98,8 +98,9 @@ export class AttestationProcessor implements IAttestationProcessor {
       return;
     }
     //don't wait for this to resolve
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    void processAttestation(this.config, this.chain, this.logger, this.db, attestation);
+    processAttestation(this.config, this.chain, this.logger, this.db, attestation).catch(e => {
+      this.logger.error("Error processing attestation", e);
+    });
   }
 
   public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {

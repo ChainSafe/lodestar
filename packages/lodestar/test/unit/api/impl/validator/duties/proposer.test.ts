@@ -45,6 +45,17 @@ describe("get proposers api impl", function () {
     }
   });
 
+  it("should throw error when node is stopped", async function() {
+    syncStub.isSynced.returns(false);
+    syncStub.getSyncStatus.throws("Node is stopped");
+    try {
+      await api.getProposerDuties(1);
+      expect.fail("Expect error here");
+    } catch (e) {
+      expect(e.message.startsWith("Node is stopped")).to.be.true;
+    }
+  });
+
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);

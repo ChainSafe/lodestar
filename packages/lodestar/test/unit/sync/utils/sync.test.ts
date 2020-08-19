@@ -10,6 +10,7 @@ import {
   getBestHead,
   getBestPeer,
   getPeerSupportedProtocols,
+  checkBestPeer,
 } from "../../../../src/sync/utils";
 import {expect} from "chai";
 import deepmerge from "deepmerge";
@@ -18,7 +19,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
 import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -27,6 +28,7 @@ import PeerId from "peer-id";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
 import {Method} from "../../../../src/constants";
+import {INetwork, Libp2pNetwork} from "../../../../src/network";
 
 describe("sync utils", function () {
   let timer: SinonFakeTimers;
@@ -325,6 +327,72 @@ describe("sync utils", function () {
       expect(protocols).to.be.deep.equal([Method.BeaconBlocksByRoot, Method.BeaconBlocksByRange]);
     });
   });
+
+  describe("checkBestPeer", function () {
+    let networkStub: SinonStubbedInstance<INetwork>;
+    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    beforeEach(() => {
+      networkStub = sinon.createStubInstance(Libp2pNetwork);
+      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    });
+    afterEach(() => {
+      sinon.restore();
+    });
+    it("should return false, no peer", function () {
+      expect(checkBestPeer(null, null, null, null)).to.be.false;
+    });
+
+    it("peer is disconnected", async function() {
+      const peer1 = await PeerId.create();
+      networkStub.getPeers.returns([]);
+      expect(checkBestPeer(peer1, null, networkStub, null)).to.be.false;
+      expect(networkStub.getPeers.calledOnce).to.be.true;
+    });
+
+    it("peer is connected but no status", async function() {
+      const peer1 = await PeerId.create();
+      networkStub.getPeers.returns([peer1]);
+      const reps = new ReputationStore();
+      expect(checkBestPeer(peer1, forkChoiceStub, networkStub, reps)).to.be.false;
+      expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.false;
+    });
+
+    it("peer head slot is not better than us", async function() {
+      const peer1 = await PeerId.create();
+      networkStub.getPeers.returns([peer1]);
+      const reps = new ReputationStore();
+      reps.getFromPeerId(peer1).latestStatus = {
+        finalizedEpoch: 0,
+        finalizedRoot: Buffer.alloc(0),
+        forkDigest: Buffer.alloc(0),
+        headRoot: ZERO_HASH,
+        headSlot: 10,
+      };
+      forkChoiceStub.headBlockSlot.returns(20);
+      expect(checkBestPeer(peer1, forkChoiceStub, networkStub, reps)).to.be.false;
+      expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
+    });
+
+    it("peer is good for best peer", async function() {
+      const peer1 = await PeerId.create();
+      networkStub.getPeers.returns([peer1]);
+      const reps = new ReputationStore();
+      reps.getFromPeerId(peer1).latestStatus = {
+        finalizedEpoch: 0,
+        finalizedRoot: Buffer.alloc(0),
+        forkDigest: Buffer.alloc(0),
+        headRoot: ZERO_HASH,
+        headSlot: 30,
+      };
+      forkChoiceStub.headBlockSlot.returns(20);
+      expect(checkBestPeer(peer1, forkChoiceStub, networkStub, reps)).to.be.true;
+      expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
+    });
+  });
+
 });
 
 function generateReputation(overiddes: Partial<IReputation>): IReputation {
