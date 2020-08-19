@@ -84,7 +84,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   public async values(opts?: IBlockFilterOptions): Promise<SignedBeaconBlock[]> {
-    const result = [];
+    const result = [] as SignedBeaconBlock[];
     for await (const value of this.valuesStream(opts)) {
       result.push(value);
     }

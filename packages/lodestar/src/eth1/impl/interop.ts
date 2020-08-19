@@ -16,7 +16,7 @@ export class InteropEth1Notifier extends EventEmitter implements IEth1Notifier {
   public async stop(): Promise<void> {}
 
   public async getEth1BlockAndDepositEventsSource(): Promise<Pushable<Eth1EventsBlock>> {
-    return null;
+    throw Error("Not implemented");
   }
   public async endEth1BlockAndDepositEventsSource(): Promise<void> {}
 

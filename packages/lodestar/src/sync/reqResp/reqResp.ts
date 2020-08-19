@@ -307,7 +307,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     slot = slot === -1 ? request.startSlot : slot + request.step;
     const upperSlot = request.startSlot + request.count * request.step;
-    const slots = [];
+    const slots = [] as number[];
     while (slot < upperSlot) {
       slots.push(slot);
       slot += request.step;

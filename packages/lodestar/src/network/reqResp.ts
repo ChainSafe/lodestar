@@ -4,7 +4,7 @@
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
 import {pipe} from "it-pipe";
-import {Type} from "@chainsafe/ssz";
+import {Type, Json} from "@chainsafe/ssz";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
@@ -292,7 +292,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               requestId,
               encoding,
               body:
-                body &&
+                (body as Json) &&
                 (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<
                   object | unknown
                 >).toJson(body),

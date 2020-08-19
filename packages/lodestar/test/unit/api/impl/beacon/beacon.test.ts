@@ -30,7 +30,7 @@ describe("beacon api implementation", function () {
 
   describe("getGenesis", function () {
     it("genesis has not yet occured", async function () {
-      chainStub.getHeadState.resolves(null);
+      chainStub.getHeadState.resolves(undefined);
       const genesis = await api.getGenesis();
       expect(genesis).to.be.null;
     });
@@ -38,8 +38,7 @@ describe("beacon api implementation", function () {
     it("success", async function () {
       chainStub.getHeadState.resolves(generateState());
       const genesis = await api.getGenesis();
-      expect(genesis).to.not.be.null;
-      expect(genesis).to.not.be.undefined;
+      if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;
       expect(genesis.genesisTime).to.not.be.undefined;
       expect(genesis.genesisValidatorsRoot).to.not.be.undefined;

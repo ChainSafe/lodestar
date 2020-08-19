@@ -71,6 +71,7 @@ export class GenesisBuilder implements IGenesisBuilder {
           return this.state;
         }
       }
+      throw Error("Did not found genesis state and block source stopped");
     };
   }
 

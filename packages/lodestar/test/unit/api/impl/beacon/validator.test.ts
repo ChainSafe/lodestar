@@ -46,6 +46,7 @@ describe("get validator details api", function () {
       epochCtx,
     });
     const result = await api.getValidator(PublicKey.fromPrivateKey(PrivateKey.fromInt(2)).toBytesCompressed());
+    if (!result) throw Error("result is undefined");
     expect(result.validator.slashed).to.be.true;
     expect(result.index).to.be.equal(1);
   });
