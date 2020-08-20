@@ -147,7 +147,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
           const lastFetchedSlot = await pipe(
             [range],
             fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
-            processSyncBlocks(config, chain, logger, false)
+            processSyncBlocks(config, chain, logger, false, null)
           );
           if (lastFetchedSlot) {
             // not trigger sync until after we process lastFetchedSlot

@@ -9,14 +9,18 @@ import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
 import {getBlockSummary} from "../../../utils/headBlockInfo";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 
 describe("block validate stream", function () {
   let blockDbStub: SinonStubbedInstance<BlockRepository>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let chainStub: SinonStubbedInstance<IBeaconChain>;
+
 
   beforeEach(function () {
     blockDbStub = sinon.createStubInstance(BlockRepository);
     forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    chainStub = sinon.createStubInstance(BeaconChain);
   });
 
   it("should filter processed blocks", async function () {
@@ -24,7 +28,7 @@ describe("block validate stream", function () {
     forkChoiceStub.hasBlock.withArgs(config.types.BeaconBlock.hashTreeRoot(receivedBlock.message)).returns(true);
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub),
+      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
       collect
     );
     expect(result).to.have.length(0);
@@ -37,7 +41,7 @@ describe("block validate stream", function () {
     forkChoiceStub.getFinalized.returns({epoch: 1, root: Buffer.alloc(0)});
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub),
+      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
       collect
     );
     expect(result).to.have.length(0);
@@ -52,7 +56,7 @@ describe("block validate stream", function () {
     blockDbStub.get.resolves(config.types.SignedBeaconBlock.defaultValue());
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub),
+      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
       collect
     );
     expect(result).to.have.length(1);

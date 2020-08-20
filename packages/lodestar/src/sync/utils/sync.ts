@@ -144,6 +144,7 @@ export function validateBlocks(
  * @param chain
  * @param logger
  * @param isInitialSync
+ * @param lastProcessedBlock only needed for initial sync
  * @param trusted
  */
 export function processSyncBlocks(
@@ -151,6 +152,7 @@ export function processSyncBlocks(
   chain: IBeaconChain,
   logger: ILogger,
   isInitialSync: boolean,
+  lastProcessedBlock: SignedBeaconBlock | null,
   trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot | null> {
   return async (source) => {
@@ -161,8 +163,8 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    let headRoot = chain.forkChoice.headBlockRoot();
-    let headSlot = chain.forkChoice.headBlockSlot();
+    let headRoot = isInitialSync && config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message);
+    let headSlot = isInitialSync && lastProcessedBlock.message.slot;
     while (blockBuffer.length > 0) {
       const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;
@@ -184,7 +186,7 @@ export function processSyncBlocks(
           blockSlot: block.slot,
         });
         //this will trigger sync to retry to fetch this chunk again
-        lastProcessedSlot = lastProcessedSlot || chain.forkChoice.headBlockSlot();
+        lastProcessedSlot = lastProcessedSlot || headSlot;
         break;
       }
     }
