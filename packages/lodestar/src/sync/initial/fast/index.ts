@@ -46,7 +46,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * The last processed block
    */
-  private lastProcessedBlock: SignedBeaconBlock;
+  private lastProcessedBlock!: SignedBeaconBlock;
 
   public constructor(
     opts: ISyncOptions,
@@ -75,7 +75,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     );
     // head may not be on finalized chain so we start from finalized block
     // there are unfinalized blocks in db so we reprocess all of them
-    this.lastProcessedBlock = await this.db.blockArchive.lastValue();
+    this.lastProcessedBlock = (await this.db.blockArchive.lastValue())!;
     this.blockImportTarget = this.lastProcessedBlock.message.slot;
     if (
       !this.targetCheckpoint ||

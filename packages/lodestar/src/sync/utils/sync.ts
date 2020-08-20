@@ -163,14 +163,14 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    let headRoot = isInitialSync && config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message);
-    let headSlot = isInitialSync && lastProcessedBlock.message.slot;
+    let headRoot = isInitialSync ? config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock!.message) : null;
+    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : null;
     while (blockBuffer.length > 0) {
       const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;
       if (
         !isInitialSync ||
-        (isInitialSync && block.slot > headSlot && config.types.Root.equals(headRoot, block.parentRoot))
+        (isInitialSync && block.slot > headSlot! && config.types.Root.equals(headRoot!, block.parentRoot))
       ) {
         await chain.receiveBlock(signedBlock, trusted);
         headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
@@ -180,7 +180,7 @@ export function processSyncBlocks(
         }
       } else {
         logger.warn("Received block parent root doesn't match our head", {
-          head: toHexString(headRoot),
+          head: toHexString(headRoot!),
           headSlot,
           blockParent: toHexString(block.parentRoot),
           blockSlot: block.slot,
