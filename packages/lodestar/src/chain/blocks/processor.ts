@@ -68,7 +68,7 @@ export class BlockProcessor implements IService {
         return abortable(source, abortSignal, {returnOnAbort: true});
       },
       convertBlock(this.config),
-      validateBlock(this.config, this.logger, this.forkChoice),
+      validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
       processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus),
       postProcess(
         this.config,
