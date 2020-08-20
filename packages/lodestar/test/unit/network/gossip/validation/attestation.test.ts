@@ -10,12 +10,11 @@ import {expect} from "chai";
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../../src/constants";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
-import {getAttestationPreState} from "../../../../../src/network/gossip/utils";
-import {after} from "mocha";
 import {generateState} from "../../../../utils/state";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
+import {BitList} from "@chainsafe/ssz";
 
 describe("gossip attestation validation", function () {
   let logger: SinonStubbedInstance<ILogger>;
@@ -46,19 +45,19 @@ describe("gossip attestation validation", function () {
   });
 
   it("should reject - attestation has empty aggregation bits", async function () {
-    const attestation = generateAttestation({aggregationBits: []});
+    const attestation = generateAttestation({aggregationBits: ([] as boolean[]) as BitList});
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
   it("should reject - attestation has more aggregation bits", async function () {
-    const attestation = generateAttestation({aggregationBits: [true, true]});
+    const attestation = generateAttestation({aggregationBits: [true, true] as BitList});
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
   it("should reject - attestation block is invalid", async function () {
-    const attestation = generateAttestation({aggregationBits: [true]});
+    const attestation = generateAttestation({aggregationBits: [true] as BitList});
     db.badBlock.has.resolves(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
@@ -67,7 +66,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - old attestation", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
       data: {
         slot: getCurrentSlot(config, chain.getGenesisTime()) - ATTESTATION_PROPAGATION_SLOT_RANGE - 1,
       },
@@ -79,7 +78,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - future attestation", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
       data: {
         slot: getCurrentSlot(config, chain.getGenesisTime()) + 5,
       },
@@ -91,7 +90,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - validator already attested to target epoch", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -102,7 +101,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - validator already attested to target epoch", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -113,7 +112,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - missing attestation block or state", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves(null);
@@ -125,7 +124,7 @@ describe("gossip attestation validation", function () {
 
   it("should ignore - missing attestation pre state context", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves({
@@ -141,7 +140,7 @@ describe("gossip attestation validation", function () {
 
   it("should reject - attestation on wrong subnet", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves({
@@ -162,7 +161,7 @@ describe("gossip attestation validation", function () {
 
   it("should reject - invalid indexed attestation", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves({
@@ -187,7 +186,7 @@ describe("gossip attestation validation", function () {
 
   it("should accept", async function () {
     const attestation = generateAttestation({
-      aggregationBits: [true],
+      aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves({

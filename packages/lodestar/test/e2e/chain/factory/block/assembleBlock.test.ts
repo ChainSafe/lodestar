@@ -1,6 +1,8 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
+import {List} from "@chainsafe/ssz";
+import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
@@ -46,8 +48,8 @@ describe("produce block", function () {
     parentBlock.message.stateRoot = Buffer.alloc(32, 1);
     const parentHeader = signedBlockToSignedHeader(config, parentBlock);
     const state = generateState({
-      validators: validators,
-      balances,
+      validators: validators as List<Validator>,
+      balances: balances as List<bigint>,
       latestBlockHeader: parentHeader.message,
     });
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
@@ -73,7 +75,7 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
-    expect(() => fastStateTransition({state, epochCtx}, block, false)).to.not.throw();
+    expect(() => fastStateTransition({state, epochCtx}, block!, false)).to.not.throw();
   });
 
   function getBlockProposingService(keypair: Keypair): BlockProposingService {

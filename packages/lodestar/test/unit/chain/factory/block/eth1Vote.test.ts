@@ -3,6 +3,7 @@ import {beforeEach, describe, it} from "mocha";
 import {getEth1Vote} from "../../../../../src/chain/factory/block/eth1Vote";
 import {generateState} from "../../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {List} from "@chainsafe/ssz";
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {StubbedBeaconDb} from "../../../../utils/stub";
@@ -23,7 +24,11 @@ describe("eth1 vote", function () {
       depositCount: 10,
     };
     db.eth1Data.values.resolves([expectedVote]);
-    const eth1Vote = await getEth1Vote(config, db, generateState({slot: 5, eth1DataVotes: [expectedVote]}));
+    const eth1Vote = await getEth1Vote(
+      config,
+      db,
+      generateState({slot: 5, eth1DataVotes: [expectedVote] as List<Eth1Data>})
+    );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });
@@ -46,7 +51,7 @@ describe("eth1 vote", function () {
             depositRoot: Buffer.alloc(32, 1),
             depositCount: 12,
           },
-        ],
+        ] as List<Eth1Data>,
       })
     );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
@@ -68,7 +73,7 @@ describe("eth1 vote", function () {
     const eth1Vote = await getEth1Vote(
       config,
       db,
-      generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1]})
+      generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1] as List<Eth1Data>})
     );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote1)).to.be.true;
@@ -95,7 +100,7 @@ describe("eth1 vote", function () {
     const eth1Vote = await getEth1Vote(
       config,
       db,
-      generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1], eth1Data: stateEth1Data})
+      generateState({slot: 5, eth1DataVotes: [expectedVote2, expectedVote1] as List<Eth1Data>, eth1Data: stateEth1Data})
     );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote2)).to.be.true;
@@ -108,7 +113,11 @@ describe("eth1 vote", function () {
       depositCount: 10,
     };
     db.eth1Data.values.resolves([expectedVote]);
-    const eth1Vote = await getEth1Vote(config, db, generateState({slot: 5, eth1DataVotes: []}));
+    const eth1Vote = await getEth1Vote(
+      config,
+      db,
+      generateState({slot: 5, eth1DataVotes: ([] as Eth1Data[]) as List<Eth1Data>})
+    );
     expect(db.eth1Data.values.callCount).to.be.equal(1);
     expect(config.types.Eth1Data.equals(eth1Vote, expectedVote)).to.be.true;
   });

@@ -19,7 +19,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   private readonly network: INetwork;
   private readonly db: IBeaconDb;
   private readonly logger: ILogger;
-  private currentForkDigest: ForkDigest;
+  private currentForkDigest!: ForkDigest;
 
   constructor(chain: IBeaconChain, network: INetwork, db: IBeaconDb, logger: ILogger) {
     this.chain = chain;

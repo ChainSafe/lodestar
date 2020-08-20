@@ -65,7 +65,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
-  public clock: IBeaconClock;
+  public clock!: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
@@ -73,7 +73,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   private readonly metrics: IBeaconMetrics;
   private readonly opts: IChainOptions;
   private blockProcessor: BlockProcessor;
-  private _currentForkDigest: ForkDigest;
+  private _currentForkDigest!: ForkDigest;
   private attestationProcessor: IAttestationProcessor;
   private genesisTime: Number64 = 0;
 
@@ -86,7 +86,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     this.eth1 = eth1;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = forkChoice || new ArrayDagLMDGHOST(config);
+    this.forkChoice = forkChoice || (new ArrayDagLMDGHOST(config) as ILMDGHOST);
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
     this.attestationProcessor = new AttestationProcessor(this, {config, db, logger});
@@ -125,7 +125,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   }
 
   public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
-    const finalizedCheckpoint = this.forkChoice.getFinalized();
+    const finalizedCheckpoint = this.forkChoice.getFinalized()!;
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);
     }
@@ -164,7 +164,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
-    return this.forkChoice.getFinalized();
+    return this.forkChoice.getFinalized()!;
   }
 
   public async start(): Promise<void> {
@@ -361,10 +361,10 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     if (isStateNotGenesis) {
       const preJustifiedBlock = await this.db.blockArchive.getByRoot(lastKnownState.currentJustifiedCheckpoint.root);
       let preFinalizedBlocks = await this.db.blockArchive.values({
-        gt: preJustifiedBlock.message.slot,
+        gt: preJustifiedBlock!.message.slot,
         lt: finalizedSlot,
       });
-      preFinalizedBlocks = sortBlocks([preJustifiedBlock, ...preFinalizedBlocks]);
+      preFinalizedBlocks = sortBlocks([preJustifiedBlock!, ...preFinalizedBlocks]);
       const firstSlot = preFinalizedBlocks[0].message.slot;
       const lastSlot = preFinalizedBlocks[preFinalizedBlocks.length - 1].message.slot;
       this.logger.info(`Initialize forkchoice with pre-finalized blocks from ${firstSlot} to ${lastSlot}

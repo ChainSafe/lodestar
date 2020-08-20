@@ -30,12 +30,12 @@ import {getDevValidator} from "../../utils/node/validator";
 
   node.chain.on(checkpointEvent, (checkpoint) => {
     validator.stop().then(() =>
-      node.stop().then(() =>
-        parentPort.postMessage({
+      node.stop().then(() => {
+        parentPort!.postMessage({
           event: checkpointEvent,
           checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),
-        })
-      )
+        });
+      })
     );
   });
 })();

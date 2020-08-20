@@ -9,7 +9,7 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
-import {generateValidator} from "../../utils/validator";
+import {generateValidators} from "../../utils/validator";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
@@ -26,7 +26,7 @@ describe("BeaconChain", function () {
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state: BeaconState = generateState();
-    state.validators = Array.from({length: 5}, () => generateValidator({activationEpoch: 0}));
+    state.validators = generateValidators(5, {activationEpoch: 0});
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
@@ -62,7 +62,7 @@ describe("BeaconChain", function () {
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
       config.types.ENRForkID.hashTreeRoot(enrForkID);
-      config.params.ALL_FORKS = undefined;
+      config.params.ALL_FORKS = undefined!;
     });
   });
 

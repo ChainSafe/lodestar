@@ -771,9 +771,9 @@ describe("ArrayDagLMDGHOST", () => {
         {root: genesis, epoch: GENESIS_EPOCH},
         {root: genesis, epoch: GENESIS_EPOCH}
       );
-      expect(Buffer.from(lmd.getAncestor(blockC, slotA))).to.be.deep.equal(blockA);
-      expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1))).to.be.deep.equal(blockA);
-      expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT))).to.be.deep.equal(genesis);
+      expect(Buffer.from(lmd.getAncestor(blockC, slotA)!)).to.be.deep.equal(blockA);
+      expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1)!)).to.be.deep.equal(blockA);
+      expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT)!)).to.be.deep.equal(genesis);
       expect(lmd.getAncestor(genesis, GENESIS_SLOT - 1)).to.be.equal(null);
     });
   });

@@ -22,7 +22,7 @@ describe("beacon state api utils", function () {
 
   it("resolve head state id - success", async function () {
     forkChoiceStub.headStateRoot.returns(Buffer.alloc(32, 1));
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "head");
     expect(state).to.not.be.null;
     expect(forkChoiceStub.headStateRoot.calledOnce).to.be.true;
@@ -38,7 +38,7 @@ describe("beacon state api utils", function () {
 
   it("resolve finalized state id - success", async function () {
     forkChoiceStub.getFinalized.returns({root: Buffer.alloc(32, 1), epoch: 1});
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
     expect(state).to.not.be.null;
     expect(forkChoiceStub.getFinalized.calledOnce).to.be.true;
@@ -54,7 +54,7 @@ describe("beacon state api utils", function () {
 
   it("resolve finalized state id - missing state", async function () {
     forkChoiceStub.getFinalized.returns({root: Buffer.alloc(32, 1), epoch: 1});
-    dbStub.stateCache.get.resolves({state: null, epochCtx: null});
+    dbStub.stateCache.get.resolves({state: null!, epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
     expect(state).to.be.null;
     expect(forkChoiceStub.getFinalized.calledOnce).to.be.true;
@@ -63,7 +63,7 @@ describe("beacon state api utils", function () {
 
   it("resolve justified state id - success", async function () {
     forkChoiceStub.getJustified.returns({root: Buffer.alloc(32, 1), epoch: 1});
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
     expect(state).to.not.be.null;
     expect(forkChoiceStub.getJustified.calledOnce).to.be.true;
@@ -79,7 +79,7 @@ describe("beacon state api utils", function () {
 
   it("resolve justified state id - missing state", async function () {
     forkChoiceStub.getJustified.returns({root: Buffer.alloc(32, 1), epoch: 1});
-    dbStub.stateCache.get.resolves({state: null, epochCtx: null});
+    dbStub.stateCache.get.resolves({state: null!, epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
     expect(state).to.be.null;
     expect(forkChoiceStub.getJustified.calledOnce).to.be.true;
@@ -87,14 +87,14 @@ describe("beacon state api utils", function () {
   });
 
   it("resolve state by root", async function () {
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
     expect(state).to.not.be.null;
     expect(dbStub.stateCache.get.calledOnce).to.be.true;
   });
 
   it.skip("resolve finalized state by root", async function () {
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
     expect(state).to.be.null;
     expect(dbStub.stateCache.get.calledOnce).to.be.true;
@@ -109,7 +109,7 @@ describe("beacon state api utils", function () {
     forkChoiceStub.getCanonicalBlockSummaryAtSlot
       .withArgs(123)
       .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
     const state = await resolveStateId(config, dbStub, forkChoiceStub, "123");
     expect(state).to.not.be.null;
     expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;

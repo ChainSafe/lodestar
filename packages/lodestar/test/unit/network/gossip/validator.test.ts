@@ -19,6 +19,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
+import {generateInitialMaxBalances} from "../../../utils/balances";
 import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../../../src/db";
@@ -73,10 +74,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -97,10 +95,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -123,10 +118,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -151,10 +143,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -177,10 +166,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -206,10 +192,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -239,10 +222,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -268,10 +248,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -300,10 +277,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -333,10 +307,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -368,10 +339,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -403,10 +371,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -436,10 +401,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -457,10 +419,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
@@ -479,10 +438,7 @@ describe.skip("GossipMessageValidator", () => {
           activationEpoch: 0,
           effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
         }),
-        balances: Array.from(
-          {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-          () => config.params.MAX_EFFECTIVE_BALANCE
-        ),
+        balances: generateInitialMaxBalances(config),
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);

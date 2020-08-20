@@ -16,6 +16,7 @@ import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ZERO_HASH} from "../../constants";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -40,7 +41,8 @@ export function mapGossipEvent(event: keyof IGossipEvents | string): GossipEvent
 
 export function topicToGossipEvent(topic: string): GossipEvent {
   const groups = topic.match(GossipTopicRegExp);
-  const topicName = groups[3] as keyof typeof GossipEvent;
+  const topicName = groups && groups[3];
+  if (!topicName) throw Error(`Bad gossip topic format: ${topic}`);
   return topicName as GossipEvent;
 }
 
@@ -59,12 +61,13 @@ export function isAttestationSubnetTopic(topic: string): boolean {
 export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   assert.true(isAttestationSubnetTopic(topic), "Should be an attestation topic");
   const groups = topic.match(AttestationSubnetRegExp);
-  const subnetStr = groups[4];
+  const subnetStr = groups && groups[4];
+  if (!subnetStr) throw Error(`Bad attestation topic format: ${topic}`);
   return parseInt(subnetStr);
 }
 
 export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessage {
-  const message: Message = utils.normalizeInRpcMessage(rawMessage);
+  const message = utils.normalizeInRpcMessage(rawMessage) as Message;
   return {
     ...message,
     messageId: getMessageId(message),
@@ -72,7 +75,7 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
 }
 
 export function getMessageId(rawMessage: Message): string {
-  return Buffer.from(hash(rawMessage.data)).toString("base64");
+  return Buffer.from(hash(rawMessage.data || ZERO_HASH)).toString("base64");
 }
 
 export async function getBlockStateContext(

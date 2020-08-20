@@ -40,9 +40,9 @@ export function eth2ResponseEncode(
           logger.warn(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`);
         }
         //yield encoded ssz length
-        yield Buffer.from(encode(serializedData.length));
+        yield Buffer.from(encode(serializedData!.length));
         //yield compressed or uncompressed data chunks
-        yield* compressor(serializedData);
+        yield* compressor(serializedData!);
         //reset compressor
         compressor = getCompressor(encoding);
       }
@@ -64,9 +64,9 @@ export function eth2ResponseDecode(
       let buffer = new BufferList();
       //holds uncompressed chunks
       let uncompressedData = new BufferList();
-      let status: number = null;
-      let errorMessage: string = null;
-      let sszLength: number = null;
+      let status: number | null = null;
+      let errorMessage: string | null = null;
+      let sszLength: number | null = null;
       const decompressor = getDecompressor(encoding);
       const type = Methods[method].responseSSZType(config);
       for await (const chunk of source) {
@@ -110,7 +110,7 @@ export function eth2ResponseDecode(
           );
         }
         if (buffer.length === 0) continue;
-        let uncompressed: Buffer;
+        let uncompressed: Buffer | null = null;
         try {
           uncompressed = decompressor.uncompress(buffer.slice());
           buffer.consume(buffer.length);

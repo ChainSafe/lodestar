@@ -47,10 +47,10 @@ export function eth2RequestDecode(
       const type = Methods[method].requestSSZType(config);
       if (!type) {
         //method has no body, emit null to trigger response
-        yield {isValid: true, body: null};
+        yield {isValid: true, body: null!};
         return;
       }
-      let sszDataLength: number = null;
+      let sszDataLength: number | null = null;
       const decompressor = getDecompressor(encoding);
       const buffer = new BufferList();
       for await (let chunk of source) {
@@ -84,7 +84,7 @@ export function eth2RequestDecode(
           yield {isValid: false};
           break;
         }
-        let uncompressed: Buffer;
+        let uncompressed: Buffer | null = null;
         try {
           uncompressed = decompressor.uncompress(chunk.slice());
         } catch (e) {

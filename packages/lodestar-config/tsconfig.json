@@ -2,9 +2,6 @@
   "extends": "../../tsconfig",
   "include": ["src"],
   "compilerOptions": {
-    "typeRoots": [
-      "../../node_modules/@types"
-    ],
-    "strictNullChecks": true
+    "typeRoots": ["../../node_modules/@types"]
   }
 }

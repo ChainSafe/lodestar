@@ -36,9 +36,9 @@ describe("syncing", function () {
       genesisTime: (await bn.chain.getHeadState()).genesisTime,
     });
     await bn2.start();
-    const head = await bn.chain.getHeadBlock();
+    const head = await bn.chain.getHeadBlock()!;
     const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain, "processedBlock", 100000, (block) =>
-      config.types.SignedBeaconBlock.equals(block, head)
+      config.types.SignedBeaconBlock.equals(block, head!)
     );
     await bn2.network.connect(bn.network.peerId, bn.network.multiaddrs);
     try {

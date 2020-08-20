@@ -4,7 +4,6 @@ import PeerId from "peer-id";
 import {
   BeaconBlocksByRangeRequest,
   Goodbye,
-  RequestId,
   ResponseBody,
   SignedBeaconBlock,
   Status,
@@ -22,7 +21,6 @@ import {ReputationStore, IReputation} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
-import {RpcError} from "../../../src/network/error";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 
@@ -189,7 +187,7 @@ describe("sync req resp", function () {
   it("should fail to handle request ", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
     try {
-      await syncRpc.onRequest(peerId, null, "null", null);
+      await syncRpc.onRequest(peerId, null!, "null", null!);
     } catch (e) {
       expect.fail(e.stack);
     }
@@ -214,14 +212,14 @@ describe("sync req resp", function () {
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
     // block 6 does not exist
-    chainStub.getUnfinalizedBlocksAtSlots.resolves([null, block8]);
+    chainStub.getUnfinalizedBlocksAtSlots.resolves([null!, block8]);
     let blockStream: AsyncIterable<ResponseBody>;
-    reqRespStub.sendResponseStream.callsFake((id: RequestId, err: RpcError, chunkIter: AsyncIterable<ResponseBody>) => {
+    reqRespStub.sendResponseStream.callsFake((id, err, chunkIter) => {
       blockStream = chunkIter;
     });
     await syncRpc.onRequest(peerId, Method.BeaconBlocksByRange, "range", body);
-    const slots = [];
-    for await (const body of blockStream) {
+    const slots: number[] = [];
+    for await (const body of blockStream!) {
       slots.push((body as SignedBeaconBlock).message.slot);
     }
     // count is 4 but it returns only 3 blocks because block 6 does not exist

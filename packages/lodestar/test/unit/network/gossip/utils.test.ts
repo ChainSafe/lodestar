@@ -163,7 +163,7 @@ describe("gossip utils", function () {
         epochCtx: new EpochContext(config),
       });
       const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot, 5);
-      expect(stateContext).to.not.be.null;
+      if (stateContext === null) throw Error("stateContext is null");
       expect(stateContext.state.slot).to.be.equal(5);
       expect(
         forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce

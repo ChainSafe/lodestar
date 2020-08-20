@@ -50,7 +50,7 @@ describe("node api implementation", function () {
 
     it("should get node identity - no enr", async function () {
       const peerId = await PeerId.create({keyType: "secp256k1"});
-      networkStub.getEnr.returns(null);
+      networkStub.getEnr.returns(null!);
       networkStub.peerId = peerId;
       networkStub.multiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       const identity = await api.getNodeIdentity();
@@ -126,6 +126,7 @@ describe("node api implementation", function () {
         },
       } as LibP2pConnection);
       const peer = await api.getPeer(peer1.toB58String());
+      if (!peer) throw Error("getPeer returned no peer");
       expect(peer.peerId).to.equal(peer1.toB58String());
       expect(peer.address).not.empty;
       expect(peer.peerId).not.empty;

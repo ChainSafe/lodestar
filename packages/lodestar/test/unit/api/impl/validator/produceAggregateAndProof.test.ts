@@ -8,7 +8,7 @@ import {computeDomain, computeSigningRoot, DomainType, EpochContext} from "@chai
 import {expect} from "chai";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
-import {generateValidator} from "../../../../utils/validator";
+import {generateValidators} from "../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 
@@ -49,11 +49,7 @@ describe("produce aggregate and proof api implementation", function () {
       getCommitteeAttestation(generateEmptyAttestation(), PrivateKey.fromInt(2), 2),
     ]);
     const state = generateState({
-      validators: [
-        generateValidator({
-          pubkey: Buffer.alloc(48, 0),
-        }),
-      ],
+      validators: generateValidators(1, {pubkey: Buffer.alloc(48, 0)}),
     });
     const epochCtx = new EpochContext(config);
     epochCtx.syncPubkeys(state);

@@ -54,7 +54,7 @@ export const runSuite = (bench: BenchSuite, name?: string): void => {
   suite.on("complete", function () {
     if (bench.profile) {
       const profile = profiler.stopProfiling(profileId);
-      profile.export((error: Error, result: string) => {
+      profile.export((error, result) => {
         if (error) {
           return;
         }

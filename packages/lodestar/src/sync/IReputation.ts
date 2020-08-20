@@ -56,7 +56,7 @@ export class ReputationStore implements IReputationStore {
     if (subnet < 0 || subnet >= ATTESTATION_SUBNET_COUNT) {
       throw new Error(`Invalid subnet ${subnetStr}`);
     }
-    const peerIds = [];
+    const peerIds = [] as string[];
     for (const [peerId, rep] of this.reputations) {
       if (rep.latestMetadata && rep.latestMetadata.attnets[subnet]) {
         peerIds.push(peerId);

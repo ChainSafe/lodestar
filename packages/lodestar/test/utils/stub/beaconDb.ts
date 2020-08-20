@@ -1,7 +1,7 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {BeaconDb, IBeaconDb, LevelDbController} from "../../../src/db";
+import {BeaconDb, LevelDbController} from "../../../src/db";
 import {
   AggregateAndProofRepository,
   AttestationRepository,
@@ -22,7 +22,7 @@ import {CheckpointStateCache} from "../../../src/db/api/beacon/stateContextCheck
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 export class StubbedBeaconDb extends BeaconDb {
-  public db: SinonStubbedInstance<LevelDbController>;
+  public db!: SinonStubbedInstance<LevelDbController>;
 
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
@@ -48,7 +48,7 @@ export class StubbedBeaconDb extends BeaconDb {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(sinon: SinonSandbox, config = minimalConfig) {
-    super({config, controller: null});
+    super({config, controller: null!});
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
     this.stateCache = sinon.createStubInstance(StateContextCache) as any;

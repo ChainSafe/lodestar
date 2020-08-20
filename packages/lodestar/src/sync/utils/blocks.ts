@@ -5,6 +5,7 @@ import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {notNullish} from "../../util/notNullish";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot
@@ -73,7 +74,7 @@ export async function getBlockRange(
           const peer = peerBalancer.next();
           let chunkBlocks;
           try {
-            chunkBlocks = await getBlockRangeFromPeer(rpc, peer, chunk);
+            chunkBlocks = await getBlockRangeFromPeer(rpc, peer!, chunk);
           } catch (e) {
             chunkBlocks = null;
           }
@@ -81,13 +82,13 @@ export async function getBlockRange(
             blocks = blocks.concat(chunkBlocks);
             return null;
           } else {
-            logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} ` + `from peer ${peer.toB58String()}`);
+            logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} ` + `from peer ${peer!.toB58String()}`);
             //if failed to obtain blocks, try in next round on another peer
             return chunk;
           }
         })
       )
-    ).filter((chunk) => chunk !== null);
+    ).filter(notNullish);
     retry++;
     if (retry > maxRetry || retry > peers.length) {
       logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));

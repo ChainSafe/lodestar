@@ -1,4 +1,6 @@
 import pipe from "it-pipe";
+import {List} from "@chainsafe/ssz";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -81,7 +83,7 @@ describe("post block process stream", function () {
       epochCtx: (epochCtxStub as unknown) as EpochContext,
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
-    block.message.body.attestations = [generateEmptyAttestation()];
+    block.message.body.attestations = [generateEmptyAttestation()] as List<Attestation>;
     const item = {
       preStateContext,
       postStateContext,
@@ -118,7 +120,7 @@ describe("post block process stream", function () {
       epochCtx: (epochCtxStub as unknown) as EpochContext,
     };
     const block = config.types.SignedBeaconBlock.defaultValue();
-    block.message.body.attestations = [generateEmptyAttestation()];
+    block.message.body.attestations = [generateEmptyAttestation()] as List<Attestation>;
     const item = {
       preStateContext,
       postStateContext,

@@ -12,6 +12,7 @@ import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/l
 import {generateState} from "../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
 
 describe("chain attestation processor", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -76,7 +77,7 @@ describe("chain attestation processor", function () {
     epochCtxStub.getIndexedAttestation.returns((attestation as unknown) as IndexedAttestation);
     attestationPrestateStub.resolves({
       state: generateState({
-        balances: [BigInt(32), BigInt(32), BigInt(32), BigInt(32)],
+        balances: [BigInt(32), BigInt(32), BigInt(32), BigInt(32)] as List<bigint>,
       }),
       epochCtx: epochCtxStub,
     });

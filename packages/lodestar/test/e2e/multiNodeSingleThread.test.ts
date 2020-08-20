@@ -10,7 +10,7 @@ import {BeaconNode} from "../../src/node";
 describe("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justifiedCheckpoint";
   const validatorsPerNode = 8;
-  const beaconParams: Partial<IBeaconParams> = {
+  const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 3,
     SLOTS_PER_EPOCH: 8,
   };

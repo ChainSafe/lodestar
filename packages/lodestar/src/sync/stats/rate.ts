@@ -6,7 +6,7 @@ export class RateCounter {
 
   private count = 0;
   private since: number;
-  private timer: NodeJS.Timeout;
+  private timer?: NodeJS.Timeout;
 
   /**
    *
@@ -17,6 +17,7 @@ export class RateCounter {
       throw "time period must be greater or equal 1 second";
     }
     this.timePeriod = timePeriod;
+    this.since = Date.now();
   }
 
   public async start(): Promise<void> {

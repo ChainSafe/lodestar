@@ -33,13 +33,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   private readonly opts: IRegularSyncOptions;
 
-  private bestPeer: PeerId;
+  private bestPeer: PeerId | undefined;
 
   private currentTarget: Slot = 0;
   private targetSlotRangeSource: Pushable<ISlotRange>;
-  private gossipParentBlockRoot: Root;
+  private gossipParentBlockRoot: Root | undefined;
   // only subscribe to gossip when we're up to this
-  private controller: AbortController;
+  private controller!: AbortController;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     super();
@@ -162,7 +162,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private handleEmptyRange = async (range: ISlotRange): Promise<void> => {
-    const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus.headSlot;
+    const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer!).latestStatus!.headSlot;
     this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
@@ -181,11 +181,11 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
    * Make sure the best peer is not disconnected and it's better than us.
    */
   private getSyncPeers = async (): Promise<PeerId[]> => {
-    if (!checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
+    if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network, this.reps)) {
       this.logger.info("Regular Sync: wait for best peer");
       await this.waitForBestPeer(this.controller.signal);
     }
-    return [this.bestPeer];
+    return [this.bestPeer!];
   };
 
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
@@ -202,11 +202,11 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       const peers = this.network.getPeers();
       this.bestPeer = getBestPeer(this.config, peers, this.reps);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
-        const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus.headSlot;
+        const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus!.headSlot;
         this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()} with head slot ${peerHeadSlot}`);
       } else {
         // continue to find best peer
-        this.bestPeer = null;
+        this.bestPeer = undefined;
       }
     }
   };

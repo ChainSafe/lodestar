@@ -12,6 +12,7 @@ import {assembleAttestation} from "../../../../../src/chain/factory/attestation"
 import {generateEmptyBlock} from "../../../../utils/block";
 import {generateAttestationData} from "../../../../utils/attestation";
 import {generateValidators} from "../../../../utils/validator";
+import {generateInitialMaxBalances} from "../../../../utils/balances";
 
 describe("assemble attestation", function () {
   const sandbox = sinon.createSandbox();
@@ -36,10 +37,7 @@ describe("assemble attestation", function () {
         activationEpoch: 0,
         effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
       }),
-      balances: Array.from(
-        {length: config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT},
-        () => config.params.MAX_EFFECTIVE_BALANCE
-      ),
+      balances: generateInitialMaxBalances(config),
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);

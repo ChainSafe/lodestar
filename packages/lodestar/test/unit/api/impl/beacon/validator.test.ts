@@ -1,3 +1,5 @@
+import {List} from "@chainsafe/ssz";
+import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
@@ -35,7 +37,7 @@ describe("get validator details api", function () {
           pubkey: PublicKey.fromPrivateKey(PrivateKey.fromInt(2)).toBytesCompressed(),
           slashed: true,
         }),
-      ],
+      ] as List<Validator>,
     });
     const epochCtx = new EpochContext(config);
     epochCtx.syncPubkeys(state);
@@ -44,6 +46,7 @@ describe("get validator details api", function () {
       epochCtx,
     });
     const result = await api.getValidator(PublicKey.fromPrivateKey(PrivateKey.fromInt(2)).toBytesCompressed());
+    if (!result) throw Error("result is undefined");
     expect(result.validator.slashed).to.be.true;
     expect(result.index).to.be.equal(1);
   });
@@ -59,7 +62,7 @@ describe("get validator details api", function () {
           generateValidator({
             pubkey: Buffer.alloc(48, 2),
           }),
-        ],
+        ] as List<Validator>,
       }),
       epochCtx: new EpochContext(config),
     });

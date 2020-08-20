@@ -118,6 +118,7 @@ describe("sync - block utils", function () {
       const rpcStub = sinon.createStubInstance(ReqResp);
       rpcStub.beaconBlocksByRange.withArgs(sinon.match.any, sinon.match.any).resolves([generateEmptySignedBlock()]);
       const result = await getBlockRangeFromPeer(rpcStub, sinon.createStubInstance(PeerId), {start: 1, end: 4});
+      if (!result) throw Error("getBlockRangeFromPeer returned null");
       expect(result.length).to.be.greaterThan(0);
       expect(rpcStub.beaconBlocksByRange.calledOnce).to.be.true;
     });
@@ -125,7 +126,7 @@ describe("sync - block utils", function () {
 });
 
 function generateValidChain(start: BeaconBlockHeader, n = 3): SignedBeaconBlock[] {
-  const blocks = [];
+  const blocks: SignedBeaconBlock[] = [];
   let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
   for (let i = 0; i < n; i++) {
     const block = generateEmptySignedBlock();

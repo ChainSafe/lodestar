@@ -13,7 +13,7 @@ before(async function f() {
   await initBLS();
 });
 
-describeDirectorySpecTest<IAggregateSigsTestCase, string>(
+describeDirectorySpecTest<IAggregateSigsTestCase, string | null>(
   "BLS - aggregate sigs",
   path.join(
     __dirname,

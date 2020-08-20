@@ -1,3 +1,4 @@
+import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 /**
@@ -26,6 +27,6 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
  * @param opts
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: Partial<Validator>): Validator[] {
-  return Array.from({length: n}, () => generateValidator(opts));
+export function generateValidators(n: number, opts?: Partial<Validator>): List<Validator> {
+  return Array.from({length: n}, () => generateValidator(opts)) as List<Validator>;
 }

@@ -1,15 +1,11 @@
 {
   "extends": "../../tsconfig",
   "compilerOptions": {
-    "typeRoots": [
-      "../../node_modules/@types"
-    ],
+    "typeRoots": ["../../node_modules/@types"],
     "outDir": "lib",
     /* Redirect output structure to the directory. */
     "rootDir": "./src",
-    "strict": false,
-    "strictNullChecks": true
-    /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */
+    "strict": false
   },
   "include": ["src"]
 }

@@ -153,7 +153,7 @@ describe("[network] rpc", () => {
       let reqIndex = 0;
       for (const resp of resps) {
         let blockIndex = 0;
-        for (const block of resp) {
+        for (const block of resp!) {
           assert.deepEqual(block, generateBlockForSlot(reqs[reqIndex].startSlot + blockIndex));
           blockIndex++;
         }
@@ -215,9 +215,9 @@ describe("[network] rpc", () => {
       step: 1,
     };
     const libP2pMock = await createNode(multiaddr);
-    libP2pMock.dialProtocol = async (_, __, {signal}: {signal: AbortSignal}) => {
+    libP2pMock.dialProtocol = async () => {
       timer.tick(TTFB_TIMEOUT);
-      return null;
+      return null!;
     };
     const rpcC = new ReqResp(networkOptions, {
       config,

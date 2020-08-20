@@ -6,7 +6,6 @@ import {
   ENRForkID,
   ForkDigest,
   Number64,
-  Root,
   SignedBeaconBlock,
   Slot,
   Uint16,
@@ -29,10 +28,10 @@ export interface IMockChainParams {
 }
 
 export class MockBeaconChain extends EventEmitter implements IBeaconChain {
-  public forkChoice: ILMDGHOST;
+  public forkChoice!: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
-  public clock: IBeaconClock;
+  public clock!: IBeaconClock;
 
   private state: TreeBacked<BeaconState> | null;
   private config: IBeaconConfig;
@@ -41,22 +40,22 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     super();
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
-    this.state = state;
-    this.config = config;
+    this.state = state!;
+    this.config = config!;
   }
 
-  getHeadBlock(): Promise<null> {
-    return undefined;
+  async getHeadBlock(): Promise<null> {
+    return null;
   }
 
-  public async getHeadStateContext(): Promise<ITreeStateContext | null> {
+  public async getHeadStateContext(): Promise<ITreeStateContext> {
     return {
-      state: this.state,
+      state: this.state!,
       epochCtx: new EpochContext(this.config),
     };
   }
 
-  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
+  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
@@ -78,11 +77,11 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
-    return this.state.finalizedCheckpoint;
+    return this.state!.finalizedCheckpoint;
   }
 
   public get currentForkDigest(): ForkDigest {
-    return computeForkDigest(this.config, this.state.fork.currentVersion, this.state.genesisValidatorsRoot);
+    return computeForkDigest(this.config, this.state!.fork.currentVersion, this.state!.genesisValidatorsRoot);
   }
 
   public async initializeBeaconChain(): Promise<void> {
@@ -101,23 +100,23 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     return Math.floor(Date.now() / 1000);
   }
 
-  receiveAttestation(): Promise<void> {
-    return undefined;
+  async receiveAttestation(): Promise<void> {
+    return;
   }
 
-  receiveBlock(): Promise<void> {
-    return undefined;
+  async receiveBlock(): Promise<void> {
+    return;
   }
 
-  start(): Promise<void> {
-    return undefined;
+  async start(): Promise<void> {
+    return;
   }
 
-  stop(): Promise<void> {
-    return undefined;
+  async stop(): Promise<void> {
+    return;
   }
 
-  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null> {
-    return Promise.resolve(undefined);
+  async getStateContextByBlockRoot(): Promise<ITreeStateContext | null> {
+    return null;
   }
 }

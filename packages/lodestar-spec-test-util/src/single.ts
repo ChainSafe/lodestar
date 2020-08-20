@@ -27,7 +27,7 @@ export interface ISpecTestOptions<TestCase, Result> {
    * Optionally
    * @param testCase
    */
-  getExpected?: (testCase: TestCase) => Result;
+  getExpected?: (testCase: TestCase) => Result | undefined;
 
   /**
    * Optionally pass function to transform loaded values

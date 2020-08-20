@@ -41,7 +41,7 @@ export async function createPeerId(): Promise<PeerId> {
 }
 
 export function getRequestMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {
-  return Methods[method].requestSSZType(config);
+  return Methods[method].requestSSZType(config)!;
 }
 
 export function getResponseMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {

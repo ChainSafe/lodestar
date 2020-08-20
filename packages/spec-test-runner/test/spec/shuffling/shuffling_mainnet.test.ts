@@ -9,7 +9,7 @@ describeDirectorySpecTest<ShufflingTestCase, number[]>(
   "shuffling mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/shuffling/core/shuffle"),
   (testcase) => {
-    const output = [];
+    const output: number[] = [];
     const seed = Buffer.from(testcase.mapping.seed.replace("0x", ""), "hex");
     for (let i = 0; i < Number(testcase.mapping.count); i++) {
       output[i] = computeShuffledIndex(config, i, Number(testcase.mapping.count), seed);
