@@ -41,7 +41,7 @@ export function postProcess(
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           eventBus.emit("processedCheckpoint", {
             epoch: currentEpoch,
-            root: forkChoice.getCanonicalBlockSummaryAtSlot(preSlot).blockRoot,
+            root: block.message.parentRoot,
           });
           // newly justified epoch
           if (preJustifiedEpoch < postStateContext.state.currentJustifiedCheckpoint.epoch) {

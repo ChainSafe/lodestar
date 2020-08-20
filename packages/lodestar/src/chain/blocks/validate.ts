@@ -4,11 +4,13 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
+import {ChainEventEmitter} from "../interface";
 
 export function validateBlock(
   config: IBeaconConfig,
   logger: ILogger,
-  forkChoice: ILMDGHOST
+  forkChoice: ILMDGHOST,
+  eventBus: ChainEventEmitter
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<IBlockProcessJob> {
   return (source) => {
     return (async function* () {
@@ -16,6 +18,7 @@ export function validateBlock(
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         if (forkChoice.hasBlock(blockHash)) {
           logger.debug(`Block ${toHexString(blockHash)} was already processed, skipping...`);
+          eventBus.emit("processedBlock", job.signedBlock);
           continue;
         }
         const finalizedCheckpoint = forkChoice.getFinalized();

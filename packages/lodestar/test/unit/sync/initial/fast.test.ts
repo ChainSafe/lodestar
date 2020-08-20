@@ -11,6 +11,8 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {EventEmitter} from "events";
 import {expect} from "chai";
 import {SyncStats} from "../../../../src/sync/stats";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {generateEmptySignedBlock} from "../../../utils/block";
 
 describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
@@ -20,6 +22,7 @@ describe("fast sync", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let repsStub: SinonStubbedInstance<ReputationStore>;
   let getTargetStub: SinonStub;
+  let dbStub: StubbedBeaconDb;
 
   beforeEach(function () {
     forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
@@ -28,6 +31,7 @@ describe("fast sync", function () {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
+    dbStub = new StubbedBeaconDb(sinon);
   });
 
   afterEach(function () {
@@ -35,7 +39,7 @@ describe("fast sync", function () {
   });
 
   it("no peers with finalized epoch", async function () {
-    forkChoiceStub.headBlockSlot.returns(0);
+    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
@@ -45,6 +49,7 @@ describe("fast sync", function () {
         network: networkStub,
         stats: sinon.createStubInstance(SyncStats),
         reputationStore: repsStub,
+        db: dbStub,
       }
     );
     getTargetStub.returns({
@@ -56,10 +61,7 @@ describe("fast sync", function () {
 
   it("should sync till target and end", function (done) {
     const chainEventEmitter = new EventEmitter();
-    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-    forkChoiceStub.headBlockSlot.returns(0);
-    // @ts-ignore
-    chainEventEmitter.forkChoice = forkChoiceStub;
+    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
     statsStub.getEstimate.returns(1);
@@ -74,6 +76,7 @@ describe("fast sync", function () {
         network: networkStub,
         stats: statsStub,
         reputationStore: repsStub,
+        db: dbStub,
       }
     );
     const target: Checkpoint = {
@@ -96,10 +99,7 @@ describe("fast sync", function () {
 
   it("should continue syncing if there is new target", function (done) {
     const chainEventEmitter = new EventEmitter();
-    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
-    forkChoiceStub.headBlockSlot.returns(0);
-    // @ts-ignore
-    chainEventEmitter.forkChoice = forkChoiceStub;
+    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
     statsStub.getEstimate.returns(1);
@@ -114,6 +114,7 @@ describe("fast sync", function () {
         network: networkStub,
         stats: statsStub,
         reputationStore: repsStub,
+        db: dbStub,
       }
     );
     const target1: Checkpoint = {
