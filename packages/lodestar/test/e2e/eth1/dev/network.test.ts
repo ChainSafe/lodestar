@@ -1,4 +1,4 @@
-import {PrivateEth1Network} from "../../../../src/eth1/dev";
+import {Eth1PrivateNetwork} from "../../../../src/eth1/dev";
 import {ethers, Wallet} from "ethers";
 import {expect} from "chai";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -15,7 +15,7 @@ describe("Eth1 dev network", function () {
   });
 
   it("should start as configured", async () => {
-    const network = new PrivateEth1Network(
+    const network = new Eth1PrivateNetwork(
       {
         host: "127.0.0.1",
         port: 34568,
@@ -40,7 +40,7 @@ describe("Eth1 dev network", function () {
 
   it("should deploy deposit contract", async function () {
     this.timeout(3000);
-    const network = new PrivateEth1Network(
+    const network = new Eth1PrivateNetwork(
       {
         host: "127.0.0.1",
         port: 34567,

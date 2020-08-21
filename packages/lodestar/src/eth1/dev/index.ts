@@ -2,4 +2,4 @@
  * @module eth1/dev
  */
 
-export * from "./network";
+export * from "./dev";

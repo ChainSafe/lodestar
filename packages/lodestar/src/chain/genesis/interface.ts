@@ -1,12 +1,12 @@
 import {IBeaconDb} from "../../db";
-import {IEth1Notifier} from "../../eth1";
+import {IEth1Provider} from "../../eth1";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 
 export interface IGenesisBuilderModules {
   db: IBeaconDb;
-  eth1: IEth1Notifier;
+  eth1Provider: IEth1Provider;
   logger: ILogger;
 }
 

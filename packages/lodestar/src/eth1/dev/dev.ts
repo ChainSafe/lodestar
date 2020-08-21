@@ -8,16 +8,16 @@ import {promisify} from "util";
 import deepmerge from "deepmerge";
 import {ethers} from "ethers";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import devEth1Options from "./options";
+import {depositContract} from "../depositContract";
 
-export const devNetworkOpts = {
+export const eth1DevNetworkOpts = {
   port: 8545,
   networkId: 200,
   defaultBalance: 1000,
   host: "127.0.0.1",
 };
 
-export interface IPrivateNetworkOpts {
+export interface IEth1PrivateNetworkOpts {
   port?: number;
   host?: string;
   networkId?: number;
@@ -28,17 +28,17 @@ export interface IPrivateNetworkOpts {
   total_accounts?: number;
 }
 
-export class PrivateEth1Network {
+export class Eth1PrivateNetwork {
   private server: any;
 
   private blockchain: any;
 
-  private opts: IPrivateNetworkOpts;
+  private opts: IEth1PrivateNetworkOpts;
 
   private logger: ILogger;
 
-  public constructor(opts: IPrivateNetworkOpts, {logger}: {logger: ILogger}) {
-    this.opts = deepmerge(devNetworkOpts, opts);
+  public constructor(opts: IEth1PrivateNetworkOpts, {logger}: {logger: ILogger}) {
+    this.opts = deepmerge(eth1DevNetworkOpts, opts);
     this.logger = logger;
     this.server = ganache.server({
       ...this.opts,
@@ -88,11 +88,7 @@ export class PrivateEth1Network {
     const deployKey = "0x" + this.blockchain.accounts[this.blockchain.coinbase].secretKey.toString("hex");
     const provider = new ethers.providers.Web3Provider(this.blockchain._provider);
     const deployWallet = new ethers.Wallet(deployKey, provider);
-    const factory = new ethers.ContractFactory(
-      devEth1Options.depositContract.abi,
-      devEth1Options.depositContract.bytecode,
-      deployWallet
-    );
+    const factory = new ethers.ContractFactory(depositContract.abi, depositContract.bytecode, deployWallet);
     const contract = await factory.deploy();
     const address = contract.address;
     await contract.deployed();

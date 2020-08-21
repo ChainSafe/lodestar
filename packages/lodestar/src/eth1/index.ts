@@ -3,5 +3,7 @@
  */
 
 export * from "./interface";
-export {EthersEth1Notifier, IEthersEth1Options} from "./impl/ethers";
+export * from "./impl/stream";
+export * from "./impl/ethers";
+export * from "./eth1";
 export {Eth1Wallet} from "./wallet";

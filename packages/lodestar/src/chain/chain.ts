@@ -29,7 +29,7 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
-import {IEth1Notifier} from "../eth1";
+import {IEth1Provider} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {ArrayDagLMDGHOST, ILMDGHOST} from "./forkChoice";
@@ -48,7 +48,7 @@ import {notNullish} from "../util/notNullish";
 export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
-  eth1: IEth1Notifier;
+  eth1Provider: IEth1Provider;
   logger: ILogger;
   metrics: IBeaconMetrics;
   forkChoice?: ILMDGHOST;
@@ -68,7 +68,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   public clock!: IBeaconClock;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly eth1: IEth1Notifier;
+  private readonly eth1Provider: IEth1Provider;
   private readonly logger: ILogger;
   private readonly metrics: IBeaconMetrics;
   private readonly opts: IChainOptions;
@@ -77,13 +77,16 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   private attestationProcessor: IAttestationProcessor;
   private genesisTime: Number64 = 0;
 
-  public constructor(opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
+  public constructor(
+    opts: IChainOptions,
+    {config, db, eth1Provider, logger, metrics, forkChoice}: IBeaconChainModules
+  ) {
     super();
     this.opts = opts;
     this.chain = opts.name;
     this.config = config;
     this.db = db;
-    this.eth1 = eth1;
+    this.eth1Provider = eth1Provider;
     this.logger = logger;
     this.metrics = metrics;
     this.forkChoice = forkChoice || (new ArrayDagLMDGHOST(config) as ILMDGHOST);
@@ -184,7 +187,6 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.on("forkVersion", this.handleForkVersionChanged);
     await this.restoreHeadState(state, epochCtx);
-    await this.eth1.start();
   }
 
   public async stop(): Promise<void> {
@@ -406,7 +408,11 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});
+      const builder = new GenesisBuilder(this.config, {
+        eth1Provider: this.eth1Provider,
+        db: this.db,
+        logger: this.logger,
+      });
       state = await builder.waitForGenesis();
       await this.initializeBeaconChain(state);
     }
