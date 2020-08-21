@@ -12,6 +12,7 @@ interface IDevOwnArgs {
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   genesisValidators: {
+    alias: ["c"],
     description: "If present it will create genesis with interop validators and start chain.",
     type: "number",
     group: "dev",
@@ -26,6 +27,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
 
   reset: {
     description: "To delete chain and validator directories",
+    alias: ["r"],
     type: "boolean",
     group: "dev",
   },

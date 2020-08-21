@@ -62,17 +62,17 @@ export class BeaconNode {
     this.config = config;
     this.logger = logger.child(this.conf.logger.node);
     this.metrics = new BeaconMetrics(this.conf.metrics, {
-      logger: logger.child(this.conf.logger.metrics),
+      logger: this.logger.child(this.conf.logger.metrics),
     });
     this.metricsServer = new HttpMetricsServer(this.conf.metrics, {
       metrics: this.metrics,
-      logger: logger.child(this.conf.logger.metrics),
+      logger: this.logger.child(this.conf.logger.metrics),
     });
     this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
       controller: new LevelDbController(this.conf.db, {
-        logger: logger.child(this.conf.logger.db),
+        logger: this.logger.child(this.conf.logger.db),
       }),
     });
     this.eth1 =
@@ -80,13 +80,13 @@ export class BeaconNode {
       new EthersEth1Notifier(this.conf.eth1, {
         config,
         db: this.db,
-        logger: logger.child(this.conf.logger.eth1),
+        logger: this.logger.child(this.conf.logger.eth1),
       });
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
       eth1: this.eth1,
-      logger: logger.child(this.conf.logger.chain),
+      logger: this.logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
 
@@ -94,12 +94,12 @@ export class BeaconNode {
       chain: this.chain,
       db: this.db,
       config,
-      logger: logger.child(this.conf.logger.network),
+      logger: this.logger.child(this.conf.logger.network),
     });
     this.network = new Libp2pNetwork(this.conf.network, this.reps, {
       config,
       libp2p,
-      logger: logger.child(this.conf.logger.network),
+      logger: this.logger.child(this.conf.logger.network),
       metrics: this.metrics,
       validator: gossipMessageValidator,
       chain: this.chain,
@@ -110,7 +110,7 @@ export class BeaconNode {
       chain: this.chain,
       network: this.network,
       reputationStore: this.reps,
-      logger: logger.child(this.conf.logger.sync),
+      logger: this.logger.child(this.conf.logger.sync),
     });
     this.api = new ApiService(this.conf.api, {
       config,

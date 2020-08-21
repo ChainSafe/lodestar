@@ -106,15 +106,21 @@ export class WinstonLogger implements ILogger {
   public child(options: ILoggerOptions): WinstonLogger {
     const logger = Object.create(WinstonLogger.prototype);
     const winston = this.winston.child({namespace: options.module, level: options.level});
-    winston.level = options.level || this._level;
+    //use more verbose log
+    if (this.winston.levels[this._level] > this.winston.levels[options.level ?? LogLevel.error]) {
+      winston.level = this._level;
+    } else {
+      winston.level = options.level ?? this._level;
+    }
     return Object.assign(logger, {
       winston,
-      _level: options.level || this._level,
+      _level: winston.level,
       _silent: this._silent,
     });
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: Context | Error): void {
+    //don't propagate if silenced or message level is more detailed than logger level
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
