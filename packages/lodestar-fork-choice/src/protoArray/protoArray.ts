@@ -448,4 +448,14 @@ export class ProtoArray {
   iterateBlockRoots(blockRoot: HexRoot): [HexRoot, Slot][] {
     return this.iterateNodes(blockRoot).map((node) => [node.blockRoot, node.slot]);
   }
+
+  nodesAtSlot(slot: Slot): IProtoNode[] {
+    const result: IProtoNode[] = [];
+    for (const node of this.nodes) {
+      if (node.slot === slot) {
+        result.push(node);
+      }
+    }
+    return result;
+  }
 }
