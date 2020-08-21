@@ -1,7 +1,6 @@
-import {toHexString, fromHexString} from "@chainsafe/ssz";
-import {Gwei, Epoch, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Gwei, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {IProtoBlock, IVoteTracker, HEX_ZERO_HASH} from "./interface";
+import {IProtoBlock, IVoteTracker, HEX_ZERO_HASH, HexRoot} from "./interface";
 import {ProtoArray} from "./protoArray";
 import {computeDeltas} from "./computeDeltas";
 
@@ -20,10 +19,10 @@ export class ProtoArrayForkChoice {
     finalizedBlockRoot,
   }: {
     finalizedBlockSlot: Slot;
-    finalizedBlockStateRoot: Root;
+    finalizedBlockStateRoot: HexRoot;
     justifiedEpoch: Epoch;
     finalizedEpoch: Epoch;
-    finalizedBlockRoot: Root;
+    finalizedBlockRoot: HexRoot;
   }) {
     this.protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
@@ -33,11 +32,11 @@ export class ProtoArrayForkChoice {
 
     const block: IProtoBlock = {
       slot: finalizedBlockSlot,
-      blockRoot: toHexString(finalizedBlockRoot),
+      blockRoot: finalizedBlockRoot,
       parentRoot: undefined,
-      stateRoot: toHexString(finalizedBlockStateRoot),
+      stateRoot: finalizedBlockStateRoot,
       // We are using the finalizedBlockRoot as the targetRoot, since it always lies on an epoch boundary
-      targetRoot: toHexString(finalizedBlockRoot),
+      targetRoot: finalizedBlockRoot,
       justifiedEpoch,
       finalizedEpoch,
     };
@@ -47,16 +46,16 @@ export class ProtoArrayForkChoice {
     this.balances = [];
   }
 
-  public processAttestation(validatorIndex: ValidatorIndex, blockRoot: Root, targetEpoch: Epoch): void {
+  public processAttestation(validatorIndex: ValidatorIndex, blockRoot: HexRoot, targetEpoch: Epoch): void {
     const vote = this.votes[validatorIndex];
     if (!vote) {
       this.votes[validatorIndex] = {
         currentRoot: HEX_ZERO_HASH,
-        nextRoot: toHexString(blockRoot),
+        nextRoot: blockRoot,
         nextEpoch: targetEpoch,
       };
     } else if (targetEpoch > vote.nextEpoch) {
-      vote.nextRoot = toHexString(blockRoot);
+      vote.nextRoot = blockRoot;
       vote.nextEpoch = targetEpoch;
     }
   }
@@ -71,10 +70,10 @@ export class ProtoArrayForkChoice {
 
   public findHead(
     justifiedEpoch: Epoch,
-    justifiedRoot: Root,
+    justifiedRoot: HexRoot,
     finalizedEpoch: Epoch,
     justifiedStateBalances: Gwei[]
-  ): Root {
+  ): HexRoot {
     const oldBalances = this.balances;
     const newBalances = justifiedStateBalances;
 
@@ -84,11 +83,11 @@ export class ProtoArrayForkChoice {
 
     this.balances = newBalances;
 
-    return fromHexString(this.protoArray.findHead(toHexString(justifiedRoot)));
+    return this.protoArray.findHead(justifiedRoot);
   }
 
-  public maybePrune(finalizedRoot: Root): void {
-    this.protoArray.maybePrune(toHexString(finalizedRoot));
+  public maybePrune(finalizedRoot: HexRoot): void {
+    this.protoArray.maybePrune(finalizedRoot);
   }
 
   public setPruneThreshold(pruneThreshold: number): void {
@@ -103,12 +102,12 @@ export class ProtoArrayForkChoice {
     return this.length() === 0;
   }
 
-  public hasBlock(blockRoot: Root): boolean {
-    return this.protoArray.indices.has(toHexString(blockRoot));
+  public hasBlock(blockRoot: HexRoot): boolean {
+    return this.protoArray.indices.has(blockRoot);
   }
 
-  public getBlock(blockRoot: Root): IProtoBlock | null {
-    const blockIndex = this.protoArray.indices.get(toHexString(blockRoot));
+  public getBlock(blockRoot: HexRoot): IProtoBlock | null {
+    const blockIndex = this.protoArray.indices.get(blockRoot);
     if (blockIndex === undefined) {
       return null;
     }
@@ -133,8 +132,8 @@ export class ProtoArrayForkChoice {
    *
    * Still returns `true` if `ancestor_root` is known and `ancestor_root == descendant_root`.
    */
-  public isDescendant(ancestorRoot: Root, descendantRoot: Root): boolean {
-    const ancestor = this.protoArray.indices.get(toHexString(ancestorRoot));
+  public isDescendant(ancestorRoot: HexRoot, descendantRoot: HexRoot): boolean {
+    const ancestor = this.protoArray.indices.get(ancestorRoot);
     if (ancestor === undefined) {
       return false;
     }
@@ -142,7 +141,7 @@ export class ProtoArrayForkChoice {
     if (!ancestorNode) {
       return false;
     }
-    for (const [root, slot] of this.protoArray.iterateBlockRoots(toHexString(descendantRoot))) {
+    for (const [root, slot] of this.protoArray.iterateBlockRoots(descendantRoot)) {
       if (slot < ancestorNode.slot) {
         return false;
       }
@@ -153,11 +152,11 @@ export class ProtoArrayForkChoice {
     return false;
   }
 
-  public latestMessage(validatorIndex: ValidatorIndex): [Root, Epoch] | null {
+  public latestMessage(validatorIndex: ValidatorIndex): [HexRoot, Epoch] | null {
     const vote = this.votes[validatorIndex];
     if (!vote) {
       return null;
     }
-    return [fromHexString(vote.nextRoot), vote.nextEpoch];
+    return [vote.nextRoot, vote.nextEpoch];
   }
 }

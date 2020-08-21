@@ -8,10 +8,6 @@ import {
   BeaconState,
   IndexedAttestation,
 } from "@chainsafe/lodestar-types";
-
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoiceStore} from "./store";
-import {ProtoArrayForkChoice} from "../protoArray";
 import {fromHexString, toHexString, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {
   computeSlotsSinceEpochStart,
@@ -20,7 +16,11 @@ import {
   ZERO_HASH,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+
 import {IProtoBlock} from "../protoArray/interface";
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
+import {IForkChoiceStore} from "./store";
+import {ProtoArrayForkChoice} from "../protoArray";
 
 /**
  * Defined here:
@@ -98,10 +98,10 @@ export class ForkChoice {
 
     const protoArray = new ProtoArrayForkChoice({
       finalizedBlockSlot,
-      finalizedBlockStateRoot,
+      finalizedBlockStateRoot: toHexString(finalizedBlockStateRoot),
       justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
       finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-      finalizedBlockRoot: fcStore.finalizedCheckpoint.root,
+      finalizedBlockRoot: toHexString(fcStore.finalizedCheckpoint.root),
     });
 
     return new ForkChoice({
@@ -127,7 +127,7 @@ export class ForkChoice {
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
    */
   public getAncestor(blockRoot: Root, ancestorSlot: Slot): Uint8Array {
-    const block = this.protoArray.getBlock(blockRoot);
+    const block = this.protoArray.getBlock(toHexString(blockRoot));
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
@@ -166,14 +166,14 @@ export class ForkChoice {
   public getHead(currentSlot: Slot): Uint8Array {
     this.updateTime(currentSlot);
 
-    return this.protoArray
-      .findHead(
+    return fromHexString(
+      this.protoArray.findHead(
         this.fcStore.justifiedCheckpoint.epoch,
-        this.fcStore.justifiedCheckpoint.root,
+        toHexString(this.fcStore.justifiedCheckpoint.root),
         this.fcStore.finalizedCheckpoint.epoch,
         this.fcStore.justifiedBalances()
       )
-      .valueOf() as Uint8Array;
+    );
   }
 
   /**
@@ -248,7 +248,7 @@ export class ForkChoice {
     this.updateTime(currentSlot);
 
     // Parent block must be known
-    if (!this.protoArray.hasBlock(block.parentRoot)) {
+    if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.ERR_INVALID_BLOCK,
         err: {
@@ -413,7 +413,7 @@ export class ForkChoice {
     //
     // We do not delay the block for later processing to reduce complexity and DoS attack
     // surface.
-    if (!this.protoArray.hasBlock(target.root)) {
+    if (!this.protoArray.hasBlock(toHexString(target.root))) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
         err: {
@@ -431,7 +431,7 @@ export class ForkChoice {
     //
     // Attestations must be for a known block. If the block is unknown, we simply drop the
     // attestation and do not delay consideration for later.
-    const block = this.protoArray.getBlock(indexedAttestation.data.beaconBlockRoot);
+    const block = this.protoArray.getBlock(toHexString(indexedAttestation.data.beaconBlockRoot));
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
@@ -521,7 +521,7 @@ export class ForkChoice {
       readOnlyForEach(attestation.attestingIndices, (validatorIndex) => {
         this.protoArray.processAttestation(
           validatorIndex,
-          attestation.data.beaconBlockRoot,
+          toHexString(attestation.data.beaconBlockRoot),
           attestation.data.target.epoch
         );
       });
@@ -566,7 +566,11 @@ export class ForkChoice {
       if (attestation.slot <= currentSlot) {
         this.queuedAttesations.delete(attestation);
         for (const validatorIndex of attestation.attestingIndices) {
-          this.protoArray.processAttestation(validatorIndex, attestation.blockRoot, attestation.targetEpoch);
+          this.protoArray.processAttestation(
+            validatorIndex,
+            toHexString(attestation.blockRoot),
+            attestation.targetEpoch
+          );
         }
       }
     }
@@ -576,14 +580,14 @@ export class ForkChoice {
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
   public hasBlock(blockRoot: Root): boolean {
-    return this.protoArray.hasBlock(blockRoot) && this.isDescendantOfFinalized(blockRoot);
+    return this.protoArray.hasBlock(toHexString(blockRoot)) && this.isDescendantOfFinalized(blockRoot);
   }
 
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
   public getBlock(blockRoot: Root): IProtoBlock | null {
-    const block = this.protoArray.getBlock(blockRoot);
+    const block = this.protoArray.getBlock(toHexString(blockRoot));
     if (!block) {
       return null;
     }
@@ -600,7 +604,7 @@ export class ForkChoice {
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
   public isDescendantOfFinalized(blockRoot: Root): boolean {
-    return this.protoArray.isDescendant(this.fcStore.finalizedCheckpoint.root, blockRoot);
+    return this.protoArray.isDescendant(toHexString(this.fcStore.finalizedCheckpoint.root), toHexString(blockRoot));
   }
 
   /**
