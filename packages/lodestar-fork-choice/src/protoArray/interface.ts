@@ -20,26 +20,14 @@ export interface IVoteTracker {
  * A simplified version of BeaconBlock
  */
 export interface IProtoBlock {
-  slot: Slot;
-  blockRoot: HexRoot;
-  parentRoot?: HexRoot;
-  stateRoot: HexRoot;
-  targetRoot: HexRoot;
-  justifiedEpoch: Epoch;
-  finalizedEpoch: Epoch;
-}
-
-/**
- * A block root with additional metadata required to form a DAG
- * with vote weights and best blocks stored as metadata
- */
-export interface IProtoNode {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
    * This is useful for upstream fork choice logic.
    */
   slot: Slot;
+  blockRoot: HexRoot;
+  parentRoot: HexRoot;
   /**
    * The stateRoot is not necessary for ProtoArray either,
    * it also just exists for upstream components (namely attestation verification)
@@ -52,13 +40,16 @@ export interface IProtoNode {
    * it also just exists for upstream components (namely attestation verification)
    */
   targetRoot: HexRoot;
-
-  blockRoot: HexRoot;
-
-  parent?: number;
   justifiedEpoch: Epoch;
   finalizedEpoch: Epoch;
+}
 
+/**
+ * A block root with additional metadata required to form a DAG
+ * with vote weights and best blocks stored as metadata
+ */
+export interface IProtoNode extends IProtoBlock {
+  parent?: number;
   weight: Gwei;
   bestChild?: number;
   bestDescendant?: number;

@@ -12,17 +12,19 @@ export class ProtoArrayForkChoice {
   public balances: Gwei[];
 
   constructor({
-    finalizedBlockSlot,
-    finalizedBlockStateRoot,
+    slot,
+    parentRoot,
+    stateRoot,
+    blockRoot,
     justifiedEpoch,
     finalizedEpoch,
-    finalizedBlockRoot,
   }: {
-    finalizedBlockSlot: Slot;
-    finalizedBlockStateRoot: HexRoot;
+    slot: Slot;
+    parentRoot: HexRoot;
+    stateRoot: HexRoot;
+    blockRoot: HexRoot;
     justifiedEpoch: Epoch;
     finalizedEpoch: Epoch;
-    finalizedBlockRoot: HexRoot;
   }) {
     this.protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
@@ -31,12 +33,12 @@ export class ProtoArrayForkChoice {
     });
 
     const block: IProtoBlock = {
-      slot: finalizedBlockSlot,
-      blockRoot: finalizedBlockRoot,
-      parentRoot: undefined,
-      stateRoot: finalizedBlockStateRoot,
-      // We are using the finalizedBlockRoot as the targetRoot, since it always lies on an epoch boundary
-      targetRoot: finalizedBlockRoot,
+      slot,
+      blockRoot,
+      parentRoot,
+      stateRoot,
+      // We are using the blockRoot as the targetRoot, since it always lies on an epoch boundary
+      targetRoot: blockRoot,
       justifiedEpoch,
       finalizedEpoch,
     };
@@ -58,14 +60,6 @@ export class ProtoArrayForkChoice {
       vote.nextRoot = blockRoot;
       vote.nextEpoch = targetEpoch;
     }
-  }
-
-  public processBlock(block: IProtoBlock): void {
-    if (!block.parentRoot) {
-      throw new Error("Missing parent root");
-    }
-
-    this.protoArray.onBlock(block);
   }
 
   public findHead(
@@ -117,11 +111,9 @@ export class ProtoArrayForkChoice {
       return null;
     }
 
-    const parentNode = block.parent === undefined ? undefined : this.protoArray.nodes[block.parent];
-    if (!parentNode) {
-      return null;
-    }
-    return block;
+    return {
+      ...block,
+    };
   }
 
   /**

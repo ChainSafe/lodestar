@@ -34,8 +34,8 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --colors --timeout 5000 'test/e2e/**/*.test.ts'",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha --colors 'test/unit/**/*.test.ts'"
+    "test:e2e": "mocha --colors -r ts-node/register 'test/e2e/**/*.test.ts'",
+    "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@chainsafe/bls": "2.0.0",

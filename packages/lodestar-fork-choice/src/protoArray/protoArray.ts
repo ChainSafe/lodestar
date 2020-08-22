@@ -118,13 +118,8 @@ export class ProtoArray {
     const nodeIndex = this.nodes.length;
 
     const node: IProtoNode = {
-      slot: block.slot,
-      blockRoot: block.blockRoot,
-      targetRoot: block.targetRoot,
-      stateRoot: block.stateRoot,
-      parent: (block.parentRoot && this.indices.get(block.parentRoot)) || undefined,
-      justifiedEpoch: block.justifiedEpoch,
-      finalizedEpoch: block.finalizedEpoch,
+      ...block,
+      parent: this.indices.get(block.parentRoot),
       weight: BigInt(0),
       bestChild: undefined,
       bestDescendant: undefined,

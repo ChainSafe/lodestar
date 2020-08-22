@@ -1,4 +1,5 @@
 /* eslint-disable max-len */
+import {fromHexString, toHexString, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {
   Epoch,
   Slot,
@@ -8,7 +9,6 @@ import {
   BeaconState,
   IndexedAttestation,
 } from "@chainsafe/lodestar-types";
-import {fromHexString, toHexString, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -17,17 +17,9 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {IProtoBlock} from "../protoArray/interface";
+import {IProtoBlock, ProtoArrayForkChoice} from "../protoArray";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoiceStore} from "./store";
-import {ProtoArrayForkChoice} from "../protoArray";
-
-/**
- * Defined here:
- *
- * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#configuration
- */
-export const SAFE_SLOTS_TO_UPDATE_JUSTIFIED = 8;
 
 /**
  * Used for queuing attestations from the current slot. Only contains the minimum necessary
@@ -93,15 +85,13 @@ export class ForkChoice {
    * Instantiates a ForkChoice from genesis parameters
    */
   public static fromGenesis(config: IBeaconConfig, fcStore: IForkChoiceStore, genesisBlock: BeaconBlock): ForkChoice {
-    const finalizedBlockSlot = genesisBlock.slot;
-    const finalizedBlockStateRoot = genesisBlock.stateRoot;
-
     const protoArray = new ProtoArrayForkChoice({
-      finalizedBlockSlot,
-      finalizedBlockStateRoot: toHexString(finalizedBlockStateRoot),
+      slot: genesisBlock.slot,
+      parentRoot: toHexString(genesisBlock.parentRoot),
+      stateRoot: toHexString(genesisBlock.stateRoot),
+      blockRoot: toHexString(fcStore.finalizedCheckpoint.root),
       justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
       finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-      finalizedBlockRoot: toHexString(fcStore.finalizedCheckpoint.root),
     });
 
     return new ForkChoice({
@@ -338,7 +328,7 @@ export class ForkChoice {
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    this.protoArray.processBlock({
+    this.protoArray.protoArray.onBlock({
       slot: block.slot,
       blockRoot: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)),
       parentRoot: toHexString(block.parentRoot),
