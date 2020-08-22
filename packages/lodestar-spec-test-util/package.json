@@ -29,7 +29,7 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
-    "test:e2e": "mocha --colors -r ts-node/register 'test/e2e/**/*.test.ts'"
+    "test:e2e": "mocha -r ts-node/register 'test/e2e/**/*.test.ts'"
   },
   "repository": {
     "type": "git",

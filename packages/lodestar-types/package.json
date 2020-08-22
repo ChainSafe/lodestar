@@ -31,7 +31,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
-    "test:unit": "mocha --colors -r ts-node/register 'test/**/*.test.ts'"
+    "test:unit": "mocha -r ts-node/register 'test/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

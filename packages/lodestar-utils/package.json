@@ -32,7 +32,7 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
-    "test:unit": "mocha --colors -r ./.babel-register 'test/**/*.test.ts'"
+    "test:unit": "mocha -r ./.babel-register 'test/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

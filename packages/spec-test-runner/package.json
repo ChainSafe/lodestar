@@ -20,14 +20,14 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "test:ssz": "mocha --colors 'test/spec/ssz/**/*.test.ts'",
-    "test:bls": "mocha --colors 'test/spec/bls/**/*.test.ts'",
-    "test:ssz-main": "mocha --colors 'test/spec/ssz/**/*mainnet.test.ts'",
-    "test:ssz-min": "mocha --colors 'test/spec/ssz/**/*minimal.test.ts'",
-    "test:spec": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
-    "test:spec-fast": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
-    "test:spec-main": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
-    "test:spec-min": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
+    "test:ssz": "mocha 'test/spec/ssz/**/*.test.ts'",
+    "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
+    "test:ssz-main": "mocha 'test/spec/ssz/**/*mainnet.test.ts'",
+    "test:ssz-min": "mocha 'test/spec/ssz/**/*minimal.test.ts'",
+    "test:spec": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
+    "test:spec-fast": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
+    "test:spec-main": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
+    "test:spec-min": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
