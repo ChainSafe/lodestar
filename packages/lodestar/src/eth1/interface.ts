@@ -34,6 +34,7 @@ export interface IEth1Block {
 }
 
 export interface IEth1Provider {
+  deployBlock: number;
   getBlockNumber(): Promise<number>;
   getBlock(blockNumber: number): Promise<IEth1Block>;
   getDepositEvents(fromBlock: number, toBlock?: number): Promise<IDepositEvent[]>;

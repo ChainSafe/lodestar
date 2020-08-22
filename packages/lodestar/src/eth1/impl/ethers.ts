@@ -20,13 +20,13 @@ interface IEth1Block {
 }
 
 export class Eth1Provider {
-  private opts: IEth1Options;
+  public deployBlock: number;
 
+  private config: IBeaconConfig;
+  private opts: IEth1Options;
   private address: string;
   private provider: ethers.providers.Provider;
   private contract: ethers.Contract;
-
-  private config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, opts: IEth1Options) {
     this.config = config;
@@ -37,6 +37,7 @@ export class Eth1Provider {
       throw Error(`Invalid contract address: ${this.address}`);
     }
     this.contract = new ethers.Contract(this.address, depositContract.abi, this.provider);
+    this.deployBlock = opts.depositContractDeployBlock;
   }
 
       this.logger.info("Eth1 notifier is disabled, no need to process eth1 for proposing data");

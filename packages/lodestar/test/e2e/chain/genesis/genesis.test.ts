@@ -1,39 +1,22 @@
-import {IEth1Notifier, EthersEth1Notifier} from "../../../../src/eth1";
-import {IEth1Options} from "../../../../src/eth1/options";
+import fs from "fs";
+import {Eth1Provider} from "../../../../src/eth1";
 import {BeaconDb, LevelDbController} from "../../../../src/db";
 import {ILogger, WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
-import {ethers} from "ethers";
-import defaults from "../../../../src/eth1/dev/options";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import * as fs from "fs";
 import {expect} from "chai";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
-import sinon from "sinon";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../../../src/util/sleep";
 
 describe("BeaconChain", function () {
-  this.timeout(10 * 60 * 1000);
+  this.timeout("10min");
 
-  let eth1Notifier: IEth1Notifier;
-  let provider: ethers.providers.JsonRpcProvider;
-  let builder: GenesisBuilder;
-  const opts: IEth1Options = {
-    ...defaults,
-    provider: {
-      url: "https://goerli.prylabs.net",
-    },
-    depositContract: {
-      ...defaults.depositContract,
-      deployedAt: 2917810,
-    },
-  };
   let db: BeaconDb;
   const dbPath = "./.tmpdb";
   const logger: ILogger = new WinstonLogger();
   logger.silent = false;
-  logger.level = LogLevel.info;
+  logger.level = LogLevel.verbose;
   const altonaConfig = Object.assign({}, {params: config.params}, config);
   altonaConfig.params = Object.assign({}, config.params, {
     MIN_GENESIS_TIME: 1593433800,
@@ -45,8 +28,6 @@ describe("BeaconChain", function () {
     DEPOSIT_CONTRACT_ADDRESS: fromHexString("0x16e82D77882A663454Ef92806b7DeCa1D394810f"),
   });
 
-  const sandbox = sinon.createSandbox();
-
   before(async () => {
     await fs.promises.rmdir(dbPath, {recursive: true});
     expect(altonaConfig.params.MIN_GENESIS_TIME).to.be.not.equal(config.params.MIN_GENESIS_TIME);
@@ -57,24 +38,7 @@ describe("BeaconChain", function () {
       config: altonaConfig,
       controller: new LevelDbController({name: dbPath}, {logger}),
     });
-    provider = new ethers.providers.JsonRpcProvider(opts.provider.url, altonaConfig.params.DEPOSIT_NETWORK_ID);
     await db.start();
-    eth1Notifier = new EthersEth1Notifier(
-      {...opts, providerInstance: provider},
-      {
-        config: altonaConfig,
-        db,
-        logger: logger.child({module: "eth1"}),
-      }
-    );
-  });
-
-  beforeEach(async function () {
-    builder = new GenesisBuilder(altonaConfig, {eth1: eth1Notifier, db, logger: logger.child({module: "genesis"})});
-  });
-
-  afterEach(async () => {
-    sandbox.restore();
   });
 
   after(async () => {
@@ -83,6 +47,18 @@ describe("BeaconChain", function () {
   });
 
   it("should detect altona genesis state", async function () {
+    const eth1Provider = new Eth1Provider(altonaConfig, {
+      enabled: true,
+      providerUrl: "https://goerli.prylabs.net",
+      depositContractDeployBlock: 2917810,
+    });
+
+    const builder = new GenesisBuilder(altonaConfig, {
+      db,
+      eth1Provider,
+      logger: logger.child({module: "genesis"}),
+    });
+
     logger.profile("detect altona genesis state");
     const headState = await builder.waitForGenesis();
     // https://github.com/goerli/altona/tree/master/altona
@@ -93,7 +69,6 @@ describe("BeaconChain", function () {
     const forkDigest = computeForkDigest(altonaConfig, headState.fork.currentVersion, headState.genesisValidatorsRoot);
     expect(toHexString(forkDigest)).to.be.equal("0xfdca39b0");
     logger.profile("detect altona genesis state");
-    await eth1Notifier.stop();
     await sleep(200);
   });
 });

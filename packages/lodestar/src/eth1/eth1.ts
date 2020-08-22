@@ -18,10 +18,12 @@ export class Eth1Streamer implements IEth1Streamer {
   }
 
   getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents> {
+    fromBlock = Math.max(fromBlock, this.provider.deployBlock);
     return getDepositsStream(fromBlock, this.provider, this.params);
   }
 
   getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[IDepositEvent[], IEth1Block]> {
+    fromBlock = Math.max(fromBlock, this.provider.deployBlock);
     return getDepositsAndBlockStreamForGenesis(fromBlock, this.provider, this.params);
   }
 }

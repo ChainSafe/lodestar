@@ -31,6 +31,8 @@ export class GenesisBuilder implements IGenesisBuilder {
   private state: TreeBacked<BeaconState>;
   private depositTree: TreeBacked<List<Root>>;
 
+  private depositCache = new Set<number>();
+
   constructor(config: IBeaconConfig, {db, eth1Provider, logger}: IGenesisBuilderModules) {
     this.state = getGenesisBeaconState(
       config,
@@ -44,7 +46,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.eth1Provider = eth1Provider;
     this.eth1 = new Eth1Streamer(eth1Provider, {
       ...config.params,
-      MAX_BLOCKS_PER_POLL: 99,
+      MAX_BLOCKS_PER_POLL: 10000,
     });
   }
 
@@ -56,7 +58,7 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     // TODO: Load data from data from this.db.depositData, this.db.depositDataRoot
     // And start from a more recent fromBlock
-    const blockNumberLastestInDb = 0;
+    const blockNumberLastestInDb = this.eth1Provider.deployBlock;
 
     const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
 
@@ -86,9 +88,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     const depositsStream = abortable(this.eth1.getDepositsStream(fromBlock), controller.signal, {returnOnAbort: true});
 
     for await (const {depositEvents, blockNumber} of depositsStream) {
-      console.log({blockNumber, num: depositEvents.length});
       this.applyDeposits(depositEvents);
-      this.logger.verbose(`Found ${this.state.validators.length} validators to genesis so far`);
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
         controller.abort();
@@ -100,15 +100,20 @@ export class GenesisBuilder implements IGenesisBuilder {
   }
 
   private applyDeposits(depositEvents: IDepositEvent[]): void {
-    const newDeposits = depositEvents.map((depositEvent) => {
-      this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent));
-      return {
-        proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
-        data: depositEvent,
-      };
-    });
+    const newDeposits = depositEvents
+      .filter((depositEvent) => !this.depositCache.has(depositEvent.index))
+      .map((depositEvent) => {
+        this.depositCache.add(depositEvent.index);
+        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent));
+        return {
+          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
+          data: depositEvent,
+        };
+      });
 
     applyDeposits(this.config, this.state, newDeposits, this.depositTree);
+
+    this.logger.verbose(`Found ${this.state.validators.length} validators to genesis`);
 
     // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot
   }
