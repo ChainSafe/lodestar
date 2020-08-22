@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {describe, it} from "mocha";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";

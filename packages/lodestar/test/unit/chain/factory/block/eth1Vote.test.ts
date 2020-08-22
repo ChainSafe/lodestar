@@ -1,5 +1,4 @@
 import sinon from "sinon";
-import {beforeEach, describe, it} from "mocha";
 import {getEth1Vote} from "../../../../../src/chain/factory/block/eth1Vote";
 import {generateState} from "../../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";

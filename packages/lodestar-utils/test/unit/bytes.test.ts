@@ -1,5 +1,4 @@
 import {assert, expect} from "chai";
-import {describe, it} from "mocha";
 import {intToBytes, bytesToInt} from "../../src";
 
 describe("intToBytes", () => {

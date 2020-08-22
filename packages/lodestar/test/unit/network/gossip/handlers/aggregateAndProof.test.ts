@@ -1,4 +1,3 @@
-import {describe, it, beforeEach, afterEach} from "mocha";
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {handleIncomingAggregateAndProof} from "../../../../../src/network/gossip/handlers/aggregateAndProof";

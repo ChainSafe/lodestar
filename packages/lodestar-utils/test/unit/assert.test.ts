@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import {describe, it} from "mocha";
 import {assert} from "../../src";
 
 describe("assert", () => {

@@ -1,4 +1,3 @@
-import {afterEach, beforeEach, describe, it} from "mocha";
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {expect} from "chai";

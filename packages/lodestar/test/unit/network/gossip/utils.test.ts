@@ -1,4 +1,3 @@
-import {describe, it} from "mocha";
 import {
   getAttestationSubnetEvent,
   getBlockStateContext,

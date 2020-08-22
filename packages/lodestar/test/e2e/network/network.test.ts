@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {createPeerId, Libp2pNetwork} from "../../../src/network";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";

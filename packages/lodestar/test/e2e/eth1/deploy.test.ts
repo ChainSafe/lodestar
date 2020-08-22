@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {ethers} from "ethers";
 import sinon from "sinon";
 import {fromHexString} from "@chainsafe/ssz";
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {EthersEth1Notifier, IEth1Notifier, Eth1EventsBlock} from "../../../src/eth1";
 import defaults from "../../../src/eth1/dev/options";

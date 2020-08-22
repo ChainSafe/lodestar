@@ -1,4 +1,3 @@
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {ReqResp} from "../../../../src/network/reqResp";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks} from "../../../../src/sync/utils";

@@ -1,6 +1,5 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {describe, beforeEach, afterEach} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../src/util";
 import {processBlockHeader} from "../../../../src/block";

@@ -1,4 +1,3 @@
-import {describe} from "mocha";
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import sinon, {SinonStubbedInstance} from "sinon";

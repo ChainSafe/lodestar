@@ -1,4 +1,3 @@
-import {describe} from "mocha";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {
