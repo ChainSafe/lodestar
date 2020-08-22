@@ -15,7 +15,6 @@
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
-    "test:all": "mocha \"packages/**/test/**/*.spec.ts?(x)\"",
     "test:unit": "node_modules/.bin/lerna run test:unit --no-bail",
     "test:e2e": "node_modules/.bin/lerna run test:e2e --no-bail",
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
