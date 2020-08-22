@@ -3,12 +3,14 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {expect} from "chai";
 import {IEth1Provider, Eth1Provider} from "../../../src/eth1";
+import eth1Options from "../../../src/eth1/options";
 import {WinstonLogger, bytesToInt} from "@chainsafe/lodestar-utils";
 import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {generateValidators} from "../../utils/validator";
+
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
@@ -21,7 +23,7 @@ describe("BeaconChain", function () {
 
   beforeEach(async () => {
     dbStub = new StubbedBeaconDb(sandbox);
-    eth1Provider = new Eth1Provider(config, {});
+    eth1Provider = new Eth1Provider(config, eth1Options);
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state: BeaconState = generateState();
