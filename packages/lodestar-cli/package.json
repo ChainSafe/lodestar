@@ -88,13 +88,13 @@
     "@types/inquirer": "^7.3.0",
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
-    "@types/mocha": "^5.2.7",
+    "@types/mocha": "^8.0.3",
     "@types/mockery": "^1.4.29",
     "@types/rimraf": "^2.0.3",
     "@types/yargs": "^15.0.4",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^6.2.2",
+    "mocha": "^8.1.1",
     "mockery": "^2.1.0",
     "webpack": "^4.39.1"
   }

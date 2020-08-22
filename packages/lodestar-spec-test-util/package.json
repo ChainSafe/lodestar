@@ -48,7 +48,7 @@
     "chai": "^4.2.0",
     "deepmerge": "^4.0.0",
     "js-yaml": "^3.13.1",
-    "mocha": "^6.2.2",
+    "mocha": "^8.1.1",
     "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
@@ -56,10 +56,10 @@
     "@types/chai": "4.2.0",
     "@types/deepmerge": "^2.2.0",
     "@types/js-yaml": "^3.12.1",
-    "@types/mocha": "^5.2.7"
+    "@types/mocha": "^8.0.3"
   },
   "peerDependencies": {
     "chai": "^4.2.0",
-    "mocha": "^6.2.2"
+    "mocha": "^8.1.1"
   }
 }
