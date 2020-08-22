@@ -1,3 +1,2 @@
 --timeout 5000
 --file ./test/setup.ts
--r ts-node/register

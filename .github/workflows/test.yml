@@ -35,11 +35,11 @@ jobs:
       - name: Lint
         run: node_modules/.bin/lerna run lint
       - name: Unit tests
-        run: node_modules/.bin/lerna run test:unit
+        run: yarn test:unit
       - name: Coverage
         run: node_modules/.bin/lerna run coverage
       - name: E2e tests
-        run: node_modules/.bin/lerna run test:e2e
+        run: yarn test:e2e
       - name: Spec tests
         run: node_modules/.bin/lerna run test:spec-min
   specTests:
