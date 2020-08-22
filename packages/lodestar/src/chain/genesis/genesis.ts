@@ -61,8 +61,13 @@ export class GenesisBuilder implements IGenesisBuilder {
     const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
 
     const controller = new AbortController();
-    const depositsAndBlocksStream = this.eth1.getDepositsAndBlockStreamForGenesis(blockNumberValidatorGenesis);
-    for await (const [depositEvents, block] of abortable(depositsAndBlocksStream, controller.signal)) {
+    const depositsAndBlocksStream = abortable(
+      this.eth1.getDepositsAndBlockStreamForGenesis(blockNumberValidatorGenesis),
+      controller.signal,
+      {returnOnAbort: true}
+    );
+
+    for await (const [depositEvents, block] of depositsAndBlocksStream) {
       this.applyDeposits(depositEvents);
       applyTimestamp(this.config, this.state, block.timestamp);
       applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
@@ -78,8 +83,10 @@ export class GenesisBuilder implements IGenesisBuilder {
 
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
     const controller = new AbortController();
-    const depositsStream = this.eth1.getDepositsStream(fromBlock);
-    for await (const {depositEvents, blockNumber} of abortable(depositsStream, controller.signal)) {
+    const depositsStream = abortable(this.eth1.getDepositsStream(fromBlock), controller.signal, {returnOnAbort: true});
+
+    for await (const {depositEvents, blockNumber} of depositsStream) {
+      console.log({blockNumber, num: depositEvents.length});
       this.applyDeposits(depositEvents);
       this.logger.verbose(`Found ${this.state.validators.length} validators to genesis so far`);
       if (isValidGenesisValidators(this.config, this.state)) {

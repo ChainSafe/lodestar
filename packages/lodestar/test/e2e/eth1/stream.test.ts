@@ -7,12 +7,13 @@ import abortable from "abortable-iterator";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 
 describe("Eth1 streams", function () {
-  this.timeout("5 min");
+  this.timeout("2 min");
 
-  // Medalla specs
+  // Medalla optimized blocks for quick testing
   const depositDeploy = 3085928;
   const blockWithDepositActivity = 3124889;
 
+  // Medalla specs
   const config = createIBeaconConfig(params);
   config.params.DEPOSIT_NETWORK_ID = 5;
   config.params.DEPOSIT_CONTRACT_ADDRESS = Buffer.from("07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", "hex");
@@ -24,19 +25,22 @@ describe("Eth1 streams", function () {
     depositContractDeployBlock: depositDeploy,
   });
 
-  it("Should fetch N deposits with getDepositsStream", async function () {
+  const MAX_BLOCKS_PER_POLL = 1000;
+  const depositsToFetch = 1000;
+
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
     const depositsStream = getDepositsStream(blockWithDepositActivity, eth1Provider, {
       ...config.params,
-      MAX_BLOCKS_PER_POLL: 10000,
+      MAX_BLOCKS_PER_POLL,
     });
 
-    const depositsToFetch = 1000;
     const controller = new AbortController();
 
     let depositCount = 0;
-    for await (const {depositEvents} of abortable(depositsStream, controller.signal)) {
+    for await (const {depositEvents} of abortable(depositsStream, controller.signal, {returnOnAbort: true})) {
       depositCount += depositEvents.length;
       if (depositCount > depositsToFetch) {
+        console.log({depositCount});
         controller.abort();
       }
     }
@@ -44,13 +48,22 @@ describe("Eth1 streams", function () {
     expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
   });
 
-  it("getDepositsAndBlockStreamForGenesis", async function () {
-    const stream = getDepositsAndBlockStreamForGenesis(depositDeploy, eth1Provider, {
+  it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
+    const stream = getDepositsAndBlockStreamForGenesis(depositsToFetch, eth1Provider, {
       ...config.params,
-      MAX_BLOCKS_PER_POLL: 10000,
+      MAX_BLOCKS_PER_POLL,
     });
-    for await (const [deposit, block] of stream) {
-      console.log({blockNumber: block.number, logs: deposit.length});
+
+    const controller = new AbortController();
+
+    let depositCount = 0;
+    for await (const [deposit] of abortable(stream, controller.signal, {returnOnAbort: true})) {
+      depositCount += deposit.length;
+      if (depositCount > depositsToFetch) {
+        controller.abort();
+      }
     }
+
+    expect(depositCount).to.be.greaterThan(depositsToFetch, "Not enough deposits were fetched");
   });
 });
