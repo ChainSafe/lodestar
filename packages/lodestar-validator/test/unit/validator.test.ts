@@ -11,7 +11,7 @@ import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
 import {MockNodeApi} from "../utils/mocks/node";
 
 describe("Validator", () => {
-  it("Should be able to connect with the beacon chain", async () => {
+  it.skip("Should be able to connect with the beacon chain", async () => {
     const apiClient = new ApiClientOverInstance({
       config,
       beacon: new MockBeaconApi({
