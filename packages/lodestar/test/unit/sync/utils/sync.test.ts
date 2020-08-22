@@ -341,13 +341,13 @@ describe("sync utils", function () {
       sinon.restore();
     });
     it("should return false, no peer", function () {
-      expect(checkBestPeer(null, null, null, null)).to.be.false;
+      expect(checkBestPeer(null!, null!, null!, null!)).to.be.false;
     });
 
     it("peer is disconnected", async function() {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([]);
-      expect(checkBestPeer(peer1, null, networkStub, null)).to.be.false;
+      expect(checkBestPeer(peer1, null!, networkStub, null!)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
     });
 
