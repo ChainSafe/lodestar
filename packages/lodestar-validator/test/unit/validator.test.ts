@@ -31,8 +31,9 @@ describe("Validator", () => {
 
     const validator = new Validator(validatorCtx);
     const runSpy = sinon.spy(validator, "run");
-    await expect(validator.start()).to.not.throw;
-    setTimeout(async () => validator.stop(), 1100);
-    setTimeout(() => expect(runSpy.calledOnce).to.be.true, 1100);
+
+    await validator.start();
+    await validator.stop();
+    expect(runSpy.calledOnce).to.be.true;
   });
 });
