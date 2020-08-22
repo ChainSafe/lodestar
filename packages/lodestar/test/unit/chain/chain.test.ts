@@ -2,8 +2,7 @@ import chainOpts from "../../../src/chain/options";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {expect} from "chai";
-import {IEth1Notifier} from "../../../src/eth1";
-import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
+import {IEth1Provider, Eth1Provider} from "../../../src/eth1";
 import {WinstonLogger, bytesToInt} from "@chainsafe/lodestar-utils";
 import {BeaconMetrics} from "../../../src/metrics";
 import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
@@ -16,20 +15,20 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, eth1: IEth1Notifier, metrics: any, forkChoice: any;
+  let dbStub: StubbedBeaconDb, eth1Provider: IEth1Provider, metrics: any, forkChoice: any;
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
   beforeEach(async () => {
     dbStub = new StubbedBeaconDb(sandbox);
-    eth1 = new InteropEth1Notifier();
+    eth1Provider = new Eth1Provider(config, {});
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state: BeaconState = generateState();
     state.validators = generateValidators(5, {activationEpoch: 0});
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
-    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
+    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1Provider, logger, metrics, forkChoice});
     await chain.start();
   });
 

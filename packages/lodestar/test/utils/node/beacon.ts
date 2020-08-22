@@ -6,7 +6,6 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src/node";
-import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
 import {initDevChain} from "../../../src/node/utils/state";
@@ -51,7 +50,6 @@ export async function getDevBeaconNode({
     {
       config,
       logger: logger || new WinstonLogger({level: LogLevel.error}),
-      eth1: new InteropEth1Notifier(),
       libp2p: await createNodeJsLibp2p(
         peerId,
         {

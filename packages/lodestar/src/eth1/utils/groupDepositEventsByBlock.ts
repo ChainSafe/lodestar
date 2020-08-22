@@ -1,4 +1,4 @@
-import {IDepositEvent, IEth1Block} from "../interface";
+import {IDepositEvent} from "../interface";
 
 /**
  * Return deposit events of blocks grouped/sorted by block number and deposit index
@@ -20,21 +20,4 @@ export function groupDepositEventsByBlock(
     blockNumber,
     depositEvents,
   }));
-}
-
-export function optimizeNextBlockDiffForGenesis(
-  lastFetchedBlock: IEth1Block,
-  params: {
-    MIN_GENESIS_TIME: number;
-    GENESIS_DELAY: number;
-    SECONDS_PER_ETH1_BLOCK: number;
-  }
-): number {
-  const timeToGenesis = params.MIN_GENESIS_TIME - params.GENESIS_DELAY - lastFetchedBlock.timestamp;
-  const numBlocksToGenesis = Math.floor(timeToGenesis / params.SECONDS_PER_ETH1_BLOCK);
-  if (numBlocksToGenesis <= 2) {
-    return 1;
-  } else {
-    return Math.max(1, Math.floor(numBlocksToGenesis / 2));
-  }
 }

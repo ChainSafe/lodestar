@@ -5,11 +5,11 @@
 import {ethers} from "ethers";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {isValidAddress} from "../../util/address";
-import {RetryProvider} from "./retryProvider";
-import {IDepositEvent} from "../interface";
-import {IEth1Options} from "../options";
-import {depositContract} from "../depositContract";
+import {isValidAddress} from "../util/address";
+import {RetryProvider} from "./utils/retryProvider";
+import {IDepositEvent} from "./interface";
+import {IEth1Options} from "./options";
+import {depositContract} from "./depositContract";
 
 const ETH1_BLOCK_RETRY = 3;
 

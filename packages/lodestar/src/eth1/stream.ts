@@ -2,9 +2,10 @@
  * @module eth1
  */
 
-import {IDepositEvent, IBatchDepositEvents, IEth1Block, IEth1Provider, IEth1StreamParams} from "../interface";
-import {groupDepositEventsByBlock, optimizeNextBlockDiffForGenesis} from "./util";
-import {sleep} from "../../util/sleep";
+import {IDepositEvent, IBatchDepositEvents, IEth1Block, IEth1Provider, IEth1StreamParams} from "./interface";
+import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
+import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
+import {sleep} from "../util/sleep";
 
 /**
  * Phase 1 of genesis building.

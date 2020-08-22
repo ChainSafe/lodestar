@@ -6,7 +6,7 @@ import {
   IDepositEvent,
   IEth1Block,
 } from "./interface";
-import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "./impl/stream";
+import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "./stream";
 
 export class Eth1Streamer implements IEth1Streamer {
   provider: IEth1Provider;

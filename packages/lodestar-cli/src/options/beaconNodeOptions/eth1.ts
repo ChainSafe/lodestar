@@ -9,17 +9,17 @@ export const eth1Options = {
     group: "eth1",
   } as Options,
 
-  "eth1.provider.url": {
+  "eth1.providerUrl": {
     description: "Url to Eth1 node with enabled rpc",
     type: "string",
-    defaultDescription: defaultOptions.eth1.provider.url,
+    defaultDescription: defaultOptions.eth1.providerUrl,
     group: "eth1",
   } as Options,
 
-  "eth1.depositContract.deployedAt": {
+  "eth1.depositContractDeployBlock": {
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
-    defaultDescription: String(defaultOptions.eth1.depositContract.deployedAt),
+    defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
     group: "eth1",
   } as Options,
 };

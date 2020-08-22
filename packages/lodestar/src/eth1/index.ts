@@ -3,7 +3,6 @@
  */
 
 export * from "./interface";
-export * from "./impl/stream";
-export * from "./impl/ethers";
+export * from "./stream";
+export * from "./ethers";
 export * from "./eth1";
-export {Eth1Wallet} from "./wallet";
