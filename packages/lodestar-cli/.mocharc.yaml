@@ -1,2 +1,3 @@
-file: ./test/setup.ts
+colors: true
 require: ts-node/register
+file: ./test/setup.ts
