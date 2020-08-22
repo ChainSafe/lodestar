@@ -1,0 +1,2 @@
+file: ./test/unit/setup.ts
+require: ts-node/register
