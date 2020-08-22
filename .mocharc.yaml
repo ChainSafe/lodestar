@@ -1,4 +1,3 @@
 colors: true
 require:
   - ts-node/register
-  - scripts/mocha-ts-hook.js
