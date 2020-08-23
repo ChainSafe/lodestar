@@ -77,6 +77,17 @@ describe("sync - block utils", function () {
       expect(result[2].start).to.be.equal(22);
       expect(result[2].end).to.be.equal(25);
     });
+
+    it("should produce a one-length chunk", function () {
+      const result = chunkify(10, 0, 22);
+      expect(result.length).to.be.equal(3);
+      expect(result[0].start).to.be.equal(0);
+      expect(result[0].end).to.be.equal(10);
+      expect(result[1].start).to.be.equal(11);
+      expect(result[1].end).to.be.equal(21);
+      expect(result[2].start).to.be.equal(22);
+      expect(result[2].end).to.be.equal(22);
+    });
   });
 
   describe("verify header chain", function () {
