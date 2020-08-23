@@ -41,13 +41,7 @@
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "@types/chai": "4.2.0",
-    "@types/chai-as-promised": "^7.1.1",
-    "@types/mocha": "^8.0.3",
-    "@types/yargs": "^13.0.2",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "mocha": "^8.1.1"
+    "@types/yargs": "^13.0.2"
   },
   "keywords": [
     "Ethereum",

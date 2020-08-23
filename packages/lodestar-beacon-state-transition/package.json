@@ -42,12 +42,7 @@
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },
-  "devDependencies": {
-    "@types/chai": "4.2.0",
-    "@types/mocha": "^8.0.3",
-    "chai": "^4.2.0",
-    "mocha": "^8.1.1"
-  },
+  "devDependencies": {},
   "keywords": [
     "ethereum",
     "eth2",

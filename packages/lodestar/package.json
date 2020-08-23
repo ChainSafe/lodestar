@@ -102,7 +102,6 @@
     "@types/eventsource": "^1.1.2",
     "@types/http-terminator": "^2.0.1",
     "@types/levelup": "^3.1.0",
-    "@types/mocha": "^8.0.3",
     "@types/qs": "^6.5.3",
     "@types/randombytes": "^2.0.0",
     "@types/supertest": "^2.0.8",
@@ -112,15 +111,10 @@
     "@types/ws": "^6.0.1",
     "babel-plugin-const-enum": "^0.0.4",
     "benchmark": "^2.1.4",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
     "eventsource": "^1.0.7",
     "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
-    "mocha": "^8.1.1",
     "rimraf": "^3.0.2",
-    "supertest": "^4.0.2",
-    "tmp": "^0.2.1",
-    "webpack": "^4.39.1"
+    "tmp": "^0.2.1"
   },
   "keywords": [
     "ethereum",

@@ -53,10 +53,8 @@
   },
   "devDependencies": {
     "@types/camelcase": "^5.2.0",
-    "@types/chai": "4.2.0",
     "@types/deepmerge": "^2.2.0",
-    "@types/js-yaml": "^3.12.1",
-    "@types/mocha": "^8.0.3"
+    "@types/js-yaml": "^3.12.1"
   },
   "peerDependencies": {
     "chai": "^4.2.0",
