@@ -3,7 +3,6 @@ import {assert, expect} from "chai";
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ReqResp} from "../../../src/network/reqResp";
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";

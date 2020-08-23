@@ -2,7 +2,6 @@ import {PrivateEth1Network} from "../../../../src/eth1/dev";
 import {ethers, Wallet} from "ethers";
 import {expect} from "chai";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {describe, before, after, it} from "mocha";
 
 describe("Eth1 dev network", function () {
   const logger: ILogger = new WinstonLogger();

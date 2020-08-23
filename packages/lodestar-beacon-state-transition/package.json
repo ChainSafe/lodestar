@@ -31,7 +31,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "prepublishOnly": "yarn build",
-    "test:unit": "mocha --colors -r ts-node/register 'test/**/*.test.ts'"
+    "test:unit": "mocha 'test/**/*.test.ts'"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
@@ -42,12 +42,7 @@
     "bigint-buffer": "^1.1.5",
     "buffer-xor": "^2.0.2"
   },
-  "devDependencies": {
-    "@types/chai": "4.2.0",
-    "@types/mocha": "^5.2.7",
-    "chai": "^4.2.0",
-    "mocha": "^6.2.2"
-  },
+  "devDependencies": {},
   "keywords": [
     "ethereum",
     "eth2",

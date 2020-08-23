@@ -2,7 +2,6 @@ import {assert} from "chai";
 import fs from "fs";
 import path from "path";
 import {types as sszTypes} from "../../src/ssz/presets/mainnet";
-import {describe, it} from "mocha";
 
 describe("@chainsafe/lodestar-types", () => {
   // interfaces are not available at run time, so we must parse our interface

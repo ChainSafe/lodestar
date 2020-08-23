@@ -2,7 +2,6 @@ import sinon, {SinonSpy} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import EventSource from "eventsource";
 import {ApiClientOverInstance} from "../../../src/api";

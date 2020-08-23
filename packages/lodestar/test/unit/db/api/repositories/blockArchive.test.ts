@@ -1,4 +1,3 @@
-import {beforeEach, describe, it} from "mocha";
 import {expect} from "chai";
 import rimraf from "rimraf";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";

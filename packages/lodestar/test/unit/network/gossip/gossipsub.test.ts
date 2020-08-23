@@ -1,4 +1,3 @@
-import {describe, it} from "mocha";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Message} from "libp2p-gossipsub/src/message";

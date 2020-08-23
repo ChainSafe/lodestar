@@ -2,7 +2,6 @@
 import sinon from "sinon";
 import mockery from "mockery";
 import {expect} from "chai";
-import {afterEach, beforeEach, describe, it} from "mocha";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../../src/util";
 import {bigIntMin, intToBytes, assert} from "@chainsafe/lodestar-utils";

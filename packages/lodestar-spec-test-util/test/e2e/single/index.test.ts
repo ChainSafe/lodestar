@@ -1,8 +1,6 @@
 import {unlinkSync, writeFileSync} from "fs";
 import {join} from "path";
 
-import {before, after} from "mocha";
-
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/ssz/generators/primitive";
 import {loadYamlFile} from "@chainsafe/lodestar-utils/lib/nodejs";

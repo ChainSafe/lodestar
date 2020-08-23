@@ -1,4 +1,3 @@
-import {describe, it} from "mocha";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonFakeTimers} from "sinon";
