@@ -23,7 +23,7 @@ export class SeenAttestationCache {
     this.add(key);
   }
 
-  public async addAggregateAndProod(aggregateAndProof: AggregateAndProof): Promise<void> {
+  public async addAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<void> {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     this.add(key);
   }
@@ -33,7 +33,7 @@ export class SeenAttestationCache {
     return this.cache.has(key);
   }
 
-  public async hasAggreagateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean> {
+  public async hasAggregateAndProof(aggregateAndProof: AggregateAndProof): Promise<boolean> {
     const key = this.aggregateAndProofKey(aggregateAndProof);
     return this.cache.has(key);
   }
