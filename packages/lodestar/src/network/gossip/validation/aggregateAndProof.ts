@@ -16,9 +16,7 @@ import {isAttestingToInValidBlock} from "./attestation";
 import {getAttestationPreState} from "../utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {Signature} from "@chainsafe/bls";
-import {
-  isValidIndexedAttestation
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 
 export async function validateGossipAggregateAndProof(
