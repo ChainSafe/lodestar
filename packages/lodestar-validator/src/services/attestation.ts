@@ -19,6 +19,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
+import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
@@ -48,6 +49,7 @@ export class AttestationService {
 
   private nextAttesterDuties: Map<Slot, IAttesterDuty[]> = new Map();
   private aggregatorTimeout?: NodeJS.Timeout;
+  private controller: AbortController = new AbortController();
 
   public constructor(
     config: IBeaconConfig,
@@ -80,6 +82,9 @@ export class AttestationService {
   public stop = async (): Promise<void> => {
     await this.provider.disconnect();
     if (this.aggregatorTimeout) clearTimeout(this.aggregatorTimeout);
+    if (this.controller) {
+      this.controller.abort();
+    }
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
@@ -147,7 +152,7 @@ export class AttestationService {
       committee: duty.committeeIndex,
       validator: toHexString(duty.validatorPubkey),
     });
-    await this.waitForAttestationBlock(duty.attestationSlot);
+    await this.waitForAttestationBlock(duty.attestationSlot, this.controller.signal);
     let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
     try {
@@ -193,11 +198,16 @@ export class AttestationService {
     }
   }
 
-  private async waitForAttestationBlock(slot: Slot): Promise<void> {
-    this.logger.debug("Waiting for slot block", {slot});
+  private async waitForAttestationBlock(slot: Slot, signal: AbortSignal): Promise<void> {
+    this.logger.info("Waiting for slot block", {slot});
     const eventSource = new EventSource(`${this.provider.url}/lodestar/blocks/stream`, {
       https: {rejectUnauthorized: false},
     });
+
+    if (signal.aborted) {
+      this.logger.verbose("AttestationService: Abort waitForAttestationBlock");
+    }
+
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         this.logger.debug("Timed out slot block waiting");
