@@ -15,7 +15,7 @@ import {
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
-import { add0xPrefix } from "../util/format";
+import {add0xPrefix} from "../util/format";
 
 export interface IValidatorDirOptions {
   force: boolean;
