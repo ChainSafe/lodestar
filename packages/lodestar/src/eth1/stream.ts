@@ -16,6 +16,8 @@ export async function* getDepositsStream(
   provider: IEth1Provider,
   params: IEth1StreamParams
 ): AsyncGenerator<IBatchDepositEvents> {
+  fromBlock = Math.max(fromBlock, provider.deployBlock);
+
   while (true) {
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);
     const toBlock = Math.min(remoteFollowBlock, fromBlock + params.MAX_BLOCKS_PER_POLL);
@@ -38,8 +40,10 @@ export async function* getDepositsAndBlockStreamForGenesis(
   provider: IEth1Provider,
   params: IEth1StreamParams
 ): AsyncGenerator<[IDepositEvent[], IEth1Block]> {
+  fromBlock = Math.max(fromBlock, provider.deployBlock);
   fromBlock = Math.min(fromBlock, await getRemoteFollowBlock(provider, params));
   let toBlock = fromBlock; // First, fetch only the first block
+
   while (true) {
     const [logs, block] = await Promise.all([
       provider.getDepositEvents(fromBlock, toBlock),

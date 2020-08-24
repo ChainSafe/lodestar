@@ -10,7 +10,13 @@ import {AbortController} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
-import {IDepositEvent, IEth1Streamer, Eth1Streamer, IEth1Provider} from "../../eth1";
+import {
+  IDepositEvent,
+  IEth1StreamParams,
+  IEth1Provider,
+  getDepositsAndBlockStreamForGenesis,
+  getDepositsStream,
+} from "../../eth1";
 import {IGenesisBuilder, IGenesisBuilderModules} from "./interface";
 import {
   getGenesisBeaconState,
@@ -26,7 +32,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1Provider: IEth1Provider;
-  private readonly eth1: IEth1Streamer;
+  private readonly eth1Params: IEth1StreamParams;
   private readonly logger: ILogger;
   private state: TreeBacked<BeaconState>;
   private depositTree: TreeBacked<List<Root>>;
@@ -44,10 +50,10 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.logger = logger;
     this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
     this.eth1Provider = eth1Provider;
-    this.eth1 = new Eth1Streamer(eth1Provider, {
+    this.eth1Params = {
       ...config.params,
       MAX_BLOCKS_PER_POLL: 10000,
-    });
+    };
   }
 
   /**
@@ -64,7 +70,7 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     const controller = new AbortController();
     const depositsAndBlocksStream = abortable(
-      this.eth1.getDepositsAndBlockStreamForGenesis(blockNumberValidatorGenesis),
+      getDepositsAndBlockStreamForGenesis(blockNumberValidatorGenesis, this.eth1Provider, this.eth1Params),
       controller.signal,
       {returnOnAbort: true}
     );
@@ -83,9 +89,18 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
+  /**
+   * First phase of waiting for genesis.
+   * Stream deposits events in batches as big as possible without querying block data
+   * @returns Block number at which there are enough active validators is state for genesis
+   */
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
     const controller = new AbortController();
-    const depositsStream = abortable(this.eth1.getDepositsStream(fromBlock), controller.signal, {returnOnAbort: true});
+    const depositsStream = abortable(
+      getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params),
+      controller.signal,
+      {returnOnAbort: true}
+    );
 
     for await (const {depositEvents, blockNumber} of depositsStream) {
       this.applyDeposits(depositEvents);
