@@ -1,4 +1,5 @@
 import fs, {mkdirSync} from "fs";
+import {promisify} from "util";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
@@ -61,18 +62,18 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
   let validators: Validator[] = [];
 
   onProcessSIGINT(async () => {
-    logger.info("Stopping validators");
-    await Promise.all(validators.map((v) => v.stop()));
-    logger.info("Stopping BN");
-    await node.stop();
-    if (options.reset) {
-      logger.info("Cleaning directories");
-      //delete db directory
-      rimraf.sync(chainDir);
-      rimraf.sync(validatorsDir);
-    }
-    logger.info("Cleanup completed");
-  });
+    await Promise.all([
+      Promise.all(validators.map((v) => v.stop())),
+      node.stop(),
+      async () => {
+        if (options.reset) {
+          logger.info("Cleaning db directories");
+          await promisify(rimraf)(chainDir);
+          await promisify(rimraf)(validatorsDir);
+        }
+      },
+    ]);
+  }, logger.info);
 
   await node.start();
 

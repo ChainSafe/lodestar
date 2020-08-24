@@ -6,17 +6,22 @@ const exitSignals = ["SIGTERM", "SIGINT"] as NodeJS.Signals[];
  * user forcibly kills the process by doing CTRL+C again
  * @param cleanUpFunction
  */
-export function onProcessSIGINT(cleanUpFunction: () => Promise<void>): void {
+export function onProcessSIGINT(
+  cleanUpFunction: () => Promise<void>,
+  // eslint-disable-next-line no-console
+  logFn: (msg: string) => void = console.log
+): void {
   for (const signal of exitSignals) {
     process.once(signal, async () => {
-      // eslint-disable-next-line no-console
-      console.log("Stopping gracefully, use Ctrl+C again to force process exit");
+      logFn("Stopping gracefully, use Ctrl+C again to force process exit");
+
       process.on(signal, () => {
-        // eslint-disable-next-line no-console
-        console.log("Forcing process exit");
+        logFn("Forcing process exit");
         process.exit(1);
       });
+
       await cleanUpFunction();
+      logFn("Cleanup completed");
     });
   }
 }

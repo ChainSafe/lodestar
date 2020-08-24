@@ -49,9 +49,8 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   const node = new BeaconNode(options, {config, libp2p, logger});
 
   onProcessSIGINT(async () => {
-    await node.stop();
-    await writeEnr(beaconPaths.enrFile, enr, peerId);
-  });
+    await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
+  }, logger.info);
 
   if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
