@@ -7,11 +7,11 @@ import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
   Goodbye,
+  MAX_REQUEST_BLOCKS,
   Ping,
   RequestBody,
   SignedBeaconBlock,
   Status,
-  MAX_REQUEST_BLOCKS,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus, ZERO_HASH} from "../../constants";
@@ -21,10 +21,10 @@ import {INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {IReputationStore} from "../IReputation";
-import {computeStartSlotAtEpoch, getBlockRoot, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus, syncPeersStatus, getPeerSupportedProtocols} from "../utils/sync";
+import {createStatus, getPeerSupportedProtocols, syncPeersStatus} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -168,10 +168,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         }
       } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
         // If it is within recent history, we can directly check against the block roots in the state
-        if (headSummary.slot - requestFinalizedSlot < this.config.params.HISTORICAL_ROOTS_LIMIT) {
+        if (headSummary.slot - requestFinalizedSlot < this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
           const headState = await this.chain.getHeadState();
           // This will get the latest known block at the start of the epoch.
-          const expected = getBlockRoot(this.config, headState, request.finalizedEpoch);
+          const expected = getBlockRootAtSlot(this.config, headState, requestFinalizedSlot);
           if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
             this.logger.verbose("Status with different finalized root", {
               received: toHexString(request.finalizedRoot),
@@ -188,6 +188,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           // The epoch in the checkpoint is there to checkpoint the tail end of skip slots, even if there is no block.
           // TODO: accepted for now. Need to maintain either a list of finalized block roots,
           // or inefficiently loop from finalized slot backwards, until we find the block we need to check against.
+          return false;
         }
       } else {
         // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
