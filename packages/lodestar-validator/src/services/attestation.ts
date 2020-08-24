@@ -47,6 +47,7 @@ export class AttestationService {
   private readonly logger: ILogger;
 
   private nextAttesterDuties: Map<Slot, IAttesterDuty[]> = new Map();
+  private aggregatorTimeout?: NodeJS.Timeout;
 
   public constructor(
     config: IBeaconConfig,
@@ -78,6 +79,7 @@ export class AttestationService {
 
   public stop = async (): Promise<void> => {
     await this.provider.disconnect();
+    if (this.aggregatorTimeout) clearTimeout(this.aggregatorTimeout);
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
@@ -169,7 +171,7 @@ export class AttestationService {
     }
 
     if (duty.isAggregator) {
-      setTimeout(async () => {
+      this.aggregatorTimeout = setTimeout(async () => {
         try {
           if (attestation) {
             await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
