@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {Uint64} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../../src/util/objects";
-import {describe, it} from "mocha";
 
 describe("Objects helper", () => {
   it("return most frequent objects", () => {

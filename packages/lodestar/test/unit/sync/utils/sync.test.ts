@@ -1,4 +1,3 @@
-import {describe} from "mocha";
 import {IReputation, ReputationStore} from "../../../../src/sync/IReputation";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {
@@ -176,7 +175,8 @@ describe("sync utils", function () {
       );
       await timer.tickAsync(30000);
       result = await result;
-      expect(result.length).to.be.equal(0);
+      expect(result.length).to.be.equal(1);
+      expect(result[0]).to.be.null;
     });
 
     it("happy path", async function () {
@@ -215,11 +215,53 @@ describe("sync utils", function () {
       const block2 = generateEmptySignedBlock();
       block2.message.slot = 3;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
-      await pipe(
+      const lastProcesssedSlot = await pipe(
         [[block2], [block1]],
         processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
+      expect(lastProcesssedSlot).to.be.equal(3);
+    });
+
+    it("should handle failed to get range - initial sync", async function () {
+      const lastProcessedBlock = generateEmptySignedBlock();
+      lastProcessedBlock.message.slot = 10;
+      const lastProcessSlot = await pipe(
+        // failed to fetch range
+        [null],
+        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+      );
+      expect(lastProcessSlot).to.be.equal(10);
+    });
+
+    it("should handle failed to get range - regular sync", async function () {
+      forkChoiceStub.headBlockSlot.returns(100);
+      const lastProcessSlot = await pipe(
+        // failed to fetch range
+        [null],
+        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+      );
+      expect(lastProcessSlot).to.be.equal(100);
+    });
+
+    it("should handle empty range - initial sync", async function () {
+      const lastProcessedBlock = generateEmptySignedBlock();
+      lastProcessedBlock.message.slot = 10;
+      const lastProcessSlot = await pipe(
+        // failed to fetch range
+        [[]],
+        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+      );
+      expect(lastProcessSlot).to.be.null;
+    });
+
+    it("should handle empty range - regular sync", async function () {
+      const lastProcessSlot = await pipe(
+        // failed to fetch range
+        [[]],
+        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+      );
+      expect(lastProcessSlot).to.be.null;
     });
   });
 
@@ -341,17 +383,17 @@ describe("sync utils", function () {
       sinon.restore();
     });
     it("should return false, no peer", function () {
-      expect(checkBestPeer(null, null, null, null)).to.be.false;
+      expect(checkBestPeer(null!, null!, null!, null!)).to.be.false;
     });
 
-    it("peer is disconnected", async function() {
+    it("peer is disconnected", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([]);
-      expect(checkBestPeer(peer1, null, networkStub, null)).to.be.false;
+      expect(checkBestPeer(peer1, null!, networkStub, null!)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
     });
 
-    it("peer is connected but no status", async function() {
+    it("peer is connected but no status", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([peer1]);
       const reps = new ReputationStore();
@@ -360,7 +402,7 @@ describe("sync utils", function () {
       expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.false;
     });
 
-    it("peer head slot is not better than us", async function() {
+    it("peer head slot is not better than us", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([peer1]);
       const reps = new ReputationStore();
@@ -377,7 +419,7 @@ describe("sync utils", function () {
       expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
     });
 
-    it("peer is good for best peer", async function() {
+    it("peer is good for best peer", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([peer1]);
       const reps = new ReputationStore();

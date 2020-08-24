@@ -20,18 +20,11 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
   }
   const chunks: ISlotRange[] = [];
   //currentSlot is our state slot so we need block from next slot
-  for (let i = currentSlot; i < targetSlot; i = i + blocksPerChunk + 1) {
-    if (i + blocksPerChunk > targetSlot) {
-      chunks.push({
-        start: i,
-        end: targetSlot,
-      });
-    } else {
-      chunks.push({
-        start: i,
-        end: i + blocksPerChunk,
-      });
-    }
+  for (let i = currentSlot; i <= targetSlot; i = i + blocksPerChunk + 1) {
+    chunks.push({
+      start: i,
+      end: Math.min(i + blocksPerChunk, targetSlot),
+    });
   }
   return chunks;
 }

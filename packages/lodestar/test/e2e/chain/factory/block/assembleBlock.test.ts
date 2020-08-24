@@ -22,7 +22,6 @@ import {BeaconChain} from "../../../../../src/chain";
 import {StatefulDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
-import {describe, it} from "mocha";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";

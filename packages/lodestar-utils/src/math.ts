@@ -35,10 +35,10 @@ export function intSqrt(n: number): number {
 
 export function bigIntSqrt(n: bigint): bigint {
   let x = n;
-  let y = (x + 1n) / 2n;
+  let y = (x + BigInt(1)) / BigInt(2);
   while (y < x) {
     x = y;
-    y = (x + n / x) / 2n;
+    y = (x + n / x) / BigInt(2);
   }
   return x;
 }

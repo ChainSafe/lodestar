@@ -79,7 +79,7 @@ export function fetchBlockChunks(
   getPeers: () => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   maxBlocksPerChunk?: number
-): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[]> {
+): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[] | null> {
   return (source) => {
     return (async function* () {
       for await (const slotRange of source) {
@@ -92,13 +92,15 @@ export function fetchBlockChunks(
           retry++;
         }
         if (peers.length === 0) {
-          logger.error("Can't find new peers, stopping sync");
+          logger.error("Can't find new peers");
+          yield null;
           return;
         }
         try {
           yield await getBlockRange(logger, reqResp, peers, slotRange);
         } catch (e) {
           logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+          yield null;
           return;
         }
       }
@@ -138,7 +140,8 @@ export function validateBlocks(
 /**
  * Bufferes and orders block and passes them to chain.
  * Returns last processed slot if it was successful,
- * current head slot if there was consensus split
+ * current head slot if there was consensus split,
+ * previous head slot if it failed to fetch range,
  * or null if there was no slots
  * @param config
  * @param chain
@@ -154,17 +157,24 @@ export function processSyncBlocks(
   isInitialSync: boolean,
   lastProcessedBlock: SignedBeaconBlock | null,
   trusted = false
-): (source: AsyncIterable<SignedBeaconBlock[]>) => Promise<Slot | null> {
+): (source: AsyncIterable<SignedBeaconBlock[] | null>) => Promise<Slot | null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
+    let headRoot = isInitialSync ? config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock!.message) : null;
+    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : chain.forkChoice.headBlockSlot();
     for await (const blocks of source) {
+      if (!blocks) {
+        // failed to fetch range, trigger sync to retry
+        logger.warn("Failed to get blocks for range", {
+          headSlot,
+        });
+        return headSlot;
+      }
       logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    let headRoot = isInitialSync ? config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock!.message) : null;
-    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : null;
     while (blockBuffer.length > 0) {
       const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;

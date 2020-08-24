@@ -82,7 +82,7 @@ export class EthersEth1Notifier implements IEth1Notifier {
    */
   public async start(): Promise<void> {
     if (!this.opts.enabled) {
-      this.logger.verbose("Eth1 notifier is disabled, no need to process eth1 for proposing data");
+      this.logger.info("Eth1 notifier is disabled, no need to process eth1 for proposing data");
       return;
     }
     // no need await

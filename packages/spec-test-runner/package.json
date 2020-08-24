@@ -20,14 +20,14 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "test:ssz": "mocha --colors 'test/spec/ssz/**/*.test.ts'",
-    "test:bls": "mocha --colors 'test/spec/bls/**/*.test.ts'",
-    "test:ssz-main": "mocha --colors 'test/spec/ssz/**/*mainnet.test.ts'",
-    "test:ssz-min": "mocha --colors 'test/spec/ssz/**/*minimal.test.ts'",
-    "test:spec": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
-    "test:spec-fast": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
-    "test:spec-main": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
-    "test:spec-min": "mocha --colors --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
+    "test:ssz": "mocha 'test/spec/ssz/**/*.test.ts'",
+    "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
+    "test:ssz-main": "mocha 'test/spec/ssz/**/*mainnet.test.ts'",
+    "test:ssz-min": "mocha 'test/spec/ssz/**/*minimal.test.ts'",
+    "test:spec": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
+    "test:spec-fast": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
+    "test:spec-main": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
+    "test:spec-min": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
@@ -41,13 +41,7 @@
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "@types/chai": "4.2.0",
-    "@types/chai-as-promised": "^7.1.1",
-    "@types/mocha": "^5.2.7",
-    "@types/yargs": "^13.0.2",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "mocha": "^6.2.2"
+    "@types/yargs": "^13.0.2"
   },
   "keywords": [
     "Ethereum",

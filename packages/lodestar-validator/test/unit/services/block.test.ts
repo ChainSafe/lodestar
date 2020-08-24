@@ -2,7 +2,6 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair} from "@chainsafe/bls";
-import {describe, it, beforeEach, afterEach} from "mocha";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ApiClientOverInstance} from "../../../src/api";
 import {generateEmptySignedBlock, generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";

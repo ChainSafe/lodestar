@@ -1,4 +1,3 @@
-import "mocha";
 import {expect} from "chai";
 import {toGraffitiBuffer} from "../../../src/util/graffiti";
 

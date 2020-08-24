@@ -7,7 +7,6 @@ import {LevelDbController} from "../../../../src/db/controller";
 import {StateArchiveRepository} from "../../../../src/db/api/beacon/repositories";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {beforeEach, describe, it} from "mocha";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {
   AttesterSlashingRepository,

@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {isPlainObject} from "../../src";
-import {describe, it} from "mocha";
 
 describe("Objects helper", () => {
   it("should be plain object", () => {

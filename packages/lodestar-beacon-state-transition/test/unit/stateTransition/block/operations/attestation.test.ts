@@ -4,7 +4,6 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {processAttestation} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";
-import {describe, it, beforeEach, afterEach} from "mocha";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 

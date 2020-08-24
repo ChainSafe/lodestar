@@ -49,8 +49,6 @@
     "v8-profiler-next": "^1.1.1"
   },
   "devDependencies": {
-    "@types/benchmark": "^1.0.31",
-    "@types/node": "^12.7.2",
-    "typescript": "^3.5.3"
+    "@types/benchmark": "^1.0.31"
   }
 }

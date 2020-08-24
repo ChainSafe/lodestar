@@ -1,4 +1,3 @@
-import {describe} from "mocha";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
