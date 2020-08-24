@@ -95,7 +95,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private setTarget = (newTarget?: Slot, triggerSync = true): void => {
-    newTarget = newTarget || this.getNewTarget();
+    newTarget = newTarget ?? this.getNewTarget();
     if (triggerSync && newTarget > this.currentTarget) {
       this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
@@ -140,7 +140,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private async sync(): Promise<void> {
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
-    const {getSyncPeers, setTarget, handleEmptyRange} = this;
+    const {getSyncPeers, setTarget, handleEmptyRange, handleFailedToGetRange} = this;
     await pipe(this.targetSlotRangeSource, (source) => {
       return (async function () {
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
@@ -150,8 +150,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
             processSyncBlocks(config, chain, logger, false, null)
           );
           if (lastFetchedSlot) {
-            // not trigger sync until after we process lastFetchedSlot
-            setTarget(lastFetchedSlot, false);
+            // failed to fetch range
+            if (lastFetchedSlot === chain.forkChoice.headBlockSlot()) {
+              handleFailedToGetRange(range);
+            } else {
+              // success, not trigger sync until after we process lastFetchedSlot
+              setTarget(lastFetchedSlot, false);
+            }
           } else {
             // no block, retry expanded range with same start slot
             await handleEmptyRange(range);
@@ -175,6 +180,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.setTarget(range.start - 1, false);
       this.setTarget();
     }
+  };
+
+  private handleFailedToGetRange = (range: ISlotRange): void => {
+    this.logger.warn(`Regular Sync: retrying range ${JSON.stringify(range)}`);
+    // retry again
+    this.setTarget(range.start - 1, false);
+    this.setTarget();
   };
 
   /**
