@@ -20,7 +20,7 @@ import {GENESIS_EPOCH, Method} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
 import {IBeaconDb} from "../../../db";
 
-export class FastSync extends (EventEmitter as {new(): InitialSyncEventEmitter}) implements InitialSync {
+export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}) implements InitialSync {
   private readonly opts: ISyncOptions;
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
@@ -183,8 +183,8 @@ export class FastSync extends (EventEmitter as {new(): InitialSyncEventEmitter})
     );
     this.logger.important(
       `Sync progress - currentEpoch=${processedCheckpoint.epoch},` +
-      ` targetEpoch=${this.targetCheckpoint!.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s` +
-      `, estimateTillComplete=${Math.round((estimate / 3600) * 10) / 10} hours`
+        ` targetEpoch=${this.targetCheckpoint!.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s` +
+        `, estimateTillComplete=${Math.round((estimate / 3600) * 10) / 10} hours`
     );
     if (processedCheckpoint.epoch === this.targetCheckpoint!.epoch) {
       //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
