@@ -15,6 +15,7 @@ import {
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
+import { add0xPrefix } from "../util/format";
 
 export interface IValidatorDirOptions {
   force: boolean;
@@ -59,7 +60,7 @@ export class ValidatorDir {
    * @param dir
    */
   constructor(baseDir: string, pubkey: string, options?: IValidatorDirOptions) {
-    this.dir = path.join(baseDir, pubkey);
+    this.dir = path.join(baseDir, add0xPrefix(pubkey));
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
     if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exists`);
