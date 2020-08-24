@@ -121,7 +121,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   };
 
   private setBlockImportTarget = (fromSlot?: Slot): void => {
-    const lastTarget = fromSlot || this.blockImportTarget;
+    const lastTarget = typeof fromSlot === "number" ? fromSlot : this.blockImportTarget;
     const newTarget = this.getNewBlockImportTarget(lastTarget);
     this.logger.info(`Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`);
     this.syncTriggerSource.push({start: lastTarget + 1, end: newTarget});
@@ -147,17 +147,19 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
             processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
           );
           logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);
-          if (lastSlot) {
+          if (typeof lastSlot === "number") {
             if (lastSlot === getLastProcessedBlock().message.slot) {
               // failed at start of range
               logger.warn(`Failed to process range, retrying, lastSlot=${lastSlot} range=${JSON.stringify(slotRange)}`);
               setBlockImportTarget(lastSlot);
             } else {
-              //set new target from last block we've processed
+              // success
+              // set new target from last block we've processed
               // it will trigger new sync once last block is processed
               updateBlockImportTarget(lastSlot);
             }
           } else {
+            // no blocks in range
             logger.warn(`Didn't receive any valid block in range range ${JSON.stringify(slotRange)}`);
             //we didn't receive any block, set target from last requested slot
             setBlockImportTarget(slotRange.end);
