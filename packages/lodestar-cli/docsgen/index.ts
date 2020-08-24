@@ -65,7 +65,7 @@ function cmdToMarkdownSection(cmd: ICliCommand<any>, parentCommand?: string): IM
     if (
       cmds.some((c) => c.command === "beacon") &&
       commandJson !== "beacon" &&
-      Object.keys(beaconOptions).every((key) => cmd.options[key])
+      Object.keys(beaconOptions).every((key) => cmd.options![key])
     ) {
       cmd.options = omit(cmd.options, Object.keys(beaconOptions));
       body.push(`Cmd \`${commandJson}\` has all the options from the [\`beacon\` cmd](#beacon).`);
@@ -91,6 +91,7 @@ function getOptionsTable(options: Record<string, Options>, {showHidden}: {showHi
   }
 
   return toMarkdownTable(
+    // @ts-ignore
     visibleOptions.map(([key, opt]) => ({
       Option: `\`--${key}\``,
       Type: opt.type,

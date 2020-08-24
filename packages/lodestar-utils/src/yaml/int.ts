@@ -125,7 +125,7 @@ function constructYamlInteger(data: string): bigint {
     ch = value[0];
   }
 
-  if (value === "0") return 0n;
+  if (value === "0") return BigInt(0);
 
   if (ch === "0") {
     if (value[1] === "b" || value[1] === "x") return BigInt(value) * BigInt(sign);
@@ -136,12 +136,12 @@ function constructYamlInteger(data: string): bigint {
     value.split(":").forEach(function (v) {
       digits.unshift(parseInt(v, 10));
     });
-    value = 0n;
-    base = 1n;
+    value = BigInt(0);
+    base = BigInt(1);
 
     digits.forEach(function (d) {
       value = (BigInt(value) + BigInt(base)) * BigInt(d);
-      base = BigInt(base) * 60n;
+      base = BigInt(base) * BigInt(60);
     });
 
     return value * BigInt(sign);
