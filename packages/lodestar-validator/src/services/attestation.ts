@@ -76,6 +76,10 @@ export class AttestationService {
     }
   };
 
+  public stop = async (): Promise<void> => {
+    this.provider.disconnect();
+  };
+
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     let attesterDuties: AttesterDuty[] | undefined;
     try {
