@@ -12,7 +12,10 @@ describe("eth1 / Eth1Provider", () => {
   it("Should throw with an invalid address", () => {
     const badConfig = {
       ...config,
-      DEPOSIT_CONTRACT_ADDRESS: Buffer.from(""),
+      params: {
+        ...config.params,
+        DEPOSIT_CONTRACT_ADDRESS: Buffer.from(""),
+      },
     };
     expect(() => new Eth1Provider(badConfig, eth1Options)).to.throw();
   });
