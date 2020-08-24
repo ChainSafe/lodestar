@@ -20,7 +20,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {sleep} from "../../../util/sleep";
 import {EventEmitter} from "events";
 
-export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
+export class NaiveRegularSync extends (EventEmitter as {new(): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
 
   private readonly network: INetwork;
@@ -95,7 +95,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private setTarget = (newTarget?: Slot, triggerSync = true): void => {
-    newTarget = typeof newTarget === "number" ? newTarget : this.getNewTarget();
+    newTarget = newTarget ?? this.getNewTarget();
     if (triggerSync && newTarget > this.currentTarget) {
       this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
@@ -110,7 +110,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       }
       this.logger.info(
         `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
-          `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
+        `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
       );
       this.setTarget();
     }
@@ -120,7 +120,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.gossipParentBlockRoot = block.message.parentRoot;
     this.logger.verbose(
       `Regular Sync: Set gossip parent block to ${toHexString(this.gossipParentBlockRoot)}` +
-        `, gossip slot ${block.message.slot}`
+      `, gossip slot ${block.message.slot}`
     );
     await this.checkSyncComplete();
   };
