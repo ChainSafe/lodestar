@@ -40,7 +40,6 @@ export class Eth1Provider {
     this.deployBlock = opts.depositContractDeployBlock;
   }
 
-      this.logger.info("Eth1 notifier is disabled, no need to process eth1 for proposing data");
   async validateContract(): Promise<void> {
     const code = await this.provider.getCode(this.address);
     if (!code || code === "0x") {
