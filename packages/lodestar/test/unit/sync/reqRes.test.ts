@@ -23,6 +23,7 @@ import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {getBlockSummary} from "../../utils/headBlockInfo";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -152,6 +153,44 @@ describe("sync req resp", function () {
 
     sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4).fill(1));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
+  });
+
+  it("should not disconnect on status - too old finalized epoch", async function () {
+    const body: Status = {
+      forkDigest: Buffer.alloc(4),
+      finalizedRoot: Buffer.alloc(32),
+      finalizedEpoch: 1,
+      headRoot: Buffer.alloc(32),
+      headSlot: 1,
+    };
+
+    sandbox.stub(chainStub, "currentForkDigest").get(() => body.forkDigest);
+    chainStub.getHeadState.resolves(
+      generateState({
+        slot: computeStartSlotAtEpoch(
+          config,
+          config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2
+        ),
+      })
+    );
+    forkChoiceStub.head.returns({
+      finalizedCheckpoint: {
+        root: Buffer.alloc(32),
+        epoch: config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2,
+      },
+      justifiedCheckpoint: {
+        root: Buffer.alloc(32),
+        epoch: 0,
+      },
+      blockRoot: Buffer.alloc(32),
+      parentRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      slot: computeStartSlotAtEpoch(
+        config,
+        config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2
+      ),
+    });
+    expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });
 
   it("should not disconnect on status", async function () {
