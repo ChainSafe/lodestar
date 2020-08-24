@@ -10,13 +10,8 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {
-  computeEpochAtSlot,
-  computeSigningRoot,
   computeStartSlotAtEpoch,
-  getCurrentSlot,
-  getDomain,
   isValidAttesterSlashing,
-  isValidIndexedAttestation,
   isValidProposerSlashing,
   isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -27,8 +22,7 @@ import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
-import {verify} from "@chainsafe/bls";
+
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
   chain: IBeaconChain;

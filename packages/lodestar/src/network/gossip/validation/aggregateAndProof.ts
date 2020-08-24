@@ -2,29 +2,24 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
-import {
-  AggregateAndProof,
-  Attestation,
-  BeaconState,
-  Epoch,
-  SignedAggregateAndProof,
-  Slot,
-} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, Attestation, SignedAggregateAndProof, Slot} from "@chainsafe/lodestar-types";
 import {ExtendedValidatorResult} from "../constants";
 import {toHexString} from "@chainsafe/ssz";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, DomainType, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../constants";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../constants";
 import {
   computeEpochAtSlot,
-  computeSigningRoot,
   computeStartSlotAtEpoch,
   getCurrentSlot,
-  getDomain,
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
 import {getAttestationPreState} from "../utils";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {PublicKey, Signature} from "@chainsafe/bls";
+import {Signature} from "@chainsafe/bls";
+import {
+  isValidIndexedAttestation
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -76,8 +71,6 @@ export async function validateGossipAggregateAndProof(
   //TODO: check pool of aggregates if already seen (not a dos vector check)
 
   const result = await validateAggregateAttestation(config, chain, db, logger, logContext, signedAggregateAndProof);
-
-  //TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
   logger.profile("gossipAggregateAndProofValidation");
   logger.info("Received gossip aggregate and proof passed validation", logContext);
@@ -152,40 +145,15 @@ export async function validateAggregateAttestation(
     logger.warn("Rejected gossip aggregate and proof", {reason: "invalid signature", ...logContext});
     return ExtendedValidatorResult.reject;
   }
+
+  //TODO: once we have pool, check if aggregate block is seen and has target as ancestor
+
+  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
+    logger.warn("Rejected gossip aggregate and proof", {reason: "invalid indexed attestation", ...logContext});
+    return ExtendedValidatorResult.reject;
+  }
+
   return ExtendedValidatorResult.accept;
-}
-
-export function isValidSelectionProofSignature(
-  config: IBeaconConfig,
-  state: BeaconState,
-  slot: Slot,
-  aggregator: PublicKey,
-  signature: Signature
-): boolean {
-  const epoch = computeEpochAtSlot(config, slot);
-  const selectionProofDomain = getDomain(config, state, DomainType.SELECTION_PROOF, epoch);
-  const selectionProofSigningRoot = computeSigningRoot(config, config.types.Slot, slot, selectionProofDomain);
-  return aggregator.verifyMessage(signature, selectionProofSigningRoot);
-}
-
-export function isValidAggregateAndProofSignature(
-  config: IBeaconConfig,
-  state: BeaconState,
-  epoch: Epoch,
-  aggregator: PublicKey,
-  aggregateAndProof: SignedAggregateAndProof
-): boolean {
-  const aggregatorDomain = getDomain(config, state, DomainType.AGGREGATE_AND_PROOF, epoch);
-  const aggregatorSigningRoot = computeSigningRoot(
-    config,
-    config.types.AggregateAndProof,
-    aggregateAndProof.message,
-    aggregatorDomain
-  );
-  return aggregator.verifyMessage(
-    Signature.fromCompressedBytes(aggregateAndProof.signature.valueOf() as Uint8Array),
-    aggregatorSigningRoot
-  );
 }
 
 //& object so we can spread it
