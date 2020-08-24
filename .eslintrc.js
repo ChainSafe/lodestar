@@ -66,9 +66,6 @@ module.exports = {
       "peerDependencies": false
     }],
     "func-call-spacing": "off",
-    "max-len": ["error", {
-      "code": 120
-    }],
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "node/no-deprecated-api": "error",
