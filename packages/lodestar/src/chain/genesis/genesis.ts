@@ -16,7 +16,7 @@ import {
   getDepositsAndBlockStreamForGenesis,
   getDepositsStream,
 } from "../../eth1";
-import {IGenesisBuilder, IGenesisBuilderModules} from "./interface";
+import {IGenesisBuilder, IGenesisBuilderModules, IGenesisResult} from "./interface";
 import {
   getGenesisBeaconState,
   getEmptyBlock,
@@ -58,7 +58,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   /**
    * Get eth1 deposit events and blocks and apply to this.state until we found genesis.
    */
-  public async waitForGenesis(): Promise<TreeBacked<BeaconState>> {
+  public async waitForGenesis(): Promise<IGenesisResult> {
     await this.eth1Provider.validateContract();
 
     // TODO: Load data from data from this.db.depositData, this.db.depositDataRoot
@@ -82,7 +82,11 @@ export class GenesisBuilder implements IGenesisBuilder {
       if (isValidGenesisState(this.config, this.state)) {
         this.logger.info(`Found genesis state at eth1 block ${block.number}`);
         controller.abort();
-        return this.state;
+        return {
+          state: this.state,
+          depositTree: this.depositTree,
+          block,
+        };
       }
     }
 

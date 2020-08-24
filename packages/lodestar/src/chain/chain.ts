@@ -413,7 +413,8 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
         db: this.db,
         logger: this.logger,
       });
-      state = await builder.waitForGenesis();
+      const genesisResult = await builder.waitForGenesis();
+      state = genesisResult.state;
       await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state

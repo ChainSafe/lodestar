@@ -60,7 +60,8 @@ describe("BeaconChain", function () {
     });
 
     logger.profile("detect altona genesis state");
-    const headState = await builder.waitForGenesis();
+    const genesisResult = await builder.waitForGenesis();
+    const headState = genesisResult.state;
     // https://github.com/goerli/altona/tree/master/altona
     expect(toHexString(altonaConfig.types.BeaconState.hashTreeRoot(headState))).to.be.equal(
       "0x939d98077986a9f6eccae33614e2da1008a2f300f1aac36bc65ef710550eec4a"
