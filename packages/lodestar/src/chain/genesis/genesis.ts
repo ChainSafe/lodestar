@@ -5,7 +5,6 @@
 import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import abortable from "abortable-iterator";
 import {AbortController} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -69,10 +68,11 @@ export class GenesisBuilder implements IGenesisBuilder {
     const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
 
     const controller = new AbortController();
-    const depositsAndBlocksStream = abortable(
-      getDepositsAndBlockStreamForGenesis(blockNumberValidatorGenesis, this.eth1Provider, this.eth1Params),
-      controller.signal,
-      {returnOnAbort: true}
+    const depositsAndBlocksStream = getDepositsAndBlockStreamForGenesis(
+      blockNumberValidatorGenesis,
+      this.eth1Provider,
+      this.eth1Params,
+      controller.signal
     );
 
     for await (const [depositEvents, block] of depositsAndBlocksStream) {
@@ -96,11 +96,7 @@ export class GenesisBuilder implements IGenesisBuilder {
    */
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
     const controller = new AbortController();
-    const depositsStream = abortable(
-      getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params),
-      controller.signal,
-      {returnOnAbort: true}
-    );
+    const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, controller.signal);
 
     for await (const {depositEvents, blockNumber} of depositsStream) {
       this.applyDeposits(depositEvents);

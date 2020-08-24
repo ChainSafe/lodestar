@@ -17,14 +17,16 @@ describe("Eth1 streams", function () {
 
   const MAX_BLOCKS_PER_POLL = 1000;
   const depositsToFetch = 1000;
+  const eth1Params = {...config.params, MAX_BLOCKS_PER_POLL};
 
   it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {
-    const depositsStream = getDepositsStream(medalla.blockWithDepositActivity, eth1Provider, {
-      ...config.params,
-      MAX_BLOCKS_PER_POLL,
-    });
-
     const controller = new AbortController();
+    const depositsStream = getDepositsStream(
+      medalla.blockWithDepositActivity,
+      eth1Provider,
+      eth1Params,
+      controller.signal
+    );
 
     let depositCount = 0;
     for await (const {depositEvents} of abortable(depositsStream, controller.signal, {returnOnAbort: true})) {
@@ -38,12 +40,13 @@ describe("Eth1 streams", function () {
   });
 
   it(`Should fetch ${depositsToFetch} deposits with getDepositsAndBlockStreamForGenesis`, async function () {
-    const stream = getDepositsAndBlockStreamForGenesis(medalla.blockWithDepositActivity, eth1Provider, {
-      ...config.params,
-      MAX_BLOCKS_PER_POLL,
-    });
-
     const controller = new AbortController();
+    const stream = getDepositsAndBlockStreamForGenesis(
+      medalla.blockWithDepositActivity,
+      eth1Provider,
+      eth1Params,
+      controller.signal
+    );
 
     let depositCount = 0;
     for await (const [deposit] of abortable(stream, controller.signal, {returnOnAbort: true})) {
