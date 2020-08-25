@@ -177,7 +177,6 @@ export class AttestationService {
 
     if (duty.isAggregator) {
       const abortSignal = this.controller?.signal;
-      
       const timeout = setTimeout(async (signal = abortSignal) => {
         this.logger.info("AttestationService: Start waitForAggregate");
         signal?.addEventListener("abort", () => {
