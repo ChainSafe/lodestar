@@ -40,16 +40,15 @@ import {isValidatorAggregator} from "../util/aggregator";
 export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  //order is important
+  // order is important
   private readonly privateKeys: PrivateKey[] = [];
-  //order is important
+  // order is important
   private readonly publicKeys: BLSPubkey[] = [];
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
 
   private nextAttesterDuties: Map<Slot, IAttesterDuty[]> = new Map();
-  private aggregatorTimeout?: NodeJS.Timeout;
-  private controller: AbortController = new AbortController();
+  private controller: AbortController | null = null;
 
   public constructor(
     config: IBeaconConfig,
@@ -69,19 +68,19 @@ export class AttestationService {
   }
 
   public start = async (): Promise<void> => {
+    this.controller = new AbortController();
     const slot = this.provider.getCurrentSlot();
-    //get current epoch duties
+    // get current epoch duties
     await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
 
     if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) !== slot) {
-      //trigger next epoch duties
+      // trigger next epoch duties
       await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
     }
   };
 
   public stop = async (): Promise<void> => {
     await this.provider.disconnect();
-    if (this.aggregatorTimeout) clearTimeout(this.aggregatorTimeout);
     if (this.controller) {
       this.controller.abort();
     }
@@ -152,7 +151,8 @@ export class AttestationService {
       committee: duty.committeeIndex,
       validator: toHexString(duty.validatorPubkey),
     });
-    await this.waitForAttestationBlock(duty.attestationSlot, this.controller.signal);
+    const abortSignal = this.controller?.signal;
+    await this.waitForAttestationBlock(duty.attestationSlot, abortSignal);
     let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
     try {
@@ -176,7 +176,15 @@ export class AttestationService {
     }
 
     if (duty.isAggregator) {
-      this.aggregatorTimeout = setTimeout(async () => {
+      const abortSignal = this.controller?.signal;
+      
+      const timeout = setTimeout(async (signal = abortSignal) => {
+        this.logger.info("AttestationService: Start waitForAggregate");
+        signal?.addEventListener("abort", () => {
+          clearTimeout(timeout);
+          this.logger.info("AttestationService: Abort waitForAggregate");
+        });
+
         try {
           if (attestation) {
             await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
@@ -198,21 +206,25 @@ export class AttestationService {
     }
   }
 
-  private async waitForAttestationBlock(slot: Slot, signal: AbortSignal): Promise<void> {
+  private async waitForAttestationBlock(slot: Slot, signal?: AbortSignal): Promise<void> {
     this.logger.info("Waiting for slot block", {slot});
     const eventSource = new EventSource(`${this.provider.url}/lodestar/blocks/stream`, {
       https: {rejectUnauthorized: false},
     });
-
-    if (signal.aborted) {
-      this.logger.verbose("AttestationService: Abort waitForAttestationBlock");
-    }
 
     await new Promise((resolve) => {
       const timeout = setTimeout(() => {
         this.logger.debug("Timed out slot block waiting");
         resolve();
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
+
+      signal?.addEventListener("abort", () => {
+        clearTimeout(timeout);
+        eventSource.close();
+        resolve();
+        this.logger.info("AttestationService: Abort waitForAttestationBlock");
+      });
+
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
           this.logger.debug("received block!");
@@ -354,7 +366,7 @@ export class AttestationService {
   private async storeAttestation(attesterIndex: number, attestation: Attestation): Promise<void> {
     await this.db.setAttestation(this.publicKeys[attesterIndex], attestation);
 
-    //cleanup
+    // cleanup
     const unusedAttestations = await this.db.getAttestations(this.publicKeys[attesterIndex], {
       gt: 0,
       lt: attestation.data.target.epoch,
