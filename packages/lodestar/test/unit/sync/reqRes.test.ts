@@ -78,8 +78,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
-      supportedProtocols: [],
+      encoding: ReqRespEncoding.SSZ_SNAPPY
     });
 
     try {
@@ -103,8 +102,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
-      supportedProtocols: [],
+      encoding: ReqRespEncoding.SSZ_SNAPPY
     };
     repsStub.get.returns(reputation);
     repsStub.getFromPeerId.returns(reputation);
@@ -132,8 +130,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
-      supportedProtocols: [],
+      encoding: ReqRespEncoding.SSZ_SNAPPY
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));

@@ -284,7 +284,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 1),
         headSlot: 1000,
       };
-      reps.getFromPeerId(peer1).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer2).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -292,7 +291,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 2000,
       };
-      reps.getFromPeerId(peer2).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer4).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -300,20 +298,16 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 4000,
       };
-      // peer4 has highest slot but does not support sync
-      reps.getFromPeerId(peer4).supportedProtocols = [];
-
       expect(getBestHead(peers, reps)).to.be.deep.equal({
-        slot: 2000,
+        slot: 4000,
         root: Buffer.alloc(32, 2),
-        supportedProtocols: [Method.BeaconBlocksByRange],
       });
       expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
     });
 
     it("should handle no peer", () => {
       const reps = new ReputationStore();
-      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH, supportedProtocols: []});
+      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH});
       expect(getBestPeer(config, [], reps)).to.be.undefined;
     });
   });
