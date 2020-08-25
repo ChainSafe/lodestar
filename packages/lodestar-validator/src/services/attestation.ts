@@ -206,7 +206,7 @@ export class AttestationService {
   }
 
   private async waitForAttestationBlock(slot: Slot, signal?: AbortSignal): Promise<void> {
-    this.logger.info("Waiting for slot block", {slot});
+    this.logger.debug("Waiting for slot block", {slot});
     const eventSource = new EventSource(`${this.provider.url}/lodestar/blocks/stream`, {
       https: {rejectUnauthorized: false},
     });
