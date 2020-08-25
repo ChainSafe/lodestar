@@ -24,6 +24,7 @@ import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {generatePeer} from "../../utils/peer";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -72,7 +73,7 @@ describe("sync req resp", function () {
   it("should start and stop sync rpc", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
     networkStub.hasPeer.returns(true);
-    networkStub.getPeers.returns([peerId, peerId]);
+    networkStub.getPeers.returns([generatePeer(peerId), generatePeer(peerId)]);
     repsStub.get.returns({
       latestMetadata: null,
       latestStatus: null,

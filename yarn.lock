@@ -11002,9 +11002,9 @@ libp2p-tcp@^0.14.6:
     multiaddr "^7.5.0"
     stream-to-it "^0.2.2"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#mpetrunic/peer-book-types":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#1306a2248294a89ca576ff4a7fc2c348169265c4"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#bdbc3f7918796d4c24791b483eb1fab1020a5203"
   dependencies:
     "@chainsafe/discv5" "^0.3.1"
     "@types/node" "^13.7.0"

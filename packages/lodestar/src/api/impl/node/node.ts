@@ -45,11 +45,11 @@ export class NodeApi implements INodeApi {
 
   public async getPeers(): Promise<NodePeer[]> {
     const peers: NodePeer[] = [];
-    for (const peer of this.network.getPeers()) {
-      const conn = this.network.getPeerConnection(peer);
+    for (const peer of this.network.getPeers({connected: true})) {
+      const conn = this.network.getPeerConnection(peer.id);
       if (conn) {
         peers.push({
-          peerId: peer.toB58String(),
+          peerId: peer.id.toB58String(),
           //TODO: figure out how to get enr of peer
           enr: "",
           address: conn.remoteAddr.toString(),

@@ -49,7 +49,7 @@
     "@chainsafe/lodestar-types": "^0.11.0",
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
-    "@chainsafe/snappy-stream": "3.0.4",
+    "@chainsafe/snappy-stream": "3.0.5",
     "@chainsafe/ssz": "^0.6.13",
     "@types/async": "^3.0.1",
     "@types/datastore-level": "^1.1.1",
@@ -112,7 +112,7 @@
     "babel-plugin-const-enum": "^0.0.4",
     "benchmark": "^2.1.4",
     "eventsource": "^1.0.7",
-    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
+    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git#mpetrunic/peer-book-types",
     "rimraf": "^3.0.2",
     "tmp": "^0.2.1"
   },

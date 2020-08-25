@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
-import {INetwork} from "../network";
+import {getSyncProtocols, INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -10,7 +10,7 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} from "./utils";
+import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -171,9 +171,12 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private getPeers(): PeerId[] {
-    return this.network.getPeers().filter((peer) => {
-      return !!this.peerReputations.getFromPeerId(peer).latestStatus;
-    });
+    return this.network
+      .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
+      .filter((peer) => {
+        return !!this.peerReputations.getFromPeerId(peer.id).latestStatus;
+      })
+      .map((peer) => peer.id);
   }
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {

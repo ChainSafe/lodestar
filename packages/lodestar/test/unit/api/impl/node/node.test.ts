@@ -9,6 +9,7 @@ import {expect} from "chai";
 import Multiaddr from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
 import {Metadata} from "@chainsafe/lodestar-types";
+import {generatePeer} from "../../../../utils/peer";
 
 describe("node api implementation", function () {
   let api: INodeApi;
@@ -76,7 +77,7 @@ describe("node api implementation", function () {
     it("success", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getPeers.returns([peer1, peer2]);
+      networkStub.getPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
       networkStub.getPeerConnection.onFirstCall().returns({
         remoteAddr: new Multiaddr(),
         stat: {
@@ -110,7 +111,7 @@ describe("node api implementation", function () {
     it("success", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getPeers.returns([peer1, peer2]);
+      networkStub.getPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
       networkStub.getPeerConnection.onFirstCall().returns({
         remoteAddr: new Multiaddr(),
         stat: {
@@ -138,7 +139,7 @@ describe("node api implementation", function () {
     it("peer not found", async function () {
       const peer1 = await createPeerId();
       const peer2 = await createPeerId();
-      networkStub.getPeers.returns([peer1, peer2]);
+      networkStub.getPeers.returns([generatePeer(peer1), generatePeer(peer2)]);
       networkStub.getPeerConnection.onFirstCall().returns({
         remoteAddr: new Multiaddr(),
         stat: {
