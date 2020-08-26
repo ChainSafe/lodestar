@@ -33,13 +33,13 @@ import {ILatestMessage, IQueuedAttestation} from "./interface";
  * This class wraps `ProtoArray` and provides:
  *
  * - Management of validators latest messages and balances
- * - Management of the justified state
- * - Queuing of attestations from the current slot.
+ * - Management of the justified/finalized checkpoints as seen by fork choice
+ * - Queuing of attestations from the current slot
  *
- * This class must be used with the following considerations:
+ * This class MUST be used with the following considerations:
  *
  * - Time is not updated automatically, updateTime MUST be called every slot
- * - Justified balances are not updated automatically, updateBalances MUST be called when fcStore justifiedCheckpoint is updated
+ * - Justified balances are not updated automatically, updateBalances MUST be called when Store justifiedCheckpoint is updated
  */
 export class ForkChoice {
   config: IBeaconConfig;
@@ -60,6 +60,8 @@ export class ForkChoice {
   /**
    * Balances currently tracked in the protoArray
    * Indexed by validator index
+   *
+   * This should be the balances of the state at fcStore.justifiedCheckpoint
    */
   balances: Gwei[];
   /**
@@ -150,7 +152,7 @@ export class ForkChoice {
         ancestorSlot,
       });
     } else {
-      // Root is older or equal than queried slot, thos a skip slot. Return most recent root prior to slot.
+      // Root is older or equal than queried slot, thus a skip slot. Return most recent root prior to slot.
       return blockRoot.valueOf() as Uint8Array;
     }
   }
@@ -166,53 +168,6 @@ export class ForkChoice {
    */
   public getHead(): Uint8Array {
     return fromHexString(this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root)));
-  }
-
-  /**
-   * Returns `true` if the given `store` should be updated to set
-   * `state.current_justified_checkpoint` its `justified_checkpoint`.
-   *
-   * ## Specification
-   *
-   * Is equivalent to:
-   *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#should_update_justified_checkpoint
-   */
-  shouldUpdateJustifiedCheckpoint(state: BeaconState): boolean {
-    const newJustifiedCheckpoint = state.currentJustifiedCheckpoint;
-
-    if (
-      computeSlotsSinceEpochStart(this.config, this.fcStore.currentSlot) <
-      this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED
-    ) {
-      return true;
-    }
-
-    const justifiedSlot = computeStartSlotAtEpoch(this.config, this.fcStore.justifiedCheckpoint.epoch);
-
-    // This sanity check is not in the spec, but the invariant is implied
-    if (justifiedSlot >= state.slot) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_ATTEMPT_TO_REVERT_JUSTIFICATION,
-        store: justifiedSlot,
-        state: state.slot,
-      });
-    }
-
-    // We know that the slot for `new_justified_checkpoint.root` is not greater than
-    // `state.slot`, since a state cannot justify its own slot.
-    //
-    // We know that `new_justified_checkpoint.root` is an ancestor of `state`, since a `state`
-    // only ever justifies ancestors.
-    //
-    // A prior `if` statement protects against a justified_slot that is greater than
-    // `state.slot`
-    const justifiedAncestor = this.getAncestor(newJustifiedCheckpoint.root, justifiedSlot);
-    if (!this.config.types.Root.equals(justifiedAncestor, this.fcStore.justifiedCheckpoint.root)) {
-      return false;
-    }
-
-    return true;
   }
 
   /**
@@ -330,132 +285,6 @@ export class ForkChoice {
       justifiedEpoch: state.currentJustifiedCheckpoint.epoch,
       finalizedEpoch: state.finalizedCheckpoint.epoch,
     });
-  }
-
-  /**
-   * Validates the `indexed_attestation` for application to fork choice.
-   *
-   * ## Specification
-   *
-   * Equivalent to:
-   *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#validate_on_attestation
-   */
-  validateOnAttestation(indexedAttestation: IndexedAttestation): void {
-    // There is no point in processing an attestation with an empty bitfield. Reject
-    // it immediately.
-    //
-    // This is not in the specification, however it should be transparent to other nodes. We
-    // return early here to avoid wasting precious resources verifying the rest of it.
-    if (!indexedAttestation.attestingIndices.length) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD,
-        },
-      });
-    }
-
-    const epochNow = computeEpochAtSlot(this.config, this.fcStore.currentSlot);
-    const target = indexedAttestation.data.target;
-
-    // Attestation must be from the current of previous epoch.
-    if (target.epoch > epochNow) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.FUTURE_EPOCH,
-          attestationEpoch: target.epoch,
-          currentEpoch: epochNow,
-        },
-      });
-    } else if (target.epoch + 1 < epochNow) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.PAST_EPOCH,
-          attestationEpoch: target.epoch,
-          currentEpoch: epochNow,
-        },
-      });
-    }
-
-    if (target.epoch !== computeEpochAtSlot(this.config, indexedAttestation.data.slot)) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.BAD_TARGET_EPOCH,
-          target: target.epoch,
-          slot: indexedAttestation.data.slot,
-        },
-      });
-    }
-
-    // Attestation target must be for a known block.
-    //
-    // We do not delay the block for later processing to reduce complexity and DoS attack
-    // surface.
-    if (!this.protoArray.hasBlock(toHexString(target.root))) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
-          root: target.root.valueOf() as Uint8Array,
-        },
-      });
-    }
-
-    // Load the block for `attestation.data.beacon_block_root`.
-    //
-    // This indirectly checks to see if the `attestation.data.beacon_block_root` is in our fork
-    // choice. Any known, non-finalized block should be in fork choice, so this check
-    // immediately filters out attestations that attest to a block that has not been processed.
-    //
-    // Attestations must be for a known block. If the block is unknown, we simply drop the
-    // attestation and do not delay consideration for later.
-    const block = this.protoArray.getBlock(toHexString(indexedAttestation.data.beaconBlockRoot));
-    if (!block) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
-          beaconBlockRoot: indexedAttestation.data.beaconBlockRoot.valueOf() as Uint8Array,
-        },
-      });
-    }
-
-    // If an attestation points to a block that is from an earlier slot than the attestation,
-    // then all slots between the block and attestation must be skipped. Therefore if the block
-    // is from a prior epoch to the attestation, then the target root must be equal to the root
-    // of the block that is being attested to.
-    const expectedTarget =
-      target.epoch > computeEpochAtSlot(this.config, block.slot)
-        ? indexedAttestation.data.beaconBlockRoot
-        : fromHexString(block.targetRoot);
-
-    if (!this.config.types.Root.equals(expectedTarget, target.root)) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.INVALID_TARGET,
-          attestation: target.root.valueOf() as Uint8Array,
-          local: expectedTarget.valueOf() as Uint8Array,
-        },
-      });
-    }
-
-    // Attestations must not be for blocks in the future. If this is the case, the attestation
-    // should not be considered.
-    if (block.slot > indexedAttestation.data.slot) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
-          block: block.slot,
-          attestation: indexedAttestation.data.slot,
-        },
-      });
-    }
   }
 
   /**
@@ -603,6 +432,179 @@ export class ForkChoice {
    */
   public iterateBlockSummaries(blockRoot: Root): IBlockSummary[] {
     return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
+  }
+
+  /**
+   * Returns `true` if the given `store` should be updated to set
+   * `state.current_justified_checkpoint` its `justified_checkpoint`.
+   *
+   * ## Specification
+   *
+   * Is equivalent to:
+   *
+   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#should_update_justified_checkpoint
+   */
+  private shouldUpdateJustifiedCheckpoint(state: BeaconState): boolean {
+    const newJustifiedCheckpoint = state.currentJustifiedCheckpoint;
+
+    if (
+      computeSlotsSinceEpochStart(this.config, this.fcStore.currentSlot) <
+      this.config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED
+    ) {
+      return true;
+    }
+
+    const justifiedSlot = computeStartSlotAtEpoch(this.config, this.fcStore.justifiedCheckpoint.epoch);
+
+    // This sanity check is not in the spec, but the invariant is implied
+    if (justifiedSlot >= state.slot) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_ATTEMPT_TO_REVERT_JUSTIFICATION,
+        store: justifiedSlot,
+        state: state.slot,
+      });
+    }
+
+    // We know that the slot for `new_justified_checkpoint.root` is not greater than
+    // `state.slot`, since a state cannot justify its own slot.
+    //
+    // We know that `new_justified_checkpoint.root` is an ancestor of `state`, since a `state`
+    // only ever justifies ancestors.
+    //
+    // A prior `if` statement protects against a justified_slot that is greater than
+    // `state.slot`
+    const justifiedAncestor = this.getAncestor(newJustifiedCheckpoint.root, justifiedSlot);
+    if (!this.config.types.Root.equals(justifiedAncestor, this.fcStore.justifiedCheckpoint.root)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Validates the `indexed_attestation` for application to fork choice.
+   *
+   * ## Specification
+   *
+   * Equivalent to:
+   *
+   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#validate_on_attestation
+   */
+  private validateOnAttestation(indexedAttestation: IndexedAttestation): void {
+    // There is no point in processing an attestation with an empty bitfield. Reject
+    // it immediately.
+    //
+    // This is not in the specification, however it should be transparent to other nodes. We
+    // return early here to avoid wasting precious resources verifying the rest of it.
+    if (!indexedAttestation.attestingIndices.length) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD,
+        },
+      });
+    }
+
+    const epochNow = computeEpochAtSlot(this.config, this.fcStore.currentSlot);
+    const target = indexedAttestation.data.target;
+
+    // Attestation must be from the current of previous epoch.
+    if (target.epoch > epochNow) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.FUTURE_EPOCH,
+          attestationEpoch: target.epoch,
+          currentEpoch: epochNow,
+        },
+      });
+    } else if (target.epoch + 1 < epochNow) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.PAST_EPOCH,
+          attestationEpoch: target.epoch,
+          currentEpoch: epochNow,
+        },
+      });
+    }
+
+    if (target.epoch !== computeEpochAtSlot(this.config, indexedAttestation.data.slot)) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.BAD_TARGET_EPOCH,
+          target: target.epoch,
+          slot: indexedAttestation.data.slot,
+        },
+      });
+    }
+
+    // Attestation target must be for a known block.
+    //
+    // We do not delay the block for later processing to reduce complexity and DoS attack
+    // surface.
+    if (!this.protoArray.hasBlock(toHexString(target.root))) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
+          root: target.root.valueOf() as Uint8Array,
+        },
+      });
+    }
+
+    // Load the block for `attestation.data.beacon_block_root`.
+    //
+    // This indirectly checks to see if the `attestation.data.beacon_block_root` is in our fork
+    // choice. Any known, non-finalized block should be in fork choice, so this check
+    // immediately filters out attestations that attest to a block that has not been processed.
+    //
+    // Attestations must be for a known block. If the block is unknown, we simply drop the
+    // attestation and do not delay consideration for later.
+    const block = this.protoArray.getBlock(toHexString(indexedAttestation.data.beaconBlockRoot));
+    if (!block) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
+          beaconBlockRoot: indexedAttestation.data.beaconBlockRoot.valueOf() as Uint8Array,
+        },
+      });
+    }
+
+    // If an attestation points to a block that is from an earlier slot than the attestation,
+    // then all slots between the block and attestation must be skipped. Therefore if the block
+    // is from a prior epoch to the attestation, then the target root must be equal to the root
+    // of the block that is being attested to.
+    const expectedTarget =
+      target.epoch > computeEpochAtSlot(this.config, block.slot)
+        ? indexedAttestation.data.beaconBlockRoot
+        : fromHexString(block.targetRoot);
+
+    if (!this.config.types.Root.equals(expectedTarget, target.root)) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.INVALID_TARGET,
+          attestation: target.root.valueOf() as Uint8Array,
+          local: expectedTarget.valueOf() as Uint8Array,
+        },
+      });
+    }
+
+    // Attestations must not be for blocks in the future. If this is the case, the attestation
+    // should not be considered.
+    if (block.slot > indexedAttestation.data.slot) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
+          block: block.slot,
+          attestation: indexedAttestation.data.slot,
+        },
+      });
+    }
   }
 
   /**

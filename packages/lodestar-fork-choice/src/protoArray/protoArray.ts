@@ -535,4 +535,8 @@ export class ProtoArray {
     }
     return false;
   }
+
+  length(): number {
+    return this.indices.size;
+  }
 }
