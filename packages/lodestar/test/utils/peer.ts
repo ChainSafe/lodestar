@@ -1,8 +1,8 @@
 import PeerId from "peer-id";
 import LibP2p from "libp2p";
-import PeerType = LibP2p.PeerType;
+import Peer = LibP2p.Peer;
 
-export function generatePeer(id: PeerId): PeerType {
+export function generatePeer(id: PeerId): Peer {
   return {
     id,
     addresses: [],
