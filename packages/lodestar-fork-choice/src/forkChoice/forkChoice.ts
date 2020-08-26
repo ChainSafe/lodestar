@@ -1,13 +1,13 @@
 /* eslint-disable max-len */
 import {fromHexString, toHexString, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {
-  Epoch,
   Slot,
   ValidatorIndex,
   BeaconBlock,
   Root,
   BeaconState,
   IndexedAttestation,
+  Gwei,
 } from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
@@ -17,21 +17,11 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {IProtoBlock, ProtoArrayForkChoice} from "../protoArray";
+import {computeDeltas, HEX_ZERO_HASH, IVoteTracker, ProtoArray} from "../protoArray";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoiceStore} from "./store";
 import {IBlockSummary, toBlockSummary} from "./blockSummary";
-
-/**
- * Used for queuing attestations from the current slot. Only contains the minimum necessary
- * information about the attestation.
- */
-export interface IQueuedAttestation {
-  slot: Slot;
-  attestingIndices: ValidatorIndex[];
-  blockRoot: Uint8Array;
-  targetEpoch: Epoch;
-}
+import {ILatestMessage, IQueuedAttestation} from "./interface";
 
 /**
  * Provides an implementation of "Ethereum 2.0 Phase 0 -- Beacon Chain Fork Choice":
@@ -40,10 +30,16 @@ export interface IQueuedAttestation {
  *
  * ## Detail
  *
- * This class wraps `ProtoArrayForkChoice` and provides:
+ * This class wraps `ProtoArray` and provides:
  *
- * - Management of the justified state and caching of balances.
+ * - Management of validators latest messages and balances
+ * - Management of the justified state
  * - Queuing of attestations from the current slot.
+ *
+ * This class must be used with the following considerations:
+ *
+ * - Time is not updated automatically, updateTime MUST be called every slot
+ * - Justified balances are not updated automatically, updateBalances MUST be called when fcStore justifiedCheckpoint is updated
  */
 export class ForkChoice {
   config: IBeaconConfig;
@@ -54,9 +50,21 @@ export class ForkChoice {
   /**
    * The underlying representation of the block DAG.
    */
-  protoArray: ProtoArrayForkChoice;
+  protoArray: ProtoArray;
+  /**
+   * Votes currently tracked in the protoArray
+   * Indexed by validator index
+   * Each vote contains the latest message and previous message
+   */
+  votes: IVoteTracker[];
+  /**
+   * Balances currently tracked in the protoArray
+   * Indexed by validator index
+   */
+  balances: Gwei[];
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
+   * NOT currently tracked in the protoArray
    */
   queuedAttesations: Set<IQueuedAttestation>;
 
@@ -73,12 +81,14 @@ export class ForkChoice {
   }: {
     config: IBeaconConfig;
     fcStore: IForkChoiceStore;
-    protoArray: ProtoArrayForkChoice;
+    protoArray: ProtoArray;
     queuedAttesations: Set<IQueuedAttestation>;
   }) {
     this.config = config;
     this.fcStore = fcStore;
     this.protoArray = protoArray;
+    this.votes = [];
+    this.balances = [];
     this.queuedAttesations = queuedAttesations;
   }
 
@@ -86,7 +96,7 @@ export class ForkChoice {
    * Instantiates a ForkChoice from genesis parameters
    */
   public static fromGenesis(config: IBeaconConfig, fcStore: IForkChoiceStore, genesisBlock: BeaconBlock): ForkChoice {
-    const protoArray = new ProtoArrayForkChoice({
+    const protoArray = ProtoArray.initialize({
       slot: genesisBlock.slot,
       parentRoot: toHexString(genesisBlock.parentRoot),
       stateRoot: toHexString(genesisBlock.stateRoot),
@@ -129,7 +139,7 @@ export class ForkChoice {
     if (block.slot > ancestorSlot) {
       // Search for a slot that is lte the target slot.
       // We check for lower slots to account for skip slots.
-      for (const node of this.protoArray.protoArray.iterateNodes(toHexString(blockRoot))) {
+      for (const node of this.protoArray.iterateNodes(toHexString(blockRoot))) {
         if (node.slot <= ancestorSlot) {
           return fromHexString(node.blockRoot);
         }
@@ -154,12 +164,8 @@ export class ForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
-  public getHead(currentSlot: Slot): Uint8Array {
-    this.updateTime(currentSlot);
-
-    return fromHexString(
-      this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root))
-    );
+  public getHead(): Uint8Array {
+    return fromHexString(this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root)));
   }
 
   /**
@@ -211,9 +217,6 @@ export class ForkChoice {
 
   /**
    * Add `block` to the fork choice DAG.
-   *
-   * - `block_root` is the root of `block.
-   * - The root of `state` matches `block.state_root`.
    *
    * ## Specification
    *
@@ -316,11 +319,9 @@ export class ForkChoice {
         ? this.config.types.BeaconBlock.hashTreeRoot(block)
         : state.blockRoots[targetSlot % this.config.params.SLOTS_PER_HISTORICAL_ROOT];
 
-    this.fcStore.onVerifiedBlock(block, state);
-
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    this.protoArray.protoArray.onBlock({
+    this.protoArray.onBlock({
       slot: block.slot,
       blockRoot: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)),
       parentRoot: toHexString(block.parentRoot),
@@ -355,8 +356,7 @@ export class ForkChoice {
       });
     }
 
-    const slotNow = this.fcStore.currentSlot;
-    const epochNow = computeEpochAtSlot(this.config, slotNow);
+    const epochNow = computeEpochAtSlot(this.config, this.fcStore.currentSlot);
     const target = indexedAttestation.data.target;
 
     // Attestation must be from the current of previous epoch.
@@ -498,11 +498,10 @@ export class ForkChoice {
 
     if (attestation.data.slot < this.fcStore.currentSlot) {
       readOnlyForEach(attestation.attestingIndices, (validatorIndex) => {
-        this.protoArray.processAttestation(
-          validatorIndex,
-          toHexString(attestation.data.beaconBlockRoot),
-          attestation.data.target.epoch
-        );
+        this.addLatestMessage(validatorIndex, {
+          root: attestation.data.beaconBlockRoot,
+          epoch: attestation.data.target.epoch,
+        });
       });
     } else {
       // The spec declares:
@@ -520,39 +519,44 @@ export class ForkChoice {
     }
   }
 
+  public getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined {
+    const vote = this.votes[validatorIndex];
+    if (!vote) {
+      return undefined;
+    }
+    return {
+      epoch: vote.nextEpoch,
+      root: fromHexString(vote.nextRoot),
+    };
+  }
+
+  public updateBalances(justifiedStateBalances: Gwei[]): void {
+    const oldBalances = this.balances;
+    const newBalances = justifiedStateBalances;
+
+    const deltas = computeDeltas(this.protoArray.indices, this.votes, oldBalances, newBalances);
+
+    this.protoArray.applyScoreChanges(
+      deltas,
+      this.fcStore.justifiedCheckpoint.epoch,
+      this.fcStore.finalizedCheckpoint.epoch
+    );
+
+    this.balances = newBalances;
+  }
+
   /**
-   * Call `onTick` for all slots between `fc_store.getCurrentSlot()` and the provided `currentSlot`.
+   * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   public updateTime(currentSlot: Slot): void {
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
-      // Note: we are relying upon `on_tick` to update `fc_store.time` to ensure we don't
-      // get stuck in a loop.
+      // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       this.onTick(previousSlot + 1);
     }
 
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
-  }
-
-  /**
-   * Processes and removes from the queue any queued attestations which may now be eligible for
-   * processing due to the slot clock incrementing.
-   */
-  processAttestationQueue(): void {
-    const currentSlot = this.fcStore.currentSlot;
-    for (const attestation of this.queuedAttesations.values()) {
-      if (attestation.slot <= currentSlot) {
-        this.queuedAttesations.delete(attestation);
-        for (const validatorIndex of attestation.attestingIndices) {
-          this.protoArray.processAttestation(
-            validatorIndex,
-            toHexString(attestation.blockRoot),
-            attestation.targetEpoch
-          );
-        }
-      }
-    }
   }
 
   /**
@@ -590,6 +594,55 @@ export class ForkChoice {
     return this.protoArray.maybePrune(toHexString(this.fcStore.finalizedCheckpoint.root)).map(toBlockSummary);
   }
 
+  public setPruneThreshold(threshold: number): void {
+    this.protoArray.pruneThreshold = threshold;
+  }
+
+  /**
+   * Iterates backwards through block summaries, starting from a block root
+   */
+  public iterateBlockSummaries(blockRoot: Root): IBlockSummary[] {
+    return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
+  }
+
+  /**
+   * Add a validator's latest message to the tracked votes
+   */
+  private addLatestMessage(validatorIndex: ValidatorIndex, message: ILatestMessage): void {
+    const nextRoot = toHexString(message.root);
+    const vote = this.votes[validatorIndex];
+    if (!vote) {
+      this.votes[validatorIndex] = {
+        currentRoot: HEX_ZERO_HASH,
+        nextRoot,
+        nextEpoch: message.epoch,
+      };
+    } else if (message.epoch > vote.nextEpoch) {
+      vote.nextRoot = nextRoot;
+      vote.nextEpoch = message.epoch;
+    }
+    // else its an old vote, don't count it
+  }
+
+  /**
+   * Processes and removes from the queue any queued attestations which may now be eligible for
+   * processing due to the slot clock incrementing.
+   */
+  private processAttestationQueue(): void {
+    const currentSlot = this.fcStore.currentSlot;
+    for (const attestation of this.queuedAttesations.values()) {
+      if (attestation.slot <= currentSlot) {
+        this.queuedAttesations.delete(attestation);
+        for (const validatorIndex of attestation.attestingIndices) {
+          this.addLatestMessage(validatorIndex, {
+            root: attestation.blockRoot,
+            epoch: attestation.targetEpoch,
+          });
+        }
+      }
+    }
+  }
+
   /**
    * Called whenever the current time increases.
    *
@@ -599,7 +652,7 @@ export class ForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_tick
    */
-  onTick(time: Slot): void {
+  private onTick(time: Slot): void {
     const previousSlot = this.fcStore.currentSlot;
 
     if (time > previousSlot + 1) {
@@ -622,10 +675,4 @@ export class ForkChoice {
     }
   }
 
-  /**
-   * Iterates backwards through block summaries, starting from a block root
-   */
-  public iterateBlockSummaries(blockRoot: Root): IBlockSummary[] {
-    return this.protoArray.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
-  }
 }

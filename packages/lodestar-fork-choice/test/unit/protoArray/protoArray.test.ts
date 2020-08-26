@@ -1,5 +1,6 @@
-import {ProtoArrayForkChoice} from "../../../src/protoArray";
-import { expect } from "chai";
+import {expect} from "chai";
+
+import {ProtoArray} from "../../../src/protoArray";
 
 describe("ProtoArrayForkChoice", () => {
   it("finalized descendant", () => {
@@ -12,7 +13,7 @@ describe("ProtoArrayForkChoice", () => {
     const finalizedDesc = "2";
     const notFinalizedDesc = "3";
     const unknown = "4";
-    const fc = new ProtoArrayForkChoice({
+    const fc = ProtoArray.initialize({
       slot: genesisSlot,
       stateRoot,
       parentRoot,
@@ -22,7 +23,7 @@ describe("ProtoArrayForkChoice", () => {
     });
 
     // Add block that is a finalized descendant.
-    fc.protoArray.onBlock({
+    fc.onBlock({
       slot: genesisSlot + 1,
       blockRoot: finalizedDesc,
       parentRoot: finalizedRoot,
@@ -33,7 +34,7 @@ describe("ProtoArrayForkChoice", () => {
     });
 
     // Add block that is *not* a finalized descendant.
-    fc.protoArray.onBlock({
+    fc.onBlock({
       slot: genesisSlot + 1,
       blockRoot: notFinalizedDesc,
       parentRoot: unknown,

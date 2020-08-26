@@ -8,6 +8,9 @@ import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
 export type HexRoot = string;
 export const HEX_ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+/**
+ * Simplified 'latest message' with previous message
+ */
 export interface IVoteTracker {
   currentRoot: HexRoot;
   nextRoot: HexRoot;

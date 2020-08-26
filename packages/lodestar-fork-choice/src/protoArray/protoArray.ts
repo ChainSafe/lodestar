@@ -3,6 +3,8 @@ import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {HexRoot, IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
+export const DEFAULT_PRUNE_THRESHOLD = 256;
+
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
   // Small prunes simply waste time
@@ -26,6 +28,40 @@ export class ProtoArray {
     this.finalizedEpoch = finalizedEpoch;
     this.nodes = [];
     this.indices = new Map();
+  }
+
+  static initialize({
+    slot,
+    parentRoot,
+    stateRoot,
+    blockRoot,
+    justifiedEpoch,
+    finalizedEpoch,
+  }: {
+    slot: Slot;
+    parentRoot: HexRoot;
+    stateRoot: HexRoot;
+    blockRoot: HexRoot;
+    justifiedEpoch: Epoch;
+    finalizedEpoch: Epoch;
+  }): ProtoArray {
+    const protoArray = new ProtoArray({
+      pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
+      justifiedEpoch,
+      finalizedEpoch,
+    });
+    const block: IProtoBlock = {
+      slot,
+      blockRoot,
+      parentRoot,
+      stateRoot,
+      // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
+      targetRoot: blockRoot,
+      justifiedEpoch,
+      finalizedEpoch,
+    };
+    protoArray.onBlock(block);
+    return protoArray;
   }
 
   /**
@@ -136,6 +172,7 @@ export class ProtoArray {
 
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
+   *
    * ## Notes
    * The result of this function is not guaranteed to be accurate if `Self::on_new_block` has
    * been called without a subsequent `Self::apply_score_changes` call. This is because
@@ -448,5 +485,54 @@ export class ProtoArray {
       }
     }
     return result;
+  }
+
+  hasBlock(blockRoot: HexRoot): boolean {
+    return this.indices.has(blockRoot);
+  }
+
+  getNode(blockRoot: HexRoot): IProtoNode | undefined {
+    const blockIndex = this.indices.get(blockRoot);
+    if (blockIndex === undefined) {
+      return undefined;
+    }
+
+    const block = this.nodes[blockIndex];
+    if (!block) {
+      return undefined;
+    }
+
+    return block;
+  }
+
+  getBlock(blockRoot: HexRoot): IProtoBlock | undefined {
+    const node = this.getNode(blockRoot);
+    if (!node) {
+      return undefined;
+    }
+    return {
+      ...node,
+    };
+  }
+
+  /**
+   * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
+   * Always returns `false if either input roots are unknown.
+   * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
+   */
+  isDescendant(ancestorRoot: HexRoot, descendantRoot: HexRoot): boolean {
+    const ancestorNode = this.getNode(ancestorRoot);
+    if (!ancestorNode) {
+      return false;
+    }
+    for (const node of this.iterateNodes(descendantRoot)) {
+      if (node.slot < ancestorNode.slot) {
+        return false;
+      }
+      if (node.blockRoot === ancestorNode.blockRoot) {
+        return true;
+      }
+    }
+    return false;
   }
 }
