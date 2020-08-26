@@ -48,7 +48,7 @@ export class AttestationService {
   private readonly logger: ILogger;
 
   private nextAttesterDuties: Map<Slot, IAttesterDuty[]> = new Map();
-  private controller: AbortController | null = null;
+  private controller: AbortController | undefined;
 
   public constructor(
     config: IBeaconConfig,

@@ -42,7 +42,7 @@ export class MockBeaconApi implements IBeaconApi {
   }
 
   public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
-    return {fork: this.fork, chainId: 1n, genesisValidatorsRoot: ZERO_HASH};
+    return {fork: this.fork, chainId: BigInt(1), genesisValidatorsRoot: ZERO_HASH};
   }
 
   public async getGenesis(): Promise<Genesis | null> {
