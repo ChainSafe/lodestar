@@ -6,6 +6,11 @@ import {computeDeltas} from "./computeDeltas";
 
 export const DEFAULT_PRUNE_THRESHOLD = 256;
 
+/**
+ * This class wraps `ProtoArray` and provides:
+ *
+ * - Tracking of latest messages and balances by validator
+ */
 export class ProtoArrayForkChoice {
   public protoArray: ProtoArray;
   public votes: IVoteTracker[];
@@ -62,12 +67,7 @@ export class ProtoArrayForkChoice {
     }
   }
 
-  public findHead(
-    justifiedEpoch: Epoch,
-    justifiedRoot: HexRoot,
-    finalizedEpoch: Epoch,
-    justifiedStateBalances: Gwei[]
-  ): HexRoot {
+  public updateBalances(justifiedEpoch: Epoch, finalizedEpoch: Epoch, justifiedStateBalances: Gwei[]): void {
     const oldBalances = this.balances;
     const newBalances = justifiedStateBalances;
 
@@ -76,12 +76,17 @@ export class ProtoArrayForkChoice {
     this.protoArray.applyScoreChanges(deltas, justifiedEpoch, finalizedEpoch);
 
     this.balances = newBalances;
+  }
 
+  /**
+   * Ensure that the balances have been updated before calling
+   */
+  public findHead(justifiedRoot: HexRoot): HexRoot {
     return this.protoArray.findHead(justifiedRoot);
   }
 
-  public maybePrune(finalizedRoot: HexRoot): void {
-    this.protoArray.maybePrune(finalizedRoot);
+  public maybePrune(finalizedRoot: HexRoot): IProtoBlock[] {
+    return this.protoArray.maybePrune(finalizedRoot);
   }
 
   public setPruneThreshold(pruneThreshold: number): void {
@@ -90,10 +95,6 @@ export class ProtoArrayForkChoice {
 
   public length(): number {
     return this.protoArray.nodes.length;
-  }
-
-  public isEmpty(): boolean {
-    return this.length() === 0;
   }
 
   public hasBlock(blockRoot: HexRoot): boolean {
@@ -133,11 +134,11 @@ export class ProtoArrayForkChoice {
     if (!ancestorNode) {
       return false;
     }
-    for (const [root, slot] of this.protoArray.iterateBlockRoots(descendantRoot)) {
-      if (slot < ancestorNode.slot) {
+    for (const node of this.protoArray.iterateNodes(descendantRoot)) {
+      if (node.slot < ancestorNode.slot) {
         return false;
       }
-      if (root === ancestorNode.blockRoot) {
+      if (node.blockRoot === ancestorNode.blockRoot) {
         return true;
       }
     }

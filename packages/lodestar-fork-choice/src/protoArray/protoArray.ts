@@ -200,7 +200,7 @@ export class ProtoArray {
    * - The finalized epoch is equal to the current one, but the finalized root is different.
    * - There is some internal error relating to invalid indices inside `this`.
    */
-  maybePrune(finalizedRoot: HexRoot): void {
+  maybePrune(finalizedRoot: HexRoot): IProtoBlock[] {
     const finalizedIndex = this.indices.get(finalizedRoot);
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({
@@ -211,7 +211,7 @@ export class ProtoArray {
 
     if (finalizedIndex < this.pruneThreshold) {
       // Pruning at small numbers incurs more cost than benefit
-      return;
+      return [];
     }
 
     // Remove the this.indices key/values for all the to-be-deleted nodes
@@ -226,6 +226,8 @@ export class ProtoArray {
       this.indices.delete(node.blockRoot);
     }
 
+    // Store nodes prior to finalization
+    const removed = this.nodes.slice(0, finalizedIndex);
     // Drop all the nodes prior to finalization
     this.nodes = this.nodes.slice(finalizedIndex);
 
@@ -268,6 +270,7 @@ export class ProtoArray {
         node.bestDescendant = bestDescendant - finalizedIndex;
       }
     }
+    return removed;
   }
 
   /**
@@ -435,13 +438,6 @@ export class ProtoArray {
       result.push(node);
     }
     return result;
-  }
-
-  /**
-   * Iterate from a block root backwards over nodes, returning block roots
-   */
-  iterateBlockRoots(blockRoot: HexRoot): [HexRoot, Slot][] {
-    return this.iterateNodes(blockRoot).map((node) => [node.blockRoot, node.slot]);
   }
 
   nodesAtSlot(slot: Slot): IProtoNode[] {
