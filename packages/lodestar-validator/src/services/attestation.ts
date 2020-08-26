@@ -80,7 +80,6 @@ export class AttestationService {
   };
 
   public stop = async (): Promise<void> => {
-    await this.provider.disconnect();
     if (this.controller) {
       this.controller.abort();
     }
