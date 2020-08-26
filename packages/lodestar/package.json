@@ -112,7 +112,7 @@
     "babel-plugin-const-enum": "^0.0.4",
     "benchmark": "^2.1.4",
     "eventsource": "^1.0.7",
-    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git#mpetrunic/peer-book-types",
+    "libp2p-ts": "https://github.com/ChainSafe/libp2p-ts.git",
     "rimraf": "^3.0.2",
     "tmp": "^0.2.1"
   },

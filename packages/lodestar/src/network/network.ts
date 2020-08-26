@@ -86,7 +86,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
-  public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.PeerType[] {
+  public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
     const peers = Array.from(this.libp2p.peerStore.peers.values()).filter((peer) => {
       if (opts?.connected && !this.getPeerConnection(peer.id)) {
         return false;

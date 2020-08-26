@@ -1113,17 +1113,17 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
-"@chainsafe/snappy-stream@3.0.4":
-  version "3.0.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-3.0.4.tgz#73b156d89e2ca82d7041a67ca7fb2427c4ff1f4d"
-  integrity sha512-8uLpo2cSj9clLescnmx0+rMGkoCaFxP6GHaOMFlrSYYUCb5OBqbTm5gOy/8lLFea8T+aW9Cfj7tGo9ba4zL7/g==
+"@chainsafe/snappy-stream@3.0.5":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-3.0.5.tgz#9e98a7bdee5ad4aeff67d270ec64a5fbbb7fd6a0"
+  integrity sha512-Z4R8FM2OgNNZQdEZh5QNhXwXfbEmwYQ2ZhTG6Bx07++9bWWuZ7PaCkV7Ub+ivJVv3l+Ut5SOgTCMKIQPRQTy2w==
   dependencies:
     bl "^1.0.0"
     buffer-alloc "^1.2.0"
     buffer-equal "1.0.0"
     buffer-from "^1.1.1"
     fast-crc32c "^1.0.1"
-    snappy "^6.0.1"
+    snappy "6.3.4"
 
 "@chainsafe/ssz@^0.6.13":
   version "0.6.13"
@@ -11002,9 +11002,9 @@ libp2p-tcp@^0.14.6:
     multiaddr "^7.5.0"
     stream-to-it "^0.2.2"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#mpetrunic/peer-book-types":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#bdbc3f7918796d4c24791b483eb1fab1020a5203"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#8bf05918fb98c44bde75d20a90777e90ca7e2f93"
   dependencies:
     "@chainsafe/discv5" "^0.3.1"
     "@types/node" "^13.7.0"
@@ -15101,7 +15101,7 @@ snapdragon@^0.8.1:
     source-map-resolve "^0.5.0"
     use "^3.1.0"
 
-snappy@^6.0.1:
+snappy@6.3.4:
   version "6.3.4"
   resolved "https://registry.yarnpkg.com/snappy/-/snappy-6.3.4.tgz#59a9223d81391b769927528183e210f60fc7fac1"
   integrity sha512-DcpD17vdvHk0jUIZ3wkhoxyLiMjM7ZuOc3M5h2qpiZdTLbRorUJdOtB166m+lkoffByg2dkX0CGffYP2PTLoGw==
