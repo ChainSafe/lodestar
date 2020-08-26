@@ -182,7 +182,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       currentEpoch: processedCheckpoint.epoch,
       targetEpoch: this.targetCheckpoint!.epoch,
       speed: this.stats.getSyncSpeed().toFixed(1) + " slots/s",
-      estimatedTillComplete: Math.round((estimate / 3600) * 10) / 10 + " hours"
+      estimatedTillComplete: Math.round((estimate / 3600) * 10) / 10 + " hours",
     });
     if (processedCheckpoint.epoch === this.targetCheckpoint!.epoch) {
       //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
