@@ -72,7 +72,6 @@ export class Validator {
   public async stop(): Promise<void> {
     this.isRunning = false;
     await this.apiClient.disconnect();
-    if (this.blockService) await this.blockService.stop();
     if (this.attestationService) await this.attestationService.stop();
   }
 
