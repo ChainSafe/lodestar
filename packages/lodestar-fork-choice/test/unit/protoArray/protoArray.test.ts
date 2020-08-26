@@ -2,7 +2,7 @@ import {expect} from "chai";
 
 import {ProtoArray} from "../../../src/protoArray";
 
-describe("ProtoArrayForkChoice", () => {
+describe("ProtoArray", () => {
   it("finalized descendant", () => {
     const genesisSlot = 0;
     const genesisEpoch = 0;
