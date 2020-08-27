@@ -43,7 +43,7 @@ export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<v
     Object.assign(options, deepmerge(options, testnetConfig));
     const genesisFileUrl = getGenesisFileUrl(options.testnet);
     if (genesisFileUrl) {
-      const genesisStateFile = path.join(options.beaconDir, "genesis.ssz");
+      const genesisStateFile = path.join(options.beaconDir, options.genesisStateFile || "genesis.ssz");
       options.genesisStateFile = genesisStateFile;
       await downloadFile(options.genesisStateFile, genesisFileUrl);
       options.eth1.enabled = false;
