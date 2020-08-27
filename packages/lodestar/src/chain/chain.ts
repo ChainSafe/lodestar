@@ -408,11 +408,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      const builder = new GenesisBuilder(this.config, {
-        eth1Provider: this.eth1Provider,
-        db: this.db,
-        logger: this.logger,
-      });
+      const builder = new GenesisBuilder(this.config, {eth1Provider: this.eth1Provider, logger: this.logger});
       const genesisResult = await builder.waitForGenesis();
       state = genesisResult.state;
       await this.initializeBeaconChain(state);

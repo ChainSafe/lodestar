@@ -8,7 +8,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortController} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db";
 import {
   IDepositEvent,
   IEth1StreamParams,
@@ -29,7 +28,6 @@ import {
 
 export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
-  private readonly db: IBeaconDb;
   private readonly eth1Provider: IEth1Provider;
   private readonly eth1Params: IEth1StreamParams;
   private readonly logger: ILogger;
@@ -38,14 +36,13 @@ export class GenesisBuilder implements IGenesisBuilder {
 
   private depositCache = new Set<number>();
 
-  constructor(config: IBeaconConfig, {db, eth1Provider, logger}: IGenesisBuilderModules) {
+  constructor(config: IBeaconConfig, {eth1Provider, logger}: IGenesisBuilderModules) {
     this.state = getGenesisBeaconState(
       config,
       config.types.Eth1Data.defaultValue(),
       getTemporaryBlockHeader(config, getEmptyBlock())
     );
     this.config = config;
-    this.db = db;
     this.logger = logger;
     this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
     this.eth1Provider = eth1Provider;
