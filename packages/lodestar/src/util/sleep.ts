@@ -3,7 +3,7 @@ import {ErrorAborted} from "./errors";
 
 /**
  * Abortable sleep function. Cleans everything on all cases preventing leaks
- * On abort returns without throwing an error
+ * On abort throws ErrorAborted
  */
 export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
