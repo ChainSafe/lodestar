@@ -15,11 +15,4 @@ export const eth1Options = {
     defaultDescription: defaultOptions.eth1.provider.url,
     group: "eth1",
   } as Options,
-
-  "eth1.depositContract.deployedAt": {
-    description: "Block number at which the deposit contract contract was deployed",
-    type: "number",
-    defaultDescription: String(defaultOptions.eth1.depositContract.deployedAt),
-    group: "eth1",
-  } as Options,
 };

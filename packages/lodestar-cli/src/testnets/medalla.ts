@@ -18,9 +18,6 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
     provider: {
       url: "https://goerli.prylabs.net",
     },
-    depositContract: {
-      deployedAt: 3085928,
-    },
   },
   metrics: {
     enabled: true,
