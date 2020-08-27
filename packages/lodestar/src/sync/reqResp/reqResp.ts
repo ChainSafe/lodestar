@@ -17,14 +17,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
-import {INetwork} from "../../network";
+import {createRpcProtocol, INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
 import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
-import {createStatus, getPeerSupportedProtocols, syncPeersStatus} from "../utils/sync";
+import {createStatus, syncPeersStatus} from "../utils/sync";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -73,13 +73,15 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.removeListener("peer:connect", this.handshake);
     this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
-      this.network.getPeers().map(async (peerId) => {
-        try {
-          await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
-        } catch (e) {
-          this.logger.verbose("Failed to send goodbye", {reason: e.message});
-        }
-      })
+      this.network
+        .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, "ssz_snappy")]})
+        .map(async (peer) => {
+          try {
+            await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
+          } catch (e) {
+            this.logger.verbose("Failed to send goodbye", {reason: e.message});
+          }
+        })
     );
   }
 
@@ -104,32 +106,22 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async onStatus(peerId: PeerId, id: RequestId, request: Status): Promise<void> {
     if (await this.shouldDisconnectOnStatus(request)) {
-      await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      try {
+        await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      } catch {
+        //ignore error
+        return;
+      }
     }
     // set status on peer
     this.reps.get(peerId.toB58String()).latestStatus = request;
     // send status response
-    let isSuccess;
     try {
       const status = await createStatus(this.chain);
       this.network.reqResp.sendResponse(id, null, status);
-      isSuccess = true;
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
       this.network.reqResp.sendResponse(id, e);
-    }
-    if (isSuccess) {
-      // response Status request first
-      try {
-        this.reps.get(peerId.toB58String()).supportedProtocols = await getPeerSupportedProtocols(
-          this.config,
-          this.reps,
-          peerId,
-          this.network.reqResp
-        );
-      } catch (e) {
-        this.logger.error("Failed to get peer supported protocol", e.message);
-      }
     }
   }
 
@@ -281,15 +273,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
-        const supportedProtocols = await getPeerSupportedProtocols(
-          this.config,
-          this.reps,
-          peerId,
-          this.network.reqResp
-        );
-        this.reps.get(peerId.toB58String()).supportedProtocols = [Method.Status, ...supportedProtocols];
       } catch (e) {
-        this.logger.warn(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
+        this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
         await this.network.disconnect(peerId);
       }
     }

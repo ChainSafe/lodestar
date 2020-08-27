@@ -28,6 +28,7 @@ import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
 import {Method} from "../../../../src/constants";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {generatePeer} from "../../../utils/peer";
 
 describe("sync utils", function () {
   let timer: SinonFakeTimers;
@@ -283,7 +284,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 1),
         headSlot: 1000,
       };
-      reps.getFromPeerId(peer1).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer2).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -291,7 +291,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 2000,
       };
-      reps.getFromPeerId(peer2).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer4).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -299,20 +298,16 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 4000,
       };
-      // peer4 has highest slot but does not support sync
-      reps.getFromPeerId(peer4).supportedProtocols = [];
-
       expect(getBestHead(peers, reps)).to.be.deep.equal({
-        slot: 2000,
+        slot: 4000,
         root: Buffer.alloc(32, 2),
-        supportedProtocols: [Method.BeaconBlocksByRange],
       });
       expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
     });
 
     it("should handle no peer", () => {
       const reps = new ReputationStore();
-      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH, supportedProtocols: []});
+      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH});
       expect(getBestPeer(config, [], reps)).to.be.undefined;
     });
   });
@@ -395,7 +390,7 @@ describe("sync utils", function () {
 
     it("peer is connected but no status", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub, reps)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
@@ -404,7 +399,7 @@ describe("sync utils", function () {
 
     it("peer head slot is not better than us", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       reps.getFromPeerId(peer1).latestStatus = {
         finalizedEpoch: 0,
@@ -421,7 +416,7 @@ describe("sync utils", function () {
 
     it("peer is good for best peer", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       reps.getFromPeerId(peer1).latestStatus = {
         finalizedEpoch: 0,
@@ -436,7 +431,6 @@ describe("sync utils", function () {
       expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
     });
   });
-
 });
 
 function generateReputation(overiddes: Partial<IReputation>): IReputation {

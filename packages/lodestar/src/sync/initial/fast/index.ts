@@ -4,8 +4,8 @@
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
-import {IReputationStore} from "../../IReputation";
-import {INetwork} from "../../../network";
+import {IReputation, IReputationStore} from "../../IReputation";
+import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import defaultOptions, {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
@@ -16,7 +16,7 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-b
 import pipe from "it-pipe";
 import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
-import {GENESIS_EPOCH, Method} from "../../../constants";
+import {GENESIS_EPOCH} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
 import {IBeaconDb} from "../../../db";
 
@@ -69,10 +69,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.chain.on("processedCheckpoint", this.checkSyncCompleted);
     this.chain.on("processedBlock", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
-    this.targetCheckpoint = getCommonFinalizedCheckpoint(
-      this.config,
-      this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
-    );
+    this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerReputations());
     // head may not be on finalized chain so we start from finalized block
     // there are unfinalized blocks in db so we reprocess all of them
     this.lastProcessedBlock = (await this.db.blockArchive.lastValue())!;
@@ -181,11 +178,12 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       computeStartSlotAtEpoch(this.config, processedCheckpoint.epoch),
       this.getHighestBlock()
     );
-    this.logger.important(
-      `Sync progress - currentEpoch=${processedCheckpoint.epoch},` +
-        ` targetEpoch=${this.targetCheckpoint!.epoch}, speed=${this.stats.getSyncSpeed().toFixed(1)} slots/s` +
-        `, estimateTillComplete=${Math.round((estimate / 3600) * 10) / 10} hours`
-    );
+    this.logger.important("Sync progress", {
+      currentEpoch: processedCheckpoint.epoch,
+      targetEpoch: this.targetCheckpoint!.epoch,
+      speed: this.stats.getSyncSpeed().toFixed(1) + " slots/s",
+      estimatedTillComplete: Math.round((estimate / 3600) * 10) / 10 + " hours",
+    });
     if (processedCheckpoint.epoch === this.targetCheckpoint!.epoch) {
       //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
       // while our processed checkpoint has root of last slot of that epoch
@@ -194,10 +192,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       //   + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
       //   throw new Error("Should delete chain and start again. Invalid blocks synced");
       // }
-      const newTarget = getCommonFinalizedCheckpoint(
-        this.config,
-        this.network.getPeers().map((peer) => this.reps.getFromPeerId(peer))
-      )!;
+      const newTarget = getCommonFinalizedCheckpoint(this.config, this.getPeerReputations())!;
       if (newTarget.epoch > this.targetCheckpoint!.epoch) {
         this.targetCheckpoint = newTarget;
         this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
@@ -208,6 +203,15 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       await this.stop();
     }
   };
+
+  private getPeerReputations(): IReputation[] {
+    return this.network
+      .getPeers({
+        connected: true,
+        supportsProtocols: getSyncProtocols(),
+      })
+      .map((peer) => this.reps.getFromPeerId(peer.id));
+  }
 
   /**
    * Make sure we get up-to-date lastProcessedBlock from sync().
@@ -220,17 +224,18 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
    * Returns peers which has same finalized Checkpoint
    */
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
-    return this.network.getPeers().reduce((validPeers: PeerId[], peer: PeerId) => {
-      const rep = this.reps.getFromPeerId(peer);
-      if (
-        rep &&
-        rep.supportedProtocols.includes(Method.BeaconBlocksByRange) &&
-        rep.latestStatus &&
-        rep.latestStatus.finalizedEpoch >= this.targetCheckpoint!.epoch
-      ) {
-        validPeers.push(peer);
-      }
-      return validPeers;
-    }, [] as PeerId[]);
+    return this.network
+      .getPeers({
+        connected: true,
+        supportsProtocols: getSyncProtocols(),
+      })
+      .map((peer) => peer.id)
+      .reduce((validPeers: PeerId[], peer: PeerId) => {
+        const rep = this.reps.getFromPeerId(peer);
+        if (rep && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint!.epoch) {
+          validPeers.push(peer);
+        }
+        return validPeers;
+      }, [] as PeerId[]);
   };
 }
