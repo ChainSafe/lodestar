@@ -1,5 +1,5 @@
-import {expect} from "chai";
-import sinon from "sinon";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
@@ -7,9 +7,12 @@ import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
-import {StubbedBeaconDb} from "../../../utils/stub";
+import {AbortController} from "abort-controller";
 import {IDepositEvent, IEth1Provider, IEth1Block} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
+import {ErrorAborted} from "../../../../src/util/errors";
+
+chai.use(chaiAsPromised);
 
 describe("genesis builder", function () {
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
@@ -18,7 +21,6 @@ describe("genesis builder", function () {
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4,
     MIN_GENESIS_DELAY: 3600,
   });
-  const sandbox = sinon.createSandbox();
 
   before(async function f() {
     try {
@@ -29,7 +31,7 @@ describe("genesis builder", function () {
     }
   });
 
-  it("should build genesis state", async () => {
+  function generateGenesisBuilderMockData(): {events: IDepositEvent[]; keypairs: Keypair[]; blocks: IEth1Block[]} {
     const events: IDepositEvent[] = [];
     const keypairs: Keypair[] = [];
     const blocks: IEth1Block[] = [];
@@ -47,7 +49,13 @@ describe("genesis builder", function () {
       });
     }
 
-    const mockEth1Provider: IEth1Provider = {
+    return {events, keypairs, blocks};
+  }
+
+  it("should build genesis state", async () => {
+    const {blocks, events} = generateGenesisBuilderMockData();
+
+    const eth1Provider: IEth1Provider = {
       deployBlock: events[0].blockNumber,
       getBlockNumber: async () => 2000,
       getBlock: async (number) => blocks[number],
@@ -59,17 +67,44 @@ describe("genesis builder", function () {
     };
 
     const genesisBuilder = new GenesisBuilder(schlesiConfig, {
-      db: new StubbedBeaconDb(sandbox),
-      eth1Provider: mockEth1Provider,
+      eth1Provider,
       logger: new WinstonLogger(),
+      MAX_BLOCKS_PER_POLL: 1,
     });
 
-    const state = await genesisBuilder.waitForGenesis();
+    const {state} = await genesisBuilder.waitForGenesis();
 
     expect(state.validators.length).to.be.equal(schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
     expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
       blocks[schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].hash
     );
+  });
+
+  it("should abort building genesis state", async () => {
+    const {blocks, events} = generateGenesisBuilderMockData();
+    const controller = new AbortController();
+
+    const eth1Provider: IEth1Provider = {
+      deployBlock: events[0].blockNumber,
+      getBlockNumber: async () => 2000,
+      getBlock: async (number) => blocks[number],
+      getDepositEvents: async (fromBlock, toBlock) => {
+        controller.abort();
+        return events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= (toBlock || fromBlock));
+      },
+      validateContract: async () => {
+        return;
+      },
+    };
+
+    const genesisBuilder = new GenesisBuilder(schlesiConfig, {
+      eth1Provider,
+      logger: new WinstonLogger(),
+      signal: controller.signal,
+      MAX_BLOCKS_PER_POLL: 1,
+    });
+
+    await expect(genesisBuilder.waitForGenesis()).to.rejectedWith(ErrorAborted);
   });
 });
 
@@ -78,7 +113,7 @@ function generateDeposit(index: ValidatorIndex, keypair: Keypair): DepositData {
   const depositMessage = {
     pubkey: keypair.publicKey.toBytesCompressed(),
     withdrawalCredentials: Buffer.alloc(32, index),
-    amount: BigInt(32 * 1000000000000000000),
+    amount: BigInt(32) * BigInt("1000000000000000000"),
   };
   const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
   const signature = keypair.privateKey.signMessage(signingRoot);

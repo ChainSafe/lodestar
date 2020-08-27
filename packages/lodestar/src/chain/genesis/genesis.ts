@@ -5,7 +5,7 @@
 import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {AbortController} from "abort-controller";
+import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {
@@ -15,7 +15,7 @@ import {
   getDepositsAndBlockStreamForGenesis,
   getDepositsStream,
 } from "../../eth1";
-import {IGenesisBuilder, IGenesisBuilderModules, IGenesisResult} from "./interface";
+import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
 import {
   getGenesisBeaconState,
   getEmptyBlock,
@@ -29,27 +29,30 @@ import {
 export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
   private readonly eth1Provider: IEth1Provider;
-  private readonly eth1Params: IEth1StreamParams;
   private readonly logger: ILogger;
+  private readonly signal?: AbortSignal;
+  private readonly eth1Params: IEth1StreamParams;
   private state: TreeBacked<BeaconState>;
   private depositTree: TreeBacked<List<Root>>;
+  private depositCache: Set<number>;
 
-  private depositCache = new Set<number>();
+  constructor(config: IBeaconConfig, {eth1Provider, logger, signal, MAX_BLOCKS_PER_POLL}: IGenesisBuilderKwargs) {
+    this.config = config;
+    this.eth1Provider = eth1Provider;
+    this.logger = logger;
+    this.signal = signal;
+    this.eth1Params = {
+      ...config.params,
+      MAX_BLOCKS_PER_POLL: MAX_BLOCKS_PER_POLL || 10000,
+    };
 
-  constructor(config: IBeaconConfig, {eth1Provider, logger}: IGenesisBuilderModules) {
     this.state = getGenesisBeaconState(
       config,
       config.types.Eth1Data.defaultValue(),
       getTemporaryBlockHeader(config, getEmptyBlock())
     );
-    this.config = config;
-    this.logger = logger;
     this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
-    this.eth1Provider = eth1Provider;
-    this.eth1Params = {
-      ...config.params,
-      MAX_BLOCKS_PER_POLL: 10000,
-    };
+    this.depositCache = new Set<number>();
   }
 
   /**
@@ -64,12 +67,11 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
 
-    const controller = new AbortController();
     const depositsAndBlocksStream = getDepositsAndBlockStreamForGenesis(
       blockNumberValidatorGenesis,
       this.eth1Provider,
       this.eth1Params,
-      controller.signal
+      this.signal
     );
 
     for await (const [depositEvents, block] of depositsAndBlocksStream) {
@@ -78,7 +80,6 @@ export class GenesisBuilder implements IGenesisBuilder {
       applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
       if (isValidGenesisState(this.config, this.state)) {
         this.logger.info(`Found genesis state at eth1 block ${block.number}`);
-        controller.abort();
         return {
           state: this.state,
           depositTree: this.depositTree,
@@ -96,14 +97,12 @@ export class GenesisBuilder implements IGenesisBuilder {
    * @returns Block number at which there are enough active validators is state for genesis
    */
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
-    const controller = new AbortController();
-    const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, controller.signal);
+    const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, this.signal);
 
     for await (const {depositEvents, blockNumber} of depositsStream) {
       this.applyDeposits(depositEvents);
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
-        controller.abort();
         return blockNumber;
       }
     }

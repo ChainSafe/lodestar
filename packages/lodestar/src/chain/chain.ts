@@ -26,6 +26,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
+import {AbortController} from "abort-controller";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -76,6 +77,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   private _currentForkDigest!: ForkDigest;
   private attestationProcessor: IAttestationProcessor;
   private genesisTime: Number64 = 0;
+  private controller: AbortController;
 
   public constructor(
     opts: IChainOptions,
@@ -102,6 +104,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
       this,
       this.attestationProcessor
     );
+    this.controller = new AbortController();
   }
 
   public getGenesisTime(): Number64 {
@@ -190,6 +193,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   }
 
   public async stop(): Promise<void> {
+    this.controller.abort();
     await this.forkChoice.stop();
 
     if (this.clock) {
@@ -408,7 +412,11 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      const builder = new GenesisBuilder(this.config, {eth1Provider: this.eth1Provider, logger: this.logger});
+      const builder = new GenesisBuilder(this.config, {
+        eth1Provider: this.eth1Provider,
+        logger: this.logger,
+        signal: this.controller.signal,
+      });
       const genesisResult = await builder.waitForGenesis();
       state = genesisResult.state;
       await this.initializeBeaconChain(state);

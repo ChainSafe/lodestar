@@ -1,19 +1,30 @@
 import {AbortSignal} from "abort-controller";
+import {ErrorAborted} from "./errors";
 
 /**
  * Abortable sleep function. Cleans everything on all cases preventing leaks
  * On abort returns without throwing an error
  */
 export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  let onDone: () => void = () => {};
-  await new Promise((resolve) => {
-    const timeout = setTimeout(resolve, ms);
-    if (signal) signal.addEventListener("abort", resolve);
+  return new Promise((resolve, reject) => {
+    if (signal && signal.aborted) return reject(new ErrorAborted());
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    let onDone: () => void = () => {};
+
+    const timeout = setTimeout(() => {
+      onDone();
+      resolve();
+    }, ms);
+    const onAbort = (): void => {
+      onDone();
+      reject(new ErrorAborted());
+    };
+    if (signal) signal.addEventListener("abort", onAbort);
+
     onDone = () => {
       clearTimeout(timeout);
-      if (signal) signal.removeEventListener("abort", resolve);
+      if (signal) signal.removeEventListener("abort", onAbort);
     };
   });
-  onDone();
 }
