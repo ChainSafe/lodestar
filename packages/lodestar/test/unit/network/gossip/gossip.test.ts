@@ -28,8 +28,8 @@ describe("Network Gossip", function () {
   beforeEach(async () => {
     const networkOpts: INetworkOptions = {
       maxPeers: 0,
-      multiaddrs: [],
-      bootnodes: [],
+      localMultiaddrs: [],
+      bootMultiaddrs: [],
       rpcTimeout: 0,
       connectTimeout: 0,
       disconnectTimeout: 0,

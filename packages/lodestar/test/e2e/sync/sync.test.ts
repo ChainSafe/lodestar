@@ -40,7 +40,7 @@ describe("syncing", function () {
     const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain, "processedBlock", 100000, (block) =>
       config.types.SignedBeaconBlock.equals(block, head!)
     );
-    await bn2.network.connect(bn.network.peerId, bn.network.multiaddrs);
+    await bn2.network.connect(bn.network.peerId, bn.network.localMultiaddrs);
     try {
       await waitForSynced;
     } catch (e) {

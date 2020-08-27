@@ -25,11 +25,11 @@ const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 const opts: INetworkOptions = {
   maxPeers: 1,
-  bootnodes: [],
+  bootMultiaddrs: [],
   rpcTimeout: 5000,
   connectTimeout: 5000,
   disconnectTimeout: 5000,
-  multiaddrs: [],
+  localMultiaddrs: [],
 };
 
 describe("[network] network", function () {
@@ -97,7 +97,7 @@ describe("[network] network", function () {
           resolve();
         })
       ),
-      netA.connect(netB.peerId, netB.multiaddrs),
+      netA.connect(netB.peerId, netB.localMultiaddrs),
     ]);
     expect(connectACount).to.be.equal(1);
     expect(connectBCount).to.be.equal(1);
@@ -109,7 +109,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const disconnection = Promise.all([
       new Promise((resolve) => netA.on("peer:disconnect", resolve)),
@@ -137,7 +137,7 @@ describe("[network] network", function () {
       });
       setTimeout(resolve, 2000);
     });
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
     validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
@@ -154,7 +154,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
@@ -168,7 +168,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
     netB.reqResp.once("request", (peerId, method, requestId) => {
@@ -182,7 +182,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
@@ -204,7 +204,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     const received = new Promise((resolve, reject) => {
@@ -221,7 +221,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const forkDigest = chain.currentForkDigest;
     let callback: (attestation: {attestation: Attestation; subnet: number}) => void;

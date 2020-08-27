@@ -62,7 +62,7 @@ export async function getDevBeaconNode({
             bindAddr: "/ip4/127.0.0.1/udp/0",
             bootEnrs: [],
           },
-          multiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+          localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
         },
         null,
         true

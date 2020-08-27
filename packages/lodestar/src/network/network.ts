@@ -30,7 +30,7 @@ interface ILibp2pModules {
 
 export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
-  public multiaddrs!: Multiaddr[];
+  public localMultiaddrs!: Multiaddr[];
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
@@ -64,7 +64,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
     this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
     await this.libp2p.start();
-    this.multiaddrs = this.libp2p.multiaddrs;
+    this.localMultiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
     const enr = this.getEnr();
     await this.metadata.start(enr!);
@@ -101,9 +101,9 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     return this.libp2p.connectionManager.get(peerId);
   }
 
-  public async connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void> {
-    if (multiaddrs) {
-      this.libp2p.peerStore.addressBook.add(peerId, multiaddrs);
+  public async connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void> {
+    if (localMultiaddrs) {
+      this.libp2p.peerStore.addressBook.add(peerId, localMultiaddrs);
     }
     await this.libp2p.dial(peerId);
   }

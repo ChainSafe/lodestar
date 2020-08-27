@@ -63,12 +63,12 @@ export interface INetwork extends NetworkEventEmitter {
    * Our network identity
    */
   peerId: PeerId;
-  multiaddrs: Multiaddr[];
+  localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
   getPeers(): PeerId[];
   getPeerConnection(peerId: PeerId): LibP2pConnection | null;
   hasPeer(peerId: PeerId): boolean;
-  connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void>;
+  connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void>;
   disconnect(peerId: PeerId): Promise<void>;
   searchSubnetPeers(subnet: string): Promise<void>;
   // Service
