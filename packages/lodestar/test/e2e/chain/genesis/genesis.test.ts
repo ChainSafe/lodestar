@@ -1,6 +1,5 @@
 import fs from "fs";
 import {Eth1Provider} from "../../../../src/eth1";
-import {BeaconDb, LevelDbController} from "../../../../src/db";
 import {ILogger, WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {expect} from "chai";
@@ -12,7 +11,6 @@ import {sleep} from "../../../../src/util/sleep";
 describe("BeaconChain", function () {
   this.timeout("10min");
 
-  let db: BeaconDb;
   const dbPath = "./.tmpdb";
   const logger: ILogger = new WinstonLogger();
   logger.silent = false;
@@ -34,15 +32,9 @@ describe("BeaconChain", function () {
     expect(altonaConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT).to.be.not.equal(
       config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT
     );
-    db = new BeaconDb({
-      config: altonaConfig,
-      controller: new LevelDbController({name: dbPath}, {logger}),
-    });
-    await db.start();
   });
 
   after(async () => {
-    await db.stop();
     await fs.promises.rmdir(dbPath, {recursive: true});
   });
 
@@ -54,7 +46,6 @@ describe("BeaconChain", function () {
     });
 
     const builder = new GenesisBuilder(altonaConfig, {
-      db,
       eth1Provider,
       logger: logger.child({module: "genesis"}),
     });
