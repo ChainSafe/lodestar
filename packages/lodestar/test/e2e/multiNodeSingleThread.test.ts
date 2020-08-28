@@ -71,7 +71,7 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       for (let i = 0; i < nodeCount; i++) {
         for (let j = 0; j < nodeCount; j++) {
           if (i !== j) {
-            await nodes[i].network.connect(nodes[j].network.peerId, nodes[j].network.multiaddrs);
+            await nodes[i].network.connect(nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
           }
         }
       }

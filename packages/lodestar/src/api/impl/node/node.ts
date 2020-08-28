@@ -30,7 +30,7 @@ export class NodeApi implements INodeApi {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
       discoveryAddresses,
-      p2pAddresses: this.network.multiaddrs.map((m) => m.toString()),
+      p2pAddresses: this.network.localMultiaddrs.map((m) => m.toString()),
       metadata: this.network.metadata,
     };
   }

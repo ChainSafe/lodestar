@@ -5,9 +5,9 @@ import {IBeaconNodeOptions} from "../options";
 import {IENRArgs} from "../cmds/beacon/enrOptions";
 
 export function updateENR(enr: ENR, args: IENRArgs & IBeaconNodeOptions): void {
-  if (args.network.multiaddrs.length) {
+  if (args.network.localMultiaddrs.length) {
     try {
-      const tcpOpts = Multiaddr(args.network.multiaddrs[0]).toOptions();
+      const tcpOpts = Multiaddr(args.network.localMultiaddrs[0]).toOptions();
       if (tcpOpts.transport === "tcp") {
         enr.tcp = tcpOpts.port;
       }
@@ -17,7 +17,7 @@ export function updateENR(enr: ENR, args: IENRArgs & IBeaconNodeOptions): void {
   }
   if (args.network.discv5?.bindAddr) {
     try {
-      const udpOpts = Multiaddr(args.network.multiaddrs[0]).toOptions();
+      const udpOpts = Multiaddr(args.network.localMultiaddrs[0]).toOptions();
       if (udpOpts.transport === "udp") {
         enr.udp = udpOpts.port;
       }

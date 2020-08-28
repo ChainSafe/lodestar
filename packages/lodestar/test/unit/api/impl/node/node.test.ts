@@ -38,7 +38,7 @@ describe("node api implementation", function () {
           };
         },
       } as MetadataController;
-      networkStub.multiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
+      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       const identity = await api.getNodeIdentity();
       expect(identity.peerId.startsWith("16")).to.be.true;
       expect(identity.enr.startsWith("enr:-")).to.be.true;
@@ -53,7 +53,7 @@ describe("node api implementation", function () {
       const peerId = await PeerId.create({keyType: "secp256k1"});
       networkStub.getEnr.returns(null!);
       networkStub.peerId = peerId;
-      networkStub.multiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
+      networkStub.localMultiaddrs = [new Multiaddr("/ip4/127.0.0.1/tcp/36000")];
       const identity = await api.getNodeIdentity();
       expect(identity.enr).equal("");
     });
