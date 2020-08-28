@@ -1,6 +1,6 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../../../src/chain";
+import {BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {
   generateBlockSummary,
@@ -20,7 +20,7 @@ describe("api - beacon - getBlockHeaders", function () {
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);

@@ -2,7 +2,7 @@ import {resolveStateId} from "../../../../../../src/api/impl/beacon/state/utils"
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../../../src/chain/forkChoice";
+import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../../../src/chain/forkChoice";
 import {generateState} from "../../../../../utils/state";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
@@ -17,7 +17,7 @@ describe("beacon state api utils", function () {
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sinon, config);
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
   });
 
   it("resolve head state id - success", async function () {

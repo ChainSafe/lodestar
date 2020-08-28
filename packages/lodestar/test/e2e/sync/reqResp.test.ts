@@ -20,7 +20,7 @@ import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
+import {ArrayDagLMDGHOST} from "../../../src/chain/forkChoice";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import pipe from "it-pipe";
 import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
@@ -63,7 +63,7 @@ describe("[sync] rpc", function () {
       config,
     });
     chain.getBlockAtSlot = sinon.stub().resolves(block);
-    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    const forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(
       getBlockSummary({
