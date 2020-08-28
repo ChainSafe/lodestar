@@ -1,5 +1,5 @@
 import {SinonStubbedInstance} from "sinon";
-import {ChainEventEmitter, IBlockProcessJob, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBlockProcessJob, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
 import pushable, {Pushable} from "it-pushable";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
