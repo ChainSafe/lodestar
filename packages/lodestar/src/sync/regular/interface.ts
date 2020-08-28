@@ -4,7 +4,7 @@ import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 export interface IRegularSyncEvents {
-  syncCompleted: () => void;
+  regularSyncCompleted: () => void;
 }
 
 export type RegularSyncEventEmitter = StrictEventEmitter<EventEmitter, IRegularSyncEvents>;

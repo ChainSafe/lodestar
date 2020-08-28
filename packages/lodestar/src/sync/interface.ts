@@ -3,6 +3,7 @@ import {INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import StrictEventEmitter from "strict-event-emitter-types";
 import {InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
@@ -11,12 +12,19 @@ import {IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
+import {EventEmitter} from "events";
 
-export interface IBeaconSync extends IService {
+export interface IBeaconSync extends IService, SyncEventEmitter {
   getSyncStatus(): Promise<SyncingStatus>;
   isSynced(): boolean;
   collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;
 }
+
+export interface ISyncEvents {
+  syncCompleted: () => void;
+}
+
+export type SyncEventEmitter = StrictEventEmitter<EventEmitter, ISyncEvents>;
 
 export interface ISyncModule {
   getHighestBlock(): Slot;

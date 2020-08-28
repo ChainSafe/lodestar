@@ -25,6 +25,7 @@ import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chains
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
 import {createStatus, syncPeersStatus} from "../utils/sync";
+import {handlePeerMetadataSequence} from "../utils/reputation";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -207,10 +208,12 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }, 400);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async onPing(peerId: PeerId, id: RequestId, request: Ping): Promise<void> {
     this.network.reqResp.sendResponse(id, null, this.network.metadata.seqNumber);
-    // TODO handle peer sequence number update
+    // no need to wait
+    handlePeerMetadataSequence(this.reps, this.network.reqResp, this.logger, peerId, request).catch(() => {
+      this.logger.warn(`Failed to handle peer ${peerId.toB58String()} metadata sequence ${request}`);
+    });
   }
 
   public async onMetadata(peerId: PeerId, id: RequestId): Promise<void> {
@@ -273,8 +276,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       const request = createStatus(this.chain);
       try {
         this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
+        this.reps.get(peerId.toB58String()).latestMetadata = await this.network.reqResp.metadata(peerId);
       } catch (e) {
-        this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
+        this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status and metadata`, {
+          reason: e.message,
+        });
         await this.network.disconnect(peerId);
       }
     }

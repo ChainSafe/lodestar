@@ -60,7 +60,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
       this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
-      this.emit("syncCompleted");
+      this.emit("regularSyncCompleted");
       await this.stop();
       return;
     }
@@ -130,7 +130,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.logger.important(
         "Regular Sync: caught up to gossip block parent " + toHexString(this.gossipParentBlockRoot)
       );
-      this.emit("syncCompleted");
+      this.emit("regularSyncCompleted");
       await this.stop();
       return true;
     }

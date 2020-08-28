@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncModules, SyncEventEmitter} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
 import {getSyncProtocols, INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
@@ -15,6 +15,7 @@ import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List} from "@chainsafe/ssz";
+import {EventEmitter} from "events";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -24,7 +25,7 @@ export enum SyncMode {
   STOPPED,
 }
 
-export class BeaconSync implements IBeaconSync {
+export class BeaconSync extends (EventEmitter as {new (): SyncEventEmitter}) implements IBeaconSync {
   private readonly opts: ISyncOptions;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
@@ -44,6 +45,7 @@ export class BeaconSync implements IBeaconSync {
   private peerCountTimer?: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
+    super();
     this.opts = opts;
     this.config = modules.config;
     this.network = modules.network;
@@ -88,7 +90,7 @@ export class BeaconSync implements IBeaconSync {
     }
     this.mode = SyncMode.STOPPED;
     this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.regularSync.removeListener("regularSyncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -151,10 +153,15 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
-    this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
+    this.regularSync.on("regularSyncCompleted", this.syncCompleted);
     await this.gossip.start();
     await this.regularSync.start();
   }
+
+  private syncCompleted = (): void => {
+    this.stopSyncTimer();
+    this.emit("syncCompleted");
+  };
 
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();

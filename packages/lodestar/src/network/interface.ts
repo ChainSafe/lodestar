@@ -72,6 +72,7 @@ export interface INetwork extends NetworkEventEmitter {
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
+  getMaxPeer(): number;
   getPeerConnection(peerId: PeerId): LibP2pConnection | null;
   hasPeer(peerId: PeerId): boolean;
   connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void>;

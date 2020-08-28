@@ -126,6 +126,7 @@ export class BeaconNode {
       sync: this.sync,
       network: this.network,
       logger: this.logger.child(this.conf.logger.chores),
+      reps: this.reps,
     });
   }
 

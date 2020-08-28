@@ -107,6 +107,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     return peers || [];
   }
 
+  public getMaxPeer(): number {
+    return this.opts.maxPeers;
+  }
+
   public hasPeer(peerId: PeerId, connected = false): boolean {
     const peer = this.libp2p.peerStore.get(peerId);
     if (!peer) {
@@ -142,42 +146,39 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
   public async searchSubnetPeers(subnet: string): Promise<void> {
     const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
-    if (peerIds.length < 3) {
-      // If an insufficient number of current peers are subscribed to the topic,
+    if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
-      this.logger.verbose(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
-      const count = await this.connectToNewPeersBySubnet(parseInt(subnet), peerIds);
-      this.logger.verbose(`Connected to ${count} new peers for subnet ${subnet}`);
+      this.logger.verbose(`Finding new peers for subnet ${subnet}`);
+      const found = await this.connectToNewPeersBySubnet(parseInt(subnet));
+      if (found) {
+        this.logger.verbose(`Found new peer for subnet ${subnet}`);
+      } else {
+        this.logger.verbose(`Not found any peers for subnet ${subnet}`);
+      }
     }
   }
 
   /**
-   * Connect to new peers given a subnet.
+   * Connect to 1 new peer given a subnet.
    * @param subnet the subnet calculated from committee index
-   * @param inPeerIds peers already have this subnet
    */
-  private async connectToNewPeersBySubnet(subnet: number, inPeerIds: string[] = []): Promise<number> {
+  private async connectToNewPeersBySubnet(subnet: number): Promise<boolean> {
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
-    const peerIds = discv5Peers.filter((peerId) => !inPeerIds.includes(peerId.toB58String()));
-    // make sure they still connect to same subnet
-    let count = 0;
+    const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id.toB58String());
+    const peerIds = discv5Peers.filter((peerId) => !knownPeers.includes(peerId.toB58String()));
+    let found = false;
     for (const peerId of peerIds) {
-      // we'll dial thru sendRequest so don't need to do connect() like in the spec
+      // will automatically get metadata once we connect
       try {
-        const metadata = await this.reqResp.metadata(peerId);
-        if (metadata === null) throw Error("No metadata");
-        if (metadata.attnets[subnet]) {
-          count++;
-        }
-      } catch (err) {
-        this.logger.warn(`Cannot get metadata from ${peerId.toB58String()}: ${err.message}`);
-      }
-      if (count < 10) {
-        // TODO: decide max peers per subnet to connect?
+        await this.connect(peerId);
+        found = true;
         break;
+      } catch (e) {
+        // this runs too frequently so make it verbose
+        this.logger.verbose(`Cannot connect to peer ${peerId.toB58String()} for subnet ${subnet}`, e.message);
       }
     }
-    return count;
+    return found;
   }
 
   private searchDiscv5Peers = async (subnet: number): Promise<PeerId[]> => {
