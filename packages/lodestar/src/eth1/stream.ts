@@ -7,7 +7,6 @@ import {IDepositEvent, IBatchDepositEvents, IEth1Block, IEth1Provider, IEth1Stre
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "../util/sleep";
-import {ErrorAborted} from "../util/errors";
 
 /**
  * Phase 1 of genesis building.
@@ -32,8 +31,8 @@ export async function* getDepositsStream(
 
     fromBlock = toBlock;
 
-    if (signal && signal.aborted) throw new ErrorAborted();
-    if (toBlock >= remoteFollowBlock) await sleep(params.SECONDS_PER_ETH1_BLOCK * 1000, signal);
+    // If reached head, sleep for an eth1 block. Throws if signal is aborted
+    await sleep(toBlock >= remoteFollowBlock ? params.SECONDS_PER_ETH1_BLOCK * 1000 : 10, signal);
   }
 }
 
@@ -64,8 +63,8 @@ export async function* getDepositsAndBlockStreamForGenesis(
     fromBlock = toBlock;
     toBlock = Math.min(remoteFollowBlock, fromBlock + Math.min(nextBlockDiff, params.MAX_BLOCKS_PER_POLL));
 
-    if (signal && signal.aborted) throw new ErrorAborted();
-    if (toBlock >= remoteFollowBlock) await sleep(params.SECONDS_PER_ETH1_BLOCK * 1000, signal);
+    // If reached head, sleep for an eth1 block. Throws if signal is aborted
+    await sleep(toBlock >= remoteFollowBlock ? params.SECONDS_PER_ETH1_BLOCK * 1000 : 10, signal);
   }
 }
 
