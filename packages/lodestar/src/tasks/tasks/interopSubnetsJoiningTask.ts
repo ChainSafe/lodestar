@@ -5,7 +5,7 @@ import {randBetween, ILogger, intToBytes} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {getCurrentSlot, computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IInteropSubnetsJoiningModules {
   network: INetwork;
@@ -38,13 +38,13 @@ export class InteropSubnetsJoiningTask {
 
   public async start(): Promise<void> {
     this.currentForkDigest = this.chain.currentForkDigest;
-    this.chain.on("forkDigest", this.handleForkDigest);
+    this.chain.emitter.on("forkDigest", this.handleForkDigest);
     await this.run(this.currentForkDigest);
     await this.scheduleNextForkSubscription();
   }
 
   public async stop(): Promise<void> {
-    this.chain.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
@@ -72,7 +72,7 @@ export class InteropSubnetsJoiningTask {
     if (nextFork) {
       const preparedEpoch = nextFork.epoch - this.config.params.EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION;
       const timeToPreparedEpoch =
-        (computeStartSlotAtEpoch(this.config, preparedEpoch) - getCurrentSlot(this.config, state.genesisTime)) *
+        (computeStartSlotAtEpoch(this.config, preparedEpoch) - this.chain.clock.currentSlot) *
         this.config.params.SECONDS_PER_SLOT *
         1000;
       if (timeToPreparedEpoch > 0) {

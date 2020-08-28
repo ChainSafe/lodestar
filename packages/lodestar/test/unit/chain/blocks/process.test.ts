@@ -5,7 +5,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
-import {BeaconChain, IBeaconChain, IBlockProcessJob} from "../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBeaconChain, IBlockProcessJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
@@ -18,7 +18,7 @@ describe("block process stream", function () {
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
 
   const sandbox = sinon.createSandbox();
 
@@ -27,7 +27,7 @@ describe("block process stream", function () {
     blockPoolStub = sinon.createStubInstance(BlockPool);
     forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
-    chainStub = sinon.createStubInstance(BeaconChain);
+    eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
 
   afterEach(function () {
@@ -49,7 +49,7 @@ describe("block process stream", function () {
         dbStub,
         forkChoiceStub,
         (blockPoolStub as unknown) as BlockPool,
-        chainStub
+        eventBusStub,
       ),
       collect
     );
@@ -74,7 +74,7 @@ describe("block process stream", function () {
         dbStub,
         forkChoiceStub,
         (blockPoolStub as unknown) as BlockPool,
-        chainStub
+        eventBusStub,
       ),
       collect
     );
@@ -101,7 +101,7 @@ describe("block process stream", function () {
         dbStub,
         forkChoiceStub,
         (blockPoolStub as unknown) as BlockPool,
-        chainStub
+        eventBusStub,
       ),
       collect
     );
@@ -131,7 +131,7 @@ describe("block process stream", function () {
         dbStub,
         forkChoiceStub,
         (blockPoolStub as unknown) as BlockPool,
-        chainStub
+        eventBusStub,
       ),
       collect
     );
@@ -166,7 +166,7 @@ describe("block process stream", function () {
         dbStub,
         forkChoiceStub,
         (blockPoolStub as unknown) as BlockPool,
-        chainStub
+        eventBusStub,
       ),
       collect
     );

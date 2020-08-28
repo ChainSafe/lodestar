@@ -2,7 +2,7 @@
  * @module chain
  */
 
-import {EventEmitter} from "events";
+import AbortController from "abort-controller";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
@@ -18,12 +18,7 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  computeEpochAtSlot,
-  computeForkDigest,
-  EpochContext,
-  ZERO_HASH,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -33,12 +28,12 @@ import {IEth1Notifier} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {ArrayDagLMDGHOST, ILMDGHOST} from "./forkChoice";
+import {ChainEventEmitter} from "./emitter";
 
-import {ChainEventEmitter, IAttestationProcessor, IBeaconChain} from "./interface";
+import {IAttestationProcessor, IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {AttestationProcessor} from "./attestation";
-import {IBeaconClock} from "./clock/interface";
-import {LocalClock} from "./clock/local/LocalClock";
+import {IBeaconClock, LocalClock} from "./clock";
 import {BlockProcessor} from "./blocks";
 import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
@@ -60,43 +55,34 @@ export interface IBlockProcessJob {
   reprocess: boolean;
 }
 
-export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) implements IBeaconChain {
-  public forkChoice: ILMDGHOST;
+export class BeaconChain implements IBeaconChain {
+  public forkChoice!: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
+  public emitter: ChainEventEmitter;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1: IEth1Notifier;
   private readonly logger: ILogger;
   private readonly metrics: IBeaconMetrics;
   private readonly opts: IChainOptions;
-  private blockProcessor: BlockProcessor;
+  private blockProcessor!: BlockProcessor;
   private _currentForkDigest!: ForkDigest;
-  private attestationProcessor: IAttestationProcessor;
+  private attestationProcessor!: IAttestationProcessor;
   private genesisTime: Number64 = 0;
+  private abortController?: AbortController;
 
-  public constructor(opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
-    super();
+  public constructor(opts: IChainOptions, {config, db, eth1, logger, metrics}: IBeaconChainModules) {
     this.opts = opts;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
     this.logger = logger;
     this.metrics = metrics;
-    this.forkChoice = forkChoice || (new ArrayDagLMDGHOST(config) as ILMDGHOST);
+    this.emitter = new ChainEventEmitter();
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
-    this.attestationProcessor = new AttestationProcessor(this, {config, db, logger});
-    this.blockProcessor = new BlockProcessor(
-      config,
-      logger,
-      db,
-      this.forkChoice,
-      metrics,
-      this,
-      this.attestationProcessor
-    );
   }
 
   public getGenesisTime(): Number64 {
@@ -119,7 +105,15 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock | null> {
-    return this.db.block.get(this.forkChoice.headBlockRoot());
+    const headSummary = this.forkChoice.head();
+    if (!headSummary) {
+      return null;
+    }
+    const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
+    if (unfinalizedBlock) {
+      return unfinalizedBlock;
+    }
+    return await this.db.blockArchive.get(headSummary.slot);
   }
 
   public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
@@ -166,6 +160,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   }
 
   public async start(): Promise<void> {
+    this.abortController = new AbortController();
     this.logger.verbose("Starting chain");
     // if we run from scratch, we want to wait for genesis state
     const state = await this.waitForState();
@@ -174,27 +169,46 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     epochCtx.loadState(state);
     await this.db.stateCache.add({state, epochCtx});
     this.logger.info("Chain started, waiting blocks and attestations");
-    this.clock = new LocalClock(this.config, state.genesisTime);
-    await this.clock.start();
-    await this.forkChoice.start(state.genesisTime, this.clock);
+    this.clock = new LocalClock({
+      config: this.config,
+      emitter: this.emitter,
+      genesisTime: state.genesisTime,
+      signal: this.abortController.signal,
+    });
+    this.forkChoice = new ArrayDagLMDGHOST({
+      config: this.config,
+      emitter: this.emitter,
+      genesisTime: state.genesisTime,
+    });
+    this.attestationProcessor = new AttestationProcessor(this, {
+      config: this.config,
+      db: this.db,
+      logger: this.logger,
+    });
+    this.blockProcessor = new BlockProcessor(
+      this.config,
+      this.logger,
+      this.db,
+      this.forkChoice,
+      this.metrics,
+      this.emitter,
+      this.attestationProcessor
+    );
     await this.blockProcessor.start();
     await this.attestationProcessor.start();
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    this.on("forkVersion", this.handleForkVersionChanged);
+    this.emitter.on("forkVersion", this.handleForkVersionChanged);
+    this.emitter.on("clock:epoch", this.onClockEpoch);
     await this.restoreHeadState(state, epochCtx);
     await this.eth1.start();
   }
 
   public async stop(): Promise<void> {
-    await this.forkChoice.stop();
-
-    if (this.clock) {
-      await this.clock.stop();
-    }
-
+    this.abortController!.abort();
     await this.attestationProcessor.stop();
     await this.blockProcessor.stop();
-    this.removeListener("forkVersion", this.handleForkVersionChanged);
+    this.emitter.removeListener("forkVersion", this.handleForkVersionChanged);
+    this.emitter.removeListener("clock:epoch", this.onClockEpoch);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -224,24 +238,9 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
       `Initializing beacon chain with state root ${toHexString(stateRoot)}` +
         ` and block root ${toHexString(blockRoot)}, number of validator: ${genesisState.validators.length}`
     );
-    const justifiedFinalizedCheckpoint = {
-      root: blockRoot,
-      epoch: computeEpochAtSlot(this.config, genesisBlock.slot),
-    };
-    this.forkChoice.addBlock({
-      slot: genesisBlock.slot,
-      blockRoot: blockRoot,
-      stateRoot: stateRoot,
-      parentRoot: Buffer.alloc(32),
-      justifiedCheckpoint: justifiedFinalizedCheckpoint,
-      finalizedCheckpoint: justifiedFinalizedCheckpoint,
-    });
-    const epochCtx = new EpochContext(this.config);
-    epochCtx.loadState(genesisState);
-    await this.db.stateCache.add({state: genesisState, epochCtx});
     // Determine whether a genesis state already in
     // the database matches what we were provided
-    const storedGenesisBlock = await this.getCanonicalBlockAtSlot(GENESIS_SLOT);
+    const storedGenesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
     if (
       storedGenesisBlock !== null &&
       !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)
@@ -279,11 +278,11 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
       const listener = (signedBlock: SignedBeaconBlock): void => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
-          this.removeListener("processedBlock", listener);
+          this.emitter.removeListener("block", listener);
           resolve();
         }
       };
-      this.on("processedBlock", listener);
+      this.emitter.on("block", listener);
     });
   }
 
@@ -302,6 +301,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     // the block respective to finalized epoch still in block db
     const unfinalizedBlocks = await this.db.block.values();
     if (!unfinalizedBlocks || unfinalizedBlocks.length === 0) {
+      await this.initForkChoice(lastKnownState);
       return;
     }
     const sortedBlocks = finalizedBlocks.concat(sortBlocks(unfinalizedBlocks));
@@ -327,7 +327,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
       this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot},
         root=${toHexString(this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message))}`);
     }
-    await this.initForkChoice(lastKnownState, finalizedBlock);
+    await this.initForkChoice(lastKnownState);
     // no need to process the finalized block
     const processedBlocks = sortedBlocks.filter((block) => block.message.slot > finalizedBlock.message.slot);
     if (!processedBlocks.length) {
@@ -345,54 +345,37 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     this.logger.profile("restoreHeadState");
   }
 
-  private async initForkChoice(
-    lastKnownState: TreeBacked<BeaconState>,
-    finalizedBlock: SignedBeaconBlock
-  ): Promise<void> {
-    const isStateNotGenesis = lastKnownState.slot > GENESIS_SLOT;
-    const finalizedSlot = finalizedBlock.message.slot;
-    const blockCheckpoint: Checkpoint = {
-      root: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
-      epoch: computeEpochAtSlot(this.config, finalizedSlot),
-    };
-    // add justified block to forkchoice so "this.justified" in forkchoice really map to a block
-    if (isStateNotGenesis) {
-      const preJustifiedBlock = await this.db.blockArchive.getByRoot(lastKnownState.currentJustifiedCheckpoint.root);
-      let preFinalizedBlocks = await this.db.blockArchive.values({
-        gt: preJustifiedBlock!.message.slot,
-        lt: finalizedSlot,
-      });
-      preFinalizedBlocks = sortBlocks([preJustifiedBlock!, ...preFinalizedBlocks]);
-      const firstSlot = preFinalizedBlocks[0].message.slot;
-      const lastSlot = preFinalizedBlocks[preFinalizedBlocks.length - 1].message.slot;
-      this.logger.info(`Initialize forkchoice with pre-finalized blocks from ${firstSlot} to ${lastSlot}
-        and finalized block ${finalizedSlot}`);
-      preFinalizedBlocks.forEach((block) => {
-        this.forkChoice.addBlock({
-          slot: block.message.slot,
-          blockRoot: this.config.types.BeaconBlock.hashTreeRoot(block.message),
-          stateRoot: block.message.stateRoot.valueOf() as Uint8Array,
-          parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
-          // don't care the below justified and finalized checkpoint as we don't use them
-          justifiedCheckpoint: {epoch: 0, root: ZERO_HASH},
-          finalizedCheckpoint: {epoch: 0, root: ZERO_HASH},
-        });
-      });
+  /**
+   * Seeds the fork choice with an anchor state.
+   * This state is set as the finalized state.
+   */
+  private async initForkChoice(anchorState: TreeBacked<BeaconState>): Promise<void> {
+    let blockRoot;
+    if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
+      const block = getEmptyBlock();
+      block.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
+      blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block);
+    } else {
+      blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(anchorState.latestBlockHeader);
     }
+    const blockCheckpoint = {
+      root: blockRoot,
+      epoch: computeEpochAtSlot(this.config, anchorState.slot),
+    };
     this.forkChoice.addBlock({
-      slot: finalizedSlot,
-      blockRoot: this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
-      stateRoot: finalizedBlock.message.stateRoot.valueOf() as Uint8Array,
-      parentRoot: finalizedBlock.message.parentRoot.valueOf() as Uint8Array,
-      justifiedCheckpoint: isStateNotGenesis ? lastKnownState.currentJustifiedCheckpoint : blockCheckpoint,
-      finalizedCheckpoint: isStateNotGenesis ? lastKnownState.finalizedCheckpoint : blockCheckpoint,
+      slot: anchorState.slot,
+      blockRoot,
+      stateRoot: this.config.types.BeaconState.hashTreeRoot(anchorState),
+      parentRoot: anchorState.latestBlockHeader.parentRoot.valueOf() as Uint8Array,
+      justifiedCheckpoint: blockCheckpoint,
+      finalizedCheckpoint: blockCheckpoint,
     });
   }
 
-  private async handleForkVersionChanged(): Promise<void> {
+  private handleForkVersionChanged = async (): Promise<void> => {
     this._currentForkDigest = await this.getCurrentForkDigest();
-    this.emit("forkDigest", this._currentForkDigest);
-  }
+    this.emitter.emit("forkDigest", this._currentForkDigest);
+  };
 
   private async getCurrentForkDigest(): Promise<ForkDigest> {
     const {state} = await this.getHeadStateContext();
@@ -415,4 +398,8 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
+
+  private onClockEpoch = (): void => {
+    this.forkChoice.onTick();
+  };
 }

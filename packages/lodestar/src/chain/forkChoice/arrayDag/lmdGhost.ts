@@ -12,13 +12,12 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
 
-import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex, ForkChoiceEventEmitter} from "../interface";
+import {BlockSummary, HexCheckpoint, ILMDGHOST, NO_NODE, RootHex} from "../interface";
 
 import {NodeInfo} from "./interface";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../../constants";
 import {AttestationAggregator} from "../attestationAggregator";
-import {IBeaconClock} from "../../clock/interface";
-import {EventEmitter} from "events";
+import {ChainEventEmitter} from "../../emitter";
 
 /**
  * A block root with additional metadata required to form a DAG
@@ -123,9 +122,9 @@ export class Node {
  *
  * See https://github.com/protolambda/lmd-ghost#array-based-stateful-dag-proto_array
  */
-export class ArrayDagLMDGHOST extends (EventEmitter as {new (): ForkChoiceEventEmitter}) implements ILMDGHOST {
+export class ArrayDagLMDGHOST implements ILMDGHOST {
   private readonly config: IBeaconConfig;
-  private genesisTime!: Number64;
+  private genesisTime: Number64;
 
   /**
    * Aggregated attestations
@@ -156,10 +155,17 @@ export class ArrayDagLMDGHOST extends (EventEmitter as {new (): ForkChoiceEventE
    */
   private bestJustifiedCheckpoint!: Checkpoint;
   private synced: boolean;
-  private clock!: IBeaconClock;
+  private emitter!: ChainEventEmitter;
 
-  public constructor(config: IBeaconConfig) {
-    super();
+  public constructor({
+    config,
+    emitter,
+    genesisTime,
+  }: {
+    config: IBeaconConfig;
+    emitter: ChainEventEmitter;
+    genesisTime: number;
+  }) {
     const slotFinder = (hex: string): Slot | null =>
       this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)!].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
@@ -169,21 +175,8 @@ export class ArrayDagLMDGHOST extends (EventEmitter as {new (): ForkChoiceEventE
     this.justified = null;
     this.synced = true;
     this.config = config;
-  }
-
-  /**
-   * Start method, should not wait for it.
-   * @param genesisTime
-   */
-  public async start(genesisTime: number, clock: IBeaconClock): Promise<void> {
+    this.emitter = emitter;
     this.genesisTime = genesisTime;
-    // Make sure we call onTick at start of each epoch
-    clock.onNewEpoch(this.onTick);
-    this.clock = clock;
-  }
-
-  public async stop(): Promise<void> {
-    this.clock && this.clock.unsubscribeFromNewEpoch(this.onTick);
   }
 
   public onTick(): void {
@@ -641,7 +634,7 @@ export class ArrayDagLMDGHOST extends (EventEmitter as {new (): ForkChoiceEventE
       // Update indexes in node
       this.nodes.forEach((node) => node.shiftIndex(oldNodes, this.nodeIndices));
       this.finalized.node.parent = NO_NODE;
-      this.emit("prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
+      this.emitter.emit("forkChoice:prune", this.toBlockSummary(this.finalized.node), blockSummariesToDel);
     }
   }
 

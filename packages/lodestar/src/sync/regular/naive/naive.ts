@@ -14,7 +14,6 @@ import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep} from "../../../util/sleep";
@@ -53,10 +52,9 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   public async start(): Promise<void> {
-    this.chain.on("processedBlock", this.onProcessedBlock);
+    this.chain.emitter.on("block", this.onProcessedBlock);
     const headSlot = this.chain.forkChoice.headBlockSlot();
-    const state = await this.chain.getHeadState();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
       this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
@@ -80,7 +78,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     if (this.controller) {
       this.controller.abort();
     }
-    this.chain.removeListener("processedBlock", this.onProcessedBlock);
+    this.chain.emitter.removeListener("block", this.onProcessedBlock);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
   }
 
@@ -89,7 +87,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private getNewTarget(): Slot {
-    const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
+    const currentSlot = this.chain.clock.currentSlot;
     // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
     return Math.min(this.currentTarget + this.opts.blockPerChunk, currentSlot + 1);
   }

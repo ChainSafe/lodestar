@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {createStubInstance, SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {BeaconChain, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST, ChainEventEmitter} from "../../../../src/chain";
@@ -27,6 +27,7 @@ describe("fast sync", function () {
     forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+    chainStub.emitter = new ChainEventEmitter();
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     repsStub = sinon.createStubInstance(ReputationStore);
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
@@ -59,7 +60,8 @@ describe("fast sync", function () {
   });
 
   it("should sync till target and end", function (done) {
-    const chainEventEmitter = new EventEmitter();
+    const chain = createStubInstance(BeaconChain);
+    chain.emitter = new ChainEventEmitter();
     dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
@@ -69,8 +71,7 @@ describe("fast sync", function () {
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
-        //@ts-ignore
-        chain: chainEventEmitter,
+        chain: chain,
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
@@ -84,20 +85,21 @@ describe("fast sync", function () {
     };
     getTargetStub.returns(target);
     networkStub.getPeers.returns([]);
-    const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
+    const endCallbackStub = sinon.stub(chain.emitter, "removeListener");
     // @ts-ignore
-    endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {
+    endCallbackStub.withArgs("checkpoint", sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledTwice).to.be.true;
       done();
       return this;
     });
     sync.start();
-    chainEventEmitter.emit("processedCheckpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint);
-    chainEventEmitter.emit("processedCheckpoint", target);
+    chain.emitter.emit("checkpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint);
+    chain.emitter.emit("checkpoint", target);
   });
 
   it("should continue syncing if there is new target", function (done) {
-    const chainEventEmitter = new EventEmitter();
+    const chain = createStubInstance(BeaconChain);
+    chain.emitter = new ChainEventEmitter();
     dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
@@ -107,8 +109,7 @@ describe("fast sync", function () {
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
-        //@ts-ignore
-        chain: chainEventEmitter,
+        chain: chain,
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
@@ -126,15 +127,15 @@ describe("fast sync", function () {
     };
     getTargetStub.onFirstCall().returns(target1).onSecondCall().returns(target2).onThirdCall().returns(target2);
     networkStub.getPeers.returns([]);
-    const endCallbackStub = sinon.stub(chainEventEmitter, "removeListener");
+    const endCallbackStub = sinon.stub(chain.emitter, "removeListener");
     // @ts-ignore
-    endCallbackStub.withArgs("processedCheckpoint", sinon.match.any).callsFake(() => {
+    endCallbackStub.withArgs("checkpoint", sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledThrice).to.be.true;
       done();
       return this;
     });
     sync.start();
-    chainEventEmitter.emit("processedCheckpoint", target1);
-    chainEventEmitter.emit("processedCheckpoint", target2);
+    chain.emitter.emit("checkpoint", target1);
+    chain.emitter.emit("checkpoint", target2);
   });
 });

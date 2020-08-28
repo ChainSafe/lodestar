@@ -1,7 +1,10 @@
-import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonFakeTimers} from "sinon";
+import AbortController from "abort-controller";
 import {expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
+import {LocalClock} from "../../../../src/chain/clock/LocalClock";
+import {ChainEventEmitter} from "../../../../src/chain/emitter";
 
 describe("LocalClock", function () {
   let realClock: SinonFakeTimers;
@@ -15,22 +18,36 @@ describe("LocalClock", function () {
   });
 
   it("Should notify on new slot", async function () {
-    const clock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
+    const emitter = new ChainEventEmitter();
+    const abortController = new AbortController();
+    const clock = new LocalClock({
+      config,
+      emitter,
+      genesisTime: Math.round(new Date().getTime() / 1000),
+      signal: abortController.signal,
+    });
     const spy = sinon.spy();
-    clock.onNewSlot(spy);
-    await clock.start();
+    emitter.on("clock:slot", spy);
     realClock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(spy.calledOnce).to.be.true;
-    await clock.stop();
+    expect(spy.calledWith(clock.currentSlot)).to.be.true;
+    abortController.abort();
   });
 
   it("Should notify on new epoch", async function () {
-    const clock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
+    const emitter = new ChainEventEmitter();
+    const abortController = new AbortController();
+    const clock = new LocalClock({
+      config,
+      emitter,
+      genesisTime: Math.round(new Date().getTime() / 1000),
+      signal: abortController.signal,
+    });
     const spy = sinon.spy();
-    clock.onNewEpoch(spy);
-    await clock.start();
+    emitter.on("clock:epoch", spy);
     realClock.tick(config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT * 1000);
     expect(spy.calledOnce).to.be.true;
-    await clock.stop();
+    expect(spy.calledWith(clock.currentEpoch)).to.be.true;
+    abortController.abort();
   });
 });

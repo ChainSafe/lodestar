@@ -7,7 +7,7 @@ import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
-import {ChainEventEmitter} from "..";
+import {ChainEventEmitter} from "../emitter";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 
@@ -55,6 +55,7 @@ export function processBlock(
             slot: newState.slot,
             epoch: computeEpochAtSlot(config, newState.slot),
           });
+          eventBus.emit("forkChoice:head", forkChoice.head()!);
           if (!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;

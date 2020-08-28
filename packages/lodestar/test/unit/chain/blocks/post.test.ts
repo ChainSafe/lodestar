@@ -40,7 +40,7 @@ describe("post block process stream", function () {
     metricsStub.currentFinalizedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
     metricsStub.currentJustifiedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
     metricsStub.previousJustifiedEpoch = (sinon.createStubInstance(Gauge) as unknown) as Gauge;
-    eventBusStub = sinon.createStubInstance(BeaconChain);
+    eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     attestationProcessorStub = sinon.createStubInstance(AttestationProcessor);
     forkChoiceStub.getCanonicalBlockSummaryAtSlot.returns({
       blockRoot: Buffer.alloc(32),
@@ -103,7 +103,7 @@ describe("post block process stream", function () {
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
-    expect(eventBusStub.emit.withArgs("processedCheckpoint").calledOnce).to.be.true;
+    expect(eventBusStub.emit.withArgs("checkpoint").calledOnce).to.be.true;
     // @ts-ignore
     expect(dbStub.processBlockOperations.calledOnce).to.be.true;
     expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
@@ -141,7 +141,7 @@ describe("post block process stream", function () {
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
-    expect(eventBusStub.emit.withArgs("processedCheckpoint").calledOnce).to.be.true;
+    expect(eventBusStub.emit.withArgs("checkpoint").calledOnce).to.be.true;
     // @ts-ignore
     expect(dbStub.processBlockOperations.calledOnce).to.be.true;
     expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;

@@ -12,6 +12,7 @@ import {List} from "@chainsafe/ssz";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
+import {LocalClock} from "../../../../../src/chain/clock";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {generateState} from "../../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -31,6 +32,7 @@ describe("gossip aggregate and proof test", function () {
     chain = sinon.createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
+    chain.clock = sinon.createStubInstance(LocalClock);
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.resolves(false);
     getAttestationPreStateStub = sinon.stub(gossipUtils, "getAttestationPreState");
