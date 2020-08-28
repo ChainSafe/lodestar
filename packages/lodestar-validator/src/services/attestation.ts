@@ -177,10 +177,14 @@ export class AttestationService {
     if (duty.isAggregator) {
       const timeout = setTimeout(async (signal = abortSignal) => {
         this.logger.debug("AttestationService: Start waitForAggregate");
-        signal?.addEventListener("abort", () => {
-          clearTimeout(timeout);
-          this.logger.debug("AttestationService: Abort waitForAggregate");
-        });
+        signal?.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timeout);
+            this.logger.debug("AttestationService: Abort waitForAggregate");
+          },
+          {once: true}
+        );
 
         try {
           if (attestation) {
@@ -215,12 +219,16 @@ export class AttestationService {
         resolve();
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
 
-      signal?.addEventListener("abort", () => {
-        clearTimeout(timeout);
-        eventSource.close();
-        resolve();
-        this.logger.debug("AttestationService: Abort waitForAttestationBlock");
-      });
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeout);
+          eventSource.close();
+          resolve();
+          this.logger.debug("AttestationService: Abort waitForAttestationBlock");
+        },
+        {once: true}
+      );
 
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
