@@ -165,23 +165,23 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private async connectToNewPeersBySubnet(subnet: number): Promise<boolean> {
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
     const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id.toB58String());
-    const peerIds = discv5Peers.filter((peerId) => !knownPeers.includes(peerId.toB58String()));
+    const candidatePeers = discv5Peers.filter((peer) => !knownPeers.includes(peer.peerId.toB58String()));
     let found = false;
-    for (const peerId of peerIds) {
+    for (const peer of candidatePeers) {
       // will automatically get metadata once we connect
       try {
-        await this.connect(peerId);
+        await this.connect(peer.peerId, [peer.multiaddr]);
         found = true;
         break;
       } catch (e) {
         // this runs too frequently so make it verbose
-        this.logger.verbose(`Cannot connect to peer ${peerId.toB58String()} for subnet ${subnet}`, e.message);
+        this.logger.verbose(`Cannot connect to peer ${peer.peerId.toB58String()} for subnet ${subnet}`, e.message);
       }
     }
     return found;
   }
 
-  private searchDiscv5Peers = async (subnet: number): Promise<PeerId[]> => {
+  private searchDiscv5Peers = async (subnet: number): Promise<{peerId: PeerId; multiaddr: Multiaddr}[]> => {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const discv5: Discv5 = discovery.discv5;
     return await Promise.all(
@@ -197,8 +197,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         })
         .map((enr: ENR) =>
           enr.peerId().then((peerId) => {
-            this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP!]);
-            return peerId;
+            return {peerId, multiaddr: enr.multiaddrTCP!};
           })
         )
     );
