@@ -167,13 +167,15 @@ export class ValidatorApi implements IValidatorApi {
       }
       return validatorIndex;
     });
-    return validatorIndexes.map((validatorIndex) => {
-      const validator = state.validators[validatorIndex];
-      if (!validator) {
-        throw Error(`Validator index ${validatorIndex} not in state`);
-      }
-      return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
-    });
+    return validatorIndexes
+      .map((validatorIndex) => {
+        const validator = state.validators[validatorIndex];
+        if (!validator) {
+          throw Error(`Validator index ${validatorIndex} not in state`);
+        }
+        return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
+      })
+      .filter((duty) => duty.committeeIndex !== null && duty.attestationSlot !== null);
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
