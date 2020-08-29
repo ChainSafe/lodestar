@@ -130,8 +130,6 @@ export class GenesisBuilder implements IGenesisBuilder {
 
     applyDeposits(this.config, this.state, newDeposits, this.depositTree);
 
-    this.logger.verbose(`Found ${this.state.validators.length} validators to genesis`);
-
     // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot
   }
 }
