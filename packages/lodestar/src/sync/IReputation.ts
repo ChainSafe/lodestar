@@ -2,15 +2,14 @@
  * @module sync
  */
 import PeerId from "peer-id";
-import {Status, Metadata} from "@chainsafe/lodestar-types";
-import {ATTESTATION_SUBNET_COUNT, ReqRespEncoding, Method} from "../constants";
+import {Metadata, Status} from "@chainsafe/lodestar-types";
+import {ATTESTATION_SUBNET_COUNT, ReqRespEncoding} from "../constants";
 
 export interface IReputation {
   latestStatus: Status | null;
   latestMetadata: Metadata | null;
   score: number;
   encoding: ReqRespEncoding | null;
-  supportedProtocols: Method[];
 }
 
 export interface IReputationStore {
@@ -32,7 +31,6 @@ export class ReputationStore implements IReputationStore {
       latestMetadata: null,
       score: 0,
       encoding: null,
-      supportedProtocols: [],
     };
     this.reputations.set(peerId, reputation);
     return reputation;

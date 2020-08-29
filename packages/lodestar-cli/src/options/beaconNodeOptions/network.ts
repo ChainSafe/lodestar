@@ -31,17 +31,17 @@ export const networkOptions = {
     group: "network",
   } as Options,
 
-  "network.bootnodes": {
+  "network.bootMultiaddrs": {
     type: "array",
     description: "Libp2p peers to connect to on boot",
-    defaultDescription: JSON.stringify(defaultOptions.network.bootnodes),
+    defaultDescription: JSON.stringify(defaultOptions.network.bootMultiaddrs),
     group: "network",
   } as Options,
 
-  "network.multiaddrs": {
+  "network.localMultiaddrs": {
     type: "array",
     description: "Local listening addresses for req/resp and gossip",
-    defaultDescription: JSON.stringify(defaultOptions.network.multiaddrs),
+    defaultDescription: JSON.stringify(defaultOptions.network.localMultiaddrs),
     group: "network",
   } as Options,
 };

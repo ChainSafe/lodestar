@@ -3,8 +3,8 @@ import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 
 export interface INetworkOptions {
   maxPeers: Number64;
-  multiaddrs: string[];
-  bootnodes: string[];
+  localMultiaddrs: string[];
+  bootMultiaddrs: string[];
   discv5?: IDiscv5DiscoveryInputOptions;
   rpcTimeout: Number64;
   connectTimeout: number;
@@ -13,8 +13,8 @@ export interface INetworkOptions {
 
 const config: INetworkOptions = {
   maxPeers: 25,
-  multiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
-  bootnodes: [],
+  localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
+  bootMultiaddrs: [],
   discv5: {
     bindAddr: "/ip4/0.0.0.0/udp/9000",
     enr: new ENR(),

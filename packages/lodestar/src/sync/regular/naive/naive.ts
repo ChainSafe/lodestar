@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import AbortController from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
-import {INetwork} from "../../../network";
+import {getSyncProtocols, INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
@@ -211,7 +211,9 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     while (!this.bestPeer && !isAborted) {
       // wait first to make sure we have latest status
       await sleep(waitingTime);
-      const peers = this.network.getPeers();
+      const peers = this.network
+        .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
+        .map((peer) => peer.id);
       this.bestPeer = getBestPeer(this.config, peers, this.reps);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
         const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus!.headSlot;

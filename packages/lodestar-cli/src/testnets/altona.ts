@@ -46,10 +46,10 @@ export const altonaConfig: IBeaconNodeOptionsPartial = {
       ],
     },
     maxPeers: 25,
-    bootnodes: [
+    bootMultiaddrs: [
       "/ip4/51.15.97.240/tcp/9000/p2p/16Uiu2HAkwVT363kpFmupwJBH5tkhnaNZPQSY7zANnPGB63ikD1Wp",
       "/ip4/51.15.70.7/tcp/9000/p2p/16Uiu2HAmHV1UA1SBnNK7Ztp8ACQ8DzHwNnR49VDEPBavCU33PtVE",
     ],
-    multiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
+    localMultiaddrs: ["/ip4/0.0.0.0/tcp/30607"],
   },
 };

@@ -27,7 +27,7 @@ export interface ILibp2pOptions {
     bootEnrs?: ENRInput[];
   };
   peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
-  bootnodes?: string[];
+  bootMultiaddrs?: string[];
   maxConnections?: number;
 }
 
@@ -68,9 +68,9 @@ export class NodejsNode extends LibP2p {
             peerId: options.peerId,
           },
           bootstrap: {
-            enabled: !!(options.bootnodes && options.bootnodes.length),
+            enabled: !!(options.bootMultiaddrs && options.bootMultiaddrs.length),
             interval: 2000,
-            list: (options.bootnodes || []) as string[],
+            list: (options.bootMultiaddrs || []) as string[],
           },
           discv5: {
             enr: options.discv5.enr,
