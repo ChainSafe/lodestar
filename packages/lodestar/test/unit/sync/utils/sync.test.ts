@@ -18,7 +18,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
 import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -204,7 +204,7 @@ describe("sync utils", function () {
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
-      forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
       chainStub.forkChoice = forkChoiceStub;
     });
 

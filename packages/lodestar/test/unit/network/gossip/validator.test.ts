@@ -12,7 +12,7 @@ import {
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 import {generateInitialMaxBalances} from "../../../utils/balances";
-import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../../../src/db";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
@@ -33,7 +33,7 @@ describe("GossipMessageValidator", () => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    chainStub.forkChoice = sandbox.createStubInstance(ArrayDagLMDGHOST);
 
     dbStub = new StubbedBeaconDb(sandbox);
     logger = new WinstonLogger();

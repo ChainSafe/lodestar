@@ -2,7 +2,7 @@ import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
+import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
 import {BeaconChain, IBeaconChain, IBlockProcessJob} from "../../../../src/chain";
@@ -25,7 +25,7 @@ describe("block process stream", function () {
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
     blockPoolStub = sinon.createStubInstance(BlockPool);
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     chainStub = sinon.createStubInstance(BeaconChain);
   });

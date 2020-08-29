@@ -5,7 +5,7 @@ import {BlockRepository} from "../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain/forkChoice";
+import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
 import {getBlockSummary} from "../../../utils/headBlockInfo";
@@ -19,7 +19,7 @@ describe("block validate stream", function () {
 
   beforeEach(function () {
     blockDbStub = sinon.createStubInstance(BlockRepository);
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
   });
 

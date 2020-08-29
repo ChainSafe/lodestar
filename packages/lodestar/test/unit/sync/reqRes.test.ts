@@ -12,7 +12,7 @@ import {
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {GENESIS_EPOCH, Method, ZERO_HASH, ReqRespEncoding} from "../../../src/constants";
-import {BeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../src/chain";
+import {BeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
@@ -39,7 +39,7 @@ describe("sync req resp", function () {
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sandbox.createStubInstance(ArrayDagLMDGHOST);
     chainStub.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(getBlockSummary({}));
     forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
