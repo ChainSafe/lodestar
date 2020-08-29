@@ -85,6 +85,8 @@ export class GenesisBuilder implements IGenesisBuilder {
           depositTree: this.depositTree,
           block,
         };
+      } else {
+        this.logger.info(`Waiting for min genesis time ${block.timestamp} / ${this.config.params.MIN_GENESIS_TIME}`);
       }
     }
 
@@ -104,6 +106,10 @@ export class GenesisBuilder implements IGenesisBuilder {
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
         return blockNumber;
+      } else {
+        this.logger.info(
+          `Found ${this.state.validators.length} / ${this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
+        );
       }
     }
 
