@@ -70,7 +70,7 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
-  getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
+  getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
 

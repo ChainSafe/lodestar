@@ -55,7 +55,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     };
   }
 
-  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
+  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
@@ -73,7 +73,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     if (!slots) {
       return [];
     }
-    return await Promise.all(slots.map(this.getBlockAtSlot));
+    return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
