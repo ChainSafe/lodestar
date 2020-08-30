@@ -45,6 +45,7 @@ import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError} from "../errors/api";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {notNullish} from "../../../util/notNullish";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -175,7 +176,7 @@ export class ValidatorApi implements IValidatorApi {
         }
         return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
       })
-      .filter((duty) => duty.committeeIndex !== null && duty.attestationSlot !== null);
+      .filter(notNullish) as AttesterDuty[];
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
