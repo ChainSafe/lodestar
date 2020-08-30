@@ -61,7 +61,6 @@ export interface IBlockProcessJob {
 }
 
 export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) implements IBeaconChain {
-  public readonly chain: string;
   public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
@@ -80,7 +79,6 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
   public constructor(opts: IChainOptions, {config, db, eth1, logger, metrics, forkChoice}: IBeaconChainModules) {
     super();
     this.opts = opts;
-    this.chain = opts.name;
     this.config = config;
     this.db = db;
     this.eth1 = eth1;
