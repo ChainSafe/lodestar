@@ -4,7 +4,7 @@ import {ReqRespEncoding} from "../../constants";
 import PeerId from "peer-id";
 import {Metadata, Status} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
-import {StringType} from "./utils";
+import {StringType} from "./sszTypes";
 
 enum MetadataKey {
   ENCODING = "encoding",

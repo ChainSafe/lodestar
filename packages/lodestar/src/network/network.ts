@@ -18,6 +18,9 @@ import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IReputationStore} from "../sync/IReputation";
+import {IPeerMetadataStore} from "./peers/interface";
+import {Libp2pPeerMetadataStore} from "./peers/metastore";
+import {getPeersWithSubnet} from "./peers/utils";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -40,7 +43,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private libp2p: LibP2p;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
-  private peerReputations: IReputationStore;
+  private peerMetadata: IPeerMetadataStore;
 
   public constructor(
     opts: INetworkOptions,
@@ -52,10 +55,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.config = config;
     this.logger = logger;
     this.metrics = metrics;
-    this.peerReputations = reps;
     this.peerId = libp2p.peerId;
     this.libp2p = libp2p;
-    this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
+    this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
+    this.reqResp = new ReqResp(opts, {config, libp2p, peerMetadata: this.peerMetadata, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
   }
@@ -141,12 +144,19 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async searchSubnetPeers(subnet: string): Promise<void> {
-    const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
+    const peerIds = getPeersWithSubnet(
+      this.getPeers({connected: true}).map((peer) => peer.id),
+      this.peerMetadata,
+      subnet
+    );
     if (peerIds.length < 3) {
       // If an insufficient number of current peers are subscribed to the topic,
       // the validator must discover new peers on this topic
       this.logger.verbose(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
-      const count = await this.connectToNewPeersBySubnet(parseInt(subnet), peerIds);
+      const count = await this.connectToNewPeersBySubnet(
+        parseInt(subnet),
+        peerIds.map((peer) => peer.toB58String())
+      );
       this.logger.verbose(`Connected to ${count} new peers for subnet ${subnet}`);
     }
   }

@@ -17,7 +17,6 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
-import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 
@@ -49,7 +48,6 @@ export class BeaconNode {
   public chain: IBeaconChain;
   public api: IService;
   public sync: IBeaconSync;
-  public reps: ReputationStore;
   public chores: TasksService;
 
   private logger: ILogger;
@@ -68,7 +66,6 @@ export class BeaconNode {
       metrics: this.metrics,
       logger: this.logger.child(this.conf.logger.metrics),
     });
-    this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
       controller: new LevelDbController(this.conf.db, {
