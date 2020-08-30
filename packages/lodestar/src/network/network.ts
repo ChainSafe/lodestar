@@ -17,7 +17,6 @@ import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {IReputationStore} from "../sync/IReputation";
 import {IPeerMetadataStore} from "./peers/interface";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeersWithSubnet} from "./peers/utils";
@@ -37,19 +36,15 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
+  public peerMetadata: IPeerMetadataStore;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
-  private peerMetadata: IPeerMetadataStore;
 
-  public constructor(
-    opts: INetworkOptions,
-    reps: IReputationStore,
-    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
-  ) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;

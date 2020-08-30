@@ -1,10 +1,9 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {BeaconChain, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST, ChainEventEmitter} from "../../../../src/chain";
+import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
-import {ReputationStore} from "../../../../src/sync/IReputation";
 import * as syncUtils from "../../../../src/sync/utils";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {EventEmitter} from "events";
@@ -12,6 +11,8 @@ import {expect} from "chai";
 import {SyncStats} from "../../../../src/sync/stats";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateEmptySignedBlock} from "../../../utils/block";
+import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
+import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 
 describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
@@ -19,7 +20,7 @@ describe("fast sync", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let repsStub: SinonStubbedInstance<ReputationStore>;
+  let metaStub: SinonStubbedInstance<IPeerMetadataStore>;
   let getTargetStub: SinonStub;
   let dbStub: StubbedBeaconDb;
 
@@ -28,7 +29,8 @@ describe("fast sync", function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
-    repsStub = sinon.createStubInstance(ReputationStore);
+    metaStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
+    networkStub.peerMetadata = metaStub;
     getTargetStub = sandbox.stub(syncUtils, "getCommonFinalizedCheckpoint");
     dbStub = new StubbedBeaconDb(sinon);
   });
@@ -47,7 +49,6 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: sinon.createStubInstance(SyncStats),
-        reputationStore: repsStub,
         db: dbStub,
       }
     );
@@ -74,7 +75,6 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
-        reputationStore: repsStub,
         db: dbStub,
       }
     );
@@ -112,7 +112,6 @@ describe("fast sync", function () {
         logger: sinon.createStubInstance(WinstonLogger),
         network: networkStub,
         stats: statsStub,
-        reputationStore: repsStub,
         db: dbStub,
       }
     );

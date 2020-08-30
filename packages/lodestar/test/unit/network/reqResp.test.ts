@@ -8,10 +8,10 @@ import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {createNode} from "../../utils/network";
-import {ReputationStore} from "../../../src/sync/IReputation";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {TTFB_TIMEOUT} from "../../../src/constants";
-import {AbortSignal} from "abort-controller/dist/abort-controller";
+import {IPeerMetadataStore} from "../../../src/network/peers/interface";
+import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -19,6 +19,8 @@ describe("[network] rpc", () => {
   const sandbox = sinon.createSandbox();
   let nodeA: NodejsNode, nodeB: NodejsNode, rpcA: ReqResp, rpcB: ReqResp;
   let loggerStub: SinonStubbedInstance<ILogger>;
+  let metaA: SinonStubbedInstance<IPeerMetadataStore>;
+  let metaB: SinonStubbedInstance<IPeerMetadataStore>;
 
   const networkOptions: INetworkOptions = {
     maxPeers: 10,
@@ -34,19 +36,21 @@ describe("[network] rpc", () => {
     // setup
     nodeA = await createNode(multiaddr);
     nodeB = await createNode(multiaddr);
+    metaA = sinon.createStubInstance(Libp2pPeerMetadataStore);
+    metaB = sinon.createStubInstance(Libp2pPeerMetadataStore);
     await Promise.all([nodeA.start(), nodeB.start()]);
 
     rpcA = new ReqResp(networkOptions, {
       config,
       libp2p: nodeA,
       logger: loggerStub,
-      peerReputations: new ReputationStore(),
+      peerMetadata: metaA,
     });
     rpcB = new ReqResp(networkOptions, {
       config,
       libp2p: nodeB,
       logger: loggerStub,
-      peerReputations: new ReputationStore(),
+      peerMetadata: metaB,
     });
     await Promise.all([rpcA.start(), rpcB.start()]);
     try {
@@ -222,7 +226,7 @@ describe("[network] rpc", () => {
       config,
       libp2p: libP2pMock,
       logger: loggerStub,
-      peerReputations: new ReputationStore(),
+      peerMetadata: sinon.createStubInstance(Libp2pPeerMetadataStore),
     });
     try {
       await rpcC.beaconBlocksByRange(nodeB.peerId, request);

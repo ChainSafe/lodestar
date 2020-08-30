@@ -20,7 +20,6 @@ import {IBeaconChain} from "../../chain";
 import {createRpcProtocol, INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IReqRespHandler} from "./interface";
-import {IReputationStore} from "../IReputation";
 import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {RpcError} from "../../network/error";
@@ -31,7 +30,6 @@ export interface IReqRespHandlerModules {
   db: IBeaconDb;
   chain: IBeaconChain;
   network: INetwork;
-  reputationStore: IReputationStore;
   logger: ILogger;
 }
 
@@ -50,15 +48,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   private db: IBeaconDb;
   private chain: IBeaconChain;
   private network: INetwork;
-  private reps: IReputationStore;
   private logger: ILogger;
 
-  public constructor({config, db, chain, network, reputationStore, logger}: IReqRespHandlerModules) {
+  public constructor({config, db, chain, network, logger}: IReqRespHandlerModules) {
     this.config = config;
     this.db = db;
     this.chain = chain;
     this.network = network;
-    this.reps = reputationStore;
     this.logger = logger;
   }
 
@@ -66,7 +62,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.reqResp.on("request", this.onRequest);
     this.network.on("peer:connect", this.handshake);
     const myStatus = await createStatus(this.chain);
-    await syncPeersStatus(this.reps, this.network, myStatus);
+    await syncPeersStatus(this.network, myStatus);
   }
 
   public async stop(): Promise<void> {
@@ -114,7 +110,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       }
     }
     // set status on peer
-    this.reps.get(peerId.toB58String()).latestStatus = request;
+    this.network.peerMetadata.setStatus(peerId, request);
     // send status response
     try {
       const status = await createStatus(this.chain);
@@ -272,7 +268,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     if (direction === "outbound") {
       const request = createStatus(this.chain);
       try {
-        this.reps.get(peerId.toB58String()).latestStatus = await this.network.reqResp.status(peerId, request);
+        this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {
         this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status`, {reason: e.message});
         await this.network.disconnect(peerId);

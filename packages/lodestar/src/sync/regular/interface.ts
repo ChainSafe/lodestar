@@ -11,4 +11,4 @@ export type RegularSyncEventEmitter = StrictEventEmitter<EventEmitter, IRegularS
 
 export type IRegularSync = IService & ISyncModule & RegularSyncEventEmitter;
 
-export type IRegularSyncModules = Pick<ISyncModules, "config" | "chain" | "network" | "logger" | "reputationStore">;
+export type IRegularSyncModules = Pick<ISyncModules, "config" | "chain" | "network" | "logger">;

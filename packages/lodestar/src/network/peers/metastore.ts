@@ -5,6 +5,7 @@ import PeerId from "peer-id";
 import {Metadata, Status} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
 import {StringType} from "./sszTypes";
+import {notNullish} from "../../util/notNullish";
 
 enum MetadataKey {
   ENCODING = "encoding",
@@ -42,24 +43,28 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     return this.get(peer, MetadataKey.STATUS, this.config.types.Status);
   }
 
-  public setEncoding(peer: PeerId, encoding: ReqRespEncoding): void {
+  public setEncoding(peer: PeerId, encoding: ReqRespEncoding | null): void {
     return this.set(peer, MetadataKey.ENCODING, new StringType(), encoding);
   }
 
-  public setMetadata(peer: PeerId, metadata: Metadata): void {
+  public setMetadata(peer: PeerId, metadata: Metadata | null): void {
     return this.set(peer, MetadataKey.METADATA, this.config.types.Metadata, metadata);
   }
 
-  public setScore(peer: PeerId, score: number): void {
+  public setScore(peer: PeerId, score: number | null): void {
     return this.set(peer, MetadataKey.SCORE, this.config.types.Number64, score);
   }
 
-  public setStatus(peer: PeerId, status: Status): void {
+  public setStatus(peer: PeerId, status: Status | null): void {
     return this.set(peer, MetadataKey.STATUS, this.config.types.Status, status);
   }
 
-  private set<T>(peer: PeerId, key: MetadataKey, type: BasicType<T> | ContainerType<T>, value: T): void {
-    this.metabook.set(peer, key, Buffer.from(type.serialize(value)));
+  private set<T>(peer: PeerId, key: MetadataKey, type: BasicType<T> | ContainerType<T>, value: T | null): void {
+    if (notNullish(value)) {
+      this.metabook.set(peer, key, Buffer.from(type.serialize(value)));
+    } else {
+      this.metabook.deleteValue(peer, key);
+    }
   }
 
   private get<T>(peer: PeerId, key: MetadataKey, type: BasicType<T> | ContainerType<T>): T | null {

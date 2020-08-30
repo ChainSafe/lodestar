@@ -3,12 +3,12 @@ import {Metadata, Status} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../../constants";
 
 export interface IPeerMetadataStore {
-  setStatus(peer: PeerId, status: Status): void;
+  setStatus(peer: PeerId, status: Status | null): void;
   getStatus(peer: PeerId): Status | null;
-  setScore(peer: PeerId, score: number): void;
+  setScore(peer: PeerId, score: number | null): void;
   getScore(peer: PeerId): number | null;
-  setMetadata(peer: PeerId, metadata: Metadata): void;
+  setMetadata(peer: PeerId, metadata: Metadata | null): void;
   getMetadata(peer: PeerId): Metadata | null;
-  setEncoding(peer: PeerId, encoding: ReqRespEncoding): void;
+  setEncoding(peer: PeerId, encoding: ReqRespEncoding | null): void;
   getEncoding(peer: PeerId): ReqRespEncoding | null;
 }

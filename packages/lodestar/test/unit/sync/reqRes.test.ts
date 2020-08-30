@@ -3,21 +3,20 @@ import {expect} from "chai";
 import PeerId from "peer-id";
 import {
   BeaconBlocksByRangeRequest,
+  BeaconState,
   Goodbye,
   ResponseBody,
   SignedBeaconBlock,
   Status,
-  BeaconState,
 } from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
-import {GENESIS_EPOCH, Method, ZERO_HASH, ReqRespEncoding} from "../../../src/constants";
-import {BeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../src/chain";
+import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
+import {ArrayDagLMDGHOST, BeaconChain, ILMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {ReqResp} from "../../../src/network/reqResp";
-import {ReputationStore, IReputation} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {IBeaconDb} from "../../../src/db/api";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
@@ -25,13 +24,15 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePeer} from "../../utils/peer";
+import {IPeerMetadataStore} from "../../../src/network/peers/interface";
+import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
   let syncRpc: BeaconReqRespHandler;
   let chainStub: SinonStubbedInstance<BeaconChain>,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
-    repsStub: SinonStubbedInstance<ReputationStore>,
+    metaStub: SinonStubbedInstance<IPeerMetadataStore>,
     forkChoiceStub: SinonStubbedInstance<ILMDGHOST>,
     logger: WinstonLogger,
     reqRespStub: SinonStubbedInstance<ReqResp>;
@@ -50,8 +51,9 @@ describe("sync req resp", function () {
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = (reqRespStub as unknown) as ReqResp & SinonStubbedInstance<ReqResp>;
+    metaStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
+    networkStub.peerMetadata = metaStub;
     dbStub = new StubbedBeaconDb(sandbox);
-    repsStub = sandbox.createStubInstance(ReputationStore);
     logger = new WinstonLogger();
     logger.silent = true;
 
@@ -60,7 +62,6 @@ describe("sync req resp", function () {
       db: (dbStub as unknown) as IBeaconDb,
       chain: chainStub,
       network: networkStub,
-      reputationStore: repsStub,
       logger,
     });
   });
@@ -74,12 +75,6 @@ describe("sync req resp", function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([generatePeer(peerId), generatePeer(peerId)]);
-    repsStub.get.returns({
-      latestMetadata: null,
-      latestStatus: null,
-      score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
-    });
 
     try {
       await syncRpc.start();
@@ -98,14 +93,6 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    const reputation: IReputation = {
-      latestMetadata: null,
-      latestStatus: null,
-      score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
-    };
-    repsStub.get.returns(reputation);
-    repsStub.getFromPeerId.returns(reputation);
     reqRespStub.sendResponse.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
     try {
@@ -126,12 +113,6 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    repsStub.get.returns({
-      latestMetadata: null,
-      latestStatus: null,
-      score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
-    });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));
       await syncRpc.onRequest(peerId, Method.Status, "status", body);

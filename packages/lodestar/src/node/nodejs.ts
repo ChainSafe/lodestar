@@ -93,7 +93,7 @@ export class BeaconNode {
       config,
       logger: this.logger.child(this.conf.logger.network),
     });
-    this.network = new Libp2pNetwork(this.conf.network, this.reps, {
+    this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p,
       logger: this.logger.child(this.conf.logger.network),
@@ -106,7 +106,6 @@ export class BeaconNode {
       db: this.db,
       chain: this.chain,
       network: this.network,
-      reputationStore: this.reps,
       logger: this.logger.child(this.conf.logger.sync),
     });
     this.api = new ApiService(this.conf.api, {
