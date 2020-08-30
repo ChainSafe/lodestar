@@ -14,7 +14,6 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {GENESIS_EPOCH, Method, ZERO_HASH, ReqRespEncoding} from "../../../src/constants";
 import {BeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {ReqResp} from "../../../src/network/reqResp";
 import {ReputationStore, IReputation} from "../../../src/sync/IReputation";
@@ -25,6 +24,7 @@ import {StubbedBeaconDb} from "../../utils/stub";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePeer} from "../../utils/peer";
+import {silentLogger} from "../../utils/logger";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -33,7 +33,6 @@ describe("sync req resp", function () {
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     repsStub: SinonStubbedInstance<ReputationStore>,
     forkChoiceStub: SinonStubbedInstance<ILMDGHOST>,
-    logger: WinstonLogger,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
@@ -52,8 +51,6 @@ describe("sync req resp", function () {
     networkStub.reqResp = (reqRespStub as unknown) as ReqResp & SinonStubbedInstance<ReqResp>;
     dbStub = new StubbedBeaconDb(sandbox);
     repsStub = sandbox.createStubInstance(ReputationStore);
-    logger = new WinstonLogger();
-    logger.silent = true;
 
     syncRpc = new BeaconReqRespHandler({
       config,
@@ -61,13 +58,12 @@ describe("sync req resp", function () {
       chain: chainStub,
       network: networkStub,
       reputationStore: repsStub,
-      logger,
+      logger: silentLogger,
     });
   });
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent = false;
   });
 
   it("should start and stop sync rpc", async function () {
@@ -78,7 +74,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
+      encoding: ReqRespEncoding.SSZ_SNAPPY,
     });
 
     try {
@@ -102,7 +98,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
+      encoding: ReqRespEncoding.SSZ_SNAPPY,
     };
     repsStub.get.returns(reputation);
     repsStub.getFromPeerId.returns(reputation);
@@ -130,7 +126,7 @@ describe("sync req resp", function () {
       latestMetadata: null,
       latestStatus: null,
       score: 0,
-      encoding: ReqRespEncoding.SSZ_SNAPPY
+      encoding: ReqRespEncoding.SSZ_SNAPPY,
     });
     try {
       reqRespStub.sendResponse.throws(new Error("server error"));

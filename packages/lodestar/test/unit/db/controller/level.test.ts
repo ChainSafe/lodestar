@@ -5,22 +5,19 @@ import level from "level";
 import leveldown from "leveldown";
 import {LevelDbController} from "../../../../src/db/controller";
 import {promisify} from "es6-promisify";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {silentLogger} from "../../../utils/logger";
 
 describe("LevelDB controller", () => {
-  const logger: ILogger = new WinstonLogger();
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {logger});
+  const db = new LevelDbController({name: dbLocation}, {logger: silentLogger});
 
   before(async () => {
-    logger.silent = true;
     await db.start();
   });
 
   after(async () => {
     await db.stop();
     await promisify<void, string>(leveldown.destroy)(dbLocation);
-    logger.silent = false;
   });
 
   it("test put/get/delete", async () => {

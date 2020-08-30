@@ -1,23 +1,22 @@
 import {expect} from "chai";
 import rimraf from "rimraf";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {intToBytes, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {LevelDbController} from "../../../../../src/db/controller";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {Bucket, encodeKey} from "../../../../../src/db/api/schema";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("block archive repository", function () {
-  const logger = new WinstonLogger();
-  logger.silent = true;
   const testDir = "./.tmp";
   let blockArchive: BlockArchiveRepository;
   let controller: LevelDbController;
 
   beforeEach(async function () {
-    controller = new LevelDbController({name: testDir}, {logger});
+    controller = new LevelDbController({name: testDir}, {logger: silentLogger});
     blockArchive = new BlockArchiveRepository(config, controller);
     await controller.start();
   });

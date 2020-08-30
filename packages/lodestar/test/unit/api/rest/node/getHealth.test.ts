@@ -1,5 +1,4 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import sinon from "sinon";
 import supertest from "supertest";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
@@ -8,6 +7,7 @@ import {ApiNamespace} from "../../../../../src/api";
 import {RestApi} from "../../../../../src/api/rest";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {getHealth} from "../../../../../src/api/rest/controllers/node";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("rest - node - getHealth", function () {
   let api: RestApi;
@@ -25,7 +25,7 @@ describe("rest - node - getHealth", function () {
       },
       {
         config,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         validator: sinon.createStubInstance(ValidatorApi),
         beacon: sinon.createStubInstance(BeaconApi),
         node: nodeApiStub,

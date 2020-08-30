@@ -2,7 +2,6 @@ import sinon, {SinonSpy} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import EventSource from "eventsource";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
@@ -16,6 +15,7 @@ import {
   generateEmptyAttestation,
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
+import {silentLogger} from "../../utils/logger";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
@@ -23,7 +23,7 @@ describe("validator attestation service", function () {
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub: any, dbStub: any, eventSourceSpy: SinonSpy;
-  const logger: ILogger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);

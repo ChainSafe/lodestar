@@ -1,7 +1,6 @@
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import supertest from "supertest";
 import {expect} from "chai";
@@ -13,6 +12,7 @@ import {generateEmptySignedBlock} from "../../../../utils/block";
 import EventSource from "eventsource";
 import {LodestarEventIterator} from "../../../../../src/util/events";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("Test beacon rest api", function () {
   this.timeout(10000);
@@ -31,7 +31,7 @@ describe("Test beacon rest api", function () {
         port: 0,
       },
       {
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         beacon: beaconApi,
         validator: validatorApi,
         node: new StubbedNodeApi(),

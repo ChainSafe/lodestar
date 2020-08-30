@@ -1,7 +1,6 @@
 import {SinonStub, SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {AttestationProcessor} from "../../../../src/chain/attestation";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
@@ -14,13 +13,14 @@ import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
 import {Slot, Attestation} from "@chainsafe/lodestar-types";
+import {silentLogger} from "../../../utils/logger";
 
 describe("attestation pool", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
   let forkChoice: SinonStubbedInstance<ILMDGHOST>;
   let processAttestationStub: SinonStub;
-  const logger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
