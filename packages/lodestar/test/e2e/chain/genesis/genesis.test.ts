@@ -12,6 +12,7 @@ import sinon from "sinon";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../../../src/util/sleep";
+import {goerliRpcUrl} from "../../../testParams";
 
 describe("BeaconChain", function () {
   this.timeout(10 * 60 * 1000);
@@ -22,7 +23,7 @@ describe("BeaconChain", function () {
   const opts: IEth1Options = {
     ...defaults,
     provider: {
-      url: "https://goerli.prylabs.net",
+      url: goerliRpcUrl,
     },
     depositContract: {
       ...defaults.depositContract,
