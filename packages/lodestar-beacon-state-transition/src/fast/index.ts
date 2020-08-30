@@ -10,7 +10,7 @@ export {IStateContext, EpochContext};
 export function fastStateTransition(
   {state, epochCtx}: IStateContext,
   signedBlock: SignedBeaconBlock,
-  options?: {verifyStateRoot: boolean; verifyProposer: boolean; verifySignatures: boolean}
+  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
   const {verifyStateRoot = false, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;

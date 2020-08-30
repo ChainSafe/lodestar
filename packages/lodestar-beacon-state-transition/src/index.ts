@@ -31,7 +31,7 @@ export function stateTransition(
   config: IBeaconConfig,
   state: BeaconState,
   signedBlock: SignedBeaconBlock,
-  options?: {verifyStateRoot: boolean; verifyProposer: boolean; verifySignatures: boolean}
+  options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): BeaconState {
   const {verifyStateRoot = false, verifyProposer = true, verifySignatures = true} = options || {};
 
