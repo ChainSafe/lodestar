@@ -1,11 +1,5 @@
-export interface IChainOptions {
-  name: string;
-  dumpState: boolean;
-}
+export type IChainOptions = {};
 
-const config: IChainOptions = {
-  name: "mainnet",
-  dumpState: false,
-};
+const config: IChainOptions = {};
 
 export default config;
