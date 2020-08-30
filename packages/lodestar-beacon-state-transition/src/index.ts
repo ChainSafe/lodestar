@@ -23,18 +23,18 @@ export * from "./fast";
  * @param config Beacon Chain configuration
  * @param state Current state
  * @param block Block being processed
- * @param validateStateRoot Compare state root at the end of state execution
- * @param verifyProposer Skip block proposer signature verification
- * @param verifySignatures Skip operations signature verification
+ * @param options.verifyStateRoot Compare state root at the end of state execution
+ * @param options.verifyProposer Skip block proposer signature verification
+ * @param options.verifySignatures Skip operations signature verification
  */
 export function stateTransition(
   config: IBeaconConfig,
   state: BeaconState,
   signedBlock: SignedBeaconBlock,
-  validateStateRoot = false,
-  verifyProposer = true,
-  verifySignatures = true
+  options?: {verifyStateRoot: boolean; verifyProposer: boolean; verifySignatures: boolean}
 ): BeaconState {
+  const {verifyStateRoot = false, verifyProposer = true, verifySignatures = true} = options || {};
+
   // Clone state because process slots and block are not pure
   const postState = config.types.BeaconState.clone(state);
   // Process slots (including those with no blocks) since block
@@ -46,7 +46,7 @@ export function stateTransition(
   // Process block
   processBlock(config, postState, signedBlock.message, verifySignatures);
   // Validate state root (`validate_state_root == True` in production)
-  if (validateStateRoot) {
+  if (verifyStateRoot) {
     assert.true(
       config.types.Root.equals(signedBlock.message.stateRoot, config.types.BeaconState.hashTreeRoot(postState)),
       "State root is not valid"
