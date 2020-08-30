@@ -122,7 +122,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     return this.db.block.get(this.forkChoice.headBlockRoot());
   }
 
-  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
+  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
     const finalizedCheckpoint = this.forkChoice.getFinalized()!;
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);
@@ -241,7 +241,7 @@ export class BeaconChain extends (EventEmitter as {new (): ChainEventEmitter}) i
     await this.db.stateCache.add({state: genesisState, epochCtx});
     // Determine whether a genesis state already in
     // the database matches what we were provided
-    const storedGenesisBlock = await this.getBlockAtSlot(GENESIS_SLOT);
+    const storedGenesisBlock = await this.getCanonicalBlockAtSlot(GENESIS_SLOT);
     if (
       storedGenesisBlock !== null &&
       !this.config.types.Root.equals(genesisBlock.stateRoot, storedGenesisBlock.message.stateRoot)

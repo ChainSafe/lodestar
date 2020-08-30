@@ -62,7 +62,7 @@ describe("[sync] rpc", function () {
       state,
       config,
     });
-    chain.getBlockAtSlot = sinon.stub().resolves(block);
+    chain.getCanonicalBlockAtSlot = sinon.stub().resolves(block);
     const forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(

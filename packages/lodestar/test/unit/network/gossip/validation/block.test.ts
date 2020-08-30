@@ -59,7 +59,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.notCalled).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.notCalled).to.be.true;
   });
 
   it("already proposed", async function () {
@@ -70,13 +70,13 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getBlockAtSlot.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
+    chainStub.getCanonicalBlockAtSlot.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
     const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
     expect(getBlockContextStub.notCalled).to.be.true;
   });
 
@@ -88,14 +88,14 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getBlockAtSlot.resolves(null);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
     getBlockContextStub.resolves(null);
     const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
     expect(getBlockContextStub.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
@@ -108,7 +108,7 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getBlockAtSlot.resolves(null);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
     getBlockContextStub.resolves({
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -119,7 +119,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
     expect(getBlockContextStub.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
@@ -133,7 +133,7 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getBlockAtSlot.resolves(null);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     getBlockContextStub.resolves({
       state: generateState(),
@@ -146,7 +146,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
     expect(getBlockContextStub.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
@@ -161,7 +161,7 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getBlockAtSlot.resolves(null);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     getBlockContextStub.resolves({
       state: generateState(),
@@ -174,7 +174,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
     expect(getBlockContextStub.calledOnce).to.be.true;
     expect(verifySignatureStub.calledOnce).to.be.true;
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
