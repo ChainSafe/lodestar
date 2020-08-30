@@ -70,6 +70,12 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
+  /**
+   * Since we can have multiple parallel chains,
+   * this methods returns blocks in current chain head according to
+   * forkchoice. Works for finalized slots as well
+   * @param slot
+   */
   getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
