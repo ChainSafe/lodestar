@@ -65,11 +65,9 @@ export class AttestationCollector implements IService {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
       this.timers.push(
-        (setTimeout(
-          this.unsubscribeSubnet,
-          this.config.params.SECONDS_PER_SLOT * 1000,
-          subnet
-        ) as unknown) as NodeJS.Timeout
+        setTimeout(() => {
+          this.unsubscribeSubnet(subnet);
+        }, this.config.params.SECONDS_PER_SLOT * 1000)
       );
     });
     this.aggregationDuties.delete(slot);
