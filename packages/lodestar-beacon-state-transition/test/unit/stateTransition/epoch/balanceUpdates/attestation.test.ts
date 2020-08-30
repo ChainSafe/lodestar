@@ -46,9 +46,9 @@ describe("process epoch - balance updates", function () {
     const state = generateState();
     state.validators = generateValidators(2);
     getPreviousEpochStub.returns(5);
-    getTotalActiveBalanceStub.returns(32n);
+    getTotalActiveBalanceStub.returns(BigInt(32));
     isActiveValidatorStub.returns(true);
-    getAttestingBalanceStub.returns(10n);
+    getAttestingBalanceStub.returns(BigInt(10));
     const emptyPendingAttestation = [
       {
         ...generateEmptyAttestation(),
@@ -60,7 +60,7 @@ describe("process epoch - balance updates", function () {
     getMatchingSourceAttestationsStub.returns(emptyPendingAttestation);
     getMatchingTargetAttestationsStub.returns(emptyPendingAttestation);
     getMatchingHeadAttestationsStub.returns(emptyPendingAttestation);
-    getBaseRewardStub.returns(10n);
+    getBaseRewardStub.returns(BigInt(10));
     getAttestingIndicesStub.returns([0, 1]);
 
     try {
@@ -68,7 +68,7 @@ describe("process epoch - balance updates", function () {
       const rewards = result[0];
       const penalties = result[1];
       rewards.forEach((value) => {
-        expect(value > 0n).to.be.true;
+        expect(value > BigInt(0)).to.be.true;
       });
     } catch (e) {
       expect.fail(e.stack);
@@ -79,9 +79,9 @@ describe("process epoch - balance updates", function () {
     const state = generateState();
     state.validators = generateValidators(4);
     getPreviousEpochStub.returns(5);
-    getTotalActiveBalanceStub.returns(100n);
+    getTotalActiveBalanceStub.returns(BigInt(100));
     isActiveValidatorStub.returns(true);
-    getAttestingBalanceStub.returns(2n);
+    getAttestingBalanceStub.returns(BigInt(2));
     const emptyPendingAttestation = [
       {
         ...generateEmptyAttestation(),
@@ -93,14 +93,14 @@ describe("process epoch - balance updates", function () {
     getMatchingSourceAttestationsStub.returns(emptyPendingAttestation);
     getMatchingTargetAttestationsStub.returns(emptyPendingAttestation);
     getMatchingHeadAttestationsStub.returns(emptyPendingAttestation);
-    getBaseRewardStub.returns(2n);
+    getBaseRewardStub.returns(BigInt(2));
     getAttestingIndicesStub.returns([2, 3]);
     try {
       const result = getAttestationDeltas(config, state);
       const rewards = result[0];
       const penalties = result[1];
       penalties.forEach((value) => {
-        expect(value > 0n).to.be.true;
+        expect(value > BigInt(0)).to.be.true;
       });
     } catch (e) {
       expect.fail(e.stack);

@@ -40,8 +40,8 @@ function getAttestationComponentDeltas(
 ): [bigint[], bigint[]] {
   const unslashedAttestingIndices = getUnslashedAttestingIndices(config, state, attestations);
   const attestingBalance = getTotalBalance(config, state, unslashedAttestingIndices);
-  const rewards = Array.from({length: state.validators.length}, () => 0n);
-  const penalties = Array.from({length: state.validators.length}, () => 0n);
+  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
+  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const totalBalance = getTotalActiveBalance(config, state);
 
   getEligibleValidatorIndices(config, state).forEach((index) => {
@@ -81,7 +81,7 @@ function getHeadDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bi
 
 function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
   const previousEpoch = getPreviousEpoch(config, state);
-  const rewards = Array.from({length: state.validators.length}, () => 0n);
+  const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
   getUnslashedAttestingIndices(config, state, matchingSourceAttestations).forEach((index) => {
     const earliestAttestation = matchingSourceAttestations
@@ -98,7 +98,7 @@ function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): big
 }
 
 function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
-  const penalties = Array.from({length: state.validators.length}, () => 0n);
+  const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
   if (isInInactivityLeak(config, state)) {

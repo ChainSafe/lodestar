@@ -15,8 +15,8 @@ import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 export function processSlashings(config: IBeaconConfig, state: BeaconState): void {
   const currentEpoch = getCurrentEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
-  const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, 0n);
-  const slashingMultiplier = bigIntMin(totalSlashings * 3n, totalBalance);
+  const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, BigInt(0));
+  const slashingMultiplier = bigIntMin(totalSlashings * BigInt(3), totalBalance);
 
   state.validators.forEach((validator, index) => {
     if (

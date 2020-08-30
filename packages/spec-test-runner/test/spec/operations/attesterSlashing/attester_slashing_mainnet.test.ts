@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     processAttesterSlashing(config, state, testcase.attester_slashing, verify);
     return state;
   },

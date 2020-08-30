@@ -40,7 +40,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - no duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
     };
@@ -56,7 +56,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - with duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
     };
@@ -79,13 +79,13 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - without duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     await service.onNewSlot(0);
   });
 
   it("on  new slot - with duty - not aggregator", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };
@@ -116,7 +116,7 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - with duty - conflicting attestation", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };
@@ -154,7 +154,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };

@@ -199,10 +199,10 @@ describe("process epoch - crosslinks", function () {
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2] as List<Validator>});
-    getTotalBalanceStub.returns(1n);
+    getTotalBalanceStub.returns(BigInt(1));
     try {
       const result = getAttestingBalance(config, state, pendingAttestations);
-      expect(result.toString()).to.be.deep.equal(1n.toString());
+      expect(result.toString()).to.be.deep.equal(BigInt(1).toString());
       expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
