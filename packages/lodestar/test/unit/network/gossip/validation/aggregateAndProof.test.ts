@@ -14,7 +14,7 @@ import * as validationUtils from "../../../../../src/network/gossip/validation/u
 import {LocalClock} from "../../../../../src/chain/clock";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {generateState} from "../../../../utils/state";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PrivateKey, PublicKey} from "@chainsafe/bls";
 import {silentLogger} from "../../../../utils/logger";
 
@@ -52,9 +52,15 @@ describe("gossip aggregate and proof test", function () {
 
   it("should ignore - invalid slot (too old)", async function () {
     //move genesis time in past so current slot is high
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT);
+    sinon
+      .stub(chain.clock, "currentSlot")
+      .get(() =>
+        getCurrentSlot(
+          config,
+          Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
+        )
+      );
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {
@@ -69,6 +75,14 @@ describe("gossip aggregate and proof test", function () {
   it("should ignore - invalid slot (too eager)", async function () {
     //move genesis time so slot 0 has not yet come
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
+    sinon
+      .stub(chain.clock, "currentSlot")
+      .get(() =>
+        getCurrentSlot(
+          config,
+          Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1
+        )
+      );
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {
