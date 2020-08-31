@@ -41,7 +41,7 @@
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
-    "@chainsafe/bls": "2.0.0",
+    "@chainsafe/bls": "4.0.0",
     "@chainsafe/discv5": "0.3.1",
     "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
     "@chainsafe/lodestar-config": "^0.11.0",
