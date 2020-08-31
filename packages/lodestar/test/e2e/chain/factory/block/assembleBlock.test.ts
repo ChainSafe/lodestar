@@ -16,7 +16,6 @@ import {
   fastStateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {generateValidator} from "../../../../utils/validator";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../../src/chain/forkChoice";
@@ -25,6 +24,7 @@ import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/bl
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("produce block", function () {
   this.timeout("10 min");
@@ -86,7 +86,7 @@ describe("produce block", function () {
       [keypair],
       rpcClientStub,
       (validatorDbStub as unknown) as IValidatorDB,
-      sinon.createStubInstance(WinstonLogger)
+      silentLogger
     );
   }
 });

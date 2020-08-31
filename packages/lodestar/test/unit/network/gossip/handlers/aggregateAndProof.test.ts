@@ -4,9 +4,9 @@ import {handleIncomingAggregateAndProof} from "../../../../../src/network/gossip
 import {AggregateAndProof, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - aggregate and proof", function () {
   const sandbox = sinon.createSandbox();
@@ -15,7 +15,7 @@ describe("gossip handlers - aggregate and proof", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = sandbox.createStubInstance(WinstonLogger);
+    gossipStub.logger = silentLogger;
     gossipStub.config = config;
   });
 

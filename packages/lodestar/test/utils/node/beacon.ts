@@ -4,13 +4,14 @@ import {createEnr} from "@chainsafe/lodestar-cli/src/network";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src/node";
 import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
 import {initDevChain} from "../../../src/node/utils/state";
 import {IBeaconNodeOptions} from "../../../lib/node/options";
+import {silentLogger} from "../logger";
 
 type RecursivePartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
@@ -50,7 +51,7 @@ export async function getDevBeaconNode({
     ),
     {
       config,
-      logger: logger || new WinstonLogger({level: LogLevel.error}),
+      logger: logger || silentLogger,
       eth1: new InteropEth1Notifier(),
       libp2p: await createNodeJsLibp2p(
         peerId,

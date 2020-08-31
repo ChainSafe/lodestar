@@ -22,15 +22,16 @@ import {BeaconChain, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../.
 import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import PeerId from "peer-id";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
 import {Method} from "../../../../src/constants";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
+import {silentLogger} from "../../../utils/logger";
 
 describe("sync utils", function () {
+  const logger = silentLogger;
   let timer: SinonFakeTimers;
 
   beforeEach(function () {
@@ -167,7 +168,7 @@ describe("sync utils", function () {
       let result = pipe(
         [{start: 0, end: 10}],
         fetchBlockChunks(
-          sinon.createStubInstance(WinstonLogger),
+          logger,
           sinon.createStubInstance(BeaconChain),
           sinon.createStubInstance(ReqResp),
           getPeersStub
@@ -186,7 +187,7 @@ describe("sync utils", function () {
       const result = await pipe(
         [{start: 0, end: 10}],
         fetchBlockChunks(
-          sinon.createStubInstance(WinstonLogger),
+          logger,
           sinon.createStubInstance(BeaconChain),
           sinon.createStubInstance(ReqResp),
           getPeersStub
@@ -218,7 +219,7 @@ describe("sync utils", function () {
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       const lastProcesssedSlot = await pipe(
         [[block2], [block1]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
       expect(lastProcesssedSlot).to.be.equal(3);
@@ -230,7 +231,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(lastProcessSlot).to.be.equal(10);
     });
@@ -240,7 +241,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+        processSyncBlocks(config, chainStub, logger, false, null)
       );
       expect(lastProcessSlot).to.be.equal(100);
     });
@@ -251,7 +252,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(lastProcessSlot).to.be.null;
     });
@@ -260,7 +261,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+        processSyncBlocks(config, chainStub, logger, false, null)
       );
       expect(lastProcessSlot).to.be.null;
     });

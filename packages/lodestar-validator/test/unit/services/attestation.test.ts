@@ -2,7 +2,6 @@ import sinon, {SinonSpy} from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import EventSource from "eventsource";
 import {ApiClientOverInstance} from "../../../src/api";
 import {AttestationService} from "../../../src/services/attestation";
@@ -16,6 +15,7 @@ import {
   generateEmptyAttestation,
 } from "@chainsafe/lodestar/test/utils/attestation";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
+import {silentLogger} from "../../utils/logger";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
@@ -23,7 +23,7 @@ describe("validator attestation service", function () {
   const sandbox = sinon.createSandbox();
 
   let rpcClientStub: any, dbStub: any, eventSourceSpy: SinonSpy;
-  const logger: ILogger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
 
   beforeEach(() => {
     rpcClientStub = sandbox.createStubInstance(ApiClientOverInstance);
@@ -40,7 +40,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - no duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
     };
@@ -56,7 +56,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - with duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.validator = {
       getAttesterDuties: sinon.stub(),
     };
@@ -79,13 +79,13 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - without duty", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
     await service.onNewSlot(0);
   });
 
   it("on  new slot - with duty - not aggregator", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };
@@ -116,7 +116,7 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - with duty - conflicting attestation", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };
@@ -154,7 +154,7 @@ describe("validator attestation service", function () {
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
-    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(98n, 32)));
+    const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     rpcClientStub.beacon = {
       getFork: sinon.stub(),
     };

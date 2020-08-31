@@ -3,7 +3,6 @@ import {validateGossipBlock} from "../../../../../src/network/gossip/validation"
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../../src/chain";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateSignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
@@ -11,6 +10,7 @@ import {expect} from "chai";
 import * as blockValidationUtils from "../../../../../src/network/gossip/utils";
 import {generateState} from "../../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -18,7 +18,7 @@ describe("gossip block validation", function () {
   let dbStub: StubbedBeaconDb;
   let getBlockContextStub: SinonStub;
   let verifySignatureStub: SinonStub;
-  const loggerStub = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
@@ -40,7 +40,7 @@ describe("gossip block validation", function () {
       epoch: 1,
       root: Buffer.alloc(32),
     });
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
@@ -54,7 +54,7 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(true);
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
@@ -70,8 +70,10 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    chainStub.getCanonicalBlockAtSlot.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    chainStub.getCanonicalBlockAtSlot.resolves(
+      generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}})
+    );
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
@@ -90,7 +92,7 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     getBlockContextStub.resolves(null);
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
@@ -114,7 +116,7 @@ describe("gossip block validation", function () {
       epochCtx: new EpochContext(config),
     });
     verifySignatureStub.returns(false);
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
@@ -141,7 +143,7 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex + 1);
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
@@ -169,7 +171,7 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
-    const result = await validateGossipBlock(config, chainStub, dbStub, loggerStub, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;

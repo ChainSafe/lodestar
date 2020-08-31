@@ -2,7 +2,6 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {FastSync} from "../../../../src/sync/initial/fast";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ArrayDagLMDGHOST, BeaconChain, ChainEventEmitter, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
 import * as syncUtils from "../../../../src/sync/utils";
@@ -11,10 +10,12 @@ import {expect} from "chai";
 import {SyncStats} from "../../../../src/sync/stats";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateEmptySignedBlock} from "../../../utils/block";
+import {silentLogger} from "../../../utils/logger";
 
 describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
 
+  const logger = silentLogger;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
   let networkStub: SinonStubbedInstance<INetwork>;
@@ -44,7 +45,7 @@ describe("fast sync", function () {
       {
         config,
         chain: chainStub,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger,
         network: networkStub,
         stats: sinon.createStubInstance(SyncStats),
         reputationStore: repsStub,
@@ -69,8 +70,9 @@ describe("fast sync", function () {
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
+        //@ts-ignore
         chain: chainStub,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger,
         network: networkStub,
         stats: statsStub,
         reputationStore: repsStub,
@@ -105,8 +107,9 @@ describe("fast sync", function () {
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
         config,
+        //@ts-ignore
         chain: chainStub,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger,
         network: networkStub,
         stats: statsStub,
         reputationStore: repsStub,

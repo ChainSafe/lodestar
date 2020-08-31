@@ -4,7 +4,6 @@ import {Attestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {expect} from "chai";
 import {BeaconChain, ChainEventEmitter, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
@@ -14,8 +13,10 @@ import {Gauge} from "prom-client";
 import {AttestationProcessor} from "../../../../src/chain/attestation";
 import {generateEmptyAttestation} from "../../../utils/attestation";
 import {StubbedBeaconDb} from "../../../utils/stub";
+import {silentLogger} from "../../../utils/logger";
 
 describe("post block process stream", function () {
+  const logger = silentLogger;
   let epochCtxStub: SinonStubbedInstance<EpochContext>;
   let forkChoiceStub: SinonStubbedInstance<ArrayDagLMDGHOST>;
   let dbStub: StubbedBeaconDb;
@@ -63,15 +64,7 @@ describe("post block process stream", function () {
     };
     await pipe(
       [item],
-      postProcess(
-        config,
-        sinon.createStubInstance(WinstonLogger),
-        dbStub,
-        forkChoiceStub,
-        metricsStub,
-        eventBusStub,
-        attestationProcessorStub
-      )
+      postProcess(config, logger, dbStub, forkChoiceStub, metricsStub, eventBusStub, attestationProcessorStub)
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
   });
@@ -91,15 +84,7 @@ describe("post block process stream", function () {
     };
     await pipe(
       [item],
-      postProcess(
-        config,
-        sinon.createStubInstance(WinstonLogger),
-        dbStub,
-        forkChoiceStub,
-        metricsStub,
-        eventBusStub,
-        attestationProcessorStub
-      )
+      postProcess(config, logger, dbStub, forkChoiceStub, metricsStub, eventBusStub, attestationProcessorStub)
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
@@ -129,15 +114,7 @@ describe("post block process stream", function () {
     dbStub.block.get.resolves(block);
     await pipe(
       [item],
-      postProcess(
-        config,
-        sinon.createStubInstance(WinstonLogger),
-        dbStub,
-        forkChoiceStub,
-        metricsStub,
-        eventBusStub,
-        attestationProcessorStub
-      )
+      postProcess(config, logger, dbStub, forkChoiceStub, metricsStub, eventBusStub, attestationProcessorStub)
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore

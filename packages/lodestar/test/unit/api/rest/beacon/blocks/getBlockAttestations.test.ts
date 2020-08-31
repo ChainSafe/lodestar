@@ -2,7 +2,6 @@ import {RestApi} from "../../../../../../src/api/rest";
 import {List} from "@chainsafe/ssz";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ValidatorApi} from "../../../../../../src/api/impl/validator";
 import sinon from "sinon";
 import {ApiNamespace} from "../../../../../../src/api";
@@ -13,6 +12,7 @@ import {getBlockAttestations} from "../../../../../../src/api/rest/controllers/b
 import {generateSignedBlock} from "../../../../../utils/block";
 import {generateEmptyAttestation} from "../../../../../utils/attestation";
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
+import {silentLogger} from "../../../../../utils/logger";
 
 describe("rest - beacon - getBlockAttestations", function () {
   let api: RestApi;
@@ -30,7 +30,7 @@ describe("rest - beacon - getBlockAttestations", function () {
       },
       {
         config,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         validator: sinon.createStubInstance(ValidatorApi),
         node: new StubbedNodeApi(),
         beacon: beaconApiStub,
