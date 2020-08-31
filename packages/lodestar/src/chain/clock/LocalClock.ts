@@ -56,18 +56,23 @@ export class LocalClock implements IBeaconClock {
 
   private onNextSlot = (): void => {
     const previousSlot = this.currentSlot;
-    this._currentSlot++;
-    this.emitter.emit("clock:slot", this.currentSlot);
-    const currentEpoch = this.currentEpoch;
-    if (computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
-      this.emitter.emit("clock:epoch", currentEpoch);
+    const clockSlot = getCurrentSlot(this.config, this.genesisTime);
+    // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
+    while (this._currentSlot < clockSlot) {
+      this._currentSlot++;
+      this.emitter.emit("clock:slot", this.currentSlot);
+      const currentEpoch = this.currentEpoch;
+      if (computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
+        this.emitter.emit("clock:epoch", currentEpoch);
+      }
     }
     //recursively invoke onNextSlot
     this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
   };
 
   private msUntilNextSlot(): number {
-    const diffInSeconds = Date.now() / 1000 - this.genesisTime;
-    return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
+    const {SECONDS_PER_SLOT} = this.config.params;
+    const diffInSeconds = Math.floor(Date.now() / 1000 - this.genesisTime);
+    return (SECONDS_PER_SLOT - (diffInSeconds % SECONDS_PER_SLOT)) * 1000;
   }
 }
