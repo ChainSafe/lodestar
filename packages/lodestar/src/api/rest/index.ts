@@ -34,8 +34,8 @@ export class RestApi implements IService {
       const address = await this.server.listen(this.opts.port, this.opts.host);
       this.logger.info(`Started rest api server on ${address}`);
     } catch (e) {
-      this.logger.error(`Failed to start rest api server on ${this.opts.host}:${this.opts.port}`);
-      this.logger.error(e.message);
+      this.logger.error(`Failed to start rest api server on ${this.opts.host}:${this.opts.port}`, e);
+      throw e;
     }
   }
 

@@ -1,11 +1,11 @@
 import {RestApi} from "../../../../../src/api/rest";
 import {ApiNamespace} from "../../../../../src/api";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconApi} from "../../../../../src/api/impl/beacon";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {silentLogger} from "../../../../utils/logger";
 import supertest from "supertest";
 import {expect} from "chai";
 import {getGenesis} from "../../../../../lib/api/rest/controllers/beacon";
@@ -27,7 +27,7 @@ describe("rest - beacon - getGenesis", function () {
         port: 0,
       },
       {
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         beacon: beaconApiStub,
         validator: validatorApiStub,
         node: new StubbedNodeApi(),

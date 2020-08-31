@@ -11,7 +11,7 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqResp";
 import {INetworkOptions} from "./options";
-import {INetwork, NetworkEventEmitter} from "./interface";
+import {INetwork, NetworkEventEmitter, PeerSearchOptions} from "./interface";
 import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
@@ -30,7 +30,7 @@ interface ILibp2pModules {
 
 export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter}) implements INetwork {
   public peerId: PeerId;
-  public multiaddrs!: Multiaddr[];
+  public localMultiaddrs!: Multiaddr[];
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
@@ -64,7 +64,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
     this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
     await this.libp2p.start();
-    this.multiaddrs = this.libp2p.multiaddrs;
+    this.localMultiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
     const enr = this.getEnr();
     await this.metadata.start(enr!);
@@ -83,27 +83,51 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
   public getEnr(): ENR | undefined {
     const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
-    return discv5Discovery?.discv5?.enr || undefined;
+    return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
-  public getPeers(): PeerId[] {
-    const peers = Array.from(this.libp2p.peerStore.peers.values())
-      .map((peerInfo) => peerInfo.id)
-      .filter((peerId) => !!this.getPeerConnection(peerId));
+  public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
+    const peers = Array.from(this.libp2p.peerStore.peers.values()).filter((peer) => {
+      if (opts?.connected && !this.getPeerConnection(peer.id)) {
+        return false;
+      }
+      this.logger.debug("Peer supported protocols", {
+        id: peer.id.toB58String(),
+        protocols: peer.protocols,
+      });
+      if (opts?.supportsProtocols) {
+        for (const protocol of opts.supportsProtocols) {
+          if (!peer.protocols.includes(protocol)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    });
     return peers || [];
   }
 
-  public hasPeer(peerId: PeerId): boolean {
-    return !!this.getPeerConnection(peerId);
+  public hasPeer(peerId: PeerId, connected = false): boolean {
+    const peer = this.libp2p.peerStore.get(peerId);
+    if (!peer) {
+      return false;
+    }
+    if (connected) {
+      const conn = this.getPeerConnection(peerId);
+      if (!conn || conn.stat.status !== "open") {
+        return false;
+      }
+    }
+    return true;
   }
 
   public getPeerConnection(peerId: PeerId): LibP2pConnection | null {
     return this.libp2p.connectionManager.get(peerId);
   }
 
-  public async connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void> {
-    if (multiaddrs) {
-      this.libp2p.peerStore.addressBook.add(peerId, multiaddrs);
+  public async connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void> {
+    if (localMultiaddrs) {
+      this.libp2p.peerStore.addressBook.add(peerId, localMultiaddrs);
     }
     await this.libp2p.dial(peerId);
   }

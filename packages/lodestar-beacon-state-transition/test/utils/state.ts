@@ -48,7 +48,7 @@ export function generateState(opts?: TestBeaconState): BeaconState {
     validators: ([] as Validator[]) as List<Validator>,
     balances: ([] as bigint[]) as List<bigint>,
     randaoMixes: Array.from({length: config.params.EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
-    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => 0n),
+    slashings: Array.from({length: config.params.EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
     previousEpochAttestations: ([] as PendingAttestation[]) as List<PendingAttestation>,
     currentEpochAttestations: ([] as PendingAttestation[]) as List<PendingAttestation>,
     justificationBits: [false, false, false, false],

@@ -5,7 +5,7 @@ import {ApiClientOverInstance} from "../../../src/api";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
 import {MockValidatorApi} from "../../utils/mocks/validator";
-import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {silentLogger} from "../../utils/logger";
 
 describe("RpcClientOverInstance test", function () {
   let clock: any, sandbox: any;
@@ -34,7 +34,7 @@ describe("RpcClientOverInstance test", function () {
       }),
       node: new MockNodeApi(),
       validator: new MockValidatorApi(),
-      logger: new WinstonLogger({level: LogLevel.error}),
+      logger: silentLogger,
     });
   }
 

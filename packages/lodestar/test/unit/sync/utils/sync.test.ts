@@ -18,18 +18,20 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
 import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import PeerId from "peer-id";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {getEmptySignedBlock} from "../../../../src/chain/genesis/util";
 import {Method} from "../../../../src/constants";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {generatePeer} from "../../../utils/peer";
+import {silentLogger} from "../../../utils/logger";
 
 describe("sync utils", function () {
+  const logger = silentLogger;
   let timer: SinonFakeTimers;
 
   beforeEach(function () {
@@ -166,7 +168,7 @@ describe("sync utils", function () {
       let result = pipe(
         [{start: 0, end: 10}],
         fetchBlockChunks(
-          sinon.createStubInstance(WinstonLogger),
+          logger,
           sinon.createStubInstance(BeaconChain),
           sinon.createStubInstance(ReqResp),
           getPeersStub
@@ -185,7 +187,7 @@ describe("sync utils", function () {
       const result = await pipe(
         [{start: 0, end: 10}],
         fetchBlockChunks(
-          sinon.createStubInstance(WinstonLogger),
+          logger,
           sinon.createStubInstance(BeaconChain),
           sinon.createStubInstance(ReqResp),
           getPeersStub
@@ -203,7 +205,7 @@ describe("sync utils", function () {
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
-      forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
       chainStub.forkChoice = forkChoiceStub;
     });
 
@@ -217,7 +219,7 @@ describe("sync utils", function () {
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       const lastProcesssedSlot = await pipe(
         [[block2], [block1]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
       expect(lastProcesssedSlot).to.be.equal(3);
@@ -229,7 +231,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(lastProcessSlot).to.be.equal(10);
     });
@@ -239,7 +241,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+        processSyncBlocks(config, chainStub, logger, false, null)
       );
       expect(lastProcessSlot).to.be.equal(100);
     });
@@ -250,7 +252,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
       );
       expect(lastProcessSlot).to.be.null;
     });
@@ -259,7 +261,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
-        processSyncBlocks(config, chainStub, sinon.createStubInstance(WinstonLogger), false, null)
+        processSyncBlocks(config, chainStub, logger, false, null)
       );
       expect(lastProcessSlot).to.be.null;
     });
@@ -283,7 +285,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 1),
         headSlot: 1000,
       };
-      reps.getFromPeerId(peer1).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer2).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -291,7 +292,6 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 2000,
       };
-      reps.getFromPeerId(peer2).supportedProtocols = [Method.BeaconBlocksByRange];
       reps.getFromPeerId(peer4).latestStatus = {
         forkDigest: Buffer.alloc(0),
         finalizedRoot: Buffer.alloc(0),
@@ -299,20 +299,16 @@ describe("sync utils", function () {
         headRoot: Buffer.alloc(32, 2),
         headSlot: 4000,
       };
-      // peer4 has highest slot but does not support sync
-      reps.getFromPeerId(peer4).supportedProtocols = [];
-
       expect(getBestHead(peers, reps)).to.be.deep.equal({
-        slot: 2000,
+        slot: 4000,
         root: Buffer.alloc(32, 2),
-        supportedProtocols: [Method.BeaconBlocksByRange],
       });
       expect(getBestPeer(config, peers, reps)).to.be.equal(peer2);
     });
 
     it("should handle no peer", () => {
       const reps = new ReputationStore();
-      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH, supportedProtocols: []});
+      expect(getBestHead([], reps)).to.be.deep.equal({slot: 0, root: ZERO_HASH});
       expect(getBestPeer(config, [], reps)).to.be.undefined;
     });
   });
@@ -395,7 +391,7 @@ describe("sync utils", function () {
 
     it("peer is connected but no status", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub, reps)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
@@ -404,7 +400,7 @@ describe("sync utils", function () {
 
     it("peer head slot is not better than us", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       reps.getFromPeerId(peer1).latestStatus = {
         finalizedEpoch: 0,
@@ -421,7 +417,7 @@ describe("sync utils", function () {
 
     it("peer is good for best peer", async function () {
       const peer1 = await PeerId.create();
-      networkStub.getPeers.returns([peer1]);
+      networkStub.getPeers.returns([generatePeer(peer1)]);
       const reps = new ReputationStore();
       reps.getFromPeerId(peer1).latestStatus = {
         finalizedEpoch: 0,
@@ -436,7 +432,6 @@ describe("sync utils", function () {
       expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
     });
   });
-
 });
 
 function generateReputation(overiddes: Partial<IReputation>): IReputation {

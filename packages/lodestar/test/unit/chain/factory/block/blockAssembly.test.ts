@@ -6,7 +6,7 @@ import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body"
 import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {generateState} from "../../../../utils/state";
-import {StatefulDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
+import {ArrayDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
 import {BeaconChain} from "../../../../../src/chain";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
@@ -25,7 +25,7 @@ describe("block assembly", function () {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
-    forkChoiceStub = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sandbox.createStubInstance(ArrayDagLMDGHOST);
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     chainStub.forkChoice = forkChoiceStub;
 

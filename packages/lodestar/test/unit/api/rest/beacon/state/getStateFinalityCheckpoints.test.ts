@@ -1,6 +1,5 @@
 import {RestApi} from "../../../../../../src/api/rest";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ValidatorApi} from "../../../../../../src/api/impl/validator";
 import sinon from "sinon";
 import {ApiNamespace} from "../../../../../../src/api";
@@ -11,6 +10,7 @@ import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 import {generateState} from "../../../../../utils/state";
 import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/controllers/beacon/state";
+import {silentLogger} from "../../../../../utils/logger";
 
 describe("rest - beacon - getStateFinalityCheckpoints", function () {
   let api: RestApi;
@@ -28,7 +28,7 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
       },
       {
         config,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         validator: sinon.createStubInstance(ValidatorApi),
         node: new StubbedNodeApi(),
         beacon: beaconApiStub,

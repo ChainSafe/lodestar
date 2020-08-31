@@ -15,7 +15,10 @@ import {bigIntMax} from "@chainsafe/lodestar-utils";
 export function getTotalBalance(config: IBeaconConfig, state: BeaconState, indices: ValidatorIndex[]): Gwei {
   return bigIntMax(
     config.params.EFFECTIVE_BALANCE_INCREMENT,
-    indices.reduce((total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance, 0n)
+    indices.reduce(
+      (total: Gwei, index: ValidatorIndex): Gwei => total + state.validators[index].effectiveBalance,
+      BigInt(0)
+    )
   );
 }
 
@@ -41,5 +44,5 @@ export function increaseBalance(state: BeaconState, index: ValidatorIndex, delta
  */
 export function decreaseBalance(state: BeaconState, index: ValidatorIndex, delta: Gwei): void {
   const currentBalance = state.balances[index];
-  state.balances[index] = delta > currentBalance ? 0n : currentBalance - delta;
+  state.balances[index] = delta > currentBalance ? BigInt(0) : currentBalance - delta;
 }

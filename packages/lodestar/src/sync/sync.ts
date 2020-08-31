@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
-import {INetwork} from "../network";
+import {getSyncProtocols, INetwork} from "../network";
 import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
@@ -10,7 +10,7 @@ import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, RoundRobinArray, syncPeersStatus, createStatus} from "./utils";
+import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -41,6 +41,7 @@ export class BeaconSync implements IBeaconSync {
   private startingBlock: Slot = 0;
 
   private statusSyncTimer?: NodeJS.Timeout;
+  private peerCountTimer?: NodeJS.Timeout;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -68,13 +69,20 @@ export class BeaconSync implements IBeaconSync {
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
+    this.peerCountTimer = setInterval(this.logPeerCount, 3 * this.config.params.SECONDS_PER_SLOT * 1000);
     await this.startInitialSync();
     await this.startRegularSync();
+    if (this.peerCountTimer) {
+      clearInterval(this.peerCountTimer);
+    }
     this.mode = SyncMode.SYNCED;
     this.startingBlock = (await this.chain.getHeadBlock())!.message.slot;
   }
 
   public async stop(): Promise<void> {
+    if (this.peerCountTimer) {
+      clearInterval(this.peerCountTimer);
+    }
     if (this.mode === SyncMode.STOPPED) {
       return;
     }
@@ -157,6 +165,13 @@ export class BeaconSync implements IBeaconSync {
     }, interval);
   }
 
+  private logPeerCount = (): void => {
+    this.logger.info("Peer status", {
+      activePeers: this.network.getPeers({connected: true}).length,
+      syncPeers: this.getPeers().length,
+    });
+  };
+
   private stopSyncTimer(): void {
     if (this.statusSyncTimer) clearInterval(this.statusSyncTimer);
   }
@@ -171,9 +186,12 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private getPeers(): PeerId[] {
-    return this.network.getPeers().filter((peer) => {
-      return !!this.peerReputations.getFromPeerId(peer).latestStatus;
-    });
+    return this.network
+      .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
+      .filter((peer) => {
+        return !!this.peerReputations.getFromPeerId(peer.id).latestStatus;
+      })
+      .map((peer) => peer.id);
   }
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {

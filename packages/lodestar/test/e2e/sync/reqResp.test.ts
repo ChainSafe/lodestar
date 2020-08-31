@@ -20,7 +20,7 @@ import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
+import {ArrayDagLMDGHOST} from "../../../src/chain/forkChoice";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import pipe from "it-pipe";
 import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
@@ -28,11 +28,11 @@ import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
   maxPeers: 1,
-  bootnodes: [],
+  bootMultiaddrs: [],
   rpcTimeout: 5000,
   connectTimeout: 5000,
   disconnectTimeout: 5000,
-  multiaddrs: [],
+  localMultiaddrs: [],
 };
 
 const block = generateEmptySignedBlock();
@@ -62,8 +62,8 @@ describe("[sync] rpc", function () {
       state,
       config,
     });
-    chain.getBlockAtSlot = sinon.stub().resolves(block);
-    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    chain.getCanonicalBlockAtSlot = sinon.stub().resolves(block);
+    const forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(
       getBlockSummary({
@@ -136,7 +136,7 @@ describe("[sync] rpc", function () {
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     expect(netA.hasPeer(netB.peerId)).to.equal(true);
     expect(netB.hasPeer(netA.peerId)).to.equal(true);
@@ -164,7 +164,7 @@ describe("[sync] rpc", function () {
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     await new Promise((resolve) => {
       netA.reqResp.once("request", resolve);
@@ -178,7 +178,7 @@ describe("[sync] rpc", function () {
 
   it("beacon block by root", async function () {
     const request = [Buffer.alloc(32)] as BeaconBlocksByRootRequest;
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
     if (!response) throw Error("beaconBlocksByRoot returned null");
     expect(response.length).to.equal(1);
@@ -193,7 +193,7 @@ describe("[sync] rpc", function () {
       step: 1,
     };
 
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     const response = await netA.reqResp.beaconBlocksByRange(netB.peerId, request);
     if (!response) throw Error("beaconBlocksByRoot returned null");
     expect(response.length).to.equal(2);
@@ -205,7 +205,7 @@ describe("[sync] rpc", function () {
 
   it("should return invalid request status code", async () => {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
-    await netA.connect(netB.peerId, netB.multiaddrs);
+    await netA.connect(netB.peerId, netB.localMultiaddrs);
     const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: Stream};
     await pipe([Buffer.from(encode(99999999999999999999999))], stream, async (source: AsyncIterable<Buffer>) => {
       let i = 0;

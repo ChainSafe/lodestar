@@ -67,7 +67,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
         return [];
       }
 
-      const canonicalBlock = await this.chain.getBlockAtSlot(filters.slot);
+      const canonicalBlock = await this.chain.getCanonicalBlockAtSlot(filters.slot);
       //skip slot
       if (!canonicalBlock) {
         return [];

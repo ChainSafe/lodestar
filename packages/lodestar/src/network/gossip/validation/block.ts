@@ -98,7 +98,7 @@ export async function waitForBlockSlot(config: IBeaconConfig, genesisTime: Numbe
 }
 
 export async function hasProposerAlreadyProposed(chain: IBeaconChain, block: BeaconBlock): Promise<boolean> {
-  const existingBlock = await chain.getBlockAtSlot(block.slot);
+  const existingBlock = await chain.getCanonicalBlockAtSlot(block.slot);
   return existingBlock?.message.proposerIndex === block.proposerIndex;
 }
 

@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
@@ -14,6 +13,7 @@ import {initCmd} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
+import {onProcessSIGINT} from "../../util/process";
 
 /**
  * Run a beacon node
@@ -48,13 +48,10 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
 
   const node = new BeaconNode(options, {config, libp2p, logger});
 
-  async function cleanup(): Promise<void> {
-    await node.stop();
-    await writeEnr(beaconPaths.enrFile, enr, peerId);
-  }
+  onProcessSIGINT(async () => {
+    await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
+  }, logger.info);
 
-  process.on("SIGTERM", cleanup);
-  process.on("SIGINT", cleanup);
   if (options.genesisStateFile) {
     await node.chain.initializeBeaconChain(
       config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.genesisStateFile))

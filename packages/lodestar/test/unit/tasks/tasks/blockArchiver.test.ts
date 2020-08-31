@@ -8,15 +8,16 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
+import {silentLogger} from "../../../utils/logger";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
+  const logger = silentLogger;
 
-  let dbStub: StubbedBeaconDb, loggerStub: any;
+  let dbStub: StubbedBeaconDb;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
-    loggerStub = sandbox.createStubInstance(WinstonLogger);
   });
 
   /**
@@ -46,7 +47,7 @@ describe("block archiver task", function () {
       config,
       {
         db: dbStub,
-        logger: loggerStub,
+        logger,
       },
       {
         slot: finalizedBlock.message.slot,

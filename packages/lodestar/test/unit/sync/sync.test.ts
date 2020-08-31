@@ -4,7 +4,6 @@ import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
 import {BeaconGossipHandler, IGossipHandler} from "../../../src/sync/gossip";
 import {INetwork, Libp2pNetwork} from "../../../src/network";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IRegularSync, NaiveRegularSync} from "../../../src/sync/regular";
 import {FastSync, InitialSync} from "../../../src/sync/initial";
 import {BeaconSync, SyncMode} from "../../../src/sync";
@@ -15,6 +14,7 @@ import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../lib/sync";
+import {silentLogger} from "../../utils/logger";
 
 describe("sync", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -22,7 +22,6 @@ describe("sync", function () {
   let attestationCollectorStub: SinonStubbedInstance<AttestationCollector>;
   let gossipStub: SinonStubbedInstance<IGossipHandler>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let loggerStub: SinonStubbedInstance<ILogger>;
   let regularSyncStub: SinonStubbedInstance<IRegularSync>;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
   let clock: SinonFakeTimers;
@@ -39,7 +38,7 @@ describe("sync", function () {
       gossipHandler: gossipStub,
       reputationStore: sinon.createStubInstance(ReputationStore),
       attestationCollector: (attestationCollectorStub as unknown) as AttestationCollector,
-      logger: loggerStub,
+      logger: silentLogger,
     });
   };
 
@@ -49,7 +48,6 @@ describe("sync", function () {
     attestationCollectorStub = sinon.createStubInstance(AttestationCollector);
     gossipStub = sinon.createStubInstance(BeaconGossipHandler);
     networkStub = sinon.createStubInstance(Libp2pNetwork);
-    loggerStub = sinon.createStubInstance(WinstonLogger);
     regularSyncStub = sinon.createStubInstance(NaiveRegularSync);
     initialSyncStub = sinon.createStubInstance(FastSync);
     clock = sinon.useFakeTimers();

@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessAttestationTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/attestation/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     processAttestation(config, state, testcase.attestation, verify);
     return state;
   },
