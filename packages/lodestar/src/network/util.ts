@@ -12,6 +12,7 @@ import {source as abortSource} from "abortable-iterator";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
+import {RESPONSE_TIMEOUT_ERR} from "./error";
 
 // req/resp
 
@@ -120,7 +121,7 @@ export function eth2ResponseTimer<T>(
   };
   return (source) => {
     return (async function* () {
-      for await (const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
+      for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
         renewTimer();
         yield item;
       }
