@@ -1,5 +1,4 @@
 import fs from "fs";
-import process from "process";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
@@ -14,6 +13,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
+import {onProcessSIGINT} from "../../util/process";
 
 /**
  * Run a validator client
@@ -66,14 +66,9 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
     }
   );
 
-  async function cleanup(): Promise<void> {
-    logger.info("Stopping validators");
+  onProcessSIGINT(async () => {
     await Promise.all(validators.map((v) => v.stop()));
-    logger.info("Cleanup completed");
-  }
-
-  process.on("SIGTERM", cleanup);
-  process.on("SIGINT", cleanup);
+  }, logger.info);
 
   await Promise.all(validators.map((validator) => validator.start()));
 }

@@ -42,8 +42,8 @@ export async function createNodeJsLibp2p(
   autoDial = true
 ): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
-  const multiaddrs = network.multiaddrs || defaults.multiaddrs;
-  const bootnodes = network.bootnodes || defaults.bootnodes;
+  const localMultiaddrs = network.localMultiaddrs || defaults.localMultiaddrs;
+  const bootMultiaddrs = network.bootMultiaddrs || defaults.bootMultiaddrs;
   const enr = network.discv5?.enr;
   if (enr && typeof enr !== "string") {
     const enrInstance = enr as ENR;
@@ -53,10 +53,10 @@ export async function createNodeJsLibp2p(
   }
   return new NodejsNode({
     peerId,
-    addresses: {listen: multiaddrs},
+    addresses: {listen: localMultiaddrs},
     autoDial,
     datastore: peerStoreDir ? new LevelDatastore(peerStoreDir) : undefined,
-    bootnodes: bootnodes,
+    bootMultiaddrs: bootMultiaddrs,
     discv5: network.discv5!,
     maxConnections: network.maxPeers,
   });

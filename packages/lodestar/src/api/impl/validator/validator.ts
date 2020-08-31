@@ -45,6 +45,7 @@ import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError} from "../errors/api";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {notNullish} from "../../../util/notNullish";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -167,13 +168,15 @@ export class ValidatorApi implements IValidatorApi {
       }
       return validatorIndex;
     });
-    return validatorIndexes.map((validatorIndex) => {
-      const validator = state.validators[validatorIndex];
-      if (!validator) {
-        throw Error(`Validator index ${validatorIndex} not in state`);
-      }
-      return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
-    });
+    return validatorIndexes
+      .map((validatorIndex) => {
+        const validator = state.validators[validatorIndex];
+        if (!validator) {
+          throw Error(`Validator index ${validatorIndex} not in state`);
+        }
+        return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
+      })
+      .filter(notNullish) as AttesterDuty[];
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {

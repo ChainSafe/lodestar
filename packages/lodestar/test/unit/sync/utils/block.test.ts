@@ -7,18 +7,17 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/src/presets/minimal";
 import PeerId from "peer-id";
 import {BeaconBlockHeader, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {silentLogger} from "../../../utils/logger";
 
 describe("sync - block utils", function () {
   describe("get block range from multiple peers", function () {
     const sandbox = sinon.createSandbox();
 
+    const logger = silentLogger;
     let rpcStub: SinonStubbedInstance<ReqResp>;
-    let loggerStub: SinonStubbedInstance<ILogger>;
 
     beforeEach(function () {
       rpcStub = sandbox.createStubInstance(ReqResp);
-      loggerStub = sandbox.createStubInstance(WinstonLogger);
     });
 
     afterEach(function () {
@@ -32,7 +31,7 @@ describe("sync - block utils", function () {
       rpcStub.beaconBlocksByRange
         .withArgs(sinon.match(peers[0]).or(sinon.match(peers[1])), sinon.match.any)
         .resolves([generateEmptySignedBlock(), generateEmptySignedBlock(), generateEmptySignedBlock()]);
-      const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
+      const blocks = await getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       expect(blocks.length).to.be.equal(3);
     });
 
@@ -43,7 +42,7 @@ describe("sync - block utils", function () {
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
       rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
-      const blockPromise = getBlockRange(loggerStub, rpcStub, peers, {start: 0, end: 4}, 2);
+      const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       await timer.tickAsync(1000);
       const blocks = await blockPromise;
       expect(blocks.length).to.be.equal(2);
@@ -54,7 +53,7 @@ describe("sync - block utils", function () {
       const peer1 = new PeerId(Buffer.from("lodestar"));
       const peers: PeerId[] = [peer1];
       rpcStub.beaconBlocksByRange.resolves([]);
-      const blocks = await getBlockRange(loggerStub, rpcStub, peers, {start: 4, end: 4}, 2);
+      const blocks = await getBlockRange(logger, rpcStub, peers, {start: 4, end: 4}, 2);
       expect(blocks.length).to.be.equal(0);
     });
   });

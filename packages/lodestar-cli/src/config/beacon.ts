@@ -64,7 +64,7 @@ export async function initBeaconConfig(filename: string, args: Partial<IBeaconNo
 /**
  * If override array option (source) is defined and has items
  * replace target (original option).
- * Example: network.multiaddrs has default ['/ip4/127.0.0.1/tcp/30606'] and we don't wanna append to that with cli flag
+ * Example: network.localMultiaddrs has default ['/ip4/127.0.0.1/tcp/30606'] and we don't wanna append to that with cli flag
  * as it could result in port taken
  * @param target
  * @param source

@@ -81,11 +81,10 @@ export class InteropSubnetsJoiningTask {
           intToBytes(nextFork.currentVersion, 4),
           state.genesisValidatorsRoot
         );
-        this.nextForkSubsTimer = (setTimeout(
-          this.run,
-          timeToPreparedEpoch,
-          nextForkDigest
-        ) as unknown) as NodeJS.Timeout;
+        this.nextForkSubsTimer = setTimeout(() => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.run(nextForkDigest).catch();
+        }, timeToPreparedEpoch);
       }
     }
   };
@@ -141,12 +140,10 @@ export class InteropSubnetsJoiningTask {
       ? this.currentTimers
       : this.nextForkTimers;
     timers.push(
-      (setTimeout(
-        this.handleChangeSubnets,
-        subscriptionLifetime * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000,
-        forkDigest,
-        subnet
-      ) as unknown) as NodeJS.Timeout
+      setTimeout(() => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.handleChangeSubnets(forkDigest, subnet);
+      }, subscriptionLifetime * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000)
     );
     if (timers.length > this.config.params.RANDOM_SUBNETS_PER_VALIDATOR) {
       timers.shift();

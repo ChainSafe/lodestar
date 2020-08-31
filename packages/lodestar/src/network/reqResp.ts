@@ -280,7 +280,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
           }
           if (requestSingleChunk && responses.length === 0) {
             // allow empty response for beacon blocks by range/root
-            this.logger.warn(`No response returned for method ${method}. request=${requestId}`, {
+            this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
               peer: peerId.toB58String(),
             });
             return null;
@@ -322,7 +322,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       try {
         conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT)) as {stream: Stream};
       } catch (e) {
-        throw new Error("Failed to dial peer (" + e.message + ")");
+        throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();

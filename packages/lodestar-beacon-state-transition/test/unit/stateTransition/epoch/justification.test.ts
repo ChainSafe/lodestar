@@ -34,8 +34,8 @@ describe("process epoch - justification and finalization", function () {
     const state = generateState();
     let previousJustifiedEpoch;
     let currentJustifiedEpoch;
-    getTotalActiveBalanceStub.returns(10n);
-    getAttestingBalanceStub.returns(10n);
+    getTotalActiveBalanceStub.returns(BigInt(10));
+    getAttestingBalanceStub.returns(BigInt(10));
     state.justificationBits = Array.from({length: 64}, () => false);
 
     getCurrentEpochStub.returns(1);

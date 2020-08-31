@@ -5,7 +5,7 @@ import {AttestationSubnets} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 describe("syncing", function () {
-  let sandbox = sinon.createSandbox();
+  const sandbox = sinon.createSandbox();
   let reps: ReputationStore;
 
   beforeEach(() => {
@@ -22,7 +22,6 @@ describe("syncing", function () {
       latestStatus: null,
       score: 0,
       encoding: null,
-      supportedProtocols: [],
     };
     try {
       const result = reps.add("lodestar");

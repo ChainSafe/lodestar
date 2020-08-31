@@ -32,7 +32,7 @@ export function processFinalUpdates(config: IBeaconConfig, state: BeaconState): 
     }
   });
   // Reset slashings
-  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = 0n;
+  state.slashings[nextEpoch % config.params.EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
   // Set randao mix
   state.randaoMixes[nextEpoch % config.params.EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(config, state, currentEpoch);
   // Set historical root accumulator

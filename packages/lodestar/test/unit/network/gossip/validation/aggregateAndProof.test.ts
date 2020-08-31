@@ -1,7 +1,6 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
@@ -16,9 +15,10 @@ import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fas
 import {generateState} from "../../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {PrivateKey, PublicKey} from "@chainsafe/bls";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip aggregate and proof test", function () {
-  const logger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
   let getAttestationPreStateStub: SinonStub;

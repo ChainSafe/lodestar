@@ -1,5 +1,5 @@
 import {SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, IBlockProcessJob, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBlockProcessJob, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
 import pushable, {Pushable} from "it-pushable";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -12,7 +12,7 @@ describe("block pool", function () {
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     eventBusStub = sinon.createStubInstance(BeaconChain);
     sourceStub = {
       ...pushable<IBlockProcessJob>(),
