@@ -12,7 +12,7 @@ import {SyncStats} from "../../../../src/sync/stats";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
-describe.skip("fast sync", function () {
+describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
 
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -58,7 +58,8 @@ describe.skip("fast sync", function () {
     await sync.start();
   });
 
-  it("should sync till target and end", function (done) {
+  //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
+  it.skip("should sync till target and end", function (done) {
     dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
@@ -93,7 +94,8 @@ describe.skip("fast sync", function () {
     chainStub.emitter.emit("checkpoint", target);
   });
 
-  it("should continue syncing if there is new target", function (done) {
+  //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
+  it.skip("should continue syncing if there is new target", function (done) {
     dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
