@@ -36,6 +36,7 @@ import {
 
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
+import {abortableTimeout} from "../util/misc";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -177,14 +178,10 @@ export class AttestationService {
     if (duty.isAggregator) {
       const timeout = setTimeout(async (signal = abortSignal) => {
         this.logger.debug("AttestationService: Start waitForAggregate");
-        signal?.addEventListener(
-          "abort",
-          () => {
-            clearTimeout(timeout);
-            this.logger.debug("AttestationService: Abort waitForAggregate");
-          },
-          {once: true}
-        );
+        abortableTimeout(signal, () => {
+          clearTimeout(timeout);
+          this.logger.debug("AttestationService: Abort waitForAggregate");
+        });
 
         try {
           if (attestation) {
@@ -219,16 +216,12 @@ export class AttestationService {
         resolve();
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
 
-      signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timeout);
-          eventSource.close();
-          resolve();
-          this.logger.debug("AttestationService: Abort waitForAttestationBlock");
-        },
-        {once: true}
-      );
+      abortableTimeout(signal, () => {
+        clearTimeout(timeout);
+        eventSource.close();
+        resolve();
+        this.logger.debug("AttestationService: Abort waitForAttestationBlock");
+      });
 
       eventSource.onmessage = (evt: MessageEvent) => {
         try {
