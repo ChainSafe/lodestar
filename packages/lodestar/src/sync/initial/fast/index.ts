@@ -220,18 +220,35 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
    * Returns peers which has same finalized Checkpoint
    */
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
-    return this.network
-      .getPeers({
-        connected: true,
-        supportsProtocols: getSyncProtocols(),
-      })
-      .map((peer) => peer.id)
-      .reduce((validPeers: PeerId[], peer: PeerId) => {
-        const status = this.network.peerMetadata.getStatus(peer);
-        if (status && status.finalizedEpoch >= this.targetCheckpoint!.epoch) {
-          validPeers.push(peer);
-        }
-        return validPeers;
-      }, [] as PeerId[]);
+    return (
+      this.network
+        .getPeers({
+          connected: true,
+          supportsProtocols: getSyncProtocols(),
+        })
+        .map((peer) => peer.id)
+        .filter((peer) => {
+          return this.network.blockProviderScores.getScore(peer) > 50;
+        })
+        .sort((p1, p2) => {
+          return this.network.blockProviderScores.getScore(p2) - this.network.blockProviderScores.getScore(p1);
+        })
+        //take 10 best peers for sync
+        .slice(0, 10)
+        .map((peer) => {
+          this.logger.verbose("peer block provider scores", {
+            peer: peer.toB58String(),
+            score: this.network.blockProviderScores.getScore(peer),
+          });
+          return peer;
+        })
+        .reduce((validPeers: PeerId[], peer: PeerId) => {
+          const status = this.network.peerMetadata.getStatus(peer);
+          if (status && status.finalizedEpoch >= this.targetCheckpoint!.epoch) {
+            validPeers.push(peer);
+          }
+          return validPeers;
+        }, [] as PeerId[])
+    );
   };
 }
