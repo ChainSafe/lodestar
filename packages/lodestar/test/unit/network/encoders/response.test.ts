@@ -8,8 +8,6 @@ import {
   decodeP2pErrorMessage,
 } from "../../../../src/network/encoders/response";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../src/constants";
 import {collect} from "../../chain/blocks/utils";
 import {expect} from "chai";
@@ -20,20 +18,17 @@ import {ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types
 import {encode} from "varint";
 import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
+import {silentLogger} from "../../../utils/logger";
 
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {
-  let loggerStub: SinonStubbedInstance<ILogger>;
-
-  beforeEach(function () {
-    loggerStub = sinon.createStubInstance(WinstonLogger);
-  });
+  const logger = silentLogger;
 
   it("should work - no response - ssz", async function () {
     const responses = await pipe(
       [],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(0);
@@ -42,8 +37,8 @@ describe("response decoders", function () {
   it("should work - no response - ssz_snappy", async function () {
     const responses = await pipe(
       [],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(0);
@@ -52,8 +47,8 @@ describe("response decoders", function () {
   it("should work - single error - ssz", async function () {
     const responses = await pipe(
       [{status: 1}],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(0);
@@ -62,8 +57,8 @@ describe("response decoders", function () {
   it("should work - single error - ssz_snappy", async function () {
     const responses = await pipe(
       [{status: 1}],
-      eth2ResponseEncode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(0);
@@ -72,8 +67,8 @@ describe("response decoders", function () {
   it("should work - single response simple- ssz", async function () {
     const responses = await pipe(
       [{status: 0, body: BigInt(1)}],
-      eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -83,8 +78,8 @@ describe("response decoders", function () {
   it("should work - single response simple - ssz_snappy", async function () {
     const responses = await pipe(
       [{status: 0, body: BigInt(1)}],
-      eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -102,8 +97,8 @@ describe("response decoders", function () {
         controller.signal,
         {returnOnAbort: true}
       ),
-      eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ, "abc", controller),
+      eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", controller),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -121,8 +116,8 @@ describe("response decoders", function () {
         controller.signal,
         {returnOnAbort: true}
       ),
-      eth2ResponseEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", controller),
+      eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", controller),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -133,8 +128,8 @@ describe("response decoders", function () {
     const status = createStatus();
     const responses = await pipe(
       [{status: 0, body: status}],
-      eth2ResponseEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -145,8 +140,8 @@ describe("response decoders", function () {
     const status = createStatus();
     const responses = await pipe(
       [{status: 0, body: status}],
-      eth2ResponseEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     );
     expect(responses.length).to.be.equal(1);
@@ -157,8 +152,8 @@ describe("response decoders", function () {
     const chunks = generateBlockChunks(10);
     const responses = (await pipe(
       chunks,
-      eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", fakeController),
+      eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", fakeController),
       collect
     )) as ResponseBody[];
     expect(responses.length).to.be.equal(10);
@@ -172,15 +167,8 @@ describe("response decoders", function () {
     const chunks = generateBlockChunks(10);
     const responses = (await pipe(
       chunks,
-      eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(
-        config,
-        loggerStub,
-        Method.BeaconBlocksByRange,
-        ReqRespEncoding.SSZ_SNAPPY,
-        "abc",
-        fakeController
-      ),
+      eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     )) as ResponseBody[];
     expect(responses.length).to.be.equal(10);
@@ -197,8 +185,8 @@ describe("response decoders", function () {
     chunks[4].body = encodeP2pErrorMessage(config, "Invalid request");
     const responses = (await pipe(
       abortSource(chunks, controller.signal, {returnOnAbort: true}),
-      eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
-      eth2ResponseDecode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", controller),
+      eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
+      eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", controller),
       collect
     )) as ResponseBody[];
     expect(responses.length).to.be.equal(4);
@@ -209,15 +197,8 @@ describe("response decoders", function () {
     chunks[5].status = RpcResponseStatus.ERR_INVALID_REQ;
     const responses = (await pipe(
       chunks,
-      eth2ResponseEncode(config, loggerStub, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
-      eth2ResponseDecode(
-        config,
-        loggerStub,
-        Method.BeaconBlocksByRange,
-        ReqRespEncoding.SSZ_SNAPPY,
-        "abc",
-        fakeController
-      ),
+      eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
+      eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       collect
     )) as ResponseBody[];
     expect(responses.length).to.be.equal(5);
@@ -230,7 +211,7 @@ describe("response decoders", function () {
           [Buffer.concat([Buffer.alloc(1), Buffer.from(encode(99999999999999999999999))])],
           eth2ResponseDecode(
             config,
-            loggerStub,
+            logger,
             Method.BeaconBlocksByRange,
             ReqRespEncoding.SSZ_SNAPPY,
             randomRequestId(),
@@ -252,7 +233,7 @@ describe("response decoders", function () {
           [Buffer.concat([Buffer.alloc(1), Buffer.alloc(12, 0)])],
           eth2ResponseDecode(
             config,
-            loggerStub,
+            logger,
             Method.Status,
             ReqRespEncoding.SSZ_SNAPPY,
             randomRequestId(),
@@ -276,7 +257,7 @@ describe("response decoders", function () {
               Buffer.alloc(config.types.Status.minSize() + 10),
             ]),
           ],
-          eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
+          eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
           collect
         );
         fail("expect error here");
@@ -297,7 +278,7 @@ describe("response decoders", function () {
           ],
           eth2ResponseDecode(
             config,
-            loggerStub,
+            logger,
             Method.Status,
             ReqRespEncoding.SSZ_SNAPPY,
             randomRequestId(),
@@ -322,7 +303,7 @@ describe("response decoders", function () {
             config.types.Status.serialize(status),
           ]),
         ],
-        eth2ResponseDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
+        eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, randomRequestId(), fakeController),
         collect
       );
       expect(response).to.be.deep.equal([status]);

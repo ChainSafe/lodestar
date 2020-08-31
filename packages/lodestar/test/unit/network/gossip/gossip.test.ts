@@ -3,7 +3,6 @@ import {INetworkOptions} from "../../../../src/network/options";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconChain} from "../../../../src/chain";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
@@ -17,6 +16,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
+import {silentLogger} from "../../../utils/logger";
 
 describe("Network Gossip", function () {
   let gossip: Gossip;
@@ -35,8 +35,7 @@ describe("Network Gossip", function () {
       disconnectTimeout: 0,
     };
     const libp2p = sandbox.createStubInstance(NodejsNode);
-    const logger = new WinstonLogger();
-    logger.silent = true;
+    const logger = silentLogger;
     const validator = {} as IGossipMessageValidator;
     state = generateState();
     chain = new MockBeaconChain({

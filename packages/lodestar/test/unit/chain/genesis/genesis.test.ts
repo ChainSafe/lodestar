@@ -9,9 +9,9 @@ import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar
 import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
+import {silentLogger} from "../../../utils/logger";
 
 describe("genesis builder", function () {
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
@@ -23,7 +23,7 @@ describe("genesis builder", function () {
   const sandbox = sinon.createSandbox();
   let genesisBuilder: GenesisBuilder;
   let eth1Stub: SinonStubbedInstance<EthersEth1Notifier>;
-  let dbStub: StubbedBeaconDb, loggerStub: any;
+  let dbStub: StubbedBeaconDb;
   const events: IDepositEvent[] = [];
   const keypairs: Keypair[] = [];
 
@@ -44,11 +44,10 @@ describe("genesis builder", function () {
 
     eth1Stub = sandbox.createStubInstance(EthersEth1Notifier);
     dbStub = new StubbedBeaconDb(sandbox);
-    loggerStub = sandbox.createStubInstance(WinstonLogger);
     genesisBuilder = new GenesisBuilder(schlesiConfig, {
       eth1: eth1Stub,
       db: dbStub,
-      logger: loggerStub,
+      logger: silentLogger,
     });
   });
 

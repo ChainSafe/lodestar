@@ -2,8 +2,7 @@ import {assert} from "chai";
 import Axios from "axios";
 import MockAdapter from "axios-mock-adapter";
 import {HttpClient} from "../../../src/util";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import sinon from "sinon";
+import {silentLogger} from "../../utils/logger";
 
 interface IUser {
   id?: number;
@@ -16,8 +15,7 @@ describe("httpClient test", () => {
 
   beforeEach(() => {
     mock = new MockAdapter(Axios);
-    const logger: ILogger = sinon.createStubInstance(WinstonLogger);
-    httpClient = new HttpClient({}, {logger});
+    httpClient = new HttpClient({}, {logger: silentLogger});
   });
 
   it("should handle successful GET request correctly", async () => {

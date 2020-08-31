@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {AttestationCollector} from "../../../../src/sync/utils";
 import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
@@ -9,13 +8,14 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 import {generateState} from "../../../utils/state";
+import {silentLogger} from "../../../utils/logger";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
+  const logger = silentLogger;
 
   it("should subscribe and collect attestations", async function () {
     const clock = sandbox.useFakeTimers();
-    const loggerStub = sandbox.createStubInstance(WinstonLogger);
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const dbStub = sandbox.createStubInstance(BeaconDb);
     const computeSubnetStub = sandbox.stub(attestationUtils, "computeSubnetForSlot");
@@ -31,7 +31,7 @@ describe("Attestation collector", function () {
         gossip: fakeGossip,
       },
       db: dbStub,
-      logger: loggerStub,
+      logger,
     });
     await realClock.start();
     await collector.start();
@@ -53,7 +53,6 @@ describe("Attestation collector", function () {
 
   it("should skip if there is no duties", async function () {
     const clock = sandbox.useFakeTimers();
-    const loggerStub = sandbox.createStubInstance(WinstonLogger);
     const realClock = new LocalClock(config, Math.round(new Date().getTime() / 1000));
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const collector = new AttestationCollector(config, {
@@ -66,7 +65,7 @@ describe("Attestation collector", function () {
       network: {
         gossip: fakeGossip,
       },
-      logger: loggerStub,
+      logger,
     });
     await realClock.start();
     await collector.start();

@@ -1,11 +1,11 @@
 import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {expect} from "chai";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 import {handleIncomingVoluntaryExit} from "../../../../../src/network/gossip/handlers/voluntaryExit";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - voluntaryExit", function () {
   const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("gossip handlers - voluntaryExit", function () {
 
   beforeEach(function () {
     gossipStub = sandbox.createStubInstance(Gossip);
-    gossipStub.logger = sandbox.createStubInstance(WinstonLogger);
+    gossipStub.logger = silentLogger;
     gossipStub.config = config;
   });
 
