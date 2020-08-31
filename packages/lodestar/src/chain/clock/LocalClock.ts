@@ -40,11 +40,11 @@ export class LocalClock implements IBeaconClock {
   }
 
   public get currentSlot(): Slot {
-    return this._currentSlot;
+    return getCurrentSlot(this.config, this.genesisTime);
   }
 
   public get currentEpoch(): Epoch {
-    return computeEpochAtSlot(this.config, this._currentSlot);
+    return computeEpochAtSlot(this.config, this.currentSlot);
   }
 
   public abort = (): void => {
@@ -55,14 +55,15 @@ export class LocalClock implements IBeaconClock {
   };
 
   private onNextSlot = (): void => {
-    const previousSlot = this.currentSlot;
     const clockSlot = getCurrentSlot(this.config, this.genesisTime);
     // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
     while (this._currentSlot < clockSlot) {
+      const previousSlot = this._currentSlot;
       this._currentSlot++;
-      this.emitter.emit("clock:slot", this.currentSlot);
-      const currentEpoch = this.currentEpoch;
-      if (computeEpochAtSlot(this.config, previousSlot) < currentEpoch) {
+      this.emitter.emit("clock:slot", this._currentSlot);
+      const previousEpoch = computeEpochAtSlot(this.config, previousSlot);
+      const currentEpoch = computeEpochAtSlot(this.config, this._currentSlot);
+      if (previousEpoch < currentEpoch) {
         this.emitter.emit("clock:epoch", currentEpoch);
       }
     }
