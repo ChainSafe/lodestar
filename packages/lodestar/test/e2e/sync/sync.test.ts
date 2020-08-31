@@ -37,7 +37,7 @@ describe("syncing", function () {
     });
     await bn2.start();
     const head = await bn.chain.getHeadBlock()!;
-    const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, "processedBlock", 100000, (block) =>
+    const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, "block", 100000, (block) =>
       config.types.SignedBeaconBlock.equals(block, head!)
     );
     await bn2.network.connect(bn.network.peerId, bn.network.localMultiaddrs);
