@@ -84,8 +84,6 @@
     "multiaddr": "^7.4.3",
     "noice-json-rpc": "^1.2.0",
     "peer-id": "^0.13.12",
-    "pouchdb-adapter-memory": "^7.0.0",
-    "pouchdb-core": "^7.0.0",
     "prom-client": "^11.5.3",
     "randombytes": "^2.1.0",
     "snappyjs": "^0.6.0",
