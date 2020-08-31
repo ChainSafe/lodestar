@@ -6,6 +6,7 @@ import AbortController from "abort-controller";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
+    BeaconBlockHeader,
   BeaconState,
   Checkpoint,
   ENRForkID,
@@ -356,7 +357,9 @@ export class BeaconChain implements IBeaconChain {
       block.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
       blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block);
     } else {
-      blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(anchorState.latestBlockHeader);
+      const blockHeader = anchorState.latestBlockHeader as BeaconBlockHeader;
+      blockHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
+      blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
     }
     const blockCheckpoint = {
       root: blockRoot,
