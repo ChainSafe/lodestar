@@ -35,7 +35,7 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
     state,
     getMatchingTargetAttestations(config, state, previousEpoch)
   );
-  if (previousEpochMatchingTargetBalance * 3n >= totalActiveBalance * 2n) {
+  if (previousEpochMatchingTargetBalance * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: previousEpoch,
       root: getBlockRoot(config, state, previousEpoch),
@@ -48,7 +48,7 @@ export function processJustificationAndFinalization(config: IBeaconConfig, state
     state,
     getMatchingTargetAttestations(config, state, currentEpoch)
   );
-  if (currentEpochMatchingTargetBalance * 3n >= totalActiveBalance * 2n) {
+  if (currentEpochMatchingTargetBalance * BigInt(3) >= totalActiveBalance * BigInt(2)) {
     state.currentJustifiedCheckpoint = {
       epoch: currentEpoch,
       root: getBlockRoot(config, state, currentEpoch),

@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig",
   "compilerOptions": {
-    "target": "es2019",
-    "lib": ["es2020.bigint", "es2020.string", "es2020.symbol.wellknown"],
     "typeRoots": ["../../node_modules/@types"],
     "outDir": "lib"
   },
