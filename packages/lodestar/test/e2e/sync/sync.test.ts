@@ -21,7 +21,7 @@ describe("syncing", function () {
       options: {sync: {minPeers: 0}},
       validatorCount,
     });
-    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, "finalizedCheckpoint", 240000);
+    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, "finalized", 240000);
     const validators = getDevValidators(bn, 8);
     await bn.start();
     validators.forEach((v) => v.start());
