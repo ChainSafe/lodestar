@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {CheckPeerAliveTask} from "../../../../src/tasks/tasks/checkPeerAliveTask";
+import {CheckPeerAliveTask} from "../../../../src/network/tasks/checkPeerAliveTask";
 import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import {ReputationStore} from "../../../../src/sync/IReputation";
 import {ReqResp} from "../../../../src/network/reqResp";

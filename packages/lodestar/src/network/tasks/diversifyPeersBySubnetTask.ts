@@ -1,4 +1,4 @@
-import {INetwork} from "../../network";
+import {INetwork} from "..";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReputationStore} from "../../sync/IReputation";

@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {INetwork} from "../../network";
+import {INetwork} from "..";
 import {IReputationStore} from "../../sync/IReputation";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {handlePeerMetadataSequence} from "../../sync/utils/reputation";

@@ -81,4 +81,5 @@ export interface INetwork extends NetworkEventEmitter {
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
+  handleSyncCompleted(): Promise<void>;
 }

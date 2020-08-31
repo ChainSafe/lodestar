@@ -18,6 +18,8 @@ import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IReputationStore} from "../sync/IReputation";
+import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
+import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -41,6 +43,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private peerReputations: IReputationStore;
+  private diversifyPeersTask: DiversifyPeersBySubnetTask;
+  private checkPeerAliveTask: CheckPeerAliveTask;
 
   public constructor(
     opts: INetworkOptions,
@@ -58,6 +62,16 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
+    this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
+      network: this,
+      reps: this.peerReputations,
+      logger: this.logger,
+    });
+    this.checkPeerAliveTask = new CheckPeerAliveTask(this.config, {
+      network: this,
+      reps: this.peerReputations,
+      logger: this.logger,
+    });
   }
 
   public async start(): Promise<void> {
@@ -79,6 +93,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
+    await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
+  }
+
+  public async handleSyncCompleted(): Promise<void> {
+    await Promise.all([this.diversifyPeersTask.start(), this.checkPeerAliveTask.start()]);
   }
 
   public getEnr(): ENR | undefined {

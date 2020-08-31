@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 
 import {ReqResp} from "../../../../src/network/reqResp";
 import {ReputationStore} from "../../../../src/sync/IReputation";
-import {DiversifyPeersBySubnetTask} from "../../../../src/tasks/tasks/diversifyPeersBySubnetTask";
+import {DiversifyPeersBySubnetTask} from "../../../../src/network/tasks/diversifyPeersBySubnetTask";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import PeerId from "peer-id";
