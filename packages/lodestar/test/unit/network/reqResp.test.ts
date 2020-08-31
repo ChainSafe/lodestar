@@ -11,7 +11,6 @@ import {createNode} from "../../utils/network";
 import {ReputationStore} from "../../../src/sync/IReputation";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {TTFB_TIMEOUT} from "../../../src/constants";
-import {AbortSignal} from "abort-controller/dist/abort-controller";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

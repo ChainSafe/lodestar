@@ -1,12 +1,8 @@
 import {assert, expect} from "chai";
-import AbortController from "abort-controller";
-
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
-import {LocalClock} from "../../../../src/chain/clock/LocalClock";
-import {sleep} from "../../../../src/util/sleep";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainEventEmitter, NO_NODE} from "../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";

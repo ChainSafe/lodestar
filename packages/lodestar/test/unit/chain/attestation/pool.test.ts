@@ -152,7 +152,6 @@ describe("attestation pool", function () {
       },
     });
     (chain.clock as any)._currentSlot = getCurrentSlot(config, Math.floor(Date.now() / 1000));
-    const clock = sinon.createStubInstance(LocalClock);
     const emitter = sinon.createStubInstance(ChainEventEmitter);
     let newSlotCallback: (slot: Slot) => void;
     emitter.on.callsFake((_, cb) => {
