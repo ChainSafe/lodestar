@@ -18,6 +18,8 @@ import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {IReputationStore} from "../sync/IReputation";
+import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
+import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -41,6 +43,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private logger: ILogger;
   private metrics: IBeaconMetrics;
   private peerReputations: IReputationStore;
+  private diversifyPeersTask: DiversifyPeersBySubnetTask;
+  private checkPeerAliveTask: CheckPeerAliveTask;
 
   public constructor(
     opts: INetworkOptions,
@@ -58,6 +62,16 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
+    this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
+      network: this,
+      reps: this.peerReputations,
+      logger: this.logger,
+    });
+    this.checkPeerAliveTask = new CheckPeerAliveTask(this.config, {
+      network: this,
+      reps: this.peerReputations,
+      logger: this.logger,
+    });
   }
 
   public async start(): Promise<void> {
@@ -79,6 +93,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
+    await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
+  }
+
+  public async handleSyncCompleted(): Promise<void> {
+    await Promise.all([this.diversifyPeersTask.start(), this.checkPeerAliveTask.start()]);
   }
 
   public getEnr(): ENR | undefined {
@@ -105,6 +124,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       return true;
     });
     return peers || [];
+  }
+
+  public getMaxPeer(): number {
+    return this.opts.maxPeers;
   }
 
   public hasPeer(peerId: PeerId, connected = false): boolean {
@@ -142,45 +165,42 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
   public async searchSubnetPeers(subnet: string): Promise<void> {
     const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
-    if (peerIds.length < 3) {
-      // If an insufficient number of current peers are subscribed to the topic,
+    if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
-      this.logger.verbose(`Found only ${peerIds.length} for subnett ${subnet}, finding new peers to connect`);
-      const count = await this.connectToNewPeersBySubnet(parseInt(subnet), peerIds);
-      this.logger.verbose(`Connected to ${count} new peers for subnet ${subnet}`);
+      this.logger.verbose(`Finding new peers for subnet ${subnet}`);
+      const found = await this.connectToNewPeersBySubnet(parseInt(subnet));
+      if (found) {
+        this.logger.verbose(`Found new peer for subnet ${subnet}`);
+      } else {
+        this.logger.verbose(`Not found any peers for subnet ${subnet}`);
+      }
     }
   }
 
   /**
-   * Connect to new peers given a subnet.
+   * Connect to 1 new peer given a subnet.
    * @param subnet the subnet calculated from committee index
-   * @param inPeerIds peers already have this subnet
    */
-  private async connectToNewPeersBySubnet(subnet: number, inPeerIds: string[] = []): Promise<number> {
+  private async connectToNewPeersBySubnet(subnet: number): Promise<boolean> {
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
-    const peerIds = discv5Peers.filter((peerId) => !inPeerIds.includes(peerId.toB58String()));
-    // make sure they still connect to same subnet
-    let count = 0;
-    for (const peerId of peerIds) {
-      // we'll dial thru sendRequest so don't need to do connect() like in the spec
+    const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id.toB58String());
+    const candidatePeers = discv5Peers.filter((peer) => !knownPeers.includes(peer.peerId.toB58String()));
+    let found = false;
+    for (const peer of candidatePeers) {
+      // will automatically get metadata once we connect
       try {
-        const metadata = await this.reqResp.metadata(peerId);
-        if (metadata === null) throw Error("No metadata");
-        if (metadata.attnets[subnet]) {
-          count++;
-        }
-      } catch (err) {
-        this.logger.warn(`Cannot get metadata from ${peerId.toB58String()}: ${err.message}`);
-      }
-      if (count < 10) {
-        // TODO: decide max peers per subnet to connect?
+        await this.connect(peer.peerId, [peer.multiaddr]);
+        found = true;
         break;
+      } catch (e) {
+        // this runs too frequently so make it verbose
+        this.logger.verbose(`Cannot connect to peer ${peer.peerId.toB58String()} for subnet ${subnet}`, e.message);
       }
     }
-    return count;
+    return found;
   }
 
-  private searchDiscv5Peers = async (subnet: number): Promise<PeerId[]> => {
+  private searchDiscv5Peers = async (subnet: number): Promise<{peerId: PeerId; multiaddr: Multiaddr}[]> => {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const discv5: Discv5 = discovery.discv5;
     return await Promise.all(
@@ -196,8 +216,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         })
         .map((enr: ENR) =>
           enr.peerId().then((peerId) => {
-            this.libp2p.peerStore.addressBook.add(peerId, [enr.multiaddrTCP!]);
-            return peerId;
+            return {peerId, multiaddr: enr.multiaddrTCP!};
           })
         )
     );
