@@ -6,6 +6,7 @@ import {ICliCommandOptions} from "../../util";
 
 interface IBeaconExtraArgs {
   genesisStateFile?: string;
+  forceGenesis?: boolean;
 }
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -13,6 +14,10 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
     description: "Genesis state file path in ssz-encoded format",
     type: "string",
     normalize: true,
+  },
+  forceGenesis: {
+    description: "Force beacon to create genesis without file",
+    type: "boolean",
   },
 };
 
