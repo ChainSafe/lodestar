@@ -33,7 +33,7 @@ export function stateTransition(
   signedBlock: SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): BeaconState {
-  const {verifyStateRoot = false, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   // Clone state because process slots and block are not pure
   const postState = config.types.BeaconState.clone(state);

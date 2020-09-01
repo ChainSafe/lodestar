@@ -12,7 +12,7 @@ export function fastStateTransition(
   signedBlock: SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
-  const {verifyStateRoot = false, verifyProposer = true, verifySignatures = true} = options || {};
+  const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;
 
   const block = signedBlock.message;
