@@ -5,7 +5,7 @@ export function sleep(ms: number): Promise<void> {
 export function abortableTimeout(
   signal: AbortSignal | undefined,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  callback: (this: AbortSignal, ev: Event) => any
+  callback: (this: AbortSignal, ev: Event) => void
 ): void {
   signal?.addEventListener("abort", callback, {once: true});
 }
