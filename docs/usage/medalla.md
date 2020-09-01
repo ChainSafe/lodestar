@@ -76,4 +76,40 @@ You should see confirmation that modules have started.
 
 ## Submit your deposit to Goerli
 
-_TBD_
+Navigate to https://github.com/ethereum/eth2.0-deposit-cli/releases
+
+Pick the most recent release to download
+
+```
+wget https://github.com/ethereum/eth2.0-deposit-cli/releases/download/v0.2.1/eth2deposit-cli-v0.2.1-linux-amd64.tar.gz
+tar -xvf eth2deposit-cli-v0.2.1-linux-amd64.tar.gz
+
+cd eth2deposit
+./deposit --num_validators 1 --chain medalla
+```
+
+Save the generated seed somewhere safe
+
+The deposit script will generate 2 files:
+- A Keystore
+- Deposit.json file
+
+Go to launchpad https://medalla.launchpad.ethereum.org/
+
+Follow the prompts which will explain running the above deposit script then it will allow you to upload the deposit.json file to transfer the validators 32 ETH
+
+Next we will generate the lodestar validator accounts using the keystore file generated in the deposit script. From the lodestar root directory run:
+```
+yarn run cli account validator import --rootDir /var/lib/lodestar --testnet medalla --directory ~/eth2deposit-cli-de03fe3-linux-amd64/validator_keys/
+```
+
+this will generate 2 folders in the "rootDir":
+- keystores dir
+- secrets dir
+
+these will be necessary to run the validator script
+
+```bash
+yarn run cli validator --testnet medalla --rootDir /var/lib/lodestar
+```
+
