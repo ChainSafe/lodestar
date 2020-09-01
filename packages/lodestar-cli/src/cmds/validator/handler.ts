@@ -68,7 +68,7 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
 
   onProcessSIGINT(async () => {
     await Promise.all(validators.map((v) => v.stop()));
-  }, logger.info);
+  }, logger.info.bind(logger));
 
   await Promise.all(validators.map((validator) => validator.start()));
 }
