@@ -148,7 +148,7 @@ export async function dialProtocol(
     // eslint-disable-next-line no-useless-catch
   } catch (e) {
     const err = new Error(e.code || e.message);
-    err.stack = e.stack;
+    // err.stack = e.stack;
     throw err;
   } finally {
     clearTimeout(timer);

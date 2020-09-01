@@ -247,10 +247,6 @@ describe("[network] network", function () {
       new Promise((resolve) => netA.on("peer:connect", resolve)),
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
-    netB.reqResp.once("request", (peerId, method, requestId) => {
-      netB.reqResp.sendResponse(requestId, null, netB.metadata);
-    });
-
     const enrB = ENR.createFromPeerId(peerIdB);
     enrB.set("attnets", Buffer.from(config.types.AttestationSubnets.serialize(netB.metadata.attnets)));
     enrB.multiaddrUDP = (libP2pB._discovery.get("discv5") as Discv5Discovery).discv5.bindAddress;
