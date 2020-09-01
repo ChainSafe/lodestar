@@ -73,6 +73,7 @@ export class Validator {
     this.isRunning = false;
     await this.apiClient.disconnect();
     if (this.attestationService) await this.attestationService.stop();
+    if (this.blockService) await this.blockService.stop();
   }
 
   private initApiClient(api: string | IApiClient): IApiClient {

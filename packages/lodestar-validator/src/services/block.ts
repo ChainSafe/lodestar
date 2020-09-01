@@ -55,6 +55,10 @@ export default class BlockProposingService {
     await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
   };
 
+  public stop = async (): Promise<void> => {
+    // nothing here yet, but if future cleanup needs to be done (for example, clearing timers), put it here
+  };
+
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {
     this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
     const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch((e) => {
