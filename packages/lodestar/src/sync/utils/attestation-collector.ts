@@ -32,12 +32,12 @@ export class AttestationCollector implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.clock.onNewSlot(this.checkDuties);
+    this.chain.emitter.on("clock:slot", this.checkDuties);
   }
 
   public async stop(): Promise<void> {
     this.timers.forEach((timer) => clearTimeout(timer));
-    this.chain.clock.unsubscribeFromNewSlot(this.checkDuties);
+    this.chain.emitter.removeListener("clock:slot", this.checkDuties);
   }
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {

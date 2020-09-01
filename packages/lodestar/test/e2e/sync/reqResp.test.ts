@@ -52,10 +52,11 @@ describe("[sync] rpc", function () {
   let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
   let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = ({} as unknown) as IGossipMessageValidator;
+  let chain: MockBeaconChain;
 
   beforeEach(async () => {
     const state = generateState();
-    const chain = new MockBeaconChain({
+    chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
@@ -122,6 +123,7 @@ describe("[sync] rpc", function () {
   });
 
   afterEach(async () => {
+    await chain.stop()
     await Promise.all([rpcA.stop(), rpcB.stop()]);
     //allow goodbye to propagate
     await sleep(200);

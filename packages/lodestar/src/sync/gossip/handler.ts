@@ -32,12 +32,12 @@ export class BeaconGossipHandler implements IGossipHandler {
     await this.network.gossip.start();
     this.currentForkDigest = this.chain.currentForkDigest;
     this.subscribe(this.currentForkDigest);
-    this.chain.on("forkDigest", this.handleForkDigest);
+    this.chain.emitter.on("forkDigest", this.handleForkDigest);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
     await this.network.gossip.stop();
   }
 

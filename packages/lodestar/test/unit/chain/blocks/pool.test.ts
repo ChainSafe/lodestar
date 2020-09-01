@@ -13,7 +13,7 @@ describe("block pool", function () {
 
   beforeEach(function () {
     forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
-    eventBusStub = sinon.createStubInstance(BeaconChain);
+    eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     sourceStub = {
       ...pushable<IBlockProcessJob>(),
       push: sinon.stub(),

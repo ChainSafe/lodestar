@@ -52,6 +52,7 @@ describe("Network Gossip", function () {
 
   afterEach(async () => {
     await gossip.stop();
+    await chain.stop();
     sandbox.restore();
   });
 
@@ -166,7 +167,7 @@ describe("Network Gossip", function () {
       const received = new Promise((resolve) => {
         gossip.subscribeToBlock(chain.currentForkDigest, resolve);
       });
-      chain.emit("forkDigest", chain.currentForkDigest);
+      chain.emitter.emit("forkDigest", chain.currentForkDigest);
       const block = generateEmptySignedBlock();
       pubsub.emit(
         getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, GossipEncoding.SSZ_SNAPPY, new Map()),

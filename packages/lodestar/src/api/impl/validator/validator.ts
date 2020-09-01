@@ -34,7 +34,6 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
   computeSubnetForSlot,
-  getCurrentSlot,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Signature, verify} from "@chainsafe/bls";
@@ -103,7 +102,7 @@ export class ValidatorApi implements IValidatorApi {
       if (validatorIndex === undefined) {
         throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
       }
-      const currentSlot = getCurrentSlot(this.config, headState.genesisTime);
+      const currentSlot = this.chain.clock.currentSlot;
       if (headState.slot < currentSlot) {
         processSlots(epochCtx, headState, currentSlot);
       }
@@ -157,7 +156,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.checkSyncStatus();
     if (!validatorPubKeys || validatorPubKeys.length === 0) throw new Error("No validator to get attester duties");
     const {epochCtx, state} = await this.chain.getHeadStateContext();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    const currentSlot = this.chain.clock.currentSlot;
     if (state.slot < currentSlot) {
       processSlots(epochCtx, state, currentSlot);
     }
@@ -262,11 +261,16 @@ export class ValidatorApi implements IValidatorApi {
     if (!this.sync.isSynced()) {
       let syncStatus;
       try {
-        syncStatus = this.config.types.SyncingStatus.toJson(await this.sync.getSyncStatus());
+        syncStatus = await this.sync.getSyncStatus();
       } catch (e) {
         throw new ApiError(503, "Node is stopped");
       }
-      throw new ApiError(503, `Node is syncing, status: ${JSON.stringify(syncStatus)}`);
+      if (syncStatus.syncDistance > this.config.params.SLOTS_PER_EPOCH) {
+        throw new ApiError(
+          503,
+          `Node is syncing, status: ${JSON.stringify(this.config.types.SyncingStatus.toJson(syncStatus))}`
+        );
+      }
     }
   }
 }

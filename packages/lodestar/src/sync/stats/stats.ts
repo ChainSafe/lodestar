@@ -14,11 +14,11 @@ export class SyncStats implements ISyncStats {
 
   public async start(): Promise<void> {
     await this.rateCounter.start();
-    this.chainEvents.on("processedBlock", this.onBlockProcessed);
+    this.chainEvents.on("block", this.onBlockProcessed);
   }
 
   public async stop(): Promise<void> {
-    this.chainEvents.removeListener("processedBlock", this.onBlockProcessed);
+    this.chainEvents.removeListener("block", this.onBlockProcessed);
     await this.rateCounter.stop();
   }
 

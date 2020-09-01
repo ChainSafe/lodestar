@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance, SinonFakeTimers} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../src/chain";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
 import {BeaconGossipHandler, IGossipHandler} from "../../../src/sync/gossip";
@@ -44,6 +44,7 @@ describe("sync", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub.emitter = new ChainEventEmitter();
     reqRespStub = sinon.createStubInstance(BeaconReqRespHandler);
     attestationCollectorStub = sinon.createStubInstance(AttestationCollector);
     gossipStub = sinon.createStubInstance(BeaconGossipHandler);
