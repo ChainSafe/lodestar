@@ -234,10 +234,11 @@ export class BeaconChain implements IBeaconChain {
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(genesisState);
     genesisBlock.stateRoot = stateRoot;
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(genesisBlock);
-    this.logger.info(
-      `Initializing beacon chain with state root ${toHexString(stateRoot)}` +
-        ` and block root ${toHexString(blockRoot)}, number of validator: ${genesisState.validators.length}`
-    );
+    this.logger.info("Initializing genesis state", {
+      stateRoot: toHexString(stateRoot),
+      blockRoot: toHexString(blockRoot),
+      validatorCount: genesisState.validators.length,
+    });
     // Determine whether a genesis state already in
     // the database matches what we were provided
     const storedGenesisBlock = await this.db.blockArchive.get(GENESIS_SLOT);
@@ -248,11 +249,7 @@ export class BeaconChain implements IBeaconChain {
       throw new Error("A genesis state with different configuration was detected! Please clean the database.");
     }
     const signedGenesisBlock = {message: genesisBlock, signature: EMPTY_SIGNATURE};
-    await Promise.all([
-      this.db.block.add(signedGenesisBlock),
-      this.db.blockArchive.add(signedGenesisBlock),
-      this.db.stateArchive.add(genesisState),
-    ]);
+    await Promise.all([this.db.blockArchive.add(signedGenesisBlock), this.db.stateArchive.add(genesisState)]);
     this.logger.info("Beacon chain initialized");
   }
 
@@ -299,7 +296,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger.profile("restoreHeadState");
     await this.db.stateCache.add({state: lastKnownState, epochCtx});
     // there might be blocks in the archive we need to reprocess
-    const finalizedBlocks = await this.db.blockArchive.values({gte: lastKnownState.slot});
+    const finalizedBlocks = await this.db.blockArchive.values({gt: lastKnownState.slot});
     // the block respective to finalized epoch still in block db
     const unfinalizedBlocks = await this.db.block.values();
     if (!unfinalizedBlocks || unfinalizedBlocks.length === 0) {
