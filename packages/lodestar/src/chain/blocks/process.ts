@@ -32,6 +32,11 @@ export function processBlock(
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         const preStateContext = await getPreState(config, db, forkChoice, pool, logger, job);
         if (!preStateContext) {
+          logger.verbose("No pre-state found, dropping block", {
+            slot: job.signedBlock.message.slot,
+            blockRoot: toHexString(blockRoot),
+            parentRoot: toHexString(job.signedBlock.message.parentRoot),
+          });
           continue;
         }
         // Run the state transition

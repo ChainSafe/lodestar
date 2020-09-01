@@ -16,7 +16,7 @@ export function validateBlock(
     return (async function* () {
       for await (const job of source) {
         const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-        if (forkChoice.hasBlock(blockHash)) {
+        if (!job.reprocess && forkChoice.hasBlock(blockHash)) {
           logger.debug(`Block ${toHexString(blockHash)} was already processed, skipping...`);
           eventBus.emit("block", job.signedBlock);
           continue;

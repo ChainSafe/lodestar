@@ -290,10 +290,12 @@ export class BeaconChain implements IBeaconChain {
    * Restore state cache and forkchoice from last finalized state.
    */
   private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>, epochCtx: EpochContext): Promise<void> {
-    const finalizedCheckpoint = lastKnownState.finalizedCheckpoint;
-    const finalizedEpoch = finalizedCheckpoint.epoch;
-    const finalizedRoot = finalizedCheckpoint.root;
-    this.logger.info(`Found last known finalized state at epoch #${finalizedEpoch} root ${toHexString(finalizedRoot)}`);
+    const stateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
+    this.logger.info("Restoring from last known state", {
+      slot: lastKnownState.slot,
+      epoch: computeEpochAtSlot(this.config, lastKnownState.slot),
+      stateRoot: toHexString(stateRoot),
+    });
     this.logger.profile("restoreHeadState");
     await this.db.stateCache.add({state: lastKnownState, epochCtx});
     // there might be blocks in the archive we need to reprocess
@@ -312,33 +314,16 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info(
       `Found ${sortedBlocks.length} nonfinalized blocks in database from slot ` + `${firstSlot} to ${lastSlot}`
     );
-    const isStateNotGenesis = lastKnownState.slot > GENESIS_SLOT;
-    const stateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
-    const finalizedBlock = sortedBlocks.find((block) => {
-      return (
-        block.message.slot === lastKnownState.slot &&
-        // at genesis the genesis block's state root is not equal to genesis state root
-        (isStateNotGenesis ? this.config.types.Root.equals(block.message.stateRoot, stateRoot) : true)
-      );
-    });
-    if (!finalizedBlock) {
-      throw new Error(`Cannot find block for finalized state at slot ${lastKnownState.slot}`);
-    } else {
-      this.logger.info(`Found finalized block at slot ${finalizedBlock.message.slot},
-        root=${toHexString(this.config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message))}`);
-    }
     await this.initForkChoice(lastKnownState);
-    // no need to process the finalized block
-    const processedBlocks = sortedBlocks.filter((block) => block.message.slot > finalizedBlock.message.slot);
-    if (!processedBlocks.length) {
+    if (!sortedBlocks.length) {
       this.logger.info("No need to reprocess blocks");
       return;
     }
-    firstSlot = processedBlocks[0].message.slot;
-    lastSlot = processedBlocks[processedBlocks.length - 1].message.slot;
+    firstSlot = sortedBlocks[0].message.slot;
+    lastSlot = sortedBlocks[sortedBlocks.length - 1].message.slot;
     this.logger.info(`Start processing from slot ${firstSlot} to ${lastSlot} to rebuild state cache and forkchoice`);
     await Promise.all([
-      ...processedBlocks.map((block) => this.receiveBlock(block, true, true)),
+      ...sortedBlocks.map((block) => this.receiveBlock(block, true, true)),
       this.waitForBlockProcessed(this.config.types.BeaconBlock.hashTreeRoot(lastBlock.message)),
     ]);
     this.logger.important(`Finish restoring chain head from ${sortedBlocks.length} blocks`);
@@ -351,26 +336,32 @@ export class BeaconChain implements IBeaconChain {
    */
   private async initForkChoice(anchorState: TreeBacked<BeaconState>): Promise<void> {
     let blockRoot;
+    let justifiedCheckpoint;
+    let finalizedCheckpoint;
     if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
       const block = getEmptyBlock();
       block.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
       blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block);
+      const blockCheckpoint = {
+        root: blockRoot,
+        epoch: computeEpochAtSlot(this.config, anchorState.slot),
+      };
+      justifiedCheckpoint = blockCheckpoint;
+      finalizedCheckpoint = blockCheckpoint;
     } else {
       const blockHeader = this.config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
       blockHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
       blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
+      justifiedCheckpoint = anchorState.currentJustifiedCheckpoint;
+      finalizedCheckpoint = anchorState.finalizedCheckpoint;
     }
-    const blockCheckpoint = {
-      root: blockRoot,
-      epoch: computeEpochAtSlot(this.config, anchorState.slot),
-    };
     this.forkChoice.addBlock({
       slot: anchorState.slot,
       blockRoot,
       stateRoot: this.config.types.BeaconState.hashTreeRoot(anchorState),
       parentRoot: anchorState.latestBlockHeader.parentRoot.valueOf() as Uint8Array,
-      justifiedCheckpoint: blockCheckpoint,
-      finalizedCheckpoint: blockCheckpoint,
+      justifiedCheckpoint,
+      finalizedCheckpoint,
     });
   }
 
