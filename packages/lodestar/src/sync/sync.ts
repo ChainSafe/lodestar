@@ -128,7 +128,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public isSynced(): boolean {
-    return this.mode === SyncMode.SYNCED || this.mode === SyncMode.REGULAR_SYNCING;
+    return this.mode === SyncMode.SYNCED;
   }
 
   public async collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {

@@ -261,11 +261,16 @@ export class ValidatorApi implements IValidatorApi {
     if (!this.sync.isSynced()) {
       let syncStatus;
       try {
-        syncStatus = this.config.types.SyncingStatus.toJson(await this.sync.getSyncStatus());
+        syncStatus = await this.sync.getSyncStatus();
       } catch (e) {
         throw new ApiError(503, "Node is stopped");
       }
-      throw new ApiError(503, `Node is syncing, status: ${JSON.stringify(syncStatus)}`);
+      if (syncStatus.syncDistance > this.config.params.SLOTS_PER_EPOCH) {
+        throw new ApiError(
+          503,
+          `Node is syncing, status: ${JSON.stringify(this.config.types.SyncingStatus.toJson(syncStatus))}`
+        );
+      }
     }
   }
 }
