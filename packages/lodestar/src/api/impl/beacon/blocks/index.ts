@@ -1,10 +1,11 @@
-import {BlockId, IBeaconBlocksApi} from "./interface";
 import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
-import {IApiOptions} from "../../../options";
-import {IApiModules} from "../../../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
+import {IApiOptions} from "../../../options";
+import {IApiModules} from "../../interface";
+import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 
 export * from "./interface";

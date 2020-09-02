@@ -1,56 +1,47 @@
-import {RestApi} from "../../../../../src/api/rest";
-import {ApiNamespace} from "../../../../../src/api";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import supertest from "supertest";
-import {expect} from "chai";
-import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import {ValidatorApi} from "../../../../../src/api/impl/validator";
-import pushable, {Pushable} from "it-pushable";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {generateEmptySignedBlock} from "../../../../utils/block";
+import {AddressInfo} from "net";
 import EventSource from "eventsource";
+import pushable, {Pushable} from "it-pushable";
+import sinon from "sinon";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+
+import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {LodestarEventIterator} from "../../../../../src/util/events";
-import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {generateEmptySignedBlock} from "../../../../utils/block";
+import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("Test beacon rest api", function () {
   this.timeout(10000);
 
-  let restApi: any, beaconApi: SinonStubbedInstance<BeaconApi>, validatorApi: SinonStubbedInstance<ValidatorApi>;
+  let restApi: RestApi, api: StubbedApi;
 
   beforeEach(async function () {
-    validatorApi = sinon.createStubInstance(ValidatorApi);
-    beaconApi = sinon.createStubInstance(BeaconApi);
-    restApi = new RestApi(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        logger: silentLogger,
-        beacon: beaconApi,
-        validator: validatorApi,
-        node: new StubbedNodeApi(),
-        config,
-      }
-    );
-    return await restApi.start();
+    api = new StubbedApi(sinon);
+    restApi = await RestApi.init({
+      api: [ApiNamespace.BEACON],
+      cors: "*",
+      enabled: true,
+      host: "127.0.0.1",
+      port: 0,
+    }, {
+      config,
+      logger: silentLogger,
+      api,
+    });
   });
 
   afterEach(async function () {
-    return await restApi.stop();
+    await restApi.close();
+    sinon.restore();
   });
 
   it("should get block stream", function (done) {
-    const server = restApi.server.server.address();
+    const server = restApi.server.server.address() as AddressInfo;
     const source = pushable<SignedBeaconBlock>() as LodestarEventIterator<SignedBeaconBlock> &
       Pushable<SignedBeaconBlock>;
     source.stop = sinon.stub();
-    beaconApi.getBlockStream.returns(source);
+    api.beacon.getBlockStream.returns(source);
     const eventSource = new EventSource(`http://${server.address}:${server.port}/lodestar/blocks/stream`, {
       https: {rejectUnauthorized: false},
     });

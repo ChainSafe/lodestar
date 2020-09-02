@@ -16,7 +16,7 @@ import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
-import {ApiService} from "../api";
+import {Api, IApi, RestApi} from "../api";
 import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
@@ -47,7 +47,8 @@ export class BeaconNode {
   public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
-  public api: IService;
+  public api?: IApi;
+  public restApi?: RestApi;
   public sync: IBeaconSync;
   public reps: ReputationStore;
   public chores: TasksService;
@@ -112,14 +113,6 @@ export class BeaconNode {
       reputationStore: this.reps,
       logger: this.logger.child(this.conf.logger.sync),
     });
-    this.api = new ApiService(this.conf.api, {
-      config,
-      logger: this.logger.child(this.conf.logger.api),
-      db: this.db,
-      sync: this.sync,
-      network: this.network,
-      chain: this.chain,
-    });
     this.chores = new TasksService(this.config, {
       db: this.db,
       chain: this.chain,
@@ -144,13 +137,25 @@ export class BeaconNode {
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.sync.start();
-    await this.api.start();
+    this.api = new Api(this.conf.api, {
+      config: this.config,
+      logger: this.logger.child(this.conf.logger.api),
+      db: this.db,
+      sync: this.sync,
+      network: this.network,
+      chain: this.chain,
+    });
+    this.restApi = await RestApi.init(this.conf.api.rest, {
+      config: this.config,
+      logger: this.logger.child(this.conf.logger.api),
+      api: this.api,
+    });
     await this.chores.start();
   }
 
   public async stop(): Promise<void> {
     await this.chores.stop();
-    await this.api.stop();
+    if (this.restApi) await this.restApi.close();
     await this.sync.stop();
     await this.chain.stop();
     await this.eth1.stop();

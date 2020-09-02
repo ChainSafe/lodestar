@@ -1,48 +1,37 @@
-import {RestApi} from "../../../../../src/api/rest";
-import {ApiNamespace} from "../../../../../src/api";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import {ValidatorApi} from "../../../../../src/api/impl/validator";
-import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
-import {silentLogger} from "../../../../utils/logger";
+import sinon from "sinon";
 import supertest from "supertest";
 import {expect} from "chai";
-import {getGenesis} from "../../../../../lib/api/rest/controllers/beacon";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+
+import {ApiNamespace, RestApi} from "../../../../../src/api";
+import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
+import {StubbedApi} from "../../../../utils/stub/api";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("rest - beacon - getGenesis", function () {
-  let restApi: RestApi,
-    beaconApiStub: SinonStubbedInstance<BeaconApi>,
-    validatorApiStub: SinonStubbedInstance<ValidatorApi>;
+  let restApi: RestApi, api: StubbedApi;
 
   beforeEach(async function () {
-    validatorApiStub = sinon.createStubInstance(ValidatorApi);
-    beaconApiStub = sinon.createStubInstance(BeaconApi);
-    restApi = new RestApi(
-      {
-        api: [ApiNamespace.BEACON],
-        cors: "*",
-        enabled: true,
-        host: "127.0.0.1",
-        port: 0,
-      },
-      {
-        logger: silentLogger,
-        beacon: beaconApiStub,
-        validator: validatorApiStub,
-        node: new StubbedNodeApi(),
-        config,
-      }
-    );
-    return await restApi.start();
+    api = new StubbedApi(sinon);
+    restApi = await RestApi.init({
+      api: [ApiNamespace.BEACON],
+      cors: "*",
+      enabled: true,
+      host: "127.0.0.1",
+      port: 0,
+    }, {
+      config,
+      logger: silentLogger,
+      api,
+    });
   });
 
   afterEach(async function () {
-    return await restApi.stop();
+    await restApi.close();
   });
 
   it("should get genesis object", async function () {
-    beaconApiStub.getGenesis.resolves({
+    api.beacon.getGenesis.resolves({
       genesisForkVersion: config.params.GENESIS_FORK_VERSION,
       genesisTime: BigInt(0),
       genesisValidatorsRoot: Buffer.alloc(32),
@@ -57,7 +46,7 @@ describe("rest - beacon - getGenesis", function () {
   });
 
   it("should return 404 if no genesis", async function () {
-    beaconApiStub.getGenesis.resolves(null);
+    api.beacon.getGenesis.resolves(null);
     await supertest(restApi.server.server).get(getGenesis.url).expect(404);
   });
 });

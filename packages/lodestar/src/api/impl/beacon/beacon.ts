@@ -11,18 +11,18 @@ import {
   Uint64,
   ValidatorResponse,
 } from "@chainsafe/lodestar-types";
-import {IBeaconApi} from "./interface";
+
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
-import {IApiModules} from "../../interface";
-import {ApiNamespace} from "../../index";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {ApiNamespace, IApiModules} from "../interface";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
 import {LodestarEventIterator} from "../../../util/events";
 import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
+import {IBeaconApi} from "./interface";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;

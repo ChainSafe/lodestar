@@ -1,6 +1,7 @@
-import {IApiModules} from "../../index";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {FastifyInstance, Middleware} from "fastify";
+
+import {IApiModules} from "../../impl";
 
 export const applySyncingMiddleware = (fastify: FastifyInstance, route: string, modules: IApiModules): void => {
   const syncingMiddleware: Middleware<Server, IncomingMessage, ServerResponse> = async (

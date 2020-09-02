@@ -1,21 +1,19 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import supertest from "supertest";
-import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
-import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import {ApiNamespace} from "../../../../../src/api";
-import {RestApi} from "../../../../../src/api/rest";
-import {ValidatorApi} from "../../../../../src/api/impl/validator";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
+import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getHealth} from "../../../../../src/api/rest/controllers/node";
+import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("rest - node - getHealth", function () {
-  let api: RestApi;
-  let nodeApiStub: StubbedNodeApi;
+  let restApi: RestApi;
+  let api: StubbedApi;
 
   beforeEach(async function () {
-    nodeApiStub = new StubbedNodeApi();
-    api = new RestApi(
+    api = new StubbedApi();
+    restApi = await RestApi.init(
       {
         api: [ApiNamespace.NODE],
         cors: "*",
@@ -26,30 +24,27 @@ describe("rest - node - getHealth", function () {
       {
         config,
         logger: silentLogger,
-        validator: sinon.createStubInstance(ValidatorApi),
-        beacon: sinon.createStubInstance(BeaconApi),
-        node: nodeApiStub,
+        api,
       }
     );
-    await api.start();
   });
 
   afterEach(async function () {
-    await api.stop();
+    await restApi.close();
   });
 
   it("ready", async function () {
-    nodeApiStub.getNodeStatus.resolves("ready");
-    await supertest(api.server.server).get(getHealth.url).expect(200);
+    api.node.getNodeStatus.resolves("ready");
+    await supertest(restApi.server.server).get(getHealth.url).expect(200);
   });
 
   it("syncing", async function () {
-    nodeApiStub.getNodeStatus.resolves("syncing");
-    await supertest(api.server.server).get(getHealth.url).expect(206);
+    api.node.getNodeStatus.resolves("syncing");
+    await supertest(restApi.server.server).get(getHealth.url).expect(206);
   });
 
   it("error", async function () {
-    nodeApiStub.getNodeStatus.resolves("error");
-    await supertest(api.server.server).get(getHealth.url).expect(503);
+    api.node.getNodeStatus.resolves("error");
+    await supertest(restApi.server.server).get(getHealth.url).expect(503);
   });
 });

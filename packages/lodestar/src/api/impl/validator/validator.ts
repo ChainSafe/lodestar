@@ -2,6 +2,8 @@
  * @module api/rpc
  */
 
+import {toHexString} from "@chainsafe/ssz";
+import {Signature, verify} from "@chainsafe/bls";
 import {
   AggregateAndProof,
   Attestation,
@@ -18,17 +20,7 @@ import {
   SignedBeaconBlock,
   Slot,
 } from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {assert} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../../db";
-import {IBeaconChain} from "../../../chain";
-import {IValidatorApi} from "./interface";
-import {assembleBlock} from "../../../chain/factory/block";
-import {ApiNamespace, IApiModules} from "../../index";
-import {IApiOptions} from "../../options";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {INetwork} from "../../../network";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -36,15 +28,23 @@ import {
   computeSubnetForSlot,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {Signature, verify} from "@chainsafe/bls";
+import {assert, ILogger} from "@chainsafe/lodestar-utils";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+
+import {IBeaconDb} from "../../../db";
+import {IBeaconChain} from "../../../chain";
+import {IApiOptions} from "../../options";
+import {INetwork} from "../../../network";
+import {IBeaconSync} from "../../../sync";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
+import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
 import {assembleAttestation} from "../../../chain/factory/attestation";
-import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError} from "../errors/api";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {notNullish} from "../../../util/notNullish";
+import {ApiNamespace, IApiModules} from "../interface";
+import {IValidatorApi} from "./interface";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
