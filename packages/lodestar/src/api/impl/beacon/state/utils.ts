@@ -31,7 +31,7 @@ export async function resolveStateId(
   }
   //block id must be slot
   const slot = parseInt(stateId, 10);
-  if (isNaN(slot) && isNaN(slot - 0)) {
+  if (isNaN(slot)) {
     throw new Error("Invalid block id");
   }
   //todo: resolve archive slot -> state

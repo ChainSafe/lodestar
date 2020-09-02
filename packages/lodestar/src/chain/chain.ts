@@ -56,7 +56,7 @@ export interface IBlockProcessJob {
 }
 
 export class BeaconChain implements IBeaconChain {
-  public forkChoice!: ILMDGHOST;
+  public forkChoice: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
@@ -83,6 +83,24 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = new ChainEventEmitter();
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
+    this.forkChoice = new ArrayDagLMDGHOST({
+      config: this.config,
+      emitter: this.emitter,
+    });
+    this.attestationProcessor = new AttestationProcessor(this, {
+      config: this.config,
+      db: this.db,
+      logger: this.logger,
+    });
+    this.blockProcessor = new BlockProcessor(
+      this.config,
+      this.logger,
+      this.db,
+      this.forkChoice,
+      this.metrics,
+      this.emitter,
+      this.attestationProcessor
+    );
   }
 
   public getGenesisTime(): Number64 {
@@ -175,25 +193,7 @@ export class BeaconChain implements IBeaconChain {
       genesisTime: state.genesisTime,
       signal: this.abortController.signal,
     });
-    this.forkChoice = new ArrayDagLMDGHOST({
-      config: this.config,
-      emitter: this.emitter,
-      genesisTime: state.genesisTime,
-    });
-    this.attestationProcessor = new AttestationProcessor(this, {
-      config: this.config,
-      db: this.db,
-      logger: this.logger,
-    });
-    this.blockProcessor = new BlockProcessor(
-      this.config,
-      this.logger,
-      this.db,
-      this.forkChoice,
-      this.metrics,
-      this.emitter,
-      this.attestationProcessor
-    );
+    this.forkChoice.init(state.genesisTime);
     await this.blockProcessor.start();
     await this.attestationProcessor.start();
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
@@ -205,7 +205,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   public async stop(): Promise<void> {
-    this.abortController!.abort();
+    if (this.abortController) {
+      this.abortController.abort();
+    }
     await this.attestationProcessor.stop();
     await this.blockProcessor.stop();
     this.emitter.removeListener("forkVersion", this.handleForkVersionChanged);

@@ -63,9 +63,9 @@ describe("ArrayDagLMDGHOST", () => {
     const genesisTime = Math.round(Date.now() / 1000);
     lmd = new ArrayDagLMDGHOST({
       config,
-      genesisTime,
       emitter,
     });
+    lmd.init(genesisTime);
     addBlock(
       lmd,
       GENESIS_SLOT,
@@ -100,9 +100,9 @@ describe("ArrayDagLMDGHOST", () => {
     const genesisTime = Math.round(Date.now() / 1000);
     lmd = new ArrayDagLMDGHOST({
       config,
-      genesisTime,
       emitter,
     });
+    lmd.init(genesisTime);
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -164,9 +164,9 @@ describe("ArrayDagLMDGHOST", () => {
     const genesisTime = Math.round(Date.now() / 1000);
     lmd = new ArrayDagLMDGHOST({
       config,
-      genesisTime,
       emitter,
     });
+    lmd.init(genesisTime);
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -213,9 +213,9 @@ describe("ArrayDagLMDGHOST", () => {
     const genesisTime = Math.round(Date.now() / 1000);
     lmd = new ArrayDagLMDGHOST({
       config,
-      genesisTime,
       emitter,
     });
+    lmd.init(genesisTime);
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -250,9 +250,9 @@ describe("ArrayDagLMDGHOST", () => {
       const genesisTime = Math.round(Date.now() / 1000);
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockA) === true, "should return true");
     });
 
@@ -263,9 +263,9 @@ describe("ArrayDagLMDGHOST", () => {
       const emitter = new ChainEventEmitter();
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -298,9 +298,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -330,9 +330,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -367,9 +367,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -459,9 +459,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -575,9 +575,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -682,9 +682,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -795,9 +795,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -858,9 +858,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -976,9 +976,9 @@ describe("ArrayDagLMDGHOST", () => {
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
       lmd = new ArrayDagLMDGHOST({
         config,
-        genesisTime,
         emitter,
       });
+      lmd.init(genesisTime);
       addBlock(
         lmd,
         GENESIS_SLOT,

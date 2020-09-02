@@ -124,7 +124,7 @@ export class Node {
  */
 export class ArrayDagLMDGHOST implements ILMDGHOST {
   private readonly config: IBeaconConfig;
-  private genesisTime: Number64;
+  private genesisTime!: Number64;
 
   /**
    * Aggregated attestations
@@ -157,15 +157,7 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   private synced: boolean;
   private emitter!: ChainEventEmitter;
 
-  public constructor({
-    config,
-    emitter,
-    genesisTime,
-  }: {
-    config: IBeaconConfig;
-    emitter: ChainEventEmitter;
-    genesisTime: number;
-  }) {
+  public constructor({config, emitter}: {config: IBeaconConfig; emitter: ChainEventEmitter}) {
     const slotFinder = (hex: string): Slot | null =>
       this.nodeIndices.get(hex) ? this.nodes[this.nodeIndices.get(hex)!].slot : null;
     this.aggregator = new AttestationAggregator(slotFinder);
@@ -176,6 +168,9 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
     this.synced = true;
     this.config = config;
     this.emitter = emitter;
+  }
+
+  public init(genesisTime: number): void {
     this.genesisTime = genesisTime;
   }
 
@@ -407,6 +402,9 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
   // To address the bouncing attack, only update conflicting justified
   //  checkpoints in the fork choice if in the early slots of the epoch.
   public shouldUpdateJustifiedCheckpoint(blockRoot: Uint8Array): boolean {
+    if (this.genesisTime === null || this.genesisTime === undefined) {
+      throw new Error("forkchoice not initialized");
+    }
     if (!this.justified) {
       return true;
     }

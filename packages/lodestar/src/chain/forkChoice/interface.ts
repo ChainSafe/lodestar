@@ -13,6 +13,7 @@ export interface IForkChoiceEvents {
 export type ForkChoiceEventEmitter = StrictEventEmitter<EventEmitter, IForkChoiceEvents>;
 
 export interface ILMDGHOST {
+  init(genesisTime: number): void;
   onTick(): void;
   addBlock(info: BlockSummary): void;
   addAttestation(blockRoot: Uint8Array, attester: ValidatorIndex, weight: Gwei): void;
