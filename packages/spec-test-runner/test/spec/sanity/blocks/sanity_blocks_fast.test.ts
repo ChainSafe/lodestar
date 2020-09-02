@@ -17,7 +17,11 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
     epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      ({state} = fastStateTransition({epochCtx, state}, testcase[`blocks_${i}`] as SignedBeaconBlock, verify));
+      ({state} = fastStateTransition({epochCtx, state}, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+        verifyStateRoot: verify,
+        verifyProposer: verify,
+        verifySignatures: verify,
+      }));
     }
     return state;
   },
