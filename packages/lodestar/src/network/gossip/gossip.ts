@@ -65,7 +65,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public async start(): Promise<void> {
     await this.pubsub.start();
     this.registerHandlers(this.chain.currentForkDigest);
-    this.chain.on("forkDigest", this.handleForkDigest);
+    this.chain.emitter.on("forkDigest", this.handleForkDigest);
     this.emit("gossip:start");
     this.logger.verbose("Gossip is started");
     this.statusInterval = setInterval(this.logSubscriptions, 60000);
@@ -74,7 +74,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public async stop(): Promise<void> {
     this.emit("gossip:stop");
     this.unregisterHandlers();
-    this.chain.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
     await this.pubsub.stop();
     if (this.statusInterval) {
       clearInterval(this.statusInterval);

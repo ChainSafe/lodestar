@@ -1,6 +1,5 @@
 import {SinonStub, SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import sinon from "sinon";
 import {generateAttestation} from "../../../utils/attestation";
@@ -13,6 +12,7 @@ import {generateState} from "../../../utils/state";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
+import {silentLogger} from "../../../utils/logger";
 
 describe("chain attestation processor", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
@@ -21,7 +21,7 @@ describe("chain attestation processor", function () {
   let attestationPrestateStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
 
-  const logger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);

@@ -14,7 +14,6 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
 import {ArrayDagLMDGHOST, BeaconChain, ILMDGHOST} from "../../../src/chain";
 import {Libp2pNetwork} from "../../../src/network";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../utils/state";
 import {ReqResp} from "../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -26,6 +25,7 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {generatePeer} from "../../utils/peer";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
+import {silentLogger} from "../../utils/logger";
 
 describe("sync req resp", function () {
   const sandbox = sinon.createSandbox();
@@ -34,7 +34,6 @@ describe("sync req resp", function () {
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     metaStub: SinonStubbedInstance<IPeerMetadataStore>,
     forkChoiceStub: SinonStubbedInstance<ILMDGHOST>,
-    logger: WinstonLogger,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
@@ -54,8 +53,6 @@ describe("sync req resp", function () {
     metaStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
     networkStub.peerMetadata = metaStub;
     dbStub = new StubbedBeaconDb(sandbox);
-    logger = new WinstonLogger();
-    logger.silent = true;
 
     syncRpc = new BeaconReqRespHandler({
       config,
@@ -68,7 +65,6 @@ describe("sync req resp", function () {
 
   afterEach(() => {
     sandbox.restore();
-    logger.silent = false;
   });
 
   it("should start and stop sync rpc", async function () {

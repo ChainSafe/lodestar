@@ -28,7 +28,7 @@ describe("process epoch - slashings", function () {
 
   it("should decrease validator balances with penalty", function () {
     getCurrentEpochStub.returns(1);
-    getTotalBalanceStub.returns(2n);
+    getTotalBalanceStub.returns(BigInt(2));
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     validator2.withdrawableEpoch = config.params.EPOCHS_PER_SLASHINGS_VECTOR;

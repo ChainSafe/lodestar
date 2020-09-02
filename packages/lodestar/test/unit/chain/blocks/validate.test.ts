@@ -4,23 +4,23 @@ import {SinonStubbedInstance} from "sinon";
 import {BlockRepository} from "../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {validateBlock} from "../../../../src/chain/blocks/validate";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
 import {collect} from "./utils";
 import {expect} from "chai";
 import {getBlockSummary} from "../../../utils/headBlockInfo";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {silentLogger} from "../../../utils/logger";
 
 describe("block validate stream", function () {
+  const logger = silentLogger;
   let blockDbStub: SinonStubbedInstance<BlockRepository>;
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
-
+  let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
 
   beforeEach(function () {
     blockDbStub = sinon.createStubInstance(BlockRepository);
     forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
-    chainStub = sinon.createStubInstance(BeaconChain);
+    eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
 
   it("should filter processed blocks", async function () {
@@ -28,7 +28,7 @@ describe("block validate stream", function () {
     forkChoiceStub.hasBlock.withArgs(config.types.BeaconBlock.hashTreeRoot(receivedBlock.message)).returns(true);
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
+      validateBlock(config, logger, forkChoiceStub, eventBusStub),
       collect
     );
     expect(result).to.have.length(0);
@@ -41,7 +41,7 @@ describe("block validate stream", function () {
     forkChoiceStub.getFinalized.returns({epoch: 1, root: Buffer.alloc(0)});
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
+      validateBlock(config, logger, forkChoiceStub, eventBusStub),
       collect
     );
     expect(result).to.have.length(0);
@@ -56,7 +56,7 @@ describe("block validate stream", function () {
     blockDbStub.get.resolves(config.types.SignedBeaconBlock.defaultValue());
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
-      validateBlock(config, sinon.createStubInstance(WinstonLogger), forkChoiceStub, chainStub),
+      validateBlock(config, logger, forkChoiceStub, eventBusStub),
       collect
     );
     expect(result).to.have.length(1);

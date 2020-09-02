@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {IGossip} from "../../../../src/network/gossip/interface";
@@ -25,6 +25,7 @@ describe("gossip handler", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
+    chainStub.emitter = new ChainEventEmitter();
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     gossipStub = sinon.createStubInstance(Gossip);
     networkStub.gossip = gossipStub;
@@ -98,8 +99,9 @@ describe("gossip handler", function () {
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
     expect(config.types.ForkDigest.equals(oldForkDigest, chain.currentForkDigest)).to.be.false;
-    chain.emit("forkDigest", chain.currentForkDigest);
+    chain.emitter.emit("forkDigest", chain.currentForkDigest);
     expect(gossipStub.unsubscribe.callCount).to.be.equal(5);
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(2);
+    await chain.stop();
   });
 });

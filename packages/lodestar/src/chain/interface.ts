@@ -1,6 +1,3 @@
-import {EventEmitter} from "events";
-import StrictEventEmitter from "strict-event-emitter-types";
-
 import {
   Attestation,
   BeaconState,
@@ -21,25 +18,14 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IService} from "../node";
-
-export interface IChainEvents {
-  unknownBlockRoot: (root: Root) => void;
-  processedBlock: (signedBlock: SignedBeaconBlock) => void;
-  processedCheckpoint: (checkPoint: Checkpoint) => void;
-  processedAttestation: (attestation: Attestation) => void;
-  justifiedCheckpoint: (checkpoint: Checkpoint) => void;
-  finalizedCheckpoint: (checkpoint: Checkpoint) => void;
-  forkVersion: () => void;
-  forkDigest: (forkDigest: ForkDigest) => void;
-}
-
-export type ChainEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
+import {ChainEventEmitter} from "./emitter";
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
  */
-export interface IBeaconChain extends ChainEventEmitter {
+export interface IBeaconChain {
+  emitter: ChainEventEmitter;
   forkChoice: ILMDGHOST;
   clock: IBeaconClock;
   chainId: Uint16;
@@ -70,7 +56,13 @@ export interface IBeaconChain extends ChainEventEmitter {
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 
-  getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
+  /**
+   * Since we can have multiple parallel chains,
+   * this methods returns blocks in current chain head according to
+   * forkchoice. Works for finalized slots as well
+   * @param slot
+   */
+  getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
 

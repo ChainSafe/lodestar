@@ -1,6 +1,5 @@
 import {RestApi} from "../../../../../../src/api/rest";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ValidatorApi} from "../../../../../../src/api/impl/validator";
 import sinon from "sinon";
 import {ApiNamespace} from "../../../../../../src/api";
@@ -11,6 +10,7 @@ import {generateSignedBeaconHeaderResponse} from "../../../../../utils/api";
 import {toHexString} from "@chainsafe/ssz";
 import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
+import {silentLogger} from "../../../../../utils/logger";
 
 describe("rest - beacon - getBlockHeaders", function () {
   let api: RestApi;
@@ -28,7 +28,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       },
       {
         config,
-        logger: sinon.createStubInstance(WinstonLogger),
+        logger: silentLogger,
         validator: sinon.createStubInstance(ValidatorApi),
         node: new StubbedNodeApi(),
         beacon: beaconApiStub,

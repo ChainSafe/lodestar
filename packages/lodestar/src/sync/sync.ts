@@ -60,7 +60,7 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
     await this.attestationCollector.start();
-    this.chain.on("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.emitter.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
     await this.waitForPeers();
     if (this.mode === SyncMode.STOPPED) {
@@ -84,8 +84,8 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.stopSyncTimer);
+    this.chain.emitter.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.regularSync.removeListener("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -148,10 +148,15 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
-    this.regularSync.on("syncCompleted", this.stopSyncTimer.bind(this));
+    this.regularSync.on("syncCompleted", this.syncCompleted);
     await this.gossip.start();
     await this.regularSync.start();
   }
+
+  private syncCompleted = async (): Promise<void> => {
+    this.stopSyncTimer();
+    await this.network.handleSyncCompleted();
+  };
 
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();

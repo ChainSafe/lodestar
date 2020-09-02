@@ -6,6 +6,8 @@ jobs:
   quickTests:
     name: Quick tests
     runs-on: ubuntu-latest
+    env:
+      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
     steps:
       - name: Free disk space
         run: |

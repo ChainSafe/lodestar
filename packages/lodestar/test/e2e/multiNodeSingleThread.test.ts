@@ -8,7 +8,7 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {BeaconNode} from "../../src/node";
 
 describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
-  const checkpointEvent = "justifiedCheckpoint";
+  const checkpointEvent = "justified";
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 3,
@@ -83,7 +83,7 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       // printBeaconCliMetrics(nodes[0]);
 
       // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain, checkpointEvent, 240000)));
+      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000)));
       logger.info("All nodes reached justified checkpoint");
     });
   }

@@ -50,9 +50,9 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
 
   onProcessSIGINT(async () => {
     await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
-  }, logger.info);
+  }, logger.info.bind(logger));
 
-  if (options.genesisStateFile) {
+  if (options.genesisStateFile && !options.forceGenesis) {
     await node.chain.initializeBeaconChain(
       config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.genesisStateFile))
     );

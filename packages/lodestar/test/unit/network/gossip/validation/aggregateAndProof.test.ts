@@ -1,7 +1,6 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
@@ -12,13 +11,15 @@ import {List} from "@chainsafe/ssz";
 import * as gossipUtils from "../../../../../src/network/gossip/utils";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
+import {LocalClock} from "../../../../../src/chain/clock";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {generateState} from "../../../../utils/state";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PrivateKey, PublicKey} from "@chainsafe/bls";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip aggregate and proof test", function () {
-  const logger = sinon.createStubInstance(WinstonLogger);
+  const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
   let getAttestationPreStateStub: SinonStub;
@@ -31,6 +32,7 @@ describe("gossip aggregate and proof test", function () {
     chain = sinon.createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
+    chain.clock = sinon.createStubInstance(LocalClock);
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.resolves(false);
     getAttestationPreStateStub = sinon.stub(gossipUtils, "getAttestationPreState");
@@ -50,9 +52,15 @@ describe("gossip aggregate and proof test", function () {
 
   it("should ignore - invalid slot (too old)", async function () {
     //move genesis time in past so current slot is high
-    chain.getGenesisTime.returns(
-      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
-    );
+    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT);
+    sinon
+      .stub(chain.clock, "currentSlot")
+      .get(() =>
+        getCurrentSlot(
+          config,
+          Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
+        )
+      );
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {
@@ -67,6 +75,14 @@ describe("gossip aggregate and proof test", function () {
   it("should ignore - invalid slot (too eager)", async function () {
     //move genesis time so slot 0 has not yet come
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
+    sinon
+      .stub(chain.clock, "currentSlot")
+      .get(() =>
+        getCurrentSlot(
+          config,
+          Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1
+        )
+      );
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {

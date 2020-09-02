@@ -50,9 +50,6 @@ describe("assemble validator duty", function () {
     const epochCtx = new EpochContext(config);
     epochCtx.getCommitteeAssignment = () => null;
     const result = assembleAttesterDuty(config, {publicKey, index: validatorIndex}, epochCtx, 3);
-    expect(result).to.not.be.null;
-    expect(result.validatorPubkey).to.be.equal(publicKey);
-    expect(result.attestationSlot).to.be.equal(null);
-    expect(result.committeeIndex).to.be.equal(null);
+    expect(result).to.be.null;
   });
 });

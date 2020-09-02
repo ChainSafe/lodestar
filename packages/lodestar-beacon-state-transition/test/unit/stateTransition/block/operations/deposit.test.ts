@@ -103,7 +103,7 @@ describe("process block - deposits", function () {
     const deposit = generateDeposit();
     const validator = generateValidator();
     state.validators.push(validator);
-    state.balances.push(0n);
+    state.balances.push(BigInt(0));
     deposit.data.pubkey = validator.pubkey;
     try {
       processDeposit(config, state, deposit);

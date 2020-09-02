@@ -73,7 +73,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
         }
       },
     ]);
-  }, logger.info);
+  }, logger.info.bind(logger));
 
   await node.start();
 

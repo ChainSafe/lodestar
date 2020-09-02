@@ -1,12 +1,7 @@
 {
   "extends": "../../tsconfig",
-  "include": ["src","test","docsgen"],
+  "include": ["src", "test", "docsgen"],
   "compilerOptions": {
-    "typeRoots": [
-      "../lodestar/types",
-      "../../node_modules/@types",
-      "../../node_modules/libp2p-ts/types"
-    ],
-    "target": "es2019"
+    "typeRoots": ["../lodestar/types", "../../node_modules/@types", "../../node_modules/libp2p-ts/types"]
   }
 }

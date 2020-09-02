@@ -1,5 +1,4 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -15,9 +14,10 @@ import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/l
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {BitList} from "@chainsafe/ssz";
+import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip attestation validation", function () {
-  let logger: SinonStubbedInstance<ILogger>;
+  const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
   let getBlockStateContextStub: SinonStub;
@@ -26,7 +26,6 @@ describe("gossip attestation validation", function () {
   let isValidIndexedAttestationStub: SinonStub;
 
   beforeEach(function () {
-    logger = sinon.createStubInstance(WinstonLogger);
     chain = sinon.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     db = new StubbedBeaconDb(sinon, config);

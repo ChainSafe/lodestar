@@ -1,14 +1,10 @@
 import {assert, expect} from "chai";
-
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon, {SinonFakeTimers} from "sinon";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
-import {LocalClock} from "../../../../src/chain/clock/local/LocalClock";
-import {sleep} from "../../../../src/util/sleep";
-import {StubbedBeaconDb} from "../../../utils/stub";
 import {toHexString} from "@chainsafe/ssz";
-import {NO_NODE} from "../../../../src/chain";
+import {ChainEventEmitter, NO_NODE} from "../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
 
 describe("ArrayDagLMDGHOST", () => {
@@ -34,7 +30,6 @@ describe("ArrayDagLMDGHOST", () => {
   const stateI = Buffer.from("state-i");
   let clock: SinonFakeTimers;
   let lmd: ArrayDagLMDGHOST;
-  let dbStub: StubbedBeaconDb;
 
   const addBlock = (
     lmd: ArrayDagLMDGHOST,
@@ -48,34 +43,10 @@ describe("ArrayDagLMDGHOST", () => {
 
   beforeEach(() => {
     clock = sinon.useFakeTimers();
-    dbStub = new StubbedBeaconDb(sinon);
-    lmd = new ArrayDagLMDGHOST(config);
   });
 
   afterEach(() => {
     clock.restore();
-  });
-
-  it("should call onTick per epoch", async () => {
-    const spy = sinon.spy();
-    const genesisTime = Math.floor(Date.now() / 1000);
-    lmd.onTick = spy;
-    const realClock = new LocalClock(config, Math.round(Date.now() / 1000));
-    await realClock.start();
-    lmd.start(genesisTime, realClock);
-    // wait for next epoch to run onNewEpoch
-    const timePerEpoch = 1 * config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT * 1000;
-    const promise = sleep(timePerEpoch);
-    clock.tick(timePerEpoch);
-    await promise;
-    expect(spy.callCount).to.be.equal(1);
-    await lmd.stop();
-    // 1 more epoch to check execute onTick
-    const promise2 = sleep(timePerEpoch);
-    clock.tick(1 * timePerEpoch);
-    await promise2;
-    // no more onTick call
-    expect(spy.callCount).to.be.equal(1);
   });
 
   it("should accept blocks to create a DAG", () => {
@@ -88,6 +59,13 @@ describe("ArrayDagLMDGHOST", () => {
      *         \
      *           e
      */
+    const emitter = new ChainEventEmitter();
+    const genesisTime = Math.round(Date.now() / 1000);
+    lmd = new ArrayDagLMDGHOST({
+      config,
+      genesisTime,
+      emitter,
+    });
     addBlock(
       lmd,
       GENESIS_SLOT,
@@ -118,6 +96,13 @@ describe("ArrayDagLMDGHOST", () => {
      *         \
      *           e
      */
+    const emitter = new ChainEventEmitter();
+    const genesisTime = Math.round(Date.now() / 1000);
+    lmd = new ArrayDagLMDGHOST({
+      config,
+      genesisTime,
+      emitter,
+    });
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -175,6 +160,13 @@ describe("ArrayDagLMDGHOST", () => {
      *
      *
      */
+    const emitter = new ChainEventEmitter();
+    const genesisTime = Math.round(Date.now() / 1000);
+    lmd = new ArrayDagLMDGHOST({
+      config,
+      genesisTime,
+      emitter,
+    });
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -217,6 +209,13 @@ describe("ArrayDagLMDGHOST", () => {
      *         \
      *           g
      */
+    const emitter = new ChainEventEmitter();
+    const genesisTime = Math.round(Date.now() / 1000);
+    lmd = new ArrayDagLMDGHOST({
+      config,
+      genesisTime,
+      emitter,
+    });
     let head: Uint8Array;
     addBlock(
       lmd,
@@ -247,6 +246,13 @@ describe("ArrayDagLMDGHOST", () => {
   describe("shouldUpdateJustifiedCheckpoint", () => {
     it("should update justified block initially", () => {
       // addBlock(lmd, 1, blockA, stateA, genesis, {root: blockA, epoch: 0}, {root: blockA, epoch: 0});
+      const emitter = new ChainEventEmitter();
+      const genesisTime = Math.round(Date.now() / 1000);
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockA) === true, "should return true");
     });
 
@@ -254,7 +260,12 @@ describe("ArrayDagLMDGHOST", () => {
       const genesisTime =
         Math.floor(Date.now() / 1000) -
         (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED - 1) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
+      const emitter = new ChainEventEmitter();
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -281,6 +292,15 @@ describe("ArrayDagLMDGHOST", () => {
      *        c
      */
     it("should not update justified block because conflict justified check point", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -295,10 +315,6 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, blockBSlot, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
-      const genesisTime =
-        Math.floor(Date.now() / 1000) -
-        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime, new LocalClock(config, Math.round(Date.now() / 1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === false, "should return false because not on same branch");
     });
@@ -308,6 +324,15 @@ describe("ArrayDagLMDGHOST", () => {
      * a -- b -- c
      */
     it("should not update justified block because conflict justified check point", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -322,10 +347,6 @@ describe("ArrayDagLMDGHOST", () => {
       addBlock(lmd, blockBSlot, blockB, stateB, blockA, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
       const blockCSlot = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(lmd, blockCSlot, blockC, stateC, blockB, {root: blockB, epoch: 1}, {root: blockA, epoch: 0});
-      const genesisTime =
-        Math.floor(Date.now() / 1000) -
-        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
-      lmd.start(genesisTime, new LocalClock(config, Math.round(new Date().getTime() / 1000)));
       // c is a conflicted justified block.
       assert(lmd.shouldUpdateJustifiedCheckpoint(blockC) === true, "should be able to update justified checkpoint");
     });
@@ -340,6 +361,15 @@ describe("ArrayDagLMDGHOST", () => {
      */
     // shouldUpdateJustifiedCheckpoint returns false but we still update justified checkpoint finally
     it("should update justified checkpoint - new justified is conflict to the previous justified", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -423,6 +453,15 @@ describe("ArrayDagLMDGHOST", () => {
      *              f
      */
     it("should switch best target - bad best target has no sibling", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -530,6 +569,15 @@ describe("ArrayDagLMDGHOST", () => {
      *              g (conflict epochs)
      */
     it("should switch best target - bad best target has bad sibling too", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -628,6 +676,15 @@ describe("ArrayDagLMDGHOST", () => {
      *             h (conflict epochs)
      */
     it("should switch best target - all best targets have conflict epochs", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -732,6 +789,15 @@ describe("ArrayDagLMDGHOST", () => {
      * genesis - a - b -c
      */
     it("should return correct ancestor", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -786,6 +852,15 @@ describe("ArrayDagLMDGHOST", () => {
      * genesis - a
      */
     it("should update indices after setting new finalized check point", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,
@@ -895,6 +970,15 @@ describe("ArrayDagLMDGHOST", () => {
      * When set d as finalized, b c should be removed
      */
     it("should update indices after setting new finalized check point - not in normal order", () => {
+      const emitter = new ChainEventEmitter();
+      const genesisTime =
+        Math.floor(Date.now() / 1000) -
+        (config.params.SAFE_SLOTS_TO_UPDATE_JUSTIFIED + 2) * config.params.SECONDS_PER_SLOT;
+      lmd = new ArrayDagLMDGHOST({
+        config,
+        genesisTime,
+        emitter,
+      });
       addBlock(
         lmd,
         GENESIS_SLOT,

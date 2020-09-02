@@ -55,14 +55,14 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.network = network;
     this.logger = logger;
     this.db = db;
-    this.stats = stats || new SyncStats(this.chain);
+    this.stats = stats || new SyncStats(this.chain.emitter);
     this.syncTriggerSource = pushable<ISlotRange>();
   }
 
   public async start(): Promise<void> {
     this.logger.info("Starting initial syncing");
-    this.chain.on("processedCheckpoint", this.checkSyncCompleted);
-    this.chain.on("processedBlock", this.checkSyncProgress);
+    this.chain.emitter.on("checkpoint", this.checkSyncCompleted);
+    this.chain.emitter.on("block", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
     this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses());
     // head may not be on finalized chain so we start from finalized block
@@ -88,8 +88,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.logger.info("initial sync stop");
     await this.stats.stop();
     this.syncTriggerSource.end();
-    this.chain.removeListener("processedBlock", this.checkSyncProgress);
-    this.chain.removeListener("processedCheckpoint", this.checkSyncCompleted);
+    this.chain.emitter.removeListener("block", this.checkSyncProgress);
+    this.chain.emitter.removeListener("checkpoint", this.checkSyncCompleted);
   }
 
   public getHighestBlock(): Slot {
