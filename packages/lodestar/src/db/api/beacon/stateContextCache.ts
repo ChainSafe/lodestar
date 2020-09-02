@@ -42,6 +42,25 @@ export class StateContextCache {
     this.cache = {};
   }
 
+  public get size(): number {
+    return Object.keys(this.cache).length;
+  }
+
+  /**
+   * TODO make this more robust.
+   * Without more thought, this currently breaks our assumptions about recent state availablity
+   */
+  public prune(): void {
+    const MAX_STATES = 128;
+    const keys = Object.keys(this.cache);
+    if (keys.length > MAX_STATES) {
+      // object keys are stored in insertion order, delete keys starting from the front (but keeping the first)
+      keys.slice(1, MAX_STATES - keys.length).forEach((key) => {
+        delete this.cache[key];
+      });
+    }
+  }
+
   /**
    * Should only use this with care as this is expensive.
    * @param epoch

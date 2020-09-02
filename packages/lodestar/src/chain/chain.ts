@@ -199,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.emitter.on("forkVersion", this.handleForkVersionChanged);
     this.emitter.on("clock:epoch", this.onClockEpoch);
+    this.emitter.on("checkpoint", this.onCheckpoint);
     await this.restoreHeadState(state, epochCtx);
     await this.eth1.start();
   }
@@ -209,6 +210,7 @@ export class BeaconChain implements IBeaconChain {
     await this.blockProcessor.stop();
     this.emitter.removeListener("forkVersion", this.handleForkVersionChanged);
     this.emitter.removeListener("clock:epoch", this.onClockEpoch);
+    this.emitter.removeListener("checkpoint", this.onCheckpoint);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -388,6 +390,10 @@ export class BeaconChain implements IBeaconChain {
     this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
+
+  private onCheckpoint = (): void => {
+    this.db.stateCache.prune();
+  };
 
   private onClockEpoch = (): void => {
     this.forkChoice.onTick();
