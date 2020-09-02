@@ -1,13 +1,11 @@
 import {INetwork} from "..";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReputationStore} from "../../sync/IReputation";
-import {findMissingSubnets, selectPeersToDisconnect} from "../../sync/utils/reputation";
 import PeerId from "peer-id";
+import {findMissingSubnets, selectPeersToDisconnect} from "../peers/utils";
 
 export interface IDiversifyPeersModules {
   network: INetwork;
-  reps: IReputationStore;
   logger: ILogger;
 }
 
@@ -18,7 +16,6 @@ export interface IDiversifyPeersModules {
 export class DiversifyPeersBySubnetTask {
   private readonly config: IBeaconConfig;
   private readonly network: INetwork;
-  private peerReputations: IReputationStore;
 
   private readonly logger: ILogger;
   private testInterval?: NodeJS.Timeout;
@@ -26,7 +23,6 @@ export class DiversifyPeersBySubnetTask {
   public constructor(config: IBeaconConfig, modules: IDiversifyPeersModules) {
     this.config = config;
     this.network = modules.network;
-    this.peerReputations = modules.reps;
     this.logger = modules.logger;
   }
 
@@ -46,7 +42,7 @@ export class DiversifyPeersBySubnetTask {
   public run = async (): Promise<void> => {
     this.logger.info("Running DiversifyPeersBySubnetTask");
     this.logger.profile("DiversifyPeersBySubnetTask");
-    const missingSubnets = findMissingSubnets(this.peerReputations, this.network);
+    const missingSubnets = findMissingSubnets(this.network);
     if (missingSubnets.length > 0) {
       this.logger.verbose(`Search for ${missingSubnets.length} peers with subnets: ` + missingSubnets.join(","));
     } else {
@@ -55,8 +51,7 @@ export class DiversifyPeersBySubnetTask {
       return;
     }
     const toDiscPeers: PeerId[] =
-      selectPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer(), this.peerReputations) ||
-      [];
+      selectPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || [];
     if (toDiscPeers.length > 0) {
       this.logger.verbose(`Disconnecting ${toDiscPeers.length} peers to find ${missingSubnets.length} new peers`);
       try {

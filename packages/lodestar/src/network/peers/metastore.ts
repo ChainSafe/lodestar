@@ -48,7 +48,14 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   }
 
   public setMetadata(peer: PeerId, metadata: Metadata | null): void {
-    return this.set(peer, MetadataKey.METADATA, this.config.types.Metadata, metadata);
+    if (!metadata) {
+      //clears metadata
+      return this.set(peer, MetadataKey.METADATA, this.config.types.Metadata, metadata);
+    }
+    const currentMetadata = this.getMetadata(peer);
+    if (!currentMetadata || currentMetadata.seqNumber < metadata.seqNumber) {
+      return this.set(peer, MetadataKey.METADATA, this.config.types.Metadata, metadata);
+    }
   }
 
   public setScore(peer: PeerId, score: number | null): void {

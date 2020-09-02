@@ -62,12 +62,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
       network: this,
-      reps: this.peerReputations,
       logger: this.logger,
     });
     this.checkPeerAliveTask = new CheckPeerAliveTask(this.config, {
       network: this,
-      reps: this.peerReputations,
       logger: this.logger,
     });
   }
@@ -162,7 +160,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async searchSubnetPeers(subnet: string): Promise<void> {
-    const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
+    const peerIds = getPeersWithSubnet(
+      this.getPeers({connected: true}).map((peer) => peer.id),
+      this.peerMetadata,
+      subnet
+    );
     if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
       this.logger.verbose(`Finding new peers for subnet ${subnet}`);

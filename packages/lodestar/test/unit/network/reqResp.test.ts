@@ -11,7 +11,6 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {TTFB_TIMEOUT} from "../../../src/constants";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
-import {AbortSignal} from "abort-controller/dist/abort-controller";
 import {silentLogger} from "../../utils/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
@@ -20,7 +19,6 @@ describe("[network] rpc", () => {
   const logger = silentLogger;
   const sandbox = sinon.createSandbox();
   let nodeA: NodejsNode, nodeB: NodejsNode, rpcA: ReqResp, rpcB: ReqResp;
-  let loggerStub: SinonStubbedInstance<ILogger>;
   let metaA: SinonStubbedInstance<IPeerMetadataStore>;
   let metaB: SinonStubbedInstance<IPeerMetadataStore>;
 
@@ -44,13 +42,13 @@ describe("[network] rpc", () => {
     rpcA = new ReqResp(networkOptions, {
       config,
       libp2p: nodeA,
-      logger: loggerStub,
+      logger: logger,
       peerMetadata: metaA,
     });
     rpcB = new ReqResp(networkOptions, {
       config,
       libp2p: nodeB,
-      logger: loggerStub,
+      logger: logger,
       peerMetadata: metaB,
     });
     await Promise.all([rpcA.start(), rpcB.start()]);
@@ -226,7 +224,7 @@ describe("[network] rpc", () => {
     const rpcC = new ReqResp(networkOptions, {
       config,
       libp2p: libP2pMock,
-      logger: loggerStub,
+      logger: logger,
       peerMetadata: sinon.createStubInstance(Libp2pPeerMetadataStore),
     });
     try {

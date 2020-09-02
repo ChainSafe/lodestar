@@ -28,6 +28,7 @@ import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 import {silentLogger} from "../../utils/logger";
 
 describe("sync req resp", function () {
+  const logger = silentLogger;
   const sandbox = sinon.createSandbox();
   let syncRpc: BeaconReqRespHandler;
   let chainStub: SinonStubbedInstance<BeaconChain>,
