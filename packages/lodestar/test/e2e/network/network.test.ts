@@ -17,7 +17,6 @@ import {IBeaconChain} from "../../../src/chain";
 import PeerId from "peer-id";
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {createNode} from "../../utils/network";
-import {ReputationStore} from "../../../src/sync/IReputation";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 
@@ -71,8 +70,8 @@ describe("[network] network", function () {
       (createNode(multiaddr) as unknown) as Libp2p,
       (createNode(multiaddr, peerIdB) as unknown) as Libp2p,
     ]);
-    netA = new Libp2pNetwork(opts, new ReputationStore(), {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, new ReputationStore(), {config, libp2p: libP2pB, logger, metrics, validator, chain});
+    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
     // gossip isn't started by default
     await Promise.all([netA.gossip.start(), netB.gossip.start()]);

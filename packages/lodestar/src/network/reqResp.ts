@@ -9,23 +9,23 @@ import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
   Goodbye,
+  IBeaconSSZTypes,
   Metadata,
   Ping,
   RequestBody,
   ResponseBody,
   SignedBeaconBlock,
   Status,
-  IBeaconSSZTypes,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   Method,
+  MethodRequestType,
   ReqRespEncoding,
   RequestId,
   RESP_TIMEOUT,
   RpcResponseStatus,
   TTFB_TIMEOUT,
-  MethodRequestType,
 } from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
@@ -33,11 +33,11 @@ import AbortController from "abort-controller";
 import {
   createResponseEvent,
   createRpcProtocol,
+  dialProtocol,
   eth2ResponseTimer,
   isRequestOnly,
   isRequestSingleChunk,
   randomRequestId,
-  dialProtocol,
 } from "./util";
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
@@ -46,7 +46,7 @@ import {RpcError} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
-import {IReputationStore} from "../sync/IReputation";
+import {IPeerMetadataStore} from "./peers/interface";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -60,7 +60,7 @@ interface IReqRespModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  peerReputations: IReputationStore;
+  peerMetadata: IPeerMetadataStore;
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
@@ -90,13 +90,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private libp2p: LibP2p;
   private logger: ILogger;
   private responseListener: ResponseEventListener;
-  private peerReputations: IReputationStore;
+  private peerMetadata: IPeerMetadataStore;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, peerReputations, logger}: IReqRespModules) {
+  public constructor(opts: INetworkOptions, {config, libp2p, peerMetadata, logger}: IReqRespModules) {
     super();
     this.config = config;
     this.libp2p = libp2p;
-    this.peerReputations = peerReputations;
+    this.peerMetadata = peerMetadata;
     this.logger = logger;
     this.responseListener = new ResponseEventListener();
   }
@@ -201,10 +201,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     encoding: ReqRespEncoding
   ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
     return (source) => {
-      const peerReputations = this.peerReputations;
+      const peerReputations = this.peerMetadata;
       return (async function* () {
         if (method === Method.Status) {
-          peerReputations.get(peerId.toB58String()).encoding = encoding;
+          peerReputations.setEncoding(peerId, encoding);
         }
         yield* source;
       })();
@@ -265,8 +265,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     method: Method,
     body?: RequestBody
   ): Promise<T | null> {
-    const reputaton = this.peerReputations.getFromPeerId(peerId);
-    const encoding = reputaton.encoding || ReqRespEncoding.SSZ_SNAPPY;
+    const encoding = this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
     const requestOnly = isRequestOnly(method);
     const requestSingleChunk = isRequestSingleChunk(method);
     const requestId = randomRequestId();

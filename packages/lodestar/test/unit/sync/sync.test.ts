@@ -10,7 +10,6 @@ import {BeaconSync, SyncMode} from "../../../src/sync";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect} from "chai";
 import {BeaconDb} from "../../../src/db/api";
-import {ReputationStore} from "../../../src/sync/IReputation";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../lib/sync";
@@ -36,7 +35,6 @@ describe("sync", function () {
       network: networkStub,
       reqRespHandler: reqRespStub,
       gossipHandler: gossipStub,
-      reputationStore: sinon.createStubInstance(ReputationStore),
       attestationCollector: (attestationCollectorStub as unknown) as AttestationCollector,
       logger: silentLogger,
     });

@@ -1,29 +1,28 @@
-import {SinonStubbedInstance} from "sinon";
-import {INetwork, Libp2pNetwork, IReqResp} from "../../../../src/network";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-
 import {ReqResp} from "../../../../src/network/reqResp";
-import {ReputationStore} from "../../../../src/sync/IReputation";
 import {DiversifyPeersBySubnetTask} from "../../../../src/network/tasks/diversifyPeersBySubnetTask";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import PeerId from "peer-id";
+import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
+import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 
 describe("DiversifyPeersBySubnetTask", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let reqRespStub: SinonStubbedInstance<IReqResp>;
-  let reps: ReputationStore;
+  let peerMetadataStore: SinonStubbedInstance<IPeerMetadataStore>;
   let task: DiversifyPeersBySubnetTask;
   beforeEach(() => {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     reqRespStub = sinon.createStubInstance(ReqResp);
     networkStub.reqResp = reqRespStub;
-    reps = new ReputationStore();
+    peerMetadataStore = sinon.createStubInstance(Libp2pPeerMetadataStore);
+    networkStub.peerMetadata = peerMetadataStore;
     task = new DiversifyPeersBySubnetTask(config, {
       logger: new WinstonLogger(),
       network: networkStub,
-      reps,
     });
   });
 
@@ -40,10 +39,10 @@ describe("DiversifyPeersBySubnetTask", function () {
   it("should not search subnets", async () => {
     const peerId = await PeerId.create();
     networkStub.getPeers.returns([{id: peerId} as LibP2p.Peer]);
-    reps.getFromPeerId(peerId).latestMetadata = {
+    peerMetadataStore.getMetadata.withArgs(peerId).returns({
       attnets: Array(64).fill(true),
       seqNumber: BigInt(1),
-    };
+    });
     expect(networkStub.searchSubnetPeers.called).to.be.false;
   });
 
@@ -54,17 +53,17 @@ describe("DiversifyPeersBySubnetTask", function () {
     const attNets = Array(64).fill(false);
     attNets[0] = true;
     attNets[1] = true;
-    reps.getFromPeerId(peerId).latestMetadata = {
+    peerMetadataStore.getMetadata.withArgs(peerId).returns({
       attnets: attNets,
       seqNumber: BigInt(1),
-    };
+    });
     const attNets2 = Array(64).fill(false);
     attNets2[1] = true;
     attNets2[2] = true;
-    reps.getFromPeerId(peerId2).latestMetadata = {
+    peerMetadataStore.getMetadata.withArgs(peerId2).returns({
       attnets: attNets2,
       seqNumber: BigInt(1),
-    };
+    });
     await task.run();
     expect(networkStub.searchSubnetPeers.callCount).to.be.equal(61);
   });

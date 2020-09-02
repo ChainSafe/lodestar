@@ -17,9 +17,11 @@ import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
 import {MetadataController} from "./metadata";
 import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {IReputationStore} from "../sync/IReputation";
 import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
 import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
+import {IPeerMetadataStore} from "./peers/interface";
+import {Libp2pPeerMetadataStore} from "./peers/metastore";
+import {getPeersWithSubnet} from "./peers/utils";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -36,40 +38,34 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   public reqResp: ReqResp;
   public gossip: IGossip;
   public metadata: MetadataController;
+  public peerMetadata: IPeerMetadataStore;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
   private metrics: IBeaconMetrics;
-  private peerReputations: IReputationStore;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
 
-  public constructor(
-    opts: INetworkOptions,
-    reps: IReputationStore,
-    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
-  ) {
+  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
     super();
     this.opts = opts;
     this.config = config;
     this.logger = logger;
     this.metrics = metrics;
-    this.peerReputations = reps;
     this.peerId = libp2p.peerId;
     this.libp2p = libp2p;
-    this.reqResp = new ReqResp(opts, {config, libp2p, peerReputations: this.peerReputations, logger});
+    this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
+    this.reqResp = new ReqResp(opts, {config, libp2p, peerMetadata: this.peerMetadata, logger});
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
       network: this,
-      reps: this.peerReputations,
       logger: this.logger,
     });
     this.checkPeerAliveTask = new CheckPeerAliveTask(this.config, {
       network: this,
-      reps: this.peerReputations,
       logger: this.logger,
     });
   }
@@ -164,7 +160,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async searchSubnetPeers(subnet: string): Promise<void> {
-    const peerIds = this.peerReputations.getPeerIdsBySubnet(subnet);
+    const peerIds = getPeersWithSubnet(
+      this.getPeers({connected: true}).map((peer) => peer.id),
+      this.peerMetadata,
+      subnet
+    );
     if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
       this.logger.verbose(`Finding new peers for subnet ${subnet}`);

@@ -1,12 +1,10 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {INetwork} from "..";
-import {IReputationStore} from "../../sync/IReputation";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {handlePeerMetadataSequence} from "../../sync/utils/reputation";
+import {handlePeerMetadataSequence} from "../peers/utils";
 
 export interface ICheckPeerAliveModules {
   network: INetwork;
-  reps: IReputationStore;
   logger: ILogger;
 }
 
@@ -20,20 +18,18 @@ export class CheckPeerAliveTask {
   private readonly network: INetwork;
   private readonly logger: ILogger;
 
-  private reps: IReputationStore;
   private interval?: NodeJS.Timeout;
 
   public constructor(config: IBeaconConfig, modules: ICheckPeerAliveModules) {
     this.config = config;
     this.network = modules.network;
     this.logger = modules.logger;
-    this.reps = modules.reps;
   }
 
   public async start(): Promise<void> {
     this.interval = setInterval(
       this.run,
-      1 * this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
+      this.config.params.SLOTS_PER_EPOCH * this.config.params.SECONDS_PER_SLOT * 1000
     );
   }
 
@@ -57,8 +53,9 @@ export class CheckPeerAliveTask {
         } catch (e) {
           this.logger.warn("Cannot ping peer" + peer.toB58String() + ", disconnecting it. Error:", e.message);
           await this.network.disconnect(peer);
+          return;
         }
-        await handlePeerMetadataSequence(this.reps, this.network.reqResp, this.logger, peer, peerSeq);
+        await handlePeerMetadataSequence(this.network, this.logger, peer, peerSeq);
       })
     );
     this.logger.profile("CheckPeerAliveTask");
