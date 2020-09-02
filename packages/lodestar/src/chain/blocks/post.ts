@@ -1,13 +1,15 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {TreeBacked, toHexString} from "@chainsafe/ssz";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
 import {IBeaconDb} from "../../db/api";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconMetrics} from "../../metrics";
-import {ChainEventEmitter, IAttestationProcessor} from "../interface";
+import {IAttestationProcessor} from "../interface";
+import {ChainEventEmitter} from "../emitter";
 import {ILMDGHOST} from "../forkChoice";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
-import {TreeBacked, toHexString} from "@chainsafe/ssz";
 
 export function postProcess(
   config: IBeaconConfig,
@@ -33,13 +35,13 @@ export function postProcess(
           await attestationProcessor.receiveBlock(block);
         }
         metrics.currentSlot.set(block.message.slot);
-        eventBus.emit("processedBlock", block);
+        eventBus.emit("block", block);
         const preSlot = preStateContext.state.slot;
         const preFinalizedEpoch = preStateContext.state.finalizedCheckpoint.epoch;
         const preJustifiedEpoch = preStateContext.state.currentJustifiedCheckpoint.epoch;
         const currentEpoch = computeEpochAtSlot(config, postStateContext.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
-          eventBus.emit("processedCheckpoint", {
+          eventBus.emit("checkpoint", {
             epoch: currentEpoch,
             root: block.message.parentRoot,
           });
@@ -69,7 +71,7 @@ function newJustifiedEpoch(
     ${toHexString(state.currentJustifiedCheckpoint.root)}!`);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-  eventBus.emit("justifiedCheckpoint", state.currentJustifiedCheckpoint);
+  eventBus.emit("justified", state.currentJustifiedCheckpoint);
 }
 
 function newFinalizedEpoch(
@@ -81,5 +83,5 @@ function newFinalizedEpoch(
   logger.important(`Epoch ${state.finalizedCheckpoint.epoch} is finalized at root \
     ${toHexString(state.finalizedCheckpoint.root)}!`);
   metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
-  eventBus.emit("finalizedCheckpoint", state.finalizedCheckpoint);
+  eventBus.emit("finalized", state.finalizedCheckpoint);
 }

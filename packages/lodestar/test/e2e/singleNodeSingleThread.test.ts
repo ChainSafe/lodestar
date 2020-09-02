@@ -19,12 +19,12 @@ describe("Run single node single thread interop validators (no eth1) until check
   const testCases: {
     vc: number;
     validators: number;
-    event: "justifiedCheckpoint" | "finalizedCheckpoint";
+    event: "justified" | "finalized";
     params: Partial<IBeaconParams>;
   }[] = [
-    {vc: 8, validators: 8, event: "justifiedCheckpoint", params: testParams},
-    {vc: 8, validators: 8, event: "finalizedCheckpoint", params: testParams},
-    {vc: 1, validators: 32, event: "justifiedCheckpoint", params: manyValidatorParams},
+    {vc: 8, validators: 8, event: "justified", params: testParams},
+    {vc: 8, validators: 8, event: "finalized", params: testParams},
+    {vc: 1, validators: 32, event: "justified", params: manyValidatorParams},
   ];
 
   for (const testCase of testCases) {
@@ -35,7 +35,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         options: {sync: {minPeers: 0}},
         validatorCount: testCase.vc * testCase.validators,
       });
-      const justificationEventListener = waitForEvent<Checkpoint>(bn.chain, testCase.event, timeout - 10 * 1000);
+      const justificationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, testCase.event, timeout - 10 * 1000);
       const validators = getDevValidators(bn, testCase.validators, testCase.vc);
       await bn.start();
       await Promise.all(validators.map((v) => v.start()));

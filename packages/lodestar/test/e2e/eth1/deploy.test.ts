@@ -11,6 +11,7 @@ import {IEth1Options} from "../../../src/eth1/options";
 import rimraf from "rimraf";
 import pipe from "it-pipe";
 import {sleep} from "../../../src/util/sleep";
+import {goerliRpcUrl} from "../../testParams";
 
 describe("Eth1Notifier - using goerli known deployed contract", () => {
   let eth1Notifier: IEth1Notifier;
@@ -20,7 +21,7 @@ describe("Eth1Notifier - using goerli known deployed contract", () => {
   const opts: IEth1Options = {
     ...defaults,
     provider: {
-      url: "https://goerli.prylabs.net",
+      url: goerliRpcUrl,
     },
     depositContract: {
       ...defaults.depositContract,

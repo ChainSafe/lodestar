@@ -4,9 +4,9 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {IEth1Notifier} from "../../../src/eth1";
 import {InteropEth1Notifier} from "../../../src/eth1/impl/interop";
-import {WinstonLogger, bytesToInt} from "@chainsafe/lodestar-utils";
+import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {BeaconMetrics} from "../../../src/metrics";
-import {IBeaconChain, BeaconChain, StatefulDagLMDGHOST} from "../../../src/chain";
+import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {generateValidators} from "../../utils/validator";
@@ -16,7 +16,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 
 describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, eth1: IEth1Notifier, metrics: any, forkChoice: any;
+  let dbStub: StubbedBeaconDb, eth1: IEth1Notifier, metrics: any;
   const logger = new WinstonLogger();
   let chain: IBeaconChain;
 
@@ -24,12 +24,11 @@ describe("BeaconChain", function () {
     dbStub = new StubbedBeaconDb(sandbox);
     eth1 = new InteropEth1Notifier();
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
-    forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
     const state: BeaconState = generateState();
     state.validators = generateValidators(5, {activationEpoch: 0});
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
-    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics, forkChoice});
+    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1, logger, metrics});
     await chain.start();
   });
 
@@ -40,7 +39,7 @@ describe("BeaconChain", function () {
 
   describe("getENRForkID", () => {
     it("should get enr fork id if not found next fork", async () => {
-      forkChoice.headStateRoot.returns(Buffer.alloc(0));
+      chain.forkChoice.headStateRoot = () => Buffer.alloc(0);
       const enrForkID = await chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
@@ -56,7 +55,7 @@ describe("BeaconChain", function () {
           previousVersion: bytesToInt(config.params.GENESIS_FORK_VERSION),
         },
       ];
-      forkChoice.headStateRoot.returns(Buffer.alloc(0));
+      chain.forkChoice.headStateRoot = () => Buffer.alloc(0);
       const enrForkID = await chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
       expect(enrForkID.nextForkEpoch === 100);
@@ -68,14 +67,15 @@ describe("BeaconChain", function () {
 
   describe("forkVersion event", () => {
     it("should should receive forkDigest event", async () => {
+      chain.forkChoice.headStateRoot = () => Buffer.alloc(0);
       const spy = sinon.spy();
       const received = new Promise((resolve) => {
-        chain.on("forkDigest", () => {
+        chain.emitter.on("forkDigest", () => {
           spy();
           resolve();
         });
       });
-      chain.emit("forkVersion");
+      chain.emitter.emit("forkVersion");
       await received;
       expect(spy.callCount).to.be.equal(1);
     });

@@ -1,5 +1,5 @@
 import fs, {mkdirSync} from "fs";
-import process from "process";
+import {promisify} from "util";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
@@ -17,6 +17,7 @@ import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {onProcessSIGINT} from "../../util/process";
 
 /**
  * Run a beacon node
@@ -58,9 +59,24 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
     );
   }
 
+  let validators: Validator[] = [];
+
+  onProcessSIGINT(async () => {
+    await Promise.all([
+      Promise.all(validators.map((v) => v.stop())),
+      node.stop(),
+      async () => {
+        if (options.reset) {
+          logger.info("Cleaning db directories");
+          await promisify(rimraf)(chainDir);
+          await promisify(rimraf)(validatorsDir);
+        }
+      },
+    ]);
+  }, logger.info.bind(logger));
+
   await node.start();
 
-  let validators: Validator[];
   if (options.startValidators) {
     const range = options.startValidators.split(":").map((s) => parseInt(s));
     const api = getValidatorApiClient(options.server, logger, node);
@@ -77,21 +93,4 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
     });
     validators.forEach((v) => v.start());
   }
-
-  async function cleanup(): Promise<void> {
-    logger.info("Stopping validators");
-    await Promise.all(validators.map((v) => v.stop()));
-    logger.info("Stopping BN");
-    await node.stop();
-    if (options.reset) {
-      logger.info("Cleaning directories");
-      //delete db directory
-      rimraf.sync(chainDir);
-      rimraf.sync(validatorsDir);
-    }
-    logger.info("Cleanup completed");
-  }
-
-  process.on("SIGTERM", cleanup);
-  process.on("SIGINT", cleanup);
 }

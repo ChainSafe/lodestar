@@ -12,6 +12,7 @@ import {source as abortSource} from "abortable-iterator";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
+
 // req/resp
 
 function randomNibble(): string {
@@ -27,7 +28,7 @@ export function createResponseEvent(id: RequestId): string {
 }
 
 const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: string, encoding: string, version = 1): string {
+export function createRpcProtocol(method: Method, encoding: "ssz" | "ssz_snappy", version = 1): string {
   return REQ_PROTOCOL.replace("{method}", method).replace("{encoding}", encoding).replace("{version}", String(version));
 }
 
@@ -54,6 +55,18 @@ export function isRequestOnly(method: Method): boolean {
 
 export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
+}
+
+export function getStatusProtocols(): string[] {
+  return [createRpcProtocol(Method.Status, "ssz_snappy")];
+}
+
+export function getSyncProtocols(): string[] {
+  return [createRpcProtocol(Method.BeaconBlocksByRange, "ssz_snappy")];
+}
+
+export function getUnknownRootProtocols(): string[] {
+  return [createRpcProtocol(Method.BeaconBlocksByRoot, "ssz_snappy")];
 }
 
 /**
@@ -135,7 +148,7 @@ export async function dialProtocol(
     // eslint-disable-next-line no-useless-catch
   } catch (e) {
     const err = new Error(e.code || e.message);
-    err.stack = e.stack;
+    // err.stack = e.stack;
     throw err;
   } finally {
     clearTimeout(timer);

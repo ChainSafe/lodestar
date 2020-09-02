@@ -94,12 +94,12 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     this.genesisTime = genesisTime;
     this.currentSlot = getCurrentSlot(this.config, genesisTime);
 
-    //subscribe to new slots and notify upon new epoch
+    // subscribe to new slots and notify upon new epoch
     this.onNewSlot(this.updateEpoch);
     if (!this.slotCountingTimeout) {
       this.slotCountingTimeout = setTimeout(
         this.updateSlot,
-        //delay to prevent validator requesting duties too early since we don't account for millis diff
+        // delay to prevent validator requesting duties too early since we don't account for millis diff
         this.getDiffTillNextSlot()
       );
     }
@@ -109,7 +109,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     if (!this.running) {
       return;
     }
-    //to prevent sometime being updated prematurely
+    // to prevent sometime being updated prematurely
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
     if (this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
       await sleep(this.getDiffTillNextSlot());
@@ -118,7 +118,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     this.newSlotCallbacks.forEach((cb) => {
       cb(this.currentSlot);
     });
-    //recursively invoke update slot after SECONDS_PER_SLOT
+    // recursively invoke update slot after SECONDS_PER_SLOT
     this.slotCountingTimeout = setTimeout(this.updateSlot, this.getDiffTillNextSlot());
   };
 
@@ -138,7 +138,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   private getDiffTillNextSlot(): number {
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
     const diffInSeconds = Math.floor(Date.now() / 1000 - this.genesisTime);
-    //update slot after remaining seconds until next slot
+    // update slot after remaining seconds until next slot
     return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
   }
 }

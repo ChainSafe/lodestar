@@ -1,23 +1,23 @@
 import PeerId from "peer-id";
-import {IReputation, IReputationStore} from "../IReputation";
-import {Checkpoint, SignedBeaconBlock, Slot, Status, Root, BeaconBlocksByRangeRequest} from "@chainsafe/lodestar-types";
+import {Checkpoint, Root, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReqResp, INetwork} from "../../network";
+import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain, ILMDGHOST} from "../../chain";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {toHexString, List} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../util/sleep";
-import {GENESIS_EPOCH, ZERO_HASH, Method} from "../../constants";
+import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
+import {IPeerMetadataStore} from "../../network/peers/interface";
 
-export function getHighestCommonSlot(peers: IReputation[]): Slot {
-  const slotStatuses = peers.reduce<Map<Slot, number>>((current, peer) => {
-    if (peer.latestStatus && current.has(peer.latestStatus.headSlot)) {
-      current.set(peer.latestStatus.headSlot, current.get(peer.latestStatus.headSlot)! + 1);
-    } else if (peer.latestStatus) {
-      current.set(peer.latestStatus.headSlot, 1);
+export function getHighestCommonSlot(peerStatuses: (Status | null)[]): Slot {
+  const slotStatuses = peerStatuses.reduce<Map<Slot, number>>((current, status) => {
+    if (status && current.has(status.headSlot)) {
+      current.set(status.headSlot, current.get(status.headSlot)! + 1);
+    } else if (status) {
+      current.set(status.headSlot, 1);
     }
     return current;
   }, new Map<Slot, number>());
@@ -43,20 +43,26 @@ export function getStatusFinalizedCheckpoint(status: Status): Checkpoint {
   return {epoch: status.finalizedEpoch, root: status.finalizedRoot};
 }
 
-export function getCommonFinalizedCheckpoint(config: IBeaconConfig, peers: IReputation[]): Checkpoint | null {
-  const checkpointVotes = peers.reduce<Map<string, {checkpoint: Checkpoint; votes: number}>>((current, peer) => {
-    if (!peer.latestStatus) {
+export function getCommonFinalizedCheckpoint(
+  config: IBeaconConfig,
+  peerStatuses: (Status | null)[]
+): Checkpoint | null {
+  const checkpointVotes = peerStatuses.reduce<Map<string, {checkpoint: Checkpoint; votes: number}>>(
+    (current, status) => {
+      if (!status) {
+        return current;
+      }
+      const peerCheckpoint = getStatusFinalizedCheckpoint(status);
+      const root = toHexString(config.types.Checkpoint.hashTreeRoot(peerCheckpoint));
+      if (current.has(root)) {
+        current.get(root)!.votes++;
+      } else {
+        current.set(root, {checkpoint: peerCheckpoint, votes: 1});
+      }
       return current;
-    }
-    const peerCheckpoint = getStatusFinalizedCheckpoint(peer.latestStatus);
-    const root = toHexString(config.types.Checkpoint.hashTreeRoot(peerCheckpoint));
-    if (current.has(root)) {
-      current.get(root)!.votes++;
-    } else {
-      current.set(root, {checkpoint: peerCheckpoint, votes: 1});
-    }
-    return current;
-  }, new Map());
+    },
+    new Map()
+  );
   if (checkpointVotes.size > 0) {
     return Array.from(checkpointVotes.values())
       .sort((voteA, voteB) => {
@@ -215,11 +221,11 @@ export function createStatus(chain: IBeaconChain): Status {
   };
 }
 
-export async function syncPeersStatus(reps: IReputationStore, network: INetwork, status: Status): Promise<void> {
+export async function syncPeersStatus(network: INetwork, status: Status): Promise<void> {
   await Promise.all(
-    network.getPeers().map(async (peerId) => {
+    network.getPeers({connected: true, supportsProtocols: getStatusProtocols()}).map(async (peer) => {
       try {
-        reps.get(peerId.toB58String()).latestStatus = await network.reqResp.status(peerId, status);
+        network.peerMetadata.setStatus(peer.id, await network.reqResp.status(peer.id, status));
         // eslint-disable-next-line no-empty
       } catch {}
     })
@@ -227,88 +233,46 @@ export async function syncPeersStatus(reps: IReputationStore, network: INetwork,
 }
 
 /**
- * Check supportedProtocols.
- */
-export async function getPeerSupportedProtocols(
-  config: IBeaconConfig,
-  reps: IReputationStore,
-  peerId: PeerId,
-  reqResp: IReqResp
-): Promise<Method[]> {
-  const latestStatus = reps.getFromPeerId(peerId).latestStatus!;
-  if (!latestStatus || latestStatus.finalizedEpoch === GENESIS_EPOCH) {
-    return [];
-  }
-  const finalizedBlock = await reqResp.beaconBlocksByRoot(peerId, [latestStatus.finalizedRoot] as List<Root>);
-  if (!finalizedBlock || finalizedBlock.length !== 1) {
-    return [];
-  }
-  const parentRoot = finalizedBlock[0].message.parentRoot;
-  const parentBlock = await reqResp.beaconBlocksByRoot(peerId, [parentRoot] as List<Root>);
-  if (!parentBlock || parentBlock.length !== 1) {
-    return [];
-  }
-  const supportedProtocols = [Method.BeaconBlocksByRoot];
-  const testReqResp: BeaconBlocksByRangeRequest = {
-    startSlot: parentBlock[0].message.slot,
-    count: 2,
-    step: finalizedBlock[0].message.slot - parentBlock[0].message.slot,
-  };
-  const blocks = await reqResp.beaconBlocksByRange(peerId, testReqResp);
-  if (blocks && blocks.length === 2) {
-    const block0Root = config.types.BeaconBlock.hashTreeRoot(blocks[0].message);
-    const block1Root = config.types.BeaconBlock.hashTreeRoot(blocks[1].message);
-    if (
-      config.types.Root.equals(parentRoot, block0Root) &&
-      config.types.Root.equals(latestStatus.finalizedRoot, block1Root)
-    ) {
-      supportedProtocols.push(Method.BeaconBlocksByRange);
-    }
-  }
-  return supportedProtocols;
-}
-
-/**
  * Get best head from peers that support beacon_blocks_by_range.
  */
-export function getBestHead(
-  peers: PeerId[],
-  reps: IReputationStore
-): {slot: number; root: Root; supportedProtocols: Method[]} {
+export function getBestHead(peers: PeerId[], peerMetaStore: IPeerMetadataStore): {slot: number; root: Root} {
   return peers
     .map((peerId) => {
-      const {latestStatus, supportedProtocols} = reps.get(peerId.toB58String());
-      return latestStatus
-        ? {slot: latestStatus.headSlot, root: latestStatus.headRoot, supportedProtocols}
-        : {slot: 0, root: ZERO_HASH, supportedProtocols};
+      const status = peerMetaStore.getStatus(peerId);
+      return status ? {slot: status.headSlot, root: status.headRoot} : {slot: 0, root: ZERO_HASH};
     })
     .reduce(
       (head, peerStatus) => {
-        return peerStatus.supportedProtocols.includes(Method.BeaconBlocksByRange) && peerStatus.slot >= head.slot
-          ? peerStatus
-          : head;
+        return peerStatus.slot >= head.slot ? peerStatus : head;
       },
-      {slot: 0, root: ZERO_HASH, supportedProtocols: []}
+      {slot: 0, root: ZERO_HASH}
     );
 }
 
 /**
  * Get best peer that support beacon_blocks_by_range.
  */
-export function getBestPeer(config: IBeaconConfig, peers: PeerId[], reps: IReputationStore): PeerId {
-  const {root} = getBestHead(peers, reps);
+export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStore: IPeerMetadataStore): PeerId {
+  const {root} = getBestHead(peers, peerMetaStore);
   return peers.find((peerId) =>
-    config.types.Root.equals(root, reps.get(peerId.toB58String()).latestStatus?.headRoot || ZERO_HASH)
+    config.types.Root.equals(root, peerMetaStore.getStatus(peerId)?.headRoot || ZERO_HASH)
   )!;
 }
 
 /**
  * Check if a peer is good to be a best peer.
  */
-export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INetwork, reps: IReputationStore): boolean {
+export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INetwork): boolean {
   if (!peer) return false;
-  if (!network.getPeers().includes(peer)) return false;
-  if (!reps.getFromPeerId(peer).latestStatus) return false;
+  if (
+    !network
+      .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
+      .map((peer) => peer.id)
+      .includes(peer)
+  )
+    return false;
+  const status = network.peerMetadata.getStatus(peer);
+  if (!status) return false;
   const headSlot = forkChoice.headBlockSlot();
-  return reps.getFromPeerId(peer).latestStatus!.headSlot > headSlot;
+  return (status?.headSlot ?? 0) > headSlot;
 }

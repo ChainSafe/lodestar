@@ -9,7 +9,7 @@ export interface GenesisInfo {
 }
 
 export interface IAttesterDuty extends AttesterDuty {
-  //internal index
+  // internal index
   attesterIndex: number;
   isAggregator: boolean;
 }

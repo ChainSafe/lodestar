@@ -21,7 +21,7 @@ describe("syncing", function () {
       options: {sync: {minPeers: 0}},
       validatorCount,
     });
-    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain, "finalizedCheckpoint", 240000);
+    const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, "finalized", 240000);
     const validators = getDevValidators(bn, 8);
     await bn.start();
     validators.forEach((v) => v.start());
@@ -37,10 +37,10 @@ describe("syncing", function () {
     });
     await bn2.start();
     const head = await bn.chain.getHeadBlock()!;
-    const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain, "processedBlock", 100000, (block) =>
+    const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, "block", 100000, (block) =>
       config.types.SignedBeaconBlock.equals(block, head!)
     );
-    await bn2.network.connect(bn.network.peerId, bn.network.multiaddrs);
+    await bn2.network.connect(bn.network.peerId, bn.network.localMultiaddrs);
     try {
       await waitForSynced;
     } catch (e) {

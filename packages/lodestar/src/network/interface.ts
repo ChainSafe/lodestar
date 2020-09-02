@@ -22,6 +22,8 @@ import {MetadataController} from "./metadata";
 import {IResponseChunk} from "./encoders/interface";
 import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5/lib";
+import LibP2p from "libp2p";
+import {IPeerMetadataStore} from "./peers/interface";
 
 export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
 
@@ -55,23 +57,31 @@ export interface INetworkEvents {
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
+export type PeerSearchOptions = {
+  connected: boolean;
+  supportsProtocols: string[];
+};
+
 export interface INetwork extends NetworkEventEmitter {
   reqResp: IReqResp;
   gossip: IGossip;
   metadata: MetadataController;
+  peerMetadata: IPeerMetadataStore;
   /**
    * Our network identity
    */
   peerId: PeerId;
-  multiaddrs: Multiaddr[];
+  localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
-  getPeers(): PeerId[];
+  getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
+  getMaxPeer(): number;
   getPeerConnection(peerId: PeerId): LibP2pConnection | null;
   hasPeer(peerId: PeerId): boolean;
-  connect(peerId: PeerId, multiaddrs?: Multiaddr[]): Promise<void>;
+  connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void>;
   disconnect(peerId: PeerId): Promise<void>;
   searchSubnetPeers(subnet: string): Promise<void>;
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
+  handleSyncCompleted(): Promise<void>;
 }

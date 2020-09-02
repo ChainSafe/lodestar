@@ -92,9 +92,9 @@ export class BeaconApi implements IBeaconApi {
 
   public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
     return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
-      this.chain.on("processedBlock", push);
+      this.chain.emitter.on("block", push);
       return () => {
-        this.chain.off("processedBlock", push);
+        this.chain.emitter.off("block", push);
       };
     });
   }

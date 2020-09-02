@@ -15,7 +15,8 @@ import {IBlockProcessJob} from "../chain";
 import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
-import {ChainEventEmitter, IAttestationProcessor} from "../interface";
+import {IAttestationProcessor} from "../interface";
+import {ChainEventEmitter} from "../emitter";
 import {convertBlock} from "./convertBlock";
 
 export class BlockProcessor implements IService {

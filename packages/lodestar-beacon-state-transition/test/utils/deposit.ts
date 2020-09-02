@@ -10,7 +10,7 @@ export function generateDeposit(): Deposit {
   return {
     proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
     data: {
-      amount: 32n * 10n * 9n,
+      amount: BigInt(32) * BigInt(10) * BigInt(9),
       pubkey: Buffer.alloc(48),
       withdrawalCredentials: Buffer.alloc(32),
       signature: EMPTY_SIGNATURE,

@@ -13,9 +13,13 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     let state = testcase.pre;
-    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === 1n;
+    const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = stateTransition(config, state, testcase[`blocks_${i}`] as SignedBeaconBlock, verify, verify, verify);
+      state = stateTransition(config, state, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+        verifyStateRoot: verify,
+        verifyProposer: verify,
+        verifySignatures: verify,
+      });
     }
     return state;
   },

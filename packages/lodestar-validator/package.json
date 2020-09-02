@@ -43,12 +43,13 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/bls": "2.0.0",
+    "@chainsafe/bls": "4.0.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
     "@chainsafe/lodestar-config": "^0.11.0",
     "@chainsafe/lodestar-types": "^0.11.0",
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
+    "abort-controller": "^3.0.0",
     "axios": "^0.19.0",
     "axios-mock-adapter": "^1.17.0",
     "bigint-buffer": "^1.1.5",

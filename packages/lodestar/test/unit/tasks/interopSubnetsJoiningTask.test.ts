@@ -74,7 +74,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(config.types.ForkDigest.equals(oldForkDigest, chain.currentForkDigest)).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
-    chain.emit("forkDigest", chain.currentForkDigest);
+    chain.emitter.emit("forkDigest", chain.currentForkDigest);
     await unSubscribePromise;
     expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(
       config.params.RANDOM_SUBNETS_PER_VALIDATOR

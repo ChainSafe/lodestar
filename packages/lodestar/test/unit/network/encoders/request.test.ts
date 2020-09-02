@@ -9,8 +9,10 @@ import {expect} from "chai";
 import {createStatus} from "./utils";
 import {encode} from "varint";
 import {Status} from "@chainsafe/lodestar-types";
+import {silentLogger} from "../../../utils/logger";
 
 describe("request encoders", function () {
+  const logger = silentLogger;
   let loggerStub: SinonStubbedInstance<ILogger>;
 
   beforeEach(function () {
@@ -20,8 +22,8 @@ describe("request encoders", function () {
   it("should work - basic request - ssz", async function () {
     const requests = await pipe(
       [BigInt(0)],
-      eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
+      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
+      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -31,8 +33,8 @@ describe("request encoders", function () {
   it("should work - basic request - ssz_snappy", async function () {
     const requests = await pipe(
       [BigInt(0)],
-      eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -43,8 +45,8 @@ describe("request encoders", function () {
     const status = createStatus();
     const requests = await pipe(
       [status],
-      eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
+      eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
+      eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -55,8 +57,8 @@ describe("request encoders", function () {
     const status = createStatus();
     const requests = await pipe(
       [status],
-      eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -66,8 +68,8 @@ describe("request encoders", function () {
   it("should work - multiple request - ssz", async function () {
     const requests = await pipe(
       [BigInt(1), BigInt(2)],
-      eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ),
+      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
+      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -77,8 +79,8 @@ describe("request encoders", function () {
   it("should work - multiple request - ssz_snappy", async function () {
     const requests = await pipe(
       [BigInt(1), BigInt(2)],
-      eth2RequestEncode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, loggerStub, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -86,18 +88,14 @@ describe("request encoders", function () {
   });
 
   it("should work - no request body - ssz", async function () {
-    const requests = await pipe(
-      [],
-      eth2RequestDecode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ),
-      collect
-    );
+    const requests = await pipe([], eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ), collect);
     expect(requests.length).to.be.equal(1);
   });
 
   it("should work - no request body - ssz_snappy", async function () {
     const requests = await pipe(
       [],
-      eth2RequestDecode(config, loggerStub, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
+      eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
       collect
     );
     expect(requests.length).to.be.equal(1);
@@ -163,7 +161,7 @@ describe("request encoders", function () {
       status.finalizedEpoch = 100;
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), config.types.Status.serialize(status)],
-        eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
+        eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
         collect
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: true, body: status}]);

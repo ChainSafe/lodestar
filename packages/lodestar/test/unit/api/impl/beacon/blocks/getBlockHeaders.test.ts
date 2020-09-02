@@ -1,6 +1,6 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST, StatefulDagLMDGHOST} from "../../../../../../src/chain";
+import {BeaconChain, BlockSummary, IBeaconChain, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {
   generateBlockSummary,
@@ -20,7 +20,7 @@ describe("api - beacon - getBlockHeaders", function () {
   let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
@@ -36,7 +36,7 @@ describe("api - beacon - getBlockHeaders", function () {
 
   it("no filters - assume head slot", async function () {
     forkChoiceStub.headBlockSlot.returns(1);
-    chainStub.getBlockAtSlot.withArgs(1).resolves(generateEmptySignedBlock());
+    chainStub.getCanonicalBlockAtSlot.withArgs(1).resolves(generateEmptySignedBlock());
     forkChoiceStub.getBlockSummariesAtSlot.withArgs(1).returns([
       generateEmptyBlockSummary(),
       //canonical block summary
@@ -53,7 +53,7 @@ describe("api - beacon - getBlockHeaders", function () {
     expect(() => config.types.SignedBeaconHeaderResponse.assertValidValue(blockHeaders[1])).to.not.throw;
     expect(blockHeaders.filter((header) => header.canonical).length).to.be.equal(1);
     expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
-    expect(chainStub.getBlockAtSlot.calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.calledOnce).to.be.true;
     expect(forkChoiceStub.getBlockSummariesAtSlot.calledOnce).to.be.true;
     expect(dbStub.block.get.calledOnce).to.be.true;
   });
@@ -66,7 +66,7 @@ describe("api - beacon - getBlockHeaders", function () {
 
   it("finalized slot", async function () {
     forkChoiceStub.headBlockSlot.returns(2);
-    chainStub.getBlockAtSlot.withArgs(0).resolves(generateEmptySignedBlock());
+    chainStub.getCanonicalBlockAtSlot.withArgs(0).resolves(generateEmptySignedBlock());
     forkChoiceStub.getBlockSummariesAtSlot.withArgs(0).returns([]);
     const blockHeaders = await blockApi.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).to.be.equal(1);
@@ -76,7 +76,7 @@ describe("api - beacon - getBlockHeaders", function () {
 
   it("skip slot", async function () {
     forkChoiceStub.headBlockSlot.returns(2);
-    chainStub.getBlockAtSlot.withArgs(0).resolves(null);
+    chainStub.getCanonicalBlockAtSlot.withArgs(0).resolves(null);
     const blockHeaders = await blockApi.getBlockHeaders({slot: 0});
     expect(blockHeaders.length).to.be.equal(0);
   });

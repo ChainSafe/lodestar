@@ -8,11 +8,11 @@ export function assembleAttesterDuty(
   validator: {publicKey: BLSPubkey; index: ValidatorIndex},
   epochCtx: EpochContext,
   epoch: Epoch
-): AttesterDuty {
-  let duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
+): AttesterDuty | null {
+  const duty: AttesterDuty = generateEmptyAttesterDuty(validator.publicKey);
   const committeeAssignment = epochCtx.getCommitteeAssignment(epoch, validator.index);
   if (committeeAssignment) {
-    duty = {
+    return {
       ...duty,
       aggregatorModulo: Math.max(
         1,
@@ -23,7 +23,7 @@ export function assembleAttesterDuty(
     };
   }
 
-  return duty;
+  return null;
 }
 
 export function generateEmptyAttesterDuty(publicKey: BLSPubkey, duty?: Partial<AttesterDuty>): AttesterDuty {

@@ -7,7 +7,7 @@ import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
-import {ChainEventEmitter} from "..";
+import {ChainEventEmitter} from "../emitter";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 
@@ -32,6 +32,11 @@ export function processBlock(
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         const preStateContext = await getPreState(config, db, forkChoice, pool, logger, job);
         if (!preStateContext) {
+          logger.verbose("No pre-state found, dropping block", {
+            slot: job.signedBlock.message.slot,
+            blockRoot: toHexString(blockRoot),
+            parentRoot: toHexString(job.signedBlock.message.parentRoot),
+          });
           continue;
         }
         // Run the state transition
@@ -55,6 +60,7 @@ export function processBlock(
             slot: newState.slot,
             epoch: computeEpochAtSlot(config, newState.slot),
           });
+          eventBus.emit("forkChoice:head", forkChoice.head()!);
           if (!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -128,7 +134,11 @@ export async function runStateTransition(
 ): Promise<IStateContext | null> {
   try {
     // if block is trusted don't verify proposer or op signature
-    return fastStateTransition(stateContext, job.signedBlock, true, !job.trusted, !job.trusted);
+    return fastStateTransition(stateContext, job.signedBlock, {
+      verifyStateRoot: true,
+      verifyProposer: !job.trusted,
+      verifySignatures: !job.trusted,
+    });
   } catch (e) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     // store block root in db and terminate
