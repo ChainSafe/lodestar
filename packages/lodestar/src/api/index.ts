@@ -18,18 +18,20 @@ export const enum ApiNamespace {
 export class ApiService implements IService {
   private opts: IApiOptions;
 
-  private rest: IService | null;
+  private rest!: IService | null;
+  private modules: IApiModules;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
     this.opts = deepmerge(defaultOptions, opts);
-    if (this.opts.rest.enabled) {
-      this.rest = this.setupRestApi(modules);
-    } else {
-      this.rest = null;
-    }
+    this.modules = modules;
   }
 
   public async start(): Promise<void> {
+    if (this.opts.rest.enabled) {
+      this.rest = this.setupRestApi(this.modules);
+    } else {
+      this.rest = null;
+    }
     if (this.rest) {
       await this.rest.start();
     }
