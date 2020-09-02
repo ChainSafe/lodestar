@@ -23,6 +23,7 @@ import {IResponseChunk} from "./encoders/interface";
 import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5/lib";
 import LibP2p from "libp2p";
+import {IPeerMetadataStore} from "./peers/interface";
 
 export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
 
@@ -65,6 +66,7 @@ export interface INetwork extends NetworkEventEmitter {
   reqResp: IReqResp;
   gossip: IGossip;
   metadata: MetadataController;
+  peerMetadata: IPeerMetadataStore;
   /**
    * Our network identity
    */

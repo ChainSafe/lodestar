@@ -2,7 +2,6 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
 import {getSyncProtocols, INetwork} from "../network";
-import {IReputationStore} from "./IReputation";
 import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
@@ -30,7 +29,6 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly peerReputations: IReputationStore;
 
   private mode: SyncMode;
   private initialSync: InitialSync;
@@ -49,7 +47,6 @@ export class BeaconSync implements IBeaconSync {
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this.peerReputations = modules.reputationStore;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
     this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
@@ -164,7 +161,7 @@ export class BeaconSync implements IBeaconSync {
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
     this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.peerReputations, this.network, createStatus(this.chain)).catch((e) => {
+      syncPeersStatus(this.network, createStatus(this.chain)).catch((e) => {
         this.logger.error("Error on syncPeersStatus", e);
       });
     }, interval);
@@ -194,7 +191,7 @@ export class BeaconSync implements IBeaconSync {
     return this.network
       .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
       .filter((peer) => {
-        return !!this.peerReputations.getFromPeerId(peer.id).latestStatus;
+        return !!this.network.peerMetadata.getStatus(peer.id);
       })
       .map((peer) => peer.id);
   }
