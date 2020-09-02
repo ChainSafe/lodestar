@@ -456,12 +456,18 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
    * delta < 0: propagate onRemoveWeight
    */
   private propagateWeightChange(nodeIndex: number, delta: Gwei): void {
-    const node = this.nodes[nodeIndex];
-    node.weight += delta;
-    const isAddWeight = delta > 0 ? true : delta < 0 ? false : this.isCandidateForBestTarget(node.bestTarget!);
-    if (node.hasParent()) {
-      isAddWeight ? this.onAddWeight(nodeIndex) : this.onRemoveWeight(nodeIndex);
-      this.propagateWeightChange(node.parent, delta);
+    let index: number = nodeIndex;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const node: Node = this.nodes[index];
+      node.weight += delta;
+      const isAddWeight = delta > 0 ? true : delta < 0 ? false : this.isCandidateForBestTarget(node.bestTarget!);
+      if (node.hasParent()) {
+        isAddWeight ? this.onAddWeight(index) : this.onRemoveWeight(index);
+        index = node.parent;
+      } else {
+        return;
+      }
     }
   }
 
