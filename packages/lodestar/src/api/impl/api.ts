@@ -10,8 +10,8 @@ export class Api implements IApi {
   public validator: IValidatorApi;
 
   public constructor(opts: Partial<IApiOptions>, modules: IApiModules) {
-    this.beacon = new BeaconApi({}, modules);
-    this.node = new NodeApi({}, modules);
-    this.validator = new ValidatorApi({}, modules);
+    this.beacon = new BeaconApi(opts, modules);
+    this.node = new NodeApi(opts, modules);
+    this.validator = new ValidatorApi(opts, modules);
   }
 }
