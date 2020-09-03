@@ -381,7 +381,7 @@ export class BeaconChain implements IBeaconChain {
       const builder = new GenesisBuilder(this.config, {
         eth1Provider: this.eth1Provider,
         logger: this.logger,
-        signal: this.controller.signal,
+        signal: this.abortController?.signal,
       });
       const genesisResult = await builder.waitForGenesis();
       state = genesisResult.state;
