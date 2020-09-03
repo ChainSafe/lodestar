@@ -2,14 +2,14 @@
  * @module api/rpc
  */
 
-import {IApi} from "../../interface";
 import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
+
 import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
 import {IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 
-export interface IBeaconApi extends IApi {
+export interface IBeaconApi {
   blocks: IBeaconBlocksApi;
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;

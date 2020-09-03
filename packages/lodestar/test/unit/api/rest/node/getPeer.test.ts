@@ -1,22 +1,20 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {expect} from "chai";
 import sinon from "sinon";
 import supertest from "supertest";
-import {expect} from "chai";
-import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
-import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import {ApiNamespace} from "../../../../../src/api";
-import {RestApi} from "../../../../../src/api/rest";
-import {ValidatorApi} from "../../../../../src/api/impl/validator";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
+import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getPeer} from "../../../../../src/api/rest/controllers/node";
+import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("rest - node - getPeer", function () {
-  let api: RestApi;
-  let nodeApiStub: StubbedNodeApi;
+  let restApi: RestApi;
+  let api: StubbedApi;
 
   beforeEach(async function () {
-    nodeApiStub = new StubbedNodeApi();
-    api = new RestApi(
+    api = new StubbedApi();
+    restApi = await RestApi.init(
       {
         api: [ApiNamespace.NODE],
         cors: "*",
@@ -27,27 +25,24 @@ describe("rest - node - getPeer", function () {
       {
         config,
         logger: silentLogger,
-        validator: sinon.createStubInstance(ValidatorApi),
-        beacon: sinon.createStubInstance(BeaconApi),
-        node: nodeApiStub,
+        api,
       }
     );
-    await api.start();
   });
 
   afterEach(async function () {
-    await api.stop();
+    await restApi.close();
   });
 
   it("should succeed", async function () {
-    nodeApiStub.getPeer.resolves({
+    api.node.getPeer.resolves({
       address: "/ip4/127.0.0.1/tcp/36000",
       direction: "inbound",
       enr: "enr-",
       peerId: "16",
       state: "connected",
     });
-    const response = await supertest(api.server.server)
+    const response = await supertest(restApi.server.server)
       .get(getPeer.url.replace(":peerId", "16"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -57,7 +52,7 @@ describe("rest - node - getPeer", function () {
   });
 
   it("peer not found", async function () {
-    nodeApiStub.getPeer.resolves(null);
-    await supertest(api.server.server).get(getPeer.url.replace(":peerId", "16")).expect(404);
+    api.node.getPeer.resolves(null);
+    await supertest(restApi.server.server).get(getPeer.url.replace(":peerId", "16")).expect(404);
   });
 });

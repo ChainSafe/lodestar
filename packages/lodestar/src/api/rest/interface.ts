@@ -1,10 +1,10 @@
 import {FastifyInstance, Plugin} from "fastify";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {IBeaconApi} from "../impl/beacon";
-import {IValidatorApi} from "../impl/validator";
+
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {INodeApi} from "../impl/node";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
+import {IApi, IBeaconApi, IValidatorApi} from "../impl";
 
 export interface ILodestarApiOpts {
   prefix: string;
@@ -20,7 +20,5 @@ export type LodestarRestApiEndpoint = (server: FastifyInstance, opts: ILodestarA
 export interface IRestApiModules {
   config: IBeaconConfig;
   logger: ILogger;
-  beacon: IBeaconApi;
-  node: INodeApi;
-  validator: IValidatorApi;
+  api: IApi;
 }

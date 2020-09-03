@@ -1,9 +1,9 @@
-import {IAttestationFilters, IBeaconPoolApi} from "./interface";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {IApiOptions} from "../../../options";
-import {IApiModules} from "../../../interface";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IApiModules} from "../../interface";
 import {IBeaconDb} from "../../../../db/api";
+import {IAttestationFilters, IBeaconPoolApi} from "./interface";
 
 export class BeaconPoolApi implements IBeaconPoolApi {
   private readonly config: IBeaconConfig;

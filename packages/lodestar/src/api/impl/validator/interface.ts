@@ -16,12 +16,11 @@ import {
   Slot,
   SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
-import {IApi} from "../../interface";
 
 /**
  * The API interface defines the calls that can be made from a Validator
  */
-export interface IValidatorApi extends IApi {
+export interface IValidatorApi {
   getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]>;
 
   getAttesterDuties(epoch: Epoch, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]>;

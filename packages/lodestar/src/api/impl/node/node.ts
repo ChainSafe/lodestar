@@ -1,12 +1,14 @@
-import {INodeApi} from "./interface";
-import {ApiNamespace, IApiModules} from "../../index";
-import {IApiOptions} from "../../options";
-import {NodeIdentity, NodePeer} from "../../types";
 import {SyncingStatus} from "@chainsafe/lodestar-types";
+import {createKeypairFromPeerId} from "@chainsafe/discv5";
+
+import {NodeIdentity, NodePeer} from "../../types";
 import {INetwork} from "../../../network";
-import {getPeerState} from "./utils";
 import {IBeaconSync} from "../../../sync";
-import {createKeypairFromPeerId} from "@chainsafe/discv5/lib";
+
+import {IApiOptions} from "../../options";
+import {ApiNamespace, IApiModules} from "../interface";
+import {getPeerState} from "./utils";
+import {INodeApi} from "./interface";
 
 export class NodeApi implements INodeApi {
   public namespace = ApiNamespace.NODE;

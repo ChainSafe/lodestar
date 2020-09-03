@@ -1,25 +1,24 @@
-import {RestApi} from "../../../../../../src/api/rest";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ValidatorApi} from "../../../../../../src/api/impl/validator";
-import sinon from "sinon";
-import {ApiNamespace} from "../../../../../../src/api";
-import {StubbedBeaconApi} from "../../../../../utils/stub/beaconApi";
-import supertest from "supertest";
 import {expect} from "chai";
+import sinon from "sinon";
+import supertest from "supertest";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
+import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
+import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 import {generateAttestation} from "../../../../../utils/attestation";
-import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
 import {silentLogger} from "../../../../../utils/logger";
 
 describe("rest - beacon - getPoolAttestations", function () {
-  let api: RestApi;
-  let beaconApiStub: StubbedBeaconApi;
+  let restApi: RestApi;
+  let api: StubbedApi;
 
   beforeEach(async function () {
-    beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi(
+    api = new StubbedApi();
+    restApi = await RestApi.init(
       {
         api: [ApiNamespace.BEACON],
         cors: "*",
@@ -30,21 +29,18 @@ describe("rest - beacon - getPoolAttestations", function () {
       {
         config,
         logger: silentLogger,
-        validator: sinon.createStubInstance(ValidatorApi),
-        node: new StubbedNodeApi(),
-        beacon: beaconApiStub,
+        api,
       }
     );
-    await api.start();
   });
 
   afterEach(async function () {
-    await api.stop();
+    await restApi.close();
   });
 
   it("should succeed", async function () {
-    beaconApiStub.pool.getAttestations.withArgs({committeeIndex: 1, slot: 1}).resolves([generateAttestation()]);
-    const response = await supertest(api.server.server)
+    api.beacon.pool.getAttestations.withArgs({committeeIndex: 1, slot: 1}).resolves([generateAttestation()]);
+    const response = await supertest(restApi.server.server)
       .get(getPoolAttestations.url)
       // eslint-disable-next-line @typescript-eslint/camelcase
       .query({slot: "1", committee_index: "1"})
