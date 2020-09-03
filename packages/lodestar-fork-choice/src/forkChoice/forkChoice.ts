@@ -166,8 +166,27 @@ export class ForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
-  public getHead(): Uint8Array {
+  public getHeadRoot(): Uint8Array {
     return fromHexString(this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root)));
+  }
+
+  public getHead(): IBlockSummary {
+    const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
+    const headIndex = this.protoArray.indices.get(headRoot);
+    if (headIndex === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        root: fromHexString(headRoot),
+      });
+    }
+    const headNode = this.protoArray.nodes[headIndex];
+    if (headNode === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        root: fromHexString(headRoot),
+      });
+    }
+    return toBlockSummary(headNode);
   }
 
   /**
@@ -434,6 +453,11 @@ export class ForkChoice {
     return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
   }
 
+  public getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null {
+    const head = this.getHeadRoot();
+    return this.iterateBlockSummaries(head).find((summary) => summary.slot === slot) || null;
+  }
+
   /**
    * Returns `true` if the given `store` should be updated to set
    * `state.current_justified_checkpoint` its `justified_checkpoint`.
@@ -676,5 +700,4 @@ export class ForkChoice {
       this.fcStore.justifiedCheckpoint = this.fcStore.bestJustifiedCheckpoint;
     }
   }
-
 }
