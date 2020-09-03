@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import AbortController from "abort-controller";
+import {AbortController, AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
 import {getSyncProtocols, INetwork} from "../../../network";
@@ -200,14 +200,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
     // statusSyncTimer is per slot
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
-    let isAborted = false;
-    signal.addEventListener("abort", () => {
-      this.logger.verbose("RegularSync: Abort waitForBestPeer");
-      isAborted = true;
-    });
-    while (!this.bestPeer && !isAborted) {
+
+    while (!this.bestPeer) {
       // wait first to make sure we have latest status
-      await sleep(waitingTime);
+      await sleep(waitingTime, signal);
       const peers = this.network
         .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
         .map((peer) => peer.id);
