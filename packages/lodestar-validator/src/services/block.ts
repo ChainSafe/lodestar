@@ -20,9 +20,9 @@ import {IApiClient} from "../api";
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  //validators private keys (order is important)
+  // validators private keys (order is important)
   private readonly privateKeys: PrivateKey[] = [];
-  //validators public keys (order is important)
+  // validators public keys (order is important)
   private readonly publicKeys: BLSPubkey[] = [];
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
@@ -50,9 +50,13 @@ export default class BlockProposingService {
   }
 
   public start = async (): Promise<void> => {
-    //trigger getting duties for current epoch
+    // trigger getting duties for current epoch
     const slot = this.provider.getCurrentSlot();
     await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+  };
+
+  public stop = async (): Promise<void> => {
+    // nothing here yet, but if future cleanup needs to be done (for example, clearing timers), put it here
   };
 
   public onNewEpoch = async (epoch: Epoch): Promise<void> => {

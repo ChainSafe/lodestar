@@ -23,13 +23,15 @@ describe("process epoch - balance updates", function () {
 
   it("should calculate base reward", function () {
     const state = generateState();
-    getTotalActiveBalanceStub.returns(100n);
+    getTotalActiveBalanceStub.returns(BigInt(100));
     state.validators = generateValidators(10);
     state.validators.forEach((value, index) => {
       state.validators[index].effectiveBalance = BigInt(index);
       const result = getBaseReward(config, state, index);
       const actual =
-        (BigInt(index) * BigInt(config.params.BASE_REWARD_FACTOR)) / bigIntSqrt(100n) / BigInt(BASE_REWARDS_PER_EPOCH);
+        (BigInt(index) * BigInt(config.params.BASE_REWARD_FACTOR)) /
+        bigIntSqrt(BigInt(100)) /
+        BigInt(BASE_REWARDS_PER_EPOCH);
       expect(result === actual).to.be.true;
     });
   });

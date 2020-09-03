@@ -17,7 +17,6 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {ApiService} from "../api";
-import {ReputationStore} from "../sync/IReputation";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 
@@ -47,7 +46,6 @@ export class BeaconNode {
   public chain: IBeaconChain;
   public api: IService;
   public sync: IBeaconSync;
-  public reps: ReputationStore;
   public chores: TasksService;
 
   private logger: ILogger;
@@ -66,7 +64,6 @@ export class BeaconNode {
       metrics: this.metrics,
       logger: this.logger.child(this.conf.logger.metrics),
     });
-    this.reps = new ReputationStore();
     this.db = new BeaconDb({
       config,
       controller: new LevelDbController(this.conf.db, {
@@ -88,7 +85,7 @@ export class BeaconNode {
       config,
       logger: this.logger.child(this.conf.logger.network),
     });
-    this.network = new Libp2pNetwork(this.conf.network, this.reps, {
+    this.network = new Libp2pNetwork(this.conf.network, {
       config,
       libp2p,
       logger: this.logger.child(this.conf.logger.network),
@@ -101,7 +98,6 @@ export class BeaconNode {
       db: this.db,
       chain: this.chain,
       network: this.network,
-      reputationStore: this.reps,
       logger: this.logger.child(this.conf.logger.sync),
     });
     this.api = new ApiService(this.conf.api, {

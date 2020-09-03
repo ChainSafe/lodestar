@@ -7,6 +7,7 @@ import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "../../../../src/util/sleep";
+import {goerliRpcUrl} from "../../../testParams";
 
 describe("BeaconChain", function () {
   this.timeout("10min");
@@ -41,7 +42,7 @@ describe("BeaconChain", function () {
   it("should detect altona genesis state", async function () {
     const eth1Provider = new Eth1Provider(altonaConfig, {
       enabled: true,
-      providerUrl: "https://goerli.prylabs.net",
+      providerUrl: goerliRpcUrl,
       depositContractDeployBlock: 2917810,
     });
 

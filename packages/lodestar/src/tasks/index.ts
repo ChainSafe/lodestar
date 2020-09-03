@@ -50,13 +50,13 @@ export class TasksService implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.forkChoice.on("prune", this.handleFinalizedCheckpointChores);
+    this.chain.emitter.on("forkChoice:prune", this.handleFinalizedCheckpointChores);
     this.network.gossip.on("gossip:start", this.handleGossipStart);
     this.network.gossip.on("gossip:stop", this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
-    this.chain.forkChoice.removeListener("prune", this.handleFinalizedCheckpointChores);
+    this.chain.emitter.removeListener("forkChoice:prune", this.handleFinalizedCheckpointChores);
     this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
     this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
     await this.interopSubnetsTask.stop();

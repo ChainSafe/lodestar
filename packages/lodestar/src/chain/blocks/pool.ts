@@ -1,9 +1,10 @@
-import {IBlockProcessJob} from "../chain";
+import {Pushable} from "it-pushable";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {Pushable} from "it-pushable";
-import {ChainEventEmitter} from "../interface";
+
+import {IBlockProcessJob} from "../chain";
+import {ChainEventEmitter} from "../emitter";
 import {ILMDGHOST} from "../forkChoice";
 
 export class BlockPool {

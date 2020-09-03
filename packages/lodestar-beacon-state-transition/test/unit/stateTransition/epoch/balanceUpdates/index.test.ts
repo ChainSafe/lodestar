@@ -38,8 +38,8 @@ describe("process epoch - balance updates", function () {
 
   it("should process rewards and penalties", function () {
     const state = generateState();
-    const reward = 10n;
-    const penalty = 0n;
+    const reward = BigInt(10);
+    const penalty = BigInt(0);
     state.validators.push(generateValidator());
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);

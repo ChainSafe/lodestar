@@ -46,7 +46,7 @@ describe("get proposers api impl", function () {
     }
   });
 
-  it("should throw error when node is stopped", async function() {
+  it("should throw error when node is stopped", async function () {
     syncStub.isSynced.returns(false);
     syncStub.getSyncStatus.throws("Node is stopped");
     try {

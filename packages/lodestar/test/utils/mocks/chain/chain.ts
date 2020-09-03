@@ -1,4 +1,6 @@
 import {EventEmitter} from "events";
+import {createStubInstance} from "sinon";
+import AbortController from "abort-controller";
 
 import {
   BeaconState,
@@ -11,13 +13,14 @@ import {
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";
-import {IBeaconChain, ILMDGHOST} from "../../../../src/chain";
+import {ChainEventEmitter, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateEmptySignedBlock} from "../../block";
 import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
 import {TreeBacked} from "@chainsafe/ssz";
+import {LocalClock} from "../../../../src/chain/clock";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -27,21 +30,30 @@ export interface IMockChainParams {
   config: IBeaconConfig;
 }
 
-export class MockBeaconChain extends EventEmitter implements IBeaconChain {
+export class MockBeaconChain implements IBeaconChain {
   public forkChoice!: ILMDGHOST;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
+  public emitter: ChainEventEmitter;
 
   private state: TreeBacked<BeaconState> | null;
   private config: IBeaconConfig;
+  private abortController: AbortController;
 
   public constructor({chainId, networkId, state, config}: Partial<IMockChainParams>) {
-    super();
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state!;
     this.config = config!;
+    this.emitter = new ChainEventEmitter();
+    this.abortController = new AbortController();
+    this.clock = new LocalClock({
+      config: config!,
+      genesisTime: state!.genesisTime,
+      emitter: this.emitter,
+      signal: this.abortController.signal,
+    });
   }
 
   async getHeadBlock(): Promise<null> {
@@ -55,7 +67,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     };
   }
 
-  public async getBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
+  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
     return block;
@@ -73,7 +85,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
     if (!slots) {
       return [];
     }
-    return await Promise.all(slots.map(this.getBlockAtSlot));
+    return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
@@ -113,6 +125,7 @@ export class MockBeaconChain extends EventEmitter implements IBeaconChain {
   }
 
   async stop(): Promise<void> {
+    this.abortController.abort();
     return;
   }
 

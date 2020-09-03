@@ -2,7 +2,6 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {generateState} from "../../../utils/state";
 import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {
@@ -12,17 +11,17 @@ import {
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {generateValidators} from "../../../utils/validator";
 import {generateInitialMaxBalances} from "../../../utils/balances";
-import {BeaconChain, StatefulDagLMDGHOST} from "../../../../src/chain";
+import {BeaconChain, ArrayDagLMDGHOST} from "../../../../src/chain";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../../../src/db";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {ExtendedValidatorResult} from "../../../../src/network/gossip/constants";
+import {silentLogger} from "../../../utils/logger";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
   let validator: GossipMessageValidator;
   let dbStub: StubbedBeaconDb,
-    logger: any,
     isValidIncomingVoluntaryExitStub: any,
     isValidIncomingProposerSlashingStub: any,
     isValidIncomingAttesterSlashingStub: any,
@@ -33,16 +32,14 @@ describe("GossipMessageValidator", () => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(StatefulDagLMDGHOST);
+    chainStub.forkChoice = sandbox.createStubInstance(ArrayDagLMDGHOST);
 
     dbStub = new StubbedBeaconDb(sandbox);
-    logger = new WinstonLogger();
-    logger.silent = true;
     validator = new GossipMessageValidator({
       chain: chainStub,
       db: (dbStub as unknown) as IBeaconDb,
       config,
-      logger,
+      logger: silentLogger,
     });
   });
 

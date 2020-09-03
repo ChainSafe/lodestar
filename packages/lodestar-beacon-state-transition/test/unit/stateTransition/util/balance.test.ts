@@ -12,7 +12,7 @@ import {generateState} from "../../../utils/state";
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 500;
-    const validatorBalance = 1000000000000n;
+    const validatorBalance = BigInt(1000000000000);
     const validators = generateValidators(num);
     for (const v of validators) {
       v.effectiveBalance = validatorBalance;
@@ -28,7 +28,7 @@ describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 5;
     const validators = generateValidators(num);
-    const balances = Array.from({length: num}, () => 0n) as List<Gwei>;
+    const balances = Array.from({length: num}, () => BigInt(0)) as List<Gwei>;
     const state: BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
@@ -42,9 +42,9 @@ describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    state.balances = [0n] as List<Gwei>;
-    const delta = 5n;
-    for (let i = 1n; i < 10n; i++) {
+    state.balances = [BigInt(0)] as List<Gwei>;
+    const delta = BigInt(5);
+    for (let i = BigInt(1); i < BigInt(10); i++) {
       increaseBalance(state, 0, delta);
       assert(state.balances[0] === delta * i);
     }
@@ -55,10 +55,10 @@ describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    const initial = 100n;
+    const initial = BigInt(100);
     state.balances = [initial] as List<Gwei>;
-    const delta = 5n;
-    for (let i = 1n; i < 10n; i++) {
+    const delta = BigInt(5);
+    for (let i = BigInt(1); i < BigInt(10); i++) {
       decreaseBalance(state, 0, delta);
       assert(state.balances[0] === initial - delta * i);
     }
@@ -66,10 +66,10 @@ describe("decreaseBalance", () => {
   it("should not make a validators balance < 0", () => {
     const state = generateState();
     state.validators = generateValidators(1);
-    const initial = 10n;
+    const initial = BigInt(10);
     state.balances = [initial] as List<Gwei>;
-    const delta = 11n;
+    const delta = BigInt(11);
     decreaseBalance(state, 0, delta);
-    assert(state.balances[0] === 0n);
+    assert(state.balances[0] === BigInt(0));
   });
 });

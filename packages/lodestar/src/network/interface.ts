@@ -23,6 +23,7 @@ import {IResponseChunk} from "./encoders/interface";
 import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5/lib";
 import LibP2p from "libp2p";
+import {IPeerMetadataStore} from "./peers/interface";
 
 export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
 
@@ -65,6 +66,7 @@ export interface INetwork extends NetworkEventEmitter {
   reqResp: IReqResp;
   gossip: IGossip;
   metadata: MetadataController;
+  peerMetadata: IPeerMetadataStore;
   /**
    * Our network identity
    */
@@ -72,6 +74,7 @@ export interface INetwork extends NetworkEventEmitter {
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
+  getMaxPeer(): number;
   getPeerConnection(peerId: PeerId): LibP2pConnection | null;
   hasPeer(peerId: PeerId): boolean;
   connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void>;
@@ -80,4 +83,5 @@ export interface INetwork extends NetworkEventEmitter {
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
+  handleSyncCompleted(): Promise<void>;
 }

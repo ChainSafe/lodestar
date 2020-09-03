@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {IAttestationProcessor, IBeaconChain} from "../interface";
@@ -34,10 +34,10 @@ export class AttestationProcessor implements IAttestationProcessor {
 
   public async start(): Promise<void> {
     //checks if attestation is waiting on specific slot
-    this.chain.clock.onNewSlot(this.onNewSlot);
+    this.chain.emitter.on("clock:slot", this.onNewSlot);
   }
   public async stop(): Promise<void> {
-    this.chain.clock.unsubscribeFromNewSlot(this.onNewSlot);
+    this.chain.emitter.off("clock:slot", this.onNewSlot);
   }
 
   /**
@@ -54,8 +54,8 @@ export class AttestationProcessor implements IAttestationProcessor {
     };
     this.logger.info("Attestation received to process pool", attestationLogContext);
     const target = attestation.data.target;
-    const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
-    const currentEpoch = computeEpochAtSlot(this.config, currentSlot);
+    const currentSlot = this.chain.clock.currentSlot;
+    const currentEpoch = this.chain.clock.currentEpoch;
     const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
     if (target.epoch < previousEpoch) {
       this.logger.warn("Attestation dropped from pool", {
@@ -130,7 +130,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   private addPendingBlockAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
-    this.chain.emit("unknownBlockRoot", blockRoot);
+    this.chain.emitter.emit("unknownBlockRoot", blockRoot);
     const blockPendingAttestations =
       this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
     blockPendingAttestations.set(toHexString(attestationHash), attestation);

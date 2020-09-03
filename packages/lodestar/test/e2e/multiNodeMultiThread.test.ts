@@ -6,7 +6,7 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {waitForEvent} from "../utils/events/resolver";
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
-  const checkpointEvent = "justifiedCheckpoint";
+  const checkpointEvent = "justified";
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,

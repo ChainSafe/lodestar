@@ -28,7 +28,7 @@ import {getDevValidator} from "../../utils/node/validator";
   await node.start();
   await validator.start();
 
-  node.chain.on(checkpointEvent, (checkpoint) => {
+  node.chain.emitter.on(checkpointEvent, (checkpoint) => {
     validator.stop().then(() =>
       node.stop().then(() => {
         parentPort!.postMessage({

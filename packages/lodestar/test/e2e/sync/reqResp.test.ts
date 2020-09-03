@@ -4,11 +4,10 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {encode} from "varint";
 
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
-import {ReputationStore} from "../../../src/sync/IReputation";
-import {Libp2pNetwork, createRpcProtocol} from "../../../src/network";
+import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
+import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";
@@ -20,7 +19,7 @@ import {sleep} from "../../utils/sleep";
 import {createNode} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {StatefulDagLMDGHOST} from "../../../src/chain/forkChoice/statefulDag";
+import {ArrayDagLMDGHOST} from "../../../src/chain/forkChoice";
 import {getBlockSummary} from "../../utils/headBlockInfo";
 import pipe from "it-pipe";
 import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
@@ -48,22 +47,23 @@ describe("[sync] rpc", function () {
   logger.silent = true;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
-  let rpcA: IReqRespHandler, netA: Libp2pNetwork, repsA: ReputationStore;
-  let rpcB: IReqRespHandler, netB: Libp2pNetwork, repsB: ReputationStore;
+  let rpcA: IReqRespHandler, netA: Libp2pNetwork;
+  let rpcB: IReqRespHandler, netB: Libp2pNetwork;
   let libP2pA: Libp2p;
   const validator: IGossipMessageValidator = ({} as unknown) as IGossipMessageValidator;
+  let chain: MockBeaconChain;
 
   beforeEach(async () => {
     const state = generateState();
-    const chain = new MockBeaconChain({
+    chain = new MockBeaconChain({
       genesisTime: 0,
       chainId: 0,
       networkId: BigInt(0),
       state,
       config,
     });
-    chain.getBlockAtSlot = sinon.stub().resolves(block);
-    const forkChoiceStub = sinon.createStubInstance(StatefulDagLMDGHOST);
+    chain.getCanonicalBlockAtSlot = sinon.stub().resolves(block);
+    const forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.head.returns(
       getBlockSummary({
@@ -77,11 +77,9 @@ describe("[sync] rpc", function () {
       epoch: computeEpochAtSlot(config, block.message.slot),
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
     });
-    repsA = new ReputationStore();
-    repsB = new ReputationStore();
     libP2pA = ((await createNode(multiaddr)) as unknown) as Libp2p;
-    netA = new Libp2pNetwork(opts, repsA, {config, libp2p: libP2pA, logger, metrics, validator, chain});
-    netB = new Libp2pNetwork(opts, repsB, {
+    netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
+    netB = new Libp2pNetwork(opts, {
       config,
       libp2p: ((await createNode(multiaddr)) as unknown) as Libp2p,
       logger,
@@ -106,7 +104,6 @@ describe("[sync] rpc", function () {
       db,
       chain,
       network: netA,
-      reputationStore: repsA,
       logger,
     });
 
@@ -115,13 +112,13 @@ describe("[sync] rpc", function () {
       db,
       chain,
       network: netB,
-      reputationStore: repsB,
       logger: logger,
     });
     await Promise.all([rpcA.start(), rpcB.start()]);
   });
 
   afterEach(async () => {
+    await chain.stop()
     await Promise.all([rpcA.stop(), rpcB.stop()]);
     //allow goodbye to propagate
     await sleep(200);
@@ -130,8 +127,8 @@ describe("[sync] rpc", function () {
 
   it("hello handshake on peer connect with correct encoding", async function () {
     // A sends status request to B with ssz encoding
-    repsA.get(netB.peerId.toB58String()).encoding = ReqRespEncoding.SSZ;
-    expect(repsB.get(netA.peerId.toB58String()).latestStatus).to.be.equal(null);
+    netA.peerMetadata.setEncoding(netB.peerId, ReqRespEncoding.SSZ);
+    expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
@@ -152,11 +149,11 @@ describe("[sync] rpc", function () {
       });
       setTimeout(resolve, 2000);
     });
-    expect(repsA.get(netB.peerId.toB58String()).latestStatus).to.not.equal(null);
-    expect(repsB.get(netA.peerId.toB58String()).latestStatus).to.not.equal(null);
+    expect(netA.peerMetadata.getStatus(netB.peerId)).to.not.equal(null);
+    expect(netB.peerMetadata.getStatus(netA.peerId)).to.not.equal(null);
     // B should store A with ssz as preferred encoding
-    expect(repsA.get(netB.peerId.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
-    expect(repsB.get(netA.peerId.toB58String()).encoding).to.be.equal(ReqRespEncoding.SSZ);
+    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(ReqRespEncoding.SSZ);
+    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(ReqRespEncoding.SSZ);
   });
 
   it("goodbye on rpc stop", async function () {

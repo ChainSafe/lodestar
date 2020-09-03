@@ -4,13 +4,12 @@
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
-import {IReputation, IReputationStore} from "../../IReputation";
 import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import defaultOptions, {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
-import {Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
@@ -19,12 +18,12 @@ import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from 
 import {GENESIS_EPOCH} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
 import {IBeaconDb} from "../../../db";
+import {notNullish} from "../../../util/notNullish";
 
 export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}) implements InitialSync {
   private readonly opts: ISyncOptions;
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
-  private readonly reps: IReputationStore;
   private readonly network: INetwork;
   private readonly logger: ILogger;
   private readonly stats: ISyncStats;
@@ -48,28 +47,24 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
    */
   private lastProcessedBlock!: SignedBeaconBlock;
 
-  public constructor(
-    opts: ISyncOptions,
-    {config, chain, network, reputationStore, logger, db, stats}: IInitialSyncModules
-  ) {
+  public constructor(opts: ISyncOptions, {config, chain, network, logger, db, stats}: IInitialSyncModules) {
     super();
     this.config = config;
     this.chain = chain;
-    this.reps = reputationStore;
     this.opts = opts;
     this.network = network;
     this.logger = logger;
     this.db = db;
-    this.stats = stats || new SyncStats(this.chain);
+    this.stats = stats || new SyncStats(this.chain.emitter);
     this.syncTriggerSource = pushable<ISlotRange>();
   }
 
   public async start(): Promise<void> {
     this.logger.info("Starting initial syncing");
-    this.chain.on("processedCheckpoint", this.checkSyncCompleted);
-    this.chain.on("processedBlock", this.checkSyncProgress);
+    this.chain.emitter.on("checkpoint", this.checkSyncCompleted);
+    this.chain.emitter.on("block", this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
-    this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerReputations());
+    this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses());
     // head may not be on finalized chain so we start from finalized block
     // there are unfinalized blocks in db so we reprocess all of them
     this.lastProcessedBlock = (await this.db.blockArchive.lastValue())!;
@@ -93,8 +88,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.logger.info("initial sync stop");
     await this.stats.stop();
     this.syncTriggerSource.end();
-    this.chain.removeListener("processedBlock", this.checkSyncProgress);
-    this.chain.removeListener("processedCheckpoint", this.checkSyncCompleted);
+    this.chain.emitter.removeListener("block", this.checkSyncProgress);
+    this.chain.emitter.removeListener("checkpoint", this.checkSyncCompleted);
   }
 
   public getHighestBlock(): Slot {
@@ -192,7 +187,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       //   + `expected ${toHexString(this.targetCheckpoint.root)}, actual ${toHexString(processedCheckpoint.root)}`);
       //   throw new Error("Should delete chain and start again. Invalid blocks synced");
       // }
-      const newTarget = getCommonFinalizedCheckpoint(this.config, this.getPeerReputations())!;
+      const newTarget = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses())!;
       if (newTarget.epoch > this.targetCheckpoint!.epoch) {
         this.targetCheckpoint = newTarget;
         this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
@@ -204,13 +199,14 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     }
   };
 
-  private getPeerReputations(): IReputation[] {
+  private getPeerStatuses(): Status[] {
     return this.network
       .getPeers({
         connected: true,
         supportsProtocols: getSyncProtocols(),
       })
-      .map((peer) => this.reps.getFromPeerId(peer.id));
+      .map((peer) => this.network.peerMetadata.getStatus(peer.id))
+      .filter(notNullish);
   }
 
   /**
@@ -231,8 +227,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       })
       .map((peer) => peer.id)
       .reduce((validPeers: PeerId[], peer: PeerId) => {
-        const rep = this.reps.getFromPeerId(peer);
-        if (rep && rep.latestStatus && rep.latestStatus.finalizedEpoch >= this.targetCheckpoint!.epoch) {
+        const status = this.network.peerMetadata.getStatus(peer);
+        if (status && status.finalizedEpoch >= this.targetCheckpoint!.epoch) {
           validPeers.push(peer);
         }
         return validPeers;

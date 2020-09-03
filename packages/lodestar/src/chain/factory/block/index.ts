@@ -51,6 +51,10 @@ function computeNewStateRoot(config: IBeaconConfig, stateContext: IStateContext,
     message: block,
     signature: EMPTY_SIGNATURE,
   };
-  const newState = fastStateTransition(stateContext, signedBlock, false, false, true);
+  const newState = fastStateTransition(stateContext, signedBlock, {
+    verifyStateRoot: false,
+    verifyProposer: false,
+    verifySignatures: true,
+  });
   return config.types.BeaconState.hashTreeRoot(newState.state);
 }

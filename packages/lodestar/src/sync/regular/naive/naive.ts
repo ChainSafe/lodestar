@@ -8,13 +8,11 @@ import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IReputationStore} from "../../IReputation";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep} from "../../../util/sleep";
@@ -26,8 +24,6 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private readonly network: INetwork;
 
   private readonly chain: IBeaconChain;
-
-  private readonly reps: IReputationStore;
 
   private readonly logger: ILogger;
 
@@ -46,17 +42,15 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
-    this.reps = modules.reputationStore;
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.targetSlotRangeSource = pushable<ISlotRange>();
   }
 
   public async start(): Promise<void> {
-    this.chain.on("processedBlock", this.onProcessedBlock);
+    this.chain.emitter.on("block", this.onProcessedBlock);
     const headSlot = this.chain.forkChoice.headBlockSlot();
-    const state = await this.chain.getHeadState();
-    const currentSlot = getCurrentSlot(this.config, state.genesisTime);
+    const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
       this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
@@ -80,7 +74,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     if (this.controller) {
       this.controller.abort();
     }
-    this.chain.removeListener("processedBlock", this.onProcessedBlock);
+    this.chain.emitter.removeListener("block", this.onProcessedBlock);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
   }
 
@@ -89,7 +83,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private getNewTarget(): Slot {
-    const currentSlot = getCurrentSlot(this.config, this.chain.getGenesisTime());
+    const currentSlot = this.chain.clock.currentSlot;
     // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
     return Math.min(this.currentTarget + this.opts.blockPerChunk, currentSlot + 1);
   }
@@ -167,7 +161,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   private handleEmptyRange = async (range: ISlotRange): Promise<void> => {
-    const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer!).latestStatus!.headSlot;
+    if (!this.bestPeer) {
+      return;
+    }
+    const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)?.headSlot ?? 0;
     this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
@@ -193,7 +190,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
    * Make sure the best peer is not disconnected and it's better than us.
    */
   private getSyncPeers = async (): Promise<PeerId[]> => {
-    if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network, this.reps)) {
+    if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)) {
       this.logger.info("Regular Sync: wait for best peer");
       await this.waitForBestPeer(this.controller.signal);
     }
@@ -214,9 +211,9 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       const peers = this.network
         .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
         .map((peer) => peer.id);
-      this.bestPeer = getBestPeer(this.config, peers, this.reps);
-      if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network, this.reps)) {
-        const peerHeadSlot = this.reps.getFromPeerId(this.bestPeer).latestStatus!.headSlot;
+      this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
+      if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
+        const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
         this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()} with head slot ${peerHeadSlot}`);
       } else {
         // continue to find best peer

@@ -36,7 +36,7 @@ export async function validateGossipAggregateAndProof(
   if (!isValidAggregateAndProofSlot(config, chain.getGenesisTime(), aggregate.data.slot)) {
     logger.warn("Ignored gossip aggregate and proof", {
       reason: "invalid slot time",
-      currentSlot: getCurrentSlot(config, chain.getGenesisTime()),
+      currentSlot: chain.clock.currentSlot,
       ...logContext,
     });
     //TODO: aggregate and proof pool to wait until proper slot to replay

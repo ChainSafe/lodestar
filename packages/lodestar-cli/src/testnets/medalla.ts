@@ -1,4 +1,5 @@
 import {IBeaconNodeOptionsPartial} from "../options";
+import {LogLevel} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable max-len */
 
@@ -17,6 +18,35 @@ export const medallaConfig: IBeaconNodeOptionsPartial = {
   eth1: {
     providerUrl: "https://goerli.prylabs.net",
     depositContractDeployBlock: 3085928,
+  },
+  logger: {
+    chain: {
+      level: LogLevel.info,
+    },
+    db: {
+      level: LogLevel.info,
+    },
+    eth1: {
+      level: LogLevel.info,
+    },
+    node: {
+      level: LogLevel.info,
+    },
+    network: {
+      level: LogLevel.info,
+    },
+    sync: {
+      level: LogLevel.info,
+    },
+    api: {
+      level: LogLevel.info,
+    },
+    metrics: {
+      level: LogLevel.info,
+    },
+    chores: {
+      level: LogLevel.info,
+    },
   },
   metrics: {
     enabled: true,
