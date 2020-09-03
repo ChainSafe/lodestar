@@ -118,9 +118,15 @@ export function calculateStateTime(config: IBeaconConfig, eth1Timestamp: number)
  * @param state
  */
 export function isValidGenesisState(config: IBeaconConfig, state: BeaconState): boolean {
-  if (state.genesisTime < config.params.MIN_GENESIS_TIME) {
-    return false;
-  }
+  return state.genesisTime >= config.params.MIN_GENESIS_TIME && isValidGenesisValidators(config, state);
+}
+
+/**
+ * Check if it's valid genesis validators state.
+ * @param config
+ * @param state
+ */
+export function isValidGenesisValidators(config: IBeaconConfig, state: BeaconState): boolean {
   return (
     getActiveValidatorIndices(state, computeEpochAtSlot(config, GENESIS_SLOT)).length >=
     config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT

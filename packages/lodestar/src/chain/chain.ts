@@ -24,7 +24,7 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
-import {IEth1Notifier} from "../eth1";
+import {IEth1Provider} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {ArrayDagLMDGHOST, ILMDGHOST} from "./forkChoice";
@@ -43,7 +43,7 @@ import {notNullish} from "../util/notNullish";
 export interface IBeaconChainModules {
   config: IBeaconConfig;
   db: IBeaconDb;
-  eth1: IEth1Notifier;
+  eth1Provider: IEth1Provider;
   logger: ILogger;
   metrics: IBeaconMetrics;
   forkChoice?: ILMDGHOST;
@@ -63,7 +63,7 @@ export class BeaconChain implements IBeaconChain {
   public emitter: ChainEventEmitter;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly eth1: IEth1Notifier;
+  private readonly eth1Provider: IEth1Provider;
   private readonly logger: ILogger;
   private readonly metrics: IBeaconMetrics;
   private readonly opts: IChainOptions;
@@ -73,11 +73,11 @@ export class BeaconChain implements IBeaconChain {
   private genesisTime: Number64 = 0;
   private abortController?: AbortController;
 
-  public constructor(opts: IChainOptions, {config, db, eth1, logger, metrics}: IBeaconChainModules) {
+  public constructor(opts: IChainOptions, {config, db, eth1Provider, logger, metrics}: IBeaconChainModules) {
     this.opts = opts;
     this.config = config;
     this.db = db;
-    this.eth1 = eth1;
+    this.eth1Provider = eth1Provider;
     this.logger = logger;
     this.metrics = metrics;
     this.emitter = new ChainEventEmitter();
@@ -201,7 +201,6 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.on("clock:epoch", this.onClockEpoch);
     this.emitter.on("checkpoint", this.onCheckpoint);
     await this.restoreHeadState(state, epochCtx);
-    await this.eth1.start();
   }
 
   public async stop(): Promise<void> {
@@ -379,8 +378,13 @@ export class BeaconChain implements IBeaconChain {
     let state = await this.db.stateArchive.lastValue();
     if (!state) {
       this.logger.info("Chain not started, listening for genesis block");
-      const builder = new GenesisBuilder(this.config, {eth1: this.eth1, db: this.db, logger: this.logger});
-      state = await builder.waitForGenesis();
+      const builder = new GenesisBuilder(this.config, {
+        eth1Provider: this.eth1Provider,
+        logger: this.logger,
+        signal: this.abortController?.signal,
+      });
+      const genesisResult = await builder.waitForGenesis();
+      state = genesisResult.state;
       await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state

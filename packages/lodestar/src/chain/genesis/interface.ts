@@ -1,15 +1,22 @@
-import {IBeaconDb} from "../../db";
-import {IEth1Notifier} from "../../eth1";
+import {IEth1Provider, IEth1Block} from "../../eth1";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {TreeBacked, List} from "@chainsafe/ssz";
+import {BeaconState, Root} from "@chainsafe/lodestar-types";
+import {AbortSignal} from "abort-controller";
 
-export interface IGenesisBuilderModules {
-  db: IBeaconDb;
-  eth1: IEth1Notifier;
+export interface IGenesisBuilderKwargs {
+  eth1Provider: IEth1Provider;
   logger: ILogger;
+  signal?: AbortSignal;
+  MAX_BLOCKS_PER_POLL?: number;
+}
+
+export interface IGenesisResult {
+  state: TreeBacked<BeaconState>;
+  depositTree: TreeBacked<List<Root>>;
+  block: IEth1Block;
 }
 
 export interface IGenesisBuilder {
-  waitForGenesis: () => Promise<TreeBacked<BeaconState>>;
+  waitForGenesis: () => Promise<IGenesisResult>;
 }

@@ -11,7 +11,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
-import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
+import {Eth1Provider} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
@@ -29,7 +29,6 @@ export interface IService {
 interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
-  eth1?: IEth1Notifier;
   libp2p: LibP2p;
 }
 
@@ -43,7 +42,6 @@ export class BeaconNode {
   public db: BeaconDb;
   public metrics: BeaconMetrics;
   public metricsServer: HttpMetricsServer;
-  public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
   public api?: IApi;
@@ -53,7 +51,7 @@ export class BeaconNode {
 
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, libp2p}: IBeaconNodeModules) {
     this.conf = deepmerge(defaultConf, opts, {
       //clone doesn't work very vell on classes like ethers.Provider
       isMergeableObject: isPlainObject,
@@ -73,18 +71,12 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.db),
       }),
     });
-    this.eth1 =
-      eth1 ||
-      new EthersEth1Notifier(this.conf.eth1, {
-        config,
-        db: this.db,
-        logger: this.logger.child(this.conf.logger.eth1),
-      });
+    const eth1Provider = new Eth1Provider(config, this.conf.eth1);
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
-      eth1: this.eth1,
-      logger: this.logger.child(this.conf.logger.chain),
+      eth1Provider,
+      logger: logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
 
@@ -126,7 +118,6 @@ export class BeaconNode {
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
-    // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
     // TODO: refactor the sync module to respect the "start should resolve quickly" interface
@@ -154,7 +145,6 @@ export class BeaconNode {
     if (this.restApi) await this.restApi.close();
     await this.sync.stop();
     await this.chain.stop();
-    await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
     await this.metricsServer.stop();
