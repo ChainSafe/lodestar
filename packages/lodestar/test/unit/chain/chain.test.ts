@@ -27,7 +27,7 @@ describe("BeaconChain", function () {
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     const state: BeaconState = generateState();
     state.validators = generateValidators(5, {activationEpoch: 0});
-    dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
+    dbStub.state.get.resolves(state);
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1Provider, logger, metrics});
     await chain.start();

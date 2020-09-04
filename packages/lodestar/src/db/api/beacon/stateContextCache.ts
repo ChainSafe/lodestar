@@ -1,6 +1,7 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {StateRepository} from "./repositories/state";
 
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
@@ -8,13 +9,16 @@ export interface ITreeStateContext {
 }
 
 /**
- * In memory cache of BeaconState and connected EpochContext
+ * In memory cache of BeaconState and connected EpochContext.
+ * It also forward calls to state repository.
  *
  * Similar API to Repository
  */
 export class StateContextCache {
+  private stateRepo: StateRepository;
   private cache: Record<string, ITreeStateContext>;
-  constructor() {
+  constructor(stateRepo: StateRepository) {
+    this.stateRepo = stateRepo;
     this.cache = {};
   }
 
@@ -26,12 +30,20 @@ export class StateContextCache {
     return this.clone(item);
   }
 
+  /**
+   * Add to both in-memory cache and state repository.
+   */
   public async add(item: ITreeStateContext): Promise<void> {
     this.cache[toHexString(item.state.hashTreeRoot())] = this.clone(item);
+    await this.stateRepo.add(item.state);
   }
 
+  /**
+   * Delete state both in-memory cache and state repository.
+   */
   public async delete(root: ByteVector): Promise<void> {
     delete this.cache[toHexString(root)];
+    await this.stateRepo.delete(root as Uint8Array);
   }
 
   public async batchDelete(roots: ByteVector[]): Promise<void> {
@@ -47,6 +59,8 @@ export class StateContextCache {
   }
 
   /**
+   * Only prune in-memory cache.
+   * States are still stored in state repository.
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */

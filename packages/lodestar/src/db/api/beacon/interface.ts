@@ -21,6 +21,7 @@ import {
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
+import {StateRepository} from "./repositories/state";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -33,6 +34,9 @@ export interface IBeaconDb {
 
   // unfinalized blocks
   block: BlockRepository;
+
+  // unfinalized states
+  state: StateRepository;
 
   // unfinalized states
   stateCache: StateContextCache;

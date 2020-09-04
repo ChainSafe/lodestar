@@ -77,7 +77,7 @@ export class MockBeaconChain implements IBeaconChain {
     return (await this.getHeadStateContext()).epochCtx;
   }
 
-  public async getHeadState(): Promise<TreeBacked<BeaconState>> {
+  public async getHeadState(): Promise<BeaconState> {
     return (await this.getHeadStateContext()).state;
   }
 

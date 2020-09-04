@@ -91,13 +91,13 @@ export class BeaconChain implements IBeaconChain {
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
     //head state should always exist
-    const headStateRoot = await this.db.stateCache.get(this.forkChoice.headStateRoot());
-    if (!headStateRoot) throw Error("headStateRoot does not exist");
-    return headStateRoot;
+    const headStateContext = await this.db.stateCache.get(this.forkChoice.headStateRoot());
+    if (!headStateContext) throw Error("headStateRoot does not exist");
+    return headStateContext;
   }
-  public async getHeadState(): Promise<TreeBacked<BeaconState>> {
-    //head state should always have epoch ctx
-    return (await this.getHeadStateContext()).state;
+
+  public async getHeadState(): Promise<BeaconState> {
+    return (await this.db.state.get(this.forkChoice.headStateRoot()!)) as BeaconState;
   }
   public async getHeadEpochContext(): Promise<EpochContext> {
     //head should always have epoch ctx
@@ -369,7 +369,7 @@ export class BeaconChain implements IBeaconChain {
   };
 
   private async getCurrentForkDigest(): Promise<ForkDigest> {
-    const {state} = await this.getHeadStateContext();
+    const state = await this.getHeadState();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
   }
 
@@ -385,14 +385,14 @@ export class BeaconChain implements IBeaconChain {
       });
       const genesisResult = await builder.waitForGenesis();
       state = genesisResult.state;
-      await this.initializeBeaconChain(state);
+      await this.initializeBeaconChain(state as TreeBacked<BeaconState>);
     }
     // set metrics based on beacon state
     this.metrics.currentSlot.set(state.slot);
     this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
     this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
     this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
-    return state;
+    return this.config.types.BeaconState.tree.createValue(state);
   }
 
   private onCheckpoint = (): void => {

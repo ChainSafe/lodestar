@@ -45,12 +45,10 @@ export class ArchiveStatesTask implements ITask {
     const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
     this.logger.info(`Started archiving states (finalized epoch #${epoch})...`);
     this.logger.profile("Archive States");
-    // store the state of finalized checkpoint
-    const stateCache = await this.db.stateCache.get(this.finalized.stateRoot);
-    if (!stateCache) {
+    const finalizedState = await this.db.state.get(this.finalized.stateRoot);
+    if (!finalizedState) {
       throw Error(`No state cache in db for finalized stateRoot ${toHexString(this.finalized.stateRoot)}`);
     }
-    const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
     // delete states before the finalized state
     const prunedStates = this.pruned.map((summary) => summary.stateRoot);
