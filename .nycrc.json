@@ -1,8 +1,6 @@
 {
   "cache": false,
-  "extension": [
-    ".ts"
-  ],
+  "extension": [".ts"],
   "exclude": [
     "**/*.d.ts",
     "**/*.js",
@@ -15,8 +13,5 @@
     "**/node_modules/**"
   ],
   "all": false,
-  "reporter": [
-    "text",
-    "lcov"
-  ]
+  "reporter": ["lcovonly"]
 }
