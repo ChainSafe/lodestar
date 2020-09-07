@@ -16,9 +16,15 @@ import {
   Slot,
   Uint16,
   Uint64,
+  BeaconBlockHeader,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeForkDigest,
+  EpochContext,
+  IStateContext,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 
@@ -39,6 +45,7 @@ import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {notNullish} from "../util/notNullish";
+import {runStateTransition} from "./blocks/process";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -95,10 +102,47 @@ export class BeaconChain implements IBeaconChain {
     if (!headStateRoot) throw Error("headStateRoot does not exist");
     return headStateRoot;
   }
+
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
     //head state should always have epoch ctx
     return (await this.getHeadStateContext()).state;
   }
+
+  /**
+   * Get unfinalized sate from a state root.
+   * State is not always available if it's too far away from head.
+   * In that case get checkpoint state and replay blocks.
+   */
+  public async getState(stateRoot: Uint8Array): Promise<TreeBacked<BeaconState>> {
+    const state = (await this.db.stateCache.get(stateRoot))?.state;
+    if (state) {
+      return state;
+    }
+    // replay blocks
+    const stateRoots = await this.db.checkpointStateCache.getStateRootAncestors(stateRoot);
+    if (!stateRoots) throw Error("getState: Cannot find state for root" + toHexString(stateRoot));
+    const checkpointStateRoot = stateRoots.shift();
+    const cpState = await this.db.checkpointStateCache.get(checkpointStateRoot!);
+    const cpBlockHeader: BeaconBlockHeader = cpState?.state.latestBlockHeader!;
+    cpBlockHeader.stateRoot = cpState?.state.hashTreeRoot()!;
+    const cpBlockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(cpBlockHeader);
+    const blockSummaries = this.forkChoice.getBlockSummariesByAncestorBlockRoot(cpBlockRoot, stateRoots)!;
+    const blocks = await Promise.all(blockSummaries.map((summary) => this.db.block.get(summary.blockRoot)));
+    let stateContext: IStateContext = cpState!;
+    let i = 0;
+    this.logger.verbose(`Replaying ${blocks.length} blocks to get state`);
+    for (const block of blocks) {
+      if (!block) throw Error("getState: Cannot find block from root" + toHexString(blockSummaries[i].blockRoot));
+      stateContext = (await runStateTransition(this.config, this.db, this.logger, stateContext, {
+        signedBlock: block!,
+        trusted: true,
+        reprocess: true,
+      })) as ITreeStateContext;
+      i++;
+    }
+    return stateContext.state as TreeBacked<BeaconState>;
+  }
+
   public async getHeadEpochContext(): Promise<EpochContext> {
     //head should always have epoch ctx
     return (await this.getHeadStateContext()).epochCtx;

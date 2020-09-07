@@ -400,6 +400,30 @@ export class ArrayDagLMDGHOST implements ILMDGHOST {
       .map((node) => this.toBlockSummary(node));
   }
 
+  /**
+   * If chain is like A - B - C - D then params are like
+   * @param ancestorRoot block root of A
+   * @param stateRoots state roots of B, C, D
+   * @returns block summaries of B, C, D
+   */
+  public getBlockSummariesByAncestorBlockRoot(
+    ancestorRoot: Uint8Array,
+    stateRoots: Uint8Array[]
+  ): BlockSummary[] | null {
+    let node = this.getNode(ancestorRoot);
+    if (!node) return null;
+    const summaries: BlockSummary[] = [];
+    for (const stateRoot of stateRoots) {
+      const children = Object.values(node.children).map((index) => this.nodes[index]);
+      const child = children.find((item) => this.config.types.Root.equals(item.stateRoot, stateRoot));
+      if (child) {
+        summaries.push(this.toBlockSummary(child));
+        node = child;
+      }
+    }
+    return summaries;
+  }
+
   public hasBlock(blockRoot: Uint8Array): boolean {
     return !!this.getNode(blockRoot);
   }

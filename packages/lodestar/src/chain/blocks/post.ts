@@ -43,8 +43,9 @@ export function postProcess(
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
           eventBus.emit("checkpoint", {
             epoch: currentEpoch,
-            root: block.message.parentRoot,
+            root: config.types.BeaconBlock.hashTreeRoot(block.message),
           });
+          await db.checkpointStateCache.add(postStateContext);
           // newly justified epoch
           if (preJustifiedEpoch < postStateContext.state.currentJustifiedCheckpoint.epoch) {
             newJustifiedEpoch(logger, metrics, eventBus, postStateContext.state);
@@ -54,6 +55,11 @@ export function postProcess(
             newFinalizedEpoch(logger, metrics, eventBus, postStateContext.state);
           }
           metrics.currentEpochLiveValidators.set(postStateContext.epochCtx.currentShuffling.activeIndices.length);
+        } else {
+          await db.checkpointStateCache.addStateRoot(
+            postStateContext.state.hashTreeRoot(),
+            preStateContext.state.hashTreeRoot()
+          );
         }
       }
       return;

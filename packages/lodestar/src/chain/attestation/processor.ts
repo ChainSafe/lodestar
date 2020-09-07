@@ -43,7 +43,7 @@ export async function processAttestation(
       //should not happen
       return;
     }
-    await db.checkpointStateCache.add(target, attestationPreState);
+    await db.checkpointStateCtxCache.add(target, attestationPreState);
     const indexedAttestation = attestationPreState.epochCtx.getIndexedAttestation(attestation);
     //TODO: we could signal to skip this in case it came from validated from gossip or from block
     //we need to check this again, because gossip validation might put it in pool before it validated signature

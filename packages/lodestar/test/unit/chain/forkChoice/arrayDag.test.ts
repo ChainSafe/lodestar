@@ -7,27 +7,36 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainEventEmitter, NO_NODE} from "../../../../src/chain";
 import {ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice/arrayDag/lmdGhost";
 
+const makeRoot = (root: string): string => {
+  if (root.length > 32) return root.substring(0, 32);
+  let padRoot = root;
+  while (padRoot.length < 32) {
+    padRoot = padRoot + "0";
+  }
+  return padRoot;
+};
+
 describe("ArrayDagLMDGHOST", () => {
-  const genesis = Buffer.from("genesis");
-  const blockA = Buffer.from("block-a");
-  const blockB = Buffer.from("block-b");
-  const blockC = Buffer.from("block-c");
-  const blockD = Buffer.from("block-d");
-  const blockE = Buffer.from("block-e");
-  const blockF = Buffer.from("block-f");
-  const blockG = Buffer.from("block-g");
-  const blockH = Buffer.from("block-h");
-  const blockI = Buffer.from("block-i");
-  const genesisState = Buffer.from("genesisState");
-  const stateA = Buffer.from("state-a");
-  const stateB = Buffer.from("state-b");
-  const stateC = Buffer.from("state-c");
-  const stateD = Buffer.from("state-d");
-  const stateE = Buffer.from("state-e");
-  const stateF = Buffer.from("state-f");
-  const stateG = Buffer.from("state-g");
-  const stateH = Buffer.from("state-h");
-  const stateI = Buffer.from("state-i");
+  const genesis = Buffer.from(makeRoot("genesis"));
+  const blockA = Buffer.from(makeRoot("block-a"));
+  const blockB = Buffer.from(makeRoot("block-b"));
+  const blockC = Buffer.from(makeRoot("block-c"));
+  const blockD = Buffer.from(makeRoot("block-d"));
+  const blockE = Buffer.from(makeRoot("block-e"));
+  const blockF = Buffer.from(makeRoot("block-f"));
+  const blockG = Buffer.from(makeRoot("block-g"));
+  const blockH = Buffer.from(makeRoot("block-h"));
+  const blockI = Buffer.from(makeRoot("block-i"));
+  const genesisState = Buffer.from(makeRoot("genesisState"));
+  const stateA = Buffer.from(makeRoot("state-a"));
+  const stateB = Buffer.from(makeRoot("state-b"));
+  const stateC = Buffer.from(makeRoot("state-c"));
+  const stateD = Buffer.from(makeRoot("state-d"));
+  const stateE = Buffer.from(makeRoot("state-e"));
+  const stateF = Buffer.from(makeRoot("state-f"));
+  const stateG = Buffer.from(makeRoot("state-g"));
+  const stateH = Buffer.from(makeRoot("state-h"));
+  const stateI = Buffer.from(makeRoot("state-i"));
   let clock: SinonFakeTimers;
   let lmd: ArrayDagLMDGHOST;
 
@@ -784,11 +793,12 @@ describe("ArrayDagLMDGHOST", () => {
     });
   });
 
-  describe("getAncestor", () => {
+  describe("getAncestor and getBlockSummariesByAncestorBlockRoot", () => {
     /**
      * genesis - a - b -c
      */
-    it("should return correct ancestor", () => {
+    let slotA, slotB, slotC: Slot;
+    beforeEach(() => {
       const emitter = new ChainEventEmitter();
       const genesisTime =
         Math.floor(Date.now() / 1000) -
@@ -807,7 +817,7 @@ describe("ArrayDagLMDGHOST", () => {
         {root: genesis, epoch: GENESIS_EPOCH},
         {root: genesis, epoch: GENESIS_EPOCH}
       );
-      const slotA = 1 * config.params.SLOTS_PER_EPOCH;
+      slotA = 1 * config.params.SLOTS_PER_EPOCH;
       addBlock(
         lmd,
         slotA,
@@ -817,7 +827,7 @@ describe("ArrayDagLMDGHOST", () => {
         {root: genesis, epoch: GENESIS_EPOCH},
         {root: genesis, epoch: GENESIS_EPOCH}
       );
-      const slotB = 2 * config.params.SLOTS_PER_EPOCH;
+      slotB = 2 * config.params.SLOTS_PER_EPOCH;
       addBlock(
         lmd,
         slotB,
@@ -827,7 +837,7 @@ describe("ArrayDagLMDGHOST", () => {
         {root: genesis, epoch: GENESIS_EPOCH},
         {root: genesis, epoch: GENESIS_EPOCH}
       );
-      const slotC = 3 * config.params.SLOTS_PER_EPOCH;
+      slotC = 3 * config.params.SLOTS_PER_EPOCH;
       addBlock(
         lmd,
         slotC,
@@ -837,10 +847,22 @@ describe("ArrayDagLMDGHOST", () => {
         {root: genesis, epoch: GENESIS_EPOCH},
         {root: genesis, epoch: GENESIS_EPOCH}
       );
+    });
+
+    it("should return correct ancestor", () => {
       expect(Buffer.from(lmd.getAncestor(blockC, slotA)!)).to.be.deep.equal(blockA);
       expect(Buffer.from(lmd.getAncestor(blockC, slotA + 1)!)).to.be.deep.equal(blockA);
       expect(Buffer.from(lmd.getAncestor(genesis, GENESIS_SLOT)!)).to.be.deep.equal(genesis);
       expect(lmd.getAncestor(genesis, GENESIS_SLOT - 1)).to.be.equal(null);
+    });
+
+    it("should return block summaries by ancestor block root", () => {
+      const summaries = [
+        lmd.getBlockSummaryByBlockRoot(blockA),
+        lmd.getBlockSummaryByBlockRoot(blockB),
+        lmd.getBlockSummaryByBlockRoot(blockC),
+      ];
+      expect(lmd.getBlockSummariesByAncestorBlockRoot(genesis, [stateA, stateB, stateC])).to.be.deep.equal(summaries);
     });
   });
 

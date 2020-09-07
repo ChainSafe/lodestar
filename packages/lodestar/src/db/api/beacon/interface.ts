@@ -19,8 +19,9 @@ import {
   VoluntaryExitRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
-import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {CheckpointStateContextCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
+import {CheckpointStateCache} from "./checkpointStateCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -36,7 +37,11 @@ export interface IBeaconDb {
 
   // unfinalized states
   stateCache: StateContextCache;
+
+  // unfinalized states at the beginning of each epoch
   checkpointStateCache: CheckpointStateCache;
+
+  checkpointStateCtxCache: CheckpointStateContextCache;
 
   //cache
   seenAttestationCache: SeenAttestationCache;

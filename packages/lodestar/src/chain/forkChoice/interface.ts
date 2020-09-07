@@ -27,6 +27,7 @@ export interface ILMDGHOST {
   getCanonicalBlockSummaryAtSlot(slot: Slot): BlockSummary | null;
   getBlockSummaryByBlockRoot(blockRoot: Uint8Array): BlockSummary | null;
   getBlockSummaryByParentBlockRoot(blockRoot: Uint8Array): BlockSummary[];
+  getBlockSummariesByAncestorBlockRoot(ancestorRoot: Uint8Array, stateRoots: Uint8Array[]): BlockSummary[] | null;
   hasBlock(blockRoot: Uint8Array): boolean;
 }
 

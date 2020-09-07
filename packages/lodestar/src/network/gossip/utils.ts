@@ -104,7 +104,7 @@ export async function getAttestationPreState(
   db: IBeaconDb,
   cp: Checkpoint
 ): Promise<ITreeStateContext | null> {
-  const preStateContext = await db.checkpointStateCache.get(cp);
+  const preStateContext = await db.checkpointStateCtxCache.get(cp);
   if (preStateContext) {
     return preStateContext;
   }
@@ -115,7 +115,7 @@ export async function getAttestationPreState(
   const epochStartSlot = computeStartSlotAtEpoch(config, cp.epoch);
   if (epochStartSlot > baseState.state.slot) {
     processSlots(baseState.epochCtx, baseState.state, epochStartSlot);
-    await db.checkpointStateCache.add(cp, baseState);
+    await db.checkpointStateCtxCache.add(cp, baseState);
   }
   return baseState;
 }

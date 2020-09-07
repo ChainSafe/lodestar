@@ -9,7 +9,7 @@ import {ITreeStateContext} from "./stateContextCache";
  *
  * Similar API to Repository
  */
-export class CheckpointStateCache {
+export class CheckpointStateContextCache {
   private readonly config: IBeaconConfig;
   private cache: Record<string, ITreeStateContext>;
   private epochIndex: Record<Epoch, string[]>;

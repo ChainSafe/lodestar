@@ -81,6 +81,10 @@ export class MockBeaconChain implements IBeaconChain {
     return (await this.getHeadStateContext()).state;
   }
 
+  public async getState(stateRoot: Uint8Array): Promise<TreeBacked<BeaconState>> {
+    return (await this.getHeadStateContext()).state;
+  }
+
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {
     if (!slots) {
       return [];

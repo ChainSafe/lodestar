@@ -48,6 +48,7 @@ export interface IBeaconChain {
   getGenesisTime(): Number64;
   getHeadStateContext(): Promise<ITreeStateContext>;
   getHeadState(): Promise<TreeBacked<BeaconState>>;
+  getState(stateRoot: Uint8Array): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
 
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
