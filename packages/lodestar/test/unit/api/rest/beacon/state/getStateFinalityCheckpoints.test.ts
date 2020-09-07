@@ -1,24 +1,23 @@
-import {RestApi} from "../../../../../../src/api/rest";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ValidatorApi} from "../../../../../../src/api/impl/validator";
-import sinon from "sinon";
-import {ApiNamespace} from "../../../../../../src/api";
-import {StubbedBeaconApi} from "../../../../../utils/stub/beaconApi";
-import supertest from "supertest";
 import {expect} from "chai";
+import sinon from "sinon";
+import supertest from "supertest";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+
+import {ApiNamespace, RestApi} from "../../../../../../src/api";
+import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/controllers/beacon/state";
 import {getBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks";
+import {StubbedApi} from "../../../../../utils/stub/api";
 import {StubbedNodeApi} from "../../../../../utils/stub/nodeApi";
 import {generateState} from "../../../../../utils/state";
-import {getStateFinalityCheckpoints} from "../../../../../../src/api/rest/controllers/beacon/state";
 import {silentLogger} from "../../../../../utils/logger";
 
 describe("rest - beacon - getStateFinalityCheckpoints", function () {
-  let api: RestApi;
-  let beaconApiStub: StubbedBeaconApi;
+  let restApi: RestApi;
+  let api: StubbedApi;
 
   beforeEach(async function () {
-    beaconApiStub = new StubbedBeaconApi();
-    api = new RestApi(
+    api = new StubbedApi();
+    restApi = await RestApi.init(
       {
         api: [ApiNamespace.BEACON],
         cors: "*",
@@ -29,21 +28,18 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
       {
         config,
         logger: silentLogger,
-        validator: sinon.createStubInstance(ValidatorApi),
-        node: new StubbedNodeApi(),
-        beacon: beaconApiStub,
+        api,
       }
     );
-    await api.start();
   });
 
   afterEach(async function () {
-    await api.stop();
+    await restApi.close();
   });
 
   it("should succeed", async function () {
-    beaconApiStub.state.getState.withArgs("head").resolves(generateState());
-    const response = await supertest(api.server.server)
+    api.beacon.state.getState.withArgs("head").resolves(generateState());
+    const response = await supertest(restApi.server.server)
       .get(getStateFinalityCheckpoints.url.replace(":stateId", "head"))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
@@ -52,7 +48,7 @@ describe("rest - beacon - getStateFinalityCheckpoints", function () {
   });
 
   it("should not found state", async function () {
-    beaconApiStub.state.getState.withArgs("4").resolves(null);
-    await supertest(api.server.server).get(getBlock.url.replace(":stateId", "4")).expect(404);
+    api.beacon.state.getState.withArgs("4").resolves(null);
+    await supertest(restApi.server.server).get(getBlock.url.replace(":stateId", "4")).expect(404);
   });
 });

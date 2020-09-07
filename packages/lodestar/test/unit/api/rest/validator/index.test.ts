@@ -8,8 +8,7 @@ import {Keypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
-import {RestApi} from "../../../../../src/api/rest";
-import {ApiNamespace} from "../../../../../src/api";
+import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {
@@ -18,19 +17,16 @@ import {
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
 } from "../../../../utils/attestation";
-import {ValidatorApi} from "../../../../../src/api/impl/validator";
-import {BeaconApi} from "../../../../../src/api/impl/beacon";
-import {StubbedNodeApi} from "../../../../utils/stub/nodeApi";
+import {StubbedApi} from "../../../../utils/stub/api";
 import {ApiError} from "../../../../../src/api/impl/errors/api";
 
 describe("Test validator rest API", function () {
-  let restApi: RestApi, validatorApi: SinonStubbedInstance<ValidatorApi>, beaconApi: SinonStubbedInstance<BeaconApi>;
+  let restApi: RestApi, api: StubbedApi;
   const sandbox = sinon.createSandbox();
 
   beforeEach(async function () {
-    validatorApi = sandbox.createStubInstance(ValidatorApi);
-    beaconApi = sandbox.createStubInstance(BeaconApi);
-    restApi = new RestApi(
+    api = new StubbedApi(sandbox);
+    restApi = await RestApi.init(
       {
         api: [ApiNamespace.VALIDATOR],
         cors: "*",
@@ -41,44 +37,41 @@ describe("Test validator rest API", function () {
       {
         logger: sandbox.createStubInstance(WinstonLogger),
         config,
-        validator: validatorApi,
-        node: new StubbedNodeApi(),
-        beacon: beaconApi,
+        api,
       }
     );
-    return await restApi.start();
   });
 
   afterEach(async function () {
-    await restApi.stop();
+    await restApi.close();
     sandbox.restore();
   });
 
   it("should return 503", async function () {
-    validatorApi.getProposerDuties.throws(new ApiError(503, "Node is syncing"));
+    api.validator.getProposerDuties.throws(new ApiError(503, "Node is syncing"));
     await supertest(restApi.server.server).get("/validator/duties/2/proposer").expect(503);
   });
 
   it("should return proposer duties", async function () {
-    validatorApi.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
+    api.validator.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
     const response = await supertest(restApi.server.server)
       .get("/validator/duties/2/proposer")
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body[0].proposer_pubkey).to.be.equal(toHexString(Buffer.alloc(48)));
-    expect(validatorApi.getProposerDuties.withArgs(2).calledOnce).to.be.true;
+    expect(api.validator.getProposerDuties.withArgs(2).calledOnce).to.be.true;
   });
 
   it("should return attester duties", async function () {
     const publicKey1 = Keypair.generate().publicKey.toBytesCompressed();
-    validatorApi.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
+    api.validator.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
     const response = await supertest(restApi.server.server)
       .get("/validator/duties/2/attester")
       .query({validator_pubkeys: [toHexString(publicKey1)]})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.length).to.be.equal(1);
-    expect(validatorApi.getAttesterDuties.withArgs(2, sinon.match.any).calledOnce).to.be.true;
+    expect(api.validator.getAttesterDuties.withArgs(2, sinon.match.any).calledOnce).to.be.true;
   });
 
   it("should publish aggregate and proof", async function () {
@@ -87,7 +80,7 @@ describe("Test validator rest API", function () {
       .post("/validator/aggregate_and_proof")
       .send([config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof, {case: "snake"}) as object])
       .expect(200);
-    expect(validatorApi.publishAggregateAndProof.calledOnce).to.be.true;
+    expect(api.validator.publishAggregateAndProof.calledOnce).to.be.true;
   });
 
   it("should throw error on invalid request for block production", async function () {
@@ -99,7 +92,7 @@ describe("Test validator rest API", function () {
 
   it("should return new block", async function () {
     const block = generateEmptyBlock();
-    validatorApi.produceBlock.resolves(block);
+    api.validator.produceBlock.resolves(block);
     const response = await supertest(restApi.server.server)
       .get("/validator/block")
       .query({
@@ -119,14 +112,14 @@ describe("Test validator rest API", function () {
       .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as object)
       .expect(200)
       .expect("Content-Type", "application/json");
-    expect(validatorApi.publishBlock.calledOnce).to.be.true;
+    expect(api.validator.publishBlock.calledOnce).to.be.true;
   });
 
   it("should produce attestation", async function () {
     const attestation: Attestation = generateAttestation({
       data: generateAttestationData(0, 1),
     });
-    validatorApi.produceAttestation.resolves(attestation);
+    api.validator.produceAttestation.resolves(attestation);
     await supertest(restApi.server.server)
       .get("/validator/attestation")
       .query({
@@ -136,7 +129,7 @@ describe("Test validator rest API", function () {
       })
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(validatorApi.produceAttestation.withArgs(sinon.match.any, 3, 2).calledOnce).to.be.true;
+    expect(api.validator.produceAttestation.withArgs(sinon.match.any, 3, 2).calledOnce).to.be.true;
   });
 
   it("should publish attestation", async function () {
@@ -146,14 +139,14 @@ describe("Test validator rest API", function () {
       .send([config.types.Attestation.toJson(attestation, {case: "snake"}) as object])
       .expect(200)
       .expect("Content-Type", "application/json");
-    expect(validatorApi.publishAttestation.calledOnce).to.be.true;
+    expect(api.validator.publishAttestation.calledOnce).to.be.true;
   });
 
   it("should get wire attestations", async function () {
     const attestation = generateAttestation({
       data: generateAttestationData(1, 1, 1, 1),
     });
-    validatorApi.getWireAttestations.resolves([attestation]);
+    api.validator.getWireAttestations.resolves([attestation]);
 
     const response = await supertest(restApi.server.server)
       .get("/validator/wire_attestations")
@@ -165,6 +158,6 @@ describe("Test validator rest API", function () {
       .expect("Content-Type", "application/json; charset=utf-8");
 
     expect(response.body.length).to.be.equal(1);
-    expect(validatorApi.getWireAttestations.withArgs(0, 1).calledOnce).to.be.true;
+    expect(api.validator.getWireAttestations.withArgs(0, 1).calledOnce).to.be.true;
   });
 });

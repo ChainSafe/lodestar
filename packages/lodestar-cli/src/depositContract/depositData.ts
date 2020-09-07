@@ -4,10 +4,10 @@ import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls, {PrivateKey, PublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
-import eth1Options from "@chainsafe/lodestar/lib/eth1/options";
+import {depositContract} from "@chainsafe/lodestar/lib/eth1/depositContract";
 
 function getDepositInterface(): ethers.utils.Interface {
-  return new ethers.utils.Interface(eth1Options.depositContract.abi);
+  return new ethers.utils.Interface(depositContract.abi);
 }
 
 export function decodeEth1TxData(

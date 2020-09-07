@@ -1,11 +1,12 @@
-import {IBeaconStateApi, StateId} from "./interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IApiOptions} from "../../../options";
-import {IApiModules} from "../../../interface";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {resolveStateId} from "./utils";
-import {IBeaconDb} from "../../../../db/api";
+
 import {ILMDGHOST} from "../../../../chain/forkChoice";
+import {IBeaconDb} from "../../../../db/api";
+import {IApiOptions} from "../../../options";
+import {IApiModules} from "../../interface";
+import {IBeaconStateApi, StateId} from "./interface";
+import {resolveStateId} from "./utils";
 
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;

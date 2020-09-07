@@ -1,7 +1,8 @@
 import {FastifyInstance} from "fastify";
+
+import {ApiNamespace} from "../../impl";
 import {registerBeaconRoutes} from "./beacon";
 import {registerNodeRoutes} from "./node";
-import {ApiNamespace} from "../../index";
 
 export * from "./beacon";
 export * from "./validator";

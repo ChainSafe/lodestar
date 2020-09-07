@@ -1,4 +1,4 @@
-import {ApiNamespace} from "../index";
+import {ApiNamespace} from "../impl";
 
 export interface IRestApiOptions {
   enabled: boolean;

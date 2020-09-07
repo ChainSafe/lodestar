@@ -5,13 +5,17 @@
 import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db";
-import {IEth1Notifier, Eth1Block, Eth1EventsBlock} from "../../eth1";
-import pipe from "it-pipe";
-import {IGenesisBuilder, IGenesisBuilderModules} from "./interface";
+import {
+  IDepositEvent,
+  IEth1StreamParams,
+  IEth1Provider,
+  getDepositsAndBlockStreamForGenesis,
+  getDepositsStream,
+} from "../../eth1";
+import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
 import {
   getGenesisBeaconState,
   getEmptyBlock,
@@ -19,90 +23,114 @@ import {
   applyTimestamp,
   applyEth1BlockHash,
   isValidGenesisState,
+  isValidGenesisValidators,
 } from "./util";
 
 export class GenesisBuilder implements IGenesisBuilder {
   private readonly config: IBeaconConfig;
-  private readonly db: IBeaconDb;
-  private readonly eth1: IEth1Notifier;
+  private readonly eth1Provider: IEth1Provider;
   private readonly logger: ILogger;
+  private readonly signal?: AbortSignal;
+  private readonly eth1Params: IEth1StreamParams;
   private state: TreeBacked<BeaconState>;
   private depositTree: TreeBacked<List<Root>>;
+  private depositCache: Set<number>;
 
-  constructor(config: IBeaconConfig, {eth1, db, logger}: IGenesisBuilderModules) {
+  constructor(config: IBeaconConfig, {eth1Provider, logger, signal, MAX_BLOCKS_PER_POLL}: IGenesisBuilderKwargs) {
+    this.config = config;
+    this.eth1Provider = eth1Provider;
+    this.logger = logger;
+    this.signal = signal;
+    this.eth1Params = {
+      ...config.params,
+      MAX_BLOCKS_PER_POLL: MAX_BLOCKS_PER_POLL || 10000,
+    };
+
     this.state = getGenesisBeaconState(
       config,
       config.types.Eth1Data.defaultValue(),
       getTemporaryBlockHeader(config, getEmptyBlock())
     );
     this.depositTree = config.types.DepositDataRootList.tree.defaultValue();
-    this.config = config;
-    this.eth1 = eth1;
-    this.db = db;
-    this.logger = logger;
+    this.depositCache = new Set<number>();
   }
 
   /**
    * Get eth1 deposit events and blocks and apply to this.state until we found genesis.
    */
-  public async waitForGenesis(): Promise<TreeBacked<BeaconState>> {
-    await this.initialize();
-    const eth1DataStream = await this.eth1.getEth1BlockAndDepositEventsSource();
-    const state = await pipe(eth1DataStream, this.processDepositEvents(), this.assembleGenesisState());
-    await this.eth1.endEth1BlockAndDepositEventsSource();
-    return state;
-  }
+  public async waitForGenesis(): Promise<IGenesisResult> {
+    await this.eth1Provider.validateContract();
 
-  private assembleGenesisState(): (source: AsyncIterable<[Deposit[], Eth1Block]>) => Promise<TreeBacked<BeaconState>> {
-    return async (source) => {
-      for await (const [deposits, block] of source) {
-        applyDeposits(this.config, this.state, deposits, this.depositTree);
-        this.logger.verbose(
-          `Found ${this.depositTree.length} deposits and ` + `${this.state.validators.length} validators so far`
-        );
-        if (!block) {
-          continue;
-        }
-        applyTimestamp(this.config, this.state, block.timestamp);
-        applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
-        const isValid = isValidGenesisState(this.config, this.state);
-        if (isValid) {
-          this.logger.info(`Found genesis state at eth1 block ${block.number}`);
-          return this.state;
-        }
+    // TODO: Load data from data from this.db.depositData, this.db.depositDataRoot
+    // And start from a more recent fromBlock
+    const blockNumberLastestInDb = this.eth1Provider.deployBlock;
+
+    const blockNumberValidatorGenesis = await this.waitForGenesisValidators(blockNumberLastestInDb);
+
+    const depositsAndBlocksStream = getDepositsAndBlockStreamForGenesis(
+      blockNumberValidatorGenesis,
+      this.eth1Provider,
+      this.eth1Params,
+      this.signal
+    );
+
+    for await (const [depositEvents, block] of depositsAndBlocksStream) {
+      this.applyDeposits(depositEvents);
+      applyTimestamp(this.config, this.state, block.timestamp);
+      applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
+      if (isValidGenesisState(this.config, this.state)) {
+        this.logger.info(`Found genesis state at eth1 block ${block.number}`);
+        return {
+          state: this.state,
+          depositTree: this.depositTree,
+          block,
+        };
+      } else {
+        this.logger.info(`Waiting for min genesis time ${block.timestamp} / ${this.config.params.MIN_GENESIS_TIME}`);
       }
-      throw Error("Did not found genesis state and block source stopped");
-    };
+    }
+
+    throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private processDepositEvents(): (source: AsyncIterable<Eth1EventsBlock>) => AsyncGenerator<[Deposit[], Eth1Block]> {
-    return (source) => {
-      const {depositTree, config} = this;
-      return (async function* () {
-        for await (const {events, block} of source) {
-          const newDeposits: Deposit[] = events.map((depositEvent) => {
-            depositTree.push(config.types.DepositData.hashTreeRoot(depositEvent));
-            return {
-              proof: depositTree.tree().getSingleProof(depositTree.gindexOfProperty(depositEvent.index)),
-              data: depositEvent,
-            };
-          });
-          yield [newDeposits, block] as [Deposit[], Eth1Block];
-        }
-      })();
-    };
+  /**
+   * First phase of waiting for genesis.
+   * Stream deposits events in batches as big as possible without querying block data
+   * @returns Block number at which there are enough active validators is state for genesis
+   */
+  private async waitForGenesisValidators(fromBlock: number): Promise<number> {
+    const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, this.signal);
+
+    for await (const {depositEvents, blockNumber} of depositsStream) {
+      this.applyDeposits(depositEvents);
+      if (isValidGenesisValidators(this.config, this.state)) {
+        this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
+        return blockNumber;
+      } else {
+        this.logger.info(
+          `Found ${this.state.validators.length} / ${this.config.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT} validators to genesis`
+        );
+      }
+    }
+
+    throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private async initialize(): Promise<void> {
-    const depositDatas = (await this.db.depositData.values()) || [];
-    const depositDataRoots = (await this.db.depositDataRoot.values()) || [];
-    depositDatas.map((event, index) => {
-      this.depositTree.push(depositDataRoots[index]);
-      return {
-        proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(index)),
-        data: event,
-      };
-    });
+  private applyDeposits(depositEvents: IDepositEvent[]): void {
+    const newDeposits = depositEvents
+      .filter((depositEvent) => !this.depositCache.has(depositEvent.index))
+      .map((depositEvent) => {
+        this.depositCache.add(depositEvent.index);
+        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent));
+        return {
+          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
+          data: depositEvent,
+        };
+      });
+
+    applyDeposits(this.config, this.state, newDeposits, this.depositTree);
+
+    // TODO: If necessary persist deposits here to this.db.depositData, this.db.depositDataRoot
   }
 }
 

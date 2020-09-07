@@ -11,12 +11,12 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
-import {EthersEth1Notifier, IEth1Notifier} from "../eth1";
+import {Eth1Provider} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
 import {BeaconMetrics, HttpMetricsServer} from "../metrics";
-import {ApiService} from "../api";
+import {Api, IApi, RestApi} from "../api";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 
@@ -29,7 +29,6 @@ export interface IService {
 interface IBeaconNodeModules {
   config: IBeaconConfig;
   logger: ILogger;
-  eth1?: IEth1Notifier;
   libp2p: LibP2p;
 }
 
@@ -43,16 +42,16 @@ export class BeaconNode {
   public db: BeaconDb;
   public metrics: BeaconMetrics;
   public metricsServer: HttpMetricsServer;
-  public eth1: IEth1Notifier;
   public network: INetwork;
   public chain: IBeaconChain;
-  public api: IService;
+  public api?: IApi;
+  public restApi?: RestApi;
   public sync: IBeaconSync;
   public chores: TasksService;
 
   private logger: ILogger;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, eth1, libp2p}: IBeaconNodeModules) {
+  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, libp2p}: IBeaconNodeModules) {
     this.conf = deepmerge(defaultConf, opts, {
       //clone doesn't work very vell on classes like ethers.Provider
       isMergeableObject: isPlainObject,
@@ -72,18 +71,12 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.db),
       }),
     });
-    this.eth1 =
-      eth1 ||
-      new EthersEth1Notifier(this.conf.eth1, {
-        config,
-        db: this.db,
-        logger: this.logger.child(this.conf.logger.eth1),
-      });
+    const eth1Provider = new Eth1Provider(config, this.conf.eth1);
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
-      eth1: this.eth1,
-      logger: this.logger.child(this.conf.logger.chain),
+      eth1Provider,
+      logger: logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
 
@@ -108,14 +101,6 @@ export class BeaconNode {
       network: this.network,
       logger: this.logger.child(this.conf.logger.sync),
     });
-    this.api = new ApiService(this.conf.api, {
-      config,
-      logger: this.logger.child(this.conf.logger.api),
-      db: this.db,
-      sync: this.sync,
-      network: this.network,
-      chain: this.chain,
-    });
     this.chores = new TasksService(this.config, {
       db: this.db,
       chain: this.chain,
@@ -133,23 +118,33 @@ export class BeaconNode {
     await this.metrics.start();
     await this.metricsServer.start();
     await this.db.start();
-    // eth1 is started in chain
     await this.chain.start();
     await this.network.start();
     // TODO: refactor the sync module to respect the "start should resolve quickly" interface
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.sync.start();
-    await this.api.start();
+    this.api = new Api(this.conf.api, {
+      config: this.config,
+      logger: this.logger.child(this.conf.logger.api),
+      db: this.db,
+      sync: this.sync,
+      network: this.network,
+      chain: this.chain,
+    });
+    this.restApi = await RestApi.init(this.conf.api.rest, {
+      config: this.config,
+      logger: this.logger.child(this.conf.logger.api),
+      api: this.api,
+    });
     await this.chores.start();
   }
 
   public async stop(): Promise<void> {
     await this.chores.stop();
-    await this.api.stop();
+    if (this.restApi) await this.restApi.close();
     await this.sync.stop();
     await this.chain.stop();
-    await this.eth1.stop();
     await this.network.stop();
     await this.db.stop();
     await this.metricsServer.stop();
