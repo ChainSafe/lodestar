@@ -7,6 +7,9 @@ export interface ITreeStateContext {
   epochCtx: EpochContext;
 }
 
+// 16 for CheckpointStateCache
+const MAX_STATES = 128;
+
 /**
  * In memory cache of BeaconState and connected EpochContext
  *
@@ -51,7 +54,6 @@ export class StateContextCache {
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
   public prune(): void {
-    const MAX_STATES = 128;
     const keys = Object.keys(this.cache);
     if (keys.length > MAX_STATES) {
       // object keys are stored in insertion order, delete keys starting from the front (but keeping the first)

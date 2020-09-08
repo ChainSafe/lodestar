@@ -1,7 +1,8 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {ITreeStateContext, clone} from "./stateContextCache";
 
-const MAX_STATES = 64;
+// 112 for StateContextCache
+const MAX_STATES = 16;
 
 /**
  * Checkpoint state is state of 1st block of each epoch.
