@@ -8,6 +8,7 @@ import {
   BeaconState,
   IndexedAttestation,
   Gwei,
+  Checkpoint,
 } from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
@@ -116,6 +117,33 @@ export class ForkChoice {
   }
 
   /**
+   * Instantiates a ForkChoice from a weak subjectivity state
+   */
+  public static fromCheckpointState(
+    config: IBeaconConfig,
+    fcStore: IForkChoiceStore,
+    anchorState: BeaconState
+  ): ForkChoice {
+    const blockHeader = config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
+    const protoArray = ProtoArray.initialize({
+      slot: anchorState.slot,
+      parentRoot: toHexString(blockHeader.parentRoot),
+      stateRoot: toHexString(blockHeader.stateRoot),
+      blockRoot: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(blockHeader)),
+      justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
+      finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
+    });
+
+    return new ForkChoice({
+      config,
+      fcStore,
+      protoArray,
+      queuedAttesations: new Set(),
+    });
+  }
+
+  /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
    *
@@ -187,6 +215,14 @@ export class ForkChoice {
       });
     }
     return toBlockSummary(headNode);
+  }
+
+  public getFinalizedCheckpoint(): Checkpoint {
+    return this.fcStore.finalizedCheckpoint;
+  }
+
+  public getJustifiedCheckpoint(): Checkpoint {
+    return this.fcStore.justifiedCheckpoint;
   }
 
   /**
@@ -425,10 +461,21 @@ export class ForkChoice {
     // If available, use the parent_root to perform the lookup since it will involve one
     // less lookup. This involves making the assumption that the finalized block will
     // always have `block.parent_root` of `None`.
-    if (!this.isDescendantOfFinalized(block.parentRoot ? fromHexString(block.parentRoot) : blockRoot)) {
+    if (!this.isDescendantOfFinalized(blockRoot)) {
       return null;
     }
     return toBlockSummary(block);
+  }
+
+  public getFinalizedBlock(): IBlockSummary {
+    const block = this.getBlock(this.fcStore.finalizedCheckpoint.root);
+    if (!block) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        root: this.fcStore.finalizedCheckpoint.root.valueOf() as Uint8Array,
+      });
+    }
+    return block;
   }
 
   /**

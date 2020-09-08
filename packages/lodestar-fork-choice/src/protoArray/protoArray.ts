@@ -3,7 +3,7 @@ import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
 import {HexRoot, IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
-export const DEFAULT_PRUNE_THRESHOLD = 256;
+export const DEFAULT_PRUNE_THRESHOLD = 0;
 
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
@@ -151,8 +151,6 @@ export class ProtoArray {
       return;
     }
 
-    const nodeIndex = this.nodes.length;
-
     const node: IProtoNode = {
       ...block,
       parent: this.indices.get(block.parentRoot),
@@ -161,23 +159,23 @@ export class ProtoArray {
       bestDescendant: undefined,
     };
 
+    let nodeIndex = this.nodes.length;
+
     this.indices.set(node.blockRoot, nodeIndex);
     this.nodes.push(node);
 
-    const parentIndex = node.parent;
-    if (parentIndex !== undefined) {
+    let parentIndex = node.parent;
+    let n: IProtoNode | undefined = node;
+    while (parentIndex !== undefined) {
       this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex);
+      nodeIndex = parentIndex;
+      n = this.getNodeByIndex(nodeIndex);
+      parentIndex = n?.parent;
     }
   }
 
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
-   *
-   * ## Notes
-   * The result of this function is not guaranteed to be accurate if `Self::on_new_block` has
-   * been called without a subsequent `Self::apply_score_changes` call. This is because
-   * `on_new_block` does not attempt to walk backwards through the tree and update the
-   * best-child/best-descendant links.
    */
   findHead(justifiedRoot: HexRoot): HexRoot {
     const justifiedIndex = this.indices.get(justifiedRoot);
@@ -344,7 +342,7 @@ export class ProtoArray {
     const childLeadsToViableHead = this.nodeLeadsToViableHead(childNode);
 
     // These three variables are aliases to the three options that we may set the
-    // parent.bestChild and parent.bestDescendend to.
+    // parent.bestChild and parent.bestDescendent to.
     //
     // Aliases are used to assist readability.
     type ChildAndDescendant = [number | undefined, number | undefined];
@@ -491,18 +489,21 @@ export class ProtoArray {
     return this.indices.has(blockRoot);
   }
 
+  getNodeByIndex(blockIndex: number): IProtoNode | undefined {
+    const node = this.nodes[blockIndex];
+    if (!node) {
+      return undefined;
+    }
+
+    return node;
+  }
+
   getNode(blockRoot: HexRoot): IProtoNode | undefined {
     const blockIndex = this.indices.get(blockRoot);
     if (blockIndex === undefined) {
       return undefined;
     }
-
-    const block = this.nodes[blockIndex];
-    if (!block) {
-      return undefined;
-    }
-
-    return block;
+    return this.getNodeByIndex(blockIndex);
   }
 
   getBlock(blockRoot: HexRoot): IProtoBlock | undefined {
