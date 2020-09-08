@@ -4,6 +4,7 @@ import {IBeaconDb} from "../db";
 import {getEth1DataDepositFromDeposits, fillEth1DataDepositToBlockRange} from "./utils/eth1DataDeposit";
 import {getTreeAtIndex} from "../util/tree";
 import {IEth1DataDeposit, IDepositLog} from "./types";
+import {assertConsecutiveDeposits} from "./utils/eth1DepositLog";
 
 export class Eth1DepositsCache {
   db: IBeaconDb;
@@ -65,6 +66,7 @@ export class Eth1DepositsCache {
         throw Error("Non consecutive logs");
       }
     }
+    assertConsecutiveDeposits(depositLogs);
 
     // Pre-compute partial eth1 data from deposits
     // Add data for both getEth1DataDepositFromDeposits and db.depositDataRoot.batchPut
