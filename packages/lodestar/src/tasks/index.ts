@@ -2,13 +2,15 @@
  * @module tasks used for running tasks on specific events
  */
 
-import {IService} from "../node";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
+import {IService} from "../node";
 import {IBeaconDb} from "../db/api";
-import {IBeaconChain, BlockSummary} from "../chain";
+import {IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork} from "../network";
@@ -70,7 +72,10 @@ export class TasksService implements IService {
     await this.interopSubnetsTask.stop();
   };
 
-  private handleFinalizedCheckpointChores = async (finalized: BlockSummary, pruned: BlockSummary[]): Promise<void> => {
+  private handleFinalizedCheckpointChores = async (
+    finalized: IBlockSummary,
+    pruned: IBlockSummary[]
+  ): Promise<void> => {
     await new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
     await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
   };

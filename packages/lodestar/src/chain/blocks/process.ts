@@ -5,7 +5,7 @@ import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ILMDGHOST} from "../forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "../emitter";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
@@ -15,7 +15,7 @@ export function processBlock(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
-  forkChoice: ILMDGHOST,
+  forkChoice: ForkChoice,
   pool: BlockPool,
   eventBus: ChainEventEmitter
 ): (
@@ -60,7 +60,7 @@ export function processBlock(
             slot: newState.slot,
             epoch: computeEpochAtSlot(config, newState.slot),
           });
-          eventBus.emit("forkChoice:head", forkChoice.head()!);
+          eventBus.emit("forkChoice:head", forkChoice.getHead());
           if (!config.types.Fork.equals(preStateContext.state.fork, newState.fork)) {
             const epoch = computeEpochAtSlot(config, newState.slot);
             const currentVersion = newState.fork.currentVersion;
@@ -83,12 +83,12 @@ export function processBlock(
 export async function getPreState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  forkChoice: ILMDGHOST,
+  forkChoice: ForkChoice,
   pool: BlockPool,
   logger: ILogger,
   job: IBlockProcessJob
 ): Promise<ITreeStateContext | null> {
-  const parentBlock = forkChoice.getBlockSummaryByBlockRoot(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
+  const parentBlock = forkChoice.getBlock(job.signedBlock.message.parentRoot);
   if (!parentBlock) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     logger.debug(
@@ -110,19 +110,17 @@ export async function getPreState(
  */
 export function updateForkChoice(
   config: IBeaconConfig,
-  forkChoice: ILMDGHOST,
+  forkChoice: ForkChoice,
   block: SignedBeaconBlock,
   newState: TreeBacked<BeaconState>
 ): Root {
-  forkChoice.addBlock({
-    slot: block.message.slot,
-    blockRoot: config.types.BeaconBlock.hashTreeRoot(block.message),
-    stateRoot: block.message.stateRoot.valueOf() as Uint8Array,
-    parentRoot: block.message.parentRoot.valueOf() as Uint8Array,
-    justifiedCheckpoint: newState.currentJustifiedCheckpoint,
-    finalizedCheckpoint: newState.finalizedCheckpoint,
-  });
-  return forkChoice.headBlockRoot();
+  try {
+    forkChoice.onBlock(block.message, newState);
+    return forkChoice.getHeadRoot();
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
 }
 
 export async function runStateTransition(

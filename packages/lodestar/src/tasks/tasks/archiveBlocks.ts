@@ -8,7 +8,7 @@ import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
-import {BlockSummary} from "../../chain";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IArchiveBlockModules {
@@ -24,14 +24,14 @@ export class ArchiveBlocksTask implements ITask {
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
-  private finalized: BlockSummary;
-  private pruned: BlockSummary[];
+  private finalized: IBlockSummary;
+  private pruned: IBlockSummary[];
 
   public constructor(
     config: IBeaconConfig,
     modules: IArchiveBlockModules,
-    finalized: BlockSummary,
-    pruned: BlockSummary[]
+    finalized: IBlockSummary,
+    pruned: IBlockSummary[]
   ) {
     this.db = modules.db;
     this.logger = modules.logger;

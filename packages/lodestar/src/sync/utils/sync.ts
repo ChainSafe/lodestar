@@ -3,7 +3,8 @@ import {Checkpoint, Root, SignedBeaconBlock, Slot, Status} from "@chainsafe/lode
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {IBeaconChain, ILMDGHOST} from "../../chain";
+import {IBeaconChain} from "../../chain";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
@@ -168,7 +169,7 @@ export function processSyncBlocks(
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
     let headRoot = isInitialSync ? config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock!.message) : null;
-    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : chain.forkChoice.headBlockSlot();
+    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : chain.forkChoice.getHead().slot;
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry
@@ -211,11 +212,12 @@ export function processSyncBlocks(
 }
 
 export function createStatus(chain: IBeaconChain): Status {
-  const head = chain.forkChoice.head()!;
+  const head = chain.forkChoice.getHead();
+  const finalizedCheckpoint = chain.forkChoice.fcStore.finalizedCheckpoint;
   return {
     forkDigest: chain.currentForkDigest,
-    finalizedRoot: head.finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : head.finalizedCheckpoint.root,
-    finalizedEpoch: head.finalizedCheckpoint.epoch,
+    finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
+    finalizedEpoch: finalizedCheckpoint.epoch,
     headRoot: head.blockRoot,
     headSlot: head.slot,
   };
@@ -262,7 +264,7 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStor
 /**
  * Check if a peer is good to be a best peer.
  */
-export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INetwork): boolean {
+export function checkBestPeer(peer: PeerId, forkChoice: ForkChoice, network: INetwork): boolean {
   if (!peer) return false;
   if (
     !network
@@ -273,6 +275,6 @@ export function checkBestPeer(peer: PeerId, forkChoice: ILMDGHOST, network: INet
     return false;
   const status = network.peerMetadata.getStatus(peer);
   if (!status) return false;
-  const headSlot = forkChoice.headBlockSlot();
+  const headSlot = forkChoice.getHead().slot;
   return (status?.headSlot ?? 0) > headSlot;
 }

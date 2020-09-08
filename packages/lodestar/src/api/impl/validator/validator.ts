@@ -95,7 +95,7 @@ export class ValidatorApi implements IValidatorApi {
     try {
       await this.checkSyncStatus();
       const [headBlockRoot, {state: headState, epochCtx}] = await Promise.all([
-        this.chain.forkChoice.headBlockRoot(),
+        this.chain.forkChoice.getHeadRoot(),
         this.chain.getHeadStateContext(),
       ]);
       const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);

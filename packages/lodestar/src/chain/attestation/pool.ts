@@ -3,7 +3,7 @@ import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ILMDGHOST} from "../forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IAttestationProcessor, IBeaconChain} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {GENESIS_EPOCH} from "../../constants";
@@ -14,7 +14,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   private db: IBeaconDb;
   private logger: ILogger;
   private chain: IBeaconChain;
-  private forkChoice: ILMDGHOST;
+  private forkChoice: ForkChoice;
   //using map inside map to ensure unique attestation
   private pendingBlockAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
   private pendingSlotAttestations: Map<Slot, Map<AttestationRootHex, Attestation>>;
@@ -77,7 +77,7 @@ export class AttestationProcessor implements IAttestationProcessor {
       );
     }
     for (const blockRoot of [target.root, attestation.data.beaconBlockRoot]) {
-      if (!this.forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array)) {
+      if (!this.forkChoice.getBlock(blockRoot)) {
         this.logger.verbose("Delaying attestation", {
           reason: "missing either target or attestation block",
           blockRoot: toHexString(blockRoot),

@@ -3,13 +3,13 @@ import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ILMDGHOST} from "../forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter} from "../emitter";
 
 export function validateBlock(
   config: IBeaconConfig,
   logger: ILogger,
-  forkChoice: ILMDGHOST,
+  forkChoice: ForkChoice,
   eventBus: ChainEventEmitter
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<IBlockProcessJob> {
   return (source) => {
@@ -21,7 +21,7 @@ export function validateBlock(
           eventBus.emit("block", job.signedBlock);
           continue;
         }
-        const finalizedCheckpoint = forkChoice.getFinalized();
+        const finalizedCheckpoint = forkChoice.fcStore.finalizedCheckpoint;
         if (
           finalizedCheckpoint &&
           finalizedCheckpoint.epoch > 0 &&
@@ -33,12 +33,17 @@ export function validateBlock(
           );
           continue;
         }
-        const currentSlot = forkChoice.headBlockSlot();
+        try {
+        const currentSlot = forkChoice.getHead().slot;
         logger.debug(
           `Received block with hash ${toHexString(blockHash)}` +
             `at slot ${job.signedBlock.message.slot}. Current state slot ${currentSlot}`
         );
         yield job;
+        } catch (e) {
+          console.log(e);
+          continue;
+        }
       }
     })();
   };

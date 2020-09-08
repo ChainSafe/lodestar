@@ -2,8 +2,7 @@ import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
 import {Attestation, Checkpoint, Epoch, ForkDigest, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-
-import {BlockSummary} from "./forkChoice";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 export interface IChainEvents {
   // old, to be deprecated
@@ -20,9 +19,9 @@ export interface IChainEvents {
   "clock:slot": (slot: Slot) => void;
   "clock:epoch": (epoch: Epoch) => void;
 
-  "forkChoice:head": (head: BlockSummary) => void;
-  "forkChoice:reorg": (head: BlockSummary, oldHead: BlockSummary) => void;
-  "forkChoice:prune": (finalized: BlockSummary, pruned: BlockSummary[]) => void;
+  "forkChoice:head": (head: IBlockSummary) => void;
+  "forkChoice:reorg": (head: IBlockSummary, oldHead: IBlockSummary) => void;
+  "forkChoice:prune": (finalized: IBlockSummary, pruned: IBlockSummary[]) => void;
   "forkChoice:justified": (checkpoint: Checkpoint) => void;
   "forkChoice:finalized": (checkpoint: Checkpoint) => void;
   // TODO more events
