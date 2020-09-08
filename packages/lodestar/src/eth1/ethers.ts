@@ -48,8 +48,8 @@ export class Eth1Provider {
   async getBlock(blockNumber: number): Promise<IEth1BlockHeader> {
     const block = await this.provider.getBlock(blockNumber);
     return {
-      hash: fromHexString(block.hash),
-      number: block.number,
+      blockHash: fromHexString(block.hash),
+      blockNumber: block.number,
       timestamp: block.timestamp,
     };
   }

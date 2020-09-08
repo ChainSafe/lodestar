@@ -6,7 +6,7 @@ import {mostFrequent} from "../../util/objects";
 
 export interface IEth1DataBlock extends Eth1Data {
   timestamp: number;
-  number: number;
+  blockNumber: number;
 }
 
 export function getEth1Vote(

@@ -77,9 +77,9 @@ export class GenesisBuilder implements IGenesisBuilder {
     for await (const [depositLogs, block] of depositsAndBlocksStream) {
       this.applyDeposits(depositLogs);
       applyTimestamp(this.config, this.state, block.timestamp);
-      applyEth1BlockHash(this.config, this.state, block.hash);
+      applyEth1BlockHash(this.config, this.state, block.blockHash);
       if (isValidGenesisState(this.config, this.state)) {
-        this.logger.info(`Found genesis state at eth1 block ${block.number}`);
+        this.logger.info(`Found genesis state at eth1 block ${block.blockNumber}`);
         return {
           state: this.state,
           depositTree: this.depositTree,

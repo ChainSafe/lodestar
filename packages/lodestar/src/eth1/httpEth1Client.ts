@@ -50,8 +50,8 @@ async function fetchBlocksByNumber(
   );
 
   return blocksRaw.map((blockRaw) => ({
-    hash: fromHexString(blockRaw.hash),
-    number: parseInt(blockRaw.number, 16),
+    blockHash: fromHexString(blockRaw.hash),
+    blockNumber: parseInt(blockRaw.number, 16),
     timestamp: parseInt(blockRaw.timestamp, 16),
   }));
 }

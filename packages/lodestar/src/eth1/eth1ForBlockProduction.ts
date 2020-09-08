@@ -97,13 +97,11 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       this.blocksCache.getReverseStream()
     );
 
-    // Fetch partial eth1Data from deposit cache (depositCount, depositRoot)
-    const fromBlock = eth1BlockHeaders[0].number;
-    const toBlock = eth1BlockHeaders[eth1BlockHeaders.length - 1].number;
-    const eth1DataDeposit = await this.depositsCache.getEth1DataDeposit(fromBlock, toBlock);
-
-    // Zip eth1BlockHeaders and eth1DataDeposit
-    const eth1Data = zip(eth1BlockHeaders, eth1DataDeposit);
+    // Append partial eth1Data from deposit cache (depositCount, depositRoot)
+    const eth1Data = await this.depositsCache.appendEth1DataDeposit(
+      eth1BlockHeaders,
+      this.lastProcessedDepositBlockNumber
+    );
 
     return getEth1Vote(this.config, state, eth1Data);
   }

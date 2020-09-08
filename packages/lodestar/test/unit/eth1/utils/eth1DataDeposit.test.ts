@@ -2,10 +2,11 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Root} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
+import {mapValues} from "lodash";
+import {IEth1DataDeposit} from "../../../../src/eth1";
 import {
   getEth1DataDepositFromDeposits,
-  fillEth1DataDepositToBlockRange,
-  IEth1DataDeposit,
+  mapEth1DataDepositToBlockRange,
 } from "../../../../src/eth1/utils/eth1DataDeposit";
 
 describe("eth1 / util / getEth1DataDepositFromLogs", function () {
@@ -66,7 +67,7 @@ describe("eth1 / util / getEth1DataDepositFromLogs", function () {
   });
 });
 
-describe("eth1 / util / fillEth1DataDepositToBlockRange", function () {
+describe("eth1 / util / mapEth1DataDepositToBlockRange", function () {
   // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
   const eth1DataDepositArr: IEth1DataDeposit[] = [
     {blockNumber: 0, depositCount: 13},
@@ -84,56 +85,55 @@ describe("eth1 / util / fillEth1DataDepositToBlockRange", function () {
     id: string;
     fromBlock: number;
     toBlock: number;
-    expectedResult: {blockNumber: number; depositCount: number}[];
+    expectedResult: {[blockNumber: number]: {depositCount: number}};
   }[] = [
     {
       id: "sequential eth1DataDeposit items - full array",
       fromBlock: 0,
-      toBlock: 9,
-      expectedResult: [
-        {blockNumber: 0, depositCount: 13},
-        {blockNumber: 1, depositCount: 13},
-        {blockNumber: 2, depositCount: 13},
-        {blockNumber: 3, depositCount: 15},
-        {blockNumber: 4, depositCount: 17},
-        {blockNumber: 5, depositCount: 17},
-        {blockNumber: 6, depositCount: 17},
-        {blockNumber: 7, depositCount: 19},
-        {blockNumber: 8, depositCount: 19},
-        {blockNumber: 9, depositCount: 20},
-      ],
+      toBlock: 10,
+      expectedResult: {
+        0: {depositCount: 13},
+        1: {depositCount: 13},
+        2: {depositCount: 13},
+        3: {depositCount: 15},
+        4: {depositCount: 17},
+        5: {depositCount: 17},
+        6: {depositCount: 17},
+        7: {depositCount: 19},
+        8: {depositCount: 19},
+        9: {depositCount: 20},
+        10: {depositCount: 20},
+      },
     },
     {
       id: "sequential eth1DataDeposit items - small array",
       fromBlock: 3,
       toBlock: 4,
-      expectedResult: [
-        {blockNumber: 3, depositCount: 15},
-        {blockNumber: 4, depositCount: 17},
-      ],
+      expectedResult: {
+        3: {depositCount: 15},
+        4: {depositCount: 17},
+      },
     },
     {
       id: "sequential eth1DataDeposit items - future block",
       fromBlock: 9,
       toBlock: 11,
-      expectedResult: [
-        {blockNumber: 9, depositCount: 20},
-        {blockNumber: 10, depositCount: 20},
-        {blockNumber: 11, depositCount: 20},
-      ],
+      expectedResult: {
+        9: {depositCount: 20},
+        10: {depositCount: 20},
+        11: {depositCount: 20},
+      },
     },
   ];
 
   for (const {id, fromBlock, toBlock, expectedResult} of testCases) {
     it(id, () => {
-      const eth1DataDepositArrSeq = fillEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DataDepositArr);
-
-      expect(
-        eth1DataDepositArrSeq.map((eth1DataDeposit) => ({
-          blockNumber: eth1DataDeposit.blockNumber,
-          depositCount: eth1DataDeposit.depositCount,
-        }))
-      ).to.deep.equal(expectedResult);
+      const eth1DataDepositMap = mapEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DataDepositArr);
+      const eth1DataDepositMapSlim = mapValues(eth1DataDepositMap, (eth1DataDeposit) => ({
+        depositCount: eth1DataDeposit.depositCount,
+      }));
+      console.log(eth1DataDepositMapSlim);
+      expect(eth1DataDepositMapSlim).to.deep.equal(expectedResult);
     });
   }
 });

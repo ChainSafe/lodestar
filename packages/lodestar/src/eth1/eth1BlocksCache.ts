@@ -18,7 +18,7 @@ export class Eth1BlockHeaderCache {
   async insertBlockHeaders(blockHeaders: IEth1BlockHeader[]): Promise<void> {
     await this.db.eth1BlockHeader.batchPut(
       blockHeaders.map((blockHeader) => ({
-        key: blockHeader.number,
+        key: blockHeader.blockNumber,
         value: blockHeader,
       }))
     );
@@ -42,7 +42,7 @@ export class Eth1BlockHeaderCache {
    */
   async getHighestBlockNumber(): Promise<number | null> {
     const lastestBlockHeader = await this.db.eth1BlockHeader.lastValue();
-    return lastestBlockHeader && lastestBlockHeader.number;
+    return lastestBlockHeader && lastestBlockHeader.blockNumber;
   }
 }
 

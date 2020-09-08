@@ -19,8 +19,8 @@ export const DepositLogGenerator = (ssz: IBeaconSSZTypes): ContainerType<IDeposi
   });
 
 export interface IEth1BlockHeader {
-  hash: Bytes32;
-  number: Number64;
+  blockHash: Bytes32;
+  blockNumber: Number64;
   timestamp: Number64;
 }
 

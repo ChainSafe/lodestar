@@ -47,40 +47,40 @@ export function getEth1DataDepositFromDeposits(
  * available data with blockNumber < N.
  * @param fromBlock
  * @param toBlock
- * @param eth1DataDepositArr
+ * @param eth1Datas
  */
-export function fillEth1DataDepositToBlockRange(
+export function mapEth1DataDepositToBlockRange(
   fromBlock: number,
   toBlock: number,
-  eth1DataDepositArr: IEth1DataDeposit[]
-): IEth1DataDeposit[] {
-  if (eth1DataDepositArr.length === 0) {
+  eth1Datas: IEth1DataDeposit[]
+): {[blockNumber: number]: IEth1DataDeposit} {
+  if (eth1Datas.length === 0) {
     throw Error("eth1Data array is empty");
   }
 
-  const lowestBlockNumber = eth1DataDepositArr[0].blockNumber;
-  const highestBlockNumber = eth1DataDepositArr[eth1DataDepositArr.length - 1].blockNumber;
-  if (fromBlock < lowestBlockNumber || toBlock > highestBlockNumber) {
+  const lowestBlockNumber = eth1Datas[0].blockNumber;
+  const highestBlockNumber = eth1Datas[eth1Datas.length - 1].blockNumber;
+  if (fromBlock < lowestBlockNumber) {
     throw Error(
       `Not enough eth1Data available for range [${fromBlock}, ${toBlock}], provided: [${lowestBlockNumber}, ${highestBlockNumber}]`
     );
   }
 
-  const eth1DataDepositArrSeq: IEth1DataDeposit[] = [];
-  for (let i = 0; i < eth1DataDepositArr.length - 1; i++) {
-    const fromEth1Data = eth1DataDepositArr[i];
-    const toEth1Data = eth1DataDepositArr[i + 1];
+  const eth1DataDepositMap: {[blockNumber: number]: IEth1DataDeposit} = {};
 
-    for (let blockNumber = fromEth1Data.blockNumber; blockNumber < toEth1Data.blockNumber; blockNumber++) {
-      eth1DataDepositArrSeq.push({
-        blockNumber,
-        depositRoot: eth1DataDepositArr[i].depositRoot,
-        depositCount: eth1DataDepositArr[i].depositCount,
-      });
+  let pointer = 0;
+  for (let blockNumber = fromBlock; blockNumber <= toBlock; blockNumber++) {
+    for (let i = pointer; i < eth1Datas.length; i++) {
+      if (
+        i === eth1Datas.length - 1 ||
+        (eth1Datas[i].blockNumber <= blockNumber && eth1Datas[i + 1].blockNumber > blockNumber)
+      ) {
+        eth1DataDepositMap[blockNumber] = eth1Datas[i];
+        pointer = i;
+        break;
+      }
     }
   }
-  // Add last item in eth1DataDepositArr which is not swept in the for loop above
-  eth1DataDepositArrSeq.push(eth1DataDepositArr[eth1DataDepositArr.length - 1]);
 
-  return eth1DataDepositArrSeq.filter(({blockNumber}) => blockNumber >= fromBlock && blockNumber <= toBlock);
+  return eth1DataDepositMap;
 }

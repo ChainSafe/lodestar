@@ -1,7 +1,7 @@
 import {Deposit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
-import {getEth1DataDepositFromDeposits, fillEth1DataDepositToBlockRange} from "./utils/eth1DataDeposit";
+import {getEth1DataDepositFromDeposits, mapEth1DataDepositToBlockRange} from "./utils/eth1DataDeposit";
 import {getTreeAtIndex} from "../util/tree";
 import {IEth1DataDeposit, IDepositLog} from "./types";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositLog";
@@ -102,24 +102,41 @@ export class Eth1DepositsCache {
   }
 
   /**
-   * Returns partial eth1 data (depositRoot, depositCount) in a block range (inclusive)
+   * Appends partial eth1 data (depositRoot, depositCount) in a block range (inclusive)
    * Returned array is sequential and ascending in blockNumber
    * @param fromBlock
    * @param toBlock
    */
-  async getEth1DataDeposit(fromBlock: number, toBlock: number): Promise<IEth1DataDeposit[]> {
-    // TOOD: Enforce somewhere that the toBlock is < lastProcessedBlock
-    // TODO: If eth1DataDeposit is not available, recompute it from depositLog
-    const TODO;
+  async appendEth1DataDeposit<T extends {blockNumber: number}>(
+    blocks: T[],
+    lastProcessedDepositBlockNumber?: number
+  ): Promise<(T & IEth1DataDeposit)[]> {
+    // Exclude blocks for which there is no valid eth1 data deposit
+    if (lastProcessedDepositBlockNumber) {
+      blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
+    }
 
+    // A valid block can be constructed using previous `state.eth1Data`, don't throw
+    if (blocks.length === 0) {
+      return [];
+    }
+
+    const fromBlock = blocks[0].blockNumber;
+    const toBlock = blocks[blocks.length - 1].blockNumber;
     const eth1DatasDeposit: IEth1DataDeposit[] = [];
+
     for await (const eth1DataBlock of this.db.eth1DataDeposit.valuesStream({lte: toBlock, reverse: true})) {
       eth1DatasDeposit.push(eth1DataBlock);
       if (eth1DataBlock.blockNumber < fromBlock) break;
     }
 
     // Convert sparse eth1 data deposit into consecutive
-    return fillEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DatasDeposit.reverse());
+    const eth1DataDepositMap = mapEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DatasDeposit.reverse());
+
+    return blocks.map((block) => ({
+      ...block,
+      ...eth1DataDepositMap[block.blockNumber],
+    }));
   }
 
   /**
