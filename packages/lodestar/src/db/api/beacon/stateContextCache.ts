@@ -23,11 +23,11 @@ export class StateContextCache {
     if (!item) {
       return null;
     }
-    return this.clone(item);
+    return clone(item);
   }
 
   public async add(item: ITreeStateContext): Promise<void> {
-    this.cache[toHexString(item.state.hashTreeRoot())] = this.clone(item);
+    this.cache[toHexString(item.state.hashTreeRoot())] = clone(item);
   }
 
   public async delete(root: ByteVector): Promise<void> {
@@ -66,13 +66,13 @@ export class StateContextCache {
    * @param epoch
    */
   public async valuesUnsafe(): Promise<ITreeStateContext[]> {
-    return Object.values(this.cache).map((item) => this.clone(item));
+    return Object.values(this.cache).map((item) => clone(item));
   }
+}
 
-  private clone(item: ITreeStateContext): ITreeStateContext {
-    return {
-      state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
-    };
-  }
+export function clone(item: ITreeStateContext): ITreeStateContext {
+  return {
+    state: item.state.clone(),
+    epochCtx: item.epochCtx.copy(),
+  };
 }

@@ -58,7 +58,7 @@ export class ArchiveStatesTask implements ITask {
     const prunedStates = this.pruned.map((summary) => summary.stateRoot);
     await Promise.all([
       this.db.stateCache.batchDelete(prunedStates),
-      this.db.checkpointStateCache.batchDelete(prunedStates),
+      this.db.checkpointStateCache.prune(this.finalized.stateRoot, prunedStates),
     ]);
     this.logger.info(`Archiving of finalized states completed (finalized epoch #${epoch})`);
     this.logger.profile("Archive States");

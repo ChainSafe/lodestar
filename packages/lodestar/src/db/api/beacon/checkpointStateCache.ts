@@ -1,5 +1,7 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
-import {ITreeStateContext} from "./stateContextCache";
+import {ITreeStateContext, clone} from "./stateContextCache";
+
+const MAX_STATES = 64;
 
 /**
  * Checkpoint state is state of 1st block of each epoch.
@@ -10,10 +12,12 @@ export class CheckpointStateCache {
   private statesByRoot: Record<string, ITreeStateContext>;
   // map a state root to its parent state root
   private stateRootToParent: Record<string, string>;
+  private finalizedStateRoot: string | null;
 
   constructor() {
     this.statesByRoot = {};
     this.stateRootToParent = {};
+    this.finalizedStateRoot = null;
   }
 
   /**
@@ -24,7 +28,7 @@ export class CheckpointStateCache {
     if (!item) {
       return null;
     }
-    return this.clone(item);
+    return clone(item);
   }
 
   /**
@@ -35,10 +39,15 @@ export class CheckpointStateCache {
     return getStateRootAncestors(stateRoot, this.statesByRoot, this.stateRootToParent);
   }
 
+  /**
+   * Maintain MAX_STATE states to avoid OOM issue weighting towards recent checkpoints
+   * @param item ITreeStateContext
+   */
   public async add(item: ITreeStateContext): Promise<void> {
     const root = toHexString(item.state.hashTreeRoot());
-    this.statesByRoot[root] = this.clone(item);
+    this.statesByRoot[root] = clone(item);
     this.stateRootToParent[root] = root;
+    ensureMaxSize(this.statesByRoot, this.finalizedStateRoot);
   }
 
   public async addStateRoot(stateRoot: Uint8Array, parentStateRoot: Uint8Array): Promise<void> {
@@ -55,6 +64,11 @@ export class CheckpointStateCache {
     await Promise.all(roots.map((root) => this.delete(root)));
   }
 
+  public async prune(finalizedStateRoot: Uint8Array, prunedStateRoot: Uint8Array[]): Promise<void> {
+    this.finalizedStateRoot = toHexString(finalizedStateRoot);
+    await this.batchDelete(prunedStateRoot);
+  }
+
   public clear(): void {
     this.statesByRoot = {};
     this.stateRootToParent = {};
@@ -62,14 +76,6 @@ export class CheckpointStateCache {
 
   public get size(): number {
     return Object.keys(this.statesByRoot).length;
-  }
-
-  // TODO: move to util
-  private clone(item: ITreeStateContext): ITreeStateContext {
-    return {
-      state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
-    };
   }
 }
 
@@ -90,5 +96,25 @@ export function getStateRootAncestors(
     return result;
   } else {
     return null;
+  }
+}
+
+export function ensureMaxSize(
+  statesByRoot: Record<string, ITreeStateContext>,
+  finalizedStateRoot: string | null,
+  maxSize: number = MAX_STATES
+): void {
+  const keys = Object.keys(statesByRoot);
+  const numDelete = keys.length - maxSize;
+  if (numDelete > 0) {
+    let count = 0;
+    // object kexys are stored in insertion order
+    for (const key of keys) {
+      if (key !== finalizedStateRoot) {
+        delete statesByRoot[key];
+        count++;
+      }
+      if (count >= numDelete) break;
+    }
   }
 }
