@@ -458,6 +458,19 @@ export class ForkChoice {
     return this.iterateBlockSummaries(head).find((summary) => summary.slot === slot) || null;
   }
 
+  public forwardIterateBlockSummaries(): IBlockSummary[] {
+    return this.protoArray.nodes.map(toBlockSummary);
+  }
+
+  public getBlockSummariesByParentRoot(parentRoot: Root): IBlockSummary[] {
+    const hexParentRoot = toHexString(parentRoot);
+    return this.protoArray.nodes.filter((node) => node.parentRoot === hexParentRoot).map(toBlockSummary);
+  }
+
+  public getBlockSummariesAtSlot(slot: Slot): IBlockSummary[] {
+    return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
+  }
+
   /**
    * Returns `true` if the given `store` should be updated to set
    * `state.current_justified_checkpoint` its `justified_checkpoint`.
