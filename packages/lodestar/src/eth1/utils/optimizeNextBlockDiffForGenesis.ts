@@ -1,12 +1,10 @@
-import {IEth1Block} from "../interface";
-
 /**
  * Utility for fetching genesis min genesis time block
  * Returns an approximation of the next block diff to fetch to progressively
  * get closer to the block that satisfies min genesis time condition
  */
 export function optimizeNextBlockDiffForGenesis(
-  lastFetchedBlock: IEth1Block,
+  lastFetchedBlock: {timestamp: number},
   params: {
     MIN_GENESIS_TIME: number;
     GENESIS_DELAY: number;

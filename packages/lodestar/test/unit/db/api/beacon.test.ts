@@ -10,7 +10,7 @@ import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {
   AttesterSlashingRepository,
-  DepositDataRepository,
+  DepositLogRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository,
   AttestationRepository,
@@ -29,7 +29,7 @@ describe("beacon db - post block processing", function () {
       config,
       controller: sandbox.createStubInstance(LevelDbController),
     }) as unknown) as StubbedBeaconDb;
-    dbStub.depositData = sandbox.createStubInstance(DepositDataRepository) as any;
+    dbStub.depositLog = sandbox.createStubInstance(DepositLogRepository) as any;
     dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as any;
     dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as any;
     dbStub.attesterSlashing = sandbox.createStubInstance(AttesterSlashingRepository) as any;
@@ -50,14 +50,14 @@ describe("beacon db - post block processing", function () {
 
   it("should do cleanup after block processing", async function () {
     const block = generateEmptySignedBlock();
-    dbStub.depositData.deleteOld.resolves();
+    dbStub.depositLog.deleteOld.resolves();
     dbStub.voluntaryExit.batchRemove.resolves();
     dbStub.proposerSlashing.batchRemove.resolves();
     dbStub.attesterSlashing.batchRemove.resolves();
     dbStub.aggregateAndProof.batchRemove.resolves();
     dbStub.aggregateAndProof.values.resolves([]);
     await dbStub.processBlockOperations(block);
-    expect(dbStub.depositData.deleteOld.calledOnce).to.be.true;
+    expect(dbStub.depositLog.deleteOld.calledOnce).to.be.true;
     expect(dbStub.voluntaryExit.batchRemove.calledOnce).to.be.true;
     expect(dbStub.proposerSlashing.batchRemove.calledOnce).to.be.true;
     expect(dbStub.attesterSlashing.batchRemove.calledOnce).to.be.true;

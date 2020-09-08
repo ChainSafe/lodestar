@@ -5,6 +5,7 @@ import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db/api";
 import {IBeaconSync} from "../../sync";
 import {INetwork} from "../../network";
+import {IEth1ForBlockProduction} from "../../eth1";
 
 import {IBeaconApi} from "./beacon";
 import {INodeApi} from "./node";
@@ -23,6 +24,7 @@ export interface IApiModules {
   sync: IBeaconSync;
   network: INetwork;
   db: IBeaconDb;
+  eth1: IEth1ForBlockProduction;
 }
 
 export interface IApi {

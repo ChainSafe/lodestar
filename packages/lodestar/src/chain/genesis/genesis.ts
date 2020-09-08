@@ -2,14 +2,14 @@
  * @module chain/genesis
  */
 
-import {TreeBacked, List, fromHexString} from "@chainsafe/ssz";
+import {TreeBacked, List} from "@chainsafe/ssz";
 import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {
-  IDepositEvent,
+  IDepositLog,
   IEth1StreamParams,
   IEth1Provider,
   getDepositsAndBlockStreamForGenesis,
@@ -74,10 +74,10 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.signal
     );
 
-    for await (const [depositEvents, block] of depositsAndBlocksStream) {
-      this.applyDeposits(depositEvents);
+    for await (const [depositLogs, block] of depositsAndBlocksStream) {
+      this.applyDeposits(depositLogs);
       applyTimestamp(this.config, this.state, block.timestamp);
-      applyEth1BlockHash(this.config, this.state, fromHexString(block.hash));
+      applyEth1BlockHash(this.config, this.state, block.hash);
       if (isValidGenesisState(this.config, this.state)) {
         this.logger.info(`Found genesis state at eth1 block ${block.number}`);
         return {
@@ -101,8 +101,8 @@ export class GenesisBuilder implements IGenesisBuilder {
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
     const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, this.signal);
 
-    for await (const {depositEvents, blockNumber} of depositsStream) {
-      this.applyDeposits(depositEvents);
+    for await (const {depositLogs, blockNumber} of depositsStream) {
+      this.applyDeposits(depositLogs);
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
         return blockNumber;
@@ -116,15 +116,15 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private applyDeposits(depositEvents: IDepositEvent[]): void {
-    const newDeposits = depositEvents
-      .filter((depositEvent) => !this.depositCache.has(depositEvent.index))
-      .map((depositEvent) => {
-        this.depositCache.add(depositEvent.index);
-        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent));
+  private applyDeposits(depositLogs: IDepositLog[]): void {
+    const newDeposits = depositLogs
+      .filter((depositLog) => !this.depositCache.has(depositLog.index))
+      .map((depositLog) => {
+        this.depositCache.add(depositLog.index);
+        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositLog.depositData));
         return {
-          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
-          data: depositEvent,
+          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositLog.index)),
+          data: depositLog.depositData,
         };
       });
 

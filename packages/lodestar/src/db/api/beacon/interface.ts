@@ -11,12 +11,13 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositDataRepository,
-  DepositDataRootRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  DepositLogRepository,
+  DepositDataRootRepository,
+  Eth1BlockHeaderRepository,
+  Eth1DataDepositRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -53,13 +54,12 @@ export interface IBeaconDb {
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositData: DepositDataRepository;
 
-  // eth1 processing
-
-  // all deposit data roots and merkle tree
+  // eth1 processing: all deposit data roots and merkle tree
+  depositLog: DepositLogRepository;
   depositDataRoot: DepositDataRootRepository;
-  eth1Data: Eth1DataRepository;
+  eth1DataDeposit: Eth1DataDepositRepository;
+  eth1BlockHeader: Eth1BlockHeaderRepository;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

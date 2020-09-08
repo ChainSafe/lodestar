@@ -52,7 +52,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     return tree;
   }
 
-  private async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
+  public async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
       const values = (await this.values()) as List<Vector<number>>;
       this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(values);

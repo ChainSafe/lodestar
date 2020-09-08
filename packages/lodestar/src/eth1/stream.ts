@@ -3,7 +3,8 @@
  */
 
 import {AbortSignal} from "abort-controller";
-import {IDepositEvent, IBatchDepositEvents, IEth1Block, IEth1Provider, IEth1StreamParams} from "./interface";
+import {IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface";
+import {IDepositLog, IEth1BlockHeader} from "./types";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "../util/sleep";
@@ -25,8 +26,8 @@ export async function* getDepositsStream(
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);
     const toBlock = Math.min(remoteFollowBlock, fromBlock + params.MAX_BLOCKS_PER_POLL);
     const logs = await provider.getDepositEvents(fromBlock, toBlock);
-    for (const batchedDeposits of groupDepositEventsByBlock(logs)) {
-      yield batchedDeposits;
+    for (const [blockNumber, depositLogs] of groupDepositEventsByBlock(logs)) {
+      yield {blockNumber, depositLogs};
     }
 
     fromBlock = toBlock;
@@ -46,7 +47,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
   provider: IEth1Provider,
   params: IEth1StreamParams,
   signal?: AbortSignal
-): AsyncGenerator<[IDepositEvent[], IEth1Block]> {
+): AsyncGenerator<[IDepositLog[], IEth1BlockHeader]> {
   fromBlock = Math.max(fromBlock, provider.deployBlock);
   fromBlock = Math.min(fromBlock, await getRemoteFollowBlock(provider, params));
   let toBlock = fromBlock; // First, fetch only the first block

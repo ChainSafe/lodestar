@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortSignal} from "abort-controller";
 import {fetchRpcBatch} from "./httpRpcClient";
-import {IEth1Block} from "./types";
+import {IEth1BlockHeader} from "./types";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -22,7 +22,7 @@ export async function fetchBlockRange(
   fromBlockNumber: number,
   toBlockNumber: number,
   signal?: AbortSignal
-): Promise<IEth1Block[]> {
+): Promise<IEth1BlockHeader[]> {
   const blockNumbers: number[] = [];
   for (let i = fromBlockNumber; i <= toBlockNumber; i++) {
     blockNumbers.push(i);
@@ -33,7 +33,11 @@ export async function fetchBlockRange(
 /**
  * Fetches an arbitrary array of block numbers in batch
  */
-async function fetchBlocksByNumber(url: string, blockNumbers: number[], signal?: AbortSignal): Promise<IEth1Block[]> {
+async function fetchBlocksByNumber(
+  url: string,
+  blockNumbers: number[],
+  signal?: AbortSignal
+): Promise<IEth1BlockHeader[]> {
   const method = "eth_getBlockByNumber";
 
   const blocksRaw = await fetchRpcBatch<IEthJsonRpcTypes[typeof method]>(

@@ -12,12 +12,13 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositDataRepository,
-  DepositDataRootRepository,
-  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  DepositLogRepository,
+  DepositDataRootRepository,
+  Eth1BlockHeaderRepository,
+  Eth1DataDepositRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -37,10 +38,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public voluntaryExit: VoluntaryExitRepository;
   public proposerSlashing: ProposerSlashingRepository;
   public attesterSlashing: AttesterSlashingRepository;
-  public depositData: DepositDataRepository;
 
+  public depositLog: DepositLogRepository;
   public depositDataRoot: DepositDataRootRepository;
-  public eth1Data: Eth1DataRepository;
+  public eth1BlockHeader: Eth1BlockHeaderRepository;
+  public eth1DataDeposit: Eth1DataDepositRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -51,14 +53,17 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.seenAttestationCache = new SeenAttestationCache(5000);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
+
     this.attestation = new AttestationRepository(this.config, this.db);
     this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-    this.depositData = new DepositDataRepository(this.config, this.db);
+
+    this.depositLog = new DepositLogRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
-    this.eth1Data = new Eth1DataRepository(this.config, this.db);
+    this.eth1DataDeposit = new Eth1DataDepositRepository(this.config, this.db);
+    this.eth1BlockHeader = new Eth1BlockHeaderRepository(this.config, this.db);
   }
 
   /**
@@ -67,7 +72,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
-      this.depositData.deleteOld(signedBlock.message.body.eth1Data.depositCount),
+      this.depositLog.deleteOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
       this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations),

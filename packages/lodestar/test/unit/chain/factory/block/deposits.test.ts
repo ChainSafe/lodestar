@@ -8,7 +8,6 @@ import {generateDeposits} from "../../../../../src/chain/factory/block/deposits"
 import {generateState} from "../../../../utils/state";
 import {generateDepositData} from "../../../../utils/deposit";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {DepositDataRepository} from "../../../../../src/db/api/beacon/repositories";
 
 describe("blockAssembly - deposits", function () {
   const sandbox = sinon.createSandbox();
@@ -42,7 +41,7 @@ describe("blockAssembly - deposits", function () {
 
   it("return deposits with valid proofs", async function () {
     const deposits = [generateDepositData(), generateDepositData()];
-    dbStub.depositData.values.resolves(deposits);
+    dbStub.depositLog.values.resolves(deposits);
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
 

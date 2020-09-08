@@ -4,39 +4,25 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
 
-export interface IEth1DataWithTimestamp extends Eth1Data {
+export interface IEth1DataBlock extends Eth1Data {
   timestamp: number;
+  number: number;
 }
 
 export function getEth1Vote(
   config: IBeaconConfig,
   state: TreeBacked<BeaconState>,
-  eth1Blocks: IEth1DataWithTimestamp[]
+  eth1Blocks: IEth1DataBlock[]
 ): Eth1Data {
-  const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
-  return pickEth1Vote(config, state, votesToConsider);
-}
-
-export function getEth1VotesToConsider(
-  config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
-  eth1Blocks: IEth1DataWithTimestamp[]
-): Eth1Data[] {
   const periodStart = votingPeriodStartTime(config, state);
 
-  return eth1Blocks.filter(
+  const votesToConsider = eth1Blocks.filter(
     (eth1DataBlock) =>
       isCandidateBlock(config, eth1DataBlock, periodStart) &&
       // Ensure cannot move back to earlier deposit contract states
       eth1DataBlock.depositCount >= state.eth1Data.depositCount
   );
-}
 
-export function pickEth1Vote(
-  config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
-  votesToConsider: Eth1Data[]
-): Eth1Data {
   const votesToConsiderHashMap = new Set<string>();
   for (const eth1Data of votesToConsider) votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
 
@@ -76,7 +62,7 @@ export function votingPeriodStartTime(config: IBeaconConfig, state: TreeBacked<B
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);
 }
 
-export function isCandidateBlock(config: IBeaconConfig, block: {timestamp: number}, periodStart: number): boolean {
+export function isCandidateBlock(config: IBeaconConfig, block: IEth1DataBlock, periodStart: number): boolean {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
   return (
     block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= periodStart &&
