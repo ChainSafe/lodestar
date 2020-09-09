@@ -11,7 +11,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 import {BeaconDb, LevelDbController} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
-import {Eth1Provider} from "../eth1";
+import {Eth1Provider, Eth1ForBlockProductionDisabled} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain} from "../chain";
@@ -134,13 +134,15 @@ export class BeaconNode {
       config: this.config,
       logger: this.logger.child(this.conf.logger.api),
       db: this.db,
-      eth1: new Eth1ForBlockProduction({
-        config: this.config,
-        db: this.db,
-        logger: this.logger.child(this.conf.logger.eth1),
-        opts: this.conf.eth1,
-        signal: this.controller.signal,
-      }),
+      eth1: this.conf.eth1.enabled
+        ? new Eth1ForBlockProduction({
+            config: this.config,
+            db: this.db,
+            logger: this.logger.child(this.conf.logger.eth1),
+            opts: this.conf.eth1,
+            signal: this.controller.signal,
+          })
+        : new Eth1ForBlockProductionDisabled(),
       sync: this.sync,
       network: this.network,
       chain: this.chain,
