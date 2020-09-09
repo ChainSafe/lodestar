@@ -100,7 +100,7 @@ describe("block process stream", function () {
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
-    stateTransitionStub.resolves({state: generateState(), epochCtx: new EpochContext(config)});
+    stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
