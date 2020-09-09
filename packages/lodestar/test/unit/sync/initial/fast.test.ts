@@ -93,8 +93,8 @@ describe("fast sync", function () {
       done();
     });
     sync.start();
-    chainStub.emitter.emit("checkpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint);
-    chainStub.emitter.emit("checkpoint", target);
+    chainStub.emitter.emit("checkpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint, {} as any);
+    chainStub.emitter.emit("checkpoint", target, {} as any);
   });
 
   //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
@@ -133,7 +133,7 @@ describe("fast sync", function () {
       done();
     });
     sync.start();
-    chainStub.emitter.emit("checkpoint", target1);
-    chainStub.emitter.emit("checkpoint", target2);
+    chainStub.emitter.emit("checkpoint", target1, {} as any);
+    chainStub.emitter.emit("checkpoint", target2, {} as any);
   });
 });

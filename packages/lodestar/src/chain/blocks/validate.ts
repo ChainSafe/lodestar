@@ -1,9 +1,9 @@
-import {IBlockProcessJob} from "../chain";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
+import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 
 export function validateBlock(

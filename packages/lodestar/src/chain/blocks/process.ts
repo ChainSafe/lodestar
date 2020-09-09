@@ -1,6 +1,11 @@
-import {IBlockProcessJob} from "../chain";
-import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconState, Root, SignedBeaconBlock, Checkpoint} from "@chainsafe/lodestar-types";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  fastStateTransition,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
@@ -8,8 +13,8 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "../emitter";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {IBlockProcessJob} from "../interface";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -40,7 +45,7 @@ export function processBlock(
           continue;
         }
         // Run the state transition
-        const postStateContext = await runStateTransition(config, db, logger, preStateContext, job);
+        const postStateContext = await runStateTransition(eventBus, preStateContext, job);
         if (!postStateContext) {
           continue;
         }
@@ -126,27 +131,43 @@ export function updateForkChoice(
 }
 
 export async function runStateTransition(
-  config: IBeaconConfig,
-  db: IBeaconDb,
-  logger: ILogger,
-  stateContext: Required<IStateContext>,
+  emitter: ChainEventEmitter,
+  stateContext: ITreeStateContext,
   job: IBlockProcessJob
 ): Promise<IStateContext | null> {
+  const config = stateContext.epochCtx.config;
   try {
+    const preSlot = stateContext.state.slot;
+    const postSlot = job.signedBlock.message.slot;
+    const preEpoch = computeEpochAtSlot(config, preSlot);
+    let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
+    while (nextEpochSlot < postSlot) {
+      processSlots(stateContext.epochCtx, stateContext.state, nextEpochSlot);
+      const checkpoint: Checkpoint = {
+        root: stateContext.state.blockRoots[(nextEpochSlot - 1) % config.params.SLOTS_PER_HISTORICAL_ROOT],
+        epoch: computeEpochAtSlot(config, nextEpochSlot),
+      };
+      emitter.emit("checkpoint", checkpoint, stateContext);
+      nextEpochSlot = nextEpochSlot + config.params.SLOTS_PER_EPOCH;
+    }
     // if block is trusted don't verify proposer or op signature
-    return fastStateTransition(stateContext, job.signedBlock, {
+    const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
       verifyStateRoot: true,
       verifyProposer: !job.trusted,
       verifySignatures: !job.trusted,
-    });
+    }) as ITreeStateContext;
+    const blockSlot = job.signedBlock.message.slot;
+    if (blockSlot % config.params.SLOTS_PER_EPOCH === 0) {
+      const checkpoint: Checkpoint = {
+        root: stateContext.state.blockRoots[Math.max(0, blockSlot - 1) % config.params.SLOTS_PER_HISTORICAL_ROOT],
+        epoch: computeEpochAtSlot(config, blockSlot),
+      };
+      emitter.emit("checkpoint", checkpoint, postStateContext);
+    }
+    return postStateContext;
   } catch (e) {
-    const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-    // store block root in db and terminate
-    await db.badBlock.put(blockRoot);
-    logger.warn(
-      `Found bad block with root: ${toHexString(blockRoot)} slot: ${job.signedBlock.message.slot}` +
-        ` Error: ${e.message}`
-    );
+    e.job = job;
+    emitter.emit("error:block", e);
     return null;
   }
 }

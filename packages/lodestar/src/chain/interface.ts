@@ -20,6 +20,17 @@ import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IService} from "../node";
 import {ChainEventEmitter} from "./emitter";
 
+export interface IBlockProcessJob {
+  signedBlock: SignedBeaconBlock;
+  trusted: boolean;
+  reprocess: boolean;
+}
+
+export type BlockError = {
+  message?: string;
+  job: IBlockProcessJob;
+};
+
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head

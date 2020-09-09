@@ -11,11 +11,10 @@ import {processBlock} from "./process";
 import {BlockPool} from "./pool";
 import {postProcess} from "./post";
 import {IService} from "../../node";
-import {IBlockProcessJob} from "../chain";
 import {IBeaconDb} from "../../db/api";
 import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
-import {IAttestationProcessor} from "../interface";
+import {IAttestationProcessor, IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {convertBlock} from "./convertBlock";
 
