@@ -10,15 +10,30 @@ export function getEth1Vote(
   state: TreeBacked<BeaconState>,
   eth1Blocks: (IEth1BlockHeader & IEth1DataDeposit)[]
 ): Eth1Data {
+  const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
+  return pickEth1Vote(config, state, votesToConsider);
+}
+
+export function getEth1VotesToConsider(
+  config: IBeaconConfig,
+  state: TreeBacked<BeaconState>,
+  eth1Blocks: (IEth1BlockHeader & IEth1DataDeposit)[]
+): Eth1Data[] {
   const periodStart = votingPeriodStartTime(config, state);
 
-  const votesToConsider = eth1Blocks.filter(
+  return eth1Blocks.filter(
     (eth1DataBlock) =>
       isCandidateBlock(config, eth1DataBlock, periodStart) &&
       // Ensure cannot move back to earlier deposit contract states
       eth1DataBlock.depositCount >= state.eth1Data.depositCount
   );
+}
 
+export function pickEth1Vote(
+  config: IBeaconConfig,
+  state: TreeBacked<BeaconState>,
+  votesToConsider: Eth1Data[]
+): Eth1Data {
   const votesToConsiderHashMap = new Set<string>();
   for (const eth1Data of votesToConsider) votesToConsiderHashMap.add(serializeEth1Data(eth1Data));
 
