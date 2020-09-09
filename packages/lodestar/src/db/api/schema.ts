@@ -34,6 +34,8 @@ export enum Bucket {
   validator,
   lastProposedBlock,
   proposedAttestations,
+  // Added latter
+  eth1Block,
 }
 
 export enum Key {

@@ -18,6 +18,7 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
+  Eth1BlockRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -41,6 +42,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public depositDataRoot: DepositDataRootRepository;
   public eth1Data: Eth1DataRepository;
+  public eth1Block: Eth1BlockRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -59,6 +61,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.depositData = new DepositDataRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
+    this.eth1Block = new Eth1BlockRepository(this.config, this.db);
   }
 
   /**
