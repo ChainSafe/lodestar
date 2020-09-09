@@ -13,4 +13,13 @@ export class Eth1DataDepositRepository extends Repository<number, IEth1DataDepos
   public async deleteOld(upToBlockNumber: number): Promise<void> {
     await this.batchDelete(await this.keys({lt: upToBlockNumber}));
   }
+
+  public async batchPutValues(values: IEth1DataDeposit[]): Promise<void> {
+    await this.batchPut(
+      values.map((value) => ({
+        key: value.blockNumber,
+        value,
+      }))
+    );
+  }
 }

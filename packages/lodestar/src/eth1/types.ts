@@ -1,5 +1,16 @@
-import {Number64, DepositData, IBeaconSSZTypes, Root} from "@chainsafe/lodestar-types";
+import {Number64, DepositData, IBeaconSSZTypes, Root, Bytes32, Eth1Data} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
+
+export interface IEth1Block {
+  hash: Bytes32; // Use blockHash to be consistent with the Eth1Data type
+  number: Number64; // Use blockNumber to be consistent with the IEth1DataDeposit type
+  timestamp: Number64;
+}
+
+export interface IEth1DataWithBlock extends Eth1Data {
+  blockNumber: number;
+  timestamp: number;
+}
 
 export interface IDepositEvent {
   depositData: DepositData;

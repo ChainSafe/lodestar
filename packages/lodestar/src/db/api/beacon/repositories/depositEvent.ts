@@ -21,6 +21,15 @@ export class DepositEventRepository extends Repository<number, IDepositEvent> {
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
   }
 
+  public async batchPutValues(values: IDepositEvent[]): Promise<void> {
+    await this.batchPut(
+      values.map((value) => ({
+        key: value.index,
+        value,
+      }))
+    );
+  }
+
   /**
    * Returns deposit events in DB. Range is inclusive
    */
