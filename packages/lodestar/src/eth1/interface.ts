@@ -20,7 +20,7 @@ export type IEth1StreamParams = Pick<
 };
 
 export interface IBatchDepositEvents {
-  depositLogs: IDepositLog[];
+  depositEvents: IDepositLog[];
   blockNumber: number;
 }
 

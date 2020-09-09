@@ -16,7 +16,7 @@ describe("eth1 / util / deposits", function () {
   });
 
   it("return deposits with valid proofs", async function () {
-    const depositLogs = Array.from(
+    const depositEvents = Array.from(
       {length: 2},
       (_, index): IDepositLog => ({
         depositData: generateDepositData(),
@@ -26,11 +26,11 @@ describe("eth1 / util / deposits", function () {
     );
 
     const depositRootTree = config.types.DepositDataRootList.tree.defaultValue();
-    for (const depositLog of depositLogs) {
+    for (const depositLog of depositEvents) {
       depositRootTree.push(config.types.DepositData.hashTreeRoot(depositLog.depositData));
     }
 
-    const deposits = getDepositsWithProofs(depositLogs, depositRootTree, 1);
+    const deposits = getDepositsWithProofs(depositEvents, depositRootTree, 1);
 
     const depositsRoot = depositRootTree.hashTreeRoot();
     expect(deposits.length).to.be.equal(2);

@@ -5,41 +5,41 @@ describe("eth1 / util / assertConsecutiveDeposits", function () {
   const testCases: {
     id: string;
     ok: boolean;
-    depositLogs: {index: number}[];
+    depositEvents: {index: number}[];
   }[] = [
     {
       id: "sequential deposits",
       ok: true,
-      depositLogs: [{index: 4}, {index: 5}, {index: 6}],
+      depositEvents: [{index: 4}, {index: 5}, {index: 6}],
     },
     {
       id: "non sequential deposits",
       ok: false,
-      depositLogs: [{index: 4}, {index: 7}, {index: 9}],
+      depositEvents: [{index: 4}, {index: 7}, {index: 9}],
     },
     {
       id: "sequential descending deposits",
       ok: false,
-      depositLogs: [{index: 6}, {index: 5}, {index: 4}],
+      depositEvents: [{index: 6}, {index: 5}, {index: 4}],
     },
     {
       id: "single deposit",
       ok: true,
-      depositLogs: [{index: 4}],
+      depositEvents: [{index: 4}],
     },
     {
       id: "empty array",
       ok: true,
-      depositLogs: [],
+      depositEvents: [],
     },
   ];
 
-  for (const {id, ok, depositLogs} of testCases) {
+  for (const {id, ok, depositEvents} of testCases) {
     it(id, () => {
       if (ok) {
-        assertConsecutiveDeposits(depositLogs);
+        assertConsecutiveDeposits(depositEvents);
       } else {
-        expect(() => assertConsecutiveDeposits(depositLogs)).to.throw();
+        expect(() => assertConsecutiveDeposits(depositEvents)).to.throw();
       }
     });
   }

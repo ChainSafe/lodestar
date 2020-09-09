@@ -28,8 +28,8 @@ describe("Eth1 streams", function () {
     );
 
     let depositCount = 0;
-    for await (const {depositLogs} of depositsStream) {
-      depositCount += depositLogs.length;
+    for await (const {depositEvents} of depositsStream) {
+      depositCount += depositEvents.length;
       if (depositCount > depositsToFetch) {
         break;
       }

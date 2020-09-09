@@ -74,8 +74,8 @@ export class GenesisBuilder implements IGenesisBuilder {
       this.signal
     );
 
-    for await (const [depositLogs, block] of depositsAndBlocksStream) {
-      this.applyDeposits(depositLogs);
+    for await (const [depositEvents, block] of depositsAndBlocksStream) {
+      this.applyDeposits(depositEvents);
       applyTimestamp(this.config, this.state, block.timestamp);
       applyEth1BlockHash(this.config, this.state, block.blockHash);
       if (isValidGenesisState(this.config, this.state)) {
@@ -101,8 +101,8 @@ export class GenesisBuilder implements IGenesisBuilder {
   private async waitForGenesisValidators(fromBlock: number): Promise<number> {
     const depositsStream = getDepositsStream(fromBlock, this.eth1Provider, this.eth1Params, this.signal);
 
-    for await (const {depositLogs, blockNumber} of depositsStream) {
-      this.applyDeposits(depositLogs);
+    for await (const {depositEvents, blockNumber} of depositsStream) {
+      this.applyDeposits(depositEvents);
       if (isValidGenesisValidators(this.config, this.state)) {
         this.logger.info(`Found enough validators at eth1 block ${blockNumber}`);
         return blockNumber;
@@ -116,8 +116,8 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private applyDeposits(depositLogs: IDepositLog[]): void {
-    const newDeposits = depositLogs
+  private applyDeposits(depositEvents: IDepositLog[]): void {
+    const newDeposits = depositEvents
       .filter((depositLog) => !this.depositCache.has(depositLog.index))
       .map((depositLog) => {
         this.depositCache.add(depositLog.index);

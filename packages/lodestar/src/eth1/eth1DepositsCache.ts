@@ -37,9 +37,9 @@ export class Eth1DepositsCache {
 
     // ### TODO: Range is inclusive or exclusive?
     // Must assert that `toIndex <= logs.length`
-    const depositLogs = await this.db.depositLog.getRange(fromIndex, toIndex);
+    const depositEvents = await this.db.depositLog.getRange(fromIndex, toIndex);
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
-    return getDepositsWithProofs(depositLogs, depositRootTree, depositCount);
+    return getDepositsWithProofs(depositEvents, depositRootTree, depositCount);
   }
 
   /**
@@ -47,9 +47,9 @@ export class Eth1DepositsCache {
    * This function enforces that `logs` are imported one-by-one with no gaps between
    * `log.index`, starting at `log.index == 0`.
    */
-  async insertLogs(depositLogs: IDepositLog[]): Promise<void> {
+  async insertLogs(depositEvents: IDepositLog[]): Promise<void> {
     const lastLog = await this.db.depositLog.lastValue();
-    const firstEvent = depositLogs[0];
+    const firstEvent = depositEvents[0];
 
     if (lastLog) {
       if (firstEvent.index <= lastLog.index) {
@@ -59,12 +59,12 @@ export class Eth1DepositsCache {
         throw Error("Non consecutive logs");
       }
     }
-    assertConsecutiveDeposits(depositLogs);
+    assertConsecutiveDeposits(depositEvents);
 
     // Pre-compute partial eth1 data from deposits
     // Add data for both getEth1DataDepositFromDeposits and db.depositDataRoot.batchPut
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
-    const depositRoots = depositLogs.map((depositEvent) => ({
+    const depositRoots = depositEvents.map((depositEvent) => ({
       blockNumber: depositEvent.blockNumber,
       index: depositEvent.index,
       root: this.config.types.DepositData.hashTreeRoot(depositEvent.depositData),
@@ -74,7 +74,7 @@ export class Eth1DepositsCache {
     // Store everything in batch at once
     await Promise.all([
       this.db.depositLog.batchPut(
-        depositLogs.map((depositLog) => ({
+        depositEvents.map((depositLog) => ({
           key: depositLog.index,
           value: depositLog,
         }))
