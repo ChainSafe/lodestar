@@ -1,8 +1,9 @@
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {goerliRpcUrl} from "../../testParams";
 
 export const medalla = {
-  providerUrl: "https://goerli.prylabs.net",
+  providerUrl: goerliRpcUrl,
   depositBlock: 3085928,
   // Medalla optimized blocks for quick testing
   blockWithDepositActivity: 3124889,

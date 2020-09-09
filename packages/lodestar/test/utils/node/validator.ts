@@ -8,6 +8,7 @@ import tmp from "tmp";
 import {ValidatorApi} from "../../../src/api/impl/validator";
 import {BeaconApi} from "../../../src/api/impl/beacon";
 import {NodeApi} from "../../../src/api/impl/node/node";
+import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
@@ -61,7 +62,14 @@ export function getDevValidator({
     }),
     api: new ApiClientOverInstance({
       config: node.config,
-      validator: new ValidatorApi({}, {...node, logger}),
+      validator: new ValidatorApi(
+        {},
+        {
+          ...node,
+          logger,
+          eth1: new Eth1ForBlockProductionDisabled(),
+        }
+      ),
       node: new NodeApi({}, {...node}),
       beacon: new BeaconApi({}, {...node}),
     }),
