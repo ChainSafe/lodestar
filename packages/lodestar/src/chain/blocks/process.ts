@@ -1,4 +1,4 @@
-import {BeaconState, Root, SignedBeaconBlock, Checkpoint} from "@chainsafe/lodestar-types";
+import {BeaconState, Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -9,7 +9,7 @@ import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, assert} from "@chainsafe/lodestar-utils";
 import {ILMDGHOST} from "../forkChoice";
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "../emitter";
@@ -130,6 +130,20 @@ export function updateForkChoice(
   return forkChoice.headBlockRoot();
 }
 
+export function emitCheckpointEvent(emitter: ChainEventEmitter, checkpointStateContext: ITreeStateContext): void {
+  const config = checkpointStateContext.epochCtx.config;
+  const slot = checkpointStateContext.state.slot;
+  assert.true(slot % config.params.SLOTS_PER_EPOCH === 0, "Checkpoint state slot must be first in an epoch");
+  emitter.emit(
+    "checkpoint",
+    {
+      root: config.types.BeaconBlockHeader.hashTreeRoot(checkpointStateContext.state.latestBlockHeader),
+      epoch: computeEpochAtSlot(config, slot),
+    },
+    checkpointStateContext
+  );
+}
+
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   stateContext: ITreeStateContext,
@@ -137,22 +151,17 @@ export async function runStateTransition(
 ): Promise<IStateContext | null> {
   const config = stateContext.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
-  const {BeaconBlockHeader} = config.types;
   try {
     const preSlot = stateContext.state.slot;
     const postSlot = job.signedBlock.message.slot;
     const preEpoch = computeEpochAtSlot(config, preSlot);
-    let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
-    while (nextEpochSlot < postSlot) {
+    for (
+      let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
+      nextEpochSlot < postSlot;
+      nextEpochSlot += SLOTS_PER_EPOCH
+    ) {
       processSlots(stateContext.epochCtx, stateContext.state, nextEpochSlot);
-      const blockHeader = BeaconBlockHeader.clone(stateContext.state.latestBlockHeader);
-      blockHeader.stateRoot = stateContext.state.hashTreeRoot();
-      const checkpoint: Checkpoint = {
-        root: BeaconBlockHeader.hashTreeRoot(blockHeader),
-        epoch: computeEpochAtSlot(config, nextEpochSlot),
-      };
-      emitter.emit("checkpoint", checkpoint, stateContext);
-      nextEpochSlot = nextEpochSlot + SLOTS_PER_EPOCH;
+      emitCheckpointEvent(emitter, stateContext);
     }
     // if block is trusted don't verify proposer or op signature
     const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
@@ -162,11 +171,7 @@ export async function runStateTransition(
     }) as ITreeStateContext;
     const blockSlot = job.signedBlock.message.slot;
     if (blockSlot % SLOTS_PER_EPOCH === 0) {
-      const checkpoint: Checkpoint = {
-        root: config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message),
-        epoch: computeEpochAtSlot(config, blockSlot),
-      };
-      emitter.emit("checkpoint", checkpoint, postStateContext);
+      emitCheckpointEvent(emitter, postStateContext);
     }
     return postStateContext;
   } catch (e) {
