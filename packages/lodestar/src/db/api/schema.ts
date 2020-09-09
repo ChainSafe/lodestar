@@ -34,6 +34,8 @@ export enum Bucket {
   validator,
   lastProposedBlock,
   proposedAttestations,
+  // added latter
+  depositEvent,
 }
 
 export enum Key {
