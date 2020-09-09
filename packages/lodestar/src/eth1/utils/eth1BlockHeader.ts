@@ -11,7 +11,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 export async function getCandidateBlocksFromStream(
   config: IBeaconConfig,
   periodStart: number,
-  blockHeaderReverseStream: AsyncIterable<IEth1BlockHeader>
+  blockHeaderDescendingStream: AsyncIterable<IEth1BlockHeader>
 ): Promise<IEth1BlockHeader[]> {
   const eth1BlockHeaders: IEth1BlockHeader[] = [];
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
@@ -21,7 +21,7 @@ export async function getCandidateBlocksFromStream(
   // block.timestamp >= periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2
   const lowerTimestamp = periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2;
 
-  for await (const block of blockHeaderReverseStream) {
+  for await (const block of blockHeaderDescendingStream) {
     if (block.timestamp < lowerTimestamp) break;
     if (block.timestamp <= upperTimestamp) eth1BlockHeaders.push(block);
   }

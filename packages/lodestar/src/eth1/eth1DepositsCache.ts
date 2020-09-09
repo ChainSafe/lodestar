@@ -1,9 +1,9 @@
 import {Deposit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
-import {getEth1DataDepositFromDeposits, mapEth1DataDepositToBlockRange} from "./utils/eth1DataDeposit";
+import {getEth1DataDepositFromDeposits, appendEth1DataDeposit} from "./utils/eth1DataDeposit";
 import {getTreeAtIndex} from "../util/tree";
-import {IEth1DataDeposit, IDepositLog} from "./types";
+import {IEth1DataDeposit, IDepositLog, IEth1BlockHeader} from "./types";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositLog";
 
 export class Eth1DepositsCache {
@@ -107,36 +107,16 @@ export class Eth1DepositsCache {
    * @param fromBlock
    * @param toBlock
    */
-  async appendEth1DataDeposit<T extends {blockNumber: number}>(
-    blocks: T[],
+  async appendEth1DataDeposit(
+    blocks: IEth1BlockHeader[],
     lastProcessedDepositBlockNumber?: number
-  ): Promise<(T & IEth1DataDeposit)[]> {
-    // Exclude blocks for which there is no valid eth1 data deposit
-    if (lastProcessedDepositBlockNumber) {
-      blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
-    }
-
-    // A valid block can be constructed using previous `state.eth1Data`, don't throw
-    if (blocks.length === 0) {
-      return [];
-    }
-
-    const fromBlock = blocks[0].blockNumber;
-    const toBlock = blocks[blocks.length - 1].blockNumber;
-    const eth1DatasDeposit: IEth1DataDeposit[] = [];
-
-    for await (const eth1DataBlock of this.db.eth1DataDeposit.valuesStream({lte: toBlock, reverse: true})) {
-      eth1DatasDeposit.push(eth1DataBlock);
-      if (eth1DataBlock.blockNumber < fromBlock) break;
-    }
-
-    // Convert sparse eth1 data deposit into consecutive
-    const eth1DataDepositMap = mapEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DatasDeposit.reverse());
-
-    return blocks.map((block) => ({
-      ...block,
-      ...eth1DataDepositMap[block.blockNumber],
-    }));
+  ): Promise<(IEth1BlockHeader & IEth1DataDeposit)[]> {
+    const highestBlock = blocks[blocks.length - 1]?.blockNumber;
+    return await appendEth1DataDeposit(
+      blocks,
+      this.db.eth1DataDeposit.valuesStream({lte: highestBlock, reverse: true}),
+      lastProcessedDepositBlockNumber
+    );
   }
 
   /**

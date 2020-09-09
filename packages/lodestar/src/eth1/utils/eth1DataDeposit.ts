@@ -2,7 +2,7 @@ import {Root} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {groupDepositEventsByBlock} from "./groupDepositEventsByBlock";
-import {IEth1DataDeposit} from "../types";
+import {IEth1DataDeposit, IEth1BlockHeader} from "../types";
 
 /**
  * Extract partial eth1 data (depositRoot, depositCount) from downloaded deposits
@@ -83,4 +83,42 @@ export function mapEth1DataDepositToBlockRange(
   }
 
   return eth1DataDepositMap;
+}
+
+/**
+ * Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
+ * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
+ */
+export async function appendEth1DataDeposit(
+  blocks: IEth1BlockHeader[],
+  eth1DataDepositDescendingStream: AsyncIterable<IEth1DataDeposit>,
+  lastProcessedDepositBlockNumber?: number
+): Promise<(IEth1BlockHeader & IEth1DataDeposit)[]> {
+  // Exclude blocks for which there is no valid eth1 data deposit
+  if (lastProcessedDepositBlockNumber) {
+    blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
+  }
+
+  // A valid block can be constructed using previous `state.eth1Data`, don't throw
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  const fromBlock = blocks[0].blockNumber;
+  const toBlock = blocks[blocks.length - 1].blockNumber;
+
+  // Take blocks until the block under the range lower bound (included)
+  const eth1DatasDeposit: IEth1DataDeposit[] = [];
+  for await (const eth1DataBlock of eth1DataDepositDescendingStream) {
+    eth1DatasDeposit.push(eth1DataBlock);
+    if (eth1DataBlock.blockNumber < fromBlock) break;
+  }
+
+  // Convert sparse eth1 data deposit into consecutive
+  const eth1DataDepositMap = mapEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DatasDeposit.reverse());
+
+  return blocks.map((block) => ({
+    ...eth1DataDepositMap[block.blockNumber],
+    ...block,
+  }));
 }

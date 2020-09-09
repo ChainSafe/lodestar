@@ -3,10 +3,12 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Root} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {mapValues} from "lodash";
-import {IEth1DataDeposit} from "../../../../src/eth1";
+import {iteratorFromArray} from "../../../utils/interator";
+import {IEth1DataDeposit, IEth1BlockHeader} from "../../../../src/eth1";
 import {
   getEth1DataDepositFromDeposits,
   mapEth1DataDepositToBlockRange,
+  appendEth1DataDeposit,
 } from "../../../../src/eth1/utils/eth1DataDeposit";
 
 describe("eth1 / util / getEth1DataDepositFromLogs", function () {
@@ -132,8 +134,73 @@ describe("eth1 / util / mapEth1DataDepositToBlockRange", function () {
       const eth1DataDepositMapSlim = mapValues(eth1DataDepositMap, (eth1DataDeposit) => ({
         depositCount: eth1DataDeposit.depositCount,
       }));
-      console.log(eth1DataDepositMapSlim);
       expect(eth1DataDepositMapSlim).to.deep.equal(expectedResult);
     });
   }
+});
+
+describe("eth1 / util / appendEth1DataDeposit", function () {
+  it("Should append eth1DataDeposit", async function () {
+    // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
+    const eth1DataDepositArr: IEth1DataDeposit[] = [
+      {blockNumber: 0, depositCount: 13},
+      {blockNumber: 3, depositCount: 15},
+      {blockNumber: 4, depositCount: 17},
+      {blockNumber: 7, depositCount: 19},
+    ].map(({blockNumber, depositCount}) => ({
+      blockNumber,
+      depositCount,
+      depositRoot: new Uint8Array(Array(32).fill(blockNumber)),
+    }));
+
+    // Consecutive block headers to be filled with eth1Data above
+    const eth1BlockHeaders: IEth1BlockHeader[] = [2, 3, 4, 5, 6, 7, 8].map((blockNumber) => ({
+      blockHash: new Uint8Array(Array(32).fill(blockNumber)),
+      blockNumber,
+      timestamp: blockNumber,
+    }));
+
+    const lastProcessedDepositBlockNumber = 11;
+
+    // Result must contain all blocks from eth1BlockHeaders, with backfilled eth1DataDeposit
+    const expectedEth1Data = [
+      {blockNumber: 2, depositCount: 13},
+      {blockNumber: 3, depositCount: 15},
+      {blockNumber: 4, depositCount: 17},
+      {blockNumber: 5, depositCount: 17},
+      {blockNumber: 6, depositCount: 17},
+      {blockNumber: 7, depositCount: 19},
+      {blockNumber: 8, depositCount: 19},
+    ];
+
+    const eth1Datas = await appendEth1DataDeposit(
+      eth1BlockHeaders,
+      // Simulate a descending stream reading from DB
+      iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr.reverse()),
+      lastProcessedDepositBlockNumber
+    );
+
+    const eth1DatasSlim = eth1Datas.map((eth1Data) => ({
+      blockNumber: eth1Data.blockNumber,
+      depositCount: eth1Data.depositCount,
+    }));
+
+    expect(eth1DatasSlim).to.deep.equal(expectedEth1Data);
+  });
+
+  it("should not throw for empty data", async function () {
+    // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
+    const eth1DataDepositArr: IEth1DataDeposit[] = [];
+    const eth1BlockHeaders: IEth1BlockHeader[] = [];
+    const lastProcessedDepositBlockNumber = undefined;
+
+    const eth1Datas = await appendEth1DataDeposit(
+      eth1BlockHeaders,
+      // Simulate a descending stream reading from DB
+      iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr),
+      lastProcessedDepositBlockNumber
+    );
+
+    expect(eth1Datas).to.deep.equal([]);
+  });
 });
