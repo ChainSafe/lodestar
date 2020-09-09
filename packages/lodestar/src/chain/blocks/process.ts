@@ -169,8 +169,7 @@ export async function runStateTransition(
       verifyProposer: !job.trusted,
       verifySignatures: !job.trusted,
     }) as ITreeStateContext;
-    const blockSlot = job.signedBlock.message.slot;
-    if (blockSlot % SLOTS_PER_EPOCH === 0) {
+    if (postSlot % SLOTS_PER_EPOCH === 0) {
       emitCheckpointEvent(emitter, postStateContext);
     }
     return postStateContext;
