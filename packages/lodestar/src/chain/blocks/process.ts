@@ -136,6 +136,8 @@ export async function runStateTransition(
   job: IBlockProcessJob
 ): Promise<IStateContext | null> {
   const config = stateContext.epochCtx.config;
+  const {SLOTS_PER_EPOCH} = config.params;
+  const {BeaconBlockHeader} = config.types;
   try {
     const preSlot = stateContext.state.slot;
     const postSlot = job.signedBlock.message.slot;
@@ -143,12 +145,14 @@ export async function runStateTransition(
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     while (nextEpochSlot < postSlot) {
       processSlots(stateContext.epochCtx, stateContext.state, nextEpochSlot);
+      const blockHeader = BeaconBlockHeader.clone(stateContext.state.latestBlockHeader);
+      blockHeader.stateRoot = stateContext.state.hashTreeRoot();
       const checkpoint: Checkpoint = {
-        root: stateContext.state.blockRoots[(nextEpochSlot - 1) % config.params.SLOTS_PER_HISTORICAL_ROOT],
+        root: BeaconBlockHeader.hashTreeRoot(blockHeader),
         epoch: computeEpochAtSlot(config, nextEpochSlot),
       };
       emitter.emit("checkpoint", checkpoint, stateContext);
-      nextEpochSlot = nextEpochSlot + config.params.SLOTS_PER_EPOCH;
+      nextEpochSlot = nextEpochSlot + SLOTS_PER_EPOCH;
     }
     // if block is trusted don't verify proposer or op signature
     const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
@@ -157,9 +161,9 @@ export async function runStateTransition(
       verifySignatures: !job.trusted,
     }) as ITreeStateContext;
     const blockSlot = job.signedBlock.message.slot;
-    if (blockSlot % config.params.SLOTS_PER_EPOCH === 0) {
+    if (blockSlot % SLOTS_PER_EPOCH === 0) {
       const checkpoint: Checkpoint = {
-        root: stateContext.state.blockRoots[Math.max(0, blockSlot - 1) % config.params.SLOTS_PER_HISTORICAL_ROOT],
+        root: config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message),
         epoch: computeEpochAtSlot(config, blockSlot),
       };
       emitter.emit("checkpoint", checkpoint, postStateContext);
