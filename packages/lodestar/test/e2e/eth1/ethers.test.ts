@@ -1,6 +1,6 @@
 import "mocha";
 import {expect} from "chai";
-import {Eth1Provider, IEth1BlockHeader} from "../../../src/eth1";
+import {Eth1Provider, IEth1Block} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
 import {getMedallaConfig, medalla} from "./util";
 import {fromHexString} from "@chainsafe/ssz";
@@ -28,7 +28,7 @@ describe("eth1 / Eth1Provider", function () {
   });
 
   it("Should get a specific block by number", async function () {
-    const goerliGenesisBlock: IEth1BlockHeader = {
+    const goerliGenesisBlock: IEth1Block = {
       blockHash: fromHexString("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a"),
       blockNumber: 0,
       timestamp: 1548854791,

@@ -1,12 +1,12 @@
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {pick} from "lodash";
-import {IEth1BlockHeader} from "../../../../src/eth1";
-import {getCandidateBlocksFromStream} from "../../../../src/eth1/utils/eth1BlockHeader";
+import {IEth1Block} from "../../../../src/eth1";
+import {getCandidateBlocksFromStream} from "../../../../src/eth1/utils/eth1Block";
 import {isCandidateBlock} from "../../../../src/eth1/utils/eth1Vote";
 import {iteratorFromArray} from "../../../utils/interator";
 
-type IEth1BlockHeaderNoHash = Pick<IEth1BlockHeader, "blockNumber" | "timestamp">;
+type IEth1BlockNoHash = Pick<IEth1Block, "blockNumber" | "timestamp">;
 
 describe("eth1 / util / getCandidateBlocksFromStream", function () {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
@@ -15,8 +15,8 @@ describe("eth1 / util / getCandidateBlocksFromStream", function () {
   const testCases: {
     id: string;
     periodStart: number;
-    blockHeaders: IEth1BlockHeaderNoHash[];
-    expectedCandidateBlocks: IEth1BlockHeaderNoHash[];
+    blockHeaders: IEth1BlockNoHash[];
+    expectedCandidateBlocks: IEth1BlockNoHash[];
   }[] = [
     {
       id: "regular case",
@@ -59,13 +59,13 @@ describe("eth1 / util / getCandidateBlocksFromStream", function () {
   }
 });
 
-function addBlockHash(block: IEth1BlockHeaderNoHash): IEth1BlockHeader {
+function addBlockHash(block: IEth1BlockNoHash): IEth1Block {
   return {
     blockHash: new Uint8Array(Array(32).fill(block.blockNumber)),
     ...block,
   };
 }
 
-function removeBlockHash(block: IEth1BlockHeader): IEth1BlockHeaderNoHash {
+function removeBlockHash(block: IEth1Block): IEth1BlockNoHash {
   return pick(block, ["blockNumber", "timestamp"]);
 }

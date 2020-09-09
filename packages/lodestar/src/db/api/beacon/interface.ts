@@ -16,7 +16,7 @@ import {
   VoluntaryExitRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockHeaderRepository,
+  Eth1BlockRepository,
   Eth1DataDepositRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
@@ -59,7 +59,7 @@ export interface IBeaconDb {
   depositLog: DepositEventRepository;
   depositDataRoot: DepositDataRootRepository;
   eth1DataDeposit: Eth1DataDepositRepository;
-  eth1BlockHeader: Eth1BlockHeaderRepository;
+  eth1Block: Eth1BlockRepository;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

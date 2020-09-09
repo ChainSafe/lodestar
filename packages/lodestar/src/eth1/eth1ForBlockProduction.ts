@@ -5,13 +5,13 @@ import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
-import {Eth1BlockHeaderCache} from "./eth1BlocksCache";
+import {Eth1BlockCache} from "./eth1BlocksCache";
 import {getEth1Vote, votingPeriodStartTime} from "./utils/eth1Vote";
 import {setIntervalAbortableAsync} from "../util/sleep";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "./ethers";
 import {fetchBlockRange} from "./httpEth1Client";
-import {getCandidateBlocksFromStream} from "./utils/eth1BlockHeader";
+import {getCandidateBlocksFromStream} from "./utils/eth1Block";
 import {IEth1ForBlockProduction} from "./interface";
 import {IEth1Options} from "./options";
 
@@ -31,7 +31,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   signal: AbortSignal;
 
   // Internal modules, state
-  blocksCache: Eth1BlockHeaderCache;
+  blocksCache: Eth1BlockCache;
   depositsCache: Eth1DepositsCache;
   eth1Provider: Eth1Provider;
   lastProcessedDepositBlockNumber?: number;
@@ -53,7 +53,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.signal = signal;
     this.logger = logger;
     this.opts = opts;
-    this.blocksCache = new Eth1BlockHeaderCache(config, db);
+    this.blocksCache = new Eth1BlockCache(config, db);
     this.depositsCache = new Eth1DepositsCache(config, db);
     this.eth1Provider = new Eth1Provider(config, opts);
     const autoUpdateIntervalMs = config.params.SECONDS_PER_ETH1_BLOCK / 2;
@@ -91,17 +91,14 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
     // Fetched only the required blocks from DB with a stream
     const periodStart = votingPeriodStartTime(this.config, state);
-    const eth1BlockHeaders = await getCandidateBlocksFromStream(
+    const eth1Blocks = await getCandidateBlocksFromStream(
       this.config,
       periodStart,
       this.blocksCache.getReverseStream()
     );
 
     // Append partial eth1Data from deposit cache (depositCount, depositRoot)
-    const eth1Data = await this.depositsCache.appendEth1DataDeposit(
-      eth1BlockHeaders,
-      this.lastProcessedDepositBlockNumber
-    );
+    const eth1Data = await this.depositsCache.appendEth1DataDeposit(eth1Blocks, this.lastProcessedDepositBlockNumber);
 
     return getEth1Vote(this.config, state, eth1Data);
   }
@@ -170,8 +167,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const fromBlockNumber = this.getFromBlockToFetch(lastCachedBlock);
     const toBlock = remoteFollowBlock;
 
-    const eth1BlockHeaders = await fetchBlockRange(this.opts.providerUrl, fromBlockNumber, toBlock, this.signal);
-    await this.blocksCache.insertBlockHeaders(eth1BlockHeaders);
+    const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlockNumber, toBlock, this.signal);
+    await this.blocksCache.insertBlockHeaders(eth1Blocks);
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {

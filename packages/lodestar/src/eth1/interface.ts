@@ -6,7 +6,7 @@
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ethers} from "ethers";
-import {IDepositEvent, IEth1BlockHeader} from "./types";
+import {IDepositEvent, IEth1Block} from "./types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Eth1Data, Deposit} from "@chainsafe/lodestar-types";
 
@@ -36,12 +36,12 @@ export interface IEth1ForBlockProduction {
 export interface IEth1Provider {
   deployBlock: number;
   getBlockNumber(): Promise<number>;
-  getBlock(blockNumber: number): Promise<IEth1BlockHeader>;
+  getBlock(blockNumber: number): Promise<IEth1Block>;
   getDepositEvents(fromBlock: number, toBlock?: number): Promise<IDepositEvent[]>;
   validateContract(): Promise<void>;
 }
 
 export interface IEth1Streamer {
   getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents>;
-  getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[IDepositEvent[], IEth1BlockHeader]>;
+  getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[IDepositEvent[], IEth1Block]>;
 }

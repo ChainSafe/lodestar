@@ -18,17 +18,17 @@ export const DepositEventGenerator = (ssz: IBeaconSSZTypes): ContainerType<IDepo
     },
   });
 
-export interface IEth1BlockHeader {
-  blockHash: Bytes32;
-  blockNumber: Number64;
+export interface IEth1Block {
+  blockHash: Bytes32; // Use blockHash to be consistent with the Eth1Data type
+  blockNumber: Number64; // Use blockNumber to be consistent with the IEth1DataDeposit type
   timestamp: Number64;
 }
 
-export const Eth1BlockHeaderGenerator = (ssz: IBeaconSSZTypes): ContainerType<IEth1BlockHeader> =>
+export const Eth1BlockGenerator = (ssz: IBeaconSSZTypes): ContainerType<IEth1Block> =>
   new ContainerType({
     fields: {
-      hash: ssz.Bytes32,
-      number: ssz.Number64,
+      blockHash: ssz.Bytes32,
+      blockNumber: ssz.Number64,
       timestamp: ssz.Number64,
     },
   });

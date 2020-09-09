@@ -11,7 +11,7 @@ import {
   BlockRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockHeaderRepository,
+  Eth1BlockRepository,
   Eth1DataDepositRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
@@ -39,7 +39,7 @@ export class StubbedBeaconDb extends BeaconDb {
   public depositLog: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
 
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
-  public eth1BlockHeader: SinonStubbedInstance<Eth1BlockHeaderRepository> & Eth1BlockHeaderRepository;
+  public eth1Block: SinonStubbedInstance<Eth1BlockRepository> & Eth1BlockRepository;
   public eth1DataDeposit: SinonStubbedInstance<Eth1DataDepositRepository> & Eth1DataDepositRepository;
 
   public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
@@ -65,7 +65,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositLog = sinon.createStubInstance(DepositEventRepository) as any;
 
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
-    this.eth1BlockHeader = sinon.createStubInstance(Eth1BlockHeaderRepository) as any;
+    this.eth1Block = sinon.createStubInstance(Eth1BlockRepository) as any;
     this.eth1DataDeposit = sinon.createStubInstance(Eth1DataDepositRepository) as any;
     this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
     this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;

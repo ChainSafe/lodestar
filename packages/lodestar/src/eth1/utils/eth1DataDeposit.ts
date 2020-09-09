@@ -2,7 +2,7 @@ import {Root} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {groupDepositEventsByBlock} from "./groupDepositEventsByBlock";
-import {IEth1DataDeposit, IEth1BlockHeader} from "../types";
+import {IEth1DataDeposit, IEth1Block} from "../types";
 
 /**
  * Extract partial eth1 data (depositRoot, depositCount) from downloaded deposits
@@ -90,10 +90,10 @@ export function mapEth1DataDepositToBlockRange(
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
  */
 export async function appendEth1DataDeposit(
-  blocks: IEth1BlockHeader[],
+  blocks: IEth1Block[],
   eth1DataDepositDescendingStream: AsyncIterable<IEth1DataDeposit>,
   lastProcessedDepositBlockNumber?: number
-): Promise<(IEth1BlockHeader & IEth1DataDeposit)[]> {
+): Promise<(IEth1Block & IEth1DataDeposit)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber) {
     blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);

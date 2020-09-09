@@ -3,7 +3,7 @@ import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
-import {IEth1DataDeposit, IEth1BlockHeader} from "../../../../src/eth1";
+import {IEth1DataDeposit, IEth1Block} from "../../../../src/eth1";
 import {pickEth1Vote, getEth1VotesToConsider, votingPeriodStartTime} from "../../../../src/eth1/utils/eth1Vote";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -90,11 +90,11 @@ describe("eth1 / util / eth1Vote", function () {
     const testCases: (() => {
       id: string;
       state: TreeBacked<BeaconState>;
-      eth1Blocks: (IEth1BlockHeader & IEth1DataDeposit)[];
+      eth1Blocks: (IEth1Block & IEth1DataDeposit)[];
       expectedVotesToConsider: Eth1Data[];
     })[] = [
       () => {
-        const state = generateState({eth1Data: getEth1DataBlock({depositCount: 0})});
+        const state = generateState({eth1Data: generateEth1Vote(0)});
         const timestampInRange = getTimestampInRage(config, state);
         const vote1 = getEth1DataBlock({depositCount: 1, timestamp: 0});
         const vote2 = getEth1DataBlock({depositCount: 1, timestamp: timestampInRange});
@@ -107,7 +107,7 @@ describe("eth1 / util / eth1Vote", function () {
         };
       },
       () => {
-        const state = generateState({eth1Data: getEth1DataBlock({depositCount: 11})});
+        const state = generateState({eth1Data: generateEth1Vote(11)});
         const timestampInRange = getTimestampInRage(config, state);
         const vote1 = getEth1DataBlock({depositCount: 10, timestamp: timestampInRange});
         const vote2 = getEth1DataBlock({depositCount: 12, timestamp: timestampInRange});
@@ -134,9 +134,7 @@ describe("eth1 / util / eth1Vote", function () {
  * Util: Fill partial eth1DataBlock with mock data
  * @param eth1DataBlock
  */
-function getEth1DataBlock(
-  eth1DataBlock: Partial<IEth1BlockHeader & IEth1DataDeposit>
-): IEth1BlockHeader & IEth1DataDeposit {
+function getEth1DataBlock(eth1DataBlock: Partial<IEth1Block & IEth1DataDeposit>): IEth1Block & IEth1DataDeposit {
   return {
     blockHash: Buffer.alloc(32),
     blockNumber: 0,

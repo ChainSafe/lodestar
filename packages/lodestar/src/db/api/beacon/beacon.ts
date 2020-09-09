@@ -17,7 +17,7 @@ import {
   VoluntaryExitRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockHeaderRepository,
+  Eth1BlockRepository,
   Eth1DataDepositRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
@@ -41,7 +41,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
 
   public depositLog: DepositEventRepository;
   public depositDataRoot: DepositDataRootRepository;
-  public eth1BlockHeader: Eth1BlockHeaderRepository;
+  public eth1Block: Eth1BlockRepository;
   public eth1DataDeposit: Eth1DataDepositRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
@@ -63,7 +63,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.depositLog = new DepositEventRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
     this.eth1DataDeposit = new Eth1DataDepositRepository(this.config, this.db);
-    this.eth1BlockHeader = new Eth1BlockHeaderRepository(this.config, this.db);
+    this.eth1Block = new Eth1BlockRepository(this.config, this.db);
   }
 
   /**

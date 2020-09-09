@@ -1,13 +1,13 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IEth1BlockHeader, Eth1BlockHeaderGenerator} from "../../../../eth1";
+import {IEth1Block, Eth1BlockGenerator} from "../../../../eth1";
 
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
 
-export class Eth1BlockHeaderRepository extends Repository<number, IEth1BlockHeader> {
+export class Eth1BlockRepository extends Repository<number, IEth1Block> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.eth1Data, Eth1BlockHeaderGenerator(config.types));
+    super(config, db, Bucket.eth1Data, Eth1BlockGenerator(config.types));
   }
 
   public async deleteOld(upToBlockNumber: number): Promise<void> {

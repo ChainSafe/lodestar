@@ -3,12 +3,12 @@ import {BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
 import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
-import {IEth1BlockHeader, IEth1DataDeposit} from "../types";
+import {IEth1Block, IEth1DataDeposit} from "../types";
 
 export function getEth1Vote(
   config: IBeaconConfig,
   state: TreeBacked<BeaconState>,
-  eth1Blocks: (IEth1BlockHeader & IEth1DataDeposit)[]
+  eth1Blocks: (IEth1Block & IEth1DataDeposit)[]
 ): Eth1Data {
   const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
   return pickEth1Vote(config, state, votesToConsider);
@@ -17,7 +17,7 @@ export function getEth1Vote(
 export function getEth1VotesToConsider(
   config: IBeaconConfig,
   state: TreeBacked<BeaconState>,
-  eth1Blocks: (IEth1BlockHeader & IEth1DataDeposit)[]
+  eth1Blocks: (IEth1Block & IEth1DataDeposit)[]
 ): Eth1Data[] {
   const periodStart = votingPeriodStartTime(config, state);
 

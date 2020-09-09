@@ -1,12 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
-import {IEth1BlockHeader} from "./types";
+import {IEth1Block} from "./types";
 
 /**
  * Stores eth1 block headers.
  * To construct a full eth1Data object, use the DepositCache
  */
-export class Eth1BlockHeaderCache {
+export class Eth1BlockCache {
   db: IBeaconDb;
   config: IBeaconConfig;
 
@@ -15,8 +15,8 @@ export class Eth1BlockHeaderCache {
     this.db = db;
   }
 
-  async insertBlockHeaders(blockHeaders: IEth1BlockHeader[]): Promise<void> {
-    await this.db.eth1BlockHeader.batchPut(
+  async insertBlockHeaders(blockHeaders: IEth1Block[]): Promise<void> {
+    await this.db.eth1Block.batchPut(
       blockHeaders.map((blockHeader) => ({
         key: blockHeader.blockNumber,
         value: blockHeader,
@@ -33,15 +33,15 @@ export class Eth1BlockHeaderCache {
    * Eth1 blocks should be pruned regularly at the end of an Eth1 voting period,
    * so there should never be a significant amount of blocks to read
    */
-  getReverseStream(): AsyncIterable<IEth1BlockHeader> {
-    return this.db.eth1BlockHeader.valuesStream({reverse: true});
+  getReverseStream(): AsyncIterable<IEth1Block> {
+    return this.db.eth1Block.valuesStream({reverse: true});
   }
 
   /**
    * Returns the highest blockNumber stored in DB if any
    */
   async getHighestBlockNumber(): Promise<number | null> {
-    const lastestBlockHeader = await this.db.eth1BlockHeader.lastValue();
+    const lastestBlockHeader = await this.db.eth1Block.lastValue();
     return lastestBlockHeader && lastestBlockHeader.blockNumber;
   }
 }

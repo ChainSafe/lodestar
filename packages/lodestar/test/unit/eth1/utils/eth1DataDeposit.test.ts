@@ -4,7 +4,7 @@ import {Root} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {mapValues} from "lodash";
 import {iteratorFromArray} from "../../../utils/interator";
-import {IEth1DataDeposit, IEth1BlockHeader} from "../../../../src/eth1";
+import {IEth1DataDeposit, IEth1Block} from "../../../../src/eth1";
 import {
   getEth1DataDepositFromDeposits,
   mapEth1DataDepositToBlockRange,
@@ -154,7 +154,7 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
     }));
 
     // Consecutive block headers to be filled with eth1Data above
-    const eth1BlockHeaders: IEth1BlockHeader[] = [2, 3, 4, 5, 6, 7, 8].map((blockNumber) => ({
+    const eth1Blocks: IEth1Block[] = [2, 3, 4, 5, 6, 7, 8].map((blockNumber) => ({
       blockHash: new Uint8Array(Array(32).fill(blockNumber)),
       blockNumber,
       timestamp: blockNumber,
@@ -162,7 +162,7 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
 
     const lastProcessedDepositBlockNumber = 11;
 
-    // Result must contain all blocks from eth1BlockHeaders, with backfilled eth1DataDeposit
+    // Result must contain all blocks from eth1Blocks, with backfilled eth1DataDeposit
     const expectedEth1Data = [
       {blockNumber: 2, depositCount: 13},
       {blockNumber: 3, depositCount: 15},
@@ -174,7 +174,7 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
     ];
 
     const eth1Datas = await appendEth1DataDeposit(
-      eth1BlockHeaders,
+      eth1Blocks,
       // Simulate a descending stream reading from DB
       iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr.reverse()),
       lastProcessedDepositBlockNumber
@@ -191,11 +191,11 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
   it("should not throw for empty data", async function () {
     // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
     const eth1DataDepositArr: IEth1DataDeposit[] = [];
-    const eth1BlockHeaders: IEth1BlockHeader[] = [];
+    const eth1Blocks: IEth1Block[] = [];
     const lastProcessedDepositBlockNumber = undefined;
 
     const eth1Datas = await appendEth1DataDeposit(
-      eth1BlockHeaders,
+      eth1Blocks,
       // Simulate a descending stream reading from DB
       iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr),
       lastProcessedDepositBlockNumber
