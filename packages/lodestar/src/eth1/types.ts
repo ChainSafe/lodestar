@@ -1,6 +1,7 @@
-import {Eth1Data} from "@chainsafe/lodestar-types";
+import {Bytes32, Number64} from "@chainsafe/lodestar-types";
 
-export interface IEth1DataWithBlock extends Eth1Data {
-  blockNumber: number;
-  timestamp: number;
+export interface IEth1Block {
+  hash: Bytes32;
+  number: Number64;
+  timestamp: Number64;
 }
