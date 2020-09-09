@@ -88,8 +88,6 @@ describe("post block process stream", function () {
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
     // @ts-ignore
-    expect(eventBusStub.emit.withArgs("checkpoint").calledOnce).to.be.true;
-    // @ts-ignore
     expect(dbStub.processBlockOperations.calledOnce).to.be.true;
     expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;
   });
@@ -117,8 +115,6 @@ describe("post block process stream", function () {
       postProcess(config, logger, dbStub, forkChoiceStub, metricsStub, eventBusStub, attestationProcessorStub)
     );
     expect(slotMetricsStub.set.withArgs(0).calledOnce).to.be.true;
-    // @ts-ignore
-    expect(eventBusStub.emit.withArgs("checkpoint").calledOnce).to.be.true;
     // @ts-ignore
     expect(dbStub.processBlockOperations.calledOnce).to.be.true;
     expect(attestationProcessorStub.receiveBlock.calledOnce).to.be.true;

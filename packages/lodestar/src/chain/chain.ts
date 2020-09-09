@@ -30,7 +30,7 @@ import {GenesisBuilder} from "./genesis/genesis";
 import {ArrayDagLMDGHOST, ILMDGHOST} from "./forkChoice";
 import {ChainEventEmitter} from "./emitter";
 
-import {IAttestationProcessor, IBeaconChain} from "./interface";
+import {IAttestationProcessor, IBeaconChain, BlockError} from "./interface";
 import {IChainOptions} from "./options";
 import {AttestationProcessor} from "./attestation";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -47,12 +47,6 @@ export interface IBeaconChainModules {
   logger: ILogger;
   metrics: IBeaconMetrics;
   forkChoice?: ILMDGHOST;
-}
-
-export interface IBlockProcessJob {
-  signedBlock: SignedBeaconBlock;
-  trusted: boolean;
-  reprocess: boolean;
 }
 
 export class BeaconChain implements IBeaconChain {
@@ -200,6 +194,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.on("forkVersion", this.handleForkVersionChanged);
     this.emitter.on("clock:epoch", this.onClockEpoch);
     this.emitter.on("checkpoint", this.onCheckpoint);
+    this.emitter.on("error:block", this.onErrorBlock);
     await this.restoreHeadState(state, epochCtx);
   }
 
@@ -210,6 +205,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.removeListener("forkVersion", this.handleForkVersionChanged);
     this.emitter.removeListener("clock:epoch", this.onClockEpoch);
     this.emitter.removeListener("checkpoint", this.onCheckpoint);
+    this.emitter.removeListener("error:block", this.onErrorBlock);
   }
 
   public get currentForkDigest(): ForkDigest {
@@ -395,11 +391,23 @@ export class BeaconChain implements IBeaconChain {
     return state;
   }
 
-  private onCheckpoint = (): void => {
+  private onCheckpoint = async (cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> => {
     this.db.stateCache.prune();
+    await this.db.checkpointStateCache.add(cp, stateContext);
   };
 
   private onClockEpoch = (): void => {
     this.forkChoice.onTick();
+  };
+
+  private onErrorBlock = async (err: BlockError): Promise<void> => {
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    // store block root in db and terminate
+    await this.db.badBlock.put(blockRoot);
+    this.logger.warn("Found bad block", {
+      blockRoot: toHexString(blockRoot),
+      slot: err.job.signedBlock.message.slot,
+      error: err.message as string,
+    });
   };
 }

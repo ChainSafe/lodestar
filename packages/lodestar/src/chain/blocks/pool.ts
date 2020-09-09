@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 
-import {IBlockProcessJob} from "../chain";
+import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {ILMDGHOST} from "../forkChoice";
 

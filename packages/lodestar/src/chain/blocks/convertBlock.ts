@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBlockProcessJob} from "../chain";
+import {IBlockProcessJob} from "../interface";
 
 /**
  * Convert incoming blocks to TreeBacked backing
