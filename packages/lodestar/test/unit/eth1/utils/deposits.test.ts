@@ -4,7 +4,7 @@ import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {getDepositsWithProofs} from "../../../../src/eth1/utils/deposits";
-import {IDepositLog} from "../../../../src/eth1/types";
+import {IDepositEvent} from "../../../../src/eth1/types";
 import {generateDepositData} from "../../../utils/deposit";
 
 describe("eth1 / util / deposits", function () {
@@ -18,7 +18,7 @@ describe("eth1 / util / deposits", function () {
   it("return deposits with valid proofs", async function () {
     const depositEvents = Array.from(
       {length: 2},
-      (_, index): IDepositLog => ({
+      (_, index): IDepositEvent => ({
         depositData: generateDepositData(),
         blockNumber: index,
         index,

@@ -9,7 +9,7 @@ import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {
-  IDepositLog,
+  IDepositEvent,
   IEth1StreamParams,
   IEth1Provider,
   getDepositsAndBlockStreamForGenesis,
@@ -116,7 +116,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private applyDeposits(depositEvents: IDepositLog[]): void {
+  private applyDeposits(depositEvents: IDepositEvent[]): void {
     const newDeposits = depositEvents
       .filter((depositLog) => !this.depositCache.has(depositLog.index))
       .map((depositLog) => {

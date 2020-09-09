@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {assertConsecutiveDeposits} from "../../../../src/eth1/utils/eth1DepositLog";
+import {assertConsecutiveDeposits} from "../../../../src/eth1/utils/eth1DepositEvent";
 
 describe("eth1 / util / assertConsecutiveDeposits", function () {
   const testCases: {

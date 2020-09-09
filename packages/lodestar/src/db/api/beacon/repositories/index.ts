@@ -12,6 +12,6 @@ export * from "./proposerSlashing";
 export * from "./voluntaryExit";
 
 export * from "./depositDataRoot";
-export * from "./depositLog";
-export * from "./eth1BlockHeader";
+export * from "./depositEvent";
+export * from "./eth1Block";
 export * from "./eth1DataDeposit";

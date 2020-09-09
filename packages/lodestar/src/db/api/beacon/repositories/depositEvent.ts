@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDepositLog, DepositLogGenerator} from "../../../../eth1";
+import {IDepositEvent, DepositEventGenerator} from "../../../../eth1";
 
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
@@ -12,9 +12,9 @@ import {Repository} from "./abstract";
  * Added via gossip or api
  * Removed when included on chain or old
  */
-export class DepositLogRepository extends Repository<number, IDepositLog> {
+export class DepositEventRepository extends Repository<number, IDepositEvent> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositData, DepositLogGenerator(config.types));
+    super(config, db, Bucket.depositData, DepositEventGenerator(config.types));
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
@@ -25,7 +25,7 @@ export class DepositLogRepository extends Repository<number, IDepositLog> {
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
   }
 
-  public async getRange(fromIndex: number, toIndex: number): Promise<IDepositLog[]> {
+  public async getRange(fromIndex: number, toIndex: number): Promise<IDepositEvent[]> {
     // ### TODO: Range is inclusive or exclusive?
     const depositDatas = await this.values({gt: fromIndex, lt: toIndex});
 

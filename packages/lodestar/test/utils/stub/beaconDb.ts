@@ -9,7 +9,7 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositLogRepository,
+  DepositEventRepository,
   DepositDataRootRepository,
   Eth1BlockHeaderRepository,
   Eth1DataDepositRepository,
@@ -36,7 +36,7 @@ export class StubbedBeaconDb extends BeaconDb {
   public voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
   public proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
   public attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
-  public depositLog: SinonStubbedInstance<DepositLogRepository> & DepositLogRepository;
+  public depositLog: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
 
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   public eth1BlockHeader: SinonStubbedInstance<Eth1BlockHeaderRepository> & Eth1BlockHeaderRepository;
@@ -62,7 +62,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.voluntaryExit = sinon.createStubInstance(VoluntaryExitRepository) as any;
     this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as any;
     this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as any;
-    this.depositLog = sinon.createStubInstance(DepositLogRepository) as any;
+    this.depositLog = sinon.createStubInstance(DepositEventRepository) as any;
 
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1BlockHeader = sinon.createStubInstance(Eth1BlockHeaderRepository) as any;

@@ -10,7 +10,7 @@ import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {
   AttesterSlashingRepository,
-  DepositLogRepository,
+  DepositEventRepository,
   ProposerSlashingRepository,
   VoluntaryExitRepository,
   AttestationRepository,
@@ -29,7 +29,7 @@ describe("beacon db - post block processing", function () {
       config,
       controller: sandbox.createStubInstance(LevelDbController),
     }) as unknown) as StubbedBeaconDb;
-    dbStub.depositLog = sandbox.createStubInstance(DepositLogRepository) as any;
+    dbStub.depositLog = sandbox.createStubInstance(DepositEventRepository) as any;
     dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as any;
     dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as any;
     dbStub.attesterSlashing = sandbox.createStubInstance(AttesterSlashingRepository) as any;

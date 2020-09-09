@@ -14,7 +14,7 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  DepositLogRepository,
+  DepositEventRepository,
   DepositDataRootRepository,
   Eth1BlockHeaderRepository,
   Eth1DataDepositRepository,
@@ -56,7 +56,7 @@ export interface IBeaconDb {
   attesterSlashing: AttesterSlashingRepository;
 
   // eth1 processing: all deposit data roots and merkle tree
-  depositLog: DepositLogRepository;
+  depositLog: DepositEventRepository;
   depositDataRoot: DepositDataRootRepository;
   eth1DataDeposit: Eth1DataDepositRepository;
   eth1BlockHeader: Eth1BlockHeaderRepository;

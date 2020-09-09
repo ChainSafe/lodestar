@@ -9,7 +9,7 @@ import {isValidAddress} from "../util/address";
 import {RetryProvider} from "./utils/retryProvider";
 import {IEth1Options} from "./options";
 import {depositContract} from "./depositContract";
-import {IDepositLog, IEth1BlockHeader} from "./types";
+import {IDepositEvent, IEth1BlockHeader} from "./types";
 
 const ETH1_BLOCK_RETRY = 3;
 
@@ -54,7 +54,7 @@ export class Eth1Provider {
     };
   }
 
-  async getDepositEvents(fromBlock: number, toBlock?: number): Promise<IDepositLog[]> {
+  async getDepositEvents(fromBlock: number, toBlock?: number): Promise<IDepositEvent[]> {
     const filter = this.contract.filters.DepositEvent();
     const logs = await this.contract.queryFilter(filter, fromBlock, toBlock || fromBlock);
     return logs.map((log) => this.parseDepositEvent(log));
@@ -63,7 +63,7 @@ export class Eth1Provider {
   /**
    * Parse DepositEvent log
    */
-  private parseDepositEvent(log: ethers.Event): IDepositLog {
+  private parseDepositEvent(log: ethers.Event): IDepositEvent {
     const values = log.args;
     if (!values) throw Error(`DepositEvent ${log.transactionHash} has no values`);
     return {

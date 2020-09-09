@@ -143,7 +143,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    */
   private async updateDepositCache(remoteFollowBlock: number): Promise<void> {
     const lastCachedBlock =
-      this.lastProcessedDepositBlockNumber || (await this.depositsCache.geHighestDepositLogBlockNumber());
+      this.lastProcessedDepositBlockNumber || (await this.depositsCache.geHighestDepositEventBlockNumber());
     const fromBlock = this.getFromBlockToFetch(lastCachedBlock);
     const toBlock = remoteFollowBlock;
 

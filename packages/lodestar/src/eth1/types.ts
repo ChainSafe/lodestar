@@ -1,7 +1,7 @@
 import {Bytes32, Number64, Root, DepositData, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 
-export interface IDepositLog {
+export interface IDepositEvent {
   depositData: DepositData;
   /// The block number of the log that included this `DepositData`.
   blockNumber: Number64;
@@ -9,7 +9,7 @@ export interface IDepositLog {
   index: Number64;
 }
 
-export const DepositLogGenerator = (ssz: IBeaconSSZTypes): ContainerType<IDepositLog> =>
+export const DepositEventGenerator = (ssz: IBeaconSSZTypes): ContainerType<IDepositEvent> =>
   new ContainerType({
     fields: {
       depositData: ssz.DepositData,

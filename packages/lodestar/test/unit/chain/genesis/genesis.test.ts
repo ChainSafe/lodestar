@@ -8,7 +8,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
-import {IDepositLog, IEth1Provider, IEth1BlockHeader} from "../../../../src/eth1";
+import {IDepositEvent, IEth1Provider, IEth1BlockHeader} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {ErrorAborted} from "../../../../src/util/errors";
 
@@ -31,14 +31,18 @@ describe("genesis builder", function () {
     }
   });
 
-  function generateGenesisBuilderMockData(): {events: IDepositLog[]; keypairs: Keypair[]; blocks: IEth1BlockHeader[]} {
-    const events: IDepositLog[] = [];
+  function generateGenesisBuilderMockData(): {
+    events: IDepositEvent[];
+    keypairs: Keypair[];
+    blocks: IEth1BlockHeader[];
+  } {
+    const events: IDepositEvent[] = [];
     const keypairs: Keypair[] = [];
     const blocks: IEth1BlockHeader[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
       const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const event: IDepositLog = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
+      const event: IDepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
       keypairs.push(keypair);
       events.push(event);
       // All blocks satisfy MIN_GENESIS_TIME, so genesis will happen when the min validator count is reached

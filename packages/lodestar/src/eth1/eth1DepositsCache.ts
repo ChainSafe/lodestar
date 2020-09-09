@@ -2,8 +2,8 @@ import {Deposit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
 import {getEth1DataDepositFromDeposits, appendEth1DataDeposit} from "./utils/eth1DataDeposit";
-import {IEth1DataDeposit, IDepositLog, IEth1BlockHeader} from "./types";
-import {assertConsecutiveDeposits} from "./utils/eth1DepositLog";
+import {IEth1DataDeposit, IDepositEvent, IEth1Block} from "./types";
+import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
 
 export class Eth1DepositsCache {
@@ -47,7 +47,7 @@ export class Eth1DepositsCache {
    * This function enforces that `logs` are imported one-by-one with no gaps between
    * `log.index`, starting at `log.index == 0`.
    */
-  async insertLogs(depositEvents: IDepositLog[]): Promise<void> {
+  async insertLogs(depositEvents: IDepositEvent[]): Promise<void> {
     const lastLog = await this.db.depositLog.lastValue();
     const firstEvent = depositEvents[0];
 
@@ -115,8 +115,8 @@ export class Eth1DepositsCache {
   /**
    * Returns the highest blockNumber stored in DB if any
    */
-  async geHighestDepositLogBlockNumber(): Promise<number | null> {
-    const latestDepositLog = await this.db.depositLog.lastValue();
-    return latestDepositLog && latestDepositLog.blockNumber;
+  async geHighestDepositEventBlockNumber(): Promise<number | null> {
+    const latestDepositEvent = await this.db.depositLog.lastValue();
+    return latestDepositEvent && latestDepositEvent.blockNumber;
   }
 }
