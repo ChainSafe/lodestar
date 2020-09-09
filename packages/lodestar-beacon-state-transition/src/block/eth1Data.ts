@@ -7,7 +7,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Update the `state.eth1_data_votes` based upon the `eth1_data` provided.
- * Spec v0.12.1
  */
 export function processEth1Data(config: IBeaconConfig, state: BeaconState, body: BeaconBlockBody): void {
   const newEth1Data = getNewEth1Data(config, state, body.eth1Data);
@@ -21,7 +20,6 @@ export function processEth1Data(config: IBeaconConfig, state: BeaconState, body:
 /**
  * Returns `newEth1Data` if adding the given `eth1Data` to `state.eth1DataVotes` would
  * result in a change to `state.eth1Data`.
- * Spec v0.12.1
  */
 export function getNewEth1Data(config: IBeaconConfig, state: BeaconState, eth1Data: Eth1Data): Eth1Data | null {
   const numVotes = Array.from(state.eth1DataVotes).filter((vote) => config.types.Eth1Data.equals(vote, eth1Data))
