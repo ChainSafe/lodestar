@@ -11,7 +11,8 @@ import {
   BlockRepository,
   DepositLogRepository,
   DepositDataRootRepository,
-  Eth1DataRepository,
+  Eth1BlockHeaderRepository,
+  Eth1DataDepositRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -38,7 +39,8 @@ export class StubbedBeaconDb extends BeaconDb {
   public depositLog: SinonStubbedInstance<DepositLogRepository> & DepositLogRepository;
 
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
-  public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
+  public eth1BlockHeader: SinonStubbedInstance<Eth1BlockHeaderRepository> & Eth1BlockHeaderRepository;
+  public eth1DataDeposit: SinonStubbedInstance<Eth1DataDepositRepository> & Eth1DataDepositRepository;
 
   public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
@@ -63,7 +65,8 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositLog = sinon.createStubInstance(DepositLogRepository) as any;
 
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
-    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
+    this.eth1BlockHeader = sinon.createStubInstance(Eth1BlockHeaderRepository) as any;
+    this.eth1DataDeposit = sinon.createStubInstance(Eth1DataDepositRepository) as any;
     this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
     this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;

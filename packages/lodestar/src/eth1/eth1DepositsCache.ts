@@ -2,9 +2,9 @@ import {Deposit} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
 import {getEth1DataDepositFromDeposits, appendEth1DataDeposit} from "./utils/eth1DataDeposit";
-import {getTreeAtIndex} from "../util/tree";
 import {IEth1DataDeposit, IDepositLog, IEth1BlockHeader} from "./types";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositLog";
+import {getDepositsWithProofs} from "./utils/deposits";
 
 export class Eth1DepositsCache {
   db: IBeaconDb;
@@ -35,18 +35,11 @@ export class Eth1DepositsCache {
       throw Error("Deposit count requests more deposits than should exist");
     }
 
-    // Fetched a tree at this particular depositCount to compute correct proofs
-    const depositRootTree = getTreeAtIndex(await this.db.depositDataRoot.getDepositRootTree(), depositCount);
-    const tree = depositRootTree.tree();
-
     // ### TODO: Range is inclusive or exclusive?
     // Must assert that `toIndex <= logs.length`
     const depositLogs = await this.db.depositLog.getRange(fromIndex, toIndex);
-
-    return depositLogs.map((log) => ({
-      proof: tree.getSingleProof(depositRootTree.gindexOfProperty(log.index)),
-      data: log.depositData,
-    }));
+    const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
+    return getDepositsWithProofs(depositLogs, depositRootTree, depositCount);
   }
 
   /**

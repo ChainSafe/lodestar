@@ -128,8 +128,8 @@ describe("block process stream", function () {
       .resolves(parentBlock);
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
-    forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 2));
-    dbStub.depositData.values.resolves([]);
+    forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
+    dbStub.eth1DataDeposit.values.resolves([]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     dbStub.block.get.resolves(receivedJob.signedBlock);
     const result = await pipe(
