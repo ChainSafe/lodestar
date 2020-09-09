@@ -64,7 +64,9 @@ describe("produce block", function () {
     dbStub.attesterSlashing.values.resolves([]);
     dbStub.voluntaryExit.values.resolves([]);
     dbStub.depositData.values.resolves([]);
-    dbStub.eth1Data.values.resolves([{depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)}]);
+    dbStub.eth1Data.entries.resolves([
+      {key: 15000000, value: {depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)}},
+    ]);
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
