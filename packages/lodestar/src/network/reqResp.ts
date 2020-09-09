@@ -91,6 +91,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private logger: ILogger;
   private responseListener: ResponseEventListener;
   private peerMetadata: IPeerMetadataStore;
+  private controller: AbortController | undefined;
 
   public constructor(opts: INetworkOptions, {config, libp2p, peerMetadata, logger}: IReqRespModules) {
     super();
@@ -101,6 +102,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
+    this.controller = new AbortController();
     Object.values(Method).forEach((method) => {
       Object.values(ReqRespEncoding).forEach((encoding) => {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
@@ -124,6 +126,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
       });
     });
+    this.controller?.abort();
   }
 
   public sendResponse(id: RequestId, err: RpcError | null, response?: ResponseBody): void {
@@ -218,6 +221,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IResponseChunk> {
     const getResponse = this.getResponse;
     const config = this.config;
+    const signal = this.controller?.signal;
     return (source) => {
       return (async function* () {
         for await (const request of source) {
@@ -228,7 +232,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               body: encodeP2pErrorMessage(config, "Invalid Request"),
             };
           } else {
-            yield* getResponse(peerId, method, encoding, request.body);
+            yield* getResponse(peerId, method, encoding, request.body, signal);
           }
           return;
         }
@@ -240,7 +244,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId,
     method: Method,
     encoding: ReqRespEncoding,
-    request?: RequestBody
+    request?: RequestBody,
+    signal?: AbortSignal
   ): AsyncIterable<IResponseChunk> => {
     const requestId = randomRequestId();
     this.logger.verbose(`receive ${method} request from ${peerId.toB58String()}`, {requestId, encoding});
@@ -252,6 +257,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
+      signal?.addEventListener("abort", () => clearTimeout(responseTimer), {once: true});
       this.emit("request", peerId, method, requestId, request!);
     });
 
