@@ -15,3 +15,4 @@ export * from "./voluntaryExit";
 export * from "./depositDataRoot";
 export * from "./eth1Data";
 export * from "./depositEvent";
+export * from "./eth1DataDeposit";

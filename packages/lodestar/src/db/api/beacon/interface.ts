@@ -15,6 +15,7 @@ import {
   DepositDataRootRepository,
   Eth1DataRepository,
   DepositEventRepository,
+  Eth1DataDepositRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -62,6 +63,7 @@ export interface IBeaconDb {
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
   depositEvent: DepositEventRepository;
+  eth1DataDeposit: Eth1DataDepositRepository;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

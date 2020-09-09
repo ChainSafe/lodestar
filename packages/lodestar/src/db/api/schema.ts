@@ -36,6 +36,7 @@ export enum Bucket {
   proposedAttestations,
   // added latter
   depositEvent,
+  eth1DataDeposit,
 }
 
 export enum Key {

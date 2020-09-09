@@ -16,6 +16,7 @@ import {
   DepositDataRootRepository,
   Eth1DataRepository,
   DepositEventRepository,
+  Eth1DataDepositRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -43,6 +44,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public depositDataRoot: DepositDataRootRepository;
   public eth1Data: Eth1DataRepository;
   public depositEvent: DepositEventRepository;
+  public eth1DataDeposit: Eth1DataDepositRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -62,6 +64,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
     this.depositEvent = new DepositEventRepository(this.config, this.db);
+    this.eth1DataDeposit = new Eth1DataDepositRepository(this.config, this.db);
   }
 
   /**
