@@ -153,7 +153,7 @@ function getEth1DataBlock(eth1DataBlock: Partial<IEth1DataWithTimestamp>): IEth1
  * @param config
  * @param state
  */
-function getTimestampInRage(config: IBeaconConfig, state: TreeBacked<BeaconState>): number {
+function getTimestampInRange(config: IBeaconConfig, state: TreeBacked<BeaconState>): number {
   const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
   const periodStart = votingPeriodStartTime(config, state);
   return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
