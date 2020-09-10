@@ -16,9 +16,6 @@ interface IEthJsonRpcTypes {
 
 /**
  * Fetches a range of blocks by blockNumber, inclusive.
- * @param url
- * @param fromBlockNumber
- * @param toBlockNumber
  */
 export async function fetchBlockRange(
   url: string,
@@ -34,12 +31,7 @@ export async function fetchBlockRange(
 }
 
 /**
- * Fetches an array of block numbers.
- * Roundtrip times with a good connection and remote provider
- * - 100 blocks: 1481.319ms
- * - 1000 blocks: 6029.288ms
- * - 10000 blocks: 62031.145ms
- * @param blockNumbers
+ * Fetches an arbitrary array of block numbers in batch
  */
 async function fetchBlocksByNumber(url: string, blockNumbers: number[], signal?: AbortSignal): Promise<IEth1Block[]> {
   const method = "eth_getBlockByNumber";

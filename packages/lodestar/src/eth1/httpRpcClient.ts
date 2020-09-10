@@ -20,8 +20,6 @@ const maxStringLengthToPrint = 500;
 
 /**
  * Perform RPC request
- * @param url
- * @param rpcPayload
  */
 export async function fetchRpc<R>(url: string, rpcPayload: IRpcPayload, signal?: AbortSignal): Promise<R> {
   const data: IRpcResponse<R> = await fetchJson(
@@ -40,8 +38,6 @@ export async function fetchRpc<R>(url: string, rpcPayload: IRpcPayload, signal?:
 /**
  * Perform RPC batched request
  * Type-wise assumes all requests results have the same type
- * @param url
- * @param rpcPayloadArr
  */
 export async function fetchRpcBatch<R>(url: string, rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]> {
   const dataArr: IRpcResponse<R>[] = await fetchJson(
@@ -59,8 +55,6 @@ export async function fetchRpcBatch<R>(url: string, rpcPayloadArr: IRpcPayload[]
 
 /**
  * Fetches JSON and throws detailed errors in case the HTTP request is not ok
- * @param url
- * @param json
  */
 async function fetchJson<R, T = unknown>(url: string, json: T, signal?: AbortSignal): Promise<R> {
   const res = await fetch(url, {
@@ -82,7 +76,6 @@ async function fetchJson<R, T = unknown>(url: string, json: T, signal?: AbortSig
  * Util: Parse JSON but display the original source string in case of error
  * Helps debug instances where an API returns a plain text instead of JSON,
  * such as getting an HTML page due to a wrong API URL
- * @param json
  */
 function parseJson<T>(json: string): T {
   try {
