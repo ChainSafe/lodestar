@@ -18,9 +18,15 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeForkDigest,
+  EpochContext,
+  ZERO_HASH,
+  GENESIS_EPOCH,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -35,10 +41,10 @@ import {IChainOptions} from "./options";
 import {AttestationProcessor} from "./attestation";
 import {IBeaconClock, LocalClock} from "./clock";
 import {BlockProcessor} from "./blocks";
-import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {notNullish} from "../util/notNullish";
+import {sortBlocks} from "../sync/utils";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -285,7 +291,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /**
-   * Restore state cache and forkchoice from last finalized state.
+   * Disregard blocks in block database, initial sync will replace that.
+   * Initialize forkchoice to make last finalized block as head.
+   * Initialize state cache with last finalized state.
    */
   private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>, epochCtx: EpochContext): Promise<void> {
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
@@ -299,18 +307,20 @@ export class BeaconChain implements IBeaconChain {
     // there might be blocks in the archive we need to reprocess
     const finalizedBlocks = await this.db.blockArchive.values({gt: lastKnownState.slot});
     // the block respective to finalized epoch still in block db
-    const unfinalizedBlocks = await this.db.block.values();
-    if (!unfinalizedBlocks || unfinalizedBlocks.length === 0) {
+    const lastUnfinalizedBlock = await this.db.block.lastValue();
+    if (!lastUnfinalizedBlock || finalizedBlocks.length === 0) {
+      // genesis or nothing to reprocess
       await this.initForkChoice(lastKnownState);
       return;
     }
-    const sortedBlocks = finalizedBlocks.concat(sortBlocks(unfinalizedBlocks));
+    // In rare case (not a clean stop) we have finalized blocks to reprocesss
+    const sortedBlocks = sortBlocks(finalizedBlocks);
     const firstBlock = sortedBlocks[0];
     const lastBlock = sortedBlocks[sortedBlocks.length - 1];
     let firstSlot = firstBlock.message.slot;
     let lastSlot = lastBlock.message.slot;
     this.logger.info(
-      `Found ${sortedBlocks.length} nonfinalized blocks in database from slot ` + `${firstSlot} to ${lastSlot}`
+      `Found ${sortedBlocks.length} finalized blocks in database from slot ` + `${firstSlot} to ${lastSlot}`
     );
     await this.initForkChoice(lastKnownState);
     if (!sortedBlocks.length) {
@@ -346,13 +356,37 @@ export class BeaconChain implements IBeaconChain {
       };
       justifiedCheckpoint = blockCheckpoint;
       finalizedCheckpoint = blockCheckpoint;
-    } else {
-      const blockHeader = this.config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-      blockHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
-      blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
-      justifiedCheckpoint = anchorState.currentJustifiedCheckpoint;
-      finalizedCheckpoint = anchorState.finalizedCheckpoint;
+      this.forkChoice.addBlock({
+        slot: anchorState.slot,
+        blockRoot,
+        stateRoot: this.config.types.BeaconState.hashTreeRoot(anchorState),
+        parentRoot: anchorState.latestBlockHeader.parentRoot.valueOf() as Uint8Array,
+        justifiedCheckpoint,
+        finalizedCheckpoint,
+      });
+      return;
     }
+    const blockHeader = this.config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+    blockHeader.stateRoot = this.config.types.BeaconState.hashTreeRoot(anchorState);
+    blockRoot = this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
+    justifiedCheckpoint = anchorState.currentJustifiedCheckpoint;
+    finalizedCheckpoint = anchorState.finalizedCheckpoint;
+    const previousFinalizedBlock = await this.db.blockArchive.getByRoot(anchorState.finalizedCheckpoint.root);
+    assert.true(!!previousFinalizedBlock, "missing previous finalized block");
+    // previous finalized blocks to head parent
+    const blocks = await this.db.blockArchive.values({gt: previousFinalizedBlock?.message.slot, lt: anchorState.slot});
+    [previousFinalizedBlock, ...blocks].forEach((block) => {
+      this.forkChoice.addBlock({
+        slot: block!.message.slot,
+        blockRoot: this.config.types.BeaconBlock.hashTreeRoot(block!.message),
+        stateRoot: block?.message.stateRoot as Uint8Array,
+        parentRoot: block?.message.parentRoot as Uint8Array,
+        // not used
+        justifiedCheckpoint: {root: ZERO_HASH, epoch: GENESIS_EPOCH},
+        finalizedCheckpoint: {root: ZERO_HASH, epoch: GENESIS_EPOCH},
+      });
+    });
+    // head
     this.forkChoice.addBlock({
       slot: anchorState.slot,
       blockRoot,

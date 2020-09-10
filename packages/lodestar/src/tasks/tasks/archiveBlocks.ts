@@ -45,6 +45,12 @@ export class ArchiveBlocksTask implements ITask {
    */
   public async run(): Promise<void> {
     this.logger.profile("Archive Blocks");
+    const lastFinalizedBlock = await this.db.blockArchive.lastValue();
+    if (lastFinalizedBlock && lastFinalizedBlock.message.slot >= this.finalized.slot) {
+      // restore chain
+      this.logger.info(`Block archive slot ${lastFinalizedBlock.message.slot} is ahead of ${this.finalized.slot}`);
+      return;
+    }
     const allBlockEntries = await this.db.block.entries();
     const blockEntries = allBlockEntries.filter(({value}) => value.message.slot <= this.finalized.slot);
     const blocksByRoot = new Map<string, SignedBeaconBlock>(

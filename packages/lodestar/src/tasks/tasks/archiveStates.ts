@@ -44,6 +44,12 @@ export class ArchiveStatesTask implements ITask {
   public async run(): Promise<void> {
     const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
     this.logger.info(`Started archiving states (finalized epoch #${epoch})...`);
+    const lastFinalizedState = await this.db.stateArchive.lastValue();
+    if (lastFinalizedState && lastFinalizedState.slot >= this.finalized.slot) {
+      // restore chain
+      this.logger.info(`State archive slot ${lastFinalizedState.slot} is ahead of ${this.finalized.slot}`);
+      return;
+    }
     this.logger.profile("Archive States");
     // store the state of finalized checkpoint
     const stateCache = await this.db.stateCache.get(this.finalized.stateRoot);
