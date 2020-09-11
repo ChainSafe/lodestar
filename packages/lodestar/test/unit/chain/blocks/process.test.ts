@@ -78,7 +78,7 @@ describe("block process stream", function () {
     forkChoiceStub.getBlockSummaryByBlockRoot
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
-    dbStub.stateCache.get.resolves(generateState() as any);
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.throws();
     const result = await pipe(
       [receivedJob],
@@ -86,7 +86,7 @@ describe("block process stream", function () {
       collect
     );
     expect(result).to.have.length(0);
-    expect(dbStub.badBlock.put.calledOnce).to.be.true;
+    expect(eventBusStub.emit.calledWith("error:block" as any)).to.be.true;
   });
 
   it("successful block process - not new chain head", async function () {
@@ -99,8 +99,8 @@ describe("block process stream", function () {
     forkChoiceStub.getBlockSummaryByBlockRoot
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
-    dbStub.stateCache.get.resolves(generateState() as any);
-    stateTransitionStub.resolves({state: generateState(), epochCtx: new EpochContext(config)});
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
+    stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
@@ -109,7 +109,6 @@ describe("block process stream", function () {
       collect
     );
     expect(result).to.have.length(1);
-    expect(dbStub.badBlock.put.notCalled).to.be.true;
     expect(dbStub.block.put.calledOnce).to.be.true;
     expect(dbStub.stateCache.add.calledOnce).to.be.true;
     expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;
@@ -125,7 +124,7 @@ describe("block process stream", function () {
     forkChoiceStub.getBlockSummaryByBlockRoot
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
-    dbStub.stateCache.get.resolves(generateState() as any);
+    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
     dbStub.depositData.values.resolves([]);
@@ -137,7 +136,6 @@ describe("block process stream", function () {
       collect
     );
     expect(result).to.have.length(1);
-    expect(dbStub.badBlock.put.notCalled).to.be.true;
     expect(dbStub.block.put.calledOnce).to.be.true;
     expect(dbStub.stateCache.add.calledOnce).to.be.true;
     expect(blockPoolStub.onProcessedBlock.calledOnce).to.be.true;

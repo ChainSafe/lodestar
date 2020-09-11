@@ -125,9 +125,11 @@ export class ForkChoice {
     anchorState: BeaconState
   ): ForkChoice {
     const blockHeader = config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-    blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
+    if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
+      blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
+    }
     const protoArray = ProtoArray.initialize({
-      slot: anchorState.slot,
+      slot: anchorState.latestBlockHeader.slot,
       parentRoot: toHexString(blockHeader.parentRoot),
       stateRoot: toHexString(blockHeader.stateRoot),
       blockRoot: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(blockHeader)),
@@ -483,6 +485,16 @@ export class ForkChoice {
    */
   public isDescendantOfFinalized(blockRoot: Root): boolean {
     return this.protoArray.isDescendant(toHexString(this.fcStore.finalizedCheckpoint.root), toHexString(blockRoot));
+  }
+
+  /**
+   * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
+   *
+   * Always returns `false` if either input roots are unknown.
+   * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
+   */
+  public isDescendant(ancestorRoot: Root, descendantRoot: Root): boolean {
+    return this.protoArray.isDescendant(toHexString(ancestorRoot), toHexString(descendantRoot));
   }
 
   public prune(): IBlockSummary[] {

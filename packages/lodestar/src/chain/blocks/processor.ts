@@ -12,18 +12,19 @@ import {processBlock} from "./process";
 import {BlockPool} from "./pool";
 import {postProcess} from "./post";
 import {IService} from "../../node";
-import {IBlockProcessJob} from "../chain";
 import {IBeaconDb} from "../../db/api";
 import {IBeaconMetrics} from "../../metrics";
-import {IAttestationProcessor} from "../interface";
+import {IAttestationProcessor, IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {convertBlock} from "./convertBlock";
+import {StateRegenerator} from "../regen";
 
 export class BlockProcessor implements IService {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
   private readonly forkChoice: ForkChoice;
+  private readonly regen: StateRegenerator;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
   private readonly attestationProcessor: IAttestationProcessor;
@@ -42,6 +43,7 @@ export class BlockProcessor implements IService {
     logger: ILogger,
     db: IBeaconDb,
     forkChoice: ForkChoice,
+    regen: StateRegenerator,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
     attestationProcessor: IAttestationProcessor
@@ -50,6 +52,7 @@ export class BlockProcessor implements IService {
     this.logger = logger;
     this.db = db;
     this.forkChoice = forkChoice;
+    this.regen = regen;
     this.metrics = metrics;
     this.eventBus = eventBus;
     this.attestationProcessor = attestationProcessor;
@@ -70,7 +73,7 @@ export class BlockProcessor implements IService {
       },
       convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
-      processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus),
+      processBlock(this.config, this.logger, this.db, this.forkChoice, this.regen, this.pendingBlocks, this.eventBus),
       postProcess(
         this.config,
         this.logger,

@@ -4,11 +4,9 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 
 export interface IArchiveStatesModules {
   db: IBeaconDb;
@@ -25,37 +23,27 @@ export class ArchiveStatesTask implements ITask {
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
-  private finalized: IBlockSummary;
-  private pruned: IBlockSummary[];
+  private finalized: Checkpoint;
 
-  public constructor(
-    config: IBeaconConfig,
-    modules: IArchiveStatesModules,
-    finalized: IBlockSummary,
-    pruned: IBlockSummary[]
-  ) {
+  public constructor(config: IBeaconConfig, modules: IArchiveStatesModules, finalized: Checkpoint) {
     this.db = modules.db;
     this.logger = modules.logger;
     this.config = config;
     this.finalized = finalized;
-    this.pruned = pruned;
   }
 
   public async run(): Promise<void> {
-    const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
-    this.logger.info(`Started archiving states (finalized epoch #${epoch})...`);
+    this.logger.info(`Started archiving states (finalized epoch #${this.finalized.epoch})...`);
     this.logger.profile("Archive States");
     // store the state of finalized checkpoint
-    const stateCache = await this.db.stateCache.get(this.finalized.stateRoot);
+    const stateCache = await this.db.checkpointStateCache.get(this.finalized);
     if (!stateCache) {
-      throw Error(`No state cache in db for finalized stateRoot ${toHexString(this.finalized.stateRoot)}`);
+      throw Error("No state in cache for finalized checkpoint state");
     }
     const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
-    // delete states before the finalized state
-    const prunedStates = this.pruned.map((summary) => summary.stateRoot);
-    await this.db.stateCache.batchDelete(prunedStates);
-    this.logger.info(`Archiving of finalized states completed (finalized epoch #${epoch})`);
+    // don't delete states before the finalized state, auto-prune will take care of it
+    this.logger.info(`Archiving of finalized states completed (finalized epoch #${this.finalized.epoch})`);
     this.logger.profile("Archive States");
   }
 }

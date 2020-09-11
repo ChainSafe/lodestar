@@ -518,7 +518,7 @@ export class ProtoArray {
 
   /**
    * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
-   * Always returns `false if either input roots are unknown.
+   * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
    */
   isDescendant(ancestorRoot: HexRoot, descendantRoot: HexRoot): boolean {

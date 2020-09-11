@@ -41,10 +41,6 @@ export function postProcess(
         const preJustifiedEpoch = preStateContext.state.currentJustifiedCheckpoint.epoch;
         const currentEpoch = computeEpochAtSlot(config, postStateContext.state.slot);
         if (computeEpochAtSlot(config, preSlot) < currentEpoch) {
-          eventBus.emit("checkpoint", {
-            epoch: currentEpoch,
-            root: block.message.parentRoot,
-          });
           // newly justified epoch
           if (preJustifiedEpoch < postStateContext.state.currentJustifiedCheckpoint.epoch) {
             newJustifiedEpoch(logger, metrics, eventBus, postStateContext.state);
