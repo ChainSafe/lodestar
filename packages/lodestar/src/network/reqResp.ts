@@ -221,7 +221,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IResponseChunk> {
     const getResponse = this.getResponse;
     const config = this.config;
-    const signal = this.controller?.signal;
     return (source) => {
       return (async function* () {
         for await (const request of source) {
@@ -232,7 +231,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
               body: encodeP2pErrorMessage(config, "Invalid Request"),
             };
           } else {
-            yield* getResponse(peerId, method, encoding, request.body, signal);
+            yield* getResponse(peerId, method, encoding, request.body);
           }
           return;
         }
@@ -244,9 +243,9 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId,
     method: Method,
     encoding: ReqRespEncoding,
-    request?: RequestBody,
-    signal?: AbortSignal
+    request?: RequestBody
   ): AsyncIterable<IResponseChunk> => {
+    const signal = this.controller?.signal;
     const requestId = randomRequestId();
     this.logger.verbose(`receive ${method} request from ${peerId.toB58String()}`, {requestId, encoding});
     // eslint-disable-next-line
@@ -321,12 +320,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     body?: RequestBody
   ): AsyncIterable<T> {
     const {libp2p, config, logger} = this;
+    const localControllerSignal = this.controller?.signal;
     return (async function* () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       let conn: {stream: Stream};
       try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT)) as {stream: Stream};
+        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, localControllerSignal)) as {stream: Stream};
       } catch (e) {
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
