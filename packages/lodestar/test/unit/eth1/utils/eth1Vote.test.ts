@@ -99,7 +99,7 @@ describe("eth1 / util / eth1Vote", function () {
     })[] = [
       () => {
         const state = generateState({eth1Data: generateEth1Vote(0)});
-        const timestampInRange = getTimestampInRage(config, state);
+        const timestampInRange = getTimestampInRange(config, state);
         const vote1 = getEth1DataBlock({depositCount: 1, timestamp: 0});
         const vote2 = getEth1DataBlock({depositCount: 1, timestamp: timestampInRange});
         const vote3 = getEth1DataBlock({depositCount: 1, timestamp: Infinity});
@@ -112,7 +112,7 @@ describe("eth1 / util / eth1Vote", function () {
       },
       () => {
         const state = generateState({eth1Data: generateEth1Vote(11)});
-        const timestampInRange = getTimestampInRage(config, state);
+        const timestampInRange = getTimestampInRange(config, state);
         const vote1 = getEth1DataBlock({depositCount: 10, timestamp: timestampInRange});
         const vote2 = getEth1DataBlock({depositCount: 12, timestamp: timestampInRange});
         return {
