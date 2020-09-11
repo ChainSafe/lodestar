@@ -47,7 +47,7 @@ import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
-import {notNullish} from "../util/notNullish";
+import {isNil} from "lodash";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -132,7 +132,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       id,
       err,
       (async function* () {
-        if (notNullish(response)) {
+        if (!isNil(response)) {
           yield response;
         }
       })()
@@ -263,7 +263,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         requestId,
         encoding,
         body:
-          notNullish(body) &&
+          !isNil(body) &&
           (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
             body
           ),
@@ -336,7 +336,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
       yield* pipe(
-        notNullish(body) ? [body] : [null],
+        !isNil(body) ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),
