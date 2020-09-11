@@ -89,7 +89,12 @@ export class BeaconChain implements IBeaconChain {
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
     //head state should always exist
-    const headStateRoot = await this.db.stateCache.get(this.forkChoice.getHead().stateRoot);
+    const head = this.forkChoice.getHead();
+    const headStateRoot =
+      (await this.db.checkpointStateCache.getLatest({
+        root: head.blockRoot,
+        epoch: Infinity,
+      })) || (await this.regen.getState(head.stateRoot));
     if (!headStateRoot) throw Error("headStateRoot does not exist");
     return headStateRoot;
   }
@@ -203,7 +208,6 @@ export class BeaconChain implements IBeaconChain {
     this.emitter.on("forkChoice:justified", this.onForkChoiceJustified);
     this.emitter.on("forkChoice:finalized", this.onForkChoiceFinalized);
     this.emitter.on("error:block", this.onErrorBlock);
-    //await this.restoreHeadState(state, epochCtx);
   }
 
   public async stop(): Promise<void> {
@@ -362,19 +366,23 @@ export class BeaconChain implements IBeaconChain {
       if (this.config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
         blockHeader.stateRoot = anchorState.hashTreeRoot();
       }
-      const blockCheckpoint = {
+      const finalizedCheckpoint = {
         root: this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
         epoch: computeEpochAtSlot(this.config, anchorState.slot),
+      };
+      const justifiedCheckpoint = {
+        root: this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
+        epoch: computeEpochAtSlot(this.config, anchorState.slot) + 1,
       };
       const store = new ForkChoiceStore({
         emitter: this.emitter,
         currentSlot: this.clock.currentSlot,
-        justifiedCheckpoint: blockCheckpoint,
-        finalizedCheckpoint: blockCheckpoint,
+        justifiedCheckpoint,
+        finalizedCheckpoint,
       });
       return {
         forkChoice: ForkChoice.fromCheckpointState(this.config, store, anchorState),
-        checkpoint: blockCheckpoint,
+        checkpoint: finalizedCheckpoint,
       };
     }
   }

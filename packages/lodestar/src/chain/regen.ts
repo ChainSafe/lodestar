@@ -156,6 +156,8 @@ export class StateRegenerator {
         stateRoot,
       });
     }
+    // blocks to replay, ordered highest to lowest
+    // gets reversed when replayed
     const blocksToReplay = [block];
     let stateCtx: ITreeStateContext | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
