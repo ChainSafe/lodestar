@@ -238,8 +238,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   private handleResponses<T extends ResponseBody | ResponseBody[]>(
-    logger: ILogger,
-    config: IBeaconConfig,
     peerId: PeerId,
     method: Method,
     encoding: ReqRespEncoding,
@@ -255,18 +253,20 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       if (requestSingleChunk && responses.length === 0) {
         // allow empty response for beacon blocks by range/root
-        logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
+        this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
           peer: peerId.toB58String(),
         });
         return null;
       }
       const finalResponse = requestSingleChunk ? responses[0] : responses;
-      logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
+      this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
         requestId,
         encoding,
         body:
           notNullish(body) &&
-          (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(body),
+          (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
+            body
+          ),
       });
       return requestOnly ? null : (finalResponse as T);
     };
@@ -308,17 +308,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     try {
       return await pipe(
         this.sendRequestStream(peerId, method, encoding, requestId, body),
-        this.handleResponses<T>(
-          this.logger,
-          this.config,
-          peerId,
-          method,
-          encoding,
-          requestId,
-          requestSingleChunk,
-          requestOnly,
-          body
-        )
+        this.handleResponses<T>(peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
       );
     } catch (e) {
       this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {reason: e.message});
