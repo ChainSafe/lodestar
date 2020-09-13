@@ -53,7 +53,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
-    const autoUpdateIntervalMs = config.params.SECONDS_PER_ETH1_BLOCK / 2;
+    const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
 
     setIntervalAbortableAsync(
       () =>
