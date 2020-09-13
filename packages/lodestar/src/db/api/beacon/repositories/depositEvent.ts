@@ -10,7 +10,7 @@ import {Repository} from "./abstract";
  */
 export class DepositEventRepository extends Repository<number, DepositEvent> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositData, config.types.DepositEvent);
+    super(config, db, Bucket.depositEvent, config.types.DepositEvent);
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
