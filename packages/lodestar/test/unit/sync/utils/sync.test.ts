@@ -15,9 +15,9 @@ import * as blockUtils from "../../../../src/sync/utils/blocks";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
+import all from "it-all";
 import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
 import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {collect} from "../../chain/blocks/utils";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import PeerId from "peer-id";
@@ -155,7 +155,7 @@ describe("sync utils", function () {
           sinon.createStubInstance(ReqResp),
           getPeersStub
         ),
-        collect
+        all
       );
       await timer.tickAsync(30000);
       result = await result;
@@ -174,7 +174,7 @@ describe("sync utils", function () {
           sinon.createStubInstance(ReqResp),
           getPeersStub
         ),
-        collect
+        all
       );
       expect(result.length).to.be.equal(1);
       expect(getBlockRangeStub.calledOnce).to.be.true;

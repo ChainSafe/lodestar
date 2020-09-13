@@ -1,6 +1,7 @@
 import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import all from "it-all";
 
 import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
 import {Bucket, encodeKey} from "../../schema";
@@ -84,11 +85,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   public async values(opts?: IBlockFilterOptions): Promise<SignedBeaconBlock[]> {
-    const result = [] as SignedBeaconBlock[];
-    for await (const value of this.valuesStream(opts)) {
-      result.push(value);
-    }
-    return result;
+    return all(this.valuesStream(opts));
   }
 
   public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {

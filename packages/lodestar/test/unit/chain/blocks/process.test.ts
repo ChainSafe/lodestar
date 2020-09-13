@@ -2,7 +2,7 @@ import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
-import {collect} from "./utils";
+import all from "it-all";
 import {expect} from "chai";
 import {BeaconChain, ChainEventEmitter, IBeaconChain, IBlockProcessJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
@@ -45,7 +45,7 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(0);
     expect(blockPoolStub.addPendingBlock.calledOnce).to.be.true;
@@ -63,7 +63,7 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(0);
   });
@@ -83,7 +83,7 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(0);
     expect(eventBusStub.emit.calledWith("error:block" as any)).to.be.true;
@@ -106,7 +106,7 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(1);
     expect(dbStub.block.put.calledOnce).to.be.true;
@@ -133,7 +133,7 @@ describe("block process stream", function () {
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(1);
     expect(dbStub.block.put.calledOnce).to.be.true;

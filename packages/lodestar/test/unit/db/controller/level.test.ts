@@ -3,6 +3,7 @@ import {assert, expect} from "chai";
 import level from "level";
 // @ts-ignore
 import leveldown from "leveldown";
+import all from "it-all";
 import {LevelDbController} from "../../../../src/db/controller";
 import {promisify} from "es6-promisify";
 import {silentLogger} from "../../../utils/logger";
@@ -101,10 +102,7 @@ describe("LevelDB controller", () => {
       gte: k1,
       lte: k2,
     });
-    const result: any[] = [];
-    for await (const item of resultStream) {
-      result.push(item);
-    }
+    const result = await all(resultStream);
     expect(result.length).to.be.equal(2);
   });
 });
