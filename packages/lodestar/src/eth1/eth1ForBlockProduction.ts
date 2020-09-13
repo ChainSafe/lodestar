@@ -32,7 +32,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   // Internal modules, state
   depositsCache: Eth1DepositsCache;
   eth1Provider: Eth1Provider;
-  lastProcessedDepositBlockNumber?: number;
+  lastProcessedDepositBlockNumber: number | null;
+  MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
+  MAX_BLOCKS_PER_LOG_QUERY = 1000;
 
   constructor({
     config,
@@ -54,6 +56,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.opts = opts;
     this.depositsCache = new Eth1DepositsCache(config, db);
     this.eth1Provider = new Eth1Provider(config, opts);
+    this.lastProcessedDepositBlockNumber = null;
     const autoUpdateIntervalMs = config.params.SECONDS_PER_ETH1_BLOCK / 2;
 
     setIntervalAbortableAsync(
@@ -132,15 +135,12 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Contacts the remote eth1 node and attempts to import deposit logs up to the configured
-   * follow-distance block.
-   * Will process no more than `BLOCKS_PER_LOG_QUERY * MAX_LOG_REQUESTS_PER_UPDATE` blocks in a
-   * single update.
+   * Fetch deposit events from remote eth1 node up to follow-distance block
    */
   private async updateDepositCache(remoteFollowBlock: number): Promise<void> {
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
-    const toBlock = remoteFollowBlock;
+    const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
     await this.depositsCache.insertBatch(depositEvents);
@@ -149,25 +149,24 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Contacts the remote eth1 node and attempts to import all blocks up to the configured
-   * follow-distance block.
-   * If the update was successful the cache may or may not have been modified
+   * Fetch block headers from a remote eth1 node up to follow-distance block
    *
    * depositRoot and depositCount is inferred from already fetched deposits.
    * Calling get_deposit_root() and the smart contract for a non-latest block requires an
    * archive node, something most users don't have access too.
-   *
-   * Fetches blocks from: currentEth1VotingPeriod, lastCachedBlock
-   * Up to: highestFetchedDepositBlockNumber, remoteFollow
    */
   private async updateBlockCache(remoteFollowBlock: number): Promise<void> {
     const highestEth1Data = await this.db.eth1Data.lastValue();
     const lastCachedBlock = highestEth1Data && highestEth1Data.blockNumber;
-    const fromBlockNumber = this.getFromBlockToFetch(lastCachedBlock);
+    const fromBlock = this.getFromBlockToFetch(lastCachedBlock);
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
-    const toBlock = Math.min(remoteFollowBlock, lastProcessedDepositBlockNumber || 0);
+    const toBlock = Math.min(
+      remoteFollowBlock,
+      fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY,
+      lastProcessedDepositBlockNumber || 0 // Do not fetch any blocks if no deposits have been fetched yet
+    );
 
-    const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlockNumber, toBlock, this.signal);
+    const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
     const eth1Datas = await this.depositsCache.appendEth1DataDeposit(eth1Blocks, this.lastProcessedDepositBlockNumber);
     await this.db.eth1Data.batchPutValues(eth1Datas);
   }
@@ -177,6 +176,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {
-    return this.lastProcessedDepositBlockNumber || (await this.depositsCache.geHighestDepositEventBlockNumber());
+    if (!this.lastProcessedDepositBlockNumber) {
+      this.lastProcessedDepositBlockNumber = await this.depositsCache.geHighestDepositEventBlockNumber();
+    }
+    return this.lastProcessedDepositBlockNumber;
   }
 }

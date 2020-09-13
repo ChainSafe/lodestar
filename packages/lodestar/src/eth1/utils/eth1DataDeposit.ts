@@ -11,7 +11,7 @@ export async function appendEth1DataDeposit(
   blocks: Eth1Block[],
   depositDescendingStream: AsyncIterable<DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,
-  lastProcessedDepositBlockNumber?: number
+  lastProcessedDepositBlockNumber: number | null
 ): Promise<(Eth1Data & Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber) {

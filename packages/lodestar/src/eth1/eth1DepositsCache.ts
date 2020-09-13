@@ -78,7 +78,7 @@ export class Eth1DepositsCache {
    */
   async appendEth1DataDeposit(
     blocks: Eth1Block[],
-    lastProcessedDepositBlockNumber?: number
+    lastProcessedDepositBlockNumber: number | null
   ): Promise<(Eth1Data & Eth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
     return await appendEth1DataDeposit(
