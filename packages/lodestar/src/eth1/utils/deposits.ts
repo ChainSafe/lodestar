@@ -1,10 +1,9 @@
-import {Deposit, Root} from "@chainsafe/lodestar-types";
+import {Deposit, Root, DepositEvent} from "@chainsafe/lodestar-types";
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {IDepositEvent} from "../types";
 import {getTreeAtIndex} from "../../util/tree";
 
 export function getDepositsWithProofs(
-  depositEvents: IDepositEvent[],
+  depositEvents: DepositEvent[],
   depositRootTree: TreeBacked<List<Root>>,
   depositCount: number
 ): Deposit[] {

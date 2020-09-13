@@ -13,5 +13,4 @@ export * from "./voluntaryExit";
 
 export * from "./depositDataRoot";
 export * from "./depositEvent";
-export * from "./eth1Block";
-export * from "./eth1DataDeposit";
+export * from "./eth1Data";

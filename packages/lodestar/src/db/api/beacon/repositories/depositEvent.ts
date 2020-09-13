@@ -1,6 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDepositEvent, DepositEventGenerator} from "../../../../eth1";
-
+import {DepositEvent} from "@chainsafe/lodestar-types";
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
@@ -12,9 +11,9 @@ import {Repository} from "./abstract";
  * Added via gossip or api
  * Removed when included on chain or old
  */
-export class DepositEventRepository extends Repository<number, IDepositEvent> {
+export class DepositEventRepository extends Repository<number, DepositEvent> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.depositData, DepositEventGenerator(config.types));
+    super(config, db, Bucket.depositData, config.types.DepositEvent);
   }
 
   public async deleteOld(depositCount: number): Promise<void> {
@@ -25,7 +24,16 @@ export class DepositEventRepository extends Repository<number, IDepositEvent> {
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));
   }
 
-  public async getRange(fromIndex: number, toIndex: number): Promise<IDepositEvent[]> {
+  public async batchPutValues(depositEvents: DepositEvent[]): Promise<void> {
+    await this.batchPut(
+      depositEvents.map((depositEvent) => ({
+        key: depositEvent.index,
+        value: depositEvent,
+      }))
+    );
+  }
+
+  public async getRange(fromIndex: number, toIndex: number): Promise<DepositEvent[]> {
     // ### TODO: Range is inclusive or exclusive?
     const depositDatas = await this.values({gt: fromIndex, lt: toIndex});
 

@@ -3,18 +3,12 @@
  */
 
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {BeaconState, Deposit, Number64, Bytes32, Root} from "@chainsafe/lodestar-types";
+import {BeaconState, Deposit, Number64, Bytes32, Root, DepositEvent} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortSignal} from "abort-controller";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {
-  IDepositEvent,
-  IEth1StreamParams,
-  IEth1Provider,
-  getDepositsAndBlockStreamForGenesis,
-  getDepositsStream,
-} from "../../eth1";
+import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
 import {IGenesisBuilder, IGenesisBuilderKwargs, IGenesisResult} from "./interface";
 import {
   getGenesisBeaconState,
@@ -116,7 +110,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     throw Error("depositsStream stopped without a valid genesis state");
   }
 
-  private applyDeposits(depositEvents: IDepositEvent[]): void {
+  private applyDeposits(depositEvents: DepositEvent[]): void {
     const newDeposits = depositEvents
       .filter((depositLog) => !this.depositCache.has(depositLog.index))
       .map((depositLog) => {

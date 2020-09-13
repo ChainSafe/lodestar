@@ -11,8 +11,7 @@ import {
   BlockRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockRepository,
-  Eth1DataDepositRepository,
+  Eth1DataRepository,
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
@@ -36,11 +35,10 @@ export class StubbedBeaconDb extends BeaconDb {
   public voluntaryExit: SinonStubbedInstance<VoluntaryExitRepository> & VoluntaryExitRepository;
   public proposerSlashing: SinonStubbedInstance<ProposerSlashingRepository> & ProposerSlashingRepository;
   public attesterSlashing: SinonStubbedInstance<AttesterSlashingRepository> & AttesterSlashingRepository;
-  public depositLog: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
+  public depositEvent: SinonStubbedInstance<DepositEventRepository> & DepositEventRepository;
 
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
-  public eth1Block: SinonStubbedInstance<Eth1BlockRepository> & Eth1BlockRepository;
-  public eth1DataDeposit: SinonStubbedInstance<Eth1DataDepositRepository> & Eth1DataDepositRepository;
+  public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
@@ -62,11 +60,10 @@ export class StubbedBeaconDb extends BeaconDb {
     this.voluntaryExit = sinon.createStubInstance(VoluntaryExitRepository) as any;
     this.proposerSlashing = sinon.createStubInstance(ProposerSlashingRepository) as any;
     this.attesterSlashing = sinon.createStubInstance(AttesterSlashingRepository) as any;
-    this.depositLog = sinon.createStubInstance(DepositEventRepository) as any;
+    this.depositEvent = sinon.createStubInstance(DepositEventRepository) as any;
 
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
-    this.eth1Block = sinon.createStubInstance(Eth1BlockRepository) as any;
-    this.eth1DataDeposit = sinon.createStubInstance(Eth1DataDepositRepository) as any;
+    this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
     this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
     this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;

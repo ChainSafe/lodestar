@@ -4,10 +4,11 @@
 
 import {AbortSignal} from "abort-controller";
 import {IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface";
-import {IDepositEvent, IEth1Block} from "./types";
+import {IEth1Block} from "./types";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "../util/sleep";
+import {DepositEvent} from "@chainsafe/lodestar-types";
 
 /**
  * Phase 1 of genesis building.
@@ -47,7 +48,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
   provider: IEth1Provider,
   params: IEth1StreamParams,
   signal?: AbortSignal
-): AsyncGenerator<[IDepositEvent[], IEth1Block]> {
+): AsyncGenerator<[DepositEvent[], IEth1Block]> {
   fromBlock = Math.max(fromBlock, provider.deployBlock);
   fromBlock = Math.min(fromBlock, await getRemoteFollowBlock(provider, params));
   let toBlock = fromBlock; // First, fetch only the first block

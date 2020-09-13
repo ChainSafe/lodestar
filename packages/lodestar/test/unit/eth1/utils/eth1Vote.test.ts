@@ -3,7 +3,6 @@ import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
-import {IEth1DataDeposit, IEth1Block} from "../../../../src/eth1";
 import {pickEth1Vote, getEth1VotesToConsider, votingPeriodStartTime} from "../../../../src/eth1/utils/eth1Vote";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -90,7 +89,7 @@ describe("eth1 / util / eth1Vote", function () {
     const testCases: (() => {
       id: string;
       state: TreeBacked<BeaconState>;
-      eth1Blocks: (IEth1Block & IEth1DataDeposit)[];
+      eth1Blocks: (Eth1Data & {timestamp: number})[];
       expectedVotesToConsider: Eth1Data[];
     })[] = [
       () => {
@@ -134,10 +133,9 @@ describe("eth1 / util / eth1Vote", function () {
  * Util: Fill partial eth1DataBlock with mock data
  * @param eth1DataBlock
  */
-function getEth1DataBlock(eth1DataBlock: Partial<IEth1Block & IEth1DataDeposit>): IEth1Block & IEth1DataDeposit {
+function getEth1DataBlock(eth1DataBlock: Partial<Eth1Data & {timestamp: number}>): Eth1Data & {timestamp: number} {
   return {
     blockHash: Buffer.alloc(32),
-    blockNumber: 0,
     timestamp: 0,
     depositRoot: Buffer.alloc(32),
     depositCount: 0,

@@ -16,8 +16,7 @@ import {
   VoluntaryExitRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockRepository,
-  Eth1DataDepositRepository,
+  Eth1DataRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -56,10 +55,9 @@ export interface IBeaconDb {
   attesterSlashing: AttesterSlashingRepository;
 
   // eth1 processing: all deposit data roots and merkle tree
-  depositLog: DepositEventRepository;
+  depositEvent: DepositEventRepository;
   depositDataRoot: DepositDataRootRepository;
-  eth1DataDeposit: Eth1DataDepositRepository;
-  eth1Block: Eth1BlockRepository;
+  eth1Data: Eth1DataRepository;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 }

@@ -3,12 +3,12 @@ import chaiAsPromised from "chai-as-promised";
 import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
-import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {DepositData, ValidatorIndex, DepositEvent} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
-import {IDepositEvent, IEth1Provider, IEth1Block} from "../../../../src/eth1";
+import {IEth1Provider, IEth1Block} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {ErrorAborted} from "../../../../src/util/errors";
 
@@ -32,17 +32,17 @@ describe("genesis builder", function () {
   });
 
   function generateGenesisBuilderMockData(): {
-    events: IDepositEvent[];
+    events: DepositEvent[];
     keypairs: Keypair[];
     blocks: IEth1Block[];
   } {
-    const events: IDepositEvent[] = [];
+    const events: DepositEvent[] = [];
     const keypairs: Keypair[] = [];
     const blocks: IEth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
       const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const event: IDepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
+      const event: DepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
       keypairs.push(keypair);
       events.push(event);
       // All blocks satisfy MIN_GENESIS_TIME, so genesis will happen when the min validator count is reached

@@ -1,10 +1,10 @@
 import {expect} from "chai";
-import {IDepositEvent} from "../../../../src/eth1";
+import {DepositEvent} from "@chainsafe/lodestar-types";
 import {groupDepositEventsByBlock} from "../../../../src/eth1/utils/groupDepositEventsByBlock";
 
 describe("eth1 / util / groupDepositEventsByBlock", function () {
   it("should return deposit events by block sorted by index", () => {
-    const depositData: Pick<IDepositEvent, "depositData"> = {
+    const depositData: Pick<DepositEvent, "depositData"> = {
       depositData: {
         amount: BigInt(0),
         signature: Buffer.alloc(96),
@@ -12,7 +12,7 @@ describe("eth1 / util / groupDepositEventsByBlock", function () {
         pubkey: Buffer.alloc(48),
       },
     };
-    const depositEvents: IDepositEvent[] = [
+    const depositEvents: DepositEvent[] = [
       {blockNumber: 1, index: 0, ...depositData},
       {blockNumber: 2, index: 2, ...depositData},
       {blockNumber: 2, index: 1, ...depositData},

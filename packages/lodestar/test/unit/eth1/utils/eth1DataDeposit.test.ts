@@ -1,206 +1,283 @@
-import {expect} from "chai";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
+import {pick} from "lodash";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Root} from "@chainsafe/lodestar-types";
-import {List, toHexString} from "@chainsafe/ssz";
-import {mapValues} from "lodash";
+import {Root, Eth1Data, DepositEvent} from "@chainsafe/lodestar-types";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {iteratorFromArray} from "../../../utils/interator";
-import {IEth1DataDeposit, IEth1Block} from "../../../../src/eth1";
+import {IEth1Block} from "../../../../src/eth1";
+import {mapToObj} from "../../../utils/map";
 import {
-  getEth1DataDepositFromDeposits,
-  mapEth1DataDepositToBlockRange,
   appendEth1DataDeposit,
+  getDepositCountByBlockNumber,
+  getDepositRootByDepositCount,
+  ErrorNoDepositCount,
+  ErrorNotEnoughDepositRoots,
 } from "../../../../src/eth1/utils/eth1DataDeposit";
 
-describe("eth1 / util / getEth1DataDepositFromLogs", function () {
-  it("should return eth1 data (depositRoot, depositCount) for block-spaced logs", () => {
-    // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
-    const depositRoots: {index: number; root: Uint8Array; blockNumber: number}[] = [
-      {index: 10, blockNumber: 5},
-      {index: 11, blockNumber: 5},
-      {index: 12, blockNumber: 5},
-      {index: 13, blockNumber: 46},
-      {index: 14, blockNumber: 46},
-      {index: 15, blockNumber: 60},
-      {index: 16, blockNumber: 60},
-      {index: 17, blockNumber: 83},
-      {index: 18, blockNumber: 83},
-      {index: 19, blockNumber: 99},
-    ].map(({index, blockNumber}) => ({index, blockNumber, root: new Uint8Array(Array(32).fill(index))}));
+chai.use(chaiAsPromised);
 
-    // Create an existing deposit tree with more deposits than the earliest item in `depositRoots`
-    const existingTreeLength = depositRoots[0].index;
-    const values = Array.from({length: existingTreeLength}, (_, i) => Buffer.alloc(32, String(i))) as List<Root>;
-    const depositRootTree = config.types.DepositDataRootList.tree.createValue(values);
-
-    const eth1DataDeposits = getEth1DataDepositFromDeposits(depositRoots, depositRootTree);
-    // Convert to hex to ease result checking
-    const eth1DataDepositsHex = eth1DataDeposits.map((eth1DataDeposit) => ({
-      ...eth1DataDeposit,
-      depositRoot: toHexString(eth1DataDeposit.depositRoot),
-    }));
-
-    expect(eth1DataDepositsHex).to.deep.equal([
-      {
-        blockNumber: 5,
-        depositRoot: "0xcab74cd3e62f92390eed488aa198cbf2b0d53e4900413ebcdb23ea0f8e66aa12",
-        depositCount: 13,
-      },
-      {
-        blockNumber: 46,
-        depositRoot: "0x372b399ae4b7855549e0c71de92a95e28445e14e746bc5c1bae724d1e22e0383",
-        depositCount: 15,
-      },
-      {
-        blockNumber: 60,
-        depositRoot: "0xa7a09ed38e1d7b865dc9ba09ee9cdd56660ecbb2361e512b33b3f91ac7935d73",
-        depositCount: 17,
-      },
-      {
-        blockNumber: 83,
-        depositRoot: "0xf35238eaf9983fb5ed38fd48d8ea132d6e8f1df328f3d4247ebd2e1b0cbd82bc",
-        depositCount: 19,
-      },
-      {
-        blockNumber: 99,
-        depositRoot: "0x8918169e9186c2eafee39da6ca5caa8423a299068f956c86b35f98d2ec9a1c1b",
-        depositCount: 20,
-      },
-    ]);
-  });
-});
-
-describe("eth1 / util / mapEth1DataDepositToBlockRange", function () {
-  // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
-  const eth1DataDepositArr: IEth1DataDeposit[] = [
-    {blockNumber: 0, depositCount: 13},
-    {blockNumber: 3, depositCount: 15},
-    {blockNumber: 4, depositCount: 17},
-    {blockNumber: 7, depositCount: 19},
-    {blockNumber: 9, depositCount: 20},
-  ].map(({blockNumber, depositCount}) => ({
-    blockNumber,
-    depositCount,
-    depositRoot: new Uint8Array(Array(32).fill(blockNumber)),
-  }));
-
-  const testCases: {
+describe("eth1 / util / appendEth1DataDeposit", function () {
+  interface ITestCase {
     id: string;
-    fromBlock: number;
-    toBlock: number;
-    expectedResult: {[blockNumber: number]: {depositCount: number}};
-  }[] = [
-    {
-      id: "sequential eth1DataDeposit items - full array",
-      fromBlock: 0,
-      toBlock: 10,
-      expectedResult: {
-        0: {depositCount: 13},
-        1: {depositCount: 13},
-        2: {depositCount: 13},
-        3: {depositCount: 15},
-        4: {depositCount: 17},
-        5: {depositCount: 17},
-        6: {depositCount: 17},
-        7: {depositCount: 19},
-        8: {depositCount: 19},
-        9: {depositCount: 20},
-        10: {depositCount: 20},
-      },
+    blocks: IEth1Block[];
+    deposits: DepositEvent[];
+    depositRootTree: TreeBacked<List<Root>>;
+    lastProcessedDepositBlockNumber: number;
+    expectedEth1Data?: Partial<Eth1Data & IEth1Block>[];
+    error?: any;
+  }
+
+  const testCases: (() => ITestCase)[] = [
+    () => {
+      // Result must contain all blocks from eth1Blocks, with backfilled eth1DataDeposit
+      const expectedEth1Data = [
+        {blockNumber: 5, depositCount: 13},
+        {blockNumber: 6, depositCount: 13},
+        {blockNumber: 7, depositCount: 17},
+        {blockNumber: 8, depositCount: 17},
+        {blockNumber: 9, depositCount: 17},
+      ];
+
+      // Consecutive block headers to be filled with eth1Data
+      const blocks = expectedEth1Data.map(({blockNumber}) => getMockBlock({blockNumber}));
+
+      // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
+      const deposits: DepositEvent[] = expectedEth1Data.map(({blockNumber, depositCount}) =>
+        getMockDeposit({blockNumber, index: depositCount - 1})
+      );
+      const lastProcessedDepositBlockNumber = expectedEth1Data[expectedEth1Data.length - 1].blockNumber;
+
+      // Pre-fill the depositTree with roots for all deposits
+      const depositRootTree = config.types.DepositDataRootList.tree.createValue(
+        Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i)) as List<Root>
+      );
+
+      return {
+        id: "Normal case",
+        blocks,
+        deposits,
+        depositRootTree,
+        lastProcessedDepositBlockNumber,
+        expectedEth1Data,
+      };
     },
-    {
-      id: "sequential eth1DataDeposit items - small array",
-      fromBlock: 3,
-      toBlock: 4,
-      expectedResult: {
-        3: {depositCount: 15},
-        4: {depositCount: 17},
-      },
+
+    () => {
+      return {
+        id: "No deposits and no deposit roots, should throw with NoDepositCount",
+        blocks: [getMockBlock({blockNumber: 0})],
+        deposits: [],
+        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        lastProcessedDepositBlockNumber: 0,
+        error: ErrorNoDepositCount,
+      };
     },
-    {
-      id: "sequential eth1DataDeposit items - future block",
-      fromBlock: 9,
-      toBlock: 11,
-      expectedResult: {
-        9: {depositCount: 20},
-        10: {depositCount: 20},
-        11: {depositCount: 20},
-      },
+
+    () => {
+      return {
+        id: "With deposits and no deposit roots, should throw with NotEnoughDepositRoots",
+        blocks: [getMockBlock({blockNumber: 0})],
+        deposits: [getMockDeposit({blockNumber: 0, index: 0})],
+        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        lastProcessedDepositBlockNumber: 0,
+        error: ErrorNotEnoughDepositRoots,
+      };
+    },
+
+    () => {
+      return {
+        id: "Empty case",
+        blocks: [],
+        deposits: [],
+        depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
+        lastProcessedDepositBlockNumber: 0,
+        expectedEth1Data: [],
+      };
     },
   ];
 
-  for (const {id, fromBlock, toBlock, expectedResult} of testCases) {
-    it(id, () => {
-      const eth1DataDepositMap = mapEth1DataDepositToBlockRange(fromBlock, toBlock, eth1DataDepositArr);
-      const eth1DataDepositMapSlim = mapValues(eth1DataDepositMap, (eth1DataDeposit) => ({
-        depositCount: eth1DataDeposit.depositCount,
-      }));
-      expect(eth1DataDepositMapSlim).to.deep.equal(expectedResult);
+  for (const testCase of testCases) {
+    const {
+      id,
+      blocks,
+      deposits,
+      depositRootTree,
+      lastProcessedDepositBlockNumber,
+      expectedEth1Data,
+      error,
+    } = testCase();
+    it(id, async function () {
+      const eth1DatasPromise = appendEth1DataDeposit(
+        blocks,
+        // Simulate a descending stream reading from DB
+        iteratorFromArray(deposits.reverse()),
+        depositRootTree,
+        lastProcessedDepositBlockNumber
+      );
+
+      if (expectedEth1Data) {
+        const eth1Datas = await eth1DatasPromise;
+        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
+        expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
+      } else if (error) {
+        await expect(eth1DatasPromise).to.be.rejectedWith(error);
+      } else {
+        throw Error("Test case must have 'expectedEth1Data' or 'error'");
+      }
     });
   }
 });
 
-describe("eth1 / util / appendEth1DataDeposit", function () {
-  it("Should append eth1DataDeposit", async function () {
-    // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
-    const eth1DataDepositArr: IEth1DataDeposit[] = [
-      {blockNumber: 0, depositCount: 13},
-      {blockNumber: 3, depositCount: 15},
-      {blockNumber: 4, depositCount: 17},
-      {blockNumber: 7, depositCount: 19},
-    ].map(({blockNumber, depositCount}) => ({
-      blockNumber,
-      depositCount,
-      depositRoot: new Uint8Array(Array(32).fill(blockNumber)),
-    }));
+describe("eth1 / util / getDepositCountByBlockNumber", function () {
+  interface ITestCase {
+    id: string;
+    fromBlock: number;
+    toBlock: number;
+    deposits: DepositEvent[];
+    expectedMap: Map<number, number>;
+  }
 
-    // Consecutive block headers to be filled with eth1Data above
-    const eth1Blocks: IEth1Block[] = [2, 3, 4, 5, 6, 7, 8].map((blockNumber) => ({
-      blockHash: new Uint8Array(Array(32).fill(blockNumber)),
-      blockNumber,
-      timestamp: blockNumber,
-    }));
+  const testCases: ITestCase[] = [
+    {
+      id: "Map deposit at block 0 => 0,1,2 in range [1,2]",
+      fromBlock: 1,
+      toBlock: 2,
+      deposits: [getMockDeposit({blockNumber: 0, index: 0})],
+      expectedMap: new Map([
+        [0, 1],
+        [1, 1],
+        [2, 1],
+      ]),
+    },
+    {
+      id: "Map deposit at block 1 => 1,2 in range [1,2]",
+      fromBlock: 1,
+      toBlock: 2,
+      deposits: [getMockDeposit({blockNumber: 1, index: 0})],
+      expectedMap: new Map([
+        [1, 1],
+        [2, 1],
+      ]),
+    },
+    {
+      id: "Map deposit at block 2 => 2 in range [1,2]",
+      fromBlock: 1,
+      toBlock: 2,
+      deposits: [getMockDeposit({blockNumber: 2, index: 0})],
+      expectedMap: new Map([[2, 1]]),
+    },
+    {
+      id: "Map deposit at block 3 => [] in range [1,2]",
+      fromBlock: 1,
+      toBlock: 2,
+      deposits: [getMockDeposit({blockNumber: 3, index: 0})],
+      expectedMap: new Map(),
+    },
+    {
+      id: "Map multiple deposits",
+      fromBlock: 1,
+      toBlock: 4,
+      deposits: [getMockDeposit({blockNumber: 0, index: 0}), getMockDeposit({blockNumber: 3, index: 4})],
+      expectedMap: new Map([
+        [0, 1],
+        [1, 1],
+        [2, 1],
+        [3, 5],
+        [4, 5],
+      ]),
+    },
+    {
+      id: "Empty case",
+      fromBlock: 0,
+      toBlock: 0,
+      deposits: [],
+      expectedMap: new Map([]),
+    },
+  ];
 
-    const lastProcessedDepositBlockNumber = 11;
-
-    // Result must contain all blocks from eth1Blocks, with backfilled eth1DataDeposit
-    const expectedEth1Data = [
-      {blockNumber: 2, depositCount: 13},
-      {blockNumber: 3, depositCount: 15},
-      {blockNumber: 4, depositCount: 17},
-      {blockNumber: 5, depositCount: 17},
-      {blockNumber: 6, depositCount: 17},
-      {blockNumber: 7, depositCount: 19},
-      {blockNumber: 8, depositCount: 19},
-    ];
-
-    const eth1Datas = await appendEth1DataDeposit(
-      eth1Blocks,
-      // Simulate a descending stream reading from DB
-      iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr.reverse()),
-      lastProcessedDepositBlockNumber
-    );
-
-    const eth1DatasSlim = eth1Datas.map((eth1Data) => ({
-      blockNumber: eth1Data.blockNumber,
-      depositCount: eth1Data.depositCount,
-    }));
-
-    expect(eth1DatasSlim).to.deep.equal(expectedEth1Data);
-  });
-
-  it("should not throw for empty data", async function () {
-    // Arbitrary list of consecutive non-uniform (blockNumber-wise) deposit roots
-    const eth1DataDepositArr: IEth1DataDeposit[] = [];
-    const eth1Blocks: IEth1Block[] = [];
-    const lastProcessedDepositBlockNumber = undefined;
-
-    const eth1Datas = await appendEth1DataDeposit(
-      eth1Blocks,
-      // Simulate a descending stream reading from DB
-      iteratorFromArray<IEth1DataDeposit>(eth1DataDepositArr),
-      lastProcessedDepositBlockNumber
-    );
-
-    expect(eth1Datas).to.deep.equal([]);
-  });
+  for (const {id, fromBlock, toBlock, deposits, expectedMap} of testCases) {
+    it(id, async function () {
+      const map = await getDepositCountByBlockNumber(
+        fromBlock,
+        toBlock, // Simulate a descending stream reading from DB
+        iteratorFromArray(deposits.reverse())
+      );
+      expect(mapToObj(map)).to.deep.equal(mapToObj(expectedMap));
+    });
+  }
 });
+
+describe("eth1 / util / getDepositRootByDepositCount", function () {
+  interface ITestCase {
+    id: string;
+    depositCounts: number[];
+    depositRootTree: TreeBacked<List<Root>>;
+    expectedMap: Map<number, Root>;
+  }
+
+  const fullRootMap = new Map<number, Root>();
+  const fullDepositRootTree = config.types.DepositDataRootList.tree.defaultValue();
+  for (let i = 0; i < 10; i++) {
+    fullDepositRootTree.push(Buffer.alloc(32, i));
+    fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
+  }
+
+  const testCases: (() => ITestCase)[] = [
+    () => {
+      return {
+        id: "Roots are computed correctly, all values match",
+        depositCounts: Array.from(fullRootMap.keys()),
+        depositRootTree: fullDepositRootTree,
+        expectedMap: fullRootMap,
+      };
+    },
+    () => {
+      const depositCounts = Array.from(fullRootMap.keys()).filter((n) => n % 2);
+      const expectedMap = new Map<number, Root>();
+      for (const depositCount of depositCounts) {
+        const depositRoot = fullRootMap.get(depositCount);
+        if (depositRoot) expectedMap.set(depositCount, depositRoot);
+      }
+      return {
+        id: "Roots are computed correctly, sparse values match",
+        depositCounts,
+        depositRootTree: fullDepositRootTree,
+        expectedMap,
+      };
+    },
+    () => {
+      const emptyTree = config.types.DepositDataRootList.tree.defaultValue();
+      return {
+        id: "Empty case",
+        depositCounts: [],
+        depositRootTree: emptyTree,
+        expectedMap: new Map<number, Root>(),
+      };
+    },
+  ];
+
+  for (const testCase of testCases) {
+    const {id, depositCounts, depositRootTree, expectedMap} = testCase();
+    it(id, async function () {
+      const map = await getDepositRootByDepositCount(depositCounts, depositRootTree);
+      expect(mapToObj(map)).to.deep.equal(mapToObj(expectedMap));
+    });
+  }
+});
+
+function getMockBlock({blockNumber}: {blockNumber: number}): IEth1Block {
+  return {
+    blockNumber,
+    blockHash: Buffer.alloc(32, blockNumber),
+    timestamp: blockNumber,
+  };
+}
+
+function getMockDeposit({blockNumber, index}: {blockNumber: number; index: number}): DepositEvent {
+  return {
+    blockNumber,
+    index,
+    depositData: {} as any, // Not used
+  };
+}

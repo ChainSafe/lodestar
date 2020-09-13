@@ -17,8 +17,7 @@ import {
   VoluntaryExitRepository,
   DepositEventRepository,
   DepositDataRootRepository,
-  Eth1BlockRepository,
-  Eth1DataDepositRepository,
+  Eth1DataRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -39,10 +38,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public proposerSlashing: ProposerSlashingRepository;
   public attesterSlashing: AttesterSlashingRepository;
 
-  public depositLog: DepositEventRepository;
+  public depositEvent: DepositEventRepository;
   public depositDataRoot: DepositDataRootRepository;
-  public eth1Block: Eth1BlockRepository;
-  public eth1DataDeposit: Eth1DataDepositRepository;
+  public eth1Data: Eth1DataRepository;
 
   public constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -60,10 +58,9 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
 
-    this.depositLog = new DepositEventRepository(this.config, this.db);
+    this.depositEvent = new DepositEventRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
-    this.eth1DataDeposit = new Eth1DataDepositRepository(this.config, this.db);
-    this.eth1Block = new Eth1BlockRepository(this.config, this.db);
+    this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
 
   /**
@@ -72,7 +69,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
-      this.depositLog.deleteOld(signedBlock.message.body.eth1Data.depositCount),
+      this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
       this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations),

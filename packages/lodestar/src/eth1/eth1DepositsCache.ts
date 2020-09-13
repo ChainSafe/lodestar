@@ -1,8 +1,8 @@
-import {Deposit} from "@chainsafe/lodestar-types";
+import {Deposit, DepositEvent, Eth1Data} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
-import {getEth1DataDepositFromDeposits, appendEth1DataDeposit} from "./utils/eth1DataDeposit";
-import {IEth1DataDeposit, IDepositEvent, IEth1Block} from "./types";
+import {appendEth1DataDeposit} from "./utils/eth1DataDeposit";
+import {IEth1Block} from "./types";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
 
@@ -37,7 +37,7 @@ export class Eth1DepositsCache {
 
     // ### TODO: Range is inclusive or exclusive?
     // Must assert that `toIndex <= logs.length`
-    const depositEvents = await this.db.depositLog.getRange(fromIndex, toIndex);
+    const depositEvents = await this.db.depositEvent.getRange(fromIndex, toIndex);
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
     return getDepositsWithProofs(depositEvents, depositRootTree, depositCount);
   }
@@ -47,8 +47,8 @@ export class Eth1DepositsCache {
    * This function enforces that `logs` are imported one-by-one with no gaps between
    * `log.index`, starting at `log.index == 0`.
    */
-  async insertLogs(depositEvents: IDepositEvent[]): Promise<void> {
-    const lastLog = await this.db.depositLog.lastValue();
+  async insertLogs(depositEvents: DepositEvent[]): Promise<void> {
+    const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
 
     if (lastLog) {
@@ -61,36 +61,15 @@ export class Eth1DepositsCache {
     }
     assertConsecutiveDeposits(depositEvents);
 
-    // Pre-compute partial eth1 data from deposits
-    // Add data for both getEth1DataDepositFromDeposits and db.depositDataRoot.batchPut
-    const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
     const depositRoots = depositEvents.map((depositEvent) => ({
-      blockNumber: depositEvent.blockNumber,
       index: depositEvent.index,
       root: this.config.types.DepositData.hashTreeRoot(depositEvent.depositData),
     }));
-    const eth1DatasDeposit = getEth1DataDepositFromDeposits(depositRoots, depositRootTree);
 
     // Store everything in batch at once
     await Promise.all([
-      this.db.depositLog.batchPut(
-        depositEvents.map((depositLog) => ({
-          key: depositLog.index,
-          value: depositLog,
-        }))
-      ),
-      this.db.depositDataRoot.batchPut(
-        depositRoots.map((deposit) => ({
-          key: deposit.index,
-          value: deposit.root,
-        }))
-      ),
-      this.db.eth1DataDeposit.batchPut(
-        eth1DatasDeposit.map((eth1DataDeposit) => ({
-          key: eth1DataDeposit.depositCount,
-          value: eth1DataDeposit,
-        }))
-      ),
+      this.db.depositEvent.batchPutValues(depositEvents),
+      this.db.depositDataRoot.batchPutValues(depositRoots),
     ]);
   }
 
@@ -103,11 +82,12 @@ export class Eth1DepositsCache {
   async appendEth1DataDeposit(
     blocks: IEth1Block[],
     lastProcessedDepositBlockNumber?: number
-  ): Promise<(IEth1Block & IEth1DataDeposit)[]> {
+  ): Promise<(Eth1Data & IEth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
     return await appendEth1DataDeposit(
       blocks,
-      this.db.eth1DataDeposit.valuesStream({lte: highestBlock, reverse: true}),
+      this.db.depositEvent.valuesStream({lte: highestBlock, reverse: true}),
+      await this.db.depositDataRoot.getDepositRootTree(),
       lastProcessedDepositBlockNumber
     );
   }
@@ -116,7 +96,7 @@ export class Eth1DepositsCache {
    * Returns the highest blockNumber stored in DB if any
    */
   async geHighestDepositEventBlockNumber(): Promise<number | null> {
-    const latestDepositEvent = await this.db.depositLog.lastValue();
+    const latestDepositEvent = await this.db.depositEvent.lastValue();
     return latestDepositEvent && latestDepositEvent.blockNumber;
   }
 }
