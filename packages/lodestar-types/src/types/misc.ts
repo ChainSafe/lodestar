@@ -109,9 +109,15 @@ export interface Eth1Data {
   blockHash: Bytes32;
 }
 
-export interface Eth1DataOrdered extends Eth1Data {
+export interface Eth1DataOrdered {
   // block number for this eth1 data block hash
   blockNumber: Number64;
+  // Root of the deposit tree
+  depositRoot: Root;
+  // Total number of deposits
+  depositCount: Number64;
+  // Block hash
+  blockHash: Bytes32;
 }
 
 export interface HistoricalBatch {
