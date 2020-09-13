@@ -15,13 +15,8 @@ import {IEth1ForBlockProduction} from "./interface";
 import {IEth1Options} from "./options";
 
 /**
- * Main class handling eth1 data fetching and processing
- * Has:
- * - depositsCache: stores deposit data and an updated deposit roots merkle tree
- * - blocksCache: stores eth1 blocks (hash, number, timestamp)
- *
- * Upon instantiation will fetched deposit logs and blocks up to the follow distance.
- * I will keep updating the cache at regular intervals
+ * Main class handling eth1 data fetching, processing and storing
+ * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
  */
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   config: IBeaconConfig;
@@ -87,7 +82,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Returns an eth1Data vote for a given state
+   * Returns an eth1Data vote for a given state.
    * Requires internal caches to be updated regularly to return good results
    */
   private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
@@ -107,7 +102,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Returns deposits to be included for a given state and eth1Data vote
+   * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
@@ -128,7 +123,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Update the deposit and block cache, returning an error if either fail.
+   * Update the deposit and block cache, returning an error if either fail
    */
   private async update(): Promise<void> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
@@ -154,7 +149,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   /**
    * Fetch block headers from a remote eth1 node up to follow-distance block
    *
-   * depositRoot and depositCount is inferred from already fetched deposits.
+   * depositRoot and depositCount are inferred from already fetched deposits.
    * Calling get_deposit_root() and the smart contract for a non-latest block requires an
    * archive node, something most users don't have access too.
    */
