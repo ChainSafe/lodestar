@@ -114,9 +114,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     } else if (depositIndex === depositCount) {
       return [];
     } else {
-      const fromIndex = depositIndex;
-      const toIndex = Math.min(depositCount, fromIndex + this.config.params.MAX_DEPOSITS);
-      return this.depositsCache.getDeposits({fromIndex, toIndex, depositCount});
+      return this.depositsCache.getDeposits({
+        indexRange: {gt: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
+        depositCount,
+      });
     }
   }
 

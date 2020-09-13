@@ -31,12 +31,14 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public seenAttestationCache: SeenAttestationCache;
   public blockArchive: BlockArchiveRepository;
   public stateArchive: StateArchiveRepository;
+
   public attestation: AttestationRepository;
   public aggregateAndProof: AggregateAndProofRepository;
   public voluntaryExit: VoluntaryExitRepository;
   public proposerSlashing: ProposerSlashingRepository;
   public attesterSlashing: AttesterSlashingRepository;
   public depositEvent: DepositEventRepository;
+
   public depositDataRoot: DepositDataRootRepository;
   public eth1Data: Eth1DataRepository;
 
@@ -49,13 +51,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.seenAttestationCache = new SeenAttestationCache(5000);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
-
     this.attestation = new AttestationRepository(this.config, this.db);
     this.aggregateAndProof = new AggregateAndProofRepository(this.config, this.db);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-
     this.depositEvent = new DepositEventRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
     this.eth1Data = new Eth1DataRepository(this.config, this.db);

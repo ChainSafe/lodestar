@@ -10,7 +10,7 @@ export * from "./aggregateAndProof";
 export * from "./attesterSlashing";
 export * from "./proposerSlashing";
 export * from "./voluntaryExit";
+export * from "./depositEvent";
 
 export * from "./depositDataRoot";
-export * from "./depositEvent";
 export * from "./eth1Data";

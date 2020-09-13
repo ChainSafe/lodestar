@@ -1,6 +1,5 @@
 import "mocha";
 import {expect} from "chai";
-import {Eth1Block} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1Block} from "../../../src/eth1/types";
 import {fetchBlockRange} from "../../../src/eth1/httpEth1Client";

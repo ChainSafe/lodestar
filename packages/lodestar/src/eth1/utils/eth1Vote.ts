@@ -36,7 +36,6 @@ export function pickEth1Vote(
 
 /**
  * Serialize eth1Data types to a unique string ID. It is only used for comparison.
- * @param eth1Data
  */
 function serializeEth1Data(eth1Data: Eth1Data): string {
   return toHexString(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHexString(eth1Data.depositRoot);

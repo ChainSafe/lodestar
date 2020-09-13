@@ -22,34 +22,33 @@ export class Eth1DepositsCache {
    * proofs with respect to a tree size of 50.
    */
   async getDeposits({
-    fromIndex,
-    toIndex,
+    indexRange,
     depositCount,
   }: {
-    fromIndex: number;
-    toIndex: number;
+    indexRange: {gt: number; lt: number};
     depositCount: number;
   }): Promise<Deposit[]> {
-    if (depositCount < toIndex) {
-      throw Error("Deposit count requests more deposits than should exist");
+    const depositEvents = await this.db.depositEvent.values(indexRange);
+
+    // Make sure all expected indexed are present (DB may not contain expected indexes)
+    const expectedLength = indexRange.lt - indexRange.gt - 1;
+    if (depositEvents.length < expectedLength) {
+      throw Error("Not enough deposits in DB");
     }
 
-    // ### TODO: Range is inclusive or exclusive?
-    // Must assert that `toIndex <= logs.length`
-    const depositEvents = await this.db.depositEvent.getRange(fromIndex, toIndex);
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
     return getDepositsWithProofs(depositEvents, depositRootTree, depositCount);
   }
 
   /**
    * Add log to cache
-   * This function enforces that `logs` are imported one-by-one with no gaps between
-   * `log.index`, starting at `log.index == 0`.
+   * This function enforces that `logs` are imported one-by-one with consecutive indexes
    */
   async insertBatch(depositEvents: DepositEvent[]): Promise<void> {
+    assertConsecutiveDeposits(depositEvents);
+
     const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
-
     if (lastLog) {
       if (firstEvent.index <= lastLog.index) {
         throw Error("DuplicateDistinctLog");
@@ -58,7 +57,6 @@ export class Eth1DepositsCache {
         throw Error("Non consecutive logs");
       }
     }
-    assertConsecutiveDeposits(depositEvents);
 
     const depositRoots = depositEvents.map((depositEvent) => ({
       index: depositEvent.index,
