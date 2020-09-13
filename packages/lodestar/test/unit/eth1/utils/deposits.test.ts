@@ -25,8 +25,8 @@ describe("eth1 / util / deposits", function () {
     );
 
     const depositRootTree = config.types.DepositDataRootList.tree.defaultValue();
-    for (const depositLog of depositEvents) {
-      depositRootTree.push(config.types.DepositData.hashTreeRoot(depositLog.depositData));
+    for (const depositEvent of depositEvents) {
+      depositRootTree.push(config.types.DepositData.hashTreeRoot(depositEvent.depositData));
     }
 
     const deposits = getDepositsWithProofs(depositEvents, depositRootTree, 1);

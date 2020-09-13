@@ -141,8 +141,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
     const toBlock = remoteFollowBlock;
 
-    const logs = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
-    await this.depositsCache.insertLogs(logs);
+    const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
+    await this.depositsCache.insertBatch(depositEvents);
     // Store the `toBlock` since that block may not contain
     this.lastProcessedDepositBlockNumber = toBlock;
   }

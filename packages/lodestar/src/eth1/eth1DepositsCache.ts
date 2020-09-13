@@ -47,7 +47,7 @@ export class Eth1DepositsCache {
    * This function enforces that `logs` are imported one-by-one with no gaps between
    * `log.index`, starting at `log.index == 0`.
    */
-  async insertLogs(depositEvents: DepositEvent[]): Promise<void> {
+  async insertBatch(depositEvents: DepositEvent[]): Promise<void> {
     const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
 

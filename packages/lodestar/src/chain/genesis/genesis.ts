@@ -112,13 +112,13 @@ export class GenesisBuilder implements IGenesisBuilder {
 
   private applyDeposits(depositEvents: DepositEvent[]): void {
     const newDeposits = depositEvents
-      .filter((depositLog) => !this.depositCache.has(depositLog.index))
-      .map((depositLog) => {
-        this.depositCache.add(depositLog.index);
-        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositLog.depositData));
+      .filter((depositEvent) => !this.depositCache.has(depositEvent.index))
+      .map((depositEvent) => {
+        this.depositCache.add(depositEvent.index);
+        this.depositTree.push(this.config.types.DepositData.hashTreeRoot(depositEvent.depositData));
         return {
-          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositLog.index)),
-          data: depositLog.depositData,
+          proof: this.depositTree.tree().getSingleProof(this.depositTree.gindexOfProperty(depositEvent.index)),
+          data: depositEvent.depositData,
         };
       });
 
