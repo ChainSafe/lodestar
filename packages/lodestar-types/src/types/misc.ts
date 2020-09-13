@@ -149,6 +149,14 @@ export interface DepositEvent {
   index: Number64;
 }
 
+export interface Eth1Block {
+  // Use blockHash to be consistent with the Eth1Data type
+  blockHash: Bytes32;
+  // Use blockNumber to be consistent with DepositEvent type
+  blockNumber: Number64;
+  timestamp: Number64;
+}
+
 export interface BeaconBlockHeader {
   slot: Slot;
   proposerIndex: ValidatorIndex;

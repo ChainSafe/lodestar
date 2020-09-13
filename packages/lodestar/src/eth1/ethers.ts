@@ -9,8 +9,7 @@ import {isValidAddress} from "../util/address";
 import {RetryProvider} from "./utils/retryProvider";
 import {IEth1Options} from "./options";
 import {depositContract} from "./depositContract";
-import {IEth1Block} from "./types";
-import {DepositEvent} from "@chainsafe/lodestar-types";
+import {DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 
 const ETH1_BLOCK_RETRY = 3;
 
@@ -46,7 +45,7 @@ export class Eth1Provider {
     return await this.provider.getBlockNumber();
   }
 
-  async getBlock(blockNumber: number): Promise<IEth1Block> {
+  async getBlock(blockNumber: number): Promise<Eth1Block> {
     const block = await this.provider.getBlock(blockNumber);
     return {
       blockHash: fromHexString(block.hash),

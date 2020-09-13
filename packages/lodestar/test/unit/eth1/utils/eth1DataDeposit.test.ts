@@ -2,10 +2,9 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {pick} from "lodash";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Root, Eth1Data, DepositEvent} from "@chainsafe/lodestar-types";
+import {Root, Eth1Data, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {iteratorFromArray} from "../../../utils/interator";
-import {IEth1Block} from "../../../../src/eth1";
 import {mapToObj} from "../../../utils/map";
 import {
   appendEth1DataDeposit,
@@ -20,11 +19,11 @@ chai.use(chaiAsPromised);
 describe("eth1 / util / appendEth1DataDeposit", function () {
   interface ITestCase {
     id: string;
-    blocks: IEth1Block[];
+    blocks: Eth1Block[];
     deposits: DepositEvent[];
     depositRootTree: TreeBacked<List<Root>>;
     lastProcessedDepositBlockNumber: number;
-    expectedEth1Data?: Partial<Eth1Data & IEth1Block>[];
+    expectedEth1Data?: Partial<Eth1Data & Eth1Block>[];
     error?: any;
   }
 
@@ -266,7 +265,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   }
 });
 
-function getMockBlock({blockNumber}: {blockNumber: number}): IEth1Block {
+function getMockBlock({blockNumber}: {blockNumber: number}): Eth1Block {
   return {
     blockNumber,
     blockHash: Buffer.alloc(32, blockNumber),

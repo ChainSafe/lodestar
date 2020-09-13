@@ -1,19 +1,18 @@
-import {Root, Eth1Data, DepositEvent} from "@chainsafe/lodestar-types";
+import {Root, Eth1Data, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {backfillMap} from "../../util/map";
-import {IEth1Block} from "../types";
 
 /**
  * Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
  */
 export async function appendEth1DataDeposit(
-  blocks: IEth1Block[],
+  blocks: Eth1Block[],
   depositDescendingStream: AsyncIterable<DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,
   lastProcessedDepositBlockNumber?: number
-): Promise<(Eth1Data & IEth1Block)[]> {
+): Promise<(Eth1Data & Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber) {
     blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
@@ -33,7 +32,7 @@ export async function appendEth1DataDeposit(
   const depositCounts = Array.from(depositCountByBlockNumber.values());
   const depositRootByDepositCount = getDepositRootByDepositCount(depositCounts, depositRootTree);
 
-  const eth1Datas: (Eth1Data & IEth1Block)[] = [];
+  const eth1Datas: (Eth1Data & Eth1Block)[] = [];
   for (const block of blocks) {
     const depositCount = depositCountByBlockNumber.get(block.blockNumber);
     if (depositCount === undefined) throw new ErrorNoDepositCount(block.blockNumber);
