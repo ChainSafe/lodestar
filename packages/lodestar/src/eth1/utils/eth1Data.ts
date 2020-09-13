@@ -28,6 +28,8 @@ export async function getEth1DataForBlocks(
   const toBlock = blocks[blocks.length - 1].blockNumber;
   const depositCountByBlockNumber = await getDepositCountByBlockNumber(fromBlock, toBlock, depositDescendingStream);
 
+  if (depositCountByBlockNumber.size === 0) throw new ErrorNoDeposits();
+
   // Generate a map of depositCount => depositRoot (from depositRootTree)
   const depositCounts = Array.from(depositCountByBlockNumber.values());
   const depositRootByDepositCount = getDepositRootByDepositCount(depositCounts, depositRootTree);
@@ -89,6 +91,12 @@ export function getDepositRootByDepositCount(
     map.set(depositCount, depositRootTree.hashTreeRoot());
     return map;
   }, new Map());
+}
+
+export class ErrorNoDeposits extends Error {
+  constructor() {
+    super("No deposits yet");
+  }
 }
 
 export class ErrorNoDepositCount extends Error {
