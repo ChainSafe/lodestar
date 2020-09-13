@@ -27,8 +27,8 @@ export async function* getDepositsStream(
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);
     const toBlock = Math.min(remoteFollowBlock, fromBlock + params.MAX_BLOCKS_PER_POLL);
     const logs = await provider.getDepositEvents(fromBlock, toBlock);
-    for (const [blockNumber, depositEvents] of groupDepositEventsByBlock(logs)) {
-      yield {blockNumber, depositEvents};
+    for (const batchedDeposits of groupDepositEventsByBlock(logs)) {
+      yield batchedDeposits;
     }
 
     fromBlock = toBlock;

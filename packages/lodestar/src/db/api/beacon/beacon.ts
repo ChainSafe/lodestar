@@ -12,12 +12,12 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  ProposerSlashingRepository,
-  StateArchiveRepository,
-  VoluntaryExitRepository,
   DepositEventRepository,
   DepositDataRootRepository,
   Eth1DataRepository,
+  ProposerSlashingRepository,
+  StateArchiveRepository,
+  VoluntaryExitRepository,
 } from "./repositories";
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
@@ -31,13 +31,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public seenAttestationCache: SeenAttestationCache;
   public blockArchive: BlockArchiveRepository;
   public stateArchive: StateArchiveRepository;
-
   public attestation: AttestationRepository;
   public aggregateAndProof: AggregateAndProofRepository;
   public voluntaryExit: VoluntaryExitRepository;
   public proposerSlashing: ProposerSlashingRepository;
   public attesterSlashing: AttesterSlashingRepository;
-
   public depositEvent: DepositEventRepository;
   public depositDataRoot: DepositDataRootRepository;
   public eth1Data: Eth1DataRepository;

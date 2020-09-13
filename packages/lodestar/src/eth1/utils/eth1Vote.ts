@@ -4,30 +4,6 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked, readOnlyMap} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
 
-export function getEth1Vote(
-  config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
-  eth1Blocks: (Eth1Data & {timestamp: number})[]
-): Eth1Data {
-  const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
-  return pickEth1Vote(config, state, votesToConsider);
-}
-
-export function getEth1VotesToConsider(
-  config: IBeaconConfig,
-  state: TreeBacked<BeaconState>,
-  eth1Blocks: (Eth1Data & {timestamp: number})[]
-): Eth1Data[] {
-  const periodStart = votingPeriodStartTime(config, state);
-
-  return eth1Blocks.filter(
-    (eth1DataBlock) =>
-      isCandidateBlock(config, eth1DataBlock, periodStart) &&
-      // Ensure cannot move back to earlier deposit contract states
-      eth1DataBlock.depositCount >= state.eth1Data.depositCount
-  );
-}
-
 export function pickEth1Vote(
   config: IBeaconConfig,
   state: TreeBacked<BeaconState>,
@@ -70,12 +46,4 @@ export function votingPeriodStartTime(config: IBeaconConfig, state: TreeBacked<B
   const eth1VotingPeriodStartSlot =
     state.slot - (state.slot % (config.params.EPOCHS_PER_ETH1_VOTING_PERIOD * config.params.SLOTS_PER_EPOCH));
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);
-}
-
-export function isCandidateBlock(config: IBeaconConfig, block: {timestamp: number}, periodStart: number): boolean {
-  const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
-  return (
-    block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= periodStart &&
-    block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= periodStart
-  );
 }

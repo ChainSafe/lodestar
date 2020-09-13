@@ -1,10 +1,9 @@
 import {expect} from "chai";
 import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {List, TreeBacked} from "@chainsafe/ssz";
-import {Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
-import {pickEth1Vote, getEth1VotesToConsider, votingPeriodStartTime} from "../../../../src/eth1/utils/eth1Vote";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {List} from "@chainsafe/ssz";
+import {Eth1Data} from "@chainsafe/lodestar-types";
+import {pickEth1Vote} from "../../../../src/eth1/utils/eth1Vote";
 
 describe("eth1 / util / eth1Vote", function () {
   function generateEth1Vote(i: number): Eth1Data {
@@ -83,73 +82,4 @@ describe("eth1 / util / eth1Vote", function () {
       });
     }
   });
-
-  describe("getEth1VotesToConsider", function () {
-    // Function array to scope votes in each test case defintion
-    const testCases: (() => {
-      id: string;
-      state: TreeBacked<BeaconState>;
-      eth1Blocks: (Eth1Data & {timestamp: number})[];
-      expectedVotesToConsider: Eth1Data[];
-    })[] = [
-      () => {
-        const state = generateState({eth1Data: generateEth1Vote(0)});
-        const timestampInRange = getTimestampInRage(config, state);
-        const vote1 = getEth1DataBlock({depositCount: 1, timestamp: 0});
-        const vote2 = getEth1DataBlock({depositCount: 1, timestamp: timestampInRange});
-        const vote3 = getEth1DataBlock({depositCount: 1, timestamp: Infinity});
-        return {
-          id: "Only consider blocks with a timestamp in range",
-          state,
-          eth1Blocks: [vote1, vote2, vote3].map(getEth1DataBlock),
-          expectedVotesToConsider: [vote2],
-        };
-      },
-      () => {
-        const state = generateState({eth1Data: generateEth1Vote(11)});
-        const timestampInRange = getTimestampInRage(config, state);
-        const vote1 = getEth1DataBlock({depositCount: 10, timestamp: timestampInRange});
-        const vote2 = getEth1DataBlock({depositCount: 12, timestamp: timestampInRange});
-        return {
-          id: "Ensure first vote is depositCount < current state is not considered",
-          state,
-          eth1Blocks: [vote1, vote2].map(getEth1DataBlock),
-          expectedVotesToConsider: [vote2],
-        };
-      },
-    ];
-
-    for (const testCase of testCases) {
-      const {id, state, eth1Blocks, expectedVotesToConsider} = testCase();
-      it(`get votesToConsider: ${id}`, async function () {
-        const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
-        expect(votesToConsider).to.deep.equal(expectedVotesToConsider);
-      });
-    }
-  });
 });
-
-/**
- * Util: Fill partial eth1DataBlock with mock data
- * @param eth1DataBlock
- */
-function getEth1DataBlock(eth1DataBlock: Partial<Eth1Data & {timestamp: number}>): Eth1Data & {timestamp: number} {
-  return {
-    blockHash: Buffer.alloc(32),
-    timestamp: 0,
-    depositRoot: Buffer.alloc(32),
-    depositCount: 0,
-    ...eth1DataBlock,
-  };
-}
-
-/**
- * Util: Get a mock timestamp that passes isCandidateBlock validation
- * @param config
- * @param state
- */
-function getTimestampInRage(config: IBeaconConfig, state: TreeBacked<BeaconState>): number {
-  const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
-  const periodStart = votingPeriodStartTime(config, state);
-  return periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
-}
