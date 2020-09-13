@@ -21,7 +21,7 @@ export class Eth1DepositsCache {
    * have 100 proofs, but the eth2 chain only acknowledges 50 of them, we must produce our
    * proofs with respect to a tree size of 50.
    */
-  async getDeposits({
+  async get({
     indexRange,
     depositCount,
   }: {
@@ -44,7 +44,7 @@ export class Eth1DepositsCache {
    * Add log to cache
    * This function enforces that `logs` are imported one-by-one with consecutive indexes
    */
-  async insertBatch(depositEvents: DepositEvent[]): Promise<void> {
+  async add(depositEvents: DepositEvent[]): Promise<void> {
     assertConsecutiveDeposits(depositEvents);
 
     const lastLog = await this.db.depositEvent.lastValue();

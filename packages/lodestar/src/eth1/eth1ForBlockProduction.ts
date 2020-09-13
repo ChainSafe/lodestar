@@ -5,6 +5,7 @@ import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition/lib/fa
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
+import {Eth1DataCache} from "./eth1DataCache";
 import {pickEth1Vote, votingPeriodStartTime} from "./utils/eth1Vote";
 import {setIntervalAbortableAsync} from "../util/sleep";
 import {IBeaconDb} from "../db";
@@ -24,13 +25,13 @@ import {IEth1Options} from "./options";
  */
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   config: IBeaconConfig;
-  db: IBeaconDb;
   logger: ILogger;
   opts: IEth1Options;
   signal: AbortSignal;
 
   // Internal modules, state
   depositsCache: Eth1DepositsCache;
+  eth1DataCache: Eth1DataCache;
   eth1Provider: Eth1Provider;
   lastProcessedDepositBlockNumber: number | null;
   MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
@@ -50,11 +51,11 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     signal: AbortSignal;
   }) {
     this.config = config;
-    this.db = db;
     this.signal = signal;
     this.logger = logger;
     this.opts = opts;
     this.depositsCache = new Eth1DepositsCache(config, db);
+    this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
     const autoUpdateIntervalMs = config.params.SECONDS_PER_ETH1_BLOCK / 2;
@@ -72,7 +73,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   /**
-   * Return eth1Data and deposits ready for blockProduction for a given state
+   * Return eth1Data and deposits ready for block production for a given state
    */
   async getEth1DataAndDeposits(
     state: TreeBacked<BeaconState>
@@ -87,16 +88,18 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   /**
    * Returns an eth1Data vote for a given state
-   * Requires `blocksCache` and `depositsCache` to be updated regularly to return good results
+   * Requires internal caches to be updated regularly to return good results
    */
   private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
     const periodStart = votingPeriodStartTime(this.config, state);
     const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = this.config.params;
 
     const eth1VotesToConsider = (
-      await this.db.eth1Data.values({
-        gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
-        lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
+      await this.eth1DataCache.get({
+        timestampRange: {
+          gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
+          lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
+        },
       })
     ).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
 
@@ -105,7 +108,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   /**
    * Returns deposits to be included for a given state and eth1Data vote
-   * Requires `blocksCache` and `depositsCache` to be updated regularly to return good results
+   * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
     const depositIndex = state.eth1DepositIndex;
@@ -117,7 +120,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     } else if (depositIndex === depositCount) {
       return [];
     } else {
-      return this.depositsCache.getDeposits({
+      return this.depositsCache.get({
         indexRange: {gt: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
         depositCount,
       });
@@ -143,7 +146,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
-    await this.depositsCache.insertBatch(depositEvents);
+    await this.depositsCache.add(depositEvents);
     // Store the `toBlock` since that block may not contain
     this.lastProcessedDepositBlockNumber = toBlock;
   }
@@ -156,8 +159,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * archive node, something most users don't have access too.
    */
   private async updateBlockCache(remoteFollowBlock: number): Promise<void> {
-    const highestEth1Data = await this.db.eth1Data.lastValue();
-    const lastCachedBlock = highestEth1Data && highestEth1Data.blockNumber;
+    const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
     const fromBlock = this.getFromBlockToFetch(lastCachedBlock);
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const toBlock = Math.min(
@@ -168,7 +170,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
     const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
     const eth1Datas = await this.depositsCache.appendEth1DataDeposit(eth1Blocks, this.lastProcessedDepositBlockNumber);
-    await this.db.eth1Data.batchPutValues(eth1Datas);
+    await this.eth1DataCache.add(eth1Datas);
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
