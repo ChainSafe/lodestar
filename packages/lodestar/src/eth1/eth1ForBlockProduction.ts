@@ -169,7 +169,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     );
 
     const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
-    const eth1Datas = await this.depositsCache.appendEth1DataDeposit(eth1Blocks, this.lastProcessedDepositBlockNumber);
+    const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, this.lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
   }
 

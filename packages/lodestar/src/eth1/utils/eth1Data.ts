@@ -7,7 +7,7 @@ import {backfillMap} from "../../util/map";
  * Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
  */
-export async function appendEth1DataDeposit(
+export async function getEth1DataForBlocks(
   blocks: Eth1Block[],
   depositDescendingStream: AsyncIterable<DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,

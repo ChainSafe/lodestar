@@ -1,7 +1,7 @@
 import {Deposit, DepositEvent, Eth1Data, Eth1Block} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db";
-import {appendEth1DataDeposit} from "./utils/eth1DataDeposit";
+import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
 
@@ -76,12 +76,12 @@ export class Eth1DepositsCache {
    * @param fromBlock
    * @param toBlock
    */
-  async appendEth1DataDeposit(
+  async getEth1DataForBlocks(
     blocks: Eth1Block[],
     lastProcessedDepositBlockNumber: number | null
   ): Promise<(Eth1Data & Eth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
-    return await appendEth1DataDeposit(
+    return await getEth1DataForBlocks(
       blocks,
       this.db.depositEvent.valuesStream({lte: highestBlock, reverse: true}),
       await this.db.depositDataRoot.getDepositRootTree(),

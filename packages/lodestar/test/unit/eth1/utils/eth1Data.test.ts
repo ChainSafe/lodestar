@@ -7,16 +7,16 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {iteratorFromArray} from "../../../utils/interator";
 import {mapToObj} from "../../../utils/map";
 import {
-  appendEth1DataDeposit,
+  getEth1DataForBlocks,
   getDepositCountByBlockNumber,
   getDepositRootByDepositCount,
   ErrorNoDepositCount,
   ErrorNotEnoughDepositRoots,
-} from "../../../../src/eth1/utils/eth1DataDeposit";
+} from "../../../../src/eth1/utils/eth1Data";
 
 chai.use(chaiAsPromised);
 
-describe("eth1 / util / appendEth1DataDeposit", function () {
+describe("eth1 / util / getEth1DataForBlocks", function () {
   interface ITestCase {
     id: string;
     blocks: Eth1Block[];
@@ -29,7 +29,7 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
 
   const testCases: (() => ITestCase)[] = [
     () => {
-      // Result must contain all blocks from eth1Blocks, with backfilled eth1DataDeposit
+      // Result must contain all blocks from eth1Blocks, with backfilled eth1Data
       const expectedEth1Data = [
         {blockNumber: 5, depositCount: 13},
         {blockNumber: 6, depositCount: 13},
@@ -107,7 +107,7 @@ describe("eth1 / util / appendEth1DataDeposit", function () {
       error,
     } = testCase();
     it(id, async function () {
-      const eth1DatasPromise = appendEth1DataDeposit(
+      const eth1DatasPromise = getEth1DataForBlocks(
         blocks,
         // Simulate a descending stream reading from DB
         iteratorFromArray(deposits.reverse()),
