@@ -48,7 +48,7 @@ import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
-import {isNil} from "lodash";
+import isNil from "lodash.isnil";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
