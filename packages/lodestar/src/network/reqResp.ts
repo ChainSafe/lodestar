@@ -30,6 +30,7 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
 import AbortController from "abort-controller";
+import all from "it-all";
 import {
   createResponseEvent,
   createRpcProtocol,
@@ -273,10 +274,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       return await pipe(
         this.sendRequestStream(peerId, method, encoding, requestId, body),
         async (source: AsyncIterable<T>): Promise<T | null> => {
-          const responses: Array<T> = [];
-          for await (const response of source) {
-            responses.push(response);
-          }
+          const responses = await all(source);
           if (requestSingleChunk && responses.length === 0) {
             // allow empty response for beacon blocks by range/root
             this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {

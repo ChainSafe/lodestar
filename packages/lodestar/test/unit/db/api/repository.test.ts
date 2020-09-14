@@ -2,6 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pushable, {Pushable} from "it-pushable";
+import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32} from "@chainsafe/lodestar-types";
@@ -130,10 +131,7 @@ describe("database repository", function () {
     source.push(TestSSZType.serialize({bool: false, bytes: Buffer.alloc(32)}) as Buffer);
     source.end();
 
-    const result: TestType[] = [];
-    for await (const v of repository.valuesStream()) {
-      result.push(v);
-    }
+    const result = await all(repository.valuesStream());
     expect(result.length).to.be.equal(2);
   });
 });
