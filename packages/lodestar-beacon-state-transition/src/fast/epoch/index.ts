@@ -18,6 +18,7 @@ export {
 
 export function processEpoch(epochCtx: EpochContext, state: BeaconState): void {
   const process = prepareEpochProcessState(epochCtx, state);
+  epochCtx.epochProcess = process;
   processJustificationAndFinalization(epochCtx, process, state);
   processRewardsAndPenalties(epochCtx, process, state);
   processRegistryUpdates(epochCtx, process, state);
