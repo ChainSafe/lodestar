@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ITreeStateContext} from "./stateContextCache";
@@ -12,7 +12,10 @@ import {ITreeStateContext} from "./stateContextCache";
 export class CheckpointStateCache {
   private readonly config: IBeaconConfig;
   private cache: Record<string, ITreeStateContext>;
-  private epochIndex: Record<Epoch, string[]>;
+  /**
+   * Epoch -> Set<blockRoot>
+   */
+  private epochIndex: Record<Epoch, Set<string>>;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
@@ -34,21 +37,63 @@ export class CheckpointStateCache {
       return;
     }
     this.cache[key] = this.clone(item);
+    const epochKey = toHexString(cp.root);
     if (this.epochIndex[cp.epoch]) {
-      this.epochIndex[cp.epoch].push(key);
+      this.epochIndex[cp.epoch].add(epochKey);
     } else {
-      this.epochIndex[cp.epoch] = [key];
+      this.epochIndex[cp.epoch] = new Set([epochKey]);
+    }
+  }
+
+  /**
+   * Searches for the latest cached state with a `root`, starting with `epoch` and descending
+   */
+  public async getLatest({root, epoch}: Checkpoint): Promise<ITreeStateContext | null> {
+    const hexRoot = toHexString(root);
+    // sort epochs in descending order, only consider epochs lte `epoch`
+    const epochs = Object.keys(this.epochIndex)
+      .map(Number)
+      .sort((a, b) => b - a)
+      .filter((e) => e <= epoch);
+    for (const epoch of epochs) {
+      const rootSet = this.epochIndex[epoch];
+      if (rootSet && rootSet.has(hexRoot)) {
+        return this.get({root, epoch});
+      }
+    }
+    return null;
+  }
+
+  public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+    Object.keys(this.epochIndex)
+      .map(Number)
+      .filter((epoch) => epoch < finalizedEpoch)
+      .forEach((epoch) => this.deleteAllEpochItems(epoch));
+  }
+
+  public async prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): Promise<void> {
+    const epochs = Object.keys(this.epochIndex)
+      .map(Number)
+      .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
+    const MAX_EPOCHS = 20;
+    if (epochs.length > MAX_EPOCHS) {
+      epochs.slice(0, epochs.length - MAX_EPOCHS).forEach((epoch) => this.deleteAllEpochItems(epoch));
     }
   }
 
   public async delete(cp: Checkpoint): Promise<void> {
-    const key = this.config.types.Checkpoint.hashTreeRoot(cp);
-    delete this.cache[toHexString(key)];
+    const key = toHexString(this.config.types.Checkpoint.hashTreeRoot(cp));
+    delete this.cache[key];
+    const epochKey = toHexString(cp.root);
+    this.epochIndex[cp.epoch]?.delete(epochKey);
+    if (!this.epochIndex[cp.epoch]?.size) {
+      delete this.epochIndex[cp.epoch];
+    }
   }
 
   public async deleteAllEpochItems(epoch: Epoch): Promise<void> {
-    this.epochIndex[epoch]?.forEach((key) => {
-      delete this.cache[key];
+    this.epochIndex[epoch]?.forEach((hexRoot) => {
+      delete this.cache[toHexString(this.config.types.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch}))];
     });
     delete this.epochIndex[epoch];
   }
