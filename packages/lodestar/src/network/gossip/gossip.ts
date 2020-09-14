@@ -37,9 +37,9 @@ import {toHexString} from "@chainsafe/ssz";
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject) => void;
 
 export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) implements IGossip {
+  public readonly pubsub: IGossipSub;
   protected readonly opts: INetworkOptions;
   protected readonly config: IBeaconConfig;
-  protected readonly pubsub: IGossipSub;
   protected readonly chain: IBeaconChain;
   protected readonly logger: ILogger;
 
@@ -63,7 +63,6 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   }
 
   public async start(): Promise<void> {
-    await this.pubsub.start();
     this.registerHandlers(this.chain.currentForkDigest);
     this.chain.emitter.on("forkDigest", this.handleForkDigest);
     this.emit("gossip:start");
@@ -75,7 +74,6 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     this.emit("gossip:stop");
     this.unregisterHandlers();
     this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
-    await this.pubsub.stop();
     if (this.statusInterval) {
       clearInterval(this.statusInterval);
     }
