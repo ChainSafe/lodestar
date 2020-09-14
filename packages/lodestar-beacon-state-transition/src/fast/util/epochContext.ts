@@ -25,6 +25,7 @@ import {
   isAggregatorFromCommitteeLength,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
+import {IEpochProcess} from "./epochProcess";
 
 class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
@@ -48,6 +49,7 @@ export class EpochContext {
   public currentShuffling!: IEpochShuffling;
   public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
+  public epochProcess?: IEpochProcess;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
@@ -89,6 +91,7 @@ export class EpochContext {
     ctx.previousShuffling = this.previousShuffling;
     ctx.currentShuffling = this.currentShuffling;
     ctx.nextShuffling = this.nextShuffling;
+    ctx.epochProcess = this.epochProcess;
     return ctx;
   }
 
