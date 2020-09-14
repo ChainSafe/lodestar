@@ -7,44 +7,44 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 export enum Bucket {
   // beacon chain
   // every state
-  state, // Root -> BeaconState
+  state = 0, // Root -> BeaconState
   // unfinalized blocks
-  block, // Root -> SignedBeaconBlock
+  block = 1, // Root -> SignedBeaconBlock
   // finalized blocks
-  blockArchive, // Slot -> SignedBeaconBlock
-  blockArchiveParentRootIndex, // parent Root -> Slot
-  blockArchiveRootIndex, // Root -> Slot
+  blockArchive = 2, // Slot -> SignedBeaconBlock
+  blockArchiveParentRootIndex = 3, // parent Root -> Slot
+  blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
-  invalidBlock, // Root -> boolean
+  invalidBlock = 5, // Root -> boolean
   // finalized chain
-  mainChain, // Slot -> Root<BeaconBlock>
+  mainChain = 6, // Slot -> Root<BeaconBlock>
   // justified, finalized state and block hashes
-  chainInfo, // Key -> Number64 | stateHash | blockHash
+  chainInfo = 7, // Key -> Number64 | stateHash | blockHash
   // eth1 processing
-  eth1Data, // timestamp -> Eth1Data
-  depositDataRoot, // depositIndex -> Root<DepositData>
+  eth1Data = 8, // timestamp -> Eth1Data
+  depositDataRoot = 9, // depositIndex -> Root<DepositData>
   // op pool
-  attestation, // Root -> Attestation
-  aggregateAndProof, // Root -> AggregateAndProof
-  depositData, // index -> DepositData
-  exit, // ValidatorIndex -> VoluntaryExit
-  proposerSlashing, // ValidatorIndex -> ProposerSlashing
-  attesterSlashing, // Root -> AttesterSlashing
+  attestation = 10, // Root -> Attestation
+  aggregateAndProof = 11, // Root -> AggregateAndProof
+  depositData = 12, // index -> DepositData
+  exit = 13, // ValidatorIndex -> VoluntaryExit
+  proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
+  attesterSlashing = 15, // Root -> AttesterSlashing
   // validator
-  validator,
-  lastProposedBlock,
-  proposedAttestations,
+  validator = 16,
+  lastProposedBlock = 17,
+  proposedAttestations = 18,
 }
 
 export enum Key {
-  chainHeight,
+  chainHeight = 0,
 
-  latestState,
-  finalizedState,
-  justifiedState,
+  latestState = 1,
+  finalizedState = 2,
+  justifiedState = 3,
 
-  finalizedBlock,
-  justifiedBlock,
+  finalizedBlock = 4,
+  justifiedBlock = 5,
 }
 
 /**
