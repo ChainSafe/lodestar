@@ -30,6 +30,7 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
 import AbortController from "abort-controller";
+import all from "it-all";
 import {
   createResponseEvent,
   createRpcProtocol,
@@ -247,10 +248,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     body?: RequestBody
   ): (source: AsyncIterable<T>) => Promise<T | null> {
     return async (source) => {
-      const responses: Array<T> = [];
-      for await (const response of source) {
-        responses.push(response);
-      }
+      const responses = await all(source);
       if (requestSingleChunk && responses.length === 0) {
         // allow empty response for beacon blocks by range/root
         this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
@@ -263,7 +261,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         requestId,
         encoding,
         body:
-          !isNil(body) &&
+          body !== undefined &&
+          body !== null &&
           (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
             body
           ),
@@ -335,9 +334,9 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
+      await pipe(!isNil(body) ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      conn.stream.reset();
       yield* pipe(
-        !isNil(body) ? [body] : [null],
-        eth2RequestEncode(config, logger, method, encoding),
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)

@@ -1,8 +1,8 @@
 import pipe from "it-pipe";
+import all from "it-all";
 import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
-import {collect} from "../../chain/blocks/utils";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
@@ -24,7 +24,7 @@ describe("request encoders", function () {
       [BigInt(0)],
       eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
@@ -35,7 +35,7 @@ describe("request encoders", function () {
       [BigInt(0)],
       eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
@@ -47,7 +47,7 @@ describe("request encoders", function () {
       [status],
       eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
@@ -59,7 +59,7 @@ describe("request encoders", function () {
       [status],
       eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
@@ -70,7 +70,7 @@ describe("request encoders", function () {
       [BigInt(1), BigInt(2)],
       eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
@@ -81,14 +81,14 @@ describe("request encoders", function () {
       [BigInt(1), BigInt(2)],
       eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
   });
 
   it("should work - no request body - ssz", async function () {
-    const requests = await pipe([], eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ), collect);
+    const requests = await pipe([], eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ), all);
     expect(requests.length).to.be.equal(1);
   });
 
@@ -96,7 +96,7 @@ describe("request encoders", function () {
     const requests = await pipe(
       [],
       eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
-      collect
+      all
     );
     expect(requests.length).to.be.equal(1);
   });
@@ -106,7 +106,7 @@ describe("request encoders", function () {
       [BigInt(1)],
       eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-      collect
+      all
     );
     expect(loggerStub.warn.calledOnce).to.be.true;
   });
@@ -116,7 +116,7 @@ describe("request encoders", function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(99999999999999999999999))],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-        collect
+        all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
       const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint 11, method status";
@@ -127,7 +127,7 @@ describe("request encoders", function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.alloc(12, 0)],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-        collect
+        all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
       const err = "eth2RequestDecode: Invalid szzLength of 0 for method status";
@@ -138,7 +138,7 @@ describe("request encoders", function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), Buffer.alloc(config.types.Status.minSize() + 10)],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-        collect
+        all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
       const err = "eth2RequestDecode: too much bytes read (94) for method status, sszLength 84";
@@ -149,7 +149,7 @@ describe("request encoders", function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), Buffer.from("wrong snappy data")],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-        collect
+        all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
       const err = "Failed to decompress request data. Error: Unsupported snappy chunk type";
@@ -162,7 +162,7 @@ describe("request encoders", function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), config.types.Status.serialize(status)],
         eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
-        collect
+        all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: true, body: status}]);
     });

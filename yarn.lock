@@ -2794,6 +2794,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/it-all@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@types/it-all/-/it-all-1.0.0.tgz#481c5ec6bcec47436b84254678052345ea8f7ce6"
+  integrity sha512-sF9Os6utVd3/H+PSj7YV5Fwd/aC0LLAOr0/oW1aEx8BQFfLsq7fKIuj7vH1vzbaiQ8IkYpoP1Yu8HSIepL3xgg==
+
 "@types/js-yaml@^3.12.1", "@types/js-yaml@^3.12.2":
   version "3.12.3"
   resolved "https://registry.yarnpkg.com/@types/js-yaml/-/js-yaml-3.12.3.tgz#abf383c5b639d0aa8b8c4a420d6a85f703357d6c"
@@ -10925,7 +10930,7 @@ libp2p-tcp@^0.14.6:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#8bf05918fb98c44bde75d20a90777e90ca7e2f93"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#fca072c9764436ef71f974a211bb1befae432575"
   dependencies:
     "@chainsafe/discv5" "^0.3.1"
     "@types/node" "^13.7.0"

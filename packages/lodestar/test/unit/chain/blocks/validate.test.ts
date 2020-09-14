@@ -1,11 +1,11 @@
 import pipe from "it-pipe";
+import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {SinonStubbedInstance} from "sinon";
 import {BlockRepository} from "../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
-import {collect} from "./utils";
 import {expect} from "chai";
 import {getBlockSummary} from "../../../utils/headBlockInfo";
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
@@ -29,7 +29,7 @@ describe("block validate stream", function () {
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
       validateBlock(config, logger, forkChoiceStub, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(0);
   });
@@ -42,7 +42,7 @@ describe("block validate stream", function () {
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
       validateBlock(config, logger, forkChoiceStub, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(0);
   });
@@ -57,7 +57,7 @@ describe("block validate stream", function () {
     const result = await pipe(
       [{signedBlock: receivedBlock, trusted: false}],
       validateBlock(config, logger, forkChoiceStub, eventBusStub),
-      collect
+      all
     );
     expect(result).to.have.length(1);
   });

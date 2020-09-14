@@ -9,6 +9,7 @@ import level from "level";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IDatabaseOptions} from "../../options";
 import pushable, {Pushable} from "it-pushable";
+import all from "it-all";
 
 export interface ILevelDBOptions extends IDatabaseOptions {
   db?: LevelUp;
@@ -87,11 +88,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   }
 
   public async keys(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
-    const keys: Buffer[] = [];
-    for await (const key of this.keysStream(opts)) {
-      keys.push(key);
-    }
-    return keys;
+    return all(this.keysStream(opts));
   }
 
   public valuesStream(opts?: IFilterOptions<Buffer>): Pushable<Buffer> {
@@ -111,11 +108,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   }
 
   public async values(opts?: IFilterOptions<Buffer>): Promise<Buffer[]> {
-    const values: Buffer[] = [];
-    for await (const value of this.valuesStream(opts)) {
-      values.push(value);
-    }
-    return values;
+    return all(this.valuesStream(opts));
   }
 
   public entriesStream(opts?: IFilterOptions<Buffer>): Pushable<IKeyValue<Buffer, Buffer>> {
@@ -135,10 +128,6 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
   }
 
   public async entries(opts?: IFilterOptions<Buffer>): Promise<IKeyValue<Buffer, Buffer>[]> {
-    const entries: IKeyValue<Buffer, Buffer>[] = [];
-    for await (const entry of this.entriesStream(opts)) {
-      entries.push(entry);
-    }
-    return entries;
+    return all(this.entriesStream(opts));
   }
 }

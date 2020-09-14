@@ -1,6 +1,7 @@
 import {TreeBacked, CompositeType} from "@chainsafe/ssz";
 import {BeaconState, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IDatabaseController} from "../../../controller";
@@ -14,6 +15,10 @@ export class StateArchiveRepository extends Repository<Epoch, TreeBacked<BeaconS
 
   public getId(state: TreeBacked<BeaconState>): Epoch {
     return computeEpochAtSlot(this.config, state.slot);
+  }
+
+  public decodeKey(data: Buffer): number {
+    return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   public decodeValue(data: Buffer): TreeBacked<BeaconState> {
