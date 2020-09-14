@@ -331,7 +331,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         eth2RequestEncode(config, logger, method, encoding),
         conn.stream
       );
-      // @ts-ignore
       conn.stream.reset();
       yield* pipe(
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
