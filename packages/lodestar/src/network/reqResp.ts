@@ -324,9 +324,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
-      yield* pipe(
+      await pipe(
         body !== null && body !== undefined ? [body] : [null],
         eth2RequestEncode(config, logger, method, encoding),
+        conn.stream
+      );
+      conn.stream.reset();
+      yield* pipe(
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),
         eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
