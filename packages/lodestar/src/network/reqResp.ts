@@ -261,8 +261,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         requestId,
         encoding,
         body:
-          body !== undefined &&
-          body !== null &&
+          !isNil(body) &&
           (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
             body
           ),
