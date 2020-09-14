@@ -53,7 +53,7 @@
     "@chainsafe/ssz": "^0.6.13",
     "@types/async": "^3.0.1",
     "@types/datastore-level": "^1.1.1",
-    "@types/lodash": "^4.14.161",
+    "@types/lodash.isnil": "^4.0.6",
     "abort-controller": "^3.0.0",
     "abortable-iterator": "^3.0.0",
     "assert": "^2.0.0",
