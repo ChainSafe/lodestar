@@ -49,7 +49,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   public async start(): Promise<void> {
     this.chain.emitter.on("block", this.onProcessedBlock);
-    const headSlot = this.chain.forkChoice.headBlockSlot();
+    const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
@@ -145,7 +145,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
           );
           if (lastFetchedSlot) {
             // failed to fetch range
-            if (lastFetchedSlot === chain.forkChoice.headBlockSlot()) {
+            if (lastFetchedSlot === chain.forkChoice.getHead().slot) {
               handleFailedToGetRange(range);
             } else {
               // success, not trigger sync until after we process lastFetchedSlot

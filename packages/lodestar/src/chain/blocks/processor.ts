@@ -5,6 +5,7 @@ import pipe from "it-pipe";
 import abortable from "abortable-iterator";
 import {AbortController} from "abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateBlock} from "./validate";
 import {processBlock} from "./process";
@@ -12,7 +13,6 @@ import {BlockPool} from "./pool";
 import {postProcess} from "./post";
 import {IService} from "../../node";
 import {IBeaconDb} from "../../db/api";
-import {ILMDGHOST} from "../forkChoice";
 import {IBeaconMetrics} from "../../metrics";
 import {IAttestationProcessor, IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
@@ -22,7 +22,7 @@ export class BlockProcessor implements IService {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
-  private readonly forkChoice: ILMDGHOST;
+  private readonly forkChoice: ForkChoice;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
   private readonly attestationProcessor: IAttestationProcessor;
@@ -40,7 +40,7 @@ export class BlockProcessor implements IService {
     config: IBeaconConfig,
     logger: ILogger,
     db: IBeaconDb,
-    forkChoice: ILMDGHOST,
+    forkChoice: ForkChoice,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
     attestationProcessor: IAttestationProcessor

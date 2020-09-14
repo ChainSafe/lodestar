@@ -11,11 +11,11 @@ import {
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";
-
-import {ILMDGHOST} from "./forkChoice";
-import {IBeaconClock} from "./clock/interface";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {IBeaconClock} from "./clock/interface";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IService} from "../node";
 import {ChainEventEmitter} from "./emitter";
@@ -37,7 +37,7 @@ export type BlockError = {
  */
 export interface IBeaconChain {
   emitter: ChainEventEmitter;
-  forkChoice: ILMDGHOST;
+  forkChoice: ForkChoice;
   clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;

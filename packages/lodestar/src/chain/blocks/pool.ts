@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 
 import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
-import {ILMDGHOST} from "../forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 export class BlockPool {
   private pool = new Map<string, IBlockProcessJob[]>();
@@ -13,13 +13,13 @@ export class BlockPool {
   private readonly config: IBeaconConfig;
   private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
   private readonly eventBus: ChainEventEmitter;
-  private readonly forkChoice: ILMDGHOST;
+  private readonly forkChoice: ForkChoice;
 
   constructor(
     config: IBeaconConfig,
     blockProcessorSource: Pushable<IBlockProcessJob>,
     eventBus: ChainEventEmitter,
-    forkChoice: ILMDGHOST
+    forkChoice: ForkChoice
   ) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;
@@ -35,7 +35,7 @@ export class BlockPool {
     } else {
       this.pool.set(key, [job]);
       //this prevents backward syncing, tolerance is 20 blocks
-      if (job.signedBlock.message.slot <= this.forkChoice.headBlockSlot() + 20) {
+      if (job.signedBlock.message.slot <= this.forkChoice.getHead().slot + 20) {
         this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
       }
     }

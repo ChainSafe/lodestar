@@ -4,15 +4,15 @@
 
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {toHexString} from "@chainsafe/ssz";
-import {BlockSummary} from "../../chain";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;
+  forkChoice: ForkChoice;
   logger: ILogger;
 }
 
@@ -20,24 +20,19 @@ export interface IArchiveBlockModules {
  * Archives finalized blocks from active bucket to archive bucket.
  */
 export class ArchiveBlocksTask implements ITask {
-  private readonly db: IBeaconDb;
-  private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
+  private readonly db: IBeaconDb;
+  private readonly forkChoice: ForkChoice;
+  private readonly logger: ILogger;
 
-  private finalized: BlockSummary;
-  private pruned: BlockSummary[];
+  private finalized: Checkpoint;
 
-  public constructor(
-    config: IBeaconConfig,
-    modules: IArchiveBlockModules,
-    finalized: BlockSummary,
-    pruned: BlockSummary[]
-  ) {
-    this.db = modules.db;
-    this.logger = modules.logger;
+  public constructor(config: IBeaconConfig, modules: IArchiveBlockModules, finalized: Checkpoint) {
     this.config = config;
+    this.db = modules.db;
+    this.forkChoice = modules.forkChoice;
+    this.logger = modules.logger;
     this.finalized = finalized;
-    this.pruned = pruned;
   }
 
   /**
@@ -45,40 +40,24 @@ export class ArchiveBlocksTask implements ITask {
    */
   public async run(): Promise<void> {
     this.logger.profile("Archive Blocks");
-    const allBlockEntries = await this.db.block.entries();
-    const blockEntries = allBlockEntries.filter(({value}) => value.message.slot <= this.finalized.slot);
-    const blocksByRoot = new Map<string, SignedBeaconBlock>(
-      blockEntries.map(({key, value}) => [toHexString(key), value])
-    );
-
-    const archivedBlocks: SignedBeaconBlock[] = [];
-    const finalizedBlock = blocksByRoot.get(toHexString(this.finalized.blockRoot));
-    if (finalizedBlock) {
-      archivedBlocks.push(finalizedBlock);
-    }
-    let lastBlock = finalizedBlock;
-    while (lastBlock) {
-      lastBlock = blocksByRoot.get(toHexString(lastBlock.message.parentRoot));
-      if (lastBlock) {
-        archivedBlocks.push(lastBlock);
+    const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
+    const keysToDelete = [];
+    let totalArchived = 0;
+    for await (const {key, value} of await this.db.block.entriesStream()) {
+      if (value.message.slot > finalizedSlot) {
+        continue;
       }
+      if (this.forkChoice.isDescendant(key, this.finalized.root)) {
+        await this.db.blockArchive.add(value);
+        totalArchived++;
+      }
+      keysToDelete.push(key);
     }
-    const fromSlot = archivedBlocks.length > 0 ? archivedBlocks[archivedBlocks.length - 1].message.slot : undefined;
-    const toSlot = archivedBlocks.length > 0 ? archivedBlocks[0].message.slot : undefined;
-    const epoch = computeEpochAtSlot(this.config, this.finalized.slot);
-
-    this.logger.info(
-      `Started archiving ${archivedBlocks.length} blocks from slot ${fromSlot} to ${toSlot}` +
-        `(finalized epoch #${epoch})...`
-    );
-    await Promise.all([
-      this.db.blockArchive.batchAdd(archivedBlocks),
-      this.db.block.batchDelete(blockEntries.map(({key}) => key)),
-    ]);
+    await this.db.block.batchDelete(keysToDelete);
     this.logger.profile("Archive Blocks");
-    this.logger.info(
-      `Archiving of ${archivedBlocks.length} finalized blocks from slot ${fromSlot} to ${toSlot}` +
-        ` completed (finalized epoch #${epoch})`
-    );
+    this.logger.info("Archiving of finalized blocks complete.", {
+      totalArchived,
+      finalizedEpoch: this.finalized.epoch,
+    });
   }
 }

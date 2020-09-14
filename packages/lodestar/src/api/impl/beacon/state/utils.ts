@@ -1,6 +1,6 @@
 // this will need async once we wan't to resolve archive slot
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILMDGHOST} from "../../../../chain/forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../../../db/api";
 import {StateId} from "./interface";
@@ -9,21 +9,21 @@ import {fromHexString} from "@chainsafe/ssz";
 export async function resolveStateId(
   config: IBeaconConfig,
   db: IBeaconDb,
-  forkChoice: ILMDGHOST,
+  forkChoice: ForkChoice,
   stateId: StateId
 ): Promise<BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head") {
-    return (await db.stateCache.get(forkChoice.headStateRoot()))?.state ?? null;
+    return (await db.stateCache.get(forkChoice.getHead().stateRoot))?.state ?? null;
   }
   if (stateId === "genesis") {
     return db.stateArchive.get(0);
   }
   if (stateId === "finalized") {
-    return (await db.stateCache.get(forkChoice.getFinalized()?.root!))?.state ?? null;
+    return (await db.stateCache.get(forkChoice.getFinalizedCheckpoint().root))?.state ?? null;
   }
   if (stateId === "justified") {
-    return (await db.stateCache.get(forkChoice.getJustified()?.root!))?.state ?? null;
+    return (await db.stateCache.get(forkChoice.getJustifiedCheckpoint().root))?.state ?? null;
   }
   if (stateId.startsWith("0x")) {
     //TODO: support getting finalized states by root as well
