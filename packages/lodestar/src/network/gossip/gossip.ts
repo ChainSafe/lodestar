@@ -37,11 +37,11 @@ import {toHexString} from "@chainsafe/ssz";
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject) => void;
 
 export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) implements IGossip {
-  public readonly pubsub: IGossipSub;
   protected readonly opts: INetworkOptions;
   protected readonly config: IBeaconConfig;
   protected readonly chain: IBeaconChain;
   protected readonly logger: ILogger;
+  protected readonly pubsub: IGossipSub;
 
   private handlers?: Map<string, GossipHandlerFn>;
   //TODO: make this configurable
