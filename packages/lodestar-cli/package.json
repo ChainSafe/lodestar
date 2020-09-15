@@ -58,11 +58,8 @@
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "@iarna/toml": "^2.2.3",
     "@types/lockfile": "^1.0.1",
-    "bigint-buffer": "^1.1.5",
     "bip39": "^3.0.2",
-    "commander": "^2.19.0",
     "deepmerge": "^3.2.0",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",
@@ -80,15 +77,12 @@
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.3",
-    "@types/es6-promisify": "6.0.0",
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.11",
     "@types/inquirer": "^7.3.0",
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
-    "@types/mockery": "^1.4.29",
     "@types/rimraf": "^2.0.3",
-    "@types/yargs": "^15.0.4",
-    "mockery": "^2.1.0"
+    "@types/yargs": "^15.0.4"
   }
 }

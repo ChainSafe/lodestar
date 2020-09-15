@@ -38,16 +38,13 @@
   "dependencies": {
     "@chainsafe/ssz": "^0.6.13",
     "bigint-buffer": "^1.1.5",
-    "camelcase": "^5.3.1",
     "chalk": "^2.4.2",
     "js-yaml": "^3.13.1",
     "winston": "^3.2.1",
     "winston-transport": "^4.3.0"
   },
   "devDependencies": {
-    "@types/camelcase": "^5.2.0",
-    "@types/js-yaml": "^3.12.1",
-    "@types/snake-case": "^1.1.2"
+    "@types/js-yaml": "^3.12.1"
   },
   "keywords": [
     "ethereum",

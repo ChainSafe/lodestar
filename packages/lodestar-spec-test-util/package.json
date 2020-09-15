@@ -44,18 +44,11 @@
   "dependencies": {
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "camelcase": "^5.3.1",
     "chai": "^4.2.0",
-    "deepmerge": "^4.0.0",
-    "js-yaml": "^3.13.1",
     "mocha": "^8.1.1",
     "v8-profiler-next": "^1.1.1"
   },
-  "devDependencies": {
-    "@types/camelcase": "^5.2.0",
-    "@types/deepmerge": "^2.2.0",
-    "@types/js-yaml": "^3.12.1"
-  },
+  "devDependencies": {},
   "peerDependencies": {
     "chai": "^4.2.0",
     "mocha": "^8.1.1"
