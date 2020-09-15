@@ -23,7 +23,7 @@ export async function getPreState(
   forkChoice: ForkChoice,
   logger: ILogger,
   job: IBlockProcessJob
-): Promise<ITreeStateContext | null> {
+): Promise<ITreeStateContext> {
   const parentBlock = forkChoice.getBlock(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
   if (!parentBlock) {
     const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
@@ -33,7 +33,11 @@ export async function getPreState(
     );
     throw new Error("Missing parent");
   }
-  return await db.stateCache.get(parentBlock.stateRoot);
+  const stateCtx = await db.stateCache.get(parentBlock.stateRoot);
+  if (!stateCtx) {
+    throw new Error("Missing state in cache");
+  }
+  return stateCtx;
 }
 
 /**

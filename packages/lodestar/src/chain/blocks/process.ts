@@ -32,7 +32,7 @@ export function processBlock(
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         let preStateContext;
         try {
-          preStateContext = await getPreState(config, db, forkChoice, logger, job.signedBlock.message);
+          preStateContext = await getPreState(config, db, forkChoice, logger, job);
         } catch (e) {
           logger.verbose("No pre-state found, dropping block", e);
           pool.addPendingBlock(job);
@@ -62,7 +62,7 @@ export function processBlock(
         pool.onProcessedBlock(job.signedBlock);
         yield {
           preStateContext,
-          postStateContext: postStateContext,
+          postStateContext,
           block: job.signedBlock,
           finalized: job.trusted,
         };
