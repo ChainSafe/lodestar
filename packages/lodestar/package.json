@@ -83,7 +83,6 @@
     "libp2p-noise": "^1.1.2",
     "libp2p-pubsub": "^0.4.7",
     "libp2p-tcp": "^0.14.6",
-    "lodash.isnil": "^4.0.0",
     "multiaddr": "^7.4.3",
     "noice-json-rpc": "^1.2.0",
     "peer-id": "^0.13.12",

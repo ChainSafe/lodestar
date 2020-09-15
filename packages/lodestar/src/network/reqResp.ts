@@ -48,7 +48,6 @@ import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
-import isNil from "lodash.isnil";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -133,7 +132,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       id,
       err,
       (async function* () {
-        if (!isNil(response)) {
+        if (response != null) {
           yield response;
         }
       })()
@@ -261,7 +260,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         requestId,
         encoding,
         body:
-          !isNil(body) &&
+          body != null &&
           (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
             body
           ),
@@ -333,7 +332,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
-      await pipe(!isNil(body) ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
       conn.stream.reset();
       yield* pipe(
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
