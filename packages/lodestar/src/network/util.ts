@@ -134,7 +134,7 @@ export async function dialProtocol(
   peerId: PeerId,
   protocol: string,
   timeout: number,
-  signal: AbortSignal | undefined
+  signal?: AbortSignal
 ): ReturnType<LibP2p["dialProtocol"]> {
   const abortController = new AbortController();
   const timer = setTimeout(() => {
