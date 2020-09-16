@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/interface-name-prefix */
 import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
 
 /**
