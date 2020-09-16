@@ -361,6 +361,10 @@ export class BeaconChain implements IBeaconChain {
         root: this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
         epoch: computeEpochAtSlot(this.config, anchorState.slot),
       };
+      // Justified checkpoint epoch must be set to finalized checkpoint epoch + 1
+      // So that we don't allow the chain to initially justify with a block that isn't also finalizing the anchor state.
+      // If that happens, we will create an invalid head state,
+      // with the head not matching the fork choice justified and finalized epochs.
       const justifiedCheckpoint = {
         root: this.config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
         epoch: computeEpochAtSlot(this.config, anchorState.slot) + 1,
