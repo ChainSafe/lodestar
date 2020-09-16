@@ -1,10 +1,10 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, ILMDGHOST} from "../../../../../../src/chain/forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
-import {generateEmptyBlockSummary, generateEmptySignedBlock} from "../../../../../utils/block";
+import {generateBlockSummary, generateEmptySignedBlock} from "../../../../../utils/block";
 import chaiAsPromised from "chai-as-promised";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {GENESIS_SLOT} from "../../../../../../src/constants";
@@ -14,18 +14,18 @@ use(chaiAsPromised);
 
 describe("block api utils", function () {
   describe("resolveBlockId", function () {
-    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
 
     let dbStub: StubbedBeaconDb;
 
     beforeEach(function () {
-      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
       dbStub = new StubbedBeaconDb(sinon, config);
     });
 
     it("should resolve head", async function () {
       const expected = Buffer.alloc(32, 2);
-      forkChoiceStub.headBlockRoot.returns(expected);
+      forkChoiceStub.getHeadRoot.returns(expected);
       await resolveBlockId(config, forkChoiceStub, dbStub, "head");
       expect(dbStub.block.get.withArgs(expected).calledOnce).to.be.true;
     });
@@ -37,7 +37,7 @@ describe("block api utils", function () {
 
     it("should resolve finalized", async function () {
       const expected = Buffer.alloc(32, 2);
-      forkChoiceStub.getFinalized.returns({epoch: 0, root: expected});
+      forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: expected});
       await resolveBlockId(config, forkChoiceStub, dbStub, "finalized");
       expect(dbStub.block.get.withArgs(expected).calledOnce).to.be.true;
     });
@@ -61,7 +61,7 @@ describe("block api utils", function () {
     it("should resolve non finalized slot", async function () {
       const expected = Buffer.alloc(32, 2);
       forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(2).returns({
-        ...generateEmptyBlockSummary(),
+        ...generateBlockSummary(),
         blockRoot: expected,
       });
       await resolveBlockId(config, forkChoiceStub, dbStub, "2");

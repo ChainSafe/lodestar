@@ -1,6 +1,7 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
+import sinon, {SinonStubbedInstance} from "sinon";
 import PeerId from "peer-id";
+
 import {
   BeaconBlocksByRangeRequest,
   BeaconState,
@@ -10,22 +11,23 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-
-import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
-import {ArrayDagLMDGHOST, BeaconChain, ILMDGHOST} from "../../../src/chain";
-import {Libp2pNetwork} from "../../../src/network";
-import {generateState} from "../../utils/state";
-import {ReqResp} from "../../../src/network/reqResp";
-import {generateEmptySignedBlock} from "../../utils/block";
-import {IBeaconDb} from "../../../src/db/api";
-import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
-import {StubbedBeaconDb} from "../../utils/stub";
-import {getBlockSummary} from "../../utils/headBlockInfo";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {generatePeer} from "../../utils/peer";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {BeaconChain} from "../../../src/chain";
+import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
+import {IBeaconDb} from "../../../src/db/api";
+import {Libp2pNetwork} from "../../../src/network";
+import {ReqResp} from "../../../src/network/reqResp";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
+import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
+import {generateEmptySignedBlock} from "../../utils/block";
+import {getBlockSummary} from "../../utils/headBlockInfo";
 import {silentLogger} from "../../utils/logger";
+import {generatePeer} from "../../utils/peer";
+import {generateState} from "../../utils/state";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 describe("sync req resp", function () {
   const logger = silentLogger;
@@ -34,16 +36,16 @@ describe("sync req resp", function () {
   let chainStub: SinonStubbedInstance<BeaconChain>,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     metaStub: SinonStubbedInstance<IPeerMetadataStore>,
-    forkChoiceStub: SinonStubbedInstance<ILMDGHOST>,
+    forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    forkChoiceStub = sandbox.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chainStub.forkChoice = forkChoiceStub;
-    forkChoiceStub.head.returns(getBlockSummary({}));
-    forkChoiceStub.getFinalized.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
+    forkChoiceStub.getHead.returns(getBlockSummary({}));
+    forkChoiceStub.getFinalizedCheckpoint.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
     chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
@@ -149,18 +151,13 @@ describe("sync req resp", function () {
         ),
       })
     );
-    forkChoiceStub.head.returns({
-      finalizedCheckpoint: {
-        root: Buffer.alloc(32),
-        epoch: config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2,
-      },
-      justifiedCheckpoint: {
-        root: Buffer.alloc(32),
-        epoch: 0,
-      },
+    forkChoiceStub.getHead.returns({
+      finalizedEpoch: config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2,
+      justifiedEpoch: 0,
       blockRoot: Buffer.alloc(32),
       parentRoot: Buffer.alloc(32),
       stateRoot: Buffer.alloc(32),
+      targetRoot: Buffer.alloc(32),
       slot: computeStartSlotAtEpoch(
         config,
         config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2

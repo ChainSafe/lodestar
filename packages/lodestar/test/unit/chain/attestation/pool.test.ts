@@ -1,24 +1,26 @@
-import {SinonStub, SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, BeaconChain, ChainEventEmitter, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {StubbedBeaconDb} from "../../../utils/stub";
-import {AttestationProcessor} from "../../../../src/chain/attestation";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon from "sinon";
-import {generateAttestation} from "../../../utils/attestation";
-import * as attestationProcessMethods from "../../../../src/chain/attestation/processor";
 import {expect} from "chai";
-import {computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+
 import {toHexString, List} from "@chainsafe/ssz";
-import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
-import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
-import {LocalClock} from "../../../../src/chain/clock/LocalClock";
 import {Slot, Attestation} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {computeStartSlotAtEpoch, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {LocalClock} from "../../../../src/chain/clock/LocalClock";
+import {AttestationProcessor} from "../../../../src/chain/attestation";
+import * as attestationProcessMethods from "../../../../src/chain/attestation/processor";
+import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {generateAttestation} from "../../../utils/attestation";
+import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
 import {silentLogger} from "../../../utils/logger";
 
 describe("attestation pool", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
-  let forkChoice: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
   let processAttestationStub: SinonStub;
   const logger = silentLogger;
 
@@ -27,7 +29,7 @@ describe("attestation pool", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     (chain.clock as any).config = config;
     chain.emitter = new ChainEventEmitter();
-    forkChoice = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chain.forkChoice = forkChoice;
     processAttestationStub = sinon.stub(attestationProcessMethods, "processAttestation");
   });
@@ -73,12 +75,8 @@ describe("attestation pool", function () {
       },
     });
     sinon.stub(chain.clock, "currentSlot").get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000)));
-    forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.target.root.valueOf() as Uint8Array)
-      .returns(generateBlockSummary());
-    forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)
-      .returns(null);
+    forkChoice.getBlock.withArgs(attestation.data.target.root.valueOf() as Uint8Array).returns(generateBlockSummary());
+    forkChoice.getBlock.withArgs(attestation.data.beaconBlockRoot.valueOf() as Uint8Array).returns(null);
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
     expect(pool.getPendingBlockAttestations(toHexString(attestation.data.beaconBlockRoot)).length).to.equal(1);
@@ -96,7 +94,7 @@ describe("attestation pool", function () {
       },
     });
     sinon.stub(chain.clock, "currentSlot").get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000)));
-    forkChoice.getBlockSummaryByBlockRoot.returns(generateBlockSummary());
+    forkChoice.getBlock.returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
     expect(pool.getPendingSlotAttestations(attestation.data.slot + 1).length).to.equal(1);
@@ -108,7 +106,7 @@ describe("attestation pool", function () {
     sinon
       .stub(chain.clock, "currentSlot")
       .get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT));
-    forkChoice.getBlockSummaryByBlockRoot.returns(generateBlockSummary());
+    forkChoice.getBlock.returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     processAttestationStub.resolves();
     await pool.receiveAttestation(attestation);
@@ -138,9 +136,7 @@ describe("attestation pool", function () {
     sinon
       .stub(chain.clock, "currentSlot")
       .get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000) - config.params.SECONDS_PER_SLOT));
-    forkChoice.getBlockSummaryByBlockRoot
-      .withArgs(attestation.data.target.root.valueOf() as Uint8Array)
-      .returns(generateBlockSummary());
+    forkChoice.getBlock.withArgs(attestation.data.target.root.valueOf() as Uint8Array).returns(generateBlockSummary());
     const pool = new AttestationProcessor(chain, {config, db, logger});
     await pool.receiveAttestation(attestation);
     const receiveAttestationStub = sinon.stub();

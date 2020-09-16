@@ -1,10 +1,11 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
+import pipe from "it-pipe";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
 
+import {ForkChoice} from "../../../../src/chain";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
@@ -15,9 +16,11 @@ describe("block archiver task", function () {
   const logger = silentLogger;
 
   let dbStub: StubbedBeaconDb;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
   });
 
   /**
@@ -43,39 +46,44 @@ describe("block archiver task", function () {
     // blockE is not archieved due to its epoch
     const blockE = generateEmptySignedBlock();
     blockE.message.slot = finalizedBlock.message.slot + 1;
-    const archiverTask = new ArchiveBlocksTask(
-      config,
-      {
-        db: dbStub,
-        logger,
-      },
-      {
-        slot: finalizedBlock.message.slot,
-        blockRoot: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
-        parentRoot: finalizedBlock.message.parentRoot as Uint8Array,
-        stateRoot: finalizedBlock.message.stateRoot as Uint8Array,
-        justifiedCheckpoint: {epoch: 0, root: Buffer.alloc(32)},
-        finalizedCheckpoint: {epoch: 0, root: Buffer.alloc(32)},
-      },
-      []
-    );
-    dbStub.block.entries.resolves([
+    const finalizedCheckpoint = {
+      epoch: 3,
+      root: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message),
+    };
+    const blocks = [
       {key: config.types.BeaconBlock.hashTreeRoot(blockA.message), value: blockA},
       {key: config.types.BeaconBlock.hashTreeRoot(blockB.message), value: blockB},
       {key: config.types.BeaconBlock.hashTreeRoot(blockC.message), value: blockC},
       {key: config.types.BeaconBlock.hashTreeRoot(blockD.message), value: blockD},
       {key: config.types.BeaconBlock.hashTreeRoot(finalizedBlock.message), value: finalizedBlock},
       {key: config.types.BeaconBlock.hashTreeRoot(blockE.message), value: blockE},
-    ]);
+    ];
+    dbStub.block.entriesStream.resolves(pipe(blocks));
+    forkChoiceStub.isDescendant.withArgs(blocks[0].key, finalizedCheckpoint.root).returns(true);
+    forkChoiceStub.isDescendant.withArgs(blocks[1].key, finalizedCheckpoint.root).returns(true);
+    forkChoiceStub.isDescendant.withArgs(blocks[2].key, finalizedCheckpoint.root).returns(false); // not a descendant
+    forkChoiceStub.isDescendant.withArgs(blocks[3].key, finalizedCheckpoint.root).returns(true);
+    forkChoiceStub.isDescendant.withArgs(blocks[4].key, finalizedCheckpoint.root).returns(true);
     const blockArchiveSpy = sinon.spy();
-    dbStub.blockArchive.batchAdd.callsFake(blockArchiveSpy);
+    dbStub.blockArchive.add.callsFake(blockArchiveSpy);
     const blockSpy = sinon.spy();
     dbStub.block.batchDelete.callsFake(blockSpy);
 
+    const archiverTask = new ArchiveBlocksTask(
+      config,
+      {
+        db: dbStub,
+        forkChoice: forkChoiceStub,
+        logger,
+      },
+      finalizedCheckpoint
+    );
     await archiverTask.run();
 
-    expect(dbStub.blockArchive.batchAdd.calledOnce).to.be.true;
-    expect(blockArchiveSpy.args[0][0]).to.be.deep.equal([finalizedBlock, blockD, blockB, blockA]);
+    expect(dbStub.blockArchive.add.calledWith(finalizedBlock)).to.be.true;
+    expect(dbStub.blockArchive.add.calledWith(blockD)).to.be.true;
+    expect(dbStub.blockArchive.add.calledWith(blockB)).to.be.true;
+    expect(dbStub.blockArchive.add.calledWith(blockA)).to.be.true;
     expect(dbStub.block.batchDelete.calledOnce).to.be.true;
     expect(blockSpy.args[0][0]).to.be.deep.equal([
       config.types.BeaconBlock.hashTreeRoot(blockA.message),

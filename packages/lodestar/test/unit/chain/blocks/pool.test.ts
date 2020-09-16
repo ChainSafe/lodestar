@@ -1,18 +1,21 @@
-import {SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, IBlockProcessJob, ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain";
-import pushable, {Pushable} from "it-pushable";
-import {BlockPool} from "../../../../src/chain/blocks/pool";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon from "sinon";
 import {expect} from "chai";
+import pushable, {Pushable} from "it-pushable";
+import sinon, {SinonStubbedInstance} from "sinon";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
+import {BlockPool} from "../../../../src/chain/blocks/pool";
+import {generateBlockSummary} from "../../../utils/block";
 
 describe("block pool", function () {
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
   let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>> & AsyncIterable<IBlockProcessJob>;
-  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     sourceStub = {
       ...pushable<IBlockProcessJob>(),
@@ -23,7 +26,7 @@ describe("block pool", function () {
 
   it("should add pending blocks", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     pool.addPendingBlock({
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
@@ -55,7 +58,7 @@ describe("block pool", function () {
 
   it("should not request missing block is too far ahead", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     const block = config.types.SignedBeaconBlock.defaultValue();
     block.message.slot = 30;
     pool.addPendingBlock({
@@ -71,7 +74,7 @@ describe("block pool", function () {
 
   it("should remove block when parent found", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.headBlockSlot.returns(0);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     const requiredBlock = config.types.SignedBeaconBlock.defaultValue();
     const pendingBlock = config.types.SignedBeaconBlock.defaultValue();
     pendingBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(requiredBlock.message);
@@ -93,6 +96,7 @@ describe("block pool", function () {
 
   it("should sort pending blocks", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     const requiredBlock = config.types.SignedBeaconBlock.defaultValue();
     const pendingBlock = config.types.SignedBeaconBlock.defaultValue();
     pendingBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(requiredBlock.message);

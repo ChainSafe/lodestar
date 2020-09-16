@@ -1,3 +1,10 @@
+import {expect} from "chai";
+import sinon, {SinonStubbedInstance} from "sinon";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
 import {
   getAttestationSubnetEvent,
   getBlockStateContext,
@@ -8,16 +15,11 @@ import {
   topicToGossipEvent,
 } from "../../../../src/network/gossip/utils";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
-import {expect} from "chai";
 import {ATTESTATION_SUBNET_COUNT} from "../../../../src/constants";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, ILMDGHOST} from "../../../../src/chain";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {generateBlockSummary, generateSignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 const forkValue = Buffer.alloc(4);
 describe("gossip utils", function () {
@@ -121,42 +123,38 @@ describe("gossip utils", function () {
   });
 
   describe("get block state context", function () {
-    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
     let dbStub: StubbedBeaconDb;
 
     beforeEach(function () {
-      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
       dbStub = new StubbedBeaconDb(sinon, config);
     });
 
     it("missing parent summary", async function () {
       const block = generateSignedBlock();
-      forkChoiceStub.getBlockSummaryByBlockRoot.returns(null);
+      forkChoiceStub.getBlock.returns(null);
       const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot);
       expect(stateContext).to.be.null;
-      expect(
-        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
-      ).to.be.true;
+      expect(forkChoiceStub.getBlock.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce).to.be.true;
       expect(dbStub.stateCache.get.calledOnce).to.be.false;
     });
 
     it("missing state", async function () {
       const block = generateSignedBlock();
       const stateRoot = Buffer.alloc(32, 3);
-      forkChoiceStub.getBlockSummaryByBlockRoot.returns(generateBlockSummary({stateRoot}));
+      forkChoiceStub.getBlock.returns(generateBlockSummary({stateRoot}));
       dbStub.stateCache.get.resolves(null);
       const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot);
       expect(stateContext).to.be.null;
-      expect(
-        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
-      ).to.be.true;
+      expect(forkChoiceStub.getBlock.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce).to.be.true;
       expect(dbStub.stateCache.get.withArgs(stateRoot).calledOnce).to.be.true;
     });
 
     it("found state", async function () {
       const block = generateSignedBlock();
       const stateRoot = Buffer.alloc(32, 3);
-      forkChoiceStub.getBlockSummaryByBlockRoot.returns(generateBlockSummary({stateRoot}));
+      forkChoiceStub.getBlock.returns(generateBlockSummary({stateRoot}));
       dbStub.stateCache.get.resolves({
         state: generateState(),
         epochCtx: new EpochContext(config),
@@ -164,9 +162,7 @@ describe("gossip utils", function () {
       const stateContext = await getBlockStateContext(forkChoiceStub, dbStub, block.message.parentRoot, 5);
       if (stateContext === null) throw Error("stateContext is null");
       expect(stateContext.state.slot).to.be.equal(5);
-      expect(
-        forkChoiceStub.getBlockSummaryByBlockRoot.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce
-      ).to.be.true;
+      expect(forkChoiceStub.getBlock.withArgs(block.message.parentRoot.valueOf() as Uint8Array).calledOnce).to.be.true;
       expect(dbStub.stateCache.get.withArgs(stateRoot).calledOnce).to.be.true;
     });
   });

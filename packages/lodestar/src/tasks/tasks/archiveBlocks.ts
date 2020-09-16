@@ -41,7 +41,7 @@ export class ArchiveBlocksTask implements ITask {
   public async run(): Promise<void> {
     this.logger.profile("Archive Blocks");
     const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-    const keysToDelete = [];
+    const keysToDelete: Uint8Array[] = [];
     let totalArchived = 0;
     for await (const {key, value} of await this.db.block.entriesStream()) {
       if (value.message.slot > finalizedSlot) {

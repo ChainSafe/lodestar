@@ -1,20 +1,15 @@
-import {BlockSummary} from "../../src/chain/forkChoice";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ZERO_HASH} from "../../src/constants";
 
-export function getBlockSummary(overide: Partial<BlockSummary>): BlockSummary {
+export function getBlockSummary(overide: Partial<IBlockSummary>): IBlockSummary {
   return {
+    slot: 0,
     blockRoot: ZERO_HASH,
     parentRoot: ZERO_HASH,
-    slot: 0,
     stateRoot: ZERO_HASH,
-    finalizedCheckpoint: {
-      epoch: 0,
-      root: ZERO_HASH,
-    },
-    justifiedCheckpoint: {
-      epoch: 0,
-      root: ZERO_HASH,
-    },
+    targetRoot: ZERO_HASH,
+    finalizedEpoch: 0,
+    justifiedEpoch: 0,
     ...overide,
   };
 }

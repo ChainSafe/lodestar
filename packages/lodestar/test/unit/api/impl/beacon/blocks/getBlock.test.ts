@@ -1,7 +1,8 @@
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../../../src/chain";
+import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect, use} from "chai";
@@ -16,11 +17,11 @@ describe("api - beacon - getBlock", function () {
   let blockApi: BeaconBlockApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
   let resolveBlockIdStub: SinonStub;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);

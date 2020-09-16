@@ -1,20 +1,23 @@
-import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
-import {validateGossipBlock} from "../../../../../src/network/gossip/validation";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../../src/chain";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {validateGossipBlock} from "../../../../../src/network/gossip/validation";
+import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
+import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
+import * as blockValidationUtils from "../../../../../src/network/gossip/utils";
 import {generateSignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
-import {expect} from "chai";
-import * as blockValidationUtils from "../../../../../src/network/gossip/utils";
 import {generateState} from "../../../../utils/state";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
   let dbStub: StubbedBeaconDb;
   let getBlockContextStub: SinonStub;
   let verifySignatureStub: SinonStub;
@@ -22,7 +25,7 @@ describe("gossip block validation", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     getBlockContextStub = sinon.stub(blockValidationUtils, "getBlockStateContext");

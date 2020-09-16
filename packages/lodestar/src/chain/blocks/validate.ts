@@ -21,7 +21,7 @@ export function validateBlock(
           eventBus.emit("block", job.signedBlock);
           continue;
         }
-        const finalizedCheckpoint = forkChoice.fcStore.finalizedCheckpoint;
+        const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();
         if (
           finalizedCheckpoint &&
           finalizedCheckpoint.epoch > 0 &&

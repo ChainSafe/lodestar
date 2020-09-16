@@ -144,7 +144,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       // we're on a further (or equal) finalized epoch
       // but the peer's block root at that epoch may not match match ours
       const headSummary = this.chain.forkChoice.getHead();
-      const finalizedCheckpoint = this.chain.forkChoice.fcStore.finalizedCheckpoint;
+      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
       const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
