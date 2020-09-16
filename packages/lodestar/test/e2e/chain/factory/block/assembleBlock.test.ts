@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
@@ -31,7 +31,7 @@ describe("produce block", function () {
 
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
-  chainStub.forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+  chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: Keypair[] = Array.from({length: 64}, () => Keypair.generate());

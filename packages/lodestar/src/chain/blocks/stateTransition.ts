@@ -8,10 +8,10 @@ import {
   fastStateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
-import {ForkChoice} from "../forkChoice";
 import {IBlockProcessJob} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db";
@@ -20,7 +20,7 @@ import {IBeaconDb} from "../../db";
 export async function getPreState(
   config: IBeaconConfig,
   db: IBeaconDb,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   logger: ILogger,
   job: IBlockProcessJob
 ): Promise<ITreeStateContext> {
@@ -102,7 +102,7 @@ export async function processSlotsToNearestCheckpoint(
 
 export async function runStateTransition(
   emitter: ChainEventEmitter,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   stateContext: ITreeStateContext,
   job: IBlockProcessJob
 ): Promise<ITreeStateContext> {

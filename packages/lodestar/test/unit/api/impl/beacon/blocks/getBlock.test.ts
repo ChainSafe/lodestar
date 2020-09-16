@@ -17,11 +17,11 @@ describe("api - beacon - getBlock", function () {
   let blockApi: BeaconBlockApi;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let resolveBlockIdStub: SinonStub;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);

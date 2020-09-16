@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../db/api";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "../emitter";
@@ -15,7 +15,7 @@ export function processBlock(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   pool: BlockPool,
   eventBus: ChainEventEmitter
 ): (

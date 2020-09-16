@@ -5,7 +5,7 @@ import {toHexString} from "@chainsafe/ssz";
 
 import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 export class BlockPool {
   private pool = new Map<string, IBlockProcessJob[]>();
@@ -13,13 +13,13 @@ export class BlockPool {
   private readonly config: IBeaconConfig;
   private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
   private readonly eventBus: ChainEventEmitter;
-  private readonly forkChoice: ForkChoice;
+  private readonly forkChoice: IForkChoice;
 
   constructor(
     config: IBeaconConfig,
     blockProcessorSource: Pushable<IBlockProcessJob>,
     eventBus: ChainEventEmitter,
-    forkChoice: ForkChoice
+    forkChoice: IForkChoice
   ) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;

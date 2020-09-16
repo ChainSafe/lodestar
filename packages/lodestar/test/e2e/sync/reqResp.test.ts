@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {encode} from "varint";
 
@@ -63,7 +63,7 @@ describe("[sync] rpc", function () {
       config,
     });
     chain.getCanonicalBlockAtSlot = sinon.stub().resolves(block);
-    const forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    const forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.getHead.returns(
       getBlockSummary({

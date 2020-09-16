@@ -12,10 +12,10 @@ import {generateBlockSummary} from "../../../utils/block";
 describe("block pool", function () {
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
   let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>> & AsyncIterable<IBlockProcessJob>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     sourceStub = {
       ...pushable<IBlockProcessJob>(),

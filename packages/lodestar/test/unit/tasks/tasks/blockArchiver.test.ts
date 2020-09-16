@@ -16,11 +16,11 @@ describe("block archiver task", function () {
   const logger = silentLogger;
 
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
   });
 
   /**

@@ -22,7 +22,7 @@ import {computeDeltas, HEX_ZERO_HASH, IVoteTracker, ProtoArray} from "../protoAr
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoiceStore} from "./store";
 import {IBlockSummary, toBlockSummary} from "./blockSummary";
-import {ILatestMessage, IQueuedAttestation} from "./interface";
+import {IForkChoice, ILatestMessage, IQueuedAttestation} from "./interface";
 
 /**
  * Provides an implementation of "Ethereum 2.0 Phase 0 -- Beacon Chain Fork Choice":
@@ -42,7 +42,7 @@ import {ILatestMessage, IQueuedAttestation} from "./interface";
  * - Time is not updated automatically, updateTime MUST be called every slot
  * - Justified balances are not updated automatically, updateBalances MUST be called when Store justifiedCheckpoint is updated
  */
-export class ForkChoice {
+export class ForkChoice implements IForkChoice {
   config: IBeaconConfig;
   /**
    * Storage for `ForkChoice`, modelled off the spec `Store` object.

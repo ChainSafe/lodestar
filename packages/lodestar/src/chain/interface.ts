@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
@@ -37,7 +37,7 @@ export type BlockError = {
  */
 export interface IBeaconChain {
   emitter: ChainEventEmitter;
-  forkChoice: ForkChoice;
+  forkChoice: IForkChoice;
   clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;

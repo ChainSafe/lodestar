@@ -11,7 +11,7 @@ import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
 import {IBeaconChain} from "../../chain";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db/api";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
@@ -80,7 +80,7 @@ export function getMessageId(rawMessage: Message): string {
 }
 
 export async function getBlockStateContext(
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   db: IBeaconDb,
   blockRoot: Root,
   slot?: Slot

@@ -2,14 +2,14 @@ import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 
 export function validateBlock(
   config: IBeaconConfig,
   logger: ILogger,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   eventBus: ChainEventEmitter
 ): (source: AsyncIterable<IBlockProcessJob>) => AsyncGenerator<IBlockProcessJob> {
   return (source) => {

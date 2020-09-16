@@ -36,13 +36,13 @@ describe("sync req resp", function () {
   let chainStub: SinonStubbedInstance<BeaconChain>,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     metaStub: SinonStubbedInstance<IPeerMetadataStore>,
-    forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice,
+    forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoiceStub;
     forkChoiceStub.getHead.returns(getBlockSummary({}));
     forkChoiceStub.getFinalizedCheckpoint.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});

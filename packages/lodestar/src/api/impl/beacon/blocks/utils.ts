@@ -1,7 +1,7 @@
 import {SignedBeaconBlock, SignedBeaconHeaderResponse} from "@chainsafe/lodestar-types";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BlockId} from "./interface";
 import {IBeaconDb} from "../../../../db/api";
 import {GENESIS_SLOT} from "../../../../constants";
@@ -24,7 +24,7 @@ export function toBeaconHeaderResponse(
 
 export async function resolveBlockId(
   config: IBeaconConfig,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
 ): Promise<SignedBeaconBlock | null> {

@@ -14,7 +14,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -31,7 +31,7 @@ export interface IMockChainParams {
 }
 
 export class MockBeaconChain implements IBeaconChain {
-  public forkChoice!: ForkChoice;
+  public forkChoice!: IForkChoice;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;

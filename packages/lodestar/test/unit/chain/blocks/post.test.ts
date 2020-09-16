@@ -19,7 +19,7 @@ import {silentLogger} from "../../../utils/logger";
 describe("post block process stream", function () {
   const logger = silentLogger;
   let epochCtxStub: SinonStubbedInstance<EpochContext>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let dbStub: StubbedBeaconDb;
   let metricsStub: SinonStubbedInstance<IBeaconMetrics>;
   let slotMetricsStub: SinonStubbedInstance<Gauge>;
@@ -32,7 +32,7 @@ describe("post block process stream", function () {
     epochCtxStub.currentShuffling = {
       activeIndices: [],
     } as any;
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     dbStub = new StubbedBeaconDb(sinon);
     slotMetricsStub = sinon.createStubInstance(Gauge);
     currentEpochLiveValidatorsMetricsStub = sinon.createStubInstance(Gauge);

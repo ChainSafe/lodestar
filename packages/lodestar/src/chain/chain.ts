@@ -21,7 +21,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {hasMarkers, FLAG_ELIGIBLE_ATTESTER} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, FAR_FUTURE_EPOCH, ZERO_HASH} from "../constants";
@@ -52,7 +52,7 @@ export interface IBeaconChainModules {
 }
 
 export class BeaconChain implements IBeaconChain {
-  public forkChoice!: ForkChoice;
+  public forkChoice!: IForkChoice;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;

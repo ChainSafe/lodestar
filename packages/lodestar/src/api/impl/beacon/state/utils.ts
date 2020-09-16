@@ -1,6 +1,6 @@
 // this will need async once we wan't to resolve archive slot
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../../../db/api";
 import {StateId} from "./interface";
@@ -9,7 +9,7 @@ import {fromHexString} from "@chainsafe/ssz";
 export async function resolveStateId(
   config: IBeaconConfig,
   db: IBeaconDb,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   stateId: StateId
 ): Promise<BeaconState | null> {
   stateId = stateId.toLowerCase();

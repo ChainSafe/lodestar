@@ -123,11 +123,11 @@ describe("gossip utils", function () {
   });
 
   describe("get block state context", function () {
-    let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
     let dbStub: StubbedBeaconDb;
 
     beforeEach(function () {
-      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+      forkChoiceStub = sinon.createStubInstance(ForkChoice);
       dbStub = new StubbedBeaconDb(sinon, config);
     });
 

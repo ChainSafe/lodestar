@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -17,7 +17,7 @@ describe("block assembly", function () {
 
   let assembleBodyStub: any,
     chainStub: StubbedChain,
-    forkChoiceStub: any,
+    forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     stateTransitionStub: any,
     beaconDB: StubbedBeaconDb;
 

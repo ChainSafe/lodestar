@@ -3,7 +3,7 @@ import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconDb} from "../../db/api";
 import {IBeaconMetrics} from "../../metrics";
@@ -15,7 +15,7 @@ export function postProcess(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
-  forkChoice: ForkChoice,
+  forkChoice: IForkChoice,
   metrics: IBeaconMetrics,
   eventBus: ChainEventEmitter,
   attestationProcessor: IAttestationProcessor

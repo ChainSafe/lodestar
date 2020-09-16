@@ -21,14 +21,14 @@ describe("fast sync", function () {
 
   const logger = silentLogger;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let metaStub: SinonStubbedInstance<IPeerMetadataStore>;
   let getTargetStub: SinonStub;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     chainStub.emitter = new ChainEventEmitter();

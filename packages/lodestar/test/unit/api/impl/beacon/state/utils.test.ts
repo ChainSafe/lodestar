@@ -13,11 +13,11 @@ use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sinon, config);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
   });
 
   it("resolve head state id - success", async function () {

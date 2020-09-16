@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -35,7 +35,7 @@ describe("GossipMessageValidator", () => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
 
     dbStub = new StubbedBeaconDb(sandbox);
     validator = new GossipMessageValidator({

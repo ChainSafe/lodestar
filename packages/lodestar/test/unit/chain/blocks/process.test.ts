@@ -18,7 +18,7 @@ import {silentLogger} from "../../../utils/logger";
 describe("block process stream", function () {
   const logger = silentLogger;
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
@@ -28,7 +28,7 @@ describe("block process stream", function () {
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
     blockPoolStub = sinon.createStubInstance(BlockPool);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });

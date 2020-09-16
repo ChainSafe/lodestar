@@ -18,7 +18,7 @@ import {silentLogger} from "../../../utils/logger";
 
 describe("chain attestation processor", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
-  let forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoice: SinonStubbedInstance<ForkChoice>;
   let db: StubbedBeaconDb;
   let attestationPrestateStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
@@ -27,7 +27,7 @@ describe("chain attestation processor", function () {
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
-    forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoice = sinon.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoice;
     db = new StubbedBeaconDb(sinon);
     attestationPrestateStub = sinon.stub(gossipUtils, "getAttestationPreState");

@@ -17,7 +17,7 @@ import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let dbStub: StubbedBeaconDb;
   let getBlockContextStub: SinonStub;
   let verifySignatureStub: SinonStub;
@@ -25,7 +25,7 @@ describe("gossip block validation", function () {
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkChoiceStub;
     dbStub = new StubbedBeaconDb(sinon, config);
     getBlockContextStub = sinon.stub(blockValidationUtils, "getBlockStateContext");

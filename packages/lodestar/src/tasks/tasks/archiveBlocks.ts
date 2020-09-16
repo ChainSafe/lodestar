@@ -7,12 +7,12 @@ import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;
-  forkChoice: ForkChoice;
+  forkChoice: IForkChoice;
   logger: ILogger;
 }
 
@@ -22,7 +22,7 @@ export interface IArchiveBlockModules {
 export class ArchiveBlocksTask implements ITask {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly forkChoice: ForkChoice;
+  private readonly forkChoice: IForkChoice;
   private readonly logger: ILogger;
 
   private finalized: Checkpoint;

@@ -15,12 +15,12 @@ import {silentLogger} from "../../../utils/logger";
 describe("block validate stream", function () {
   const logger = silentLogger;
   let blockDbStub: SinonStubbedInstance<BlockRepository>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
 
   beforeEach(function () {
     blockDbStub = sinon.createStubInstance(BlockRepository);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
 

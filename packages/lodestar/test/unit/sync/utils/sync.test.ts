@@ -186,11 +186,11 @@ describe("sync utils", function () {
 
   describe("block process", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
-    let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
-      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+      forkChoiceStub = sinon.createStubInstance(ForkChoice);
       chainStub.forkChoice = forkChoiceStub;
     });
 

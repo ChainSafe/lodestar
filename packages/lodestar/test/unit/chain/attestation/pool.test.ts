@@ -20,7 +20,7 @@ import {silentLogger} from "../../../utils/logger";
 describe("attestation pool", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let db: StubbedBeaconDb;
-  let forkChoice: SinonStubbedInstance<ForkChoice> & ForkChoice;
+  let forkChoice: SinonStubbedInstance<ForkChoice>;
   let processAttestationStub: SinonStub;
   const logger = silentLogger;
 
@@ -29,7 +29,7 @@ describe("attestation pool", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     (chain.clock as any).config = config;
     chain.emitter = new ChainEventEmitter();
-    forkChoice = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+    forkChoice = sinon.createStubInstance(ForkChoice);
     chain.forkChoice = forkChoice;
     processAttestationStub = sinon.stub(attestationProcessMethods, "processAttestation");
   });
