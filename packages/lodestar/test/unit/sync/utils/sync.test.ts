@@ -1,4 +1,16 @@
+import {expect} from "chai";
+import deepmerge from "deepmerge";
+import all from "it-all";
+import pipe from "it-pipe";
+import PeerId from "peer-id";
+import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
+
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
 import {
   checkBestPeer,
   fetchBlockChunks,
@@ -9,19 +21,10 @@ import {
   getStatusFinalizedCheckpoint,
   processSyncBlocks,
 } from "../../../../src/sync/utils";
-import {expect} from "chai";
-import deepmerge from "deepmerge";
 import * as blockUtils from "../../../../src/sync/utils/blocks";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {isPlainObject} from "@chainsafe/lodestar-utils";
-import pipe from "it-pipe";
-import all from "it-all";
-import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
-import {ArrayDagLMDGHOST, BeaconChain, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {ReqResp} from "../../../../src/network/reqResp";
-import {generateEmptySignedBlock} from "../../../utils/block";
-import PeerId from "peer-id";
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
@@ -183,11 +186,11 @@ describe("sync utils", function () {
 
   describe("block process", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
-    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
-      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ForkChoice);
       chainStub.forkChoice = forkChoiceStub;
     });
 
@@ -219,7 +222,7 @@ describe("sync utils", function () {
     });
 
     it("should handle failed to get range - regular sync", async function () {
-      forkChoiceStub.headBlockSlot.returns(100);
+      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 100}));
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
@@ -240,6 +243,7 @@ describe("sync utils", function () {
     });
 
     it("should handle empty range - regular sync", async function () {
+      forkChoiceStub.getHead.returns(generateBlockSummary());
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
@@ -298,14 +302,14 @@ describe("sync utils", function () {
 
   describe("checkBestPeer", function () {
     let networkStub: SinonStubbedInstance<INetwork>;
-    let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+    let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
     let metastoreStub: SinonStubbedInstance<IPeerMetadataStore>;
 
     beforeEach(() => {
       metastoreStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
       networkStub = sinon.createStubInstance(Libp2pNetwork);
       networkStub.peerMetadata = metastoreStub;
-      forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+      forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     });
     afterEach(() => {
       sinon.restore();
@@ -319,7 +323,7 @@ describe("sync utils", function () {
       networkStub.getPeers.returns([]);
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.false;
+      expect(forkChoiceStub.getHead.calledOnce).to.be.false;
     });
 
     it("peer is connected but no status", async function () {
@@ -327,7 +331,7 @@ describe("sync utils", function () {
       networkStub.getPeers.returns([generatePeer(peer1)]);
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.false;
+      expect(forkChoiceStub.getHead.calledOnce).to.be.false;
     });
 
     it("peer head slot is not better than us", async function () {
@@ -340,10 +344,10 @@ describe("sync utils", function () {
         headRoot: ZERO_HASH,
         headSlot: 10,
       });
-      forkChoiceStub.headBlockSlot.returns(20);
+      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
+      expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
 
     it("peer is good for best peer", async function () {
@@ -356,10 +360,10 @@ describe("sync utils", function () {
         headRoot: ZERO_HASH,
         headSlot: 30,
       });
-      forkChoiceStub.headBlockSlot.returns(20);
+      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.true;
       expect(networkStub.getPeers.calledOnce).to.be.true;
-      expect(forkChoiceStub.headBlockSlot.calledOnce).to.be.true;
+      expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
   });
 });

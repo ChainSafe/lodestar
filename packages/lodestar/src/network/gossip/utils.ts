@@ -10,7 +10,8 @@ import {utils} from "libp2p-pubsub";
 import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
-import {IBeaconChain, ILMDGHOST} from "../../chain";
+import {IBeaconChain} from "../../chain";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db/api";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
@@ -79,12 +80,12 @@ export function getMessageId(rawMessage: Message): string {
 }
 
 export async function getBlockStateContext(
-  forkChoice: ILMDGHOST,
+  forkChoice: IForkChoice,
   db: IBeaconDb,
   blockRoot: Root,
   slot?: Slot
 ): Promise<ITreeStateContext | null> {
-  const parentSummary = forkChoice.getBlockSummaryByBlockRoot(blockRoot.valueOf() as Uint8Array);
+  const parentSummary = forkChoice.getBlock(blockRoot);
   if (!parentSummary) {
     return null;
   }

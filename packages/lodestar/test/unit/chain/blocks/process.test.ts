@@ -1,22 +1,24 @@
-import pipe from "it-pipe";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ILMDGHOST, ArrayDagLMDGHOST} from "../../../../src/chain/forkChoice";
-import all from "it-all";
 import {expect} from "chai";
-import {BeaconChain, ChainEventEmitter, IBeaconChain, IBlockProcessJob} from "../../../../src/chain";
+import all from "it-all";
+import pipe from "it-pipe";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
-import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {silentLogger} from "../../../utils/logger";
 
 describe("block process stream", function () {
   const logger = silentLogger;
   let dbStub: StubbedBeaconDb;
-  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
@@ -26,7 +28,7 @@ describe("block process stream", function () {
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox);
     blockPoolStub = sinon.createStubInstance(BlockPool);
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
@@ -75,7 +77,7 @@ describe("block process stream", function () {
       reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    forkChoiceStub.getBlockSummaryByBlockRoot
+    forkChoiceStub.getBlock
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
@@ -96,13 +98,13 @@ describe("block process stream", function () {
       reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    forkChoiceStub.getBlockSummaryByBlockRoot
+    forkChoiceStub.getBlock
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
-    forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 1));
+    forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
       [receivedJob],
       processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
@@ -121,12 +123,12 @@ describe("block process stream", function () {
       reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    forkChoiceStub.getBlockSummaryByBlockRoot
+    forkChoiceStub.getBlock
       .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
       .resolves(parentBlock);
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
-    forkChoiceStub.headBlockRoot.returns(Buffer.alloc(32, 2));
+    forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 2));
     dbStub.depositData.values.resolves([]);
     dbStub.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     dbStub.block.get.resolves(receivedJob.signedBlock);

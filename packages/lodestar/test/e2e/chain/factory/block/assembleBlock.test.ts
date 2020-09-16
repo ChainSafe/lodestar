@@ -15,10 +15,10 @@ import {
   EpochContext,
   fastStateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
-import {ArrayDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
@@ -31,7 +31,7 @@ describe("produce block", function () {
 
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
-  chainStub.forkChoice = sinon.createStubInstance(ArrayDagLMDGHOST);
+  chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: Keypair[] = Array.from({length: 64}, () => Keypair.generate());

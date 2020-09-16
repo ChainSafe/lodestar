@@ -1,4 +1,4 @@
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -6,7 +6,7 @@ import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body"
 import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {generateState} from "../../../../utils/state";
-import {ArrayDagLMDGHOST} from "../../../../../../lodestar/src/chain/forkChoice";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain} from "../../../../../src/chain";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
@@ -17,7 +17,7 @@ describe("block assembly", function () {
 
   let assembleBodyStub: any,
     chainStub: StubbedChain,
-    forkChoiceStub: any,
+    forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     stateTransitionStub: any,
     beaconDB: StubbedBeaconDb;
 
@@ -25,7 +25,7 @@ describe("block assembly", function () {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
-    forkChoiceStub = sandbox.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     chainStub.forkChoice = forkChoiceStub;
 

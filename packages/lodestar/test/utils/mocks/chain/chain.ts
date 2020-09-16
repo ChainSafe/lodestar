@@ -1,7 +1,6 @@
-import {EventEmitter} from "events";
-import {createStubInstance} from "sinon";
 import AbortController from "abort-controller";
 
+import {TreeBacked} from "@chainsafe/ssz";
 import {
   BeaconState,
   Checkpoint,
@@ -13,13 +12,14 @@ import {
   Uint16,
   Uint64,
 } from "@chainsafe/lodestar-types";
-import {ChainEventEmitter, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {IBeaconClock} from "../../../../src/chain/clock/interface";
-import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
 import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
-import {TreeBacked} from "@chainsafe/ssz";
 import {LocalClock} from "../../../../src/chain/clock";
 
 export interface IMockChainParams {
@@ -31,7 +31,7 @@ export interface IMockChainParams {
 }
 
 export class MockBeaconChain implements IBeaconChain {
-  public forkChoice!: ILMDGHOST;
+  public forkChoice!: IForkChoice;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;

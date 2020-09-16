@@ -30,7 +30,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       if (finalizedBlock) {
         result.push(toBeaconHeaderResponse(this.config, finalizedBlock, true));
       }
-      const nonFinalizedBlockSummaries = this.chain.forkChoice.getBlockSummaryByParentBlockRoot(
+      const nonFinalizedBlockSummaries = this.chain.forkChoice.getBlockSummariesByParentRoot(
         filters.parentRoot.valueOf() as Uint8Array
       );
       await Promise.all(
@@ -57,7 +57,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       );
     }
 
-    const headSlot = this.chain.forkChoice.headBlockSlot();
+    const headSlot = this.chain.forkChoice.getHead().slot;
     if (!filters.parentRoot && !filters.slot && filters.slot !== 0) {
       filters.slot = headSlot;
     }

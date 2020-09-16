@@ -2,13 +2,15 @@
  * @module tasks used for running tasks on specific events
  */
 
-import {IService} from "../node";
+import {Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
+import {IService} from "../node";
 import {IBeaconDb} from "../db/api";
-import {IBeaconChain, BlockSummary} from "../chain";
+import {IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork} from "../network";
@@ -50,13 +52,15 @@ export class TasksService implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("forkChoice:prune", this.handleFinalizedCheckpointChores);
+    this.chain.emitter.on("forkChoice:finalized", this.onFinalizedCheckpoint);
+    this.chain.emitter.on("checkpoint", this.onCheckpoint);
     this.network.gossip.on("gossip:start", this.handleGossipStart);
     this.network.gossip.on("gossip:stop", this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkChoice:prune", this.handleFinalizedCheckpointChores);
+    this.chain.emitter.removeListener("forkChoice:finalized", this.onFinalizedCheckpoint);
+    this.chain.emitter.removeListener("checkpoint", this.onCheckpoint);
     this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
     this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
     await this.interopSubnetsTask.stop();
@@ -70,8 +74,25 @@ export class TasksService implements IService {
     await this.interopSubnetsTask.stop();
   };
 
-  private handleFinalizedCheckpointChores = async (finalized: BlockSummary, pruned: BlockSummary[]): Promise<void> => {
-    await new ArchiveBlocksTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
-    await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized, pruned).run();
+  private onFinalizedCheckpoint = async (finalized: Checkpoint): Promise<void> => {
+    await new ArchiveBlocksTask(
+      this.config,
+      {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
+      finalized
+    ).run();
+    await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
+    await this.db.checkpointStateCache.pruneFinalized(finalized.epoch);
+    // tasks rely on extended fork choice
+    this.chain.forkChoice.prune();
+  };
+
+  private onCheckpoint = async (): Promise<void> => {
+    await Promise.all([
+      this.db.checkpointStateCache.prune(
+        this.chain.forkChoice.getFinalizedCheckpoint().epoch,
+        this.chain.forkChoice.getJustifiedCheckpoint().epoch
+      ),
+      this.db.stateCache.prune(),
+    ]);
   };
 }
