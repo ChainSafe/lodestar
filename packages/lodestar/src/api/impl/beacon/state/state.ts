@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconDb} from "../../../../db/api";
 import {IApiOptions} from "../../../options";
@@ -11,7 +11,7 @@ import {resolveStateId} from "./utils";
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
-  private readonly forkChoice: ForkChoice;
+  private readonly forkChoice: IForkChoice;
 
   public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
     this.config = modules.config;

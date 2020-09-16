@@ -3,7 +3,7 @@ import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IAttestationProcessor, IBeaconChain} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {GENESIS_EPOCH} from "../../constants";
@@ -14,7 +14,7 @@ export class AttestationProcessor implements IAttestationProcessor {
   private db: IBeaconDb;
   private logger: ILogger;
   private chain: IBeaconChain;
-  private forkChoice: ForkChoice;
+  private forkChoice: IForkChoice;
   //using map inside map to ensure unique attestation
   private pendingBlockAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
   private pendingSlotAttestations: Map<Slot, Map<AttestationRootHex, Attestation>>;

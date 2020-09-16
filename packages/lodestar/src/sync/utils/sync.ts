@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
@@ -264,7 +264,7 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStor
 /**
  * Check if a peer is good to be a best peer.
  */
-export function checkBestPeer(peer: PeerId, forkChoice: ForkChoice, network: INetwork): boolean {
+export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: INetwork): boolean {
   if (!peer) return false;
   if (
     !network
