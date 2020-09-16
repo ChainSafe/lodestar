@@ -33,8 +33,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
-    "test": "yarn test:unit && yarn test:e2e",
-    "test:e2e": "mocha --colors -r ts-node/register 'test/e2e/**/*.test.ts'",
+    "test": "yarn test:unit",
     "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
