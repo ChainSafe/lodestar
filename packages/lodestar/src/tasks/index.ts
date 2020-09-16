@@ -75,15 +75,13 @@ export class TasksService implements IService {
   };
 
   private onFinalizedCheckpoint = async (finalized: Checkpoint): Promise<void> => {
+    await new ArchiveBlocksTask(
+      this.config,
+      {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
+      finalized
+    ).run();
     await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
-    await Promise.all([
-      new ArchiveBlocksTask(
-        this.config,
-        {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
-        finalized
-      ).run(),
-      this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
-    ]);
+    await this.db.checkpointStateCache.pruneFinalized(finalized.epoch);
     // tasks rely on extended fork choice
     this.chain.forkChoice.prune();
   };
