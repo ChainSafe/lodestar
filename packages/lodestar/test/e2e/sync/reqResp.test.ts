@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {encode} from "varint";
 
@@ -63,17 +63,14 @@ describe("[sync] rpc", function () {
       config,
     });
     chain.getCanonicalBlockAtSlot = sinon.stub().resolves(block);
-    const forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    const forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
     chain.forkChoice = forkChoiceStub;
-    forkChoiceStub.head.returns(
+    forkChoiceStub.getHead.returns(
       getBlockSummary({
-        finalizedCheckpoint: {
-          epoch: computeEpochAtSlot(config, block.message.slot),
-          root: config.types.BeaconBlock.hashTreeRoot(block.message),
-        },
+        finalizedEpoch: computeEpochAtSlot(config, block.message.slot),
       })
     );
-    forkChoiceStub.getFinalized.returns({
+    forkChoiceStub.getFinalizedCheckpoint.returns({
       epoch: computeEpochAtSlot(config, block.message.slot),
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
     });
@@ -118,7 +115,7 @@ describe("[sync] rpc", function () {
   });
 
   afterEach(async () => {
-    await chain.stop()
+    await chain.stop();
     await Promise.all([rpcA.stop(), rpcB.stop()]);
     //allow goodbye to propagate
     await sleep(200);
