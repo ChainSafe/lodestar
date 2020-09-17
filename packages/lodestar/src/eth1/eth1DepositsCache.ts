@@ -63,11 +63,10 @@ export class Eth1DepositsCache {
       root: this.config.types.DepositData.hashTreeRoot(depositEvent.depositData),
     }));
 
-    // Store everything in batch at once
-    await Promise.all([
-      this.db.depositEvent.batchPutValues(depositEvents),
-      this.db.depositDataRoot.batchPutValues(depositRoots),
-    ]);
+    // Store events after verifying that data is consecutive
+    // depositDataRoot will throw if adding non consecutive roots
+    await this.db.depositDataRoot.batchPutValues(depositRoots);
+    await this.db.depositEvent.batchPutValues(depositEvents);
   }
 
   /**
