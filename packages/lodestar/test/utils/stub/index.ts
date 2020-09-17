@@ -1,10 +1,11 @@
 import {SinonStubbedInstance} from "sinon";
 
-import {ILMDGHOST, IBeaconChain, ChainEventEmitter} from "../../../src/chain";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconChain, ChainEventEmitter} from "../../../src/chain";
 
 interface IStubbedChain extends IBeaconChain {
-  forkChoice: SinonStubbedInstance<ILMDGHOST>;
+  forkChoice: SinonStubbedInstance<IForkChoice>;
   epochCtx: SinonStubbedInstance<EpochContext> & EpochContext;
   emitter: SinonStubbedInstance<ChainEventEmitter>;
 }

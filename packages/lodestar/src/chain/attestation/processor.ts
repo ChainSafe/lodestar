@@ -26,10 +26,7 @@ export async function processAttestation(
     //LMD vote must be consistent with FFG vote target
     const targetSlot = computeStartSlotAtEpoch(config, target.epoch);
     if (
-      !config.types.Root.equals(
-        target.root,
-        chain.forkChoice.getAncestor(attestation.data.beaconBlockRoot.valueOf() as Uint8Array, targetSlot)!
-      )
+      !config.types.Root.equals(target.root, chain.forkChoice.getAncestor(attestation.data.beaconBlockRoot, targetSlot))
     ) {
       logger.verbose("Dropping attestation from processing", {
         reason: "attestation ancensor isnt target root",
@@ -54,15 +51,7 @@ export async function processAttestation(
       });
       return;
     }
-    const validators = attestationPreState.epochCtx.getAttestingIndices(attestation.data, attestation.aggregationBits);
-    const balances = validators.map((index) => attestationPreState.state.balances[index]);
-    for (let i = 0; i < validators.length; i++) {
-      chain.forkChoice.addAttestation(
-        attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
-        validators[i],
-        balances[i]
-      );
-    }
+    chain.forkChoice.onAttestation(indexedAttestation);
     logger.debug(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
     chain.emitter.emit("attestation", attestation);
   } catch (e) {

@@ -5,7 +5,8 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
-import {BeaconChain, ChainEventEmitter, ArrayDagLMDGHOST} from "../../../../src/chain";
+import {ChainEventEmitter} from "../../../../src/chain";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateState} from "../../../utils/state";
 import {postProcess} from "../../../../src/chain/blocks/post";
 import {BeaconMetrics, IBeaconMetrics} from "../../../../src/metrics";
@@ -18,7 +19,7 @@ import {silentLogger} from "../../../utils/logger";
 describe("post block process stream", function () {
   const logger = silentLogger;
   let epochCtxStub: SinonStubbedInstance<EpochContext>;
-  let forkChoiceStub: SinonStubbedInstance<ArrayDagLMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let dbStub: StubbedBeaconDb;
   let metricsStub: SinonStubbedInstance<IBeaconMetrics>;
   let slotMetricsStub: SinonStubbedInstance<Gauge>;
@@ -31,7 +32,7 @@ describe("post block process stream", function () {
     epochCtxStub.currentShuffling = {
       activeIndices: [],
     } as any;
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     dbStub = new StubbedBeaconDb(sinon);
     slotMetricsStub = sinon.createStubInstance(Gauge);
     currentEpochLiveValidatorsMetricsStub = sinon.createStubInstance(Gauge);

@@ -1,32 +1,34 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {FastSync} from "../../../../src/sync/initial/fast";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {ArrayDagLMDGHOST, BeaconChain, ChainEventEmitter, IBeaconChain, ILMDGHOST} from "../../../../src/chain";
-import {INetwork, Libp2pNetwork} from "../../../../src/network";
-import * as syncUtils from "../../../../src/sync/utils";
-import {Checkpoint} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+
+import {Checkpoint} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {INetwork, Libp2pNetwork} from "../../../../src/network";
+import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
+import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
+import {FastSync} from "../../../../src/sync/initial/fast";
+import * as syncUtils from "../../../../src/sync/utils";
 import {SyncStats} from "../../../../src/sync/stats";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {silentLogger} from "../../../utils/logger";
-import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
-import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 
 describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
 
   const logger = silentLogger;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ILMDGHOST>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let networkStub: SinonStubbedInstance<INetwork>;
   let metaStub: SinonStubbedInstance<IPeerMetadataStore>;
   let getTargetStub: SinonStub;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ArrayDagLMDGHOST);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
     chainStub.emitter = new ChainEventEmitter();

@@ -73,8 +73,6 @@ describe("[network] network", function () {
     netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
     netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
-    // gossip isn't started by default
-    await Promise.all([netA.gossip.start(), netB.gossip.start()]);
   });
   afterEach(async () => {
     await chain.stop();

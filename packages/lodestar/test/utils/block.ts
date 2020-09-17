@@ -8,10 +8,11 @@ import {
   SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
-import {BlockSummary} from "../../src/chain";
-import deepmerge from "deepmerge";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
+
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
+import deepmerge from "deepmerge";
 import {DeepPartial} from "./misc";
 
 export function generateEmptyBlock(): BeaconBlock {
@@ -50,19 +51,20 @@ export function generateSignedBlock(override: DeepPartial<SignedBeaconBlock> = {
   });
 }
 
-export function generateEmptyBlockSummary(): BlockSummary {
+export function generateEmptyBlockSummary(): IBlockSummary {
   return {
+    slot: 0,
     blockRoot: Buffer.alloc(32),
     parentRoot: Buffer.alloc(32),
-    slot: 0,
     stateRoot: Buffer.alloc(32),
-    justifiedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
-    finalizedCheckpoint: {root: Buffer.alloc(32), epoch: 0},
+    targetRoot: Buffer.alloc(32),
+    justifiedEpoch: 0,
+    finalizedEpoch: 0,
   };
 }
 
-export function generateBlockSummary(overrides: DeepPartial<BlockSummary> = {}): BlockSummary {
-  return deepmerge<BlockSummary, DeepPartial<BlockSummary>>(generateEmptyBlockSummary(), overrides, {
+export function generateBlockSummary(overrides: DeepPartial<IBlockSummary> = {}): IBlockSummary {
+  return deepmerge<IBlockSummary, DeepPartial<IBlockSummary>>(generateEmptyBlockSummary(), overrides, {
     isMergeableObject: isPlainObject,
   });
 }
