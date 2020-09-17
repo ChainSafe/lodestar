@@ -49,7 +49,7 @@ export class Eth1DepositsCache {
 
     const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
-    if (lastLog) {
+    if (lastLog && firstEvent) {
       if (firstEvent.index <= lastLog.index) {
         throw Error("DuplicateDistinctLog");
       }
