@@ -8,9 +8,9 @@ import {iteratorFromArray} from "../../../utils/interator";
 import {mapToObj} from "../../../utils/map";
 import {
   getEth1DataForBlocks,
-  getDepositCountByBlockNumber,
+  getDepositsByBlockNumber,
   getDepositRootByDepositCount,
-  ErrorNoDeposits,
+  ErrorNoDepositsForBlockRange,
   ErrorNotEnoughDepositRoots,
 } from "../../../../src/eth1/utils/eth1Data";
 
@@ -64,12 +64,12 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
     () => {
       return {
-        id: "No deposits yet, should throw with NoDeposits",
+        id: "No deposits yet, should throw with NoDepositsForBlockRange",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [],
         depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
         lastProcessedDepositBlockNumber: 0,
-        error: ErrorNoDeposits,
+        error: ErrorNoDepositsForBlockRange,
       };
     },
 
@@ -128,81 +128,77 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
   }
 });
 
-describe("eth1 / util / getDepositCountByBlockNumber", function () {
+describe("eth1 / util / getDepositsByBlockNumber", function () {
   interface ITestCase {
     id: string;
     fromBlock: number;
     toBlock: number;
     deposits: DepositEvent[];
-    expectedMap: Map<number, number>;
+    expectedResult: DepositEvent[];
   }
 
-  const testCases: ITestCase[] = [
-    {
-      id: "Map deposit at block 0 => 0,1,2 in range [1,2]",
-      fromBlock: 1,
-      toBlock: 2,
-      deposits: [getMockDeposit({blockNumber: 0, index: 0})],
-      expectedMap: new Map([
-        [0, 1],
-        [1, 1],
-        [2, 1],
-      ]),
+  const testCases: (() => ITestCase)[] = [
+    () => {
+      const deposit0 = getMockDeposit({blockNumber: 0, index: 0});
+      return {
+        id: "Collect deposit at block 0 in range [1,2]",
+        fromBlock: 1,
+        toBlock: 2,
+        deposits: [deposit0],
+        expectedResult: [deposit0],
+      };
     },
-    {
-      id: "Map deposit at block 1 => 1,2 in range [1,2]",
-      fromBlock: 1,
-      toBlock: 2,
-      deposits: [getMockDeposit({blockNumber: 1, index: 0})],
-      expectedMap: new Map([
-        [1, 1],
-        [2, 1],
-      ]),
+    () => {
+      const deposit1 = getMockDeposit({blockNumber: 1, index: 0});
+      return {
+        id: "Collect deposit at block 1 in range [1,2]",
+        fromBlock: 1,
+        toBlock: 2,
+        deposits: [deposit1],
+        expectedResult: [deposit1],
+      };
     },
-    {
-      id: "Map deposit at block 2 => 2 in range [1,2]",
-      fromBlock: 1,
-      toBlock: 2,
-      deposits: [getMockDeposit({blockNumber: 2, index: 0})],
-      expectedMap: new Map([[2, 1]]),
+    () => {
+      const deposit3 = getMockDeposit({blockNumber: 3, index: 0});
+      return {
+        id: "Don't collect deposit at block 3 in range [1,2]",
+        fromBlock: 1,
+        toBlock: 2,
+        deposits: [deposit3],
+        expectedResult: [],
+      };
     },
-    {
-      id: "Map deposit at block 3 => [] in range [1,2]",
-      fromBlock: 1,
-      toBlock: 2,
-      deposits: [getMockDeposit({blockNumber: 3, index: 0})],
-      expectedMap: new Map(),
+    () => {
+      const deposit0 = getMockDeposit({blockNumber: 0, index: 0});
+      const deposit3 = getMockDeposit({blockNumber: 3, index: 4});
+      return {
+        id: "Collect multiple deposits",
+        fromBlock: 1,
+        toBlock: 4,
+        deposits: [deposit0, deposit3],
+        expectedResult: [deposit0, deposit3],
+      };
     },
-    {
-      id: "Map multiple deposits",
-      fromBlock: 1,
-      toBlock: 4,
-      deposits: [getMockDeposit({blockNumber: 0, index: 0}), getMockDeposit({blockNumber: 3, index: 4})],
-      expectedMap: new Map([
-        [0, 1],
-        [1, 1],
-        [2, 1],
-        [3, 5],
-        [4, 5],
-      ]),
-    },
-    {
-      id: "Empty case",
-      fromBlock: 0,
-      toBlock: 0,
-      deposits: [],
-      expectedMap: new Map([]),
+    () => {
+      return {
+        id: "Empty case",
+        fromBlock: 0,
+        toBlock: 0,
+        deposits: [],
+        expectedResult: [],
+      };
     },
   ];
 
-  for (const {id, fromBlock, toBlock, deposits, expectedMap} of testCases) {
+  for (const testCase of testCases) {
+    const {id, fromBlock, toBlock, deposits, expectedResult} = testCase();
     it(id, async function () {
-      const map = await getDepositCountByBlockNumber(
+      const result = await getDepositsByBlockNumber(
         fromBlock,
         toBlock, // Simulate a descending stream reading from DB
         iteratorFromArray(deposits.reverse())
       );
-      expect(mapToObj(map)).to.deep.equal(mapToObj(expectedMap));
+      expect(result).to.deep.equal(expectedResult);
     });
   }
 });

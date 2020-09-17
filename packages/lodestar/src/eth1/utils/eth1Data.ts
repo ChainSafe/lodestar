@@ -1,7 +1,7 @@
 import {Root, Eth1Data, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
-import {backfillMap} from "../../util/map";
+import {binarySearchLte} from "../../util/binarySearch";
 
 /**
  * Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
@@ -23,21 +23,22 @@ export async function getEth1DataForBlocks(
     return [];
   }
 
-  // Generate a map of blockNumber => depositCount (from stored deposits)
+  // Collect the latest deposit of each blockNumber in a block number range
   const fromBlock = blocks[0].blockNumber;
   const toBlock = blocks[blocks.length - 1].blockNumber;
-  const depositCountByBlockNumber = await getDepositCountByBlockNumber(fromBlock, toBlock, depositDescendingStream);
+  const depositsByBlockNumber = await getDepositsByBlockNumber(fromBlock, toBlock, depositDescendingStream);
+  if (depositsByBlockNumber.length === 0) {
+    throw new ErrorNoDepositsForBlockRange(fromBlock, toBlock);
+  }
 
-  if (depositCountByBlockNumber.size === 0) throw new ErrorNoDeposits();
-
-  // Generate a map of depositCount => depositRoot (from depositRootTree)
-  const depositCounts = Array.from(depositCountByBlockNumber.values());
+  // Precompute a map of depositCount => depositRoot (from depositRootTree)
+  const depositCounts = depositsByBlockNumber.map((event) => event.index + 1);
   const depositRootByDepositCount = getDepositRootByDepositCount(depositCounts, depositRootTree);
 
   const eth1Datas: (Eth1Data & Eth1Block)[] = [];
   for (const block of blocks) {
-    const depositCount = depositCountByBlockNumber.get(block.blockNumber);
-    if (depositCount === undefined) throw new ErrorNoDepositCount(block.blockNumber);
+    const deposit = binarySearchLte(depositsByBlockNumber, block.blockNumber, (event) => event.blockNumber);
+    const depositCount = deposit.index + 1;
     const depositRoot = depositRootByDepositCount.get(depositCount);
     if (depositRoot === undefined) throw new ErrorNoDepositRoot(depositCount);
     eth1Datas.push({...block, depositCount, depositRoot});
@@ -46,26 +47,28 @@ export async function getEth1DataForBlocks(
 }
 
 /**
- * Precompute a map of blockNumber => depositCount from a stream of descending deposits
+ * Collect depositCount by blockNumber from a stream matching a block number range
  * For a given blockNumber it's depositCount is equal to the index + 1 of the
  * closest deposit event whose deposit.blockNumber <= blockNumber
+ * @returns array ascending by blockNumber
  */
-export async function getDepositCountByBlockNumber(
+export async function getDepositsByBlockNumber(
   fromBlock: number,
   toBlock: number,
   depositEventDescendingStream: AsyncIterable<DepositEvent>
-): Promise<Map<number, number>> {
-  const depositCountMap = new Map<number, number>();
+): Promise<DepositEvent[]> {
+  const depositCountMap = new Map<number, DepositEvent>();
   // Take blocks until the block under the range lower bound (included)
-  for await (const {blockNumber, index} of depositEventDescendingStream) {
-    if (blockNumber <= toBlock && !depositCountMap.has(index)) {
-      depositCountMap.set(blockNumber, index + 1);
+  for await (const deposit of depositEventDescendingStream) {
+    if (deposit.blockNumber <= toBlock && !depositCountMap.has(deposit.blockNumber)) {
+      depositCountMap.set(deposit.blockNumber, deposit);
     }
-    if (blockNumber < fromBlock) {
+    if (deposit.blockNumber < fromBlock) {
       break;
     }
   }
-  return backfillMap(depositCountMap, toBlock);
+
+  return Array.from(depositCountMap.values()).sort((a, b) => a.blockNumber - b.blockNumber);
 }
 
 /**
@@ -93,17 +96,13 @@ export function getDepositRootByDepositCount(
   }, new Map());
 }
 
-export class ErrorNoDeposits extends Error {
-  constructor() {
-    super("No deposits yet");
-  }
-}
-
-export class ErrorNoDepositCount extends Error {
-  blockNumber: number;
-  constructor(blockNumber: number) {
-    super(`No depositCount for blockNumber ${blockNumber}`);
-    this.blockNumber = blockNumber;
+export class ErrorNoDepositsForBlockRange extends Error {
+  fromBlock: number;
+  toBlock: number;
+  constructor(fromBlock: number, toBlock: number) {
+    super(`No deposits found for block range [${fromBlock}, ${toBlock}]`);
+    this.fromBlock = fromBlock;
+    this.toBlock = toBlock;
   }
 }
 
