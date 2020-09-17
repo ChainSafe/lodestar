@@ -10,7 +10,7 @@ import {
   getEth1DataForBlocks,
   getDepositCountByBlockNumber,
   getDepositRootByDepositCount,
-  ErrorNoDepositCount,
+  ErrorNoDeposits,
   ErrorNotEnoughDepositRoots,
 } from "../../../../src/eth1/utils/eth1Data";
 
@@ -64,12 +64,12 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
     () => {
       return {
-        id: "No deposits and no deposit roots, should throw with NoDepositCount",
+        id: "No deposits yet, should throw with NoDeposits",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [],
         depositRootTree: config.types.DepositDataRootList.tree.defaultValue(),
         lastProcessedDepositBlockNumber: 0,
-        error: ErrorNoDepositCount,
+        error: ErrorNoDeposits,
       };
     },
 

@@ -19,7 +19,6 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
-import {ArrayDagLMDGHOST} from "../../../../../src/chain/forkChoice";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
@@ -33,7 +32,7 @@ describe("produce block", function () {
 
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
-  chainStub.forkChoice = sinon.createStubInstance(ArrayDagLMDGHOST);
+  chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
   const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {

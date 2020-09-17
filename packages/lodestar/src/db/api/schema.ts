@@ -23,10 +23,11 @@ export enum Bucket {
   // eth1 processing
   eth1Data = 8, // timestamp -> Eth1Data
   depositDataRoot = 9, // depositIndex -> Root<DepositData>
+  depositEvent = 19, // depositIndex -> DepositEvent
   // op pool
   attestation = 10, // Root -> Attestation
   aggregateAndProof = 11, // Root -> AggregateAndProof
-  depositData = 12, // index -> DepositData
+  depositData = 12, // [DEPRECATED] index -> DepositData
   exit = 13, // ValidatorIndex -> VoluntaryExit
   proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   attesterSlashing = 15, // Root -> AttesterSlashing

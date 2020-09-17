@@ -18,7 +18,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {getEth1Vote} from "../../../eth1/utils/eth1Vote";
 
 export async function assembleBody(
   config: IBeaconConfig,
