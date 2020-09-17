@@ -91,8 +91,16 @@ export class Eth1DepositsCache {
   /**
    * Returns the highest blockNumber stored in DB if any
    */
-  async geHighestDepositEventBlockNumber(): Promise<number | null> {
-    const latestDepositEvent = await this.db.depositEvent.lastValue();
-    return latestDepositEvent && latestDepositEvent.blockNumber;
+  async getHighestDepositEventBlockNumber(): Promise<number | null> {
+    const latestEvent = await this.db.depositEvent.lastValue();
+    return latestEvent && latestEvent.blockNumber;
+  }
+
+  /**
+   * Returns the lowest blockNumber stored in DB if any
+   */
+  async getLowestDepositEventBlockNumber(): Promise<number | null> {
+    const firstEvent = await this.db.depositEvent.firstValue();
+    return firstEvent && firstEvent.blockNumber;
   }
 }

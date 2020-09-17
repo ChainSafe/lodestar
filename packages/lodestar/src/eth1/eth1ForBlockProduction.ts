@@ -155,8 +155,13 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    */
   private async updateBlockCache(remoteFollowBlock: number): Promise<void> {
     const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
-    const fromBlock = this.getFromBlockToFetch(lastCachedBlock);
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
+    const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
+    const fromBlock = Math.max(
+      this.getFromBlockToFetch(lastCachedBlock),
+      // depositCount data is available only after the first deposit event
+      lowestEventBlockNumber || 0
+    );
     const toBlock = Math.min(
       remoteFollowBlock,
       fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY,
@@ -174,7 +179,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {
     if (!this.lastProcessedDepositBlockNumber) {
-      this.lastProcessedDepositBlockNumber = await this.depositsCache.geHighestDepositEventBlockNumber();
+      this.lastProcessedDepositBlockNumber = await this.depositsCache.getHighestDepositEventBlockNumber();
     }
     return this.lastProcessedDepositBlockNumber;
   }
