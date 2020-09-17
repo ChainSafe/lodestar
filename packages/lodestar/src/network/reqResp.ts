@@ -92,6 +92,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private logger: ILogger;
   private responseListener: ResponseEventListener;
   private peerMetadata: IPeerMetadataStore;
+  private controller: AbortController | undefined;
 
   public constructor(opts: INetworkOptions, {config, libp2p, peerMetadata, logger}: IReqRespModules) {
     super();
@@ -102,6 +103,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
+    this.controller = new AbortController();
     Object.values(Method).forEach((method) => {
       Object.values(ReqRespEncoding).forEach((encoding) => {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
@@ -125,6 +127,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
       });
     });
+    this.controller?.abort();
   }
 
   public sendResponse(id: RequestId, err: RpcError | null, response?: ResponseBody): void {
@@ -243,6 +246,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     encoding: ReqRespEncoding,
     request?: RequestBody
   ): AsyncIterable<IResponseChunk> => {
+    const signal = this.controller?.signal;
     const requestId = randomRequestId();
     this.logger.verbose(`receive ${method} request from ${peerId.toB58String()}`, {requestId, encoding});
     // eslint-disable-next-line
@@ -253,6 +257,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
+      signal?.addEventListener("abort", () => clearTimeout(responseTimer), {once: true});
       this.emit("request", peerId, method, requestId, request!);
     });
 
@@ -313,12 +318,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     body?: RequestBody
   ): AsyncIterable<T> {
     const {libp2p, config, logger} = this;
+    const localControllerSignal = this.controller?.signal;
     return (async function* () {
       const protocol = createRpcProtocol(method, encoding);
       logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
       let conn: {stream: Stream};
       try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT)) as {stream: Stream};
+        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, localControllerSignal)) as {stream: Stream};
       } catch (e) {
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
