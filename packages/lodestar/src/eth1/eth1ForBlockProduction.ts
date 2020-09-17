@@ -155,7 +155,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private async updateDepositCache(remoteFollowBlock: number): Promise<boolean> {
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
-    const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY);
+    const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY - 1);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
     await this.depositsCache.add(depositEvents);
@@ -184,7 +184,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     );
     const toBlock = Math.min(
       remoteFollowBlock,
-      fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY,
+      fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
       lastProcessedDepositBlockNumber || 0 // Do not fetch any blocks if no deposits have been fetched yet
     );
 
