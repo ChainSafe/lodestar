@@ -67,7 +67,7 @@ describe("Libp2pPeerMetadataStore", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = 80;
     store.setBlockProviderScore(peerId, value);
-    const result = store.getScore(peerId);
+    const result = store.getBlockProviderScore(peerId);
     expect(config.types.Number64.equals(result as number, value)).to.be.true;
   });
 });
