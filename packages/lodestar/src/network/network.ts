@@ -49,7 +49,6 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private metrics: IBeaconMetrics;
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
-  private blockProviderScores: IBlockProviderScoreTracker;
 
   public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
     super();

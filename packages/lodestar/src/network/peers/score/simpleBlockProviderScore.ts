@@ -33,6 +33,7 @@ export class SimpleBlockProviderScoreTracker implements IBlockProviderScoreTrack
   public update(peer: PeerId, event: BlockProviderScoreEvent): void {
     const currentScore = this.getScore(peer);
     const delta = scoreConstants[event];
+    //ensure score is between min and max
     this.store.setBlockProviderScore(peer, Math.max(Math.min(MAX_SCORE, currentScore + delta), MIN_SCORE));
   }
 }
