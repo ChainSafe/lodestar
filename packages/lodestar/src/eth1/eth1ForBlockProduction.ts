@@ -82,11 +82,15 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const periodStart = votingPeriodStartTime(this.config, state);
     const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = this.config.params;
 
+    // Spec v0.12.2
+    // is_candidate_block =
+    //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start &&
+    //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
     const eth1VotesToConsider = (
       await this.eth1DataCache.get({
         timestampRange: {
-          gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
-          lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
+          lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
+          gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
         },
       })
     ).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
