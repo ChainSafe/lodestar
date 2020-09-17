@@ -7,12 +7,12 @@ import {AbortSignal} from "abort-controller";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {pickEth1Vote, votingPeriodStartTime} from "./utils/eth1Vote";
-import {setIntervalAbortableAsync} from "../util/sleep";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "./ethers";
 import {fetchBlockRange} from "./httpEth1Client";
 import {IEth1ForBlockProduction} from "./interface";
 import {IEth1Options} from "./options";
+import {sleep} from "../util/sleep";
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -53,16 +53,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
-    const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
 
-    setIntervalAbortableAsync(
-      () =>
-        this.update().catch((e) => {
-          this.logger.error("Error updating eth1 chain cache", e);
-        }),
-      autoUpdateIntervalMs,
-      signal
-    ).catch((e) => {
+    const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
+    this.runAutoUpdate(autoUpdateIntervalMs).catch((e) => {
       this.logger.error("Aborted", e);
     });
   }
@@ -119,6 +112,27 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
         indexRange: {gt: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
         depositCount,
       });
+    }
+  }
+
+  /**
+   * Abortable async setInterval that runs its callback once at max between `ms` at minimum
+   */
+  private async runAutoUpdate(intervalMs: number): Promise<void> {
+    let lastRunMs = 0;
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      lastRunMs = Date.now();
+
+      const hasCatchedUp = await this.update().catch((e) => {
+        this.logger.error("Error updating eth1 chain cache", e);
+      });
+
+      if (hasCatchedUp) {
+        const sleepTime = Math.max(intervalMs + lastRunMs - Date.now(), 0);
+        await sleep(sleepTime, this.signal);
+      }
     }
   }
 
