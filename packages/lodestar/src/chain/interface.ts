@@ -91,6 +91,11 @@ export interface IBeaconChain {
    * Initialize the chain with a genesis state
    */
   initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void>;
+
+  /**
+   * Initialize the chain with a weak subjectivity state
+   */
+  initializeWeakSubjectivityState(weakSubjectivityState: TreeBacked<BeaconState>): Promise<void>;
 }
 
 export interface IAttestationProcessor extends IService {

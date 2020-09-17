@@ -255,6 +255,21 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info("Beacon chain initialized");
   }
 
+  /**
+   * Initialize our chain from a weak subjectivity state.
+   * @param state a weak subjectivity state
+   */
+  public async initializeWeakSubjectivityState(weakSubjectivityState: TreeBacked<BeaconState>): Promise<void> {
+    // don't want to initialize if already run beacon node
+    const lastKnownState = await this.db.stateArchive.lastValue();
+    if (lastKnownState) {
+      this.logger.info(`Found finalized state at slot ${lastKnownState.slot}, starting chain from there`);
+      return;
+    }
+    await this.db.stateArchive.add(weakSubjectivityState);
+    this.logger.info("Beacon chain initialized with weak subjectivity state at slot", weakSubjectivityState.slot);
+  }
+
   public async getENRForkID(): Promise<ENRForkID> {
     const state = await this.getHeadState();
     const currentVersion = state.fork.currentVersion;
