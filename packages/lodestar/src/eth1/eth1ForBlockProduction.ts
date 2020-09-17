@@ -124,18 +124,21 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   /**
    * Update the deposit and block cache, returning an error if either fail
+   * @returns true if it has catched up to the remote follow block
    */
-  private async update(): Promise<void> {
+  private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
     const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.params.ETH1_FOLLOW_DISTANCE);
-    await this.updateDepositCache(remoteFollowBlock);
-    await this.updateBlockCache(remoteFollowBlock);
+    const catchedUpDeposits = await this.updateDepositCache(remoteFollowBlock);
+    const catchedUpBlocks = await this.updateBlockCache(remoteFollowBlock);
+    return catchedUpDeposits && catchedUpBlocks;
   }
 
   /**
    * Fetch deposit events from remote eth1 node up to follow-distance block
+   * @returns true if it has catched up to the remote follow block
    */
-  private async updateDepositCache(remoteFollowBlock: number): Promise<void> {
+  private async updateDepositCache(remoteFollowBlock: number): Promise<boolean> {
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY);
@@ -144,6 +147,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     await this.depositsCache.add(depositEvents);
     // Store the `toBlock` since that block may not contain
     this.lastProcessedDepositBlockNumber = toBlock;
+
+    return toBlock >= remoteFollowBlock;
   }
 
   /**
@@ -152,8 +157,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * depositRoot and depositCount are inferred from already fetched deposits.
    * Calling get_deposit_root() and the smart contract for a non-latest block requires an
    * archive node, something most users don't have access too.
+   * @returns true if it has catched up to the remote follow block
    */
-  private async updateBlockCache(remoteFollowBlock: number): Promise<void> {
+  private async updateBlockCache(remoteFollowBlock: number): Promise<boolean> {
     const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
@@ -171,6 +177,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, this.lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
+
+    return toBlock >= remoteFollowBlock;
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
