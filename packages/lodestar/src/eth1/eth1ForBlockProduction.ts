@@ -19,18 +19,18 @@ import {sleep} from "../util/sleep";
  * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
  */
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
-  config: IBeaconConfig;
-  logger: ILogger;
-  opts: IEth1Options;
-  signal: AbortSignal;
+  private config: IBeaconConfig;
+  private logger: ILogger;
+  private opts: IEth1Options;
+  private signal: AbortSignal;
 
   // Internal modules, state
-  depositsCache: Eth1DepositsCache;
-  eth1DataCache: Eth1DataCache;
-  eth1Provider: Eth1Provider;
-  lastProcessedDepositBlockNumber: number | null;
-  MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
-  MAX_BLOCKS_PER_LOG_QUERY = 1000;
+  private depositsCache: Eth1DepositsCache;
+  private eth1DataCache: Eth1DataCache;
+  private eth1Provider: Eth1Provider;
+  private lastProcessedDepositBlockNumber: number | null;
+  private MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
+  private MAX_BLOCKS_PER_LOG_QUERY = 1000;
 
   constructor({
     config,
