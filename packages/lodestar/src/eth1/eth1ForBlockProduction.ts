@@ -103,6 +103,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
+    // eth1_deposit_index represents the next deposit index to be added
     const depositIndex = state.eth1DepositIndex;
     // Eth1 data may change due to the vote included in this block
     const {depositCount} = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
@@ -112,8 +113,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     } else if (depositIndex === depositCount) {
       return [];
     } else {
+      // Spec v0.12.2
+      // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
       return this.depositsCache.get({
-        indexRange: {gt: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
+        indexRange: {gte: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
         depositCount,
       });
     }

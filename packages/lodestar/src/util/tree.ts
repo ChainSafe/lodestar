@@ -4,7 +4,7 @@ export function getTreeAtIndex<T>(tree: TreeBacked<List<T>>, index: number): Tre
   const newTree = tree.clone();
   let maxIndex = newTree.length - 1;
   if (index > maxIndex) {
-    throw new Error(`Cannot get tree for index: ${index}, current length: ${maxIndex}`);
+    throw new Error(`Cannot get tree for index: ${index}, maxIndex: ${maxIndex}`);
   }
   while (maxIndex > index) {
     newTree.pop();

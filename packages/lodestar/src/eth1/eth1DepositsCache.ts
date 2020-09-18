@@ -25,13 +25,13 @@ export class Eth1DepositsCache {
     indexRange,
     depositCount,
   }: {
-    indexRange: {gt: number; lt: number};
+    indexRange: {gte: number; lt: number};
     depositCount: number;
   }): Promise<Deposit[]> {
     const depositEvents = await this.db.depositEvent.values(indexRange);
 
     // Make sure all expected indexed are present (DB may not contain expected indexes)
-    const expectedLength = indexRange.lt - indexRange.gt - 1;
+    const expectedLength = indexRange.lt - indexRange.gte;
     if (depositEvents.length < expectedLength) {
       throw Error("Not enough deposits in DB");
     }

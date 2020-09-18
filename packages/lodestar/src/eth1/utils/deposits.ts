@@ -8,7 +8,7 @@ export function getDepositsWithProofs(
   depositCount: number
 ): Deposit[] {
   // Get tree at this particular depositCount to compute correct proofs
-  const treeAtDepositCount = getTreeAtIndex(depositRootTree, depositCount);
+  const treeAtDepositCount = getTreeAtIndex(depositRootTree, depositCount - 1);
 
   return depositEvents.map((log) => ({
     proof: treeAtDepositCount.tree().getSingleProof(treeAtDepositCount.gindexOfProperty(log.index)),
