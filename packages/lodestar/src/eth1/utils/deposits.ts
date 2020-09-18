@@ -16,9 +16,7 @@ export async function getDeposits<T>(
   const depositIndex = state.eth1DepositIndex;
   const depositCount = eth1Data.depositCount;
 
-  if (depositIndex > depositCount) {
-    throw Error("Deposit index too high");
-  }
+  if (depositIndex > depositCount) throw new ErrorDepositIndexTooHigh(depositIndex, depositCount);
 
   // Spec v0.12.2
   // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
@@ -51,6 +49,12 @@ export function getDepositsWithProofs(
     proof: treeAtDepositCount.tree().getSingleProof(treeAtDepositCount.gindexOfProperty(log.index)),
     data: log.depositData,
   }));
+}
+
+export class ErrorDepositIndexTooHigh extends Error {
+  constructor(depositIndex: number, depositCount: number) {
+    super(`Deposit index too high: depositIndex=${depositIndex} depositCount=${depositCount}`);
+  }
 }
 
 export class ErrorNotEnoughDeposits extends Error {

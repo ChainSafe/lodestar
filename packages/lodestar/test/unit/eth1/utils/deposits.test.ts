@@ -1,4 +1,5 @@
-import {expect} from "chai";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {Root, DepositEvent, Eth1Data} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -7,7 +8,15 @@ import {filterBy} from "../../../utils/db";
 import {getTreeAtIndex} from "../../../../src/util/tree";
 import {generateDepositData, generateDepositEvent} from "../../../utils/deposit";
 import {generateState} from "../../../utils/state";
-import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits";
+import {
+  getDeposits,
+  getDepositsWithProofs,
+  DepositGetter,
+  ErrorDepositIndexTooHigh,
+  ErrorNotEnoughDeposits,
+} from "../../../../src/eth1/utils/deposits";
+
+chai.use(chaiAsPromised);
 
 describe("eth1 / util / deposits", function () {
   describe("getDeposits", () => {
@@ -16,7 +25,8 @@ describe("eth1 / util / deposits", function () {
       depositCount: number;
       eth1DepositIndex: number;
       depositIndexes: number[];
-      expectedReturnedIndexes: number[];
+      expectedReturnedIndexes?: number[];
+      error?: any;
     }
 
     const {MAX_DEPOSITS} = config.params;
@@ -50,6 +60,20 @@ describe("eth1 / util / deposits", function () {
         expectedReturnedIndexes: Array.from({length: MAX_DEPOSITS}, (_, i) => i),
       },
       {
+        id: "Should throw if depositIndex > depositCount",
+        depositCount: 0,
+        eth1DepositIndex: 1,
+        depositIndexes: [],
+        error: ErrorDepositIndexTooHigh,
+      },
+      {
+        id: "Should throw if DB returns less deposits than expected",
+        depositCount: 1,
+        eth1DepositIndex: 0,
+        depositIndexes: [],
+        error: ErrorNotEnoughDeposits,
+      },
+      {
         id: "Empty case",
         depositCount: 0,
         eth1DepositIndex: 0,
@@ -59,7 +83,7 @@ describe("eth1 / util / deposits", function () {
     ];
 
     for (const testCase of testCases) {
-      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes} = testCase;
+      const {id, depositIndexes, eth1DepositIndex, depositCount, expectedReturnedIndexes, error} = testCase;
       it(id, async function () {
         const state = generateState({eth1DepositIndex});
         const eth1Data = generateEth1Data(depositCount);
@@ -67,8 +91,16 @@ describe("eth1 / util / deposits", function () {
         const depositsGetter: DepositGetter<DepositEvent> = async (indexRange) =>
           filterBy(deposits, indexRange, (deposit) => deposit.index);
 
-        const result = await getDeposits(config, state, eth1Data, depositsGetter);
-        expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
+        const resultPromise = getDeposits(config, state, eth1Data, depositsGetter);
+
+        if (expectedReturnedIndexes) {
+          const result = await resultPromise;
+          expect(result.map((deposit) => deposit.index)).to.deep.equal(expectedReturnedIndexes);
+        } else if (error) {
+          await expect(resultPromise).to.be.rejectedWith(error);
+        } else {
+          throw Error("Test case must have 'result' or 'error'");
+        }
       });
     }
   });
