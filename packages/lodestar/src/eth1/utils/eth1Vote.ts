@@ -4,6 +4,31 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString, TreeBacked, readOnlyMap} from "@chainsafe/ssz";
 import {mostFrequent} from "../../util/objects";
 
+export type Eth1DataGetter = ({timestampRange}: {timestampRange: {gte: number; lte: number}}) => Promise<Eth1Data[]>;
+
+export async function getEth1VotesToConsider(
+  config: IBeaconConfig,
+  state: TreeBacked<BeaconState>,
+  eth1DataGetter: Eth1DataGetter
+): Promise<Eth1Data[]> {
+  const periodStart = votingPeriodStartTime(config, state);
+  const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = config.params;
+
+  // Modified version of the spec function to fetch the required range directly from the DB
+  return (
+    await eth1DataGetter({
+      timestampRange: {
+        // Spec v0.12.2
+        // is_candidate_block =
+        //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start &&
+        //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
+        lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
+        gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
+      },
+    })
+  ).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
+}
+
 export function pickEth1Vote(
   config: IBeaconConfig,
   state: TreeBacked<BeaconState>,

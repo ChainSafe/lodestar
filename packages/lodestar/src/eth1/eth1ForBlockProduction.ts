@@ -6,7 +6,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
-import {pickEth1Vote, votingPeriodStartTime} from "./utils/eth1Vote";
+import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "./ethers";
 import {fetchBlockRange} from "./httpEth1Client";
@@ -79,22 +79,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
-    const periodStart = votingPeriodStartTime(this.config, state);
-    const {SECONDS_PER_ETH1_BLOCK, ETH1_FOLLOW_DISTANCE} = this.config.params;
-
-    // Spec v0.12.2
-    // is_candidate_block =
-    //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start &&
-    //   block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2 >= period_start
-    const eth1VotesToConsider = (
-      await this.eth1DataCache.get({
-        timestampRange: {
-          lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
-          gte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE * 2,
-        },
-      })
-    ).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
-
+    const eth1VotesToConsider = await getEth1VotesToConsider(this.config, state, this.eth1DataCache.get);
     return pickEth1Vote(this.config, state, eth1VotesToConsider);
   }
 
