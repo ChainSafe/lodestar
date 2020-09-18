@@ -4,6 +4,7 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {generateState} from "../../../utils/state";
+import {filterBy} from "../../../utils/db";
 import {
   getEth1VotesToConsider,
   pickEth1Vote,
@@ -128,9 +129,8 @@ describe("eth1 / util / eth1Vote", function () {
       const {id, state, eth1Datas, expectedVotesToConsider} = testCase();
       it(`get votesToConsider: ${id}`, async function () {
         const eth1DataGetter: Eth1DataGetter = async ({timestampRange}) =>
-          eth1Datas.filter(
-            (eth1Data) => eth1Data.timestamp >= timestampRange.gte && eth1Data.timestamp <= timestampRange.lte
-          );
+          filterBy(eth1Datas, timestampRange, (eth1Data) => eth1Data.timestamp);
+
         const votesToConsider = await getEth1VotesToConsider(config, state, eth1DataGetter);
         expect(votesToConsider).to.deep.equal(expectedVotesToConsider);
       });
