@@ -9,7 +9,7 @@ import {BeaconNode} from "../../../src/node";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
 import {initDevChain} from "../../../src/node/utils/state";
-import {IBeaconNodeOptions} from "../../../lib/node/options";
+import {IBeaconNodeOptions} from "../../../src/node/options";
 import {silentLogger} from "../logger";
 
 type RecursivePartial<T> = {
@@ -39,15 +39,9 @@ export async function getDevBeaconNode({
   const node = new BeaconNode(
     deepmerge(
       {
-        db: {
-          name: tmpDir.name,
-        },
-        sync: {
-          minPeers: 1,
-        },
-        eth1: {
-          enabled: false,
-        },
+        db: {name: tmpDir.name},
+        sync: {minPeers: 1},
+        eth1: {enabled: false},
       } as Partial<IBeaconNodeOptions>,
       options
     ),
