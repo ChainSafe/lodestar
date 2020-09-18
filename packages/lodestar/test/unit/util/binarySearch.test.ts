@@ -81,5 +81,14 @@ describe("util / binarySearch", () => {
         }
       });
     }
+
+    const length = 1000;
+    it(`Stress test: search in ${length} items, ${length} times.`, () => {
+      const items = Array.from({length}, (_, i) => i);
+      for (let i = 0; i < length; i++) {
+        const result = binarySearchLte(items, i, (n) => n);
+        expect(result).to.equal(i);
+      }
+    });
   });
 });
