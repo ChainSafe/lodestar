@@ -1,5 +1,6 @@
 import PeerId from "peer-id";
 import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange, ISyncCheckpoint} from "../interface";
@@ -9,7 +10,6 @@ import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {sleep} from "../../util/sleep";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
 

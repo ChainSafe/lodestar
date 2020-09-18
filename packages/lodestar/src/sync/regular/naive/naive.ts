@@ -9,13 +9,13 @@ import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
-import {sleep} from "../../../util/sleep";
 import {EventEmitter} from "events";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
