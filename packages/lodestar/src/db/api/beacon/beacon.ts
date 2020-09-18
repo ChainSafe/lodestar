@@ -12,7 +12,7 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositDataRepository,
+  DepositEventRepository,
   DepositDataRootRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
@@ -37,7 +37,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public voluntaryExit: VoluntaryExitRepository;
   public proposerSlashing: ProposerSlashingRepository;
   public attesterSlashing: AttesterSlashingRepository;
-  public depositData: DepositDataRepository;
+  public depositEvent: DepositEventRepository;
 
   public depositDataRoot: DepositDataRootRepository;
   public eth1Data: Eth1DataRepository;
@@ -56,7 +56,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db);
     this.proposerSlashing = new ProposerSlashingRepository(this.config, this.db);
     this.attesterSlashing = new AttesterSlashingRepository(this.config, this.db);
-    this.depositData = new DepositDataRepository(this.config, this.db);
+    this.depositEvent = new DepositEventRepository(this.config, this.db);
     this.depositDataRoot = new DepositDataRootRepository(this.config, this.db);
     this.eth1Data = new Eth1DataRepository(this.config, this.db);
   }
@@ -67,7 +67,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   public async processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void> {
     await Promise.all([
       this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
-      this.depositData.deleteOld(signedBlock.message.body.eth1Data.depositCount),
+      this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),
       this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
       this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
       this.aggregateAndProof.removeIncluded(signedBlock.message.body.attestations),

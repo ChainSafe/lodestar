@@ -37,7 +37,11 @@ export function storeSSZState(config: IBeaconConfig, state: TreeBacked<BeaconSta
 async function storeDeposits(config: IBeaconConfig, db: IBeaconDb, deposits: Deposit[]): Promise<void> {
   for (let i = 0; i < deposits.length; i++) {
     await Promise.all([
-      db.depositData.put(i, deposits[i].data),
+      db.depositEvent.put(i, {
+        blockNumber: i,
+        index: i,
+        depositData: deposits[i].data,
+      }),
       db.depositDataRoot.put(i, config.types.DepositData.hashTreeRoot(deposits[i].data)),
     ]);
   }

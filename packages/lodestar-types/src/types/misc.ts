@@ -109,6 +109,17 @@ export interface Eth1Data {
   blockHash: Bytes32;
 }
 
+export interface Eth1DataOrdered {
+  // block number for this eth1 data block hash
+  blockNumber: Number64;
+  // Root of the deposit tree
+  depositRoot: Root;
+  // Total number of deposits
+  depositCount: Number64;
+  // Block hash
+  blockHash: Bytes32;
+}
+
 export interface HistoricalBatch {
   // Block roots
   blockRoots: Vector<Root>;
@@ -137,15 +148,19 @@ export interface DepositData {
 }
 
 export interface DepositEvent {
+  depositData: DepositData;
+  /// The block number of the log that included this `DepositData`.
+  blockNumber: Number64;
+  /// The index included with the deposit log.
   index: Number64;
-  // BLS pubkey
-  pubkey: BLSPubkey;
-  // Withdrawal credentials
-  withdrawalCredentials: Bytes32;
-  // Amount in Gwei
-  amount: Gwei;
-  // Signing over DepositMessage
-  signature: BLSSignature;
+}
+
+export interface Eth1Block {
+  // Use blockHash to be consistent with the Eth1Data type
+  blockHash: Bytes32;
+  // Use blockNumber to be consistent with DepositEvent type
+  blockNumber: Number64;
+  timestamp: Number64;
 }
 
 export interface BeaconBlockHeader {

@@ -106,6 +106,16 @@ export const Eth1Data = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
+export const Eth1DataOrdered = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      depositRoot: ssz.Root,
+      depositCount: ssz.Number64,
+      blockHash: ssz.Bytes32,
+      blockNumber: ssz.Number64,
+    },
+  });
+
 export const HistoricalBlockRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType =>
   new VectorType({
     elementType: new RootType({expandedType: () => ssz.BeaconBlock}),
@@ -148,11 +158,9 @@ export const DepositData = (ssz: IBeaconSSZTypes): ContainerType =>
 export const DepositEvent = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
+      depositData: ssz.DepositData,
+      blockNumber: ssz.Number64,
       index: ssz.Number64,
-      pubkey: ssz.BLSPubkey,
-      withdrawalCredentials: ssz.Bytes32,
-      amount: ssz.Gwei,
-      signature: ssz.BLSSignature,
     },
   });
 

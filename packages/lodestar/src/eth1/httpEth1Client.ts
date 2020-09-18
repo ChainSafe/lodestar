@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
+import {Eth1Block} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {fetchRpcBatch} from "./httpRpcClient";
-import {IEth1Block} from "./types";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -22,7 +22,7 @@ export async function fetchBlockRange(
   fromBlockNumber: number,
   toBlockNumber: number,
   signal?: AbortSignal
-): Promise<IEth1Block[]> {
+): Promise<Eth1Block[]> {
   const blockNumbers: number[] = [];
   for (let i = fromBlockNumber; i <= toBlockNumber; i++) {
     blockNumbers.push(i);
@@ -33,7 +33,7 @@ export async function fetchBlockRange(
 /**
  * Fetches an arbitrary array of block numbers in batch
  */
-async function fetchBlocksByNumber(url: string, blockNumbers: number[], signal?: AbortSignal): Promise<IEth1Block[]> {
+async function fetchBlocksByNumber(url: string, blockNumbers: number[], signal?: AbortSignal): Promise<Eth1Block[]> {
   const method = "eth_getBlockByNumber";
 
   const blocksRaw = await fetchRpcBatch<IEthJsonRpcTypes[typeof method]>(
@@ -46,8 +46,8 @@ async function fetchBlocksByNumber(url: string, blockNumbers: number[], signal?:
   );
 
   return blocksRaw.map((blockRaw) => ({
-    hash: fromHexString(blockRaw.hash),
-    number: parseInt(blockRaw.number, 16),
+    blockHash: fromHexString(blockRaw.hash),
+    blockNumber: parseInt(blockRaw.number, 16),
     timestamp: parseInt(blockRaw.timestamp, 16),
   }));
 }

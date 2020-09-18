@@ -1,14 +1,15 @@
 import {expect} from "chai";
-import {generateState} from "../../../utils/state";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {List, TreeBacked} from "@chainsafe/ssz";
-import {Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {generateState} from "../../../utils/state";
+import {filterBy} from "../../../utils/db";
 import {
-  pickEth1Vote,
   getEth1VotesToConsider,
+  pickEth1Vote,
   votingPeriodStartTime,
-  IEth1DataWithTimestamp,
+  Eth1DataGetter,
 } from "../../../../src/eth1/utils/eth1Vote";
 
 describe("eth1 / util / eth1Vote", function () {
@@ -94,7 +95,7 @@ describe("eth1 / util / eth1Vote", function () {
     const testCases: (() => {
       id: string;
       state: TreeBacked<BeaconState>;
-      eth1Blocks: IEth1DataWithTimestamp[];
+      eth1Datas: IEth1DataWithTimestamp[];
       expectedVotesToConsider: Eth1Data[];
     })[] = [
       () => {
@@ -106,7 +107,7 @@ describe("eth1 / util / eth1Vote", function () {
         return {
           id: "Only consider blocks with a timestamp in range",
           state,
-          eth1Blocks: [vote1, vote2, vote3].map(getEth1DataBlock),
+          eth1Datas: [vote1, vote2, vote3].map(getEth1DataBlock),
           expectedVotesToConsider: [vote2],
         };
       },
@@ -118,21 +119,28 @@ describe("eth1 / util / eth1Vote", function () {
         return {
           id: "Ensure first vote is depositCount < current state is not considered",
           state,
-          eth1Blocks: [vote1, vote2].map(getEth1DataBlock),
+          eth1Datas: [vote1, vote2].map(getEth1DataBlock),
           expectedVotesToConsider: [vote2],
         };
       },
     ];
 
     for (const testCase of testCases) {
-      const {id, state, eth1Blocks, expectedVotesToConsider} = testCase();
+      const {id, state, eth1Datas, expectedVotesToConsider} = testCase();
       it(`get votesToConsider: ${id}`, async function () {
-        const votesToConsider = getEth1VotesToConsider(config, state, eth1Blocks);
+        const eth1DataGetter: Eth1DataGetter = async ({timestampRange}) =>
+          filterBy(eth1Datas, timestampRange, (eth1Data) => eth1Data.timestamp);
+
+        const votesToConsider = await getEth1VotesToConsider(config, state, eth1DataGetter);
         expect(votesToConsider).to.deep.equal(expectedVotesToConsider);
       });
     }
   });
 });
+
+interface IEth1DataWithTimestamp extends Eth1Data {
+  timestamp: number;
+}
 
 /**
  * Util: Fill partial eth1DataBlock with mock data

@@ -5,3 +5,5 @@
 export * from "./interface";
 export * from "./stream";
 export * from "./ethers";
+export * from "./eth1ForBlockProduction";
+export * from "./eth1ForBlockProductionDisabled";

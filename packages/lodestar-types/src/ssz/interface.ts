@@ -52,6 +52,7 @@ export interface IBeaconSSZTypes {
   CommitteeBits: BitListType;
   PendingAttestation: ContainerType<t.PendingAttestation>;
   Eth1Data: ContainerType<t.Eth1Data>;
+  Eth1DataOrdered: ContainerType<t.Eth1DataOrdered>;
   HistoricalBlockRoots: VectorType<Vector<t.Root>>;
   HistoricalStateRoots: VectorType<Vector<t.Root>>;
   HistoricalBatch: ContainerType<t.HistoricalBatch>;
@@ -133,6 +134,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "CommitteeBits",
   "PendingAttestation",
   "Eth1Data",
+  "Eth1DataOrdered",
   "HistoricalBlockRoots",
   "HistoricalStateRoots",
   "HistoricalBatch",

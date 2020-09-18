@@ -5,19 +5,13 @@
 import {ethers} from "ethers";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {isValidAddress} from "../util/address";
 import {RetryProvider} from "./utils/retryProvider";
-import {IDepositEvent} from "./interface";
 import {IEth1Options} from "./options";
 import {depositContract} from "./depositContract";
 
 const ETH1_BLOCK_RETRY = 3;
-
-interface IEth1Block {
-  hash: string;
-  number: number;
-  timestamp: number;
-}
 
 export class Eth1Provider {
   public deployBlock: number;
@@ -51,16 +45,16 @@ export class Eth1Provider {
     return await this.provider.getBlockNumber();
   }
 
-  async getBlock(blockNumber: number): Promise<IEth1Block> {
+  async getBlock(blockNumber: number): Promise<Eth1Block> {
     const block = await this.provider.getBlock(blockNumber);
     return {
-      hash: block.hash,
-      number: block.number,
+      blockHash: fromHexString(block.hash),
+      blockNumber: block.number,
       timestamp: block.timestamp,
     };
   }
 
-  async getDepositEvents(fromBlock: number, toBlock?: number): Promise<IDepositEvent[]> {
+  async getDepositEvents(fromBlock: number, toBlock?: number): Promise<DepositEvent[]> {
     const filter = this.contract.filters.DepositEvent();
     const logs = await this.contract.queryFilter(filter, fromBlock, toBlock || fromBlock);
     return logs.map((log) => this.parseDepositEvent(log));
@@ -69,16 +63,18 @@ export class Eth1Provider {
   /**
    * Parse DepositEvent log
    */
-  private parseDepositEvent(log: ethers.Event): IDepositEvent {
+  private parseDepositEvent(log: ethers.Event): DepositEvent {
     const values = log.args;
     if (!values) throw Error(`DepositEvent ${log.transactionHash} has no values`);
     return {
       blockNumber: log.blockNumber,
       index: this.config.types.Number64.deserialize(fromHexString(values.index)),
-      pubkey: fromHexString(values.pubkey),
-      withdrawalCredentials: fromHexString(values.withdrawal_credentials),
-      amount: this.config.types.Gwei.deserialize(fromHexString(values.amount)),
-      signature: fromHexString(values.signature),
+      depositData: {
+        pubkey: fromHexString(values.pubkey),
+        withdrawalCredentials: fromHexString(values.withdrawal_credentials),
+        amount: this.config.types.Gwei.deserialize(fromHexString(values.amount)),
+        signature: fromHexString(values.signature),
+      },
     };
   }
 }

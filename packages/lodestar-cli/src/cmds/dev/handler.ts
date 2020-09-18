@@ -41,6 +41,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
   mkdirSync(validatorsDir, {recursive: true});
 
   options.db.name = join(chainDir, "db-" + peerId.toB58String());
+  options.eth1.enabled = false;
 
   const node = new BeaconNode(options, {
     config,

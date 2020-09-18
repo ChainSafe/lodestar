@@ -40,6 +40,8 @@ export async function fetchRpc<R>(url: string, rpcPayload: IRpcPayload, signal?:
  * Type-wise assumes all requests results have the same type
  */
 export async function fetchRpcBatch<R>(url: string, rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]> {
+  if (rpcPayloadArr.length === 0) return [];
+
   const dataArr: IRpcResponse<R>[] = await fetchJson(
     url,
     rpcPayloadArr.map((rpcPayload, i) => ({

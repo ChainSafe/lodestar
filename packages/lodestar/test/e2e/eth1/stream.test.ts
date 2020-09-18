@@ -1,7 +1,6 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "abort-controller";
-import abortable from "abortable-iterator";
 import {getMedallaConfig, medalla} from "./util";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 
@@ -29,10 +28,10 @@ describe("Eth1 streams", function () {
     );
 
     let depositCount = 0;
-    for await (const {depositEvents} of abortable(depositsStream, controller.signal, {returnOnAbort: true})) {
+    for await (const {depositEvents} of depositsStream) {
       depositCount += depositEvents.length;
       if (depositCount > depositsToFetch) {
-        controller.abort();
+        break;
       }
     }
 
@@ -49,10 +48,10 @@ describe("Eth1 streams", function () {
     );
 
     let depositCount = 0;
-    for await (const [deposit] of abortable(stream, controller.signal, {returnOnAbort: true})) {
+    for await (const [deposit] of stream) {
       depositCount += deposit.length;
       if (depositCount > depositsToFetch) {
-        controller.abort();
+        break;
       }
     }
 

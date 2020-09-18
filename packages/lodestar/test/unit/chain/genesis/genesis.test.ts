@@ -3,12 +3,12 @@ import chaiAsPromised from "chai-as-promised";
 import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
-import {DepositData, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
-import {IDepositEvent, IEth1Provider, IEth1Block} from "../../../../src/eth1";
+import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {ErrorAborted} from "../../../../src/util/errors";
 
@@ -31,21 +31,25 @@ describe("genesis builder", function () {
     }
   });
 
-  function generateGenesisBuilderMockData(): {events: IDepositEvent[]; keypairs: Keypair[]; blocks: IEth1Block[]} {
-    const events: IDepositEvent[] = [];
+  function generateGenesisBuilderMockData(): {
+    events: DepositEvent[];
+    keypairs: Keypair[];
+    blocks: Eth1Block[];
+  } {
+    const events: DepositEvent[] = [];
     const keypairs: Keypair[] = [];
-    const blocks: IEth1Block[] = [];
+    const blocks: Eth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
       const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const event = {...generateDeposit(i, keypair), index: i, blockNumber: i};
+      const event: DepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
       keypairs.push(keypair);
       events.push(event);
       // All blocks satisfy MIN_GENESIS_TIME, so genesis will happen when the min validator count is reached
       blocks.push({
-        number: i,
+        blockNumber: i,
+        blockHash: Buffer.alloc(32, 0),
         timestamp: schlesiConfig.params.MIN_GENESIS_TIME + i,
-        hash: `0x${String(i).padStart(64, "0")}`,
       });
     }
 
@@ -76,7 +80,7 @@ describe("genesis builder", function () {
 
     expect(state.validators.length).to.be.equal(schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT);
     expect(toHexString(state.eth1Data.blockHash)).to.be.equal(
-      blocks[schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].hash
+      toHexString(blocks[schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT - 1].blockHash)
     );
   });
 

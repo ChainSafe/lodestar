@@ -36,6 +36,7 @@ import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {INetwork} from "../../../network";
 import {IBeaconSync} from "../../../sync";
+import {IEth1ForBlockProduction} from "../../../eth1";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
@@ -52,18 +53,20 @@ export class ValidatorApi implements IValidatorApi {
   private config: IBeaconConfig;
   private chain: IBeaconChain;
   private db: IBeaconDb;
+  private eth1: IEth1ForBlockProduction;
   private network: INetwork;
   private sync: IBeaconSync;
   private logger: ILogger;
 
   public constructor(
     opts: Partial<IApiOptions>,
-    modules: Pick<IApiModules, "config" | "chain" | "db" | "sync" | "network" | "logger">
+    modules: Pick<IApiModules, "config" | "chain" | "db" | "eth1" | "sync" | "network" | "logger">
   ) {
     this.namespace = ApiNamespace.VALIDATOR;
     this.config = modules.config;
     this.chain = modules.chain;
     this.db = modules.db;
+    this.eth1 = modules.eth1;
     this.network = modules.network;
     this.sync = modules.sync;
     this.logger = modules.logger;
@@ -84,6 +87,7 @@ export class ValidatorApi implements IValidatorApi {
       this.config,
       this.chain,
       this.db,
+      this.eth1,
       slot,
       validatorIndex,
       randaoReveal,
