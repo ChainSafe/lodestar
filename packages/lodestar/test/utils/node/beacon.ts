@@ -45,7 +45,10 @@ export async function getDevBeaconNode({
         sync: {
           minPeers: 1,
         },
-      },
+        eth1: {
+          enabled: false,
+        },
+      } as Partial<IBeaconNodeOptions>,
       options
     ),
     {
