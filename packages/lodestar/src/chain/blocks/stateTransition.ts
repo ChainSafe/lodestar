@@ -25,17 +25,36 @@ export async function getPreState(
   job: IBlockProcessJob
 ): Promise<ITreeStateContext> {
   const parentBlock = forkChoice.getBlock(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
+  const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
   if (!parentBlock) {
-    const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     logger.debug(
       `Block(${toHexString(blockRoot)}) at slot ${job.signedBlock.message.slot}` +
         ` is missing parent block (${toHexString(job.signedBlock.message.parentRoot)}).`
     );
     throw new Error("Missing parent");
   }
-  const stateCtx = await db.stateCache.get(parentBlock.stateRoot);
+  let stateCtx = await db.stateCache.get(parentBlock.stateRoot);
   if (!stateCtx) {
-    throw new Error("Missing state in cache");
+    logger.verbose("Missing state in cache", {
+      slot: job.signedBlock.message.slot,
+      blockRoot: toHexString(blockRoot),
+      parentRoot: toHexString(parentBlock.blockRoot),
+    });
+    const nearestEpoch = computeEpochAtSlot(config, job.signedBlock.message.slot - 1);
+    // when we restart from a skipped slot, we only have checkpoint state, not state
+    // we always do processSlotsToNearestCheckpoint when running state transition so this is reasonable
+    stateCtx = await db.checkpointStateCache.getLatest({
+      root: parentBlock.blockRoot,
+      epoch: nearestEpoch,
+    });
+    if (!stateCtx) {
+      logger.error("Missing state in cache", {
+        slot: job.signedBlock.message.slot,
+        blockRoot: toHexString(blockRoot),
+        parentRoot: toHexString(parentBlock.blockRoot),
+      });
+      throw new Error("Missing state in cache");
+    }
   }
   return stateCtx;
 }
