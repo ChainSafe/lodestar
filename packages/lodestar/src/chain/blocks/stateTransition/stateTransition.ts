@@ -10,11 +10,11 @@ import {
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
-import {ChainEventEmitter} from "../emitter";
-import {IBlockProcessJob} from "../interface";
+import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
+import {ChainEventEmitter} from "../../emitter";
+import {IBlockProcessJob} from "../../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb} from "../../db";
+import {IBeaconDb} from "../../../db";
 
 // TODO remove after state regenerator exists
 export async function getPreState(

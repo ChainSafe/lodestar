@@ -3,13 +3,13 @@ import {SlotProcessJob} from "./types";
 import {ITreeStateContext} from "../../../../db/api/beacon/stateContextCache";
 import {ModuleThread, spawn, Thread, Worker} from "threads";
 import {Transfer} from "threads/worker";
-import {LongStateTransitionWorker} from "./stateTransition";
+import {LongStateTransitionWorker} from "./threadStateTransitionWorker";
 import {ChainEventEmitter} from "../../../emitter";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
-export class StateTransitionWorker {
+export class ThreadStateTransitionQueue {
   protected queue?: Pushable<SlotProcessJob>;
   protected resultGenerator?: AsyncGenerator<ITreeStateContext | Error>;
   protected workerThread?: ModuleThread<LongStateTransitionWorker>;
@@ -90,4 +90,4 @@ export class StateTransitionWorker {
   };
 }
 
-export const stateTransitionWorker = new StateTransitionWorker();
+export const threadStateTransitionQueue = new ThreadStateTransitionQueue();
