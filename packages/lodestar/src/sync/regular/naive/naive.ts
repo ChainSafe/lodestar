@@ -140,7 +140,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
           const lastFetchedSlot = await pipe(
             [range],
-            fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
+            fetchBlockChunks(logger, chain, reqResp, getSyncPeers, undefined, controller.signal),
             processSyncBlocks(config, chain, logger, false, null)
           );
           if (lastFetchedSlot) {

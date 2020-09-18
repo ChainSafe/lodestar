@@ -1,4 +1,5 @@
 import PeerId from "peer-id";
+import {AbortSignal} from "abort-controller";
 import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -85,7 +86,8 @@ export function fetchBlockChunks(
   reqResp: IReqResp,
   getPeers: () => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  maxBlocksPerChunk?: number
+  maxBlocksPerChunk?: number,
+  signal?: AbortSignal
 ): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[] | null> {
   return (source) => {
     return (async function* () {
@@ -94,7 +96,7 @@ export function fetchBlockChunks(
         let retry = 0;
         while (peers.length === 0 && retry < 5) {
           logger.info("Waiting for peers...");
-          await sleep(6000);
+          await sleep(6000, signal);
           peers = await getPeers();
           retry++;
         }
