@@ -12,15 +12,17 @@ import {getMedallaConfig, medalla} from "./util";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {sleep} from "../../../src/util/sleep";
 import {generateState} from "../../utils/state";
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, List, toHexString} from "@chainsafe/ssz";
+import {Root} from "@chainsafe/lodestar-types";
 
 const dbLocation = "./.__testdb";
 
-const firstMedallaDeposits = [
+// First Medalla deposits deposit_data_root field
+const medallaDepositsDataRoot = [
   // https://goerli.etherscan.io/tx/0x342d3551439a13555c62f95d27b2fbabc816e4c23a6e58c28e69af6fae6d0159
-  "0xae9e6a550ac71490cdf134533b1688fcbdb16f113d7190eacf4f2e9ca6e013d5bd08c37cb2bde9bbdec8ffb8edbd495b",
+  "0x8976a7deec59f3ebcdcbd67f512fdd07a9a7cab72b63e85bc7a22bb689c2a40c",
   // https://goerli.etherscan.io/tx/0x6bab2263e1801ae3ffd14a31c08602c17f0e105e8ab849855adbd661d8b87bfd
-  "0xb1d0ec8f907e023ea7b8cb1236be8a74d02ba3f13aba162da4a68e9ffa2e395134658d150ef884bcfaeecdf35c286496",
+  "0x61cef7d8a3f7c590a2dc066ae1c95def5ce769b3e9471fdb34f36f7a7246965e",
 ];
 
 describe("eth1 / Eth1Provider", function () {
@@ -91,6 +93,11 @@ describe("eth1 / Eth1Provider", function () {
     // block.timestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= period_start && ...
     const periodStart = maxTimestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 
+    // Compute correct deposit root tree
+    const depositRootTree = config.types.DepositDataRootList.tree.createValue(
+      medallaDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
+    );
+
     const state = generateState({
       // Set genesis time and slot so latestEth1Data is considered
       slot: 0,
@@ -101,16 +108,15 @@ describe("eth1 / Eth1Provider", function () {
       // Set eth1Data with deposit length to return them
       eth1Data: {
         depositCount: deposits.length,
-        depositRoot: Buffer.alloc(32),
+        depositRoot: depositRootTree.hashTreeRoot(),
         blockHash: Buffer.alloc(32),
       },
     });
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
-    expect(result.deposits.map((deposit) => toHexString(deposit.data.pubkey))).to.deep.equal(
-      firstMedallaDeposits,
-      "Wrong deposits for for block production"
-    );
+    expect(
+      result.deposits.map((deposit) => toHexString(config.types.DepositData.hashTreeRoot(deposit.data)))
+    ).to.deep.equal(medallaDepositsDataRoot, "Wrong deposits for for block production");
   });
 });

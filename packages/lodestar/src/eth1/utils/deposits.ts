@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Deposit, Root, DepositEvent, Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
-import {TreeBacked, List} from "@chainsafe/ssz";
+import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
 import {IFilterOptions} from "../../db";
 import {getTreeAtIndex} from "../../util/tree";
 
@@ -41,8 +41,9 @@ export function getDepositsWithProofs(
   const treeAtDepositCount = getTreeAtIndex(depositRootTree, eth1Data.depositCount - 1);
 
   const depositRoot = treeAtDepositCount.hashTreeRoot();
+
   if (!config.types.Root.equals(depositRoot, eth1Data.depositRoot)) {
-    throw Error("Deposit root tree does not match current eth1Data");
+    throw new ErrorWrongDepositRoot(toHexString(depositRoot), toHexString(eth1Data.depositRoot));
   }
 
   return depositEvents.map((log) => ({
@@ -66,5 +67,11 @@ export class ErrorNotEnoughDeposits extends Error {
 export class ErrorTooManyDeposits extends Error {
   constructor(len: number, expectedLen: number) {
     super(`Too many deposits returned by DB: got ${len}, expected ${expectedLen}`);
+  }
+}
+
+export class ErrorWrongDepositRoot extends Error {
+  constructor(root: string, expectedRoot: string) {
+    super(`Deposit root tree does not match current eth1Data ${root} != ${expectedRoot}`);
   }
 }
