@@ -1,7 +1,7 @@
 import {IService} from "../node";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
-import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Slot, SyncingStatus, Root} from "@chainsafe/lodestar-types";
 import {InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
@@ -24,6 +24,11 @@ export interface ISyncModule {
 export interface ISlotRange {
   start: Slot;
   end: Slot;
+}
+
+export interface ISyncCheckpoint {
+  slot: Slot;
+  blockRoot: Root;
 }
 
 export interface ISyncModules {

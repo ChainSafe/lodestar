@@ -100,6 +100,10 @@ export class MockBeaconChain implements IBeaconChain {
     return undefined;
   }
 
+  public async initializeWeakSubjectivityState(
+    weakSubjectivityState: TreeBacked<BeaconState>
+  ): Promise<void> {}
+
   public async getENRForkID(): Promise<ENRForkID> {
     return {
       forkDigest: Buffer.alloc(4),

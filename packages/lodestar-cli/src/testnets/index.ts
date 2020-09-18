@@ -58,6 +58,18 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
 }
 
 /**
+ * Fet a remote file from either a local file part or url
+ */
+export async function getRemoteFile(filepath: string, urlOrPath: string): Promise<void> {
+  if (urlOrPath.startsWith("http")) {
+    await downloadFile(filepath, urlOrPath);
+  } else {
+    fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
+    await fs.promises.copyFile(urlOrPath, filepath);
+  }
+}
+
+/**
  * Downloads a genesis file per testnet if it does not exist
  */
 export async function downloadFile(filepath: string, url: string): Promise<void> {

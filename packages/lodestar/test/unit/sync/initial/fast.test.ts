@@ -3,7 +3,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
@@ -13,8 +13,18 @@ import {FastSync} from "../../../../src/sync/initial/fast";
 import * as syncUtils from "../../../../src/sync/utils";
 import {SyncStats} from "../../../../src/sync/stats";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {generateEmptySignedBlock} from "../../../utils/block";
 import {silentLogger} from "../../../utils/logger";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+
+const finalizedBlockSummary: IBlockSummary = {
+  blockRoot: ZERO_HASH,
+  finalizedEpoch: 0,
+  justifiedEpoch: 0,
+  parentRoot: ZERO_HASH,
+  slot: 0,
+  stateRoot: ZERO_HASH,
+  targetRoot: ZERO_HASH,
+};
 
 describe("fast sync", function () {
   const sandbox = sinon.createSandbox();
@@ -44,7 +54,7 @@ describe("fast sync", function () {
   });
 
   it("no peers with finalized epoch", async function () {
-    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
+    forkChoiceStub.getFinalizedBlock.returns(finalizedBlockSummary);
     const sync = new FastSync(
       {blockPerChunk: 5, maxSlotImport: 10, minPeers: 0},
       {
@@ -65,7 +75,7 @@ describe("fast sync", function () {
 
   //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
   it.skip("should sync till target and end", function (done) {
-    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
+    forkChoiceStub.getFinalizedBlock.returns(finalizedBlockSummary);
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
     statsStub.getEstimate.returns(1);
@@ -101,7 +111,7 @@ describe("fast sync", function () {
 
   //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
   it.skip("should continue syncing if there is new target", function (done) {
-    dbStub.blockArchive.lastValue.resolves(generateEmptySignedBlock());
+    forkChoiceStub.getFinalizedBlock.returns(finalizedBlockSummary);
     const statsStub = sinon.createStubInstance(SyncStats);
     statsStub.start.resolves();
     statsStub.getEstimate.returns(1);

@@ -1,8 +1,8 @@
 import PeerId from "peer-id";
-import {Checkpoint, Root, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
+import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
-import {ISlotRange} from "../interface";
+import {ISlotRange, ISyncCheckpoint} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
@@ -162,14 +162,14 @@ export function processSyncBlocks(
   chain: IBeaconChain,
   logger: ILogger,
   isInitialSync: boolean,
-  lastProcessedBlock: SignedBeaconBlock | null,
+  lastProcessedBlock: ISyncCheckpoint | null,
   trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[] | null>) => Promise<Slot | null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
-    let headRoot = isInitialSync ? config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock!.message) : null;
-    let headSlot = isInitialSync ? lastProcessedBlock!.message.slot : chain.forkChoice.getHead().slot;
+    let headRoot = isInitialSync ? lastProcessedBlock?.blockRoot : null;
+    let headSlot = isInitialSync ? lastProcessedBlock!.slot : chain.forkChoice.getHead().slot;
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry
