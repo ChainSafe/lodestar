@@ -4,15 +4,16 @@ import {BeaconState, Eth1Data, Deposit} from "@chainsafe/lodestar-types";
 import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/processEth1Data";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
+import {IBeaconDb} from "../db";
+import {sleep} from "../util/sleep";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
-import {IBeaconDb} from "../db";
+import {getDeposits} from "./utils/deposits";
 import {Eth1Provider} from "./ethers";
 import {fetchBlockRange} from "./httpEth1Client";
 import {IEth1ForBlockProduction} from "./interface";
 import {IEth1Options} from "./options";
-import {sleep} from "../util/sleep";
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -88,23 +89,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
-    // eth1_deposit_index represents the next deposit index to be added
-    const depositIndex = state.eth1DepositIndex;
     // Eth1 data may change due to the vote included in this block
-    const {depositCount} = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
-
-    if (depositIndex > depositCount) {
-      throw Error("DepositIndexTooHigh");
-    } else if (depositIndex === depositCount) {
-      return [];
-    } else {
-      // Spec v0.12.2
-      // assert len(body.deposits) == min(MAX_DEPOSITS, state.eth1_data.deposit_count - state.eth1_deposit_index)
-      return this.depositsCache.get({
-        indexRange: {gte: depositIndex, lt: Math.min(depositCount, depositIndex + this.config.params.MAX_DEPOSITS)},
-        depositCount,
-      });
-    }
+    const newEth1Data = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
+    return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get);
   }
 
   /**

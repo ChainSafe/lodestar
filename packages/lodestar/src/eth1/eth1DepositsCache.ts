@@ -1,6 +1,6 @@
 import {Deposit, DepositEvent, Eth1Data, Eth1Block} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb} from "../db";
+import {IBeaconDb, IFilterOptions} from "../db";
 import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
@@ -21,23 +21,10 @@ export class Eth1DepositsCache {
    * have 100 proofs, but the eth2 chain only acknowledges 50 of them, we must produce our
    * proofs with respect to a tree size of 50.
    */
-  async get({
-    indexRange,
-    depositCount,
-  }: {
-    indexRange: {gte: number; lt: number};
-    depositCount: number;
-  }): Promise<Deposit[]> {
+  async get(indexRange: IFilterOptions<number>, eth1Data: Eth1Data): Promise<Deposit[]> {
     const depositEvents = await this.db.depositEvent.values(indexRange);
-
-    // Make sure all expected indexed are present (DB may not contain expected indexes)
-    const expectedLength = indexRange.lt - indexRange.gte;
-    if (depositEvents.length < expectedLength) {
-      throw Error("Not enough deposits in DB");
-    }
-
     const depositRootTree = await this.db.depositDataRoot.getDepositRootTree();
-    return getDepositsWithProofs(depositEvents, depositRootTree, depositCount);
+    return getDepositsWithProofs(this.config, depositEvents, depositRootTree, eth1Data);
   }
 
   /**
