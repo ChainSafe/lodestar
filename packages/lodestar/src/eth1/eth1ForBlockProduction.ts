@@ -80,7 +80,11 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getEth1Data(state: TreeBacked<BeaconState>): Promise<Eth1Data> {
-    const eth1VotesToConsider = await getEth1VotesToConsider(this.config, state, this.eth1DataCache.get);
+    const eth1VotesToConsider = await getEth1VotesToConsider(
+      this.config,
+      state,
+      this.eth1DataCache.get.bind(this.eth1DataCache)
+    );
     return pickEth1Vote(this.config, state, eth1VotesToConsider);
   }
 
@@ -91,7 +95,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private async getDeposits(state: TreeBacked<BeaconState>, eth1DataVote: Eth1Data): Promise<Deposit[]> {
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = getNewEth1Data(this.config, state, eth1DataVote) || state.eth1Data;
-    return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get);
+    return await getDeposits(this.config, state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 
   /**
