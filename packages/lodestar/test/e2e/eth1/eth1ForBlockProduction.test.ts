@@ -8,7 +8,7 @@ import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
 
 import {Eth1ForBlockProduction} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getMedallaConfig, medalla} from "./util";
+import {getMedallaConfig, medalla} from "../../utils/medalla";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {sleep} from "../../../src/util/sleep";
 import {generateState} from "../../utils/state";

@@ -2,7 +2,6 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {JsonRpcHttpClient} from "./utils/jsonRpcHttpClient";
-import {IEth1Options} from "./options";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -31,8 +30,8 @@ interface IEthJsonRpcTypes {
 export class Eth1JsonRpcClient {
   private rpc: JsonRpcHttpClient;
 
-  constructor(opts: IEth1Options) {
-    this.rpc = new JsonRpcHttpClient(opts.providerUrl);
+  constructor({providerUrl}: {providerUrl: string}) {
+    this.rpc = new JsonRpcHttpClient(providerUrl);
   }
 
   /**
