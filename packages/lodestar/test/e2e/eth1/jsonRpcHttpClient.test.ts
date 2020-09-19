@@ -13,6 +13,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
 
   const port = 36421;
+  const noMethodError = "The method does not exist/is not available";
 
   const testCases: {
     id: string;
@@ -24,12 +25,12 @@ describe("eth1 / jsonRpcHttpClient", function () {
   }[] = [
     {
       id: "Bad domain",
-      url: "https://goerli.wrongurl.io",
+      url: "https://goerli.fake-website.io",
       error: "getaddrinfo ENOTFOUND",
     },
     {
       id: "Bad subdomain",
-      url: "https://goerli2.infura.io",
+      url: "https://fake-website.infura.io",
       error: "getaddrinfo ENOTFOUND",
     },
     {
@@ -41,7 +42,6 @@ describe("eth1 / jsonRpcHttpClient", function () {
     {
       id: "Not a JSON RPC endpoint",
       requestListener: (req, res) => {
-        res.statusCode = 200;
         res.setHeader("Content-Type", "text/html");
         res.end("<html></html>");
       },
@@ -56,18 +56,27 @@ describe("eth1 / jsonRpcHttpClient", function () {
       error: "404 Not Found",
     },
     {
-      id: "Bad payload method",
-      payload: {method: "eth_getLogs2", params: []},
-      error: "The method eth_getLogs2 does not exist/is not available",
+      id: "RPC payload with error",
+      requestListener: (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: {code: -32601, message: noMethodError}}));
+      },
+      error: noMethodError,
     },
     {
-      id: "Bad payload param",
-      payload: {method: "eth_getLogs", params: ["WRONG_PARAM"]},
-      error: "cannot unmarshal string into Go value of type eth.params",
+      id: "RPC payload with no result",
+      requestListener: (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({jsonrpc: "2.0", id: 83}));
+      },
+      error: "No JSON RPC result",
     },
     {
       id: "Abort request",
       abort: true,
+      requestListener: () => {
+        // leave the request open until aborted
+      },
       error: "The user aborted a request",
     },
   ];
