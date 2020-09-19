@@ -1,11 +1,7 @@
 // Uses isomorphic-fetch for browser + NodeJS cross compatibility
 import fetch from "isomorphic-fetch";
 import {AbortSignal} from "abort-controller";
-
-interface IRpcPayload {
-  method: string;
-  params: (string | number | boolean)[];
-}
+import {IJsonRpcClient, IRpcPayload} from "../interface";
 
 interface IRpcResponse<T> {
   jsonrpc: "2.0";
@@ -13,47 +9,41 @@ interface IRpcResponse<T> {
   result: T;
 }
 
+export class JsonRpcHttpClient implements IJsonRpcClient {
+  private url: string;
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  /**
+   * Perform RPC request
+   */
+  async fetch<R>({method, params}: IRpcPayload, signal?: AbortSignal): Promise<R> {
+    const data: IRpcResponse<R> = await fetchJson(this.url, {jsonrpc: "2.0", method, params, id: 1}, signal);
+    return data.result;
+  }
+
+  /**
+   * Perform RPC batched request
+   * Type-wise assumes all requests results have the same type
+   */
+  async fetchBatch<R>(rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]> {
+    if (rpcPayloadArr.length === 0) return [];
+
+    const dataArr: IRpcResponse<R>[] = await fetchJson(
+      this.url,
+      rpcPayloadArr.map(({method, params}, i) => ({jsonrpc: "2.0", method, params, id: i})),
+      signal
+    );
+    return dataArr.map((data) => data.result);
+  }
+}
+
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
 const maxStringLengthToPrint = 500;
-
-/**
- * Perform RPC request
- */
-export async function fetchRpc<R>(url: string, rpcPayload: IRpcPayload, signal?: AbortSignal): Promise<R> {
-  const data: IRpcResponse<R> = await fetchJson(
-    url,
-    {
-      jsonrpc: "2.0",
-      method: rpcPayload.method,
-      params: rpcPayload.params,
-      id: 1,
-    },
-    signal
-  );
-  return data.result;
-}
-
-/**
- * Perform RPC batched request
- * Type-wise assumes all requests results have the same type
- */
-export async function fetchRpcBatch<R>(url: string, rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]> {
-  if (rpcPayloadArr.length === 0) return [];
-
-  const dataArr: IRpcResponse<R>[] = await fetchJson(
-    url,
-    rpcPayloadArr.map((rpcPayload, i) => ({
-      jsonrpc: "2.0",
-      method: rpcPayload.method,
-      params: rpcPayload.params,
-      id: i,
-    })),
-    signal
-  );
-  return dataArr.map((data) => data.result);
-}
 
 /**
  * Fetches JSON and throws detailed errors in case the HTTP request is not ok
