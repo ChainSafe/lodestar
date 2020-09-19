@@ -1,7 +1,7 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
-import {JsonRpcHttpClient} from "./utils/jsonRpcHttpClient";
+import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
 
 /**
  * Binds return types to Ethereum JSON RPC methods

@@ -1,12 +1,16 @@
 // Uses isomorphic-fetch for browser + NodeJS cross compatibility
 import fetch from "isomorphic-fetch";
 import {AbortSignal} from "abort-controller";
-import {IJsonRpcClient, IRpcPayload} from "../interface";
+import {IJsonRpcClient, IRpcPayload} from "./interface";
 
-interface IRpcResponse<T> {
+interface IRpcResponse<R> {
   jsonrpc: "2.0";
   id: number;
-  result: T;
+  result?: R;
+  error?: {
+    code: number; // -32601;
+    message: string; // "The method eth_none does not exist/is not available"
+  };
 }
 
 export class JsonRpcHttpClient implements IJsonRpcClient {
@@ -20,8 +24,8 @@ export class JsonRpcHttpClient implements IJsonRpcClient {
    * Perform RPC request
    */
   async fetch<R>({method, params}: IRpcPayload, signal?: AbortSignal): Promise<R> {
-    const data: IRpcResponse<R> = await fetchJson(this.url, {jsonrpc: "2.0", method, params, id: 1}, signal);
-    return data.result;
+    const res: IRpcResponse<R> = await fetchJson(this.url, {jsonrpc: "2.0", method, params, id: 1}, signal);
+    return parseRpcResponse(res);
   }
 
   /**
@@ -31,12 +35,27 @@ export class JsonRpcHttpClient implements IJsonRpcClient {
   async fetchBatch<R>(rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]> {
     if (rpcPayloadArr.length === 0) return [];
 
-    const dataArr: IRpcResponse<R>[] = await fetchJson(
+    const resArr: IRpcResponse<R>[] = await fetchJson(
       this.url,
       rpcPayloadArr.map(({method, params}, i) => ({jsonrpc: "2.0", method, params, id: i})),
       signal
     );
-    return dataArr.map((data) => data.result);
+    return resArr.map(parseRpcResponse);
+  }
+}
+
+function parseRpcResponse<R>(res: IRpcResponse<R>): R {
+  if (res.error) {
+    if (typeof res.error.message === "string") {
+      throw Error(res.error.message);
+    } else if (res.error.code) {
+      throw Error(`JSON RPC error ${res.error.code}`);
+    }
+    throw Error("JSON RPC error");
+  } else if (res.result === undefined) {
+    throw Error("No JSON RPC result");
+  } else {
+    return res.result;
   }
 }
 
