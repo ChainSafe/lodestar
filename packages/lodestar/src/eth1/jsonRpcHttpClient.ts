@@ -1,5 +1,6 @@
-// Uses isomorphic-fetch for browser + NodeJS cross compatibility
-import fetch from "isomorphic-fetch";
+// Uses cross-fetch for browser + NodeJS cross compatibility
+// Note: isomorphic-fetch is not well mantained and does not support abort signals
+import fetch from "cross-fetch";
 import {AbortSignal} from "abort-controller";
 import {IJsonRpcClient, IRpcPayload} from "./interface";
 
