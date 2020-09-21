@@ -39,7 +39,7 @@ export async function validateGossipAggregateAndProof(
       currentSlot: chain.clock.currentSlot,
       ...logContext,
     });
-    //TODO: aggregate and proof pool to wait until proper slot to replay
+    // TODO: aggregate and proof pool to wait until proper slot to replay
     return ExtendedValidatorResult.ignore;
   }
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
@@ -66,7 +66,7 @@ export async function validateGossipAggregateAndProof(
     return ExtendedValidatorResult.reject;
   }
 
-  //TODO: check pool of aggregates if already seen (not a dos vector check)
+  // TODO: check pool of aggregates if already seen (not a dos vector check)
 
   const result = await validateAggregateAttestation(config, chain, db, logger, logContext, signedAggregateAndProof);
 
@@ -102,59 +102,67 @@ export async function validateAggregateAttestation(
     logger.warn("Ignored gossip aggregate and proof", {reason: "missing attestation prestate", ...logContext});
     return ExtendedValidatorResult.ignore;
   }
+
   const {state, epochCtx} = attestationPreState;
-  //committee changes on epoch, so advance only if different epoch
+  // committee changes on epoch, so advance only if different epoch
   const attEpoch = computeEpochAtSlot(config, attestation.data.slot);
   if (attEpoch > computeEpochAtSlot(config, state.slot)) {
     processSlots(epochCtx, state, computeStartSlotAtEpoch(config, attEpoch));
   }
-  const committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
-  if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
-    logger.warn("Rejected gossip aggregate and proof", {reason: "aggregator not in committee", ...logContext});
-    return ExtendedValidatorResult.reject;
-  }
-  if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
-    logger.warn("Rejected gossip aggregate and proof", {reason: "not valid aggregator", ...logContext});
-    return ExtendedValidatorResult.reject;
-  }
-  const aggregator = epochCtx.index2pubkey[aggregateAndProof.message.aggregatorIndex];
-  if (
-    !isValidSelectionProofSignature(
-      config,
-      state,
-      attestation.data.slot,
-      aggregator,
-      Signature.fromCompressedBytes(aggregateAndProof.message.selectionProof.valueOf() as Uint8Array)
-    )
-  ) {
-    logger.warn("Rejected gossip aggregate and proof", {reason: "invalid selection proof signature", ...logContext});
-    return ExtendedValidatorResult.reject;
-  }
 
-  if (
-    !isValidAggregateAndProofSignature(
-      config,
-      state,
-      computeEpochAtSlot(config, attestation.data.slot),
-      aggregator,
-      aggregateAndProof
-    )
-  ) {
-    logger.warn("Rejected gossip aggregate and proof", {reason: "invalid signature", ...logContext});
-    return ExtendedValidatorResult.reject;
-  }
+  try {
+    const committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
+    if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
+      logger.warn("Rejected gossip aggregate and proof", {reason: "aggregator not in committee", ...logContext});
+      return ExtendedValidatorResult.reject;
+    }
+    if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
+      logger.warn("Rejected gossip aggregate and proof", {reason: "not valid aggregator", ...logContext});
+      return ExtendedValidatorResult.reject;
+    }
+    const aggregator = epochCtx.index2pubkey[aggregateAndProof.message.aggregatorIndex];
+    if (
+      !isValidSelectionProofSignature(
+        config,
+        state,
+        attestation.data.slot,
+        aggregator,
+        Signature.fromCompressedBytes(aggregateAndProof.message.selectionProof.valueOf() as Uint8Array)
+      )
+    ) {
+      logger.warn("Rejected gossip aggregate and proof", {reason: "invalid selection proof signature", ...logContext});
+      return ExtendedValidatorResult.reject;
+    }
 
-  //TODO: once we have pool, check if aggregate block is seen and has target as ancestor
+    if (
+      !isValidAggregateAndProofSignature(
+        config,
+        state,
+        computeEpochAtSlot(config, attestation.data.slot),
+        aggregator,
+        aggregateAndProof
+      )
+    ) {
+      logger.warn("Rejected gossip aggregate and proof", {reason: "invalid signature", ...logContext});
+      return ExtendedValidatorResult.reject;
+    }
 
-  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
-    logger.warn("Rejected gossip aggregate and proof", {reason: "invalid indexed attestation", ...logContext});
+    // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
+
+    if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
+      logger.warn("Rejected gossip aggregate and proof", {reason: "invalid indexed attestation", ...logContext});
+      return ExtendedValidatorResult.reject;
+    }
+  } catch (e) {
+    // if any errors are thrown in the process of checking for REJECTs, return a REJECT
+    logger.warn("Rejected gossip aggregate and proof", {reason: e.message, ...logContext});
     return ExtendedValidatorResult.reject;
   }
 
   return ExtendedValidatorResult.accept;
 }
 
-//& object so we can spread it
+// & object so we can spread it
 function getLogContext(
   aggregate: Attestation,
   aggregateAndProof: AggregateAndProof,
