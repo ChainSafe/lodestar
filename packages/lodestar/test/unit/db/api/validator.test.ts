@@ -61,7 +61,7 @@ describe("beacon db api", function () {
     const attestationKey = Buffer.alloc(32, 1);
     encodeKeyStub.returns(attestationKey);
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
-    await validatorDB.getAttestations(pubKey, {gt: 0, lt: 3});
+    await validatorDB.getAttestations(pubKey, {gte: 0, lt: 3});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
     expect(
       encodeKeyStub.withArgs(
@@ -76,7 +76,7 @@ describe("beacon db api", function () {
     const attestationKey = Buffer.alloc(32, 1);
     encodeKeyStub.returns(attestationKey);
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
-    await validatorDB.getAttestations(pubKey, {gt: 0});
+    await validatorDB.getAttestations(pubKey, {gte: 0});
     expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
     expect(
       encodeKeyStub.withArgs(

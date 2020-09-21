@@ -354,19 +354,33 @@ export class AttestationService {
 
   private async isConflictingAttestation(attesterIndex: number, other: AttestationData): Promise<boolean> {
     const potentialAttestationConflicts = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gt: other.target.epoch - 1,
+      gte: other.target.epoch,
     });
     return potentialAttestationConflicts.some((attestation) => {
-      return isSlashableAttestationData(this.config, attestation.data, other);
+      const result = isSlashableAttestationData(this.config, attestation.data, other);
+      if (result) {
+        this.logger.info("conflict", {
+          validator: toHexString(this.publicKeys[attesterIndex]),
+          attesterIndex,
+          targetEpoch: other.target.epoch,
+          conflictx: JSON.stringify(potentialAttestationConflicts),
+        });
+      }
+      return result;
     });
   }
 
   private async storeAttestation(attesterIndex: number, attestation: Attestation): Promise<void> {
+    // this.logger.error("storing attestation", {
+    //   attesterIndex,
+    //   slot: attestation.data.slot,
+    //   validator: toHexString(this.publicKeys[attesterIndex]),
+    // });
     await this.db.setAttestation(this.publicKeys[attesterIndex], attestation);
 
     // cleanup
     const unusedAttestations = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gt: 0,
+      gte: 0,
       lt: attestation.data.target.epoch,
     });
     await this.db.deleteAttestations(this.publicKeys[attesterIndex], unusedAttestations);
