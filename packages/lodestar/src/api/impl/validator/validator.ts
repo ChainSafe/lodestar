@@ -235,11 +235,14 @@ export class ValidatorApi implements IValidatorApi {
       return current;
     });
 
-    return {
+    const aggregateAndProof = {
       aggregate,
       aggregatorIndex,
       selectionProof: EMPTY_SIGNATURE,
     };
+
+    await this.db.seenAttestationCache.addAggregateAndProof(aggregateAndProof);
+    return aggregateAndProof;
   }
 
   public async subscribeCommitteeSubnet(
