@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
 
