@@ -40,7 +40,11 @@ export async function validateGossipBlock(
   await waitForBlockSlot(config, chain.getGenesisTime(), blockSlot);
 
   if (await db.badBlock.has(blockRoot)) {
-    logger.warn("Rejecting gossip block", {reason: "bad block", blockSlot, blockRoot: toHexString(blockRoot)});
+    logger.warn("Rejecting gossip block", {
+      reason: "bad block",
+      blockSlot,
+      blockRoot: toHexString(blockRoot),
+    });
     return ExtendedValidatorResult.reject;
   }
 
@@ -65,6 +69,15 @@ export async function validateGossipBlock(
     //rest of validation is performed in state transition anyways
     await chain.receiveBlock(block);
     return ExtendedValidatorResult.ignore;
+  }
+
+  if (chain.forkChoice.getAncestor(blockRoot, finalizedSlot) !== finalizedCheckpoint.root) {
+    logger.warn("Rejecting gossip block", {
+      reason: "finalized checkpoint not an ancestor of block",
+      blockSlot,
+      blockRoot: toHexString(blockRoot),
+    });
+    return ExtendedValidatorResult.reject;
   }
 
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
