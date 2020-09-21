@@ -62,13 +62,7 @@ describe("beacon db api", function () {
     encodeKeyStub.returns(attestationKey);
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
     await validatorDB.getAttestations(pubKey, {gte: 0, lt: 3});
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
-    expect(
-      encodeKeyStub.withArgs(
-        Bucket.proposedAttestations,
-        toHexString(bigIntToBytes(bytesToBigInt(pubKey) + BigInt(1), 48)) + "3"
-      ).calledOnce
-    ).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, sinon.match.any).calledTwice).to.be.true;
     expect(dbStub.values.calledOnce).to.be.true;
   });
 
@@ -77,13 +71,7 @@ describe("beacon db api", function () {
     encodeKeyStub.returns(attestationKey);
     dbStub.values.resolves([config.types.Attestation.serialize(generateEmptyAttestation()) as Buffer]);
     await validatorDB.getAttestations(pubKey, {gte: 0});
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
-    expect(
-      encodeKeyStub.withArgs(
-        Bucket.proposedAttestations,
-        toHexString(bigIntToBytes(bytesToBigInt(pubKey) + BigInt(1), 48)) + Number.MAX_SAFE_INTEGER
-      ).calledOnce
-    ).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, sinon.match.any).calledTwice).to.be.true;
     expect(dbStub.values.calledOnce).to.be.true;
   });
 
@@ -92,7 +80,7 @@ describe("beacon db api", function () {
     encodeKeyStub.returns(attestationKey);
     dbStub.put.resolves();
     await validatorDB.setAttestation(pubKey, generateEmptyAttestation());
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledOnce).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, sinon.match.any).calledOnce).to.be.true;
     expect(dbStub.put.withArgs(attestationKey, sinon.match.any).calledOnce).to.be.true;
   });
 
@@ -101,7 +89,7 @@ describe("beacon db api", function () {
     encodeKeyStub.returns(attestationKey);
     dbStub.batchDelete.resolves();
     await validatorDB.deleteAttestations(pubKey, [generateEmptyAttestation(), generateEmptyAttestation()]);
-    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, toHexString(pubKey) + "0").calledTwice).to.be.true;
+    expect(encodeKeyStub.withArgs(Bucket.proposedAttestations, sinon.match.any).calledTwice).to.be.true;
     expect(dbStub.batchDelete.withArgs(sinon.match.array).calledOnce).to.be.true;
   });
 });
