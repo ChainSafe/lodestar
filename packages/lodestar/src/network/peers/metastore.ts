@@ -35,7 +35,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     return this.get(peer, MetadataKey.METADATA, this.config.types.Metadata);
   }
 
-  public getBlockProviderScore(peer: PeerId): number | null {
+  public getRpcScore(peer: PeerId): number | null {
     return this.get(peer, MetadataKey.SCORE, this.config.types.Number64);
   }
 
@@ -58,7 +58,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
     }
   }
 
-  public setBlockProviderScore(peer: PeerId, score: number | null): void {
+  public setRpcScore(peer: PeerId, score: number | null): void {
     return this.set(peer, MetadataKey.SCORE, this.config.types.Number64, score);
   }
 

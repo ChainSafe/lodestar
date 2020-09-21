@@ -12,7 +12,7 @@ import {TTFB_TIMEOUT} from "../../../src/constants";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 import {silentLogger} from "../../utils/logger";
-import {IBlockProviderScoreTracker, SimpleBlockProviderScoreTracker} from "../../../src/network/peers/score";
+import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../src/network/peers/score";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -22,7 +22,7 @@ describe("[network] rpc", () => {
   let nodeA: NodejsNode, nodeB: NodejsNode, rpcA: ReqResp, rpcB: ReqResp;
   let metaA: SinonStubbedInstance<IPeerMetadataStore>;
   let metaB: SinonStubbedInstance<IPeerMetadataStore>;
-  let blockProviderScoresStub: SinonStubbedInstance<IBlockProviderScoreTracker>;
+  let blockProviderScoresStub: SinonStubbedInstance<IRpcScoreTracker>;
 
   const networkOptions: INetworkOptions = {
     maxPeers: 10,
@@ -39,7 +39,7 @@ describe("[network] rpc", () => {
     nodeB = await createNode(multiaddr);
     metaA = sinon.createStubInstance(Libp2pPeerMetadataStore);
     metaB = sinon.createStubInstance(Libp2pPeerMetadataStore);
-    blockProviderScoresStub = sinon.createStubInstance(SimpleBlockProviderScoreTracker);
+    blockProviderScoresStub = sinon.createStubInstance(SimpleRpcScoreTracker);
     await Promise.all([nodeA.start(), nodeB.start()]);
 
     rpcA = new ReqResp(networkOptions, {

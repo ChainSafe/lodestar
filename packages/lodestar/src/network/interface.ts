@@ -24,7 +24,7 @@ import Multiaddr from "multiaddr";
 import {ENR} from "@chainsafe/discv5/lib";
 import LibP2p from "libp2p";
 import {IPeerMetadataStore} from "./peers/interface";
-import {IBlockProviderScoreTracker} from "./peers/score";
+import {IRpcScoreTracker} from "./peers/score";
 
 export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
 
@@ -69,7 +69,7 @@ export interface INetwork extends NetworkEventEmitter {
   gossip: IGossip;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
-  blockProviderScores: IBlockProviderScoreTracker;
+  peerRpcScores: IRpcScoreTracker;
   /**
    * Our network identity
    */

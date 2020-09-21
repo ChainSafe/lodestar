@@ -1,2 +1,2 @@
 export * from "./interface";
-export * from "./simpleBlockProviderScore";
+export * from "./simpleRpcScore";

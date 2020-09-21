@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 
-export enum BlockProviderScoreEvent {
+export enum RpcScoreEvent {
   //on successful block range fetch
   SUCCESS_BLOCK_RANGE,
   //on successful block by root fetch
@@ -12,8 +12,8 @@ export enum BlockProviderScoreEvent {
   UNKNOWN_ERROR,
 }
 
-export interface IBlockProviderScoreTracker {
+export interface IRpcScoreTracker {
   getScore(peer: PeerId): number;
-  update(peer: PeerId, event: BlockProviderScoreEvent): void;
+  update(peer: PeerId, event: RpcScoreEvent): void;
   reset(peer: PeerId): void;
 }

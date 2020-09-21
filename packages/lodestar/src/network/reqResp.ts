@@ -48,7 +48,7 @@ import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
-import {BlockProviderScoreEvent, IBlockProviderScoreTracker} from "./peers/score";
+import {RpcScoreEvent, IRpcScoreTracker} from "./peers/score";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -63,7 +63,7 @@ interface IReqRespModules {
   libp2p: LibP2p;
   logger: ILogger;
   peerMetadata: IPeerMetadataStore;
-  blockProviderScores: IBlockProviderScoreTracker;
+  blockProviderScores: IRpcScoreTracker;
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
@@ -94,7 +94,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private logger: ILogger;
   private responseListener: ResponseEventListener;
   private peerMetadata: IPeerMetadataStore;
-  private blockProviderScores: IBlockProviderScoreTracker;
+  private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
 
   public constructor(
@@ -198,7 +198,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   ): Promise<SignedBeaconBlock[] | null> {
     try {
       const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
-      this.blockProviderScores.update(peerId, BlockProviderScoreEvent.SUCCESS_BLOCK_RANGE);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
       return result;
     } catch (e) {
       updateBlockProviderErrorScore(this.blockProviderScores, peerId, e);
@@ -212,7 +212,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   ): Promise<SignedBeaconBlock[] | null> {
     try {
       const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
-      this.blockProviderScores.update(peerId, BlockProviderScoreEvent.SUCCESS_BLOCK_ROOT);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
       return result;
     } catch (e) {
       updateBlockProviderErrorScore(this.blockProviderScores, peerId, e);
