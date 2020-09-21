@@ -140,7 +140,8 @@ export async function dialProtocol(
   const timer = setTimeout(() => {
     abortController.abort();
   }, timeout);
-  signal?.addEventListener("abort", () => abortController.abort(), {once: true});
+  const abortHandler = (): void => abortController.abort();
+  signal?.addEventListener("abort", abortHandler, {once: true});
   try {
     const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
     if (!conn) {
@@ -153,6 +154,7 @@ export async function dialProtocol(
     // err.stack = e.stack;
     throw err;
   } finally {
+    signal?.removeEventListener("abort", abortHandler);
     clearTimeout(timer);
   }
 }
