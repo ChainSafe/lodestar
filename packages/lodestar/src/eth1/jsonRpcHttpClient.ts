@@ -3,11 +3,21 @@
 import fetch from "cross-fetch";
 import {AbortSignal} from "abort-controller";
 import {IJsonRpcClient, IRpcPayload} from "./interface";
+import {serializeContext} from "@chainsafe/lodestar-utils";
+import {Json} from "@chainsafe/ssz";
 
-interface IRpcResponse<R> {
+/**
+ * Limits the amount of response text printed with RPC or parsing errors
+ */
+const maxStringLengthToPrint = 500;
+
+interface IRpcResponse<R> extends IRpcResponseError {
+  result?: R;
+}
+
+interface IRpcResponseError {
   jsonrpc: "2.0";
   id: number;
-  result?: R;
   error?: {
     code: number; // -32601;
     message: string; // "The method eth_none does not exist/is not available"
@@ -24,9 +34,9 @@ export class JsonRpcHttpClient implements IJsonRpcClient {
   /**
    * Perform RPC request
    */
-  async fetch<R>({method, params}: IRpcPayload, signal?: AbortSignal): Promise<R> {
-    const res: IRpcResponse<R> = await fetchJson(this.url, {jsonrpc: "2.0", method, params, id: 1}, signal);
-    return parseRpcResponse(res);
+  async fetch<R>(payload: IRpcPayload, signal?: AbortSignal): Promise<R> {
+    const res: IRpcResponse<R> = await fetchJson(this.url, {jsonrpc: "2.0", id: 1, ...payload}, signal);
+    return parseRpcResponse(res, payload);
   }
 
   /**
@@ -41,29 +51,14 @@ export class JsonRpcHttpClient implements IJsonRpcClient {
       rpcPayloadArr.map(({method, params}, i) => ({jsonrpc: "2.0", method, params, id: i})),
       signal
     );
-    return resArr.map(parseRpcResponse);
+    return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
   }
 }
 
-function parseRpcResponse<R>(res: IRpcResponse<R>): R {
-  if (res.error) {
-    if (typeof res.error.message === "string") {
-      throw Error(res.error.message);
-    } else if (res.error.code) {
-      throw Error(`JSON RPC error ${res.error.code}`);
-    }
-    throw Error("JSON RPC error");
-  } else if (res.result === undefined) {
-    throw Error("No JSON RPC result");
-  } else {
-    return res.result;
-  }
+function parseRpcResponse<R>(res: IRpcResponse<R>, payload: IRpcPayload): R {
+  if (res.result !== undefined) return res.result;
+  throw new ErrorJsonRpcResponse(res, payload);
 }
-
-/**
- * Limits the amount of response text printed with RPC or parsing errors
- */
-const maxStringLengthToPrint = 500;
 
 /**
  * Fetches JSON and throws detailed errors in case the HTTP request is not ok
@@ -95,4 +90,36 @@ function parseJson<T>(json: string): T {
   } catch (e) {
     throw Error(`Error parsing JSON: ${e.message}\n${json.slice(0, maxStringLengthToPrint)}`);
   }
+}
+
+export class ErrorJsonRpcResponse extends Error {
+  response: IRpcResponseError;
+  payload: IRpcPayload;
+  constructor(res: IRpcResponseError, payload: IRpcPayload) {
+    const errorMessage = res.error
+      ? typeof res.error.message === "string"
+        ? res.error.message
+        : typeof res.error.code === "number"
+        ? parseJsonRpcErrorCode(res.error.code)
+        : serializeContext(res.error)
+      : "no result";
+
+    super(`JSON RPC error: ${errorMessage}, ${serializeContext((payload as unknown) as Json)}`);
+
+    this.response = res;
+    this.payload = payload;
+  }
+}
+
+/**
+ * JSON RPC spec errors https://www.jsonrpc.org/specification#response_object
+ */
+function parseJsonRpcErrorCode(code: number): string {
+  if (code === -32700) return "Parse request error";
+  if (code === -32600) return "Invalid request object";
+  if (code === -32601) return "Method not found";
+  if (code === -32602) return "Invalid params";
+  if (code === -32603) return "Internal error";
+  if (code >= -32000 && code <= -32099) return "Server error";
+  return `Unknown error code ${code}`;
 }

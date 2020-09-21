@@ -13,7 +13,8 @@ describe("eth1 / jsonRpcHttpClient", function () {
   this.timeout("10 seconds");
 
   const port = 36421;
-  const noMethodError = "The method does not exist/is not available";
+  const noMethodError = {code: -32601, message: "Method not found"};
+  const notInSpecError = "JSON RPC Error not in spec";
 
   const testCases: {
     id: string;
@@ -59,9 +60,25 @@ describe("eth1 / jsonRpcHttpClient", function () {
       id: "RPC payload with error",
       requestListener: (req, res) => {
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: {code: -32601, message: noMethodError}}));
+        res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: noMethodError}));
       },
-      error: noMethodError,
+      error: noMethodError.message,
+    },
+    {
+      id: "RPC payload with non-spec error: error has no message",
+      requestListener: (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: {code: noMethodError.code}}));
+      },
+      error: noMethodError.message,
+    },
+    {
+      id: "RPC payload with non-spec error: error is a string",
+      requestListener: (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({jsonrpc: "2.0", id: 83, error: notInSpecError}));
+      },
+      error: notInSpecError,
     },
     {
       id: "RPC payload with no result",
@@ -69,7 +86,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({jsonrpc: "2.0", id: 83}));
       },
-      error: "No JSON RPC result",
+      error: "no result",
     },
     {
       id: "Abort request",
@@ -116,7 +133,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
       }
 
       if (!url) url = goerliRpcUrl;
-      if (!payload) payload = {method: "", params: []};
+      if (!payload) payload = {method: "no-method", params: []};
 
       const eth1JsonRpcClient = new JsonRpcHttpClient(url);
       const controller = new AbortController();
