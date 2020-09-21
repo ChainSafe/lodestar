@@ -17,6 +17,7 @@ import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {sleep} from "../../../util/sleep";
 import {EventEmitter} from "events";
+import {getSyncPeers} from "../../utils/peers";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
@@ -208,9 +209,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     while (!this.bestPeer && !isAborted) {
       // wait first to make sure we have latest status
       await sleep(waitingTime);
-      const peers = this.network
-        .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
-        .map((peer) => peer.id);
+      const peers = getSyncPeers(this.network, undefined, this.network.getMaxPeer());
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
