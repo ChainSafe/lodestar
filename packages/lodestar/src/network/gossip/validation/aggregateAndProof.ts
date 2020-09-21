@@ -2,14 +2,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
-import {AggregateAndProof, Attestation, SignedAggregateAndProof, Slot} from "@chainsafe/lodestar-types";
+import {AggregateAndProof, Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {ExtendedValidatorResult} from "../constants";
 import {toHexString} from "@chainsafe/ssz";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../constants";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  getCurrentSlot,
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
@@ -18,6 +16,7 @@ import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast
 import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
+import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -33,7 +32,7 @@ export async function validateGossipAggregateAndProof(
   const attestationRoot = config.types.Attestation.hashTreeRoot(aggregate);
   const logContext = getLogContext(aggregate, aggregateAndProof, root, attestationRoot);
   logger.verbose("Started gossip aggregate and proof validation", logContext);
-  if (!isValidAggregateAndProofSlot(config, chain.getGenesisTime(), aggregate.data.slot)) {
+  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), aggregate.data.slot)) {
     logger.warn("Ignored gossip aggregate and proof", {
       reason: "invalid slot time",
       currentSlot: chain.clock.currentSlot,
@@ -73,15 +72,6 @@ export async function validateGossipAggregateAndProof(
   logger.profile("gossipAggregateAndProofValidation");
   logger.info("Received gossip aggregate and proof passed validation", logContext);
   return result;
-}
-
-export function isValidAggregateAndProofSlot(config: IBeaconConfig, genesisTime: number, slot: Slot): boolean {
-  const milliSecPerSlot = config.params.SECONDS_PER_SLOT * 1000;
-  const currentSlotTime = getCurrentSlot(config, genesisTime) * milliSecPerSlot;
-  return (
-    (slot + ATTESTATION_PROPAGATION_SLOT_RANGE) * milliSecPerSlot + MAXIMUM_GOSSIP_CLOCK_DISPARITY >= currentSlotTime &&
-    currentSlotTime >= slot * milliSecPerSlot - MAXIMUM_GOSSIP_CLOCK_DISPARITY
-  );
 }
 
 export function hasAttestationParticipants(attestation: Attestation): boolean {

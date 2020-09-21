@@ -5,12 +5,11 @@ import {Attestation} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
 import {getAttestationPreState, getBlockStateContext} from "../utils";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 // eslint-disable-next-line max-len
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -47,7 +46,7 @@ export async function validateGossipAttestation(
     return ExtendedValidatorResult.reject;
   }
 
-  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), attestation)) {
+  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), attestation.data.slot)) {
     logger.warn("Ignored gossip committee attestation", {reason: "Invalid slot time", ...attestationLogContext});
     //attestation might be valid later so passing to attestation pool
     await chain.receiveAttestation(attestation);
@@ -114,16 +113,6 @@ export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Atte
   const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
   //TODO: check if source and target blocks are not in bad block repository
   return await db.badBlock.has(blockRoot);
-}
-
-/**
- * is ready to be included in block
- */
-export function hasValidAttestationSlot(config: IBeaconConfig, genesisTime: number, attestation: Attestation): boolean {
-  const currentSlot = getCurrentSlot(config, genesisTime);
-  return (
-    attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot && currentSlot >= attestation.data.slot
-  );
 }
 
 export function isUnaggregatedAttestation(attestation: Attestation): boolean {
