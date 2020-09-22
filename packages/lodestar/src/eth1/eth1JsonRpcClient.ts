@@ -85,9 +85,8 @@ export class Eth1JsonRpcClient {
   }
 }
 
-function toHex(num: number): string {
-  const hex = num.toString(16);
-  return num > 0 && hex.length % 2 ? "0x0" + hex : "0x" + hex;
+function toHex(n: number): string {
+  return "0x" + n.toString(16);
 }
 
 function parseBlock(blockRaw: IEthJsonRpcTypes["eth_getBlockByNumber"]): Eth1Block {
