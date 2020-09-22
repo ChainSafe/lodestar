@@ -1,7 +1,7 @@
 import {ExtendedValidatorResult} from "../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Attestation, AttestationData, BeaconState} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationData, BeaconState, Epoch, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
@@ -109,7 +109,7 @@ export async function validateGossipAttestation(
     });
     return ExtendedValidatorResult.reject;
   }
-  if (!isCommitteIndexWithinRange(config, attestation, attestationPreStateContext.state)) {
+  if (!isCommitteIndexWithinRange(config, attestation.data, attestationPreStateContext.state)) {
     logger.warn("Rejected gossip committee attestation", {
       reason: "committee index not within the expected range",
       ...attestationLogContext,
@@ -130,9 +130,20 @@ export async function validateGossipAttestation(
     });
     return ExtendedValidatorResult.reject;
   }
-  if (!isAncestorOfBlock(config, chain, attestation.data)) {
+  if (
+    !isAncestorOfBlock(config, chain, attestation.data, attestation.data.target.epoch, attestation.data.target.root)
+  ) {
     logger.warn("Rejected gossip committee attestation", {
       reason: "target block is not an ancestor of the block named in the LMD vote",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
+  if (!isAncestorOfBlock(config, chain, attestation.data, finalizedCheckpoint.epoch, finalizedCheckpoint.root)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason:
+        "current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root",
       ...attestationLogContext,
     });
     return ExtendedValidatorResult.reject;
@@ -155,10 +166,10 @@ export function isUnaggregatedAttestation(attestation: Attestation): boolean {
 
 export function isCommitteIndexWithinRange(
   config: IBeaconConfig,
-  attestation: Attestation,
+  attestationData: AttestationData,
   state: BeaconState
 ): boolean {
-  return attestation.data.index < getCommitteeCountAtSlot(config, state, attestation.data.target.epoch);
+  return attestationData.index < getCommitteeCountAtSlot(config, state, attestationData.target.epoch);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
@@ -178,8 +189,10 @@ export function doesEpochSlotMatchTarget(config: IBeaconConfig, attestationData:
 export function isAncestorOfBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
-  attestationData: AttestationData
+  attestationData: AttestationData,
+  epoch: Epoch,
+  root: Root
 ): boolean {
-  const startSlot = computeStartSlotAtEpoch(config, attestationData.target.epoch);
-  return chain.forkChoice.getAncestor(attestationData.beaconBlockRoot, startSlot) === attestationData.target.root;
+  const startSlot = computeStartSlotAtEpoch(config, epoch);
+  return chain.forkChoice.getAncestor(attestationData.beaconBlockRoot, startSlot) === root;
 }
