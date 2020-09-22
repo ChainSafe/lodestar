@@ -371,11 +371,6 @@ export class AttestationService {
   }
 
   private async storeAttestation(attesterIndex: number, attestation: Attestation): Promise<void> {
-    // this.logger.error("storing attestation", {
-    //   attesterIndex,
-    //   slot: attestation.data.slot,
-    //   validator: toHexString(this.publicKeys[attesterIndex]),
-    // });
     await this.db.setAttestation(this.publicKeys[attesterIndex], attestation);
 
     // cleanup
