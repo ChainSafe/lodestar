@@ -137,8 +137,9 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
    */
   private getDiffTillNextSlot(): number {
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    const diffInSeconds = Math.floor(Date.now() / 1000 - this.genesisTime);
+    const milisecondsPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
+    const diffInMiliseconds = Date.now() - this.genesisTime * 1000;
     // update slot after remaining seconds until next slot
-    return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
+    return milisecondsPerSlot - (diffInMiliseconds % milisecondsPerSlot);
   }
 }
