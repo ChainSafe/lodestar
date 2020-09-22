@@ -197,6 +197,11 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
+    // at regular sync time, we fetch follow-up range so don't need to handle this
+    // otherwise, got "write EPIPE" error bc we call beacon_block_by_root too much
+    // at the same time to same peer and it disconnects us
+    // this happens with "missing parent" gossip blocks
+    if (!this.isSynced()) return;
     const peerBalancer = new RoundRobinArray(this.getPeers());
     // eslint-disable-next-line no-constant-condition
     while (true) {
