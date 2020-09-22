@@ -186,6 +186,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.checkSyncStatus();
     await Promise.all([
       this.db.aggregateAndProof.add(signedAggregateAndProof.message),
+      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
       this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
     ]);
   }
@@ -235,14 +236,11 @@ export class ValidatorApi implements IValidatorApi {
       return current;
     });
 
-    const aggregateAndProof = {
+    return {
       aggregate,
       aggregatorIndex,
       selectionProof: EMPTY_SIGNATURE,
     };
-
-    await this.db.seenAttestationCache.addAggregateAndProof(aggregateAndProof);
-    return aggregateAndProof;
   }
 
   public async subscribeCommitteeSubnet(
