@@ -60,7 +60,6 @@ export class BeaconSync implements IBeaconSync {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
     await this.attestationCollector.start();
-    this.chain.emitter.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
     await this.waitForPeers();
     if (this.mode === SyncMode.STOPPED) {
@@ -155,6 +154,7 @@ export class BeaconSync implements IBeaconSync {
 
   private syncCompleted = async (): Promise<void> => {
     this.stopSyncTimer();
+    this.chain.emitter.on("unknownBlockRoot", this.onUnknownBlockRoot);
     await this.network.handleSyncCompleted();
   };
 

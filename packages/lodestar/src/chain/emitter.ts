@@ -27,6 +27,8 @@ export interface IChainEvents {
   "forkChoice:reorg": (head: IBlockSummary, oldHead: IBlockSummary) => void;
   "forkChoice:justified": (checkpoint: Checkpoint) => void;
   "forkChoice:finalized": (checkpoint: Checkpoint) => void;
+
+  "sync:missingBlockRoots": (blockRoots: Root[]) => void;
   // TODO more events
 }
 

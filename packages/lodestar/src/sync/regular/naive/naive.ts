@@ -12,10 +12,10 @@ import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
+import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer, sortBlocks} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, List} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
@@ -49,6 +49,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   public async start(): Promise<void> {
     this.chain.emitter.on("block", this.onProcessedBlock);
+    this.chain.emitter.on("sync:missingBlockRoots", this.onMissingBlockRoots);
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
@@ -75,6 +76,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.controller.abort();
     }
     this.chain.emitter.removeListener("block", this.onProcessedBlock);
+    this.chain.emitter.removeListener("sync:missingBlockRoots", this.onMissingBlockRoots);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
   }
 
@@ -107,6 +109,50 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
           `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
       );
       this.setTarget();
+    }
+  };
+
+  /**
+   * This only happens in case our best peer changes forkchoice head/branch after each request
+   * or it does not follow beacon_block_by_range spec.
+   * @param blockRoots
+   */
+  private onMissingBlockRoots = async (blockRoots: Root[]): Promise<void> => {
+    const missingBlockRoots = [...blockRoots];
+    try {
+      const foundBlocks: SignedBeaconBlock[] = [];
+      const foundBlockRoots: Set<string> = new Set();
+      while (missingBlockRoots.length > 0) {
+        const blocks =
+          (await this.network.reqResp.beaconBlocksByRoot(this.bestPeer!, missingBlockRoots as List<Root>)) || [];
+        if (blocks.length === 0) {
+          this.logger.error(
+            "Regular Sync: Cannot find missing block roots",
+            missingBlockRoots.map((root) => toHexString(root)).join(",")
+          );
+          return;
+        }
+        foundBlocks.push(...blocks);
+        const sortedBlocks = sortBlocks(blocks);
+        sortedBlocks.forEach((block) => {
+          const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
+          foundBlockRoots.add(toHexString(blockRoot));
+          const index = missingBlockRoots.findIndex((root) => this.config.types.Root.equals(root, blockRoot));
+          if (index !== -1) {
+            missingBlockRoots.splice(index, 1);
+          }
+          const parentRoot = block.message.parentRoot;
+          if (!this.chain.forkChoice.hasBlock(parentRoot) && !foundBlockRoots.has(toHexString(parentRoot))) {
+            missingBlockRoots.push(block.message.parentRoot);
+          }
+        });
+      }
+      await Promise.all(foundBlocks.map((block) => this.chain.receiveBlock(block, false)));
+    } catch (e) {
+      this.logger.error("Regular Sync: failed to query missing block roots", {
+        missingBlockRoots: missingBlockRoots.map((root) => toHexString(root)).join(","),
+        message: e.message,
+      });
     }
   };
 

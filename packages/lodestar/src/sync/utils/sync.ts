@@ -184,6 +184,8 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
+    const blockRoots = blockBuffer.map((block) => config.types.BeaconBlock.hashTreeRoot(block.message));
+    const missingBlockRoots: Root[] = [];
     while (blockBuffer.length > 0) {
       const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;
@@ -191,6 +193,12 @@ export function processSyncBlocks(
         !isInitialSync ||
         (isInitialSync && block.slot > headSlot! && config.types.Root.equals(headRoot!, block.parentRoot))
       ) {
+        if (
+          !chain.forkChoice.hasBlock(block.parentRoot) &&
+          blockRoots.findIndex((blockRoot) => config.types.Root.equals(blockRoot, block.parentRoot)) === -1
+        ) {
+          missingBlockRoots.push(block.parentRoot);
+        }
         await chain.receiveBlock(signedBlock, trusted);
         headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
         headSlot = block.slot;
@@ -208,6 +216,9 @@ export function processSyncBlocks(
         lastProcessedSlot = lastProcessedSlot || headSlot;
         break;
       }
+    }
+    if (missingBlockRoots.length > 0) {
+      chain.emitter.emit("sync:missingBlockRoots", missingBlockRoots);
     }
     return lastProcessedSlot;
   };

@@ -21,7 +21,7 @@ import {
   processSyncBlocks,
 } from "../../../../src/sync/utils";
 import * as blockUtils from "../../../../src/sync/utils/blocks";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ChainEventEmitter} from "../../../../src/chain";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -187,14 +187,17 @@ describe("sync utils", function () {
   describe("block process", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
     let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+    let emitterStub: SinonStubbedInstance<ChainEventEmitter>;
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
       forkChoiceStub = sinon.createStubInstance(ForkChoice);
       chainStub.forkChoice = forkChoiceStub;
+      emitterStub = sinon.createStubInstance(ChainEventEmitter);
+      chainStub.emitter = emitterStub;
     });
 
-    it("should work", async function () {
+    it("initial sync - should work without emitting missing root", async function () {
       const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
       const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
       const block1 = generateEmptySignedBlock();
@@ -203,12 +206,32 @@ describe("sync utils", function () {
       const block2 = generateEmptySignedBlock();
       block2.message.slot = 3;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
+      forkChoiceStub.hasBlock.returns(true);
       const lastProcesssedSlot = await pipe(
         [[block2], [block1]],
         processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot})
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
       expect(lastProcesssedSlot).to.be.equal(3);
+      expect(emitterStub.emit.calledOnce).to.be.false;
+    });
+
+    it("regular sync - should work and emit missing roots event", async function () {
+      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 0}));
+      const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
+      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
+      const block1 = generateEmptySignedBlock();
+      block1.message.slot = 1;
+      const block2 = generateEmptySignedBlock();
+      block2.message.slot = 3;
+      forkChoiceStub.hasBlock.returns(false);
+      const lastProcesssedSlot = await pipe(
+        [[block2], [block1]],
+        processSyncBlocks(config, chainStub, logger, false, {blockRoot, slot: lastProcessedBlock.slot})
+      );
+      expect(chainStub.receiveBlock.calledTwice).to.be.true;
+      expect(lastProcesssedSlot).to.be.equal(3);
+      expect(emitterStub.emit.calledOnce).to.be.true;
     });
 
     it("should handle failed to get range - initial sync", async function () {
