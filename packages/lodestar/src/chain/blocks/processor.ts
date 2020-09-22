@@ -18,6 +18,7 @@ import {IAttestationProcessor, IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {convertBlock} from "./convertBlock";
 import {IBeaconClock} from "../clock";
+import {IStateRegenerator} from "../regen";
 
 export class BlockProcessor implements IService {
   private readonly config: IBeaconConfig;
@@ -25,6 +26,7 @@ export class BlockProcessor implements IService {
   private readonly db: IBeaconDb;
   private readonly forkChoice: IForkChoice;
   private readonly clock: IBeaconClock;
+  private readonly regen: IStateRegenerator;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
   private readonly attestationProcessor: IAttestationProcessor;
@@ -43,6 +45,7 @@ export class BlockProcessor implements IService {
     logger: ILogger,
     db: IBeaconDb,
     forkChoice: IForkChoice,
+    regen: IStateRegenerator,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
     clock: IBeaconClock,
@@ -52,6 +55,7 @@ export class BlockProcessor implements IService {
     this.logger = logger;
     this.db = db;
     this.forkChoice = forkChoice;
+    this.regen = regen;
     this.metrics = metrics;
     this.eventBus = eventBus;
     this.clock = clock;
@@ -73,7 +77,7 @@ export class BlockProcessor implements IService {
       },
       convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
-      processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus, this.clock),
+      processBlock(this.config, this.logger, this.db, this.forkChoice, this.regen, this.pendingBlocks, this.eventBus, this.clock),
       postProcess(
         this.config,
         this.logger,

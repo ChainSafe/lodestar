@@ -19,6 +19,7 @@ import {IBeaconClock} from "./clock/interface";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IService} from "../node";
 import {ChainEventEmitter} from "./emitter";
+import {IStateRegenerator} from "./regen";
 
 export interface IBlockProcessJob {
   signedBlock: SignedBeaconBlock;
@@ -38,6 +39,7 @@ export type BlockError = {
 export interface IBeaconChain {
   emitter: ChainEventEmitter;
   forkChoice: IForkChoice;
+  regen: IStateRegenerator;
   clock: IBeaconClock;
   chainId: Uint16;
   networkId: Uint64;

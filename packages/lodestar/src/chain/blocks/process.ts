@@ -9,14 +9,16 @@ import {BlockPool} from "./pool";
 import {ChainEventEmitter} from "../emitter";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {IBlockProcessJob} from "../interface";
-import {getPreState, runStateTransition} from "./stateTransition";
+import {runStateTransition} from "./stateTransition";
 import {IBeaconClock} from "../clock";
+import {IStateRegenerator} from "../regen";
 
 export function processBlock(
   config: IBeaconConfig,
   logger: ILogger,
   db: IBeaconDb,
   forkChoice: IForkChoice,
+  regen: IStateRegenerator,
   pool: BlockPool,
   eventBus: ChainEventEmitter,
   clock: IBeaconClock
@@ -38,7 +40,7 @@ export function processBlock(
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         let preStateContext;
         try {
-          preStateContext = await getPreState(config, db, forkChoice, logger, job);
+          preStateContext = await regen.getPreState(job.signedBlock.message);
         } catch (e) {
           logger.verbose("No pre-state found, dropping block", e);
           pool.addPendingBlock(job);

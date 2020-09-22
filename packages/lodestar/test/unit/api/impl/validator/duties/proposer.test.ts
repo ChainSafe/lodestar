@@ -1,21 +1,26 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {generateState} from "../../../../../utils/state";
-import {generateValidators} from "../../../../../utils/validator";
-import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {expect} from "chai";
-import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
-import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
-import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
+
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+
+import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
+import {LocalClock} from "../../../../../../src/chain/clock";
+import {StateRegenerator} from "../../../../../../src/chain/regen";
+import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
+import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
+import {generateInitialMaxBalances} from "../../../../../utils/balances";
+import {generateState} from "../../../../../utils/state";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
+import {generateValidators} from "../../../../../utils/validator";
 
 describe("get proposers api impl", function () {
   const sandbox = sinon.createSandbox();
 
   let dbStub: StubbedBeaconDb,
     chainStub: SinonStubbedInstance<IBeaconChain>,
+    regenStub: SinonStubbedInstance<StateRegenerator>,
     syncStub: SinonStubbedInstance<IBeaconSync>;
 
   let api: IValidatorApi;
@@ -23,6 +28,9 @@ describe("get proposers api impl", function () {
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sandbox, config);
     chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub.clock = sandbox.createStubInstance(LocalClock);
+    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
     syncStub = sandbox.createStubInstance(BeaconSync);
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
@@ -59,6 +67,8 @@ describe("get proposers api impl", function () {
 
   it("should get proposers", async function () {
     syncStub.isSynced.returns(true);
+    sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
     dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
     const state = generateState({
       slot: 0,
@@ -71,16 +81,19 @@ describe("get proposers api impl", function () {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves({
+    regenStub.getBlockSlotState.resolves({
       state,
       epochCtx,
     });
+    sinon.stub(epochCtx, "getBeaconProposer").returns(1);
     const result = await api.getProposerDuties(1);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 
   it("should get future proposers", async function () {
     syncStub.isSynced.returns(true);
+    sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
     const state = generateState({
       slot: config.params.SLOTS_PER_EPOCH - 3,
       validators: generateValidators(25, {
@@ -92,10 +105,11 @@ describe("get proposers api impl", function () {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves({
+    regenStub.getBlockSlotState.resolves({
       state,
       epochCtx,
     });
+    sinon.stub(epochCtx, "getBeaconProposer").returns(1);
 
     const result = await api.getProposerDuties(2);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);

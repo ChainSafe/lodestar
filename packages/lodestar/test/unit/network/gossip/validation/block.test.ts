@@ -4,12 +4,12 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {validateGossipBlock} from "../../../../../src/network/gossip/validation";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
+import {LocalClock} from "../../../../../src/chain/clock";
+import {StateRegenerator} from "../../../../../src/chain/regen";
 import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
-import * as blockValidationUtils from "../../../../../src/network/gossip/utils";
+import {validateGossipBlock} from "../../../../../src/network/gossip/validation";
 import {generateSignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {generateState} from "../../../../utils/state";
@@ -17,23 +17,20 @@ import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+  let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
-  let getBlockContextStub: SinonStub;
   let verifySignatureStub: SinonStub;
   const logger = silentLogger;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    chainStub.forkChoice = forkChoiceStub;
+    chainStub.clock = sinon.createStubInstance(LocalClock);
+    regenStub = chainStub.regen = sinon.createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sinon, config);
-    getBlockContextStub = sinon.stub(blockValidationUtils, "getBlockStateContext");
     verifySignatureStub = sinon.stub(specUtils, "verifyBlockSignature");
   });
 
   afterEach(function () {
-    getBlockContextStub.restore();
     verifySignatureStub.restore();
   });
 
@@ -82,7 +79,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
-    expect(getBlockContextStub.notCalled).to.be.true;
+    expect(regenStub.getPreState.notCalled).to.be.true;
   });
 
   it("missing parent", async function () {
@@ -94,14 +91,14 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
-    getBlockContextStub.resolves(null);
+    regenStub.getPreState.throws();
     const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
-    expect(getBlockContextStub.calledOnce).to.be.true;
+    expect(regenStub.getPreState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
@@ -114,7 +111,7 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
-    getBlockContextStub.resolves({
+    regenStub.getPreState.resolves({
       state: generateState(),
       epochCtx: new EpochContext(config),
     });
@@ -125,7 +122,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
-    expect(getBlockContextStub.calledOnce).to.be.true;
+    expect(regenStub.getPreState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
   });
@@ -140,9 +137,9 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
-    getBlockContextStub.resolves({
+    regenStub.getPreState.resolves({
       state: generateState(),
-      epochCtx: epochCtxStub,
+      epochCtx: (epochCtxStub as unknown) as EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex + 1);
@@ -152,7 +149,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
-    expect(getBlockContextStub.calledOnce).to.be.true;
+    expect(regenStub.getPreState.calledOnce).to.be.true;
     expect(chainStub.receiveBlock.calledOnce).to.be.false;
     expect(verifySignatureStub.calledOnce).to.be.true;
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
@@ -168,9 +165,9 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
-    getBlockContextStub.resolves({
+    regenStub.getPreState.resolves({
       state: generateState(),
-      epochCtx: epochCtxStub,
+      epochCtx: (epochCtxStub as unknown) as EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
@@ -180,7 +177,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
-    expect(getBlockContextStub.calledOnce).to.be.true;
+    expect(regenStub.getPreState.calledOnce).to.be.true;
     expect(verifySignatureStub.calledOnce).to.be.true;
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
   });

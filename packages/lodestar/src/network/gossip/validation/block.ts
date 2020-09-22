@@ -7,7 +7,6 @@ import {ExtendedValidatorResult} from "../constants";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {getBlockStateContext} from "../utils";
 
 export async function validateGossipBlock(
   config: IBeaconConfig,
@@ -52,8 +51,10 @@ export async function validateGossipBlock(
     return ExtendedValidatorResult.ignore;
   }
 
-  const blockContext = await getBlockStateContext(chain.forkChoice, db, block.message.parentRoot, block.message.slot);
-  if (!blockContext) {
+  let blockContext;
+  try {
+    blockContext = await chain.regen.getPreState(block.message);
+  } catch (e) {
     logger.warn("Ignoring gossip block", {
       reason: "missing parent",
       blockSlot,

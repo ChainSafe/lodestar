@@ -45,6 +45,7 @@ import {sortBlocks} from "../sync/utils";
 import {getEmptyBlock} from "./genesis/util";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {notNullish} from "../util/notNullish";
+import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -61,6 +62,7 @@ export class BeaconChain implements IBeaconChain {
   public networkId: Uint64;
   public clock!: IBeaconClock;
   public emitter: ChainEventEmitter;
+  public regen!: IStateRegenerator;
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly eth1Provider: IEth1Provider;
@@ -96,7 +98,7 @@ export class BeaconChain implements IBeaconChain {
       (await this.db.checkpointStateCache.getLatest({
         root: head.blockRoot,
         epoch: Infinity,
-      })) || (await this.db.stateCache.get(head.stateRoot));
+      })) || (await this.regen.getState(head.stateRoot));
     if (!headStateRoot) throw Error("headStateRoot does not exist");
     return headStateRoot;
   }
@@ -180,6 +182,13 @@ export class BeaconChain implements IBeaconChain {
     epochCtx.loadState(state);
     await this.db.stateCache.add({state, epochCtx});
     await this.db.checkpointStateCache.add(checkpoint, {state, epochCtx});
+    this.regen = new QueuedStateRegenerator({
+      config: this.config,
+      emitter: this.emitter,
+      forkChoice: this.forkChoice,
+      db: this.db,
+      signal: this.abortController!.signal,
+    });
     this.attestationProcessor = new AttestationProcessor(this, {
       config: this.config,
       db: this.db,
@@ -190,6 +199,7 @@ export class BeaconChain implements IBeaconChain {
       this.logger,
       this.db,
       this.forkChoice,
+      this.regen,
       this.metrics,
       this.emitter,
       this.clock,
@@ -450,6 +460,7 @@ export class BeaconChain implements IBeaconChain {
   };
 
   private onClockSlot = (slot: Slot): void => {
+    this.logger.verbose("clock slot", {slot});
     this.forkChoice.updateTime(slot);
     this.blockProcessor.onNewSlot(slot);
   };
