@@ -2,10 +2,9 @@
  * @module db/api/validator
  */
 
-import deepmerge from "deepmerge";
 import {toHexString} from "@chainsafe/ssz";
-import {Attestation, BLSPubkey, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
+import {Attestation, BLSPubkey, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 import {DatabaseService, IDatabaseApiOptions} from "../abstract";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
@@ -32,17 +31,16 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   }
 
   public async getAttestations(pubKey: BLSPubkey, options: IAttestationSearchOptions): Promise<Attestation[]> {
-    options = deepmerge({gt: 0, lt: Number.MAX_SAFE_INTEGER}, options);
     const data = await this.db.values({
-      gt: encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + options.gt),
-      lt: encodeKey(Bucket.proposedAttestations, "" + toHexString(this.incrementPubKey(pubKey)) + options.lt),
+      gte: encodeKey(Bucket.proposedAttestations, this.getAttestationKey(pubKey, options.gte ?? 0)),
+      lt: encodeKey(Bucket.proposedAttestations, this.getAttestationKey(pubKey, options.lt ?? Number.MAX_SAFE_INTEGER)),
     });
     return data.map((data) => this.config.types.Attestation.deserialize(data));
   }
 
   public async setAttestation(pubKey: BLSPubkey, attestation: Attestation): Promise<void> {
     await this.db.put(
-      encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + attestation.data.target.epoch),
+      encodeKey(Bucket.proposedAttestations, this.getAttestationKey(pubKey, attestation.data.target.epoch)),
       this.config.types.Attestation.serialize(attestation) as Buffer
     );
   }
@@ -50,12 +48,14 @@ export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public async deleteAttestations(pubKey: BLSPubkey, attestations: Attestation[]): Promise<void> {
     const criteria: ReturnType<typeof encodeKey>[] = [];
     attestations.forEach((attestation) =>
-      criteria.push(encodeKey(Bucket.proposedAttestations, "" + toHexString(pubKey) + attestation.data.target.epoch))
+      criteria.push(
+        encodeKey(Bucket.proposedAttestations, this.getAttestationKey(pubKey, attestation.data.target.epoch))
+      )
     );
     await this.db.batchDelete(criteria);
   }
 
-  private incrementPubKey(pubKey: BLSPubkey): BLSPubkey {
-    return bigIntToBytes(bytesToBigInt(pubKey.valueOf() as Uint8Array) + BigInt(1), this.config.types.BLSPubkey.length);
+  private getAttestationKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
+    return Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), 8, "be")]);
   }
 }
