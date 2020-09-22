@@ -29,7 +29,7 @@ export function processBlock(
   return (source) => {
     return (async function* () {
       for await (const job of source) {
-        if (job.signedBlock.message.slot > forkChoice.fcStore.currentSlot) {
+        if (job.signedBlock.message.slot > forkChoice.getTime()) {
           pool.addPendingSlotBlock(job);
           continue;
         }

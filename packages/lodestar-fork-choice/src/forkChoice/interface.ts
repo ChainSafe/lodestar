@@ -10,11 +10,8 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "./blockSummary";
-import {IForkChoiceStore} from "./store";
 
 export interface IForkChoice {
-  fcStore: IForkChoiceStore;
-
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
@@ -81,6 +78,11 @@ export interface IForkChoice {
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void;
+
+  /**
+   * Returns current time slot.
+   */
+  getTime(): Slot;
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */

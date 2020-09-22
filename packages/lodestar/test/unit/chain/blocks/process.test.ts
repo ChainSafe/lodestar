@@ -29,6 +29,7 @@ describe("block process stream", function () {
     dbStub = new StubbedBeaconDb(sandbox);
     blockPoolStub = sinon.createStubInstance(BlockPool);
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    forkChoiceStub.getTime.returns(0)
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
@@ -51,6 +52,24 @@ describe("block process stream", function () {
     );
     expect(result).to.have.length(0);
     expect(blockPoolStub.addPendingBlock.calledOnce).to.be.true;
+  });
+
+  it("future slot", async function () {
+    const receivedJob: IBlockProcessJob = {
+      signedBlock: config.types.SignedBeaconBlock.defaultValue(),
+      trusted: false,
+      reprocess: false,
+    };
+    receivedJob.signedBlock.message.slot = 1;
+    const parentBlock = config.types.SignedBeaconBlock.defaultValue();
+    dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
+    const result = await pipe(
+      [receivedJob],
+      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      all
+    );
+    expect(result).to.have.length(0);
+    expect(blockPoolStub.addPendingSlotBlock.calledOnce).to.be.true;
   });
 
   it("missing parent state", async function () {
