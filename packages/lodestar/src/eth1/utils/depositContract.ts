@@ -2,7 +2,7 @@
  * @module eth1
  */
 
-import {ethers} from "ethers";
+import {Interface} from "@ethersproject/abi";
 import {fromHexString} from "@chainsafe/ssz";
 import {DepositEvent} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -10,7 +10,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 const depositEventFragment =
   "event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)";
 
-const depositContractInterface = new ethers.utils.Interface([depositEventFragment]);
+const depositContractInterface = new Interface([depositEventFragment]);
 
 /**
  * Precomputed topics of DepositEvent logs
