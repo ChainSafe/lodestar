@@ -1,7 +1,7 @@
 import {ExtendedValidatorResult} from "../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Attestation} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
@@ -10,6 +10,8 @@ import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-tran
 // eslint-disable-next-line max-len
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
+import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
+import {getCommitteeCountAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -103,6 +105,20 @@ export async function validateGossipAttestation(
     });
     return ExtendedValidatorResult.reject;
   }
+  if (!isCommitteIndexWithinRange(config, attestation, attestationPreStateContext.state)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason: "committee index not within the expected range",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason: "number of aggregation bits does not match the committee size",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
   logger.profile("gossipAttestationValidation");
   logger.info("Received valid committee attestation", attestationLogContext);
@@ -117,4 +133,22 @@ export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Atte
 
 export function isUnaggregatedAttestation(attestation: Attestation): boolean {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1;
+}
+
+export function isCommitteIndexWithinRange(
+  config: IBeaconConfig,
+  attestation: Attestation,
+  state: BeaconState
+): boolean {
+  return attestation.data.index < getCommitteeCountAtSlot(config, state, attestation.data.target.epoch);
+}
+
+export function doAggregationBitsMatchCommitteeSize(
+  attestationPreStateContext: ITreeStateContext,
+  attestation: Attestation
+): boolean {
+  return (
+    attestation.aggregationBits.length ===
+    attestationPreStateContext.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
+  );
 }
