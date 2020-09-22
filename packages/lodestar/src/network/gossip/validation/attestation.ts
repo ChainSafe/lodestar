@@ -54,12 +54,12 @@ export async function validateGossipAttestation(
 
   if (!hasValidAttestationSlot(config, chain.getGenesisTime(), attestation.data.slot)) {
     logger.warn("Ignored gossip committee attestation", {reason: "Invalid slot time", ...attestationLogContext});
-    //attestation might be valid later so passing to attestation pool
+    // attestation might be valid later so passing to attestation pool
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
 
-  //no other validator attestation for same target epoch has been seen
+  // no other validator attestation for same target epoch has been seen
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     return ExtendedValidatorResult.ignore;
   }
@@ -70,7 +70,7 @@ export async function validateGossipAttestation(
       reason: "missing attestation state/block",
       ...attestationLogContext,
     });
-    //attestation might be valid after we receive block
+    // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
@@ -80,7 +80,7 @@ export async function validateGossipAttestation(
       reason: "missing attestation prestate",
       ...attestationLogContext,
     });
-    //attestation might be valid after we receive block
+    // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
@@ -145,7 +145,7 @@ export async function validateGossipAttestation(
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {
   const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
-  //TODO: check if source and target blocks are not in bad block repository
+  // TODO: check if source and target blocks are not in bad block repository
   return await db.badBlock.has(blockRoot);
 }
 
