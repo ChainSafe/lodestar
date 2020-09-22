@@ -29,6 +29,10 @@ export function processBlock(
   return (source) => {
     return (async function* () {
       for await (const job of source) {
+        if (job.signedBlock.message.slot > forkChoice.fcStore.currentSlot) {
+          pool.addPendingSlotBlock(job);
+          continue;
+        }
         const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
         let preStateContext;
         try {

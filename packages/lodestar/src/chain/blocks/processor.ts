@@ -57,6 +57,7 @@ export class BlockProcessor implements IService {
 
   public async start(): Promise<void> {
     const abortSignal = this.controller.signal;
+    await this.pendingBlocks.start();
     // TODO: Add more robust error handling of this pipe
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     void pipe(
@@ -83,6 +84,7 @@ export class BlockProcessor implements IService {
   }
 
   public async stop(): Promise<void> {
+    await this.pendingBlocks.stop();
     this.controller.abort();
   }
 

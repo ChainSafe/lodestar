@@ -10,8 +10,11 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "./blockSummary";
+import {IForkChoiceStore} from "./store";
 
 export interface IForkChoice {
+  fcStore: IForkChoiceStore;
+
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)
