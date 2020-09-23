@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import AbortController from "abort-controller";
+import {AbortController, AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
 import {getSyncProtocols, INetwork} from "../../../network";
@@ -9,13 +9,13 @@ import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {ISlotRange} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
-import {sleep} from "../../../util/sleep";
 import {EventEmitter} from "events";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
@@ -140,7 +140,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
           const lastFetchedSlot = await pipe(
             [range],
-            fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
+            fetchBlockChunks(logger, chain, reqResp, getSyncPeers, undefined, controller.signal),
             processSyncBlocks(config, chain, logger, false, null)
           );
           if (lastFetchedSlot) {
@@ -200,14 +200,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
     // statusSyncTimer is per slot
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
-    let isAborted = false;
-    signal.addEventListener("abort", () => {
-      this.logger.verbose("RegularSync: Abort waitForBestPeer");
-      isAborted = true;
-    });
-    while (!this.bestPeer && !isAborted) {
+
+    while (!this.bestPeer) {
       // wait first to make sure we have latest status
-      await sleep(waitingTime);
+      await sleep(waitingTime, signal);
       const peers = this.network
         .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
         .map((peer) => peer.id);

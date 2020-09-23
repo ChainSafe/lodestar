@@ -6,7 +6,7 @@ import {AbortSignal} from "abort-controller";
 import {IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
-import {sleep} from "../util/sleep";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 
 /**
