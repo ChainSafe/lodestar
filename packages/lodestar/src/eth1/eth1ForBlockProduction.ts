@@ -54,6 +54,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
 
+    if (!opts.depositContractDeployBlock) {
+      this.logger.warn("No depositContractDeployBlock provided");
+    }
+
     const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
     this.runAutoUpdate(autoUpdateIntervalMs).catch((e) => {
       this.logger.error("Aborted", e);
