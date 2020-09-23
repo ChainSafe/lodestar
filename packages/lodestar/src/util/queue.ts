@@ -1,4 +1,5 @@
-import {EventEmitter} from "events";
+import pushable, {Pushable} from "it-pushable";
+import pipe from "it-pipe";
 
 export enum QueueErrorCode {
   ERR_QUEUE_ABORTED = "ERR_QUEUE_ABORTED",
@@ -13,66 +14,57 @@ export class QueueError extends Error {
   }
 }
 
-/**
- * EventEmitter-based job queue
- */
-export class JobQueue extends EventEmitter {
-  private finished: number;
-  private next: number;
-  private queueSize: number;
-  private signal: AbortSignal;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Job = (...args: any) => any;
 
+type JobQueueItem<T extends Job = Job> = {
+  job: T;
+  resolve: (value?: ReturnType<T> | PromiseLike<ReturnType<T>> | undefined) => void;
+  reject: (reason?: unknown) => void;
+};
+
+export class JobQueue {
+  queueSize: number;
+  currentSize: number;
+  signal: AbortSignal;
+  queue: Pushable<JobQueueItem>;
+  processor: Promise<void>;
   constructor({queueSize, signal}: {queueSize: number; signal: AbortSignal}) {
-    super();
-    this.finished = 0;
-    this.next = 0;
     this.queueSize = queueSize;
+    this.currentSize = 0;
     this.signal = signal;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async enqueueJob<T extends (...args: any) => any>(job: T): Promise<ReturnType<T>> {
-    const id = await this.startJob();
-    try {
-      const result = await job();
-      await this.finishJob(id);
-      return result;
-    } catch (e) {
-      await this.finishJob(id);
-      throw e;
-    }
-  }
-
-  async startJob(): Promise<number> {
-    if (this.signal.aborted) {
-      throw new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED);
-    }
-    if (this.next + 1 - this.finished > this.queueSize) {
-      throw new QueueError(QueueErrorCode.ERR_QUEUE_THROTTLED);
-    }
-    const prev = this.next;
-    this.next++;
-    const id = this.next;
-    // the job should start right away if there are no outstanding jobs
-    if (prev === this.finished) {
-      return id;
-    }
-    // otherwise wait for the previous job to complete
-    return await new Promise((resolve, reject) => {
-      const abortHandler = (): void => {
-        this.removeAllListeners(prev.toString());
-        reject(new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED));
-      };
-      this.once(prev.toString(), () => {
-        this.signal.removeEventListener("abort", abortHandler);
-        resolve(id);
-      });
-      this.signal.addEventListener("abort", abortHandler, {once: true});
+    this.queue = pushable();
+    this.processor = pipe(this.queue, async (source) => {
+      for await (const job of source) {
+        await this.processJob(job);
+      }
     });
   }
 
-  async finishJob(id: number): Promise<void> {
-    this.finished = id;
-    this.emit(id.toString());
+  async processJob({job, resolve, reject}: JobQueueItem): Promise<void> {
+    if (this.signal.aborted) {
+      reject(new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED));
+    } else {
+      try {
+        const result = await job();
+        resolve(result);
+      } catch (e) {
+        reject(e);
+      }
+    }
+    this.currentSize--;
+  }
+
+  async enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
+    if (this.signal.aborted) {
+      throw new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED);
+    }
+    if (this.currentSize + 1 > this.queueSize) {
+      throw new QueueError(QueueErrorCode.ERR_QUEUE_THROTTLED);
+    }
+    return new Promise((resolve, reject) => {
+      this.queue.push({job, resolve, reject});
+      this.currentSize++;
+    });
   }
 }

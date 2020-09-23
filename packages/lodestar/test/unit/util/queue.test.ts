@@ -64,10 +64,8 @@ describe("Job queue", () => {
     const jobs = Promise.allSettled(Array.from({length: queueSize}, () => jobQueue.enqueueJob(job)));
     controller.abort();
     const results = await jobs;
-    // the first job is already in progress before the queue is aborted
-    expect(results[0].status).to.be.equal("fulfilled");
-    // all subsequent jobs should be rejected with ERR_QUEUE_ABORTED
-    results.slice(1).forEach((e) => {
+    // all jobs should be rejected with ERR_QUEUE_ABORTED
+    results.forEach((e) => {
       if (e.status === "rejected") {
         expect(e.reason).to.be.instanceOf(QueueError);
         expect(e.reason.code).to.be.equal(QueueErrorCode.ERR_QUEUE_ABORTED);
