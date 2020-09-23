@@ -150,11 +150,9 @@ export class BlockError extends Error {
   public type: BlockErrorType;
   public job: IBlockProcessJob;
 
-  constructor(type: BlockErrorType & JobObject) {
+  constructor({job, ...type}: BlockErrorType & JobObject) {
     super(type.code);
-    this.job = type.job;
+    this.job = job;
     this.type = type;
-    // delete this.type.job for easier serialization of this.type
-    delete (this.type as BlockErrorType & Partial<JobObject>).job;
   }
 }
