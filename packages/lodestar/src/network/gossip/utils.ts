@@ -93,7 +93,7 @@ export async function getBlockStateContext(
   if (!stateEpochCtx) return null;
   //only advance state transition if asked for future block
   slot = slot ?? parentSummary.slot;
-  if (slot && stateEpochCtx.state.slot < slot) {
+  if (stateEpochCtx.state.slot < slot) {
     processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, slot);
   }
   return stateEpochCtx;
