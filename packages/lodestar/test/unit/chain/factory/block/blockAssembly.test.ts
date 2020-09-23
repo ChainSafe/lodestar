@@ -11,6 +11,7 @@ import {BeaconChain} from "../../../../../src/chain";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 
 describe("block assembly", function () {
   const sandbox = sinon.createSandbox();
@@ -44,9 +45,14 @@ describe("block assembly", function () {
     });
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
-    stateTransitionStub.returns({state: generateState()});
+    const state = generateState();
+    stateTransitionStub.returns({state});
+
+    const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
+    eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
+
     try {
-      const result = await assembleBlock(config, chainStub, beaconDB, 1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;

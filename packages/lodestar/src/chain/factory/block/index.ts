@@ -11,11 +11,13 @@ import {blockToHeader, EpochContext, fastStateTransition} from "@chainsafe/lodes
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IEth1ForBlockProduction} from "../../../eth1";
 
 export async function assembleBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
+  eth1: IEth1ForBlockProduction,
   slot: Slot,
   proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
@@ -30,7 +32,7 @@ export async function assembleBlock(
     proposerIndex,
     parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
     stateRoot: ZERO_HASH,
-    body: await assembleBody(config, db, headState, randaoReveal, graffiti),
+    body: await assembleBody(config, db, eth1, headState, randaoReveal, graffiti),
   };
 
   let epochCtx: EpochContext;

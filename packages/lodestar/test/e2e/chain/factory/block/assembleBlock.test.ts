@@ -19,6 +19,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
 import {BeaconChain} from "../../../../../src/chain";
+import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
@@ -32,6 +33,7 @@ describe("produce block", function () {
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
+  const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: Keypair[] = Array.from({length: 64}, () => Keypair.generate());
@@ -63,17 +65,16 @@ describe("produce block", function () {
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);
     dbStub.attesterSlashing.values.resolves([]);
     dbStub.voluntaryExit.values.resolves([]);
-    dbStub.depositData.values.resolves([]);
-    dbStub.eth1Data.entries.resolves([
-      {key: 15000000, value: {depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)}},
-    ]);
+    eth1.getEth1DataAndDeposits.resolves({
+      eth1Data: {depositCount: 1, depositRoot: tree.root, blockHash: Buffer.alloc(32)},
+      deposits: [],
+    });
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
     const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
-      // @ts-ignore
-      return await assembleBlock(config, chainStub, dbStub, slot, validatorIndex, randao);
+      return await assembleBlock(config, chainStub, dbStub, eth1, slot, validatorIndex, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
     expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();

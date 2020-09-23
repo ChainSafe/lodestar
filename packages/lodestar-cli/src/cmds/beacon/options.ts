@@ -7,6 +7,7 @@ import {ICliCommandOptions} from "../../util";
 interface IBeaconExtraArgs {
   genesisStateFile?: string;
   forceGenesis?: boolean;
+  weakSubjectivityStateFile?: string;
 }
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -18,6 +19,11 @@ const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
+  },
+  weakSubjectivityStateFile: {
+    description: "Weak subjectivity state file path in ssz-encoded format",
+    type: "string",
+    normalize: true,
   },
 };
 

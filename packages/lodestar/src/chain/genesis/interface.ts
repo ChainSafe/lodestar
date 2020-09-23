@@ -1,4 +1,5 @@
-import {IEth1Provider, IEth1Block} from "../../eth1";
+import {IEth1Provider} from "../../eth1";
+import {Eth1Block} from "@chainsafe/lodestar-types/src";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {TreeBacked, List} from "@chainsafe/ssz";
 import {BeaconState, Root} from "@chainsafe/lodestar-types";
@@ -14,7 +15,7 @@ export interface IGenesisBuilderKwargs {
 export interface IGenesisResult {
   state: TreeBacked<BeaconState>;
   depositTree: TreeBacked<List<Root>>;
-  block: IEth1Block;
+  block: Eth1Block;
 }
 
 export interface IGenesisBuilder {

@@ -5,7 +5,14 @@ import {initBeaconConfig} from "../../config/beacon";
 import {IGlobalArgs} from "../../options";
 import {mkdir, getBeaconConfig, joinIfRelative} from "../../util";
 import {initPeerId, initEnr, readPeerId} from "../../network";
-import {getTestnetConfig, getGenesisFileUrl, downloadFile, fetchBootnodes, getTestnetParamsUrl} from "../../testnets";
+import {
+  getTestnetConfig,
+  getGenesisFileUrl,
+  downloadFile,
+  fetchBootnodes,
+  getTestnetParamsUrl,
+  getRemoteFile,
+} from "../../testnets";
 import {writeParamsConfig} from "../../config/params";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
@@ -40,12 +47,18 @@ export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<v
     }
     // Mutate options so options will be written to disk in beacon configuration file
     Object.assign(options, deepmerge(options, testnetConfig));
-    const genesisFileUrl = getGenesisFileUrl(options.testnet);
-    if (genesisFileUrl) {
-      const genesisStateFile = joinIfRelative(options.beaconDir, options.genesisStateFile || "genesis.ssz");
-      options.genesisStateFile = genesisStateFile;
-      await downloadFile(options.genesisStateFile, genesisFileUrl);
-      options.eth1.enabled = false;
+    if (options.weakSubjectivityStateFile) {
+      const weakSubjectivityState = joinIfRelative(options.beaconDir, "weakSubjectivityState.ssz");
+      await getRemoteFile(weakSubjectivityState, options.weakSubjectivityStateFile);
+      options.weakSubjectivityStateFile = weakSubjectivityState;
+    } else {
+      const genesisFileUrl = getGenesisFileUrl(options.testnet);
+      if (genesisFileUrl) {
+        const genesisStateFile = joinIfRelative(options.beaconDir, options.genesisStateFile || "genesis.ssz");
+        options.genesisStateFile = genesisStateFile;
+        await downloadFile(options.genesisStateFile, genesisFileUrl);
+        options.eth1.enabled = false;
+      }
     }
 
     // testnet params

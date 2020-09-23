@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {IEth1Block} from "../../../../src/eth1";
 import {optimizeNextBlockDiffForGenesis} from "../../../../src/eth1/utils/optimizeNextBlockDiffForGenesis";
+import {Eth1Block} from "@chainsafe/lodestar-types";
 
 describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
   it("should return optimized block diff to find genesis time", () => {
@@ -10,10 +10,10 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
       SECONDS_PER_ETH1_BLOCK: 14,
     };
     const initialTimeDiff = params.GENESIS_DELAY * 2;
-    let lastFetchedBlock: IEth1Block = {
-      hash: "0x",
+    let lastFetchedBlock: Eth1Block = {
+      blockHash: Buffer.alloc(32, 0),
+      blockNumber: 100000,
       timestamp: params.MIN_GENESIS_TIME - initialTimeDiff,
-      number: 100000,
     };
 
     const diffRecord: {blockDiff: number; number: number}[] = [];
@@ -22,15 +22,15 @@ describe("eth1 / utils / optimizeNextBlockDiffForGenesis", function () {
 
       // Simulate fetching the next block
       lastFetchedBlock = {
-        hash: "0x",
+        blockHash: Buffer.alloc(32, 0),
+        blockNumber: lastFetchedBlock.blockNumber + blockDiff,
         timestamp: lastFetchedBlock.timestamp + blockDiff * params.SECONDS_PER_ETH1_BLOCK,
-        number: lastFetchedBlock.number + blockDiff,
       };
 
       if (lastFetchedBlock.timestamp > params.MIN_GENESIS_TIME - params.GENESIS_DELAY) {
         break;
       } else {
-        diffRecord.push({number: lastFetchedBlock.number, blockDiff});
+        diffRecord.push({number: lastFetchedBlock.blockNumber, blockDiff});
       }
     }
 

@@ -1,12 +1,12 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
-import {sleep} from "../../../src/util/sleep";
-import {ErrorAborted} from "../../../src/util/errors";
+import {sleep} from "../../src/sleep";
+import {ErrorAborted} from "../../src/errors";
 
 chai.use(chaiAsPromised);
 
-describe("util > sleep", function () {
+describe("sleep", function () {
   it("Should resolve timeout", async function () {
     const controller = new AbortController();
     await sleep(0, controller.signal);

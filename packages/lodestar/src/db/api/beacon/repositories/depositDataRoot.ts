@@ -38,6 +38,15 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     }
   }
 
+  public async batchPutValues(values: {index: number; root: Root}[]): Promise<void> {
+    await this.batchPut(
+      values.map(({index, root}) => ({
+        key: index,
+        value: root,
+      }))
+    );
+  }
+
   public async getTreeBacked(depositIndex: number): Promise<TreeBacked<List<Root>>> {
     const depositRootTree = await this.getDepositRootTree();
     const tree = depositRootTree.clone();
@@ -52,7 +61,7 @@ export class DepositDataRootRepository extends Repository<number, Root> {
     return tree;
   }
 
-  private async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
+  public async getDepositRootTree(): Promise<TreeBacked<List<Root>>> {
     if (!this.depositRootTree) {
       const values = (await this.values()) as List<Vector<number>>;
       this.depositRootTree = this.config.types.DepositDataRootList.tree.createValue(values);

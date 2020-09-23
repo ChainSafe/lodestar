@@ -13,7 +13,7 @@ import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-t
 import pushable, {Pushable} from "it-pushable";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
-import {ISlotRange} from "../../interface";
+import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
 import {GENESIS_EPOCH} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
@@ -46,7 +46,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * The last processed block
    */
-  private lastProcessedBlock!: SignedBeaconBlock;
+  private lastProcessedBlock!: ISyncCheckpoint;
 
   public constructor(opts: ISyncOptions, {config, chain, network, logger, db, stats}: IInitialSyncModules) {
     super();
@@ -68,8 +68,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses());
     // head may not be on finalized chain so we start from finalized block
     // there are unfinalized blocks in db so we reprocess all of them
-    this.lastProcessedBlock = (await this.db.blockArchive.lastValue())!;
-    this.blockImportTarget = this.lastProcessedBlock.message.slot;
+    this.lastProcessedBlock = this.chain.forkChoice.getFinalizedBlock();
+    this.blockImportTarget = this.lastProcessedBlock.slot;
     if (
       !this.targetCheckpoint ||
       this.targetCheckpoint.epoch == GENESIS_EPOCH ||
@@ -141,7 +141,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
           );
           logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);
           if (typeof lastSlot === "number") {
-            if (lastSlot === getLastProcessedBlock().message.slot) {
+            if (lastSlot === getLastProcessedBlock().slot) {
               // failed at start of range
               logger.warn(`Failed to process range, retrying, lastSlot=${lastSlot} range=${JSON.stringify(slotRange)}`);
               setBlockImportTarget(lastSlot);
@@ -164,7 +164,10 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
 
   private checkSyncProgress = async (processedBlock: SignedBeaconBlock): Promise<void> => {
     if (processedBlock.message.slot === this.blockImportTarget) {
-      this.lastProcessedBlock = processedBlock;
+      this.lastProcessedBlock = {
+        slot: processedBlock.message.slot,
+        blockRoot: this.config.types.BeaconBlock.hashTreeRoot(processedBlock.message),
+      };
       this.setBlockImportTarget();
     }
   };
@@ -213,7 +216,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * Make sure we get up-to-date lastProcessedBlock from sync().
    */
-  private getLastProcessedBlock = (): SignedBeaconBlock => {
+  private getLastProcessedBlock = (): ISyncCheckpoint => {
     return this.lastProcessedBlock;
   };
 

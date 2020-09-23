@@ -1,12 +1,11 @@
 import fs from "fs";
 import {Eth1Provider} from "../../../../src/eth1";
-import {ILogger, WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
+import {ILogger, WinstonLogger, LogLevel, sleep} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {expect} from "chai";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
-import {sleep} from "../../../../src/util/sleep";
 import {goerliRpcUrl} from "../../../testParams";
 
 describe("BeaconChain", function () {

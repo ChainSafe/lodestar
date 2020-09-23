@@ -8,7 +8,6 @@ import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {
@@ -25,6 +24,7 @@ import * as blockUtils from "../../../../src/sync/utils/blocks";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
+import {ZERO_HASH, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {generatePeer} from "../../../utils/peer";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
@@ -195,24 +195,24 @@ describe("sync utils", function () {
     });
 
     it("should work", async function () {
-      const lastProcessedBlock = generateEmptySignedBlock();
+      const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
+      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
       const block1 = generateEmptySignedBlock();
-      block1.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message);
+      block1.message.parentRoot = blockRoot;
       block1.message.slot = 1;
       const block2 = generateEmptySignedBlock();
       block2.message.slot = 3;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
       const lastProcesssedSlot = await pipe(
         [[block2], [block1]],
-        processSyncBlocks(config, chainStub, logger, true, lastProcessedBlock)
+        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot})
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
       expect(lastProcesssedSlot).to.be.equal(3);
     });
 
     it("should handle failed to get range - initial sync", async function () {
-      const lastProcessedBlock = generateEmptySignedBlock();
-      lastProcessedBlock.message.slot = 10;
+      const lastProcessedBlock = {blockRoot: ZERO_HASH, slot: 10};
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
@@ -232,8 +232,7 @@ describe("sync utils", function () {
     });
 
     it("should handle empty range - initial sync", async function () {
-      const lastProcessedBlock = generateEmptySignedBlock();
-      lastProcessedBlock.message.slot = 10;
+      const lastProcessedBlock = {blockRoot: ZERO_HASH, slot: 10};
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],

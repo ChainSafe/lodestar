@@ -1,4 +1,4 @@
-import {Deposit, DepositData} from "@chainsafe/lodestar-types";
+import {Deposit, DepositData, DepositEvent} from "@chainsafe/lodestar-types";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, EMPTY_SIGNATURE} from "../../src/constants";
 
 /**
@@ -10,6 +10,14 @@ export function generateDeposit(): Deposit {
   return {
     proof: Array.from({length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}, () => Buffer.alloc(32)),
     data: generateDepositData(),
+  };
+}
+
+export function generateDepositEvent(index: number, blockNumber = 0): DepositEvent {
+  return {
+    index,
+    blockNumber,
+    depositData: generateDepositData(),
   };
 }
 

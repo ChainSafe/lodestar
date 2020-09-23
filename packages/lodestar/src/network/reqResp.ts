@@ -273,12 +273,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     // eslint-disable-next-line
     let responseTimer: NodeJS.Timeout;
     const sourcePromise = new Promise<AsyncIterable<IResponseChunk>>((resolve) => {
+      const abortHandler = (): void => clearTimeout(responseTimer);
       const responseListenerFn: ResponseCallbackFn = async (responseIter) => {
         clearTimeout(responseTimer);
+        signal?.removeEventListener("abort", abortHandler);
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
-      signal?.addEventListener("abort", () => clearTimeout(responseTimer), {once: true});
+      signal?.addEventListener("abort", abortHandler, {once: true});
       this.emit("request", peerId, method, requestId, request!);
     });
 

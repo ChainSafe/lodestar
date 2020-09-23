@@ -16,39 +16,27 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db";
-import {generateDeposits} from "./deposits";
-import {readEth1VotesFromDb} from "./eth1Vote";
+import {IEth1ForBlockProduction} from "../../../eth1";
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {getEth1Vote} from "../../../eth1/utils/eth1Vote";
 
 export async function assembleBody(
   config: IBeaconConfig,
   db: IBeaconDb,
+  eth1: IEth1ForBlockProduction,
   currentState: TreeBacked<BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32
 ): Promise<BeaconBlockBody> {
-  const [
-    proposerSlashings,
-    attesterSlashings,
-    attestations,
-    voluntaryExits,
-    depositDataRootList,
-    eth1DataVotes,
-  ] = await Promise.all([
+  const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
     db.proposerSlashing.values({limit: config.params.MAX_PROPOSER_SLASHINGS}),
     db.attesterSlashing.values({limit: config.params.MAX_ATTESTER_SLASHINGS}),
     db.aggregateAndProof
       .getBlockAttestations(currentState)
       .then((value) => value.slice(0, config.params.MAX_ATTESTATIONS)),
     db.voluntaryExit.values({limit: config.params.MAX_VOLUNTARY_EXITS}),
-    db.depositDataRoot.getTreeBacked(currentState.eth1DepositIndex - 1),
-    readEth1VotesFromDb(db),
+    eth1.getEth1DataAndDeposits(currentState),
   ]);
-  //requires new eth1 data so it has to be done after above operations
-  const eth1Data = getEth1Vote(config, currentState, eth1DataVotes);
-  const deposits = await generateDeposits(config, db, currentState, eth1Data, depositDataRootList);
-  eth1Data.depositRoot = depositDataRootList.tree().root;
+
   return {
     randaoReveal,
     graffiti,

@@ -11,7 +11,7 @@ import {
   BadBlockRepository,
   BlockArchiveRepository,
   BlockRepository,
-  DepositDataRepository,
+  DepositEventRepository,
   DepositDataRootRepository,
   Eth1DataRepository,
   ProposerSlashingRepository,
@@ -53,7 +53,7 @@ export interface IBeaconDb {
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
-  depositData: DepositDataRepository;
+  depositEvent: DepositEventRepository;
 
   // eth1 processing
 
