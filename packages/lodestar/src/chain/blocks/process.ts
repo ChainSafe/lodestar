@@ -10,6 +10,7 @@ import {ChainEventEmitter} from "../emitter";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {IBlockProcessJob} from "../interface";
 import {getPreState, runStateTransition} from "./stateTransition";
+import {IBeaconClock} from "../clock";
 
 export function processBlock(
   config: IBeaconConfig,
@@ -17,7 +18,8 @@ export function processBlock(
   db: IBeaconDb,
   forkChoice: IForkChoice,
   pool: BlockPool,
-  eventBus: ChainEventEmitter
+  eventBus: ChainEventEmitter,
+  clock: IBeaconClock
 ): (
   source: AsyncIterable<IBlockProcessJob>
 ) => AsyncGenerator<{
@@ -29,7 +31,7 @@ export function processBlock(
   return (source) => {
     return (async function* () {
       for await (const job of source) {
-        if (job.signedBlock.message.slot > forkChoice.getTime()) {
+        if (job.signedBlock.message.slot > clock.currentSlot) {
           pool.addPendingSlotBlock(job);
           continue;
         }

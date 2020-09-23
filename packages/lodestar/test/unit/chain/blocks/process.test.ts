@@ -14,11 +14,13 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {silentLogger} from "../../../utils/logger";
+import {IBeaconClock, LocalClock} from "../../../../src/chain/clock";
 
 describe("block process stream", function () {
   const logger = silentLogger;
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+  let clockStub: SinonStubbedInstance<IBeaconClock>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
@@ -29,7 +31,8 @@ describe("block process stream", function () {
     dbStub = new StubbedBeaconDb(sandbox);
     blockPoolStub = sinon.createStubInstance(BlockPool);
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    forkChoiceStub.getTime.returns(0)
+    clockStub = sinon.createStubInstance(LocalClock);
+    sinon.stub(clockStub, "currentSlot").get(() => 0);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
@@ -47,7 +50,15 @@ describe("block process stream", function () {
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(null);
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(0);
@@ -65,7 +76,15 @@ describe("block process stream", function () {
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(parentBlock);
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(0);
@@ -83,7 +102,15 @@ describe("block process stream", function () {
     dbStub.stateCache.get.resolves(null);
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(0);
@@ -103,7 +130,15 @@ describe("block process stream", function () {
     stateTransitionStub.throws();
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(0);
@@ -126,7 +161,15 @@ describe("block process stream", function () {
     forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(1);
@@ -153,7 +196,15 @@ describe("block process stream", function () {
     dbStub.block.get.resolves(receivedJob.signedBlock);
     const result = await pipe(
       [receivedJob],
-      processBlock(config, logger, dbStub, forkChoiceStub, (blockPoolStub as unknown) as BlockPool, eventBusStub),
+      processBlock(
+        config,
+        logger,
+        dbStub,
+        forkChoiceStub,
+        (blockPoolStub as unknown) as BlockPool,
+        eventBusStub,
+        clockStub
+      ),
       all
     );
     expect(result).to.have.length(1);

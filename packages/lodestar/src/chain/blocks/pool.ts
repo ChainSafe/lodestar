@@ -28,14 +28,6 @@ export class BlockPool {
     this.forkChoice = forkChoice;
   }
 
-  public async start(): Promise<void> {
-    this.eventBus.on("clock:slot", this.onNewSlot);
-  }
-
-  public async stop(): Promise<void> {
-    this.eventBus.off("clock:slot", this.onNewSlot);
-  }
-
   public addPendingBlock(job: IBlockProcessJob): void {
     const key = this.getKey(job.signedBlock);
     const pendingBlockPool = this.unknownParentBlockPool.get(key);
@@ -72,7 +64,7 @@ export class BlockPool {
     }
   }
 
-  private onNewSlot = (slot: Slot): void => {
+  public onNewSlot = (slot: Slot): void => {
     const jobs = this.pendingSlotBlockPool.get(slot) ?? [];
     jobs.forEach((job) => this.blockProcessorSource.push(job));
     this.pendingSlotBlockPool.delete(slot);
