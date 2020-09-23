@@ -119,41 +119,47 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
    */
   private onMissingBlockRoots = async (blockRoots: Root[]): Promise<void> => {
     const missingBlockRoots = [...blockRoots];
-    try {
-      const foundBlocks: SignedBeaconBlock[] = [];
-      const foundBlockRoots: Set<string> = new Set();
-      while (missingBlockRoots.length > 0) {
-        const blocks =
-          (await this.network.reqResp.beaconBlocksByRoot(this.bestPeer!, missingBlockRoots as List<Root>)) || [];
-        if (blocks.length === 0) {
-          this.logger.error(
-            "Regular Sync: Cannot find missing block roots",
-            missingBlockRoots.map((root) => toHexString(root)).join(",")
-          );
-          return;
-        }
-        foundBlocks.push(...blocks);
-        const sortedBlocks = sortBlocks(blocks);
-        sortedBlocks.forEach((block) => {
-          const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-          foundBlockRoots.add(toHexString(blockRoot));
-          const index = missingBlockRoots.findIndex((root) => this.config.types.Root.equals(root, blockRoot));
-          if (index !== -1) {
-            missingBlockRoots.splice(index, 1);
-          }
-          const parentRoot = block.message.parentRoot;
-          if (!this.chain.forkChoice.hasBlock(parentRoot) && !foundBlockRoots.has(toHexString(parentRoot))) {
-            missingBlockRoots.push(block.message.parentRoot);
-          }
+    this.logger.info(
+      "Regular Sync: finding missing block roots",
+      missingBlockRoots.map((root) => toHexString(root)).join(",")
+    );
+    const foundBlocks: SignedBeaconBlock[] = [];
+    const foundBlockRoots: Set<string> = new Set();
+    while (missingBlockRoots.length > 0) {
+      let blocks: SignedBeaconBlock[];
+      try {
+        blocks = (await this.network.reqResp.beaconBlocksByRoot(this.bestPeer!, missingBlockRoots as List<Root>)) || [];
+      } catch (e) {
+        this.logger.warn("Regular Sync: failed to query missing block roots", {
+          missingBlockRoots: missingBlockRoots.map((root) => toHexString(root)).join(","),
+          message: e.message,
         });
+        continue;
       }
-      await Promise.all(foundBlocks.map((block) => this.chain.receiveBlock(block, false)));
-    } catch (e) {
-      this.logger.error("Regular Sync: failed to query missing block roots", {
-        missingBlockRoots: missingBlockRoots.map((root) => toHexString(root)).join(","),
-        message: e.message,
+      if (blocks.length === 0) {
+        this.logger.error(
+          "Regular Sync: Cannot find missing block roots",
+          missingBlockRoots.map((root) => toHexString(root)).join(",")
+        );
+        return;
+      }
+      foundBlocks.push(...blocks);
+      const sortedBlocks = sortBlocks(blocks);
+      sortedBlocks.forEach((block) => {
+        const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
+        foundBlockRoots.add(toHexString(blockRoot));
+        const index = missingBlockRoots.findIndex((root) => this.config.types.Root.equals(root, blockRoot));
+        if (index !== -1) {
+          missingBlockRoots.splice(index, 1);
+        }
+        const parentRoot = block.message.parentRoot;
+        if (!this.chain.forkChoice.hasBlock(parentRoot) && !foundBlockRoots.has(toHexString(parentRoot))) {
+          missingBlockRoots.push(block.message.parentRoot);
+        }
       });
     }
+    await Promise.all(foundBlocks.map((block) => this.chain.receiveBlock(block, false)));
+    this.logger.info(`Regular Sync: found ${foundBlocks.length} missing blocks`);
   };
 
   private onGossipBlock = async (block: SignedBeaconBlock): Promise<void> => {
