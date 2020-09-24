@@ -184,6 +184,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "AttesterDuty",
   "ProposerDuty",
   "ValidatorResponse",
+  "Genesis",
   "ChainHead",
   "BlockEventPayload",
   "FinalizedCheckpoint",

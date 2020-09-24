@@ -55,7 +55,7 @@ const externalOptionsOverrides: {[k: string]: Options} = {
   "network.maxPeers": {
     ...beaconNodeOptions["network.maxPeers"],
     defaultDescription: undefined,
-    default: 0,
+    default: 1,
   },
   "eth1.enabled": {
     ...beaconNodeOptions["eth1.enabled"],

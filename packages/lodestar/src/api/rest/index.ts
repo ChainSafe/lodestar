@@ -3,16 +3,14 @@ import {FastifySSEPlugin} from "fastify-sse-v2";
 import fastifyCors from "fastify-cors";
 import * as querystring from "querystring";
 import {IncomingMessage, Server, ServerResponse} from "http";
-
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {ApiNamespace, IBeaconApi, INodeApi, IValidatorApi} from "../impl";
+import {ApiNamespace} from "../impl";
 import defaultOptions, {IRestApiOptions} from "./options";
 import * as routes from "./routes";
 import {registerRoutes} from "./routes";
 import {IRestApiModules} from "./interface";
 import {FastifyLogger} from "./logger/fastify";
 import {errorHandler} from "./routes/error";
+import "./fastify";
 
 export class RestApi {
   public server: FastifyInstance;
@@ -79,17 +77,4 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   }
 
   return server;
-}
-
-declare module "fastify" {
-  // eslint-disable-next-line @typescript-eslint/interface-name-prefix
-  interface FastifyInstance<HttpServer, HttpRequest, HttpResponse, Config = {}> {
-    //decorated properties on fastify server
-    config: IBeaconConfig;
-    api: {
-      beacon: IBeaconApi;
-      node: INodeApi;
-      validator: IValidatorApi;
-    };
-  }
 }

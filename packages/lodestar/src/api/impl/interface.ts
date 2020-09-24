@@ -10,6 +10,7 @@ import {IEth1ForBlockProduction} from "../../eth1";
 import {IBeaconApi} from "./beacon";
 import {INodeApi} from "./node";
 import {IValidatorApi} from "./validator";
+import {IEventsApi} from "./events";
 
 export const enum ApiNamespace {
   BEACON = "beacon",
@@ -32,4 +33,5 @@ export interface IApi {
   beacon: IBeaconApi;
   node: INodeApi;
   validator: IValidatorApi;
+  events: IEventsApi;
 }
