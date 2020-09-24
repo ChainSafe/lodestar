@@ -73,7 +73,7 @@
     "read-pkg-up": "^7.0.1",
     "rimraf": "^3.0.0",
     "uuidv4": "^6.1.1",
-    "yargs": "^15.3.1"
+    "yargs": "^16.0.3"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.3",
@@ -83,6 +83,6 @@
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
     "@types/rimraf": "^2.0.3",
-    "@types/yargs": "^15.0.4"
+    "@types/yargs": "^15.0.7"
   }
 }
