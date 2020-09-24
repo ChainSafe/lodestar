@@ -3,9 +3,9 @@ import {BeaconEvent, BeaconEventType} from "./types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-export type ChainEventListener<E extends keyof IChainEvents> = (
-  payload: Parameters<IChainEvents[E]>[0]
-) => void | Promise<void>;
+type ListenerType<T> = [T] extends [(...args: infer U) => unknown] ? U : [T] extends [void] ? [] : [T];
+
+export type ChainEventListener<E extends keyof IChainEvents> = (...args: ListenerType<IChainEvents[E]>) => void;
 
 export function handleBeaconHeadEvent(
   config: IBeaconConfig,
@@ -85,20 +85,18 @@ export function handleChainReorgEvent(
   config: IBeaconConfig,
   push: (value: BeaconEvent) => void
 ): ChainEventListener<"forkChoice:reorg"> {
-  return (payload) => {
+  return (oldHead, newHead) => {
     push({
       type: BeaconEventType.CHAIN_REORG,
       message: {
         //TODO: add depth to common ancestor
         depth: 0,
-        epoch: computeEpochAtSlot(config, payload.slot),
-        slot: payload.slot,
-        newHeadBlock: payload.blockRoot,
-        //TODO: replace with real value
-        oldHeadBlock: payload.blockRoot,
-        newHeadState: payload.stateRoot,
-        //TODO: replace with real value
-        oldHeadState: payload.stateRoot,
+        epoch: computeEpochAtSlot(config, newHead.slot),
+        slot: newHead.slot,
+        newHeadBlock: newHead.blockRoot,
+        oldHeadBlock: oldHead.blockRoot,
+        newHeadState: newHead.stateRoot,
+        oldHeadState: oldHead.stateRoot,
       },
     });
   };
