@@ -67,7 +67,7 @@
     "inquirer": "^7.3.3",
     "js-yaml": "^3.14.0",
     "lockfile": "^1.0.4",
-    "lodash": "^4.17.20",
+    "lodash": "^4.17.15",
     "multiaddr": "^7.5.0",
     "peer-id": "^0.13.7",
     "read-pkg-up": "^7.0.1",
