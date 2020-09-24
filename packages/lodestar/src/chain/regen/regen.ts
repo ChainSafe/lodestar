@@ -108,10 +108,10 @@ export class StateRegenerator implements IStateRegenerator {
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
     // searching the state caches
     // then replay blocks forward to the desired stateRoot
-    const _Root = this.config.types.Root;
+    const rootType = this.config.types.Root;
     const block = this.forkChoice
       .forwardIterateBlockSummaries()
-      .find((summary) => _Root.equals(summary.stateRoot, stateRoot));
+      .find((summary) => rootType.equals(summary.stateRoot, stateRoot));
     if (!block) {
       throw new RegenError({
         code: RegenErrorCode.ERR_STATE_NOT_IN_FORKCHOICE,
