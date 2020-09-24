@@ -15,6 +15,7 @@ export const enum ApiNamespace {
   BEACON = "beacon",
   VALIDATOR = "validator",
   NODE = "node",
+  EVENTS = "events",
 }
 
 export interface IApiModules {
