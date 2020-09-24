@@ -60,9 +60,10 @@ export interface IBeaconChain {
   getENRForkID(): Promise<ENRForkID>;
   getGenesisTime(): Number64;
   getHeadStateContext(): Promise<ITreeStateContext>;
+  getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
+  getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
   getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
-
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;

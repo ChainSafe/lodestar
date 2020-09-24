@@ -22,6 +22,7 @@ import {
   blockToHeader,
   computeEpochAtSlot,
   computeForkDigest,
+  computeStartSlotAtEpoch,
   EpochContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -109,6 +110,17 @@ export class BeaconChain implements IBeaconChain {
   public async getHeadEpochContext(): Promise<EpochContext> {
     //head should always have epoch ctx
     return (await this.getHeadStateContext()).epochCtx;
+  }
+
+  public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
+    const currentEpochStartSlot = computeStartSlotAtEpoch(this.config, this.clock.currentEpoch);
+    const head = this.forkChoice.getHead();
+    const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
+  }
+
+  public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
+    return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
   }
 
   public async getHeadBlock(): Promise<SignedBeaconBlock | null> {

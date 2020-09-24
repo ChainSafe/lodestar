@@ -98,10 +98,7 @@ export class ValidatorApi implements IValidatorApi {
     try {
       await this.checkSyncStatus();
       const headBlock = this.chain.forkChoice.getHead();
-      const {state, epochCtx} = await this.chain.regen.getBlockSlotState(
-        headBlock.blockRoot,
-        this.chain.clock.currentSlot
-      );
+      const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentSlot();
       const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
       if (validatorIndex === undefined) {
         throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
@@ -135,10 +132,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.checkSyncStatus();
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch + 2, "Cannot get duties for epoch more than two ahead");
-    const {state, epochCtx} = await this.chain.regen.getBlockSlotState(
-      this.chain.forkChoice.getHeadRoot(),
-      this.chain.clock.currentSlot
-    );
+    const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentEpoch();
     const startSlot = computeStartSlotAtEpoch(this.config, epoch);
     const duties: ProposerDuty[] = [];
 
@@ -153,10 +147,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.checkSyncStatus();
     if (!validatorPubKeys || validatorPubKeys.length === 0) throw new Error("No validator to get attester duties");
     assert.lte(epoch, this.chain.clock.currentEpoch + 2, "Cannot get duties for epoch more than two ahead");
-    const {epochCtx, state} = await this.chain.regen.getBlockSlotState(
-      this.chain.forkChoice.getHeadRoot(),
-      this.chain.clock.currentSlot
-    );
+    const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
     const validatorIndexes = validatorPubKeys.map((key) => {
       const validatorIndex = epochCtx.pubkey2index.get(key);
       if (validatorIndex === undefined || !Number.isInteger(validatorIndex)) {
