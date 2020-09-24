@@ -1,10 +1,10 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
-import {BeaconBlock, Number64, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlock, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ExtendedValidatorResult} from "../constants";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
@@ -35,7 +35,7 @@ export async function validateGossipBlock(
   //this won't fix block queue since it could resume before we synced to this slot and
   // fail with missing parent state/block
   // TODO: queue those blocks and submit to gossip handler directly when parent processed
-  await waitForBlockSlot(config, chain.getGenesisTime(), blockSlot);
+  await chain.clock.waitForSlot(blockSlot);
 
   if (await db.badBlock.has(blockRoot)) {
     logger.warn("Rejecting gossip block", {reason: "bad block", blockSlot, blockRoot: toHexString(blockRoot)});
@@ -86,15 +86,6 @@ export async function validateGossipBlock(
   }
   logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
   return ExtendedValidatorResult.accept;
-}
-
-export async function waitForBlockSlot(config: IBeaconConfig, genesisTime: Number64, blockSlot: Slot): Promise<void> {
-  const blockTime = (genesisTime + blockSlot * config.params.SECONDS_PER_SLOT) * 1000;
-  const currentTime = Date.now();
-  const tolerance = blockTime - currentTime;
-  if (tolerance > 0) {
-    await sleep(tolerance);
-  }
 }
 
 export async function hasProposerAlreadyProposed(chain: IBeaconChain, block: BeaconBlock): Promise<boolean> {

@@ -45,7 +45,6 @@ import {ApiError} from "../errors/api";
 import {notNullish} from "../../../util/notNullish";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IValidatorApi} from "./interface";
-import {waitForBlockSlot} from "../../../network/gossip/validation";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -116,8 +115,7 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
     await this.checkSyncStatus();
-    await waitForBlockSlot(this.config, this.chain.getGenesisTime(), signedBlock.message.slot);
-    this.chain.clock.currentSlot;
+    await this.chain.clock.waitForSlot(signedBlock.message.slot);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 
