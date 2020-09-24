@@ -99,6 +99,10 @@ export interface IBeaconSSZTypes {
   ForkResponse: ContainerType<t.ForkResponse>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
   Genesis: ContainerType<t.Genesis>;
+  ChainHead: ContainerType<t.ChainHead>;
+  BlockEventPayload: ContainerType<t.BlockEventPayload>;
+  FinalizedCheckpoint: ContainerType<t.FinalizedCheckpoint>;
+  ChainReorg: ContainerType<t.ChainReorg>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -180,5 +184,8 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "AttesterDuty",
   "ProposerDuty",
   "ValidatorResponse",
-  "Genesis",
+  "ChainHead",
+  "BlockEventPayload",
+  "FinalizedCheckpoint",
+  "ChainReorg",
 ];

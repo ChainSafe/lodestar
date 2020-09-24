@@ -73,3 +73,43 @@ export const Genesis = (ssz: IBeaconSSZTypes): ContainerType =>
       genesisForkVersion: ssz.Version,
     },
   });
+
+export const ChainHead = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      slot: ssz.Slot,
+      block: ssz.Root,
+      state: ssz.Root,
+      epochTransition: ssz.Boolean,
+    },
+  });
+
+export const BlockEventPayload = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      slot: ssz.Slot,
+      block: ssz.Root,
+    },
+  });
+
+export const FinalizedCheckpoint = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      block: ssz.Root,
+      state: ssz.Root,
+      epoch: ssz.Epoch,
+    },
+  });
+
+export const ChainReorg = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      slot: ssz.Slot,
+      depth: ssz.Number64,
+      oldHeadBlock: ssz.Root,
+      newHeadBlock: ssz.Root,
+      oldHeadState: ssz.Root,
+      newHeadState: ssz.Root,
+      epoch: ssz.Epoch,
+    },
+  });
