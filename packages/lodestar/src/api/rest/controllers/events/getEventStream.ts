@@ -68,8 +68,10 @@ export const getEventStream: ApiController<Query> = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function serializeEvent(type: BasicType<unknown> | CompositeType<any>, event: BeaconEvent): EventMessage {
+function serializeEvent<T extends BeaconEvent>(
+  type: BasicType<T["message"]> | CompositeType<T["message"]>,
+  event: T
+): EventMessage {
   return {
     event: event.type,
     data: JSON.stringify(type.toJson(event.message)),
