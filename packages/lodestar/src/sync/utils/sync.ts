@@ -1,5 +1,7 @@
 import PeerId from "peer-id";
+import {AbortSignal} from "abort-controller";
 import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange, ISyncCheckpoint} from "../interface";
@@ -9,7 +11,6 @@ import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {sleep} from "../../util/sleep";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
 
@@ -85,7 +86,8 @@ export function fetchBlockChunks(
   reqResp: IReqResp,
   getPeers: () => Promise<PeerId[]>,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  maxBlocksPerChunk?: number
+  maxBlocksPerChunk?: number,
+  signal?: AbortSignal
 ): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[] | null> {
   return (source) => {
     return (async function* () {
@@ -94,7 +96,7 @@ export function fetchBlockChunks(
         let retry = 0;
         while (peers.length === 0 && retry < 5) {
           logger.info("Waiting for peers...");
-          await sleep(6000);
+          await sleep(6000, signal);
           peers = await getPeers();
           retry++;
         }
@@ -154,7 +156,7 @@ export function validateBlocks(
  * @param chain
  * @param logger
  * @param isInitialSync
- * @param lastProcessedBlock only needed for initial sync
+ * @param lastProcessedBlock
  * @param trusted
  */
 export function processSyncBlocks(
@@ -162,14 +164,13 @@ export function processSyncBlocks(
   chain: IBeaconChain,
   logger: ILogger,
   isInitialSync: boolean,
-  lastProcessedBlock: ISyncCheckpoint | null,
+  lastProcessedBlock: ISyncCheckpoint,
   trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[] | null>) => Promise<Slot | null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
-    let headRoot = isInitialSync ? lastProcessedBlock?.blockRoot : null;
-    let headSlot = isInitialSync ? lastProcessedBlock!.slot : chain.forkChoice.getHead().slot;
+    let {slot: headSlot, blockRoot: headRoot} = lastProcessedBlock;
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry

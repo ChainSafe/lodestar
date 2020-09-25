@@ -21,7 +21,7 @@ import {
   processSyncBlocks,
 } from "../../../../src/sync/utils";
 import * as blockUtils from "../../../../src/sync/utils/blocks";
-import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain, ChainEventEmitter} from "../../../../src/chain";
 import {ReqResp} from "../../../../src/network/reqResp";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
@@ -222,11 +222,10 @@ describe("sync utils", function () {
     });
 
     it("should handle failed to get range - regular sync", async function () {
-      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 100}));
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, logger, false, null)
+        processSyncBlocks(config, chainStub, logger, false, {slot: 100, blockRoot: ZERO_HASH})
       );
       expect(lastProcessSlot).to.be.equal(100);
     });
@@ -242,11 +241,10 @@ describe("sync utils", function () {
     });
 
     it("should handle empty range - regular sync", async function () {
-      forkChoiceStub.getHead.returns(generateBlockSummary());
       const lastProcessSlot = await pipe(
-        // failed to fetch range
+        // empty range
         [[]],
-        processSyncBlocks(config, chainStub, logger, false, null)
+        processSyncBlocks(config, chainStub, logger, false, {slot: 100, blockRoot: ZERO_HASH})
       );
       expect(lastProcessSlot).to.be.null;
     });

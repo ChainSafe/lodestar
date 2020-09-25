@@ -5,7 +5,7 @@
 import {Attestation, BLSPubkey, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 export interface IAttestationSearchOptions {
-  gt?: Epoch;
+  gte?: Epoch;
   lt?: Epoch;
 }
 

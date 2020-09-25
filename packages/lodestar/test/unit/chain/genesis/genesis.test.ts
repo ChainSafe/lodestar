@@ -4,13 +4,12 @@ import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
-import {ErrorAborted} from "../../../../src/util/errors";
 
 chai.use(chaiAsPromised);
 
