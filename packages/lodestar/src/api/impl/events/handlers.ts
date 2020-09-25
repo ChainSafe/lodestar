@@ -66,7 +66,7 @@ export function handleVoluntaryExitEvent(
 export function handleFinalizedCheckpointEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"forkChoice:finalized"> {
+): ChainEventListener<"finalized"> {
   return (payload) => {
     callback({
       type: BeaconEventType.FINALIZED_CHECKPOINT,

@@ -4,8 +4,9 @@ import {
   ChainHead,
   ChainReorg,
   FinalizedCheckpoint,
-  SignedVoluntaryExit
+  SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
+import {ChainEventEmitter, IChainEvents} from "../../../chain";
 
 export enum BeaconEventType {
   HEAD = "head",

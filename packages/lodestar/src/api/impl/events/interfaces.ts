@@ -1,6 +1,6 @@
 import {LodestarEventIterator} from "../../../util/events";
-import {BeaconEvent} from "./types";
+import {BeaconEvent, BeaconEventType} from "./types";
 
 export interface IEventsApi {
-  getEventStream(): LodestarEventIterator<BeaconEvent>;
+  getEventStream(topics: BeaconEventType[]): LodestarEventIterator<BeaconEvent>;
 }
