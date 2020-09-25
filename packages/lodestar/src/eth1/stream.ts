@@ -55,7 +55,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
   while (true) {
     const [logs, block] = await Promise.all([
       provider.getDepositEvents(fromBlock, toBlock),
-      provider.getBlock(toBlock),
+      provider.getBlockByNumber(toBlock),
     ]);
     yield [logs, block];
 

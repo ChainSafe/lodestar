@@ -5,14 +5,12 @@ import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition/lib/fa
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IBeaconDb} from "../db";
+import {linspace} from "../util/numpy";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
 import {getDeposits} from "./utils/deposits";
-import {Eth1Provider} from "./ethers";
-import {fetchBlockRange} from "./httpEth1Client";
-import {IEth1ForBlockProduction} from "./interface";
-import {IEth1Options} from "./options";
+import {IEth1ForBlockProduction, IEth1Provider} from "./interface";
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -21,13 +19,12 @@ import {IEth1Options} from "./options";
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private config: IBeaconConfig;
   private logger: ILogger;
-  private opts: IEth1Options;
   private signal: AbortSignal;
 
   // Internal modules, state
   private depositsCache: Eth1DepositsCache;
   private eth1DataCache: Eth1DataCache;
-  private eth1Provider: Eth1Provider;
+  private eth1Provider: IEth1Provider;
   private lastProcessedDepositBlockNumber: number | null;
   private MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
   private MAX_BLOCKS_PER_LOG_QUERY = 1000;
@@ -35,23 +32,22 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   constructor({
     config,
     db,
+    eth1Provider,
     logger,
-    opts,
     signal,
   }: {
     config: IBeaconConfig;
     db: IBeaconDb;
+    eth1Provider: IEth1Provider;
     logger: ILogger;
-    opts: IEth1Options;
     signal: AbortSignal;
   }) {
     this.config = config;
     this.signal = signal;
     this.logger = logger;
-    this.opts = opts;
+    this.eth1Provider = eth1Provider;
     this.depositsCache = new Eth1DepositsCache(config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
-    this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
 
     if (!opts.depositContractDeployBlock) {
@@ -179,7 +175,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       lastProcessedDepositBlockNumber
     );
 
-    const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
+    const blockNumbers = linspace(fromBlock, toBlock);
+    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(blockNumbers, this.signal);
     this.logger.verbose(`Fetched eth1 blocks ${eth1Blocks.length}`, {fromBlock, toBlock});
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);
@@ -189,7 +186,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
-    return Math.max(lastCachedBlock ? lastCachedBlock + 1 : 0, this.opts.depositContractDeployBlock || 0);
+    return Math.max(lastCachedBlock ? lastCachedBlock + 1 : 0, this.eth1Provider.deployBlock || 0);
   }
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {
