@@ -77,6 +77,20 @@ export class MockBeaconChain implements IBeaconChain {
     };
   }
 
+  public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
+    return {
+      state: this.state!,
+      epochCtx: new EpochContext(this.config),
+    };
+  }
+
+  public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
+    return {
+      state: this.state!,
+      epochCtx: new EpochContext(this.config),
+    };
+  }
+
   public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
