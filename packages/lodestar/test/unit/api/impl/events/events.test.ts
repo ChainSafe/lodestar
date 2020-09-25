@@ -1,4 +1,4 @@
-import {EventsApi} from "../../../../../lib/api/impl/events";
+import {EventsApi} from "../../../../../src/api/impl/events";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
@@ -55,11 +55,11 @@ describe("Events api impl", function () {
       stream.stop();
     });
 
-    it.skip("should process voluntary exit event", async function () {
+    it("should process voluntary exit event", async function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream();
       const exit = generateEmptySignedVoluntaryExit();
-      // chainEventEmmitter.emit("voluntaryExit", exit);
+      chainEventEmmitter.emit("voluntaryExit", exit);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.VOLUNTARY_EXIT);
@@ -84,12 +84,12 @@ describe("Events api impl", function () {
       const stream = api.getEventStream();
       const oldHead = generateBlockSummary({slot: 4});
       const newHead = generateBlockSummary({slot: 3});
-      chainEventEmmitter.emit("forkChoice:reorg", oldHead, newHead);
+      chainEventEmmitter.emit("forkChoice:reorg", oldHead, newHead, 3);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.CHAIN_REORG);
       expect(event.value.message).to.not.be.null;
-      expect(event.value.message.depth).to.equal(0);
+      expect(event.value.message.depth).to.equal(3);
       stream.stop();
     });
   });

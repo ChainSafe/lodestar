@@ -10,7 +10,7 @@ import {
   handleBeaconBlockEvent,
   handleBeaconHeadEvent,
   handleChainReorgEvent,
-  handleFinalizedCheckpointEvent,
+  handleFinalizedCheckpointEvent, handleVoluntaryExitEvent,
 } from "./handlers";
 
 export class EventsApi implements IEventsApi {
@@ -30,17 +30,20 @@ export class EventsApi implements IEventsApi {
       const beaconHeadHandler = handleBeaconHeadEvent(this.config, push);
       const beaconBlockHandler = handleBeaconBlockEvent(this.config, push);
       const beaconAttestationHandler = handleBeaconAttestationEvent(this.config, push);
+      const voluntaryExitHandler = handleVoluntaryExitEvent(this.config, push);
       const finalizedCheckpointHandler = handleFinalizedCheckpointEvent(this.config, push);
       const chainReorgHandler = handleChainReorgEvent(this.config, push);
       this.chain.emitter.on("forkChoice:head", beaconHeadHandler);
       this.chain.emitter.on("block", beaconBlockHandler);
       this.chain.emitter.on("attestation", beaconAttestationHandler);
+      this.chain.emitter.on("voluntaryExit", voluntaryExitHandler);
       this.chain.emitter.on("forkChoice:finalized", finalizedCheckpointHandler);
       this.chain.emitter.on("forkChoice:reorg", chainReorgHandler);
       return () => {
         this.chain.emitter.off("forkChoice:head", beaconHeadHandler);
         this.chain.emitter.off("block", beaconBlockHandler);
         this.chain.emitter.off("attestation", beaconAttestationHandler);
+        this.chain.emitter.off("voluntaryExit", voluntaryExitHandler);
         this.chain.emitter.off("forkChoice:finalized", finalizedCheckpointHandler);
         this.chain.emitter.off("forkChoice:reorg", chainReorgHandler);
       };

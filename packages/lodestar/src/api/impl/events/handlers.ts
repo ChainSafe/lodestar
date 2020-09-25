@@ -9,10 +9,10 @@ export type ChainEventListener<E extends keyof IChainEvents> = (...args: Listene
 
 export function handleBeaconHeadEvent(
   config: IBeaconConfig,
-  push: (value: BeaconEvent) => void
+  callback: (value: BeaconEvent) => void
 ): ChainEventListener<"forkChoice:head"> {
   return (payload) => {
-    push({
+    callback({
       type: BeaconEventType.HEAD,
       message: {
         block: payload.blockRoot,
@@ -26,10 +26,10 @@ export function handleBeaconHeadEvent(
 
 export function handleBeaconBlockEvent(
   config: IBeaconConfig,
-  push: (value: BeaconEvent) => void
+  callback: (value: BeaconEvent) => void
 ): ChainEventListener<"block"> {
   return (payload) => {
-    push({
+    callback({
       type: BeaconEventType.BLOCK,
       message: {
         block: config.types.BeaconBlock.hashTreeRoot(payload.message),
@@ -41,35 +41,34 @@ export function handleBeaconBlockEvent(
 
 export function handleBeaconAttestationEvent(
   config: IBeaconConfig,
-  push: (value: BeaconEvent) => void
+  callback: (value: BeaconEvent) => void
 ): ChainEventListener<"attestation"> {
   return (payload) => {
-    push({
+    callback({
       type: BeaconEventType.ATTESTATION,
       message: payload,
     });
   };
 }
 
-//TODO: add event
-// export function handleVoluntaryExitEvent(
-//   config: IBeaconConfig,
-//   push: (value: BeaconEvent) => void
-// ): ChainEventListener<""> {
-//   return (payload) => {
-//     push({
-//       type: BeaconEventType.VOLUNTARY_EXIT,
-//       message: payload,
-//     });
-//   };
-// }
+export function handleVoluntaryExitEvent(
+  config: IBeaconConfig,
+  callback: (value: BeaconEvent) => void
+): ChainEventListener<"voluntaryExit"> {
+  return (payload) => {
+    callback({
+      type: BeaconEventType.VOLUNTARY_EXIT,
+      message: payload,
+    });
+  };
+}
 
 export function handleFinalizedCheckpointEvent(
   config: IBeaconConfig,
-  push: (value: BeaconEvent) => void
+  callback: (value: BeaconEvent) => void
 ): ChainEventListener<"forkChoice:finalized"> {
   return (payload) => {
-    push({
+    callback({
       type: BeaconEventType.FINALIZED_CHECKPOINT,
       message: {
         block: payload.root,
@@ -83,14 +82,13 @@ export function handleFinalizedCheckpointEvent(
 
 export function handleChainReorgEvent(
   config: IBeaconConfig,
-  push: (value: BeaconEvent) => void
+  callback: (value: BeaconEvent) => void
 ): ChainEventListener<"forkChoice:reorg"> {
-  return (oldHead, newHead) => {
-    push({
+  return (oldHead, newHead, depth) => {
+    callback({
       type: BeaconEventType.CHAIN_REORG,
       message: {
-        //TODO: add depth to common ancestor
-        depth: 0,
+        depth,
         epoch: computeEpochAtSlot(config, newHead.slot),
         slot: newHead.slot,
         newHeadBlock: newHead.blockRoot,
