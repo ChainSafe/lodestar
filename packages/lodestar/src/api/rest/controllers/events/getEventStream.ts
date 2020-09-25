@@ -3,12 +3,16 @@ import {EventMessage} from "fastify";
 import {BeaconEvent, BeaconEventType} from "../../../impl/events";
 import {BasicType, CompositeType} from "@chainsafe/ssz";
 
-export const getEventStream: ApiController = {
+type Query = {
+  topics?: BeaconEventType[];
+};
+
+export const getEventStream: ApiController<Query> = {
   url: "/",
 
   handler: async function (req, resp) {
     resp.sent = true;
-    const source = this.api.events.getEventStream();
+    const source = this.api.events.getEventStream(req.query.topics ?? Object.values(BeaconEventType));
     ["end", "error", "close"].forEach((event) => {
       req.req.once(event, () => {
         source.stop();
@@ -47,7 +51,20 @@ export const getEventStream: ApiController = {
   },
 
   opts: {
-    schema: {},
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          topics: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: Object.values(BeaconEventType),
+            },
+          },
+        },
+      },
+    },
   },
 };
 
