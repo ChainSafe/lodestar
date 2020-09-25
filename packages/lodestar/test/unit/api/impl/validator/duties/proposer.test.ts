@@ -81,7 +81,7 @@ describe("get proposers api impl", function () {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getBlockSlotState.resolves({
+    chainStub.getHeadStateContextAtCurrentEpoch.resolves({
       state,
       epochCtx,
     });
@@ -105,7 +105,7 @@ describe("get proposers api impl", function () {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getBlockSlotState.resolves({
+    chainStub.getHeadStateContextAtCurrentEpoch.resolves({
       state,
       epochCtx,
     });
