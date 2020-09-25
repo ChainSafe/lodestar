@@ -10,6 +10,7 @@ import {spadinaConfig} from "./spadina";
 import {zinkenConfig} from "./zinken";
 
 export type TestnetName = "altona" | "medalla" | "spadina" | "zinken";
+export const testnetNames: TestnetName[] = ["altona", "medalla", "spadina", "zinken"];
 
 export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartial {
   switch (testnet) {

@@ -1,17 +1,42 @@
 import {Options} from "yargs";
-import {LogLevels} from "@chainsafe/lodestar-utils";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
+import {LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
+import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {ICliCommandOptions} from "../../util";
+
+const getArgKey = (logModule: keyof IBeaconNodeOptions["logger"]): keyof IBeaconNodeLoggerArgs =>
+  `logger.${logModule}.level` as keyof IBeaconNodeLoggerArgs;
+
+export interface IBeaconNodeLoggerArgs {
+  "logger.chain.level": string;
+  "logger.db.level": string;
+  "logger.eth1.level": string;
+  "logger.node.level": string;
+  "logger.network.level": string;
+  "logger.sync.level": string;
+  "logger.api.level": string;
+  "logger.metrics.level": string;
+  "logger.chores.level": string;
+}
 
 type LoggerModule = keyof typeof defaultOptions.logger;
+
+export function toLoggerOptions(args: IBeaconNodeLoggerArgs): Partial<IBeaconNodeOptions["logger"]> {
+  return Object.keys(defaultOptions.logger).reduce((options: Partial<IBeaconNodeOptions["logger"]>, logModule) => {
+    const logModuleKey = logModule as keyof IBeaconNodeOptions["logger"];
+    const level = args[getArgKey(logModuleKey)];
+    if (level) options[logModuleKey] = {level: LogLevel[level as LogLevel]};
+    return options;
+  }, {});
+}
 
 /**
  * Generates an option for each module in defaultOptions.logger
  * chain, db, eth1, etc
  */
-export const loggerOptions = Object.keys(defaultOptions.logger).reduce(
-  (options: Record<string, Options>, logModule) => {
-    options[`logger.${logModule}.level`] = {
-      alias: [`log.${logModule}.level`],
+export const loggerOptions: ICliCommandOptions<IBeaconNodeLoggerArgs> = Object.keys(defaultOptions.logger).reduce(
+  (options, logModule) => {
+    const logModuleKey = logModule as keyof IBeaconNodeOptions["logger"];
+    options[getArgKey(logModuleKey)] = {
       hidden: true,
       type: "string",
       choices: LogLevels,
@@ -21,5 +46,5 @@ export const loggerOptions = Object.keys(defaultOptions.logger).reduce(
     };
     return options;
   },
-  {}
+  {} as {[key in keyof IBeaconNodeLoggerArgs]: Options}
 );
