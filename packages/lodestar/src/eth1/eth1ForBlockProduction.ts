@@ -11,6 +11,7 @@ import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
 import {getDeposits} from "./utils/deposits";
 import {IEth1ForBlockProduction, IEth1Provider} from "./interface";
+import {IEth1Options} from "./options";
 
 /**
  * Main class handling eth1 data fetching, processing and storing
@@ -34,12 +35,14 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     db,
     eth1Provider,
     logger,
+    opts,
     signal,
   }: {
     config: IBeaconConfig;
     db: IBeaconDb;
     eth1Provider: IEth1Provider;
     logger: ILogger;
+    opts: IEth1Options;
     signal: AbortSignal;
   }) {
     this.config = config;
