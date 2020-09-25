@@ -6,8 +6,9 @@ import got from "got";
 import {IBeaconNodeOptionsPartial} from "../options";
 import {altonaConfig} from "./altona";
 import {medallaConfig} from "./medalla";
+import {spadinaConfig} from "./spadina";
 
-export type TestnetName = "altona" | "medalla";
+export type TestnetName = "altona" | "medalla" | "spadina";
 
 export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartial {
   switch (testnet) {
@@ -15,6 +16,8 @@ export function getTestnetConfig(testnet: TestnetName): IBeaconNodeOptionsPartia
       return altonaConfig;
     case "medalla":
       return medallaConfig;
+    case "spadina":
+      return spadinaConfig;
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
@@ -26,6 +29,8 @@ export function getTestnetParamsUrl(testnet: TestnetName): string | null {
       return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/altona/config.yaml";
     case "medalla":
       return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/medalla/config.yaml";
+    case "spadina":
+      return "https://raw.githubusercontent.com/eth2-clients/eth2-testnets/master/shared/spadina/config.yaml";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
@@ -41,6 +46,8 @@ export function getGenesisFileUrl(testnet: TestnetName): string | null {
       return "https://github.com/eth2-clients/eth2-testnets/raw/b84d27cc8f161cc6289c91acce6dae9c35096845/shared/altona/genesis.ssz";
     case "medalla":
       return "https://github.com/eth2-clients/eth2-testnets/blob/master/shared/medalla/genesis.ssz?raw=true";
+    case "spadina":
+      return ""; // TODO: add genesis.ssz file here
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
@@ -52,6 +59,8 @@ function getBootnodesFileUrl(testnet: TestnetName): string {
       return "https://github.com/eth2-clients/eth2-testnets/raw/master/shared/altona/bootstrap_nodes.txt";
     case "medalla":
       return "https://github.com/goerli/medalla/raw/master/medalla/bootnodes.txt";
+    case "spadina":
+      return "https://github.com/goerli/medalla/raw/master/spadina/bootnodes.txt";
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
