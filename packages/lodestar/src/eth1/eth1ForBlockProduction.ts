@@ -54,6 +54,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1Provider = new Eth1Provider(config, opts);
     this.lastProcessedDepositBlockNumber = null;
 
+    if (!opts.depositContractDeployBlock) {
+      this.logger.warn("No depositContractDeployBlock provided");
+    }
+
     const autoUpdateIntervalMs = 1000 * config.params.SECONDS_PER_ETH1_BLOCK;
     this.runAutoUpdate(autoUpdateIntervalMs).catch((e) => {
       this.logger.error("Aborted", e);
@@ -161,21 +165,24 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
-    const fromBlock = Math.max(
-      this.getFromBlockToFetch(lastCachedBlock),
-      // depositCount data is available only after the first deposit event
-      lowestEventBlockNumber || 0
-    );
+
+    // Do not fetch any blocks if no deposits have been fetched yet
+    // depositCount data is available only after the first deposit event
+    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
+      return false;
+    }
+
+    const fromBlock = Math.max(this.getFromBlockToFetch(lastCachedBlock), lowestEventBlockNumber);
     const toBlock = Math.min(
       remoteFollowBlock,
       fromBlock + this.MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
-      lastProcessedDepositBlockNumber || 0 // Do not fetch any blocks if no deposits have been fetched yet
+      lastProcessedDepositBlockNumber
     );
 
     const eth1Blocks = await fetchBlockRange(this.opts.providerUrl, fromBlock, toBlock, this.signal);
     this.logger.verbose(`Fetched eth1 blocks ${eth1Blocks.length}`, {fromBlock, toBlock});
 
-    const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, this.lastProcessedDepositBlockNumber);
+    const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
 
     return toBlock >= remoteFollowBlock;
