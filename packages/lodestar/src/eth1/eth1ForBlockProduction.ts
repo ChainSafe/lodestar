@@ -168,7 +168,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
     // Do not fetch any blocks if no deposits have been fetched yet
     // depositCount data is available only after the first deposit event
-    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber == null) {
+    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
       return false;
     }
 
