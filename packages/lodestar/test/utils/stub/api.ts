@@ -1,4 +1,4 @@
-import sinon, {SinonSandbox, SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import sinon, {SinonSandbox, SinonStubbedInstance} from "sinon";
 
 import {IApi, ValidatorApi} from "../../../src/api/impl";
 
@@ -10,7 +10,7 @@ export class StubbedApi implements SinonStubbedInstance<IApi> {
   beacon: StubbedBeaconApi;
   node: StubbedNodeApi;
   validator: SinonStubbedInstance<ValidatorApi>;
-  events: SinonStubbedMember<IApi["events"]>;
+  events: SinonStubbedInstance<EventsApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
     this.beacon = new StubbedBeaconApi(sandbox);

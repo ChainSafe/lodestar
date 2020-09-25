@@ -1,5 +1,6 @@
+import "fastify";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IApi} from "../impl";
+import {IApi} from "../../src/api/impl";
 
 declare module "fastify" {
   // eslint-disable-next-line @typescript-eslint/interface-name-prefix

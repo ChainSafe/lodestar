@@ -10,7 +10,6 @@ import {registerRoutes} from "./routes";
 import {IRestApiModules} from "./interface";
 import {FastifyLogger} from "./logger/fastify";
 import {errorHandler} from "./routes/error";
-import "./fastify";
 
 export class RestApi {
   public server: FastifyInstance;
