@@ -139,6 +139,7 @@ export class BeaconNode {
             db: this.db,
             eth1Provider: new Eth1Provider(this.config, this.conf.eth1),
             logger: this.logger.child(this.conf.logger.eth1),
+            opts: this.conf.eth1,
             signal: this.controller.signal,
           })
         : new Eth1ForBlockProductionDisabled(),

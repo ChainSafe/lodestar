@@ -68,6 +68,7 @@ describe("eth1 / Eth1Provider", function () {
       db,
       eth1Provider,
       logger,
+      opts: eth1Options,
       signal: controller.signal,
     });
 
