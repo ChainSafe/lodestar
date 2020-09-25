@@ -9,7 +9,7 @@ import {
   Root,
   SignedBeaconBlock,
   SignedVoluntaryExit,
-  Slot
+  Slot,
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";

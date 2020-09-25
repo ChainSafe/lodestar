@@ -16,7 +16,6 @@ export enum BeaconEventType {
   CHAIN_REORG = "chain_reorg",
 }
 
-
 export type BeaconHeadEvent = {
   type: typeof BeaconEventType.HEAD;
   message: ChainHead;
