@@ -106,9 +106,8 @@ export class ValidatorApi implements IValidatorApi {
       if (validatorIndex === undefined) {
         throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
       }
-      const currentSlot = this.chain.clock.currentSlot;
-      if (headState.slot < currentSlot) {
-        processSlots(epochCtx, headState, currentSlot);
+      if (headState.slot < slot) {
+        processSlots(epochCtx, headState, slot);
       }
       return await assembleAttestation(epochCtx, headState, headBlockRoot, validatorIndex, index, slot);
     } catch (e) {
