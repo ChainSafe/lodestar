@@ -2,14 +2,14 @@
  * @module node
  */
 
-import defaultChainOptions, {IChainOptions} from "../chain/options";
-import defaultDatabaseOptions, {IDatabaseOptions} from "../db/options";
-import defaultApiOptions, {IApiOptions} from "../api/options";
-import defaultEth1Options, {IEth1Options} from "../eth1/options";
-import defaultNetworkOptions, {INetworkOptions} from "../network/options";
-import defaultSyncOptions, {ISyncOptions} from "../sync/options";
-import defaultLoggerOptions, {IBeaconLoggerOptions} from "./loggerOptions";
-import defaultMetricsOptions, {IMetricsOptions} from "../metrics/options";
+import {defaultChainOptions, IChainOptions} from "../chain/options";
+import {defaultDbOptions, IDatabaseOptions} from "../db/options";
+import {defaultApiOptions, IApiOptions} from "../api/options";
+import {defaultEth1Options, IEth1Options} from "../eth1/options";
+import {defaultNetworkOptions, INetworkOptions} from "../network/options";
+import {defaultSyncOptions, ISyncOptions} from "../sync/options";
+import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions";
+import {defaultMetricsOptions, IMetricsOptions} from "../metrics/options";
 
 export interface IBeaconNodeOptions {
   chain: IChainOptions;
@@ -24,7 +24,7 @@ export interface IBeaconNodeOptions {
 
 const config: IBeaconNodeOptions = {
   chain: defaultChainOptions,
-  db: defaultDatabaseOptions,
+  db: defaultDbOptions,
   api: defaultApiOptions,
   eth1: defaultEth1Options,
   network: defaultNetworkOptions,

@@ -14,14 +14,14 @@ type RecursivePartial<T> = {
     : T[P];
 };
 
-export type ICliArgsBeaconNode = IBeaconNodeApiArgs &
+export type IBeaconNodeArgs = IBeaconNodeApiArgs &
   IBeaconNodeEth1Args &
   IBeaconNodeLoggerArgs &
   IBeaconNodeMetricsArgs &
   IBeaconNodeNetworkArgs &
   IBeaconNodeSyncArgs;
 
-export function toBeaconNodeOptions(args: ICliArgsBeaconNode): _IBeaconNodeOptions {
+export function toBeaconNodeOptions(args: IBeaconNodeArgs): IBeaconNodeOptions {
   return {
     api: toApiOptions(args),
     chain: {},

@@ -11,7 +11,7 @@ export interface INetworkOptions {
   disconnectTimeout: number;
 }
 
-const config: INetworkOptions = {
+export const defaultNetworkOptions: INetworkOptions = {
   maxPeers: 25,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
@@ -25,5 +25,3 @@ const config: INetworkOptions = {
   connectTimeout: 3000,
   disconnectTimeout: 3000,
 };
-
-export default config;
