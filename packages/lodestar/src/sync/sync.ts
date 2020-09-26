@@ -13,7 +13,7 @@ import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} fr
 import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {List} from "@chainsafe/ssz";
+import {List, toHexString} from "@chainsafe/ssz";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -199,15 +199,27 @@ export class BeaconSync implements IBeaconSync {
   private onUnknownBlockRoot = async (root: Root): Promise<void> => {
     const peerBalancer = new RoundRobinArray(this.getPeers());
     // eslint-disable-next-line no-constant-condition
-    while (true) {
+    let retry = 0;
+    const maxRetry = this.getPeers().length;
+    while (retry < maxRetry) {
       const peer = peerBalancer.next();
       if (!peer) {
         return;
       }
-      const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
-      if (blocks && blocks[0]) {
-        return await this.chain.receiveBlock(blocks[0]);
+      try {
+        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
+        if (blocks && blocks[0]) {
+          return await this.chain.receiveBlock(blocks[0]);
+        }
+      } catch (e) {
+        this.logger.warn("Failed to get unknown block root from peer", {
+          blockRoot: toHexString(root),
+          peer: peer.toB58String(),
+          error: e.message,
+        });
       }
+      retry++;
     }
+    this.logger.error(`Failed to get unknown block root ${toHexString(root)}`);
   };
 }
