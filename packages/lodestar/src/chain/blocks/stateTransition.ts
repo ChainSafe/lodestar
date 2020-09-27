@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
 import {Slot} from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {
@@ -8,7 +8,7 @@ import {
   fastStateTransition,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
@@ -119,6 +119,28 @@ export async function processSlotsToNearestCheckpoint(
   return postCtx;
 }
 
+export function emitForkChoiceHeadEvents(
+  emitter: ChainEventEmitter,
+  forkChoice: IForkChoice,
+  head: IBlockSummary,
+  oldHead: IBlockSummary
+): void {
+  const headRoot = head.blockRoot;
+  const oldHeadRoot = oldHead.blockRoot;
+  if (!byteArrayEquals(headRoot, oldHeadRoot)) {
+    // new head
+    if (!forkChoice.isDescendant(oldHeadRoot, headRoot)) {
+      // chain reorg
+      const oldHeadHistory = forkChoice.iterateBlockSummaries(oldHeadRoot);
+      const headHistory = forkChoice.iterateBlockSummaries(headRoot);
+      const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
+      const distance = oldHead.slot - (firstAncestor?.slot ?? oldHead.slot);
+      emitter.emit("forkChoice:reorg", head, oldHead, distance);
+    }
+    emitter.emit("forkChoice:head", head);
+  }
+}
+
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
@@ -135,9 +157,12 @@ export async function runStateTransition(
     verifyProposer: !job.trusted,
     verifySignatures: !job.trusted,
   }) as ITreeStateContext;
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state);
+  const oldHead = forkChoice.getHead();
+  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, postStateContext.epochCtx.epochProcess);
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
   }
+  const head = forkChoice.getHead();
+  emitForkChoiceHeadEvents(emitter, forkChoice, head, oldHead);
   return postStateContext;
 }
