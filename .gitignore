@@ -43,6 +43,7 @@ altona.json
 medalla.json
 .altona
 .medalla
+.spadina
 packages/lodestar/.tmpdb/
 
 # Wallet CLI artifacts
