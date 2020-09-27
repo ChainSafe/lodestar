@@ -47,7 +47,7 @@ export function getGenesisFileUrl(testnet: TestnetName): string | null {
     case "medalla":
       return "https://github.com/eth2-clients/eth2-testnets/blob/master/shared/medalla/genesis.ssz?raw=true";
     case "spadina":
-      return ""; // TODO: add genesis.ssz file here
+      return null; // TODO: add genesis.ssz file here
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
