@@ -5,9 +5,8 @@ import {ReqRespEncoding} from "../../constants";
 export interface IPeerMetadataStore {
   setStatus(peer: PeerId, status: Status | null): void;
   getStatus(peer: PeerId): Status | null;
-  setScore(peer: PeerId, score: number | null): void;
-  getScore(peer: PeerId): number | null;
-
+  setRpcScore(peer: PeerId, score: number | null): void;
+  getRpcScore(peer: PeerId): number | null;
   /**
    * It will never store metadata with lower seq number
    * @param peer

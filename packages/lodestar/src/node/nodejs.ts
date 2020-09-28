@@ -20,7 +20,7 @@ import {BeaconMetrics, HttpMetricsServer} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 
 export interface IService {
   start(): Promise<void>;

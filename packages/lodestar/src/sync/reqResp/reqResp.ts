@@ -131,7 +131,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       );
       return true;
     }
-
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
         this.logger.verbose(

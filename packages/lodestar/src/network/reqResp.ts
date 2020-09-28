@@ -29,7 +29,7 @@ import {
 } from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import all from "it-all";
 import {
   createResponseEvent,
@@ -43,11 +43,12 @@ import {
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
-import {RpcError} from "./error";
+import {RpcError, updateRpcScore} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
+import {RpcScoreEvent, IRpcScoreTracker} from "./peers/score";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -62,6 +63,7 @@ interface IReqRespModules {
   libp2p: LibP2p;
   logger: ILogger;
   peerMetadata: IPeerMetadataStore;
+  blockProviderScores: IRpcScoreTracker;
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
@@ -92,14 +94,19 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private logger: ILogger;
   private responseListener: ResponseEventListener;
   private peerMetadata: IPeerMetadataStore;
+  private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, peerMetadata, logger}: IReqRespModules) {
+  public constructor(
+    opts: INetworkOptions,
+    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules
+  ) {
     super();
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
     this.logger = logger;
+    this.blockProviderScores = blockProviderScores;
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
@@ -189,14 +196,28 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
+    try {
+      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
+      return result;
+    } catch (e) {
+      updateRpcScore(this.blockProviderScores, peerId, e);
+      throw e;
+    }
   }
 
   public async beaconBlocksByRoot(
     peerId: PeerId,
     request: BeaconBlocksByRootRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
+    try {
+      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
+      return result;
+    } catch (e) {
+      updateRpcScore(this.blockProviderScores, peerId, e);
+      throw e;
+    }
   }
 
   private storePeerEncodingPreference(
@@ -315,7 +336,10 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         this.handleResponses<T>(peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
       );
     } catch (e) {
-      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {reason: e.message});
+      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
+        method,
+        reason: e.message,
+      });
       throw e;
     }
   }

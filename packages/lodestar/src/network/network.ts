@@ -22,6 +22,7 @@ import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 import {IPeerMetadataStore} from "./peers/interface";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeersWithSubnet} from "./peers/utils";
+import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -39,6 +40,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   public gossip: IGossip;
   public metadata: MetadataController;
   public peerMetadata: IPeerMetadataStore;
+  public peerRpcScores: IRpcScoreTracker;
 
   private opts: INetworkOptions;
   private config: IBeaconConfig;
@@ -57,7 +59,14 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.peerId = libp2p.peerId;
     this.libp2p = libp2p;
     this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
-    this.reqResp = new ReqResp(opts, {config, libp2p, peerMetadata: this.peerMetadata, logger});
+    this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
+    this.reqResp = new ReqResp(opts, {
+      config,
+      libp2p,
+      peerMetadata: this.peerMetadata,
+      blockProviderScores: this.peerRpcScores,
+      logger,
+    });
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {
@@ -120,7 +129,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       }
       return true;
     });
-    return peers || [];
+    return peers.slice(0, opts?.count ?? peers.length) || [];
   }
 
   public getMaxPeer(): number {

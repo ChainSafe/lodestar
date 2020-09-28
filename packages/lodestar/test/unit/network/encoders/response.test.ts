@@ -1,6 +1,6 @@
 import pipe from "it-pipe";
 import all from "it-all";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {
   eth2ResponseDecode,

@@ -3,12 +3,12 @@ import {
   BeaconState,
   Checkpoint,
   Epoch,
-  Gwei,
   IndexedAttestation,
   Root,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
+import {IEpochProcess} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBlockSummary} from "./blockSummary";
 
 export interface IForkChoice {
@@ -51,8 +51,11 @@ export interface IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * `epochProcess` is passed in so that justified balances can be updated synchronously.
+   * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: BeaconBlock, state: BeaconState): void;
+  onBlock(block: BeaconBlock, state: BeaconState, epochProcess?: IEpochProcess): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -73,7 +76,6 @@ export interface IForkChoice {
    */
   onAttestation(attestation: IndexedAttestation): void;
   getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined;
-  updateBalances(justifiedStateBalances: Gwei[]): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */

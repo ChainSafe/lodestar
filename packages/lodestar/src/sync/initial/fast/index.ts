@@ -19,6 +19,7 @@ import {GENESIS_EPOCH} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
 import {IBeaconDb} from "../../../db";
 import {notNullish} from "../../../util/notNullish";
+import {getSyncPeers} from "../../utils/peers";
 
 export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}) implements InitialSync {
   private readonly opts: ISyncOptions;
@@ -223,18 +224,10 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
    * Returns peers which has same finalized Checkpoint
    */
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
-    return this.network
-      .getPeers({
-        connected: true,
-        supportsProtocols: getSyncProtocols(),
-      })
-      .map((peer) => peer.id)
-      .reduce((validPeers: PeerId[], peer: PeerId) => {
-        const status = this.network.peerMetadata.getStatus(peer);
-        if (status && status.finalizedEpoch >= this.targetCheckpoint!.epoch) {
-          validPeers.push(peer);
-        }
-        return validPeers;
-      }, [] as PeerId[]);
+    const targetCheckpoint = this.targetCheckpoint;
+    return getSyncPeers(this.network, (peer) => {
+      const status = this.network.peerMetadata.getStatus(peer);
+      return !!status && status.finalizedEpoch >= (targetCheckpoint?.epoch ?? 0);
+    });
   };
 }

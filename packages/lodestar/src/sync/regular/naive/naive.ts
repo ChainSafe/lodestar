@@ -2,21 +2,22 @@ import PeerId from "peer-id";
 import {AbortController, AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
-import {getSyncProtocols, INetwork} from "../../../network";
+import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
+import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
+import {checkBestPeer, fetchBlockChunks, getBestPeer, processSyncBlocks} from "../../utils";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
-import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
+import {getSyncPeers} from "../../utils/peers";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
@@ -224,9 +225,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     while (!this.bestPeer) {
       // wait first to make sure we have latest status
       await sleep(waitingTime, signal);
-      const peers = this.network
-        .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
-        .map((peer) => peer.id);
+      const peers = getSyncPeers(this.network, undefined, this.network.getMaxPeer());
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
