@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
 import {decode, encode} from "varint";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import BufferList from "bl";
 import {ResponseBody, P2pErrorMessage} from "@chainsafe/lodestar-types";

@@ -2,7 +2,7 @@
  * @module chain
  */
 
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,

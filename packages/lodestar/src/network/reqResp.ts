@@ -29,7 +29,7 @@ import {
 } from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import all from "it-all";
 import {
   createResponseEvent,

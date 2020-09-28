@@ -5,7 +5,7 @@
 
 import PeerId from "peer-id";
 import {Type} from "@chainsafe/ssz";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
