@@ -336,7 +336,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         this.handleResponses<T>(peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
       );
     } catch (e) {
-      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
+      this.logger.verbose(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
         method,
         reason: e.message,
       });

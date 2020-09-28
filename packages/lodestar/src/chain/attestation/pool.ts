@@ -133,9 +133,11 @@ export class AttestationProcessor implements IAttestationProcessor {
   }
 
   private addPendingBlockAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
-    this.chain.emitter.emit("unknownBlockRoot", blockRoot);
     const blockPendingAttestations =
       this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
+    if (blockPendingAttestations.size === 0) {
+      this.chain.emitter.emit("unknownBlockRoot", blockRoot);
+    }
     blockPendingAttestations.set(toHexString(attestationHash), attestation);
     this.pendingBlockAttestations.set(toHexString(blockRoot), blockPendingAttestations);
   }

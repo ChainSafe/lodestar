@@ -212,10 +212,12 @@ export class BeaconSync implements IBeaconSync {
           return await this.chain.receiveBlock(blocks[0]);
         }
       } catch (e) {
-        this.logger.warn("Failed to get unknown block root from peer", {
+        this.logger.verbose("Failed to get unknown block root from peer", {
           blockRoot: toHexString(root),
           peer: peer.toB58String(),
           error: e.message,
+          maxRetry,
+          retry,
         });
       }
       retry++;
