@@ -43,7 +43,7 @@ import {
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
-import {RpcError, updateBlockProviderErrorScore} from "./error";
+import {RpcError, updateRpcScore} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
@@ -201,7 +201,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
       return result;
     } catch (e) {
-      updateBlockProviderErrorScore(this.blockProviderScores, peerId, e);
+      updateRpcScore(this.blockProviderScores, peerId, e);
       throw e;
     }
   }
@@ -215,7 +215,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
       return result;
     } catch (e) {
-      updateBlockProviderErrorScore(this.blockProviderScores, peerId, e);
+      updateRpcScore(this.blockProviderScores, peerId, e);
       throw e;
     }
   }

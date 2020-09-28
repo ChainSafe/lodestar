@@ -20,7 +20,7 @@ export function isResponseTimeout(err: Error): boolean {
   return err.message.includes(RESPONSE_TIMEOUT_ERR);
 }
 
-export function updateBlockProviderErrorScore(scoreTracker: IRpcScoreTracker, peer: PeerId, e: Error): void {
+export function updateRpcScore(scoreTracker: IRpcScoreTracker, peer: PeerId, e: Error): void {
   if (isResponseTimeout(e)) {
     scoreTracker.update(peer, RpcScoreEvent.RESPONSE_TIMEOUT);
   } else if (e.message.includes("ERR_UNSUPPORTED_PROTOCOL")) {
