@@ -77,7 +77,16 @@ export class BlockProcessor implements IService {
       },
       convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
-      processBlock(this.config, this.logger, this.db, this.forkChoice, this.regen, this.pendingBlocks, this.eventBus, this.clock),
+      processBlock(
+        this.config,
+        this.logger,
+        this.db,
+        this.forkChoice,
+        this.regen,
+        this.pendingBlocks,
+        this.eventBus,
+        this.clock
+      ),
       postProcess(
         this.config,
         this.logger,

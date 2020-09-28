@@ -97,13 +97,13 @@ export class ValidatorApi implements IValidatorApi {
   public async produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation> {
     try {
       await this.checkSyncStatus();
-      const headBlock = this.chain.forkChoice.getHead();
+      const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentSlot();
       const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
       if (validatorIndex === undefined) {
         throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
       }
-      return await assembleAttestation(epochCtx, state, headBlock.blockRoot, validatorIndex, index, slot);
+      return await assembleAttestation(epochCtx, state, headRoot, validatorIndex, index, slot);
     } catch (e) {
       this.logger.warn(`Failed to produce attestation because: ${e.message}`);
       throw e;
