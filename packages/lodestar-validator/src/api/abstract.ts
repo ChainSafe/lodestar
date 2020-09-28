@@ -75,7 +75,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
 
     this.logger.info("Checking genesis time and beacon node connection");
     const genesis = await this.beacon.getGenesis();
-    if (genesis && Math.round(Date.now() / 1000) >= genesis.genesisTime) {
+    if (genesis && Math.floor(Date.now() / 1000) >= genesis.genesisTime) {
       this.emit("beaconChainStarted");
       if (this.beaconNodeInterval) {
         clearInterval(this.beaconNodeInterval);
@@ -84,7 +84,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     } else {
       let waitTime = "unknown";
       if (genesis) {
-        waitTime = genesis.genesisTime - BigInt(Math.round(Date.now() / 1000)) + "s";
+        waitTime = genesis.genesisTime - BigInt(Math.floor(Date.now() / 1000)) + "s";
       }
       this.logger.info("Waiting for genesis time", {waitTime});
     }
@@ -111,9 +111,6 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     }
     // to prevent sometime being updated prematurely
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    if (this.currentSlot + 1 > getCurrentSlot(this.config, this.genesisTime)) {
-      await sleep(this.getDiffTillNextSlot());
-    }
     this.currentSlot++;
     this.newSlotCallbacks.forEach((cb) => {
       cb(this.currentSlot);
