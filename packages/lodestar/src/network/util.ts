@@ -5,13 +5,14 @@
 
 import PeerId from "peer-id";
 import {Type} from "@chainsafe/ssz";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
+import {RESPONSE_TIMEOUT_ERR} from "./error";
 
 // req/resp
 
@@ -120,7 +121,7 @@ export function eth2ResponseTimer<T>(
   };
   return (source) => {
     return (async function* () {
-      for await (const item of abortSource(source, controller.signal, {abortMessage: "response timeout"})) {
+      for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
         renewTimer();
         yield item;
       }
@@ -140,7 +141,8 @@ export async function dialProtocol(
   const timer = setTimeout(() => {
     abortController.abort();
   }, timeout);
-  signal?.addEventListener("abort", () => abortController.abort(), {once: true});
+  const abortHandler = (): void => abortController.abort();
+  signal?.addEventListener("abort", abortHandler, {once: true});
   try {
     const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
     if (!conn) {
@@ -153,6 +155,7 @@ export async function dialProtocol(
     // err.stack = e.stack;
     throw err;
   } finally {
+    signal?.removeEventListener("abort", abortHandler);
     clearTimeout(timer);
   }
 }

@@ -354,10 +354,19 @@ export class AttestationService {
 
   private async isConflictingAttestation(attesterIndex: number, other: AttestationData): Promise<boolean> {
     const potentialAttestationConflicts = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gt: other.target.epoch - 1,
+      gte: other.target.epoch,
     });
     return potentialAttestationConflicts.some((attestation) => {
-      return isSlashableAttestationData(this.config, attestation.data, other);
+      const result = isSlashableAttestationData(this.config, attestation.data, other);
+      if (result) {
+        this.logger.info("conflict", {
+          validator: toHexString(this.publicKeys[attesterIndex]),
+          attesterIndex,
+          targetEpoch: other.target.epoch,
+          conflictx: JSON.stringify(potentialAttestationConflicts),
+        });
+      }
+      return result;
     });
   }
 
@@ -366,7 +375,7 @@ export class AttestationService {
 
     // cleanup
     const unusedAttestations = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gt: 0,
+      gte: 0,
       lt: attestation.data.target.epoch,
     });
     await this.db.deleteAttestations(this.publicKeys[attesterIndex], unusedAttestations);

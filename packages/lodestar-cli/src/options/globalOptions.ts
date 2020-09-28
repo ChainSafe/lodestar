@@ -20,7 +20,7 @@ export const globalOptions = {
   testnet: {
     description: "Use a testnet configuration",
     type: "string",
-    choices: ["altona", "medalla"] as TestnetName[],
+    choices: ["altona", "medalla", "spadina"] as TestnetName[],
   } as Options,
 
   preset: {

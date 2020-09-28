@@ -2,8 +2,8 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
 import {getSyncProtocols, INetwork} from "../network";
-import {sleep} from "../util/sleep";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
@@ -191,7 +191,7 @@ export class BeaconSync implements IBeaconSync {
     return this.network
       .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
       .filter((peer) => {
-        return !!this.network.peerMetadata.getStatus(peer.id);
+        return !!this.network.peerMetadata.getStatus(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
       })
       .map((peer) => peer.id);
   }

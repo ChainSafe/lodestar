@@ -4,10 +4,12 @@ import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import bls, {PrivateKey, PublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
-import {depositContract} from "@chainsafe/lodestar/lib/eth1/depositContract";
+
+const depositFunctionFragment =
+  "function deposit(bytes pubkey, bytes withdrawal_credentials, bytes signature, bytes32 deposit_data_root) external payable;";
 
 function getDepositInterface(): ethers.utils.Interface {
-  return new ethers.utils.Interface(depositContract.abi);
+  return new ethers.utils.Interface([depositFunctionFragment]);
 }
 
 export function decodeEth1TxData(

@@ -66,8 +66,8 @@ describe("Libp2pPeerMetadataStore", function () {
   it("can store and retrieve score", function () {
     const store = new Libp2pPeerMetadataStore(config, metabookStub);
     const value = 80;
-    store.setScore(peerId, value);
-    const result = store.getScore(peerId);
+    store.setRpcScore(peerId, value);
+    const result = store.getRpcScore(peerId);
     expect(config.types.Number64.equals(result as number, value)).to.be.true;
   });
 });

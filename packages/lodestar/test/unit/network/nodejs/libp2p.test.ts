@@ -1,7 +1,7 @@
 import {assert} from "chai";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {NodejsNode} from "../../../../src/network/nodejs";
 import {createNode} from "../../../utils/network";
-import {sleep} from "../../../../src/util/sleep";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 

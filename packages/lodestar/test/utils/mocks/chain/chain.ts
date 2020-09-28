@@ -1,4 +1,4 @@
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {

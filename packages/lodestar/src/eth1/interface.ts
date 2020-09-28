@@ -4,23 +4,18 @@
  * @module eth1
  */
 
+import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ethers} from "ethers";
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Eth1Data, Deposit, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 
-export type IEthersAbi = Array<string | ethers.utils.EventFragment | ethers.utils.ParamType>;
-
-export type IEth1StreamParams = Pick<
-  IBeaconConfig["params"],
-  "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
-> & {
-  MAX_BLOCKS_PER_POLL: number;
-};
-
-export interface IBatchDepositEvents {
-  depositEvents: DepositEvent[];
-  blockNumber: number;
+export interface IEth1Provider {
+  deployBlock: number;
+  getBlockNumber(signal?: AbortSignal): Promise<number>;
+  getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<Eth1Block>;
+  getBlocksByNumber(blockNumbers: number[], signal?: AbortSignal): Promise<Eth1Block[]>;
+  getDepositEvents(fromBlock: number, toBlock?: number, signal?: AbortSignal): Promise<DepositEvent[]>;
+  validateContract(signal?: AbortSignal): Promise<void>;
 }
 
 export interface IEth1ForBlockProduction {
@@ -32,15 +27,31 @@ export interface IEth1ForBlockProduction {
   }>;
 }
 
-export interface IEth1Provider {
-  deployBlock: number;
-  getBlockNumber(): Promise<number>;
-  getBlock(blockNumber: number): Promise<Eth1Block>;
-  getDepositEvents(fromBlock: number, toBlock?: number): Promise<DepositEvent[]>;
-  validateContract(): Promise<void>;
+export interface IBatchDepositEvents {
+  depositEvents: DepositEvent[];
+  blockNumber: number;
 }
 
 export interface IEth1Streamer {
   getDepositsStream(fromBlock: number): AsyncGenerator<IBatchDepositEvents>;
   getDepositsAndBlockStreamForGenesis(fromBlock: number): AsyncGenerator<[DepositEvent[], Eth1Block]>;
+}
+
+export type IEth1StreamParams = Pick<
+  IBeaconConfig["params"],
+  "ETH1_FOLLOW_DISTANCE" | "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"
+> & {
+  MAX_BLOCKS_PER_POLL: number;
+};
+
+export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
+
+export interface IRpcPayload {
+  method: string;
+  params: IJson[];
+}
+
+export interface IJsonRpcClient {
+  fetch<R>({method, params}: IRpcPayload, signal?: AbortSignal): Promise<R>;
+  fetchBatch<R>(rpcPayloadArr: IRpcPayload[], signal?: AbortSignal): Promise<R[]>;
 }

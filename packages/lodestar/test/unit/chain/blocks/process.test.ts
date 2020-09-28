@@ -14,6 +14,7 @@ import {processBlock} from "../../../../src/chain/blocks/process";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {silentLogger} from "../../../utils/logger";
+import { generateBlockSummary } from "../../../utils/block";
 
 describe("block process stream", function () {
   const logger = silentLogger;
@@ -97,13 +98,10 @@ describe("block process stream", function () {
       trusted: false,
       reprocess: false,
     };
-    const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    forkChoiceStub.getBlock
-      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
-      .resolves(parentBlock);
+    forkChoiceStub.getBlock.returns(generateBlockSummary());
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
-    //dbStub.chain.getChainHeadRoot.resolves(Buffer.alloc(32, 1));
     forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
       [receivedJob],
@@ -123,9 +121,8 @@ describe("block process stream", function () {
       reprocess: false,
     };
     const parentBlock = config.types.SignedBeaconBlock.defaultValue();
-    forkChoiceStub.getBlock
-      .withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array)
-      .resolves(parentBlock);
+    forkChoiceStub.getBlock.returns(generateBlockSummary());
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 2));

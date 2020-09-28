@@ -4,10 +4,9 @@ import {IBeaconDb} from "../../../db/api";
 import {BeaconBlock, Number64, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ExtendedValidatorResult} from "../constants";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../constants";
-import {sleep} from "../../../util/sleep";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getBlockStateContext} from "../utils";
 

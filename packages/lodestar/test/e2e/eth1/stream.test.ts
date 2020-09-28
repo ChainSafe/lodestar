@@ -1,7 +1,7 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "abort-controller";
-import {getMedallaConfig, medalla} from "./util";
+import {getMedallaConfig, medalla} from "../../utils/medalla";
 import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
 
 describe("Eth1 streams", function () {

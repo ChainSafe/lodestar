@@ -1,22 +1,23 @@
 import PeerId from "peer-id";
-import AbortController from "abort-controller";
+import {AbortController, AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
-import {getSyncProtocols, INetwork} from "../../../network";
+import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SignedBeaconBlock, Slot, Root} from "@chainsafe/lodestar-types";
+import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
-import {fetchBlockChunks, processSyncBlocks, getBestPeer, checkBestPeer} from "../../utils";
-import {ISlotRange} from "../../interface";
+import {checkBestPeer, fetchBlockChunks, getBestPeer, processSyncBlocks} from "../../utils";
+import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
-import {sleep} from "../../../util/sleep";
 import {EventEmitter} from "events";
+import {getSyncPeers} from "../../utils/peers";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
@@ -36,6 +37,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private gossipParentBlockRoot: Root | undefined;
   // only subscribe to gossip when we're up to this
   private controller!: AbortController;
+  /**
+   * The last processed block
+   */
+  private lastProcessedBlock!: ISyncCheckpoint;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     super();
@@ -48,7 +53,6 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("block", this.onProcessedBlock);
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
@@ -59,6 +63,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       return;
     }
     this.currentTarget = headSlot;
+    this.lastProcessedBlock = this.chain.forkChoice.getHead();
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
@@ -66,6 +71,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const newTarget = this.getNewTarget();
     this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
+    // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
+    this.chain.emitter.on("block", this.onProcessedBlock);
     await Promise.all([this.sync(), this.setTarget()]);
   }
 
@@ -106,7 +113,14 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
           `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
       );
-      this.setTarget();
+      // don't want to trigger another sync from other sources than regular sync
+      if (this.currentTarget === lastProcessedBlock.message.slot) {
+        this.lastProcessedBlock = {
+          slot: lastProcessedBlock.message.slot,
+          blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message),
+        };
+        this.setTarget();
+      }
     }
   };
 
@@ -134,18 +148,18 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private async sync(): Promise<void> {
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
-    const {getSyncPeers, setTarget, handleEmptyRange, handleFailedToGetRange} = this;
+    const {getSyncPeers, setTarget, handleEmptyRange, handleFailedToGetRange, getLastProcessedBlock} = this;
     await pipe(this.targetSlotRangeSource, (source) => {
       return (async function () {
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
           const lastFetchedSlot = await pipe(
             [range],
-            fetchBlockChunks(logger, chain, reqResp, getSyncPeers),
-            processSyncBlocks(config, chain, logger, false, null)
+            fetchBlockChunks(logger, chain, reqResp, getSyncPeers, undefined, controller.signal),
+            processSyncBlocks(config, chain, logger, false, getLastProcessedBlock())
           );
           if (lastFetchedSlot) {
             // failed to fetch range
-            if (lastFetchedSlot === chain.forkChoice.getHead().slot) {
+            if (lastFetchedSlot === getLastProcessedBlock().slot) {
               handleFailedToGetRange(range);
             } else {
               // success, not trigger sync until after we process lastFetchedSlot
@@ -187,6 +201,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   };
 
   /**
+   * Make sure we get up-to-date lastProcessedBlock from sync().
+   */
+  private getLastProcessedBlock = (): ISyncCheckpoint => {
+    return this.lastProcessedBlock;
+  };
+
+  /**
    * Make sure the best peer is not disconnected and it's better than us.
    */
   private getSyncPeers = async (): Promise<PeerId[]> => {
@@ -200,17 +221,11 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
     // statusSyncTimer is per slot
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
-    let isAborted = false;
-    signal.addEventListener("abort", () => {
-      this.logger.verbose("RegularSync: Abort waitForBestPeer");
-      isAborted = true;
-    });
-    while (!this.bestPeer && !isAborted) {
+
+    while (!this.bestPeer) {
       // wait first to make sure we have latest status
-      await sleep(waitingTime);
-      const peers = this.network
-        .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
-        .map((peer) => peer.id);
+      await sleep(waitingTime, signal);
+      const peers = getSyncPeers(this.network, undefined, this.network.getMaxPeer());
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;

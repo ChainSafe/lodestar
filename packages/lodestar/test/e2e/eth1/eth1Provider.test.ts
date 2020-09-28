@@ -2,9 +2,10 @@ import "mocha";
 import {expect} from "chai";
 import {Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getMedallaConfig, medalla} from "./util";
+import {getMedallaConfig, medalla} from "../../utils/medalla";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
+import {goerliMedallaDepositEvents} from "../../utils/medalla";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
@@ -15,16 +16,15 @@ describe("eth1 / Eth1Provider", function () {
     depositContractDeployBlock: 0,
   };
 
-  function getEth1Provider(): Eth1Provider {
-    return new Eth1Provider(getMedallaConfig(), eth1Options);
-  }
+  const config = getMedallaConfig();
+  const eth1Provider = new Eth1Provider(config, eth1Options);
 
   it("Should validate contract", async function () {
-    await getEth1Provider().validateContract();
+    await eth1Provider.validateContract();
   });
 
   it("Should get latest block number", async function () {
-    const blockNumber = await getEth1Provider().getBlockNumber();
+    const blockNumber = await eth1Provider.getBlockNumber();
     expect(blockNumber).to.be.greaterThan(0);
   });
 
@@ -34,16 +34,15 @@ describe("eth1 / Eth1Provider", function () {
       blockNumber: 0,
       timestamp: 1548854791,
     };
-    const block = await getEth1Provider().getBlock(goerliGenesisBlock.blockNumber);
+    const block = await eth1Provider.getBlockByNumber(goerliGenesisBlock.blockNumber);
     expect(block).to.deep.equal(goerliGenesisBlock);
   });
 
   it("Should get deposits events for a block range", async function () {
-    const goerliMedallaDeposit = {
-      block: 3124930,
-      depositIndexes: [6833],
-    };
-    const logs = await getEth1Provider().getDepositEvents(goerliMedallaDeposit.block, goerliMedallaDeposit.block);
-    expect(logs.map((log) => log.index)).to.deep.equal(goerliMedallaDeposit.depositIndexes);
+    const blockNumbers = goerliMedallaDepositEvents.map((log) => log.blockNumber);
+    const fromBlock = Math.min(...blockNumbers);
+    const toBlock = Math.min(...blockNumbers);
+    const depositEvents = await eth1Provider.getDepositEvents(fromBlock, toBlock);
+    expect(depositEvents).to.deep.equal(goerliMedallaDepositEvents);
   });
 });

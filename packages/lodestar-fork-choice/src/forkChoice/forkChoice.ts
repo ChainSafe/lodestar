@@ -16,6 +16,7 @@ import {
   computeEpochAtSlot,
   ZERO_HASH,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {IEpochProcess} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas, HEX_ZERO_HASH, IVoteTracker, ProtoArray} from "../protoArray";
@@ -64,12 +65,19 @@ export class ForkChoice implements IForkChoice {
    *
    * This should be the balances of the state at fcStore.justifiedCheckpoint
    */
-  balances: Gwei[];
+  justifiedBalances: Gwei[];
+  /**
+   * Balances tracked in the protoArray, or soon to be tracked
+   * Indexed by validator index
+   *
+   * This should be the balances of the state at fcStore.bestJustifiedCheckpoint
+   */
+  bestJustifiedBalances: Gwei[];
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
    */
-  queuedAttesations: Set<IQueuedAttestation>;
+  queuedAttestations: Set<IQueuedAttestation>;
 
   /**
    * Instantiates a Fork Choice from some existing components
@@ -80,19 +88,20 @@ export class ForkChoice implements IForkChoice {
     config,
     fcStore,
     protoArray,
-    queuedAttesations,
+    queuedAttestations,
   }: {
     config: IBeaconConfig;
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
-    queuedAttesations: Set<IQueuedAttestation>;
+    queuedAttestations: Set<IQueuedAttestation>;
   }) {
     this.config = config;
     this.fcStore = fcStore;
     this.protoArray = protoArray;
     this.votes = [];
-    this.balances = [];
-    this.queuedAttesations = queuedAttesations;
+    this.justifiedBalances = [];
+    this.bestJustifiedBalances = [];
+    this.queuedAttestations = queuedAttestations;
   }
 
   /**
@@ -112,7 +121,7 @@ export class ForkChoice implements IForkChoice {
       config,
       fcStore,
       protoArray,
-      queuedAttesations: new Set(),
+      queuedAttestations: new Set(),
     });
   }
 
@@ -141,7 +150,7 @@ export class ForkChoice implements IForkChoice {
       config,
       fcStore,
       protoArray,
-      queuedAttesations: new Set(),
+      queuedAttestations: new Set(),
     });
   }
 
@@ -238,8 +247,11 @@ export class ForkChoice implements IForkChoice {
    * ## Notes:
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
+   *
+   * `epochProcess` is passed in so that justified balances can be updated synchronously.
+   * This ensures that the forkchoice is never out of sync.
    */
-  public onBlock(block: BeaconBlock, state: BeaconState): void {
+  public onBlock(block: BeaconBlock, state: BeaconState, epochProcess?: IEpochProcess): void {
     // Parent block must be known
     if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
       throw new ForkChoiceError({
@@ -294,13 +306,23 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    let shouldUpdateJustified = false;
+
     // Update justified checkpoint.
     if (state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
+      if (!epochProcess) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
+          error: new Error("No epoch process supplied"),
+        });
+      }
       if (state.currentJustifiedCheckpoint.epoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
-        this.fcStore.bestJustifiedCheckpoint = state.currentJustifiedCheckpoint;
+        const balances = epochProcess.statuses.map((s) => (s.active ? s.validator.effectiveBalance : BigInt(0)));
+        this.updateBestJustified(state.currentJustifiedCheckpoint, balances);
       }
       if (this.shouldUpdateJustifiedCheckpoint(state)) {
-        this.fcStore.justifiedCheckpoint = state.currentJustifiedCheckpoint;
+        // wait to update until after finalized checkpoint is set
+        shouldUpdateJustified = true;
       }
     }
 
@@ -317,8 +339,20 @@ export class ForkChoice implements IForkChoice {
           this.fcStore.finalizedCheckpoint.root
         )
       ) {
-        this.fcStore.justifiedCheckpoint = state.currentJustifiedCheckpoint;
+        shouldUpdateJustified = true;
       }
+    }
+
+    // This needs to be performed after finalized checkpoint has been updated
+    if (shouldUpdateJustified) {
+      if (!epochProcess) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
+          error: new Error("No epoch process supplied"),
+        });
+      }
+      const balances = epochProcess.statuses.map((s) => (s.active ? s.validator.effectiveBalance : BigInt(0)));
+      this.updateJustified(state.currentJustifiedCheckpoint, balances);
     }
 
     const targetSlot = computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, block.slot));
@@ -392,7 +426,7 @@ export class ForkChoice implements IForkChoice {
       // Attestations can only affect the fork choice of subsequent slots.
       // Delay consideration in the fork choice until their slot is in the past.
       // ```
-      this.queuedAttesations.add({
+      this.queuedAttestations.add({
         slot: attestation.data.slot,
         attestingIndices: readOnlyMap(attestation.attestingIndices, (x) => x),
         blockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
@@ -410,21 +444,6 @@ export class ForkChoice implements IForkChoice {
       epoch: vote.nextEpoch,
       root: fromHexString(vote.nextRoot),
     };
-  }
-
-  public updateBalances(justifiedStateBalances: Gwei[]): void {
-    const oldBalances = this.balances;
-    const newBalances = justifiedStateBalances;
-
-    const deltas = computeDeltas(this.protoArray.indices, this.votes, oldBalances, newBalances);
-
-    this.protoArray.applyScoreChanges(
-      deltas,
-      this.fcStore.justifiedCheckpoint.epoch,
-      this.fcStore.finalizedCheckpoint.epoch
-    );
-
-    this.balances = newBalances;
   }
 
   /**
@@ -524,6 +543,23 @@ export class ForkChoice implements IForkChoice {
 
   public getBlockSummariesAtSlot(slot: Slot): IBlockSummary[] {
     return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
+  }
+
+  private updateJustified(justifiedCheckpoint: Checkpoint, justifiedBalances: Gwei[]): void {
+    const oldBalances = this.justifiedBalances;
+    const newBalances = justifiedBalances;
+
+    const deltas = computeDeltas(this.protoArray.indices, this.votes, oldBalances, newBalances);
+
+    this.protoArray.applyScoreChanges(deltas, justifiedCheckpoint.epoch, this.fcStore.finalizedCheckpoint.epoch);
+
+    this.justifiedBalances = newBalances;
+    this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
+  }
+
+  private updateBestJustified(justifiedCheckpoint: Checkpoint, justifiedBalances: Gwei[]): void {
+    this.bestJustifiedBalances = justifiedBalances;
+    this.fcStore.bestJustifiedCheckpoint = justifiedCheckpoint;
   }
 
   /**
@@ -724,9 +760,9 @@ export class ForkChoice implements IForkChoice {
    */
   private processAttestationQueue(): void {
     const currentSlot = this.fcStore.currentSlot;
-    for (const attestation of this.queuedAttesations.values()) {
+    for (const attestation of this.queuedAttestations.values()) {
       if (attestation.slot <= currentSlot) {
-        this.queuedAttesations.delete(attestation);
+        this.queuedAttestations.delete(attestation);
         for (const validatorIndex of attestation.attestingIndices) {
           this.addLatestMessage(validatorIndex, {
             root: attestation.blockRoot,
@@ -765,7 +801,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (this.fcStore.bestJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
-      this.fcStore.justifiedCheckpoint = this.fcStore.bestJustifiedCheckpoint;
+      this.updateJustified(this.fcStore.bestJustifiedCheckpoint, this.bestJustifiedBalances);
     }
   }
 }

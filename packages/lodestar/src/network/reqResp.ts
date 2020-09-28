@@ -29,7 +29,7 @@ import {
 } from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {duplex as abortDuplex} from "abortable-iterator";
-import AbortController from "abort-controller";
+import {AbortController} from "abort-controller";
 import all from "it-all";
 import {
   createResponseEvent,
@@ -43,11 +43,12 @@ import {
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
-import {RpcError} from "./error";
+import {RpcError, updateRpcScore} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
 import {IPeerMetadataStore} from "./peers/interface";
+import {RpcScoreEvent, IRpcScoreTracker} from "./peers/score";
 
 interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
@@ -62,6 +63,7 @@ interface IReqRespModules {
   libp2p: LibP2p;
   logger: ILogger;
   peerMetadata: IPeerMetadataStore;
+  blockProviderScores: IRpcScoreTracker;
 }
 
 class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
@@ -92,14 +94,19 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private logger: ILogger;
   private responseListener: ResponseEventListener;
   private peerMetadata: IPeerMetadataStore;
+  private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, peerMetadata, logger}: IReqRespModules) {
+  public constructor(
+    opts: INetworkOptions,
+    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules
+  ) {
     super();
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
     this.logger = logger;
+    this.blockProviderScores = blockProviderScores;
     this.responseListener = new ResponseEventListener();
   }
   public async start(): Promise<void> {
@@ -135,7 +142,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       id,
       err,
       (async function* () {
-        if (response !== null && response !== undefined) {
+        if (response != null) {
           yield response;
         }
       })()
@@ -189,14 +196,28 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
+    try {
+      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
+      return result;
+    } catch (e) {
+      updateRpcScore(this.blockProviderScores, peerId, e);
+      throw e;
+    }
   }
 
   public async beaconBlocksByRoot(
     peerId: PeerId,
     request: BeaconBlocksByRootRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
+    try {
+      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
+      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
+      return result;
+    } catch (e) {
+      updateRpcScore(this.blockProviderScores, peerId, e);
+      throw e;
+    }
   }
 
   private storePeerEncodingPreference(
@@ -240,6 +261,38 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     };
   }
 
+  private handleResponses<T extends ResponseBody | ResponseBody[]>(
+    peerId: PeerId,
+    method: Method,
+    encoding: ReqRespEncoding,
+    requestId: RequestId,
+    requestSingleChunk: boolean,
+    requestOnly: boolean,
+    body?: RequestBody
+  ): (source: AsyncIterable<T>) => Promise<T | null> {
+    return async (source) => {
+      const responses = await all(source);
+      if (requestSingleChunk && responses.length === 0) {
+        // allow empty response for beacon blocks by range/root
+        this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
+          peer: peerId.toB58String(),
+        });
+        return null;
+      }
+      const finalResponse = requestSingleChunk ? responses[0] : responses;
+      this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
+        requestId,
+        encoding,
+        body:
+          body != null &&
+          (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
+            body
+          ),
+      });
+      return requestOnly ? null : (finalResponse as T);
+    };
+  }
+
   private getResponse = (
     peerId: PeerId,
     method: Method,
@@ -252,12 +305,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     // eslint-disable-next-line
     let responseTimer: NodeJS.Timeout;
     const sourcePromise = new Promise<AsyncIterable<IResponseChunk>>((resolve) => {
+      const abortHandler = (): void => clearTimeout(responseTimer);
       const responseListenerFn: ResponseCallbackFn = async (responseIter) => {
         clearTimeout(responseTimer);
+        signal?.removeEventListener("abort", abortHandler);
         resolve(responseIter);
       };
       responseTimer = this.responseListener.waitForResponse(this.config, requestId, responseListenerFn);
-      signal?.addEventListener("abort", () => clearTimeout(responseTimer), {once: true});
+      signal?.addEventListener("abort", abortHandler, {once: true});
       this.emit("request", peerId, method, requestId, request!);
     });
 
@@ -278,34 +333,13 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     try {
       return await pipe(
         this.sendRequestStream(peerId, method, encoding, requestId, body),
-        async (source: AsyncIterable<T>): Promise<T | null> => {
-          const responses = await all(source);
-          if (requestSingleChunk && responses.length === 0) {
-            // allow empty response for beacon blocks by range/root
-            this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
-              peer: peerId.toB58String(),
-            });
-            return null;
-          }
-          const finalResponse = requestSingleChunk ? responses[0] : responses;
-          this.logger.verbose(
-            `receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`,
-            {
-              requestId,
-              encoding,
-              body:
-                body !== undefined &&
-                body !== null &&
-                (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<
-                  object | unknown
-                >).toJson(body),
-            }
-          );
-          return requestOnly ? null : (finalResponse as T);
-        }
+        this.handleResponses<T>(peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
       );
     } catch (e) {
-      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {reason: e.message});
+      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
+        method,
+        reason: e.message,
+      });
       throw e;
     }
   }
@@ -330,11 +364,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
-      await pipe(
-        body !== null && body !== undefined ? [body] : [null],
-        eth2RequestEncode(config, logger, method, encoding),
-        conn.stream
-      );
+      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
       conn.stream.reset();
       yield* pipe(
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),

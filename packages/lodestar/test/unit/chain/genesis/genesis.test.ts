@@ -4,13 +4,12 @@ import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
-import {ErrorAborted} from "../../../../src/util/errors";
 
 chai.use(chaiAsPromised);
 
@@ -62,7 +61,8 @@ describe("genesis builder", function () {
     const eth1Provider: IEth1Provider = {
       deployBlock: events[0].blockNumber,
       getBlockNumber: async () => 2000,
-      getBlock: async (number) => blocks[number],
+      getBlockByNumber: async (number) => blocks[number],
+      getBlocksByNumber: async (numbers) => blocks.filter((b) => numbers.includes(b.blockNumber)),
       getDepositEvents: async (fromBlock, toBlock) =>
         events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= (toBlock || fromBlock)),
       validateContract: async () => {
@@ -91,7 +91,8 @@ describe("genesis builder", function () {
     const eth1Provider: IEth1Provider = {
       deployBlock: events[0].blockNumber,
       getBlockNumber: async () => 2000,
-      getBlock: async (number) => blocks[number],
+      getBlockByNumber: async (number) => blocks[number],
+      getBlocksByNumber: async (numbers) => blocks.filter((b) => numbers.includes(b.blockNumber)),
       getDepositEvents: async (fromBlock, toBlock) => {
         controller.abort();
         return events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= (toBlock || fromBlock));

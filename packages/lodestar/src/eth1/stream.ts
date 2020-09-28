@@ -6,7 +6,7 @@ import {AbortSignal} from "abort-controller";
 import {IBatchDepositEvents, IEth1Provider, IEth1StreamParams} from "./interface";
 import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
-import {sleep} from "../util/sleep";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 
 /**
@@ -55,7 +55,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
   while (true) {
     const [logs, block] = await Promise.all([
       provider.getDepositEvents(fromBlock, toBlock),
-      provider.getBlock(toBlock),
+      provider.getBlockByNumber(toBlock),
     ]);
     yield [logs, block];
 

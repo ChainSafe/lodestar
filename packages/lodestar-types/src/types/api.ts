@@ -10,6 +10,7 @@ import {
   ValidatorIndex,
   Root,
   Version,
+  Epoch,
 } from "./primitive";
 import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
 
@@ -67,4 +68,32 @@ export interface Genesis {
   genesisTime: Uint64;
   genesisValidatorsRoot: Root;
   genesisForkVersion: Version;
+}
+
+export interface ChainHead {
+  slot: Slot;
+  block: Root;
+  state: Root;
+  epochTransition: boolean;
+}
+
+export interface BlockEventPayload {
+  slot: Slot;
+  block: Root;
+}
+
+export interface FinalizedCheckpoint {
+  block: Root;
+  state: Root;
+  epoch: Epoch;
+}
+
+export interface ChainReorg {
+  slot: Slot;
+  depth: Number64;
+  oldHeadBlock: Root;
+  newHeadBlock: Root;
+  oldHeadState: Root;
+  newHeadState: Root;
+  epoch: Epoch;
 }
