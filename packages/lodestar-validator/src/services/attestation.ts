@@ -194,11 +194,13 @@ export class AttestationService {
     }
     try {
       await this.provider.validator.publishAttestation(attestation);
-      this.logger.info(
-        `Published new attestation for block ${toHexString(attestation.data.target.root)} ` +
-          `and committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`,
-        {validator: toHexString(duty.validatorPubkey)}
-      );
+      this.logger.info("Published new attestation", {
+        slot: attestation.data.slot,
+        committee: attestation.data.index,
+        attestation: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
+        block: toHexString(attestation.data.target.root),
+        validator: toHexString(duty.validatorPubkey),
+      });
     } catch (e) {
       this.logger.error("Failed to publish attestation", e);
     }

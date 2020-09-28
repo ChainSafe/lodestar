@@ -5,7 +5,6 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
-import {sleep} from "../util";
 import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -111,9 +110,6 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     }
     // to prevent sometime being updated prematurely
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    if (this.currentSlot + 1 !== getCurrentSlot(this.config, this.genesisTime)) {
-      await sleep(this.getDiffTillNextSlot());
-    }
     this.currentSlot++;
     this.newSlotCallbacks.forEach((cb) => {
       cb(this.currentSlot);
@@ -137,8 +133,9 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
    */
   private getDiffTillNextSlot(): number {
     if (this.genesisTime === undefined) throw Error("no genesisTime set");
-    const diffInSeconds = Math.floor(Date.now() / 1000 - this.genesisTime);
+    const milisecondsPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
+    const diffInMiliseconds = Date.now() - this.genesisTime * 1000;
     // update slot after remaining seconds until next slot
-    return (this.config.params.SECONDS_PER_SLOT - (diffInSeconds % this.config.params.SECONDS_PER_SLOT)) * 1000;
+    return milisecondsPerSlot - (diffInMiliseconds % milisecondsPerSlot);
   }
 }

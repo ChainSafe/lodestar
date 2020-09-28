@@ -460,6 +460,10 @@ export class ForkChoice implements IForkChoice {
     this.processAttestationQueue();
   }
 
+  public getTime(): Slot {
+    return this.fcStore.currentSlot;
+  }
+
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */

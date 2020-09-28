@@ -55,6 +55,7 @@ export async function processAttestation(
     logger.debug(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
     chain.emitter.emit("attestation", attestation);
   } catch (e) {
-    logger.warn("Failed to process attestation", {root: toHexString(attestationHash)});
+    logger.warn("Failed to process attestation", {root: toHexString(attestationHash), reason: e.message});
+    await db.attestation.remove(attestation);
   }
 }

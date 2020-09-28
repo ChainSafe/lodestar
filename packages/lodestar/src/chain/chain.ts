@@ -192,6 +192,7 @@ export class BeaconChain implements IBeaconChain {
       this.forkChoice,
       this.metrics,
       this.emitter,
+      this.clock,
       this.attestationProcessor
     );
     await this.blockProcessor.start();
@@ -450,6 +451,7 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockSlot = (slot: Slot): void => {
     this.forkChoice.updateTime(slot);
+    this.blockProcessor.onNewSlot(slot);
   };
 
   private onForkChoiceJustified = async (cp: Checkpoint): Promise<void> => {

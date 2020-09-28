@@ -80,6 +80,11 @@ export interface IForkChoice {
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void;
+
+  /**
+   * Returns current time slot.
+   */
+  getTime(): Slot;
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */

@@ -1,5 +1,5 @@
 import pushable from "it-pushable";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import pipe from "it-pipe";
 import abortable from "abortable-iterator";
@@ -17,12 +17,14 @@ import {IBeaconMetrics} from "../../metrics";
 import {IAttestationProcessor, IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {convertBlock} from "./convertBlock";
+import {IBeaconClock} from "../clock";
 
 export class BlockProcessor implements IService {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly db: IBeaconDb;
   private readonly forkChoice: IForkChoice;
+  private readonly clock: IBeaconClock;
   private readonly metrics: IBeaconMetrics;
   private readonly eventBus: ChainEventEmitter;
   private readonly attestationProcessor: IAttestationProcessor;
@@ -43,6 +45,7 @@ export class BlockProcessor implements IService {
     forkChoice: IForkChoice,
     metrics: IBeaconMetrics,
     eventBus: ChainEventEmitter,
+    clock: IBeaconClock,
     attestationProcessor: IAttestationProcessor
   ) {
     this.config = config;
@@ -51,6 +54,7 @@ export class BlockProcessor implements IService {
     this.forkChoice = forkChoice;
     this.metrics = metrics;
     this.eventBus = eventBus;
+    this.clock = clock;
     this.attestationProcessor = attestationProcessor;
     this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus, forkChoice);
   }
@@ -69,7 +73,7 @@ export class BlockProcessor implements IService {
       },
       convertBlock(this.config),
       validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
-      processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus),
+      processBlock(this.config, this.logger, this.db, this.forkChoice, this.pendingBlocks, this.eventBus, this.clock),
       postProcess(
         this.config,
         this.logger,
@@ -85,6 +89,10 @@ export class BlockProcessor implements IService {
   public async stop(): Promise<void> {
     this.controller.abort();
   }
+
+  public onNewSlot = (slot: Slot): void => {
+    this.pendingBlocks.onNewSlot(slot);
+  };
 
   public receiveBlock(block: SignedBeaconBlock, trusted = false, reprocess = false): void {
     this.blockProcessingSource.push({signedBlock: block, trusted, reprocess});
