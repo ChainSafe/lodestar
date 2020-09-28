@@ -156,7 +156,7 @@ export function validateBlocks(
  * @param chain
  * @param logger
  * @param isInitialSync
- * @param lastProcessedBlock only needed for initial sync
+ * @param lastProcessedBlock
  * @param trusted
  */
 export function processSyncBlocks(
@@ -164,14 +164,13 @@ export function processSyncBlocks(
   chain: IBeaconChain,
   logger: ILogger,
   isInitialSync: boolean,
-  lastProcessedBlock: ISyncCheckpoint | null,
+  lastProcessedBlock: ISyncCheckpoint,
   trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[] | null>) => Promise<Slot | null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
-    let headRoot = isInitialSync ? lastProcessedBlock?.blockRoot : null;
-    let headSlot = isInitialSync ? lastProcessedBlock!.slot : chain.forkChoice.getHead().slot;
+    let {slot: headSlot, blockRoot: headRoot} = lastProcessedBlock;
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry

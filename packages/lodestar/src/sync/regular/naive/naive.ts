@@ -13,7 +13,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {checkBestPeer, fetchBlockChunks, getBestPeer, processSyncBlocks} from "../../utils";
-import {ISlotRange} from "../../interface";
+import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
@@ -37,6 +37,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private gossipParentBlockRoot: Root | undefined;
   // only subscribe to gossip when we're up to this
   private controller!: AbortController;
+  /**
+   * The last processed block
+   */
+  private lastProcessedBlock!: ISyncCheckpoint;
 
   constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
     super();
@@ -49,7 +53,6 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("block", this.onProcessedBlock);
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
@@ -60,6 +63,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       return;
     }
     this.currentTarget = headSlot;
+    this.lastProcessedBlock = this.chain.forkChoice.getHead();
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
@@ -67,6 +71,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const newTarget = this.getNewTarget();
     this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
+    // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
+    this.chain.emitter.on("block", this.onProcessedBlock);
     await Promise.all([this.sync(), this.setTarget()]);
   }
 
@@ -107,7 +113,14 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
           `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
       );
-      this.setTarget();
+      // don't want to trigger another sync from other sources than regular sync
+      if (this.currentTarget === lastProcessedBlock.message.slot) {
+        this.lastProcessedBlock = {
+          slot: lastProcessedBlock.message.slot,
+          blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message),
+        };
+        this.setTarget();
+      }
     }
   };
 
@@ -135,18 +148,18 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private async sync(): Promise<void> {
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
-    const {getSyncPeers, setTarget, handleEmptyRange, handleFailedToGetRange} = this;
+    const {getSyncPeers, setTarget, handleEmptyRange, handleFailedToGetRange, getLastProcessedBlock} = this;
     await pipe(this.targetSlotRangeSource, (source) => {
       return (async function () {
         for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
           const lastFetchedSlot = await pipe(
             [range],
             fetchBlockChunks(logger, chain, reqResp, getSyncPeers, undefined, controller.signal),
-            processSyncBlocks(config, chain, logger, false, null)
+            processSyncBlocks(config, chain, logger, false, getLastProcessedBlock())
           );
           if (lastFetchedSlot) {
             // failed to fetch range
-            if (lastFetchedSlot === chain.forkChoice.getHead().slot) {
+            if (lastFetchedSlot === getLastProcessedBlock().slot) {
               handleFailedToGetRange(range);
             } else {
               // success, not trigger sync until after we process lastFetchedSlot
@@ -185,6 +198,13 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     // retry again
     this.setTarget(range.start - 1, false);
     this.setTarget();
+  };
+
+  /**
+   * Make sure we get up-to-date lastProcessedBlock from sync().
+   */
+  private getLastProcessedBlock = (): ISyncCheckpoint => {
+    return this.lastProcessedBlock;
   };
 
   /**

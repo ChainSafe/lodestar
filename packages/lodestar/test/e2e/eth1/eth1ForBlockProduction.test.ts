@@ -6,9 +6,9 @@ import leveldown from "leveldown";
 import {AbortController} from "abort-controller";
 import {WinstonLogger, LogLevel, sleep} from "@chainsafe/lodestar-utils";
 
-import {Eth1ForBlockProduction} from "../../../src/eth1";
+import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getMedallaConfig, medalla} from "./util";
+import {getMedallaConfig, medalla} from "../../utils/medalla";
 import {BeaconDb, LevelDbController} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
@@ -36,6 +36,7 @@ describe("eth1 / Eth1Provider", function () {
 
   const config = getMedallaConfig();
   const logger = new WinstonLogger({level: LogLevel.verbose});
+  const eth1Provider = new Eth1Provider(config, eth1Options);
 
   let db: BeaconDb;
   let dbController: LevelDbController;
@@ -65,6 +66,7 @@ describe("eth1 / Eth1Provider", function () {
     const eth1ForBlockProduction = new Eth1ForBlockProduction({
       config,
       db,
+      eth1Provider,
       logger,
       opts: eth1Options,
       signal: controller.signal,

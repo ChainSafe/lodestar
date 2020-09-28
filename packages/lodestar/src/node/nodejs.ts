@@ -76,11 +76,10 @@ export class BeaconNode {
         logger: this.logger.child(this.conf.logger.db),
       }),
     });
-    const eth1Provider = new Eth1Provider(config, this.conf.eth1);
     this.chain = new BeaconChain(this.conf.chain, {
       config,
       db: this.db,
-      eth1Provider,
+      eth1Provider: new Eth1Provider(config, this.conf.eth1),
       logger: logger.child(this.conf.logger.chain),
       metrics: this.metrics,
     });
@@ -138,6 +137,7 @@ export class BeaconNode {
         ? new Eth1ForBlockProduction({
             config: this.config,
             db: this.db,
+            eth1Provider: new Eth1Provider(this.config, this.conf.eth1),
             logger: this.logger.child(this.conf.logger.eth1),
             opts: this.conf.eth1,
             signal: this.controller.signal,
