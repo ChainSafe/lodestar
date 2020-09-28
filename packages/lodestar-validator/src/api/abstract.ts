@@ -5,7 +5,6 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
-import {sleep} from "../util";
 import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
