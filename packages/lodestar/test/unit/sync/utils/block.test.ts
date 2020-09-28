@@ -32,7 +32,7 @@ describe("sync - block utils", function () {
         .withArgs(sinon.match(peers[0]).or(sinon.match(peers[1])), sinon.match.any)
         .resolves([generateEmptySignedBlock(), generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blocks = await getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
-      expect(blocks.length).to.be.equal(3);
+      expect(blocks?.length).to.be.equal(3);
     });
 
     it("refetch failed chunks", async function () {
@@ -45,7 +45,7 @@ describe("sync - block utils", function () {
       const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       await timer.tickAsync(1000);
       const blocks = await blockPromise;
-      expect(blocks.length).to.be.equal(2);
+      expect(blocks?.length).to.be.equal(2);
       timer.reset();
     });
 
@@ -54,7 +54,7 @@ describe("sync - block utils", function () {
       const peers: PeerId[] = [peer1];
       rpcStub.beaconBlocksByRange.resolves([]);
       const blocks = await getBlockRange(logger, rpcStub, peers, {start: 4, end: 4}, 2);
-      expect(blocks.length).to.be.equal(0);
+      expect(blocks?.length).to.be.equal(0);
     });
   });
 
