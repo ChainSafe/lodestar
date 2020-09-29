@@ -37,7 +37,16 @@ describe("gossip block validation", function () {
     verifySignatureStub.restore();
   });
 
-  it("block slot is finalized", async function () {
+  it("should ignore - block is from the future", async function () {
+    const block = generateSignedBlock();
+    // TODO: finish this
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    expect(result).to.equal(ExtendedValidatorResult.ignore);
+    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
+    expect(chainStub.getGenesisTime.notCalled).to.be.true;
+  });
+
+  it("should ignore - block slot is finalized", async function () {
     const block = generateSignedBlock();
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 1,
@@ -49,7 +58,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
   });
 
-  it("bad block", async function () {
+  it("should reject - bad block", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -65,7 +74,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getCanonicalBlockAtSlot.notCalled).to.be.true;
   });
 
-  it("already proposed", async function () {
+  it("should ignore - already proposed", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -85,7 +94,7 @@ describe("gossip block validation", function () {
     expect(getBlockContextStub.notCalled).to.be.true;
   });
 
-  it("missing parent", async function () {
+  it("should ignore - missing parent", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -105,7 +114,7 @@ describe("gossip block validation", function () {
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
-  it("invalid signature", async function () {
+  it("should reject - invalid signature", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -130,7 +139,7 @@ describe("gossip block validation", function () {
     expect(verifySignatureStub.calledOnce).to.be.true;
   });
 
-  it("wrong proposer", async function () {
+  it("should reject - wrong proposer", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -187,7 +196,7 @@ describe("gossip block validation", function () {
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
   });
 
-  it("valid block", async function () {
+  it("should accept - valid block", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
