@@ -31,6 +31,7 @@ export function postProcess(
     return (async function () {
       for await (const {block, preStateContext, postStateContext, finalized} of source) {
         await db.processBlockOperations(block);
+        emitVoluntaryExitEvents(eventBus, block);
         if (!finalized) {
           await attestationProcessor.receiveBlock(block);
         }
@@ -80,4 +81,13 @@ function newFinalizedEpoch(
     ${toHexString(state.finalizedCheckpoint.root)}!`);
   metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
   eventBus.emit("finalized", state.finalizedCheckpoint);
+}
+
+function emitVoluntaryExitEvents(
+    eventBus: ChainEventEmitter,
+    block: SignedBeaconBlock
+): void {
+  block.message.body.voluntaryExits.forEach((exit) => {
+    eventBus.emit("voluntaryExit", exit);
+  })
 }
