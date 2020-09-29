@@ -48,7 +48,7 @@ export async function getBlockRange(
   range: ISlotRange,
   blocksPerChunk?: number,
   maxRetry = 6
-): Promise<SignedBeaconBlock[]> {
+): Promise<SignedBeaconBlock[] | null> {
   const totalBlocks = range.end - range.start;
   blocksPerChunk = blocksPerChunk || Math.ceil(totalBlocks / peers.length);
   if (blocksPerChunk < 5) {
@@ -83,8 +83,9 @@ export async function getBlockRange(
       )
     ).filter(notNullish);
     retry++;
-    if (retry > maxRetry || retry > peers.length) {
+    if ((retry > maxRetry || retry > peers.length) && chunks.length > 0) {
       logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
+      return null;
     }
   }
   return sortBlocks(blocks);

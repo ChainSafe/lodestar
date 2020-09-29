@@ -30,6 +30,7 @@ import {generatePeer} from "../../../utils/peer";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import {silentLogger} from "../../../utils/logger";
+import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
 
 describe("sync utils", function () {
   const logger = silentLogger;
@@ -301,18 +302,22 @@ describe("sync utils", function () {
     let networkStub: SinonStubbedInstance<INetwork>;
     let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
     let metastoreStub: SinonStubbedInstance<IPeerMetadataStore>;
+    let peerScoreStub: SinonStubbedInstance<IRpcScoreTracker>;
 
     beforeEach(() => {
       metastoreStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
       networkStub = sinon.createStubInstance(Libp2pNetwork);
       networkStub.peerMetadata = metastoreStub;
       forkChoiceStub = sinon.createStubInstance(ForkChoice) as SinonStubbedInstance<ForkChoice> & ForkChoice;
+      peerScoreStub = sinon.createStubInstance(SimpleRpcScoreTracker);
+      networkStub.peerRpcScores = peerScoreStub;
     });
     afterEach(() => {
       sinon.restore();
     });
     it("should return false, no peer", function () {
-      expect(checkBestPeer(null!, null!, null!)).to.be.false;
+      networkStub.getPeers.returns([]);
+      expect(checkBestPeer(null!, forkChoiceStub, networkStub)).to.be.false;
     });
 
     it("peer is disconnected", async function () {
@@ -331,6 +336,17 @@ describe("sync utils", function () {
       expect(forkChoiceStub.getHead.calledOnce).to.be.false;
     });
 
+    it("not enough peer score", async function () {
+      const peer1 = await PeerId.create();
+      networkStub.getPeers.returns([generatePeer(peer1)]);
+      forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
+      peerScoreStub.getScore.returns(20);
+      expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
+      expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(peerScoreStub.getScore.calledOnce).to.be.true;
+      expect(forkChoiceStub.getHead.calledOnce).to.be.false;
+    });
+
     it("peer head slot is not better than us", async function () {
       const peer1 = await PeerId.create();
       networkStub.getPeers.returns([generatePeer(peer1)]);
@@ -342,8 +358,10 @@ describe("sync utils", function () {
         headSlot: 10,
       });
       forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
+      peerScoreStub.getScore.returns(150);
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.false;
       expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(peerScoreStub.getScore.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
 
@@ -357,9 +375,11 @@ describe("sync utils", function () {
         headRoot: ZERO_HASH,
         headSlot: 30,
       });
+      peerScoreStub.getScore.returns(150);
       forkChoiceStub.getHead.returns(generateBlockSummary({slot: 20}));
       expect(checkBestPeer(peer1, forkChoiceStub, networkStub)).to.be.true;
       expect(networkStub.getPeers.calledOnce).to.be.true;
+      expect(peerScoreStub.getScore.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
     });
   });

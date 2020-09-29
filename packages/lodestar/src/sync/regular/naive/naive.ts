@@ -109,10 +109,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       if (await this.checkSyncComplete()) {
         return;
       }
-      this.logger.info(
-        `Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} ` +
-          `gossipParentBlockRoot=${this.gossipParentBlockRoot && toHexString(this.gossipParentBlockRoot)}`
-      );
+      this.logger.info(`Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} `, {
+        currentSlot: this.chain.clock.currentSlot,
+        gossipParentBlockRoot: this.gossipParentBlockRoot ? toHexString(this.gossipParentBlockRoot) : "undefined",
+      });
       // don't want to trigger another sync from other sources than regular sync
       if (this.currentTarget === lastProcessedBlock.message.slot) {
         this.lastProcessedBlock = {
@@ -229,7 +229,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
-        this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()} with head slot ${peerHeadSlot}`);
+        this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()}`, {
+          peerHeadSlot,
+          currentSlot: this.chain.clock.currentSlot,
+        });
       } else {
         // continue to find best peer
         this.bestPeer = undefined;
