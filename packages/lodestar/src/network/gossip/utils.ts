@@ -75,8 +75,17 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
   };
 }
 
+/**
+ * ETH2 spec defines the message ID as:
+ * ```
+ * message-id: SHA256(message.data)[:8]
+ * ```
+ * Spec v0.12.3
+ */
 export function getMessageId(rawMessage: Message): string {
-  return Buffer.from(hash(rawMessage.data || ZERO_HASH)).toString("base64");
+  return Buffer.from(hash(rawMessage.data || ZERO_HASH))
+    .slice(0, 8)
+    .toString("hex");
 }
 
 export async function getBlockStateContext(
