@@ -209,6 +209,7 @@ export class BeaconSync implements IBeaconSync {
       try {
         const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
         if (blocks && blocks[0]) {
+          this.logger.verbose(`Fould block ${blocks[0].message.slot} for root ${toHexString(root)}`);
           return await this.chain.receiveBlock(blocks[0]);
         }
       } catch (e) {
