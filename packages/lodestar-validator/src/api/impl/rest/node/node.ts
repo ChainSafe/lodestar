@@ -11,7 +11,7 @@ export class RestNodeApi implements INodeApi {
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "/v1/node")}, {logger});
+    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/node")}, {logger});
     this.config = config;
   }
 

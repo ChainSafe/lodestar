@@ -3,7 +3,7 @@ import {objectToExpectedCase} from "@chainsafe/lodestar-utils/lib/misc";
 import {DefaultQuery} from "fastify";
 
 export const getPeer: ApiController<DefaultQuery, {peerId: string}> = {
-  url: "/v1/node/peers/:peerId",
+  url: "/peers/:peerId",
   opts: {
     schema: {
       params: {

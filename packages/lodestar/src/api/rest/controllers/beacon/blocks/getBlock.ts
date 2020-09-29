@@ -3,7 +3,7 @@ import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
 export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
-  url: "/v1/beacon/blocks/:blockId",
+  url: "/blocks/:blockId",
 
   handler: async function (req, resp) {
     try {

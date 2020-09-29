@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getGenesis: ApiController = {
-  url: "/v1/beacon/genesis",
+  url: "/genesis",
 
   handler: async function (req, resp) {
     const genesis = await this.api.beacon.getGenesis();

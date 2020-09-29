@@ -5,7 +5,7 @@ import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
 export const getStateFinalityCheckpoints: ApiController<DefaultQuery, {stateId: string}> = {
-  url: "/v1/beacon/state/:stateId/finality_checkpoints",
+  url: "/state/:stateId/finality_checkpoints",
 
   handler: async function (req, resp) {
     try {
