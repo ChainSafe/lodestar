@@ -83,11 +83,8 @@ function newFinalizedEpoch(
   eventBus.emit("finalized", state.finalizedCheckpoint);
 }
 
-function emitVoluntaryExitEvents(
-    eventBus: ChainEventEmitter,
-    block: SignedBeaconBlock
-): void {
+function emitVoluntaryExitEvents(eventBus: ChainEventEmitter, block: SignedBeaconBlock): void {
   block.message.body.voluntaryExits.forEach((exit) => {
     eventBus.emit("voluntaryExit", exit);
-  })
+  });
 }
