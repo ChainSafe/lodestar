@@ -6,6 +6,10 @@ export function defaultErrorToJson(obj: Error): Json {
   return errObj;
 }
 
+interface ICustomError extends Error {
+  toJson?: () => Json;
+}
+
 export function toJson(obj: unknown): Json {
   if (obj == null) {
     return null;
@@ -16,9 +20,7 @@ export function toJson(obj: unknown): Json {
   } else if (obj instanceof Uint8Array) {
     return toHexString(obj);
   } else if (obj instanceof Error) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((obj as any).toJson) return (obj as any).toJson();
-    return defaultErrorToJson(obj);
+    return (obj as ICustomError).toJson?.() ?? defaultErrorToJson(obj);
   } else if (Array.isArray(obj)) {
     return obj.map(toJson);
   } else if (typeof obj === "object") {
