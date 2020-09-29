@@ -70,15 +70,6 @@ export async function validateGossipBlock(
     return ExtendedValidatorResult.ignore;
   }
 
-  if (chain.forkChoice.getAncestor(blockRoot, finalizedSlot) !== finalizedCheckpoint.root) {
-    logger.warn("Rejecting gossip block", {
-      reason: "finalized checkpoint not an ancestor of block",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
-    return ExtendedValidatorResult.reject;
-  }
-
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     logger.warn("Rejecting gossip block", {
       reason: "invalid signature",
@@ -91,6 +82,16 @@ export async function validateGossipBlock(
   if (!isExpectedProposer(blockContext.epochCtx, block.message)) {
     logger.warn("Rejecting gossip block", {
       reason: "wrong proposer",
+      blockSlot,
+      blockRoot: toHexString(blockRoot),
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  if (
+    toHexString(await chain.forkChoice.getAncestor(blockRoot, finalizedSlot)) !== toHexString(finalizedCheckpoint.root)
+  ) {
+    logger.warn("Rejecting gossip block", {
+      reason: "finalized checkpoint not an ancestor of block",
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });

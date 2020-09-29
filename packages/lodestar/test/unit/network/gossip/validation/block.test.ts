@@ -158,6 +158,35 @@ describe("gossip block validation", function () {
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
   });
 
+  it("should reject - finalized checkpoint not an ancestor of block", async function () {
+    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    const block = generateSignedBlock({message: {slot: 1}});
+    chainStub.getFinalizedCheckpoint.resolves({
+      epoch: 0,
+      root: Buffer.alloc(32),
+    });
+    dbStub.badBlock.has.resolves(false);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
+    const epochCtxStub = sinon.createStubInstance(EpochContext);
+    getBlockContextStub.resolves({
+      state: generateState(),
+      epochCtx: epochCtxStub,
+    });
+    verifySignatureStub.returns(true);
+    epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+    forkChoiceStub.getAncestor.resolves(Buffer.alloc(33));
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    expect(result).to.equal(ExtendedValidatorResult.reject);
+    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
+    expect(chainStub.getGenesisTime.calledOnce).to.be.true;
+    expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
+    expect(chainStub.getCanonicalBlockAtSlot.withArgs(block.message.slot).calledOnce).to.be.true;
+    expect(getBlockContextStub.calledOnce).to.be.true;
+    expect(chainStub.receiveBlock.calledOnce).to.be.false;
+    expect(verifySignatureStub.calledOnce).to.be.true;
+    expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
+  });
+
   it("valid block", async function () {
     chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
     const block = generateSignedBlock({message: {slot: 1}});
@@ -174,6 +203,7 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+    forkChoiceStub.getAncestor.resolves(Buffer.alloc(32));
     const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
