@@ -22,6 +22,7 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     HYSTERESIS_DOWNWARD_MULTIPLIER: Number64,
     HYSTERESIS_UPWARD_MULTIPLIER: Number64,
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: Number64,
+    PROPORTIONAL_SLASHING_MULTIPLIER: Number64,
 
     // Fork choice
     SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
