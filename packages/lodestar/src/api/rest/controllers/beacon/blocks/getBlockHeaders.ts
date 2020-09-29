@@ -2,7 +2,7 @@ import {Root, Slot} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
 export const getBlockHeaders: ApiController<{slot?: string | number; parent_root?: string}> = {
-  url: "/v1/beacon/headers",
+  url: "/headers",
 
   handler: async function (req, resp) {
     let slot: Slot | undefined;

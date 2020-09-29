@@ -11,6 +11,8 @@ import {generateEmptySignedBlock} from "../../../../utils/block";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 
+export const BEACON_PREFIX = "/eth/v1/beacon";
+
 describe("Test beacon rest api", function () {
   this.timeout(10000);
 

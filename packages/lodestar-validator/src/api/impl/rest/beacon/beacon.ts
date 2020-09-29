@@ -24,7 +24,7 @@ export class RestBeaconApi implements IBeaconApi {
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
-    this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/v1/beacon")}, {logger});
+    this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/beacon")}, {logger});
     this.logger = logger;
     this.config = config;
   }

@@ -2,7 +2,7 @@ import {ApiController} from "../types";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils/lib/misc";
 
 export const getNetworkIdentity: ApiController = {
-  url: "/v1/node/identity",
+  url: "/identity",
   opts: {
     schema: {},
   },

@@ -2,7 +2,7 @@
 import {ApiController} from "../../types";
 
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
-  url: "/v1/beacon/pool/attestations",
+  url: "/pool/attestations",
 
   handler: async function (req, resp) {
     const attestations = await this.api.beacon.pool.getAttestations({

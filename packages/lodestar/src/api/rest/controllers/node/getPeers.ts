@@ -2,7 +2,7 @@ import {ApiController} from "../types";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils/lib/misc";
 
 export const getPeers: ApiController = {
-  url: "/v1/node/peers",
+  url: "/peers",
   opts: {
     schema: {},
   },
