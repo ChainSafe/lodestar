@@ -1,12 +1,13 @@
 import {expect} from "chai";
-import sinon from "sinon";
 import supertest from "supertest";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {getPeer} from "../../../../../src/api/rest/controllers/node";
+import {getHealth, getPeer} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
+import {urlJoin} from "../utils";
+import {NODE_PREFIX} from "./index";
 
 describe("rest - node - getPeer", function () {
   let restApi: RestApi;
@@ -43,7 +44,7 @@ describe("rest - node - getPeer", function () {
       state: "connected",
     });
     const response = await supertest(restApi.server.server)
-      .get(getPeer.url.replace(":peerId", "16"))
+      .get(urlJoin(NODE_PREFIX, getPeer.url.replace(":peerId", "16")))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
@@ -53,6 +54,8 @@ describe("rest - node - getPeer", function () {
 
   it("peer not found", async function () {
     api.node.getPeer.resolves(null);
-    await supertest(restApi.server.server).get(getPeer.url.replace(":peerId", "16")).expect(404);
+    await supertest(restApi.server.server)
+        .get(urlJoin(NODE_PREFIX, getPeer.url.replace(":peerId", "16")))
+        .expect(404);
   });
 });

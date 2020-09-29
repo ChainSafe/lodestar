@@ -7,6 +7,8 @@ import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
+import {urlJoin} from "../utils";
+import {BEACON_PREFIX} from "./index.test";
 
 describe("rest - beacon - getGenesis", function () {
   let restApi: RestApi, api: StubbedApi;
@@ -37,7 +39,7 @@ describe("rest - beacon - getGenesis", function () {
       genesisValidatorsRoot: Buffer.alloc(32),
     });
     const response = await supertest(restApi.server.server)
-      .get(getGenesis.url)
+      .get(urlJoin(BEACON_PREFIX, getGenesis.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
@@ -47,6 +49,6 @@ describe("rest - beacon - getGenesis", function () {
 
   it("should return 404 if no genesis", async function () {
     api.beacon.getGenesis.resolves(null);
-    await supertest(restApi.server.server).get(getGenesis.url).expect(404);
+    await supertest(restApi.server.server).get(urlJoin(BEACON_PREFIX, getGenesis.url)).expect(404);
   });
 });

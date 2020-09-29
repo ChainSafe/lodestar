@@ -71,7 +71,7 @@ describe("rest - events - getEventStream", function () {
   function getEventStreamUrl(topics: BeaconEventType[]): string {
     const addressInfo = restApi.server.server.address() as AddressInfo;
     return new URL(
-      "/v1/events?" + topics.map((t) => "topics=" + t).join("&"),
+      "/eth/v1/events?" + topics.map((t) => "topics=" + t).join("&"),
       "http://" + addressInfo.address + ":" + addressInfo.port
     ).toString();
   }

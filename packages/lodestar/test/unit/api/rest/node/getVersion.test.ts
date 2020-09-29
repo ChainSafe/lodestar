@@ -4,9 +4,11 @@ import supertest from "supertest";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {getVersion} from "../../../../../src/api/rest/controllers/node";
+import {getHealth, getVersion} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
+import {urlJoin} from "../utils";
+import {NODE_PREFIX} from "./index";
 
 describe("rest - node - getVersion", function () {
   let restApi: RestApi;
@@ -37,7 +39,7 @@ describe("rest - node - getVersion", function () {
   it("should succeed", async function () {
     api.node.getVersion.resolves("test");
     const response = await supertest(restApi.server.server)
-      .get(getVersion.url)
+      .get(urlJoin(NODE_PREFIX, getVersion.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
