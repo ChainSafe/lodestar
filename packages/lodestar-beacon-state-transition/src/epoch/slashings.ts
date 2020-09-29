@@ -16,18 +16,17 @@ export function processSlashings(config: IBeaconConfig, state: BeaconState): voi
   const currentEpoch = getCurrentEpoch(config, state);
   const totalBalance = getTotalActiveBalance(config, state);
   const totalSlashings = Array.from(state.slashings).reduce((a, b) => a + b, BigInt(0));
-  const slashingMultiplier = bigIntMin(totalSlashings * BigInt(3), totalBalance);
+  const proportionalSlashingMultiplier = BigInt(config.params.PROPORTIONAL_SLASHING_MULTIPLIER);
+  const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * proportionalSlashingMultiplier, totalBalance);
+  const increment = BigInt(config.params.EFFECTIVE_BALANCE_INCREMENT);
 
   state.validators.forEach((validator, index) => {
     if (
       validator.slashed &&
       currentEpoch + intDiv(config.params.EPOCHS_PER_SLASHINGS_VECTOR, 2) === validator.withdrawableEpoch
     ) {
-      const penalty =
-        (((validator.effectiveBalance / config.params.EFFECTIVE_BALANCE_INCREMENT) * slashingMultiplier) /
-          totalBalance) *
-        config.params.EFFECTIVE_BALANCE_INCREMENT;
-
+      const penaltyNumerator = (validator.effectiveBalance / increment) * adjustedTotalSlashingBalance;
+      const penalty = (penaltyNumerator / totalBalance) * increment;
       decreaseBalance(state, index, penalty);
     }
   });
