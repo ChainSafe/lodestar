@@ -1,4 +1,5 @@
 import {format} from "winston";
+import {toJson} from "../json";
 import {Context} from "./interface";
 
 export const defaultLogFormat = format.combine(
@@ -23,7 +24,12 @@ export const defaultLogFormat = format.combine(
 export function serializeContext(context?: Context | Error): string {
   if (!context) return "";
   if (context instanceof Error) {
-    return "Error: " + context.message + "\n" + context.stack;
+    const errObj = toJson(context);
+    if (errObj != null && typeof errObj === "object" && !Array.isArray(errObj)) {
+      delete errObj["message"];
+      delete errObj["stack"];
+    }
+    return serializeContext(errObj) + "\n" + context.stack;
   }
   if (typeof context === "string") return context;
   if (typeof context === "number" || typeof context === "boolean" || Array.isArray(context))

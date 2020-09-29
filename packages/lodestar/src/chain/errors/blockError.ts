@@ -1,4 +1,6 @@
+import {Json} from "@chainsafe/ssz";
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {toJson} from "@chainsafe/lodestar-utils";
 
 import {IBlockProcessJob} from "../interface";
 
@@ -154,5 +156,9 @@ export class BlockError extends Error {
     super(type.code);
     this.job = job;
     this.type = type;
+  }
+
+  toJson(): Json {
+    return toJson(this.type);
   }
 }

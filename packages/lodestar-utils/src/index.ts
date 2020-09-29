@@ -8,3 +8,4 @@ export * from "./sleep";
 export * from "./sort";
 export * from "./logger";
 export * from "./verifyMerkleBranch";
+export * from "./json";
