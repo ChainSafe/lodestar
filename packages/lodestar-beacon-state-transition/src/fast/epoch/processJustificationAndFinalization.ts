@@ -13,6 +13,8 @@ export function processJustificationAndFinalization(
   const previousEpoch = process.prevEpoch;
   const currentEpoch = process.currentEpoch;
 
+  // Initial FFG checkpoint values have a `0x00` stub for `root`.
+  // Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
   if (currentEpoch <= GENESIS_EPOCH + 1) {
     return;
   }
