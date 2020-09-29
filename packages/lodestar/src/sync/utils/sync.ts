@@ -3,7 +3,7 @@ import {AbortSignal} from "abort-controller";
 import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getStatusProtocols, getSyncProtocols, INetwork, IReqResp} from "../../network";
+import {getStatusProtocols, INetwork, IReqResp} from "../../network";
 import {ISlotRange, ISyncCheckpoint} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -13,6 +13,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
+import {getSyncPeers} from "./peers";
 
 export function getHighestCommonSlot(peerStatuses: (Status | null)[]): Slot {
   const slotStatuses = peerStatuses.reduce<Map<Slot, number>>((current, status) => {
@@ -266,16 +267,13 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStor
  * Check if a peer is good to be a best peer.
  */
 export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: INetwork): boolean {
-  if (!peer) return false;
-  if (
-    !network
-      .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
-      .map((peer) => peer.id)
-      .includes(peer)
-  )
-    return false;
-  const status = network.peerMetadata.getStatus(peer);
-  if (!status) return false;
-  const headSlot = forkChoice.getHead().slot;
-  return (status?.headSlot ?? 0) > headSlot;
+  return getSyncPeers(
+    network,
+    (peer) => {
+      const status = network.peerMetadata.getStatus(peer);
+      return !!status && status.headSlot > forkChoice.getHead().slot;
+    },
+    10,
+    100
+  ).includes(peer);
 }

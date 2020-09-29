@@ -6,7 +6,6 @@ import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-
 import {ExtendedValidatorResult} from "../constants";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../constants";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getBlockStateContext} from "../utils";
 
@@ -32,6 +31,7 @@ export async function validateGossipBlock(
     });
     return ExtendedValidatorResult.ignore;
   }
+
   //if slot is in future, wait for it's time before resuming
   //this won't fix block queue since it could resume before we synced to this slot and
   // fail with missing parent state/block
@@ -102,7 +102,7 @@ export async function validateGossipBlock(
 
 export async function waitForBlockSlot(config: IBeaconConfig, genesisTime: Number64, blockSlot: Slot): Promise<void> {
   const blockTime = (genesisTime + blockSlot * config.params.SECONDS_PER_SLOT) * 1000;
-  const currentTime = Date.now() + MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  const currentTime = Date.now();
   const tolerance = blockTime - currentTime;
   if (tolerance > 0) {
     await sleep(tolerance);

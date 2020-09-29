@@ -9,13 +9,18 @@ export * from "./beacon";
 export * from "./validator";
 
 export function registerRoutes(server: FastifyInstance, enabledNamespaces: ApiNamespace[]): void {
-  if (enabledNamespaces.includes(ApiNamespace.BEACON)) {
-    registerBeaconRoutes(server);
-  }
-  if (enabledNamespaces.includes(ApiNamespace.NODE)) {
-    registerNodeRoutes(server);
-  }
-  if (enabledNamespaces.includes(ApiNamespace.EVENTS)) {
-    registerEventsRoutes(server);
-  }
+  server.register(
+    async function (fastify) {
+      if (enabledNamespaces.includes(ApiNamespace.BEACON)) {
+        registerBeaconRoutes(fastify);
+      }
+      if (enabledNamespaces.includes(ApiNamespace.NODE)) {
+        registerNodeRoutes(fastify);
+      }
+      if (enabledNamespaces.includes(ApiNamespace.EVENTS)) {
+        registerEventsRoutes(fastify);
+      }
+    },
+    {prefix: "/eth"}
+  );
 }

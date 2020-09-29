@@ -7,6 +7,9 @@ import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getNetworkIdentity} from "../../../../../src/api/rest/controllers/node/getNetworkIdentity";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
+import {urlJoin} from "../utils";
+import {NODE_PREFIX} from "./index";
+import {getHealth} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getNetworkIdentity", function () {
   let restApi: RestApi;
@@ -46,7 +49,7 @@ describe("rest - node - getNetworkIdentity", function () {
       discoveryAddresses: ["/ip4/127.0.0.1/tcp/36000"],
     });
     const response = await supertest(restApi.server.server)
-      .get(getNetworkIdentity.url)
+      .get(urlJoin(NODE_PREFIX, getNetworkIdentity.url))
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;

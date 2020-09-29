@@ -6,6 +6,10 @@ import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getHealth} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
+import {urlJoin} from "../utils";
+import {BEACON_PREFIX} from "../beacon/index.test";
+import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
+import {NODE_PREFIX} from "./index";
 
 describe("rest - node - getHealth", function () {
   let restApi: RestApi;
@@ -35,16 +39,16 @@ describe("rest - node - getHealth", function () {
 
   it("ready", async function () {
     api.node.getNodeStatus.resolves("ready");
-    await supertest(restApi.server.server).get(getHealth.url).expect(200);
+    await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(200);
   });
 
   it("syncing", async function () {
     api.node.getNodeStatus.resolves("syncing");
-    await supertest(restApi.server.server).get(getHealth.url).expect(206);
+    await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(206);
   });
 
   it("error", async function () {
     api.node.getNodeStatus.resolves("error");
-    await supertest(restApi.server.server).get(getHealth.url).expect(503);
+    await supertest(restApi.server.server).get(urlJoin(NODE_PREFIX, getHealth.url)).expect(503);
   });
 });

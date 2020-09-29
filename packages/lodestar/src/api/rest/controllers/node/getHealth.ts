@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 
 export const getHealth: ApiController = {
-  url: "/v1/node/health",
+  url: "/health",
   opts: {
     schema: {},
   },

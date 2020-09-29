@@ -174,7 +174,7 @@ export class ForkChoiceError extends Error {
   type: ForkChoiceErrorType;
 
   constructor(type: ForkChoiceErrorType) {
-    super();
+    super(type.code + " " + JSON.stringify(type));
     this.type = type;
   }
 }
