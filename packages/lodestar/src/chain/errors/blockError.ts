@@ -159,6 +159,9 @@ export class BlockError extends Error {
   }
 
   toJson(): Json {
-    return toJson(this.type);
+    const obj = toJson(this.type) as Record<string, Json>;
+    obj.message = this.message;
+    if (this.stack) obj.stack = this.stack;
+    return obj;
   }
 }
