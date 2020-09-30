@@ -37,15 +37,6 @@ describe("gossip block validation", function () {
     verifySignatureStub.restore();
   });
 
-  it("should ignore - block is from the future", async function () {
-    const block = generateSignedBlock();
-    // TODO: finish this
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
-    expect(result).to.equal(ExtendedValidatorResult.ignore);
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(chainStub.getGenesisTime.notCalled).to.be.true;
-  });
-
   it("should ignore - block slot is finalized", async function () {
     const block = generateSignedBlock();
     chainStub.getFinalizedCheckpoint.resolves({
