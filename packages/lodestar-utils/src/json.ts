@@ -34,5 +34,5 @@ export function toJson(obj: unknown): Json {
     Object.entries(obj as object).forEach(([k, v]) => (jsonObj[k] = toJson(v)));
     return jsonObj;
   }
-  throw new Error("Unable to convert unknown to json");
+  throw new Error("Unable to convert unknown to json: " + obj);
 }
