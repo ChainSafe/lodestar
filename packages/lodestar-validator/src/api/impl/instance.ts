@@ -4,7 +4,7 @@ import {IValidatorApi} from "../interface/validators";
 import {IBeaconApi} from "../interface/beacon";
 import {INodeApi} from "../interface/node";
 import {WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
-import {IEventsApi} from "@chainsafe/lodestar/lib/api/impl/events";
+import {IEventsApi} from "../interface/events";
 
 export interface IApiClientOverInstanceOpts {
   config: IBeaconConfig;

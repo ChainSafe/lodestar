@@ -7,8 +7,8 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RestNodeApi} from "./node/node";
 import {INodeApi} from "../../interface/node";
-import {IEventsApi} from "@chainsafe/lodestar/lib/api/impl/events";
 import {RestEventsApi} from "./events/events";
+import {IEventsApi} from "../../interface/events";
 
 export class ApiClientOverRest extends AbstractApiClient {
   public beacon: IBeaconApi;

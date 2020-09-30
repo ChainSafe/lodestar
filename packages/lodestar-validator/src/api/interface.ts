@@ -4,7 +4,7 @@ import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
-import {IEventsApi} from "@chainsafe/lodestar/lib/api/impl/events";
+import {IEventsApi} from "./interface/events";
 
 export interface INewSlotCallback {
   (slot: Slot): void;

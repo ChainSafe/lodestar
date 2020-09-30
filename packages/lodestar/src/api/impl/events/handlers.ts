@@ -1,5 +1,5 @@
 import {IChainEvents} from "../../../chain";
-import {BeaconEvent, BeaconEventType} from "./types";
+import {BeaconEventType, BeaconEvent} from "./types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 

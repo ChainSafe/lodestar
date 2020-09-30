@@ -7,7 +7,7 @@ import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IEventsApi} from "@chainsafe/lodestar/lib/api/impl/events";
+import {IEventsApi} from "./interface/events";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {

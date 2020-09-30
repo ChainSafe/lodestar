@@ -1,7 +1,11 @@
 import {EventIterator} from "event-iterator";
 import {EventIteratorOptions, ListenHandler} from "event-iterator/src/event-iterator";
 
-export class LodestarEventIterator<T> implements AsyncIterable<T> {
+export interface IStoppableEventIterable<T> extends AsyncIterable<T> {
+  stop(): void;
+}
+
+export class LodestarEventIterator<T> implements IStoppableEventIterable<T> {
   public [Symbol.asyncIterator]: () => AsyncIterator<T>;
   private stopCallback?: () => void;
 

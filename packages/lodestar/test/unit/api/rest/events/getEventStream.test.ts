@@ -8,10 +8,10 @@ import {ApiNamespace} from "../../../../../src/api/impl";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {silentLogger} from "../../../../utils/logger";
 import pushable from "it-pushable/index";
-import {LodestarEventIterator} from "../../../../../src/util/events";
 import {generateAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {AddressInfo} from "net";
+import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 describe("rest - events - getEventStream", function () {
   let restApi: RestApi, api: StubbedApi;

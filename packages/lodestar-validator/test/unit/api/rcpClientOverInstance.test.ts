@@ -6,6 +6,7 @@ import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
 import {MockValidatorApi} from "../../utils/mocks/validator";
 import {silentLogger} from "../../utils/logger";
+import {RestEventsApi} from "../../../src/api/impl/rest/events/events";
 
 describe("RpcClientOverInstance test", function () {
   let clock: any, sandbox: any;
@@ -34,6 +35,7 @@ describe("RpcClientOverInstance test", function () {
       }),
       node: new MockNodeApi(),
       validator: new MockValidatorApi(),
+      events: sinon.createStubInstance(RestEventsApi),
       logger: silentLogger,
     });
   }
