@@ -101,17 +101,6 @@ describe("gossip attestation validation", function () {
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
-  it("should ignore - validator already attested to target epoch", async function () {
-    const attestation = generateAttestation({
-      aggregationBits: [true] as BitList,
-    });
-    db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
-    expect(result).to.equal(ExtendedValidatorResult.ignore);
-    expect(chain.receiveAttestation.called).to.be.false;
-    expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
-  });
-
   it("should ignore - missing attestation block or state", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
@@ -256,8 +245,8 @@ describe("gossip attestation validation", function () {
         slot: 0,
         target: {
           epoch: 12,
-        }
-      }
+        },
+      },
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     getBlockStateContextStub.resolves({
@@ -408,7 +397,7 @@ describe("gossip attestation validation", function () {
     getAttestationPreStateStub.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    chain.getFinalizedCheckpoint.resolves({epoch: 0, root: Buffer.alloc(32)})
+    chain.getFinalizedCheckpoint.resolves({epoch: 0, root: Buffer.alloc(32)});
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     forkChoiceStub.getAncestor.returns(Buffer.alloc(32));
