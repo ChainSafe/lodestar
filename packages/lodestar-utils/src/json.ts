@@ -10,6 +10,10 @@ interface ICustomError extends Error {
   toJson?: () => Json;
 }
 
+interface IToJson {
+  toJson: () => Json;
+}
+
 export function toJson(obj: unknown): Json {
   if (obj == null) {
     return null;
@@ -23,6 +27,8 @@ export function toJson(obj: unknown): Json {
     return (obj as ICustomError).toJson?.() ?? defaultErrorToJson(obj);
   } else if (Array.isArray(obj)) {
     return obj.map(toJson);
+  } else if ((obj as Partial<IToJson>).toJson) {
+    return (obj as IToJson).toJson();
   } else if (typeof obj === "object") {
     const jsonObj: Json = {};
     Object.entries(obj as object).forEach(([k, v]) => (jsonObj[k] = toJson(v)));
