@@ -7,6 +7,7 @@ import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {IEventsApi} from "@chainsafe/lodestar/lib/api/impl/events";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
@@ -25,6 +26,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   public abstract url: string;
   abstract beacon: IBeaconApi;
   abstract node: INodeApi;
+  abstract events: IEventsApi;
   abstract validator: IValidatorApi;
 
   protected constructor(config: IBeaconConfig, logger: ILogger) {
