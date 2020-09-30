@@ -29,7 +29,7 @@ export function serializeContext(context?: Context | Error): string {
       delete errObj["message"];
       delete errObj["stack"];
     }
-    return serializeContext(errObj) + "\n" + context.stack;
+    return serializeContext(errObj) + "\n" + (context.stack ?? context.message);
   }
   if (typeof context === "string") return context;
   if (typeof context === "number" || typeof context === "boolean" || Array.isArray(context))
