@@ -131,7 +131,7 @@ describe("account cli", function () {
     registerCommandToYargs(lodestar, account);
     expect(existsSync(`${rootDir}/keystores/${validatorId}/.lock`)).to.be.false;
     await new Promise((resolve) => lodestar.parse(["account", "validator", "deposit"], resolve));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     expect(existsSync(`${rootDir}/keystores/${validatorId}/eth1-deposit-tx-hash.txt`)).to.be.true;
   });
 });
