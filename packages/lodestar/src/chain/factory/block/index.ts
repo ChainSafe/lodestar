@@ -24,7 +24,7 @@ export async function assembleBlock(
   graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
   const head = chain.forkChoice.getHead();
-  const stateContext = await chain.regen.getState(head.stateRoot);
+  const stateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot - 1);
   const headState = stateContext.state.clone();
   headState.slot = slot;
   const block: BeaconBlock = {
