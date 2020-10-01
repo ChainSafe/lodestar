@@ -1,4 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
+import {LodestarError} from "../../../lodestar-utils/lib";
 import {HexRoot} from "./interface";
 
 export enum ProtoArrayErrorCode {
@@ -82,10 +83,8 @@ export type ProtoArrayErrorType =
       headFinalizedEpoch: Epoch;
     };
 
-export class ProtoArrayError extends Error {
-  public type: ProtoArrayErrorType;
+export class ProtoArrayError extends LodestarError<ProtoArrayErrorType> {
   constructor(type: ProtoArrayErrorType) {
-    super();
-    this.type = type;
+    super(type);
   }
 }

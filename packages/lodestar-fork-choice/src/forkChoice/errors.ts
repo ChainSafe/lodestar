@@ -1,4 +1,5 @@
 import {Slot, Epoch} from "@chainsafe/lodestar-types";
+import {LodestarError} from "../../../lodestar-utils/lib";
 
 export enum InvalidBlockCode {
   UNKNOWN_PARENT = "UNKNOWN_PARENT",
@@ -170,11 +171,8 @@ export type ForkChoiceErrorType =
       error: Error;
     };
 
-export class ForkChoiceError extends Error {
-  type: ForkChoiceErrorType;
-
+export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {
   constructor(type: ForkChoiceErrorType) {
-    super(type.code + " " + JSON.stringify(type));
-    this.type = type;
+    super(type);
   }
 }
