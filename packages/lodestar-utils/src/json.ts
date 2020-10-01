@@ -2,7 +2,7 @@ import {Json, toHexString} from "@chainsafe/ssz";
 import {mapValues, pick} from "lodash";
 import {LodestarError} from "./errors";
 
-export function errorToObj(obj: Error): Json {
+export function errorToObject(obj: Error): Json {
   return pick(obj, Object.getOwnPropertyNames(obj)) as Json;
 }
 
@@ -17,8 +17,8 @@ export function toJson(arg: unknown): Json {
       if (arg === null) return "null";
       if (Array.isArray(arg)) return arg.map(toJson);
       if (arg instanceof Uint8Array) return toHexString(arg);
-      if (arg instanceof LodestarError) return toJson(arg.toObj());
-      if (arg instanceof Error) return toJson(errorToObj(arg));
+      if (arg instanceof LodestarError) return toJson(arg.toObject());
+      if (arg instanceof Error) return toJson(errorToObject(arg));
       return mapValues(arg, (value) => toJson(value)) as Json;
 
     // Already valid JSON

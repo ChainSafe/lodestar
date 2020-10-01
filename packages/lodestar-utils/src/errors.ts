@@ -14,7 +14,7 @@ export class LodestarError<T extends {code: string}> extends Error {
     return this.type;
   }
 
-  toObj(): {[key: string]: Json} {
+  toObject(): {[key: string]: Json} {
     return {
       // Ignore message since it's just type.code
       ...this.getMetadata(),
