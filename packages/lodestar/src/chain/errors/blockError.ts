@@ -1,6 +1,5 @@
-import {Json} from "@chainsafe/ssz";
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {toJson} from "@chainsafe/lodestar-utils";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {IBlockProcessJob} from "../interface";
 
@@ -148,20 +147,13 @@ type JobObject = {
   job: IBlockProcessJob;
 };
 
-export class BlockError extends Error {
+export class BlockError extends LodestarError<BlockErrorType> {
   public type: BlockErrorType;
   public job: IBlockProcessJob;
 
   constructor({job, ...type}: BlockErrorType & JobObject) {
-    super(type.code);
+    super(type);
     this.job = job;
     this.type = type;
-  }
-
-  toJson(): Json {
-    const obj = toJson(this.type) as Record<string, Json>;
-    obj.message = this.message;
-    if (this.stack) obj.stack = this.stack;
-    return obj;
   }
 }
