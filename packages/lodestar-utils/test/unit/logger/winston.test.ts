@@ -1,4 +1,4 @@
-import {Context, ILogger, ILoggerOptions, LodestarError, WinstonLogger} from "../../../src";
+import {Context, ILogger, LodestarError, LogFormat, logFormats, WinstonLogger} from "../../../src";
 import TransportStream from "winston-transport";
 import {MESSAGE} from "triple-beam";
 import {expect} from "chai";
@@ -17,58 +17,54 @@ class CallbackTransport extends TransportStream {
   }
 }
 
-describe.only("winston logger", () => {
+describe("winston logger", () => {
   describe("winston logger format and options", () => {
     interface ITestCase {
       id: string;
       message: string;
       context?: Context | Error;
-      outputHuman: string;
-      outputJson: string;
+      output: {[P in LogFormat]: string};
     }
     const testCases: (ITestCase | (() => ITestCase))[] = [
       {
         id: "regular log with metadata",
         message: "foo bar",
         context: {meta: "data"},
-        // Ignore the variable timestamp part
-        outputHuman: "\u001b[33mwarn\u001b[39m: foo bar meta=data",
-        // eslint-disable-next-line quotes
-        outputJson: '{"module":"","context":{"meta":"data"},"level":"warn","message":"foo bar"',
+        output: {
+          human: "[]                 \u001b[33mwarn\u001b[39m: foo bar meta=data",
+          // eslint-disable-next-line quotes
+          json: `{"module":"","context":{"meta":"data"},"level":"warn","message":"foo bar"}`,
+        },
       },
 
       () => {
         const error = new LodestarError({code: "SAMPLE_ERROR", data: {foo: "bar"}});
+        error.stack = "$STACK";
         return {
           id: "error with metadata",
           opts: {format: "human", module: "SAMPLE"},
           message: "foo bar",
           context: error,
-          // Ignore the variable timestamp part
-          outputHuman:
-            "\u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data=[foo=bar], message=SAMPLE_ERROR\n" + error.stack,
-          // eslint-disable-next-line quotes
-          outputJson: `{"module":"","context":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"message":"SAMPLE_ERROR","stack"`,
+          output: {
+            human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data={"foo":"bar"}\n${error.stack}`,
+            // eslint-disable-next-line quotes
+            json: `{"module":"","context":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
+          },
         };
       },
     ];
 
     for (const testCase of testCases) {
-      const {id, message, context, outputHuman, outputJson} = typeof testCase === "function" ? testCase() : testCase;
-      it(`${id} human output`, () => {
-        let output = "";
-        const callbackTransport = new CallbackTransport((data: any) => (output += data));
-        const logger = new WinstonLogger({format: "human"}, [callbackTransport]);
-        logger.warn(message, context);
-        expect(output).to.include(outputHuman);
-      });
-      it(`${id} json output`, () => {
-        let output = "";
-        const callbackTransport = new CallbackTransport((data: any) => (output += data));
-        const logger = new WinstonLogger({format: "json"}, [callbackTransport]);
-        logger.warn(message, context);
-        expect(output).to.include(outputJson);
-      });
+      const {id, message, context, output} = typeof testCase === "function" ? testCase() : testCase;
+      for (const format of logFormats) {
+        it(`${id} human output`, () => {
+          let allOutput = "";
+          const callbackTransport = new CallbackTransport((data: any) => (allOutput += data));
+          const logger = new WinstonLogger({format, hideTimestamp: true}, [callbackTransport]);
+          logger.warn(message, context);
+          expect(allOutput).to.equal(output[format]);
+        });
+      }
     }
   });
 
@@ -80,9 +76,9 @@ describe.only("winston logger", () => {
     setTimeout(function () {
       //
       // Stop profile of 'test'. Logging will now take place:
-      //   '17 Jan 21:00:00 - info: test duration=1000ms'
+      //   '17 Jan 21:00:00 - info: test duration=10ms'
       //
       logger.profile("test");
-    }, 100);
+    }, 10);
   });
 });

@@ -34,6 +34,7 @@ export class WinstonLogger implements ILogger {
       module: "",
       ...options,
     };
+
     this.winston = createLogger({
       level: options.level, // log level switching handled in `createLogEntry`
       defaultMeta: {
@@ -41,10 +42,10 @@ export class WinstonLogger implements ILogger {
       },
       format:
         options.format === "human"
-          ? humanReadableLogFormat
+          ? humanReadableLogFormat(options)
           : options.format === "json"
-          ? jsonLogFormat
-          : defaultLogFormat,
+          ? jsonLogFormat(options)
+          : defaultLogFormat(options),
       transports: transports || [consoleTransport],
       exitOnError: false,
     });

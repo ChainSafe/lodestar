@@ -143,17 +143,11 @@ export type BlockErrorType =
       error: Error;
     };
 
-type JobObject = {
-  job: IBlockProcessJob;
-};
-
 export class BlockError extends LodestarError<BlockErrorType> {
-  public type: BlockErrorType;
   public job: IBlockProcessJob;
 
-  constructor({job, ...type}: BlockErrorType & JobObject) {
+  constructor(type: BlockErrorType, job: IBlockProcessJob) {
     super(type);
     this.job = job;
-    this.type = type;
   }
 }

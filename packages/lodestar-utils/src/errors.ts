@@ -1,21 +1,25 @@
 import {Json} from "@chainsafe/ssz";
-import {toJson} from "./json";
 
 /**
  * Generic Lodestar error with attached metadata
  */
 export class LodestarError<T extends {code: string}> extends Error {
-  data: T;
-  constructor(data: T) {
-    super(data.code);
-    this.data = data;
+  type: T;
+  constructor(type: T) {
+    super(type.code);
+    this.type = type;
   }
 
-  toJson(): Json {
-    const obj = toJson(this.data) as Record<string, Json>;
-    obj.message = this.message;
-    if (this.stack) obj.stack = this.stack;
-    return obj;
+  getMetadata(): {[key: string]: Json} {
+    return this.type;
+  }
+
+  toObj(): {[key: string]: Json} {
+    return {
+      // Ignore message since it's just type.code
+      ...this.getMetadata(),
+      stack: this.stack || "",
+    };
   }
 }
 
