@@ -1,4 +1,3 @@
-import {registerForkEndpoint} from "./fork";
 import {LodestarApiPlugin} from "../../interface";
 import {registerGetValidatorEndpoint} from "./validator";
 import {FastifyInstance} from "fastify";
@@ -12,10 +11,10 @@ import {
   getPoolAttestations,
   getStateFinalityCheckpoints,
 } from "../../controllers/beacon";
+import {getStateFork} from "../../controllers/beacon/state/getStateFork";
 
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
-  registerForkEndpoint(fastify, opts);
   registerGetValidatorEndpoint(fastify, opts);
   done();
 };
@@ -32,6 +31,7 @@ export function registerBeaconRoutes(server: FastifyInstance): void {
         getStateFinalityCheckpoints.opts,
         getStateFinalityCheckpoints.handler
       );
+      fastify.get(getStateFork.url, getStateFork.opts, getStateFork.handler);
 
       //pool
       fastify.get(getPoolAttestations.url, getPoolAttestations.opts, getPoolAttestations.handler);

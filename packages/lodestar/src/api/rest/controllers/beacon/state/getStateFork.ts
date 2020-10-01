@@ -2,23 +2,17 @@ import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
-export const getStateFinalityCheckpoints: ApiController<DefaultQuery, {stateId: string}> = {
-  url: "/state/:stateId/finality_checkpoints",
+export const getStateFork: ApiController<DefaultQuery, {stateId: string}> = {
+  url: "/state/:stateId/fork",
 
   handler: async function (req, resp) {
     try {
-      const state = await this.api.beacon.state.getState(req.params.stateId);
-      if (!state) {
+      const fork = await this.api.beacon.state.getFork(req.params.stateId);
+      if (!fork) {
         return resp.status(404).send();
       }
       return resp.status(200).send({
-        data: {
-          // eslint-disable-next-line @typescript-eslint/camelcase
-          previous_justified: this.config.types.Checkpoint.toJson(state.previousJustifiedCheckpoint, {case: "snake"}),
-          // eslint-disable-next-line @typescript-eslint/camelcase
-          current_justified: this.config.types.Checkpoint.toJson(state.currentJustifiedCheckpoint, {case: "snake"}),
-          finalized: this.config.types.Checkpoint.toJson(state.finalizedCheckpoint, {case: "snake"}),
-        },
+        data: this.config.types.Fork.toJson(fork, {case: "snake"}),
       });
     } catch (e) {
       if (e.message === "Invalid state id") {
