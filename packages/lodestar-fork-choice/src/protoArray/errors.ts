@@ -1,5 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {LodestarError} from "../../../lodestar-utils/lib";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import {HexRoot} from "./interface";
 
 export enum ProtoArrayErrorCode {

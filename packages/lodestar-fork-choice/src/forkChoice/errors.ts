@@ -1,5 +1,5 @@
 import {Slot, Epoch} from "@chainsafe/lodestar-types";
-import {LodestarError} from "../../../lodestar-utils/lib";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum InvalidBlockCode {
   UNKNOWN_PARENT = "UNKNOWN_PARENT",
