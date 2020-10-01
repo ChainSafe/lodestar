@@ -67,7 +67,7 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
     info.message,
     context,
     info.durationMs && ` - duration=${info.durationMs}ms`,
-    stack,
+    stack && `\n${stack}`,
   ];
 
   return logParts.filter((s) => s).join(" ");

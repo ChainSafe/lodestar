@@ -46,7 +46,7 @@ describe("winston logger", () => {
           message: "foo bar",
           context: error,
           output: {
-            human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data={"foo":"bar"}\n${error.stack}`,
+            human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data={"foo":"bar"} \n${error.stack}`,
             // eslint-disable-next-line quotes
             json: `{"module":"","context":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
           },
