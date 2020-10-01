@@ -5,6 +5,7 @@ export * from "./bytes";
 export * from "./yaml";
 export * from "./objects";
 export * from "./sleep";
+export * from "./events";
 export * from "./sort";
 export * from "./logger";
 export * from "./verifyMerkleBranch";

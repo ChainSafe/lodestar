@@ -9,6 +9,8 @@ import {ValidatorApi} from "../../../src/api/impl/validator";
 import {BeaconApi} from "../../../src/api/impl/beacon";
 import {NodeApi} from "../../../src/api/impl/node/node";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
+import {EventsApi} from "../../../src/api/impl/events";
+import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
@@ -71,6 +73,7 @@ export function getDevValidator({
         }
       ),
       node: new NodeApi({}, {...node}),
+      events: new EventsApi({}, {...node}) as IEventsApi,
       beacon: new BeaconApi({}, {...node}),
     }),
     logger: logger,

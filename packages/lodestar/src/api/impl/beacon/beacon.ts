@@ -18,11 +18,11 @@ import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
 import {ApiNamespace, IApiModules} from "../interface";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
-import {LodestarEventIterator} from "../../../util/events";
 import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
 import {IBeaconApi} from "./interface";
+import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;

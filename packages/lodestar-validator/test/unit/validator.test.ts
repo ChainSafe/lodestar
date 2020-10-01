@@ -9,6 +9,7 @@ import {IValidatorOptions, Validator} from "../../src";
 import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
 import {MockNodeApi} from "../utils/mocks/node";
 import {silentLogger} from "../utils/logger";
+import {RestEventsApi} from "../../src/api/impl/rest/events/events";
 
 describe("Validator", () => {
   it.skip("Should be able to connect with the beacon chain", async () => {
@@ -18,6 +19,7 @@ describe("Validator", () => {
         genesisTime: Math.floor(Date.now() / 1000),
       }),
       node: new MockNodeApi(),
+      events: sinon.createStubInstance(RestEventsApi),
       validator: new MockValidatorApi(),
     });
 
