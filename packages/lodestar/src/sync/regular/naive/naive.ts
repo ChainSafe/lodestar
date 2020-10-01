@@ -182,10 +182,20 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
-      this.logger.verbose(`Range ${JSON.stringify(range)} is behind peer head ${peerHeadSlot}, fetch next range`);
-      this.setTarget();
+      this.logger.verbose("Regular Sync: queried range is behind peer head, fetch next range", {
+        range: JSON.stringify(range),
+        peerHead: peerHeadSlot,
+      });
+      // don't trust empty range as it's rarely happen, peer may return it incorrectly or not up to date
+      const newTarget = this.getNewTarget();
+      // same range start, expand range end
+      this.setTarget(range.start - 1, false);
+      this.setTarget(newTarget);
     } else {
-      this.logger.verbose(`Range ${JSON.stringify(range)} passed peer head ${peerHeadSlot}, sleep then try again`);
+      this.logger.verbose("Regular Sync: Queried range passed peer head, sleep then try again", {
+        range: JSON.stringify(range),
+        peerHead: peerHeadSlot,
+      });
       // don't want to disturb our peer if we pass peer head
       await sleep(this.config.params.SECONDS_PER_SLOT * 1000);
       this.setTarget(range.start - 1, false);
