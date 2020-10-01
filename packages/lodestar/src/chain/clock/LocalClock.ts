@@ -50,6 +50,9 @@ export class LocalClock implements IBeaconClock {
     if (this.signal.aborted) {
       throw new ErrorAborted();
     }
+    if (this.currentSlot >= slot) {
+      return;
+    }
     return new Promise((resolve, reject) => {
       const onSlot = (clockSlot: Slot): void => {
         if (clockSlot >= slot) {
