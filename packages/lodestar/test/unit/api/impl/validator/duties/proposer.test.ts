@@ -6,7 +6,6 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
-import {StateRegenerator} from "../../../../../../src/chain/regen";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IValidatorApi, ValidatorApi} from "../../../../../../src/api/impl/validator";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
@@ -20,7 +19,6 @@ describe("get proposers api impl", function () {
 
   let dbStub: StubbedBeaconDb,
     chainStub: SinonStubbedInstance<IBeaconChain>,
-    regenStub: SinonStubbedInstance<StateRegenerator>,
     syncStub: SinonStubbedInstance<IBeaconSync>;
 
   let api: IValidatorApi;
@@ -30,7 +28,6 @@ describe("get proposers api impl", function () {
     chainStub = sandbox.createStubInstance(BeaconChain);
     chainStub.clock = sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
-    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
     syncStub = sandbox.createStubInstance(BeaconSync);
     // @ts-ignore
     api = new ValidatorApi({}, {db: dbStub, chain: chainStub, sync: syncStub, config});
@@ -86,32 +83,7 @@ describe("get proposers api impl", function () {
       epochCtx,
     });
     sinon.stub(epochCtx, "getBeaconProposer").returns(1);
-    const result = await api.getProposerDuties(1);
-    expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
-  });
-
-  it("should get future proposers", async function () {
-    syncStub.isSynced.returns(true);
-    sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-    sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    const state = generateState({
-      slot: config.params.SLOTS_PER_EPOCH - 3,
-      validators: generateValidators(25, {
-        effectiveBalance: config.params.MAX_EFFECTIVE_BALANCE,
-        activationEpoch: 0,
-        exitEpoch: FAR_FUTURE_EPOCH,
-      }),
-      balances: generateInitialMaxBalances(config, 25),
-    });
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    chainStub.getHeadStateContextAtCurrentEpoch.resolves({
-      state,
-      epochCtx,
-    });
-    sinon.stub(epochCtx, "getBeaconProposer").returns(1);
-
-    const result = await api.getProposerDuties(2);
+    const result = await api.getProposerDuties(0);
     expect(result.length).to.be.equal(config.params.SLOTS_PER_EPOCH);
   });
 });

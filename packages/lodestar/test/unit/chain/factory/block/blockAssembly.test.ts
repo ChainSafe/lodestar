@@ -12,7 +12,7 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
+import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 
@@ -21,6 +21,7 @@ describe("block assembly", function () {
 
   let assembleBodyStub: any,
     chainStub: StubbedChain,
+    forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     regenStub: SinonStubbedInstance<StateRegenerator>,
     stateTransitionStub: any,
     beaconDB: StubbedBeaconDb;
@@ -30,7 +31,7 @@ describe("block assembly", function () {
     stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
-    chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    forkChoiceStub = chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.clock = sandbox.createStubInstance(LocalClock);
     regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
 
@@ -42,8 +43,8 @@ describe("block assembly", function () {
   });
 
   it("should assemble block", async function () {
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
     regenStub.getBlockSlotState.resolves({
       state: generateState({slot: 1}),
       epochCtx: new EpochContext(config),
@@ -63,7 +64,6 @@ describe("block assembly", function () {
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
       expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
-      expect(chainStub.getHeadBlock.calledOnce).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);

@@ -47,7 +47,7 @@ describe("gossip block validation", function () {
   });
 
   it("bad block", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
@@ -62,7 +62,7 @@ describe("gossip block validation", function () {
   });
 
   it("already proposed", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
@@ -78,7 +78,7 @@ describe("gossip block validation", function () {
   });
 
   it("missing parent", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
@@ -96,7 +96,7 @@ describe("gossip block validation", function () {
   });
 
   it("invalid signature", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
@@ -119,7 +119,7 @@ describe("gossip block validation", function () {
   });
 
   it("wrong proposer", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
@@ -145,7 +145,7 @@ describe("gossip block validation", function () {
   });
 
   it("valid block", async function () {
-    chainStub.getGenesisTime.returns(Date.now() / 1000 - config.params.SECONDS_PER_SLOT);
+    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 0,
