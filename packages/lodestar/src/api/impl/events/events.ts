@@ -3,8 +3,6 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IChainEvents} from "../../../chain";
 import {IApiOptions} from "../../options";
-import {LodestarEventIterator} from "../../../util/events";
-import {BeaconEvent, BeaconEventType} from "./types";
 import {
   ChainEventListener,
   handleBeaconAttestationEvent,
@@ -14,6 +12,8 @@ import {
   handleFinalizedCheckpointEvent,
   handleVoluntaryExitEvent,
 } from "./handlers";
+import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
+import {BeaconEventType, BeaconEvent} from "./types";
 
 export class EventsApi implements IEventsApi {
   public namespace: ApiNamespace;

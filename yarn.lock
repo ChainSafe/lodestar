@@ -3420,6 +3420,14 @@ any-signal@^1.1.0:
   dependencies:
     abort-controller "^3.0.0"
 
+any-signal@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.0.0.tgz#fdf0e92f770b6bc7ad5f03673e8cb2f4b9886404"
+  integrity sha512-+X8EDF+4D+ZlZbgfW49Ma8Q0jnBQyfKUbehpur4C7v5q/EroaYQ5gwZvJquEyTCCPvO1jM6p0dtHanVggdT3OQ==
+  dependencies:
+    abort-controller "^3.0.0"
+    native-abort-controller "0.0.3"
+
 anymatch@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/anymatch/-/anymatch-2.0.0.tgz#bcb24b4f37934d9aa7ac17b4adaf89e7c76ef2eb"
@@ -10061,6 +10069,13 @@ napi-macros@~2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/napi-macros/-/napi-macros-2.0.0.tgz#2b6bae421e7b96eb687aa6c77a7858640670001b"
   integrity sha512-A0xLykHtARfueITVDernsAWdtIMbOJgKgcluwENp3AlsKN/PloyO10HtmoqnFAQAcxPkgZN7wdfPfEd0zNGxbg==
+
+native-abort-controller@0.0.3:
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/native-abort-controller/-/native-abort-controller-0.0.3.tgz#4c528a6c9c7d3eafefdc2c196ac9deb1a5edf2f8"
+  integrity sha512-YIxU5nWqSHG1Xbu3eOu3pdFRD882ivQpIcu6AiPVe2oSVoRbfYW63DVkZm3g1gHiMtZSvZzF6THSzTGEBYl8YA==
+  dependencies:
+    globalthis "^1.0.1"
 
 natural-compare@^1.4.0:
   version "1.4.0"

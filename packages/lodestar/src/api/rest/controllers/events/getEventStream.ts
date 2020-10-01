@@ -1,7 +1,7 @@
 import {ApiController} from "../types";
 import {EventMessage} from "fastify";
-import {BeaconEvent, BeaconEventType} from "../../../impl/events";
 import {BasicType, CompositeType} from "@chainsafe/ssz";
+import {BeaconEvent, BeaconEventType} from "../../../impl/events";
 
 type Query = {
   topics?: BeaconEventType[];

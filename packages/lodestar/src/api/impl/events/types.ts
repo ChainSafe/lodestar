@@ -12,8 +12,8 @@ export enum BeaconEventType {
   BLOCK = "block",
   ATTESTATION = "attestation",
   VOLUNTARY_EXIT = "voluntary_exit",
-  FINALIZED_CHECKPOINT = "finalized_checkpoint",
   CHAIN_REORG = "chain_reorg",
+  FINALIZED_CHECKPOINT = "finalized_checkpoint",
 }
 
 export type BeaconHeadEvent = {
@@ -51,5 +51,5 @@ export type BeaconEvent =
   | BeaconBlockEvent
   | BeaconAttestationEvent
   | VoluntaryExitEvent
-  | FinalizedCheckpointEvent
-  | BeaconChainReorgEvent;
+  | BeaconChainReorgEvent
+  | FinalizedCheckpointEvent;

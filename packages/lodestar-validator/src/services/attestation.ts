@@ -14,11 +14,9 @@ import {
   Fork,
   Root,
   SignedAggregateAndProof,
-  SignedBeaconBlock,
   Slot,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import EventSource from "eventsource";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
@@ -33,10 +31,12 @@ import {
   getDomain,
   isSlashableAttestationData,
 } from "@chainsafe/lodestar-beacon-state-transition";
-
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
+import abortableSource from "abortable-iterator";
+import {BeaconEventType} from "../api/impl/rest/events/types";
+import {anySignal} from "any-signal";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -208,40 +208,26 @@ export class AttestationService {
 
   private async waitForAttestationBlock(slot: Slot, signal?: AbortSignal): Promise<void> {
     this.logger.debug("Waiting for slot block", {slot});
-    const eventSource = new EventSource(`${this.provider.url}/lodestar/blocks/stream`, {
-      https: {rejectUnauthorized: false},
-    });
-
-    await new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        this.logger.debug("Timed out slot block waiting");
-        resolve();
-      }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
-
-      abortableTimeout(signal, () => {
+    const eventSource = this.provider.events.getEventStream([BeaconEventType.BLOCK]);
+    const timeoutController = new AbortController();
+    const signals = [timeoutController.signal];
+    if (signal) {
+      signals.push(signal);
+    }
+    const source = abortableSource(eventSource, anySignal(signals), {returnOnAbort: true});
+    const timeout = setTimeout(() => {
+      timeoutController.abort();
+    }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
+    for await (const event of source) {
+      if (event.type === BeaconEventType.BLOCK && event.message.slot === slot) {
         clearTimeout(timeout);
-        eventSource.close();
-        resolve();
-        this.logger.debug("AttestationService: Abort waitForAttestationBlock");
-      });
-
-      eventSource.onmessage = (evt: MessageEvent) => {
-        try {
-          this.logger.debug("received block!");
-          const signedBlock: SignedBeaconBlock = this.config.types.SignedBeaconBlock.fromJson(JSON.parse(evt.data), {
-            case: "snake",
-          });
-          if (signedBlock.message.slot === slot) {
-            clearTimeout(timeout);
-            this.logger.debug("Received slot block", {slot});
-            resolve();
-          }
-        } catch (err) {
-          this.logger.error(`Failed to parse block from SSE. Error: ${err.message}`);
-        }
-      };
-    });
-    eventSource.close();
+        eventSource.stop();
+        return;
+      }
+    }
+    this.logger.debug("Timeout out waiting for slot block", {slot});
+    clearTimeout(timeout);
+    eventSource.stop();
   }
 
   private aggregateAttestations = async (
