@@ -213,6 +213,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private getSyncPeers = async (): Promise<PeerId[]> => {
     if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)) {
       this.logger.info("Regular Sync: wait for best peer");
+      this.bestPeer = undefined;
       await this.waitForBestPeer(this.controller.signal);
     }
     return [this.bestPeer!];
@@ -229,7 +230,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
-        this.logger.verbose(`Found best peer ${this.bestPeer.toB58String()}`, {
+        this.logger.info(`Found best peer ${this.bestPeer.toB58String()}`, {
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,
         });
