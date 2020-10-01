@@ -11,7 +11,7 @@ const scoreConstants: Record<RpcScoreEvent, number> = {
   [RpcScoreEvent.UNKNOWN_ERROR]: -10,
 };
 
-const DEFAULT_SCORE = 100;
+export const DEFAULT_SCORE = 100;
 const MAX_SCORE = 200;
 const MIN_SCORE = 0;
 
