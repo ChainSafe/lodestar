@@ -1,38 +1,32 @@
 import {Json, toHexString} from "@chainsafe/ssz";
+import {mapValues, pick} from "lodash";
+import {LodestarError} from "./errors";
 
-export function defaultErrorToJson(obj: Error): Json {
-  const errObj: Json = {message: obj.message};
-  if (obj.stack) errObj.stack = obj.stack;
-  return errObj;
+export function errorToJson(obj: Error): Json {
+  return pick(obj, Object.getOwnPropertyNames(obj)) as Json;
 }
 
-interface ICustomError extends Error {
-  toJson?: () => Json;
-}
+export function toJson(arg: unknown): Json {
+  switch (typeof arg) {
+    case "bigint":
+    case "symbol":
+    case "function":
+      return arg.toString();
 
-interface IToJson {
-  toJson: () => Json;
-}
+    case "object":
+      if (arg === null) return "null";
+      if (Array.isArray(arg)) return arg.map(toJson);
+      if (arg instanceof Uint8Array) return toHexString(arg);
+      if (arg instanceof LodestarError) return arg.toJson();
+      if (arg instanceof Error) return errorToJson(arg);
+      return mapValues(arg, (value) => toJson(value)) as Json;
 
-export function toJson(obj: unknown): Json {
-  if (obj == null) {
-    return null;
-  } else if (typeof obj === "number" || typeof obj === "string") {
-    return obj;
-  } else if (typeof obj === "bigint") {
-    return String(obj);
-  } else if (obj instanceof Uint8Array) {
-    return toHexString(obj);
-  } else if (obj instanceof Error) {
-    return (obj as ICustomError).toJson?.() ?? defaultErrorToJson(obj);
-  } else if (Array.isArray(obj)) {
-    return obj.map(toJson);
-  } else if ((obj as Partial<IToJson>).toJson) {
-    return (obj as IToJson).toJson();
-  } else if (typeof obj === "object") {
-    const jsonObj: Json = {};
-    Object.entries(obj as object).forEach(([k, v]) => (jsonObj[k] = toJson(v)));
-    return jsonObj;
+    // Already valid JSON
+    case "number":
+    case "string":
+    case "undefined":
+    case "boolean":
+    default:
+      return arg as Json;
   }
-  throw new Error("Unable to convert unknown to json: " + obj);
 }
