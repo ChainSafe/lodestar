@@ -31,11 +31,17 @@ export async function validateGossipBlock(
     return ExtendedValidatorResult.ignore;
   }
 
-  //if slot is in future, wait for it's time before resuming
-  //this won't fix block queue since it could resume before we synced to this slot and
-  // fail with missing parent state/block
-  // TODO: queue those blocks and submit to gossip handler directly when parent processed
-  await chain.clock.waitForSlot(blockSlot);
+  const currentSlot = chain.clock.currentSlot;
+  if (currentSlot < blockSlot) {
+    logger.warn("Ignoring gossip block", {
+      reason: "future slot",
+      blockSlot,
+      currentSlot,
+      blockRoot: toHexString(blockRoot),
+    });
+    await chain.receiveBlock(block);
+    return ExtendedValidatorResult.ignore;
+  }
 
   if (await db.badBlock.has(blockRoot)) {
     logger.warn("Rejecting gossip block", {reason: "bad block", blockSlot, blockRoot: toHexString(blockRoot)});
