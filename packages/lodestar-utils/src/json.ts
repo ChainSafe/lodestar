@@ -30,3 +30,22 @@ export function toJson(arg: unknown): Json {
       return arg as Json;
   }
 }
+
+export function toString(json: Json, nested = false): string {
+  switch (typeof json) {
+    case "object": {
+      if (json === null) return "null";
+      if (Array.isArray(json)) return json.map(toJson).join(", ");
+      const s = Object.entries(json)
+        .map(([key, value]) => `${key}=${toString(value, true)}`)
+        .join(", ");
+      return nested ? `[${s}]` : s;
+    }
+
+    case "number":
+    case "string":
+    case "boolean":
+    default:
+      return String(json);
+  }
+}

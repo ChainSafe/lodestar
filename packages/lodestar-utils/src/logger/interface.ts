@@ -30,6 +30,7 @@ export const defaultLogLevel = LogLevel.info;
 export interface ILoggerOptions {
   level?: LogLevel;
   module?: string;
+  format?: "human" | "json";
 }
 
 export type Context = Json;

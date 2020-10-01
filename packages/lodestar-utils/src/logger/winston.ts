@@ -5,7 +5,7 @@
 import {createLogger, Logger, transports as winstonTransports} from "winston";
 import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel} from "./interface";
 import chalk from "chalk";
-import {defaultLogFormat} from "./format";
+import {defaultLogFormat, humanReadableLogFormat, jsonLogFormat} from "./format";
 import TransportStream from "winston-transport";
 import {Writable} from "stream";
 
@@ -39,7 +39,12 @@ export class WinstonLogger implements ILogger {
       defaultMeta: {
         module: options.module || "",
       },
-      format: defaultLogFormat,
+      format:
+        options.format === "human"
+          ? humanReadableLogFormat
+          : options.format === "json"
+          ? jsonLogFormat
+          : defaultLogFormat,
       transports: transports || [consoleTransport],
       exitOnError: false,
     });
