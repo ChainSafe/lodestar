@@ -1,12 +1,5 @@
 import sinon, {SinonSandbox, SinonStubbedInstance, SinonStubbedMember} from "sinon";
-import {
-  ApiClientEventEmitter,
-  IApiClient,
-  INewEpochCallback,
-  INewSlotCallback,
-  RestBeaconApi,
-  RestValidatorApi,
-} from "../../src/api";
+import {ApiClientEventEmitter, IApiClient, RestBeaconApi, RestValidatorApi} from "../../src/api";
 import {IBeaconApi} from "../../src/api/interface/beacon";
 import {INodeApi} from "../../src/api/interface/node";
 import {IValidatorApi} from "../../src/api/interface/validators";

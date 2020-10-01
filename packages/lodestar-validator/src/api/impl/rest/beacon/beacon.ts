@@ -1,13 +1,4 @@
-import {
-  BeaconBlock,
-  BeaconState,
-  BLSPubkey,
-  Fork,
-  Genesis,
-  Root,
-  Uint64,
-  ValidatorResponse,
-} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconState, BLSPubkey, Fork, Genesis, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "../../../interface/beacon";
 import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -29,12 +20,21 @@ export class RestBeaconApi implements IBeaconApi {
     this.config = config;
   }
 
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  public state: {getFork: (stateId: string) => Promise<Fork | null>} = {
+    getFork: async (): Promise<Fork | null> => {
+      try {
+        const response = await this.clientV2.get<{data: Json}>(`/state/${stateId}/fork`);
+        return this.config.types.Fork.fromJson(response.data, {case: "snake"});
+      } catch (e) {
+        this.logger.error("Failed to obtain fork version", {reason: e.message});
+        return null;
+      }
+    },
+  };
+
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
     return this.config.types.ValidatorResponse.fromJson(await this.client.get(`/validators/${toHexString(pubkey)}`));
-  }
-
-  public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
-    return this.config.types.ForkResponse.fromJson(await this.client.get<Json>("/fork"), {case: "snake"});
   }
 
   public async getGenesis(): Promise<Genesis | null> {

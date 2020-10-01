@@ -1,4 +1,4 @@
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
@@ -30,6 +30,8 @@ export interface IApiClient extends ApiClientEventEmitter {
   validator: IValidatorApi;
 
   url: string;
+
+  genesisValidatorsRoot: Root;
 
   /**
    * Initiates connection to rpc server.

@@ -3,14 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BLSPubkey,
-  ForkResponse,
-  Genesis,
-  SignedBeaconBlock,
-  Uint64,
-  ValidatorResponse,
-} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Genesis, ValidatorResponse} from "@chainsafe/lodestar-types";
 
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
@@ -22,7 +15,6 @@ import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
 import {IBeaconApi} from "./interface";
-import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;
@@ -61,23 +53,6 @@ export class BeaconApi implements IBeaconApi {
     }
   }
 
-  public async getFork(): Promise<ForkResponse> {
-    const state = await this.chain.getHeadState();
-    const networkId: Uint64 = this.chain.networkId;
-    const fork = state
-      ? state.fork
-      : {
-          previousVersion: Buffer.alloc(4),
-          currentVersion: Buffer.alloc(4),
-          epoch: 0,
-        };
-    return {
-      fork,
-      chainId: networkId,
-      genesisValidatorsRoot: state.genesisValidatorsRoot,
-    };
-  }
-
   public async getGenesis(): Promise<Genesis | null> {
     const state = await this.chain.getHeadState();
     if (state) {
@@ -88,14 +63,5 @@ export class BeaconApi implements IBeaconApi {
       };
     }
     return null;
-  }
-
-  public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
-    return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
-      this.chain.emitter.on("block", push);
-      return () => {
-        this.chain.emitter.off("block", push);
-      };
-    });
   }
 }

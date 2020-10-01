@@ -94,12 +94,18 @@ export class AttestationService {
       this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
       return;
     }
-    const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+    const fork = await this.provider.beacon.state.getFork("head");
+    if (!fork) return;
     for (const duty of attesterDuties) {
       const attesterIndex = this.publicKeys.findIndex((pubkey) => {
         return this.config.types.BLSPubkey.equals(pubkey, duty.validatorPubkey);
       });
-      const slotSignature = this.getSlotSignature(attesterIndex, duty.attestationSlot, fork, genesisValidatorsRoot);
+      const slotSignature = this.getSlotSignature(
+        attesterIndex,
+        duty.attestationSlot,
+        fork,
+        this.provider.genesisValidatorsRoot
+      );
       const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
       this.logger.debug("new attester duty", {
         slot: duty.attestationSlot,
@@ -156,13 +162,14 @@ export class AttestationService {
     let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
     try {
-      ({fork, genesisValidatorsRoot} = await this.provider.beacon.getFork());
+      const fork = await this.provider.beacon.state.getFork("head");
+      if (!fork) return;
       attestation = await this.createAttestation(
         duty.attesterIndex,
         duty.attestationSlot,
         duty.committeeIndex,
         fork,
-        genesisValidatorsRoot
+        this.provider.genesisValidatorsRoot
       );
     } catch (e) {
       this.logger.error("Failed to produce attestation", {
