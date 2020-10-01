@@ -117,6 +117,9 @@ export async function validateGossipAttestation(
       reason: "committee index not within the expected range",
       ...attestationLogContext,
     });
+    // throw new AttestationError({
+    //   code: AttestationErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+    // });
     return ExtendedValidatorResult.reject;
   }
   if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {

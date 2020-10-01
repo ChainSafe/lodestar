@@ -1,4 +1,4 @@
-import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {IBlockProcessJob} from "../interface";
 
@@ -76,6 +76,10 @@ export enum BlockErrorCode {
    * There was an error whilst processing the block. It is not necessarily invalid.
    */
   ERR_BEACON_CHAIN_ERROR = "ERR_BEACON_CHAIN_ERROR",
+  /**
+   * The finalized checkpoint is not an ancestor of the block.
+   */
+  ERR_CHECKPOINT_NOT_AN_ANCESTOR = "ERR_CHECKPOINT_NOT_AN_ANCESTOR",
 }
 
 export type BlockErrorType =
@@ -84,7 +88,7 @@ export type BlockErrorType =
     }
   | {
       code: BlockErrorCode.ERR_PARENT_UNKNOWN;
-      parentRoot: Uint8Array;
+      parentRoot: Root;
     }
   | {
       code: BlockErrorCode.ERR_FUTURE_SLOT;
@@ -113,7 +117,7 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER;
       blockProposer: ValidatorIndex;
-      shufflingProposer: ValidatorIndex;
+      // shufflingProposer: ValidatorIndex;
     }
   | {
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID;
@@ -140,6 +144,10 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR;
       error: Error;
+    }
+  | {
+      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR;
+      blockSlot: Slot;
     };
 
 type JobObject = {

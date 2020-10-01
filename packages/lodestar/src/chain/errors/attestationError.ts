@@ -2,14 +2,9 @@ import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-t
 
 export enum AttestationErrorCode {
   /**
-   * The attestation is from a slot that is later than the current slot (with respect to the gossip clock disparity).
+   * The attestation is from a slot that is out of range.
    */
-  ERR_FUTURE_SLOT = "ERR_FUTURE_SLOT",
-  /**
-   * The attestation is from a slot that is prior to the earliest permissible slot
-   * (with respect to the gossip clock disparity).
-   */
-  ERR_PAST_SLOT = "ERR_PAST_SLOT",
+  ERR_SLOT_OUT_OF_RANGE = "ERR_SLOT_OUT_OF_RANGE",
   /**
    * The attestations aggregation bits were empty when they shouldn't be.
    */
@@ -92,18 +87,27 @@ export enum AttestationErrorCode {
    * There was an error whilst processing the attestation. It is not known if it is valid or invalid.
    */
   ERR_BEACON_CHAIN_ERROR = "ERR_BEACON_CHAIN_ERROR",
+  /**
+   * Number of aggregation bits does not match committee size
+   */
+  ERR_WRONG_NUMBER_OF_AGGREGATION_BITS = "ERR_WRONG_NUMBER_OF_AGGREGATION_BITS",
+  /**
+   * Block did not pass validation during block processing.
+   */
+  ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
+  /**
+   * The attestation target block is not an ancestor of the block defined by attestation.data.beacon_block_root.
+   */
+  ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT = "ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT",
+  /**
+   * The finalized checkpoint is not an ancestor of the block named in the LMD vote.
+   */
+  ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
 }
 
 export type AttestationErrorType =
   | {
-      code: AttestationErrorCode.ERR_FUTURE_SLOT;
-      attestationSlot: Slot;
-      latestPermissibleSlot: Slot;
-    }
-  | {
-      code: AttestationErrorCode.ERR_PAST_SLOT;
-      attestationSlot: Slot;
-      earliestPermissibleSlot: Slot;
+      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE;
     }
   | {
       code: AttestationErrorCode.ERR_EMPTY_AGGREGATION_BITFIELD;
@@ -187,6 +191,18 @@ export type AttestationErrorType =
   | {
       code: AttestationErrorCode.ERR_BEACON_CHAIN_ERROR;
       error: Error;
+    }
+  | {
+      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS;
+    }
+  | {
+      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK;
+    }
+  | {
+      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT;
+    }
+  | {
+      code: AttestationErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK;
     };
 
 export class AttestationError extends Error {

@@ -22,6 +22,9 @@ import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {BlockErrorCode} from "../../chain/errors/blockError";
+import {IBlockProcessJob} from "../../chain";
+import {AttestationErrorCode} from "../../chain/errors/attestationError";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -46,11 +49,24 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
     try {
-      return await validateGossipBlock(this.config, this.chain, this.db, this.logger, signedBlock);
+      const blockJob = {
+        signedBlock: signedBlock,
+        trusted: false,
+        reprocess: false,
+      } as IBlockProcessJob;
+      await validateGossipBlock(this.config, this.chain, this.db, this.logger, blockJob);
     } catch (e) {
       this.logger.error("Error while validating gossip block", e);
-      return ExtendedValidatorResult.ignore;
+      if (e.code === BlockErrorCode.ERR_FUTURE_SLOT) return ExtendedValidatorResult.ignore;
+      else if (e.code === BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT) return ExtendedValidatorResult.ignore;
+      else if (e.code === BlockErrorCode.ERR_REPEAT_PROPOSAL) return ExtendedValidatorResult.ignore;
+      else if (e.code === BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID) return ExtendedValidatorResult.reject;
+      else if (e.code === BlockErrorCode.ERR_PARENT_UNKNOWN) return ExtendedValidatorResult.ignore;
+      else if (e.code === BlockErrorCode.ERR_PRESTATE_MISSING) return ExtendedValidatorResult.reject;
+      else if (e.code === BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR) return ExtendedValidatorResult.reject;
+      else if (e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER) return ExtendedValidatorResult.reject;
     }
+    return ExtendedValidatorResult.accept;
   };
 
   public isValidIncomingCommitteeAttestation = async (
@@ -58,11 +74,28 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     subnet: number
   ): Promise<ExtendedValidatorResult> => {
     try {
-      return await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
+      await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
     } catch (e) {
       this.logger.error("Error while validating gossip attestation", e);
-      return ExtendedValidatorResult.ignore;
+      if (e.code === AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE) return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_INVALID_SUBNET_ID) return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE) return ExtendedValidatorResult.ignore;
+      else if (e.code === AttestationErrorCode.ERR_BAD_TARGET_EPOCH) return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET)
+        return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS)
+        return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN) return ExtendedValidatorResult.ignore;
+      else if (e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE) return ExtendedValidatorResult.reject;
+      // else if ()
+      // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue aggregates for processing once block is retrieved).
+      else if (e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK) return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT)
+        return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK)
+        return ExtendedValidatorResult.reject;
     }
+    return ExtendedValidatorResult.accept;
   };
 
   public isValidIncomingAggregateAndProof = async (

@@ -1,21 +1,23 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../../chain";
+import {IBeaconChain, IBlockProcessJob} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
-import {BeaconBlock, Number64, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlock, Number64, Slot} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ExtendedValidatorResult} from "../constants";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getBlockStateContext} from "../utils";
+import {BlockError, BlockErrorCode} from "../../../chain/errors";
 
 export async function validateGossipBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   logger: ILogger,
-  block: SignedBeaconBlock
+  blockJob: IBlockProcessJob
 ): Promise<ExtendedValidatorResult> {
+  const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
   logger.verbose("Started gossip block validation", {blockSlot, blockRoot: toHexString(blockRoot)});
@@ -29,7 +31,13 @@ export async function validateGossipBlock(
       finalizedSlot,
       blockRoot: toHexString(blockRoot),
     });
-    return ExtendedValidatorResult.ignore;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+      blockSlot,
+      finalizedSlot,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.ignore;
   }
 
   //if slot is in future, wait for it's time before resuming
@@ -44,6 +52,12 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
+    // throw new BlockError({
+    //   code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+    //   blockSlot,
+    //   blockRoot,
+    //   job: blockJob,
+    // });
     return ExtendedValidatorResult.reject;
   }
 
@@ -53,7 +67,14 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
-    return ExtendedValidatorResult.ignore;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
+      slot: blockSlot,
+      // blockRoot,
+      proposer: block.message.proposerIndex,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.ignore;
   }
 
   const blockContext = await getBlockStateContext(chain.forkChoice, db, block.message.parentRoot, block.message.slot);
@@ -67,7 +88,13 @@ export async function validateGossipBlock(
     //temporary skip rest of validation and put in block pool
     //rest of validation is performed in state transition anyways
     await chain.receiveBlock(block);
-    return ExtendedValidatorResult.ignore;
+
+    throw new BlockError({
+      code: BlockErrorCode.ERR_PARENT_UNKNOWN,
+      parentRoot: block.message.parentRoot,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.ignore;
   }
 
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
@@ -76,7 +103,11 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
-    return ExtendedValidatorResult.reject;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.reject;
   }
 
   if (!isExpectedProposer(blockContext.epochCtx, block.message)) {
@@ -85,7 +116,13 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
-    return ExtendedValidatorResult.reject;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
+      blockProposer: block.message.proposerIndex,
+      // shufflingProposer,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.reject;
   }
   if (
     toHexString(await chain.forkChoice.getAncestor(blockRoot, finalizedSlot)) !== toHexString(finalizedCheckpoint.root)
@@ -95,10 +132,15 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
-    return ExtendedValidatorResult.reject;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR,
+      job: blockJob,
+      blockSlot,
+    });
+    // return ExtendedValidatorResult.reject;
   }
   logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
-  return ExtendedValidatorResult.accept;
+  // return ExtendedValidatorResult.accept;
 }
 
 export async function waitForBlockSlot(config: IBeaconConfig, genesisTime: Number64, blockSlot: Slot): Promise<void> {
