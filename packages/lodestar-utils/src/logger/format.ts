@@ -1,7 +1,6 @@
 import {format} from "winston";
-import {toJson} from "../json";
+import {toJson, toString} from "../json";
 import {Context, ILoggerOptions} from "./interface";
-import {serializeContext} from "./serialize";
 
 type Format = ReturnType<typeof format.combine>;
 
@@ -47,6 +46,9 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
   );
 }
 
+/**
+ * Winston template function print a human readable string given a log object
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
   const info = _info as IWinstonInfoArg;
@@ -56,14 +58,31 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
   const infoString = info.module || info.namespace || "";
   const infoPad = paddingBetweenInfo - infoString.length;
 
+  const {context, stack} = splitContextAndStackTrace(info.context);
+
   const logParts: (string | undefined)[] = [
     info.timestamp,
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    serializeContext(info.context),
+    context,
     info.durationMs && ` - duration=${info.durationMs}ms`,
+    stack,
   ];
 
   return logParts.filter((s) => s).join(" ");
+}
+
+/**
+ * Extract stack property from context to allow appending at the end of the log
+ */
+function splitContextAndStackTrace(context?: Context | Error): {context: string; stack?: string} {
+  const json = toJson(context);
+
+  if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {
+    const {stack, ...errJsonData} = json;
+    return {context: toString(errJsonData), stack: toString(stack)};
+  } else {
+    return {context: toString(json)};
+  }
 }
