@@ -80,6 +80,10 @@ export enum BlockErrorCode {
    * The finalized checkpoint is not an ancestor of the block.
    */
   ERR_CHECKPOINT_NOT_AN_ANCESTOR = "ERR_CHECKPOINT_NOT_AN_ANCESTOR",
+  /**
+   * Block did not pass validation during block processing.
+   */
+  ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
 }
 
 export type BlockErrorType =
@@ -148,6 +152,11 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR;
       blockSlot: Slot;
+    }
+  | {
+      code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK;
+      blockSlot: Slot;
+      blockRoot: Uint8Array;
     };
 
 type JobObject = {

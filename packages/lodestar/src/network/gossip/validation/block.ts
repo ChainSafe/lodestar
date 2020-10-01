@@ -3,7 +3,6 @@ import {IBeaconChain, IBlockProcessJob} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {BeaconBlock, Number64, Slot} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ExtendedValidatorResult} from "../constants";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
@@ -16,7 +15,7 @@ export async function validateGossipBlock(
   db: IBeaconDb,
   logger: ILogger,
   blockJob: IBlockProcessJob
-): Promise<ExtendedValidatorResult> {
+): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
@@ -52,13 +51,13 @@ export async function validateGossipBlock(
       blockSlot,
       blockRoot: toHexString(blockRoot),
     });
-    // throw new BlockError({
-    //   code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
-    //   blockSlot,
-    //   blockRoot,
-    //   job: blockJob,
-    // });
-    return ExtendedValidatorResult.reject;
+    throw new BlockError({
+      code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
+      blockSlot,
+      blockRoot,
+      job: blockJob,
+    });
+    // return ExtendedValidatorResult.reject;
   }
 
   if (await hasProposerAlreadyProposed(chain, block.message)) {
