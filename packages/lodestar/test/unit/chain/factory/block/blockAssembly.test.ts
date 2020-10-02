@@ -63,7 +63,7 @@ describe("block assembly", function () {
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
+      expect(regenStub.getBlockSlotState.calledTwice).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);
