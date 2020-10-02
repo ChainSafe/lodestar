@@ -6,7 +6,7 @@ import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
-import {generateEmptySignedBlock} from "../../../../utils/block";
+import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import {
@@ -26,6 +26,7 @@ import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {silentLogger} from "../../../../utils/logger";
+import {StateRegenerator} from "../../../../../src/chain/regen";
 
 describe("produce block", function () {
   this.timeout("10 min");
@@ -33,6 +34,8 @@ describe("produce block", function () {
   const dbStub = new StubbedBeaconDb(sinon);
   const chainStub = sinon.createStubInstance(BeaconChain);
   chainStub.forkChoice = sinon.createStubInstance(ForkChoice);
+  const regenStub = (chainStub.regen = sinon.createStubInstance(StateRegenerator));
+  const forkChoiceStub = (chainStub.forkChoice = sinon.createStubInstance(ForkChoice));
   const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
@@ -48,6 +51,12 @@ describe("produce block", function () {
     //if zero hash it get changed
     parentBlock.message.stateRoot = Buffer.alloc(32, 1);
     const parentHeader = signedBlockToSignedHeader(config, parentBlock);
+    const parentBlockSummary = generateBlockSummary({
+      slot: parentBlock.message.slot,
+      blockRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader.message),
+      parentRoot: parentBlock.message.parentRoot.valueOf() as Uint8Array,
+      stateRoot: parentBlock.message.stateRoot.valueOf() as Uint8Array,
+    });
     const state = generateState({
       validators: validators as List<Validator>,
       balances: balances as List<bigint>,
@@ -58,8 +67,8 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    chainStub.getHeadStateContext.resolves({state: state.clone(), epochCtx});
-    chainStub.getHeadBlock.resolves(parentBlock);
+    regenStub.getBlockSlotState.resolves({state: state.clone(), epochCtx});
+    forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
     dbStub.aggregateAndProof.getBlockAttestations.resolves([]);
