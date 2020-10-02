@@ -112,7 +112,6 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
     await this.checkSyncStatus();
-    await this.chain.clock.waitForSlot(signedBlock.message.slot);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 
