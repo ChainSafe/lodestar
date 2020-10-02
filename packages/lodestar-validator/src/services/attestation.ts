@@ -33,9 +33,7 @@ import {
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
-import abortableSource from "abortable-iterator";
 import {BeaconEventType} from "../api/interface/events";
-import {anySignal} from "any-signal";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -161,7 +159,7 @@ export class AttestationService {
       committee: duty.committeeIndex,
       validator: toHexString(duty.validatorPubkey),
     });
-    const abortSignal = this.controller?.signal;
+    const abortSignal = this.controller!.signal;
     await this.waitForAttestationBlock(duty.attestationSlot, abortSignal);
     let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
@@ -216,28 +214,34 @@ export class AttestationService {
     }
   }
 
-  private async waitForAttestationBlock(slot: Slot, signal?: AbortSignal): Promise<void> {
-    this.logger.debug("Waiting for slot block", {slot});
-    const eventSource = this.provider.events.getEventStream([BeaconEventType.BLOCK]);
-    const timeoutController = new AbortController();
-    const signals = [timeoutController.signal];
-    if (signal) {
-      signals.push(signal);
-    }
-    const source = abortableSource(eventSource, anySignal(signals), {returnOnAbort: true});
-    const timeout = setTimeout(() => {
-      timeoutController.abort();
-    }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
-    for await (const event of source) {
-      if (event.type === BeaconEventType.BLOCK && event.message.slot === slot) {
+  private async waitForAttestationBlock(blockSlot: Slot, signal: AbortSignal): Promise<void> {
+    this.logger.debug("Waiting for block at slot", {blockSlot});
+    return new Promise((resolve, reject) => {
+      const onSuccess = (): void => {
         clearTimeout(timeout);
-        eventSource.stop();
-        return;
-      }
-    }
-    this.logger.debug("Timeout out waiting for slot block", {slot});
-    clearTimeout(timeout);
-    eventSource.stop();
+        signal.removeEventListener("abort", onAbort);
+        this.provider.emitter.removeListener(BeaconEventType.BLOCK, onBlock);
+        resolve();
+      };
+      const onAbort = (): void => {
+        clearTimeout(timeout);
+        this.provider.emitter.removeListener(BeaconEventType.BLOCK, onBlock);
+        reject();
+      };
+      const onTimeout = (): void => {
+        this.logger.debug("Timeout out waiting for block at slot", {blockSlot});
+        onSuccess();
+      };
+      const onBlock = ({slot}: {slot: Slot}): void => {
+        if (blockSlot === slot) {
+          this.logger.debug("Found block at slot", {blockSlot});
+          onSuccess();
+        }
+      };
+      signal.addEventListener("abort", onAbort, {once: true});
+      const timeout = setTimeout(onTimeout, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
+      this.provider.emitter.on(BeaconEventType.BLOCK, onBlock);
+    });
   }
 
   private aggregateAttestations = async (

@@ -1,4 +1,3 @@
-import {EventEmitter} from "events";
 import EventSource from "eventsource";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodestar-utils";
@@ -6,6 +5,7 @@ import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodesta
 import {urlJoin} from "../../../../util";
 import {deserializeBeaconEventMessage} from "./util";
 import {BeaconEvent, BeaconEventEmitter, BeaconEventType, IEventsApi} from "../../../interface/events";
+import {BlockEventPayload} from "@chainsafe/lodestar-types";
 
 export class RestEventsApi implements IEventsApi {
   private readonly config: IBeaconConfig;
@@ -31,21 +31,13 @@ export class RestEventsApi implements IEventsApi {
       };
     });
   }
-
-  public getEventEmitter(topics: BeaconEventType[], signal: AbortSignal): EventSourceBeaconEventEmitter {
-    const eventSource = new EventSource(
-      urlJoin(this.baseUrl, "/v1/events?" + topics.map((topic) => `topics=${topic}`).join("&"))
-    );
-    return new EventSourceBeaconEventEmitter(this.config, eventSource, signal);
-  }
 }
 
-export class EventSourceBeaconEventEmitter extends EventEmitter implements BeaconEventEmitter {
-  constructor(config: IBeaconConfig, eventSource: EventSource, signal: AbortSignal) {
-    super();
-    eventSource.onmessage = (event) => {
-      this.emit(event.type, deserializeBeaconEventMessage(config, event)["message"]);
-    };
-    signal.addEventListener("abort", () => eventSource.close(), {once: true});
+export async function pipeToEmitter(
+  stream: IStoppableEventIterable<BeaconEvent>,
+  emitter: BeaconEventEmitter
+): Promise<void> {
+  for await (const evt of stream) {
+    emitter.emit(evt.type as BeaconEventType.BLOCK, evt.message as BlockEventPayload);
   }
 }

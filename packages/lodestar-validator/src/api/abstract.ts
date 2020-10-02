@@ -5,9 +5,10 @@ import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {BeaconEventEmitter, BeaconEventType, IEventsApi} from "./interface/events";
+import {ILogger, IStoppableEventIterable} from "@chainsafe/lodestar-utils";
+import {BeaconEvent, BeaconEventEmitter, BeaconEventType, IEventsApi} from "./interface/events";
 import {LocalClock} from "./LocalClock";
+import {pipeToEmitter} from "@chainsafe/lodestar-validator/src/api/impl/rest/events/events";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
@@ -22,6 +23,8 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   private beaconNodeInterval?: NodeJS.Timeout;
   private slotCountingTimeout?: NodeJS.Timeout;
   private genesisTime?: number;
+  private stream?: IStoppableEventIterable<BeaconEvent>;
+  private streamPromise?: Promise<void>;
 
   public abstract url: string;
   abstract beacon: IBeaconApi;
@@ -33,6 +36,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     super();
     this.config = config;
     this.logger = logger;
+    this.emitter = new EventEmitter();
   }
 
   public async connect(): Promise<void> {
@@ -51,6 +55,9 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     }
     if (this.slotCountingTimeout) {
       clearTimeout(this.slotCountingTimeout);
+    }
+    if (this.stream) {
+      this.stream.stop();
     }
     this.controller.abort();
   }
@@ -79,10 +86,14 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
 
   private startSlotCounting(genesisTime: number): void {
     this.genesisTime = genesisTime;
-    this.emitter = this.events.getEventEmitter(
-      [BeaconEventType.BLOCK, BeaconEventType.HEAD, BeaconEventType.CLOCK_SLOT],
-      this.controller.signal
-    );
+    this.stream = this.events.getEventStream([
+      BeaconEventType.BLOCK,
+      BeaconEventType.HEAD,
+      BeaconEventType.CLOCK_SLOT,
+      BeaconEventType.CLOCK_EPOCH,
+    ]);
+    this.streamPromise = pipeToEmitter(this.stream, this.emitter);
+    // CLOCK_SLOT and CLOCK_EPOCH currently being emitted from this LocalClock
     this.clock = new LocalClock({
       config: this.config,
       genesisTime,

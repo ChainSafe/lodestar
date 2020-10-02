@@ -1,8 +1,7 @@
-import {EventEmitter} from "events";
 import {IEventsApi} from "./interfaces";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ChainEventEmitter, IBeaconChain, IChainEvents} from "../../../chain";
+import {IBeaconChain, IChainEvents} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {
   ChainEventListener,
@@ -34,7 +33,9 @@ export class EventsApi implements IEventsApi {
 
       topics.forEach((topic) => {
         const eventHandler = eventHandlerMapping[topic];
-        this.chain.emitter.on(eventHandler.chainEvent, eventHandler.handler);
+        if (eventHandler) {
+          this.chain.emitter.on(eventHandler.chainEvent, eventHandler.handler);
+        }
       });
       return () => {
         topics.forEach((topic) => {
@@ -43,35 +44,6 @@ export class EventsApi implements IEventsApi {
         });
       };
     });
-  }
-
-  public getEventEmitter(topics: BeaconEventType[], signal: AbortSignal): BeaconEventEmitter {
-    return new BeaconEventEmitter(this.config, this.chain.emitter, signal);
-  }
-}
-
-class BeaconEventEmitter extends EventEmitter {
-  constructor(config: IBeaconConfig, emitter: ChainEventEmitter, signal: AbortSignal) {
-    super();
-    const callback = (value: BeaconEvent): void => {
-      this.emit(value.type, value.message);
-    };
-    const eventHandlerMapping = getEventHandlerMapping(config, callback);
-
-    Object.keys(eventHandlerMapping).forEach((topic) => {
-      const eventHandler = eventHandlerMapping[topic as BeaconEventType];
-      emitter.on(eventHandler.chainEvent, eventHandler.handler);
-    });
-    signal.addEventListener(
-      "abort",
-      () => {
-        Object.keys(eventHandlerMapping).forEach((topic) => {
-          const eventHandler = eventHandlerMapping[topic as BeaconEventType];
-          emitter.removeListener(eventHandler.chainEvent, eventHandler.handler);
-        });
-      },
-      {once: true}
-    );
   }
 }
 

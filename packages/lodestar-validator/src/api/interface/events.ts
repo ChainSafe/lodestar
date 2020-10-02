@@ -54,5 +54,4 @@ export type BeaconEventEmitter = StrictEventEmitter<EventEmitter, IChainEvents>;
 
 export interface IEventsApi {
   getEventStream(topics: BeaconEventType[]): IStoppableEventIterable<BeaconEvent>;
-  getEventEmitter(topics: BeaconEventType[], signal: AbortSignal): BeaconEventEmitter;
 }
