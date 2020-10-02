@@ -7,7 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
