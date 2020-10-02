@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ContainerType} from "@chainsafe/ssz";
-import {BeaconEvent, BeaconEventType} from "./types";
+import {BeaconEvent, BeaconEventType} from "../../../interface/events";
 
 export function deserializeBeaconEventMessage(config: IBeaconConfig, msg: MessageEvent): BeaconEvent {
   switch (msg.type) {

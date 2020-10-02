@@ -4,15 +4,7 @@ import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
-import {IEventsApi} from "./interface/events";
-
-export interface INewSlotCallback {
-  (slot: Slot): void;
-}
-
-export interface INewEpochCallback {
-  (slot: Epoch): void;
-}
+import {BeaconEventEmitter, IEventsApi} from "./interface/events";
 
 export interface IApiClientEvents {
   beaconChainStarted: () => void;
@@ -20,14 +12,18 @@ export interface IApiClientEvents {
 
 export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientEvents>;
 
+export interface IBeaconClock {
+  currentSlot: Slot;
+  currentEpoch: Epoch;
+}
+
 export interface IApiClient extends ApiClientEventEmitter {
   beacon: IBeaconApi;
-
   node: INodeApi;
-
   events: IEventsApi;
-
   validator: IValidatorApi;
+  emitter: BeaconEventEmitter;
+  clock: IBeaconClock;
 
   url: string;
 
@@ -40,20 +36,4 @@ export interface IApiClient extends ApiClientEventEmitter {
    * Destroys connection to rpc server.
    */
   disconnect(): Promise<void>;
-
-  getCurrentSlot(): Slot;
-
-  /**
-   * Invokes callback on new slot.
-   * Depending on implementation it will poll for new slot or getting notified(Websockets)
-   * @param cb
-   */
-  onNewSlot(cb: INewSlotCallback): void;
-
-  /**
-   * Invokes callback on new epoch.
-   * Depending on implementation it will poll for new epoch or getting notified(Websockets)
-   * @param cb
-   */
-  onNewEpoch(cb: INewEpochCallback): void;
 }

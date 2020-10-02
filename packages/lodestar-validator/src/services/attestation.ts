@@ -26,7 +26,6 @@ import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
-  computeStartSlotAtEpoch,
   DomainType,
   getDomain,
   isSlashableAttestationData,
@@ -35,7 +34,7 @@ import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import abortableSource from "abortable-iterator";
-import {BeaconEventType} from "../api/impl/rest/events/types";
+import {BeaconEventType} from "../api/interface/events";
 import {anySignal} from "any-signal";
 
 export class AttestationService {
@@ -48,7 +47,7 @@ export class AttestationService {
   private readonly db: IValidatorDB;
   private readonly logger: ILogger;
 
-  private nextAttesterDuties: Map<Slot, IAttesterDuty[]> = new Map();
+  private nextAttesterDuties: Map<Slot, Map<number, IAttesterDuty>> = new Map();
   private controller: AbortController | undefined;
 
   public constructor(
@@ -70,28 +69,50 @@ export class AttestationService {
 
   public start = async (): Promise<void> => {
     this.controller = new AbortController();
-    const slot = this.provider.getCurrentSlot();
+    const currentEpoch = this.provider.clock.currentEpoch;
     // get current epoch duties
-    await this.onNewEpoch(computeEpochAtSlot(this.config, slot) - 1);
+    await this.updateDuties(currentEpoch);
+    await this.updateDuties(currentEpoch + 1);
 
-    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) !== slot) {
-      // trigger next epoch duties
-      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
-    }
+    this.provider.emitter.on(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.emitter.on(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.emitter.on(BeaconEventType.HEAD, this.onHead);
   };
 
   public stop = async (): Promise<void> => {
     if (this.controller) {
       this.controller.abort();
     }
+    this.provider.emitter.off(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.emitter.off(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.emitter.off(BeaconEventType.HEAD, this.onHead);
   };
 
-  public onNewEpoch = async (epoch: Epoch): Promise<void> => {
+  public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
+    await this.updateDuties(epoch + 1);
+  };
+
+  public onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
+    const duties = this.nextAttesterDuties.get(slot);
+    if (duties && duties.size > 0) {
+      this.nextAttesterDuties.delete(slot);
+      await Promise.all(Array.from(duties.values()).map((duty) => this.handleDuty(duty)));
+    }
+  };
+
+  public onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
+    if (epochTransition) {
+      // refetch next epoch's duties
+      await this.updateDuties(computeEpochAtSlot(this.config, slot) + 1);
+    }
+  };
+
+  public async updateDuties(epoch: Epoch): Promise<void> {
     let attesterDuties: AttesterDuty[] | undefined;
     try {
-      attesterDuties = await this.provider.validator.getAttesterDuties(epoch + 1, this.publicKeys);
+      attesterDuties = await this.provider.validator.getAttesterDuties(epoch, this.publicKeys);
     } catch (e) {
-      this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
+      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e);
       return;
     }
     const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
@@ -113,12 +134,12 @@ export class AttestationService {
         attesterIndex,
         isAggregator,
       };
-      const attesterDuties = this.nextAttesterDuties.get(duty.attestationSlot);
-      if (attesterDuties) {
-        attesterDuties.push(nextDuty);
-      } else {
-        this.nextAttesterDuties.set(duty.attestationSlot, [nextDuty]);
+      let attesterDuties = this.nextAttesterDuties.get(duty.attestationSlot);
+      if (!attesterDuties) {
+        attesterDuties = new Map();
+        this.nextAttesterDuties.set(duty.attestationSlot, attesterDuties);
       }
+      attesterDuties.set(attesterIndex, nextDuty);
       if (isAggregator) {
         try {
           await this.provider.validator.subscribeCommitteeSubnet(
@@ -132,18 +153,7 @@ export class AttestationService {
         }
       }
     }
-  };
-
-  public onNewSlot = async (slot: Slot): Promise<void> => {
-    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
-      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
-    }
-    const duties = this.nextAttesterDuties.get(slot);
-    if (duties && duties.length > 0) {
-      this.nextAttesterDuties.delete(slot);
-      await Promise.all(duties.map((duty) => this.handleDuty(duty)));
-    }
-  };
+  }
 
   private async handleDuty(duty: IAttesterDuty): Promise<void> {
     this.logger.info("Handling attestation duty", {

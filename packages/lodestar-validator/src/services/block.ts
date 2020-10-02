@@ -10,12 +10,12 @@ import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
-  computeStartSlotAtEpoch,
   DomainType,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
+import {BeaconEventType} from "../api/interface/events";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
@@ -50,16 +50,44 @@ export default class BlockProposingService {
   }
 
   public start = async (): Promise<void> => {
+    const currentEpoch = this.provider.clock.currentEpoch;
     // trigger getting duties for current epoch
-    const slot = this.provider.getCurrentSlot();
-    await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
+    await this.updateDuties(currentEpoch);
+
+    this.provider.emitter.on(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.emitter.on(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.emitter.on(BeaconEventType.HEAD, this.onHead);
   };
 
   public stop = async (): Promise<void> => {
     // nothing here yet, but if future cleanup needs to be done (for example, clearing timers), put it here
   };
 
-  public onNewEpoch = async (epoch: Epoch): Promise<void> => {
+  public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
+    await this.updateDuties(epoch);
+  };
+
+  public onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
+    const proposerPubKey = this.nextProposals.get(slot);
+    if (proposerPubKey && slot !== 0) {
+      this.nextProposals.delete(slot);
+      this.logger.info("Validator is proposer!", {
+        slot,
+        validator: toHexString(proposerPubKey),
+      });
+      const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+      await this.createAndPublishBlock(this.getPubKeyIndex(proposerPubKey), slot, fork, genesisValidatorsRoot);
+    }
+  };
+
+  public onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
+    if (epochTransition) {
+      // refetch this epoch's duties
+      await this.updateDuties(computeEpochAtSlot(this.config, slot));
+    }
+  };
+
+  public updateDuties = async (epoch: Epoch): Promise<void> => {
     this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
     const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
@@ -74,22 +102,6 @@ export default class BlockProposingService {
         this.nextProposals.set(duty.slot, duty.proposerPubkey);
       }
     });
-  };
-
-  public onNewSlot = async (slot: Slot): Promise<void> => {
-    if (computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, slot)) === slot) {
-      await this.onNewEpoch(computeEpochAtSlot(this.config, slot));
-    }
-    const proposerPubKey = this.nextProposals.get(slot);
-    if (proposerPubKey && slot !== 0) {
-      this.nextProposals.delete(slot);
-      this.logger.info("Validator is proposer!", {
-        slot,
-        validator: toHexString(proposerPubKey),
-      });
-      const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
-      await this.createAndPublishBlock(this.getPubKeyIndex(proposerPubKey), slot, fork, genesisValidatorsRoot);
-    }
   };
 
   /**
