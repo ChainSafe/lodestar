@@ -27,7 +27,7 @@ import {
   RpcResponseStatus,
   TTFB_TIMEOUT,
 } from "../constants";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {duplex as abortDuplex} from "abortable-iterator";
 import {AbortController} from "abort-controller";
 import all from "it-all";

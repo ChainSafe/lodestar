@@ -4,7 +4,7 @@ import {Registrar, Peer} from "libp2p-gossipsub/src/peer";
 import {Message} from "libp2p-gossipsub/src/message";
 import {Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {assert} from "@chainsafe/lodestar-utils";
 import {compress, uncompress} from "snappyjs";
 

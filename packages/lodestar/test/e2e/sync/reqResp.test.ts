@@ -7,7 +7,7 @@ import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants
 import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import Libp2p from "libp2p";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateState} from "../../utils/state";

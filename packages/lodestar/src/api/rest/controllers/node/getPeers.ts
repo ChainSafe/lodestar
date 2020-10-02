@@ -1,5 +1,5 @@
 import {ApiController} from "../types";
-import {objectToExpectedCase} from "@chainsafe/lodestar-utils/lib/misc";
+import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
 
 export const getPeers: ApiController = {
   url: "/peers",

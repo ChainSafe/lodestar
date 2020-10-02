@@ -3,8 +3,8 @@ import {join} from "path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {Boolean, Number64} from "@chainsafe/lodestar-types/lib/ssz/generators/primitive";
-import {loadYamlFile} from "@chainsafe/lodestar-utils/lib/nodejs";
 import {describeDirectorySpecTest} from "../../../src/single";
+import {loadYamlFile} from "../../../src/util";
 
 export interface ISimpleStruct {
   test: boolean;

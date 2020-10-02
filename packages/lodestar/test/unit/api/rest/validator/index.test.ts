@@ -6,7 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {Keypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";

@@ -6,7 +6,7 @@ import {INetwork} from "../../../network";
 import {IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";

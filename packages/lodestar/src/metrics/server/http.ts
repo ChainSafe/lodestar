@@ -3,7 +3,7 @@
  */
 import http from "http";
 import {createHttpTerminator, HttpTerminator} from "http-terminator";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics, IMetricsServer} from "../interface";
 import {IMetricsOptions} from "../options";
 

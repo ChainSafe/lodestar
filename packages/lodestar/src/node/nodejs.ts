@@ -6,7 +6,7 @@ import deepmerge from "deepmerge";
 import LibP2p from "libp2p";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {initBLS} from "@chainsafe/bls";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 import {BeaconDb, LevelDbController} from "../db";

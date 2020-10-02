@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {LogLevels} from "@chainsafe/lodestar-utils/lib/logger";
+import {LogLevels} from "@chainsafe/lodestar-utils";
 import defaultOptions from "@chainsafe/lodestar/lib/node/options";
 
 type LoggerModule = keyof typeof defaultOptions.logger;

@@ -6,7 +6,7 @@
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {ILogger, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, LogLevel} from "@chainsafe/lodestar-utils";
 import {getAttestationSubnetEvent, getGossipTopic, mapGossipEvent} from "./utils";
 import {INetworkOptions} from "../options";
 import {GossipEventEmitter, GossipObject, IGossip, IGossipEvents, IGossipModules, IGossipSub} from "./interface";

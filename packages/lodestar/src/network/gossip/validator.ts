@@ -16,7 +16,7 @@ import {
   isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 import {ExtendedValidatorResult} from "./constants";

@@ -15,7 +15,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IService} from "../../node";
 import {Message} from "libp2p-gossipsub/src/message";
 import {IBeaconChain} from "../../chain";

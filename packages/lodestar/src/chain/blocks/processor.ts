@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import pipe from "it-pipe";
 import abortable from "abortable-iterator";
 import {AbortController} from "abort-controller";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateBlock} from "./validate";

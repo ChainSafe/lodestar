@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IAttestationProcessor, IBeaconChain} from "../interface";
 import {IBeaconDb} from "../../db/api";
