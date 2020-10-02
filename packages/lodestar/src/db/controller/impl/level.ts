@@ -6,7 +6,7 @@ import {LevelUp} from "levelup";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "../interface";
 //@ts-ignore
 import level from "level";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IDatabaseOptions} from "../../options";
 import pushable, {Pushable} from "it-pushable";
 import all from "it-all";

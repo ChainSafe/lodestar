@@ -1,6 +1,6 @@
 import request from "supertest";
 import {Metrics, HttpMetricsServer} from "../../../../src/metrics";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 describe("HttpMetricsServer", () => {
   const logger: ILogger = new WinstonLogger();
   it("should serve metrics on /metrics", async () => {
