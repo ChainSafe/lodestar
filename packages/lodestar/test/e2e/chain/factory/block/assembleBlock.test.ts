@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {Keypair} from "@chainsafe/bls/lib/keypair";
+import {Keypair} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
