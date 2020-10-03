@@ -11,7 +11,7 @@ const scoreConstants: Record<RpcScoreEvent, number> = {
   [RpcScoreEvent.UNKNOWN_ERROR]: -10,
 };
 
-export const DEFAULT_SCORE = 100;
+export const DEFAULT_RPC_SCORE = 100;
 const MAX_SCORE = 200;
 const MIN_SCORE = 0;
 
@@ -23,11 +23,11 @@ export class SimpleRpcScoreTracker implements IRpcScoreTracker {
   }
 
   public getScore(peer: PeerId): number {
-    return this.store.getRpcScore(peer) ?? DEFAULT_SCORE;
+    return this.store.getRpcScore(peer) ?? DEFAULT_RPC_SCORE;
   }
 
   public reset(peer: PeerId): void {
-    this.store.setRpcScore(peer, DEFAULT_SCORE);
+    this.store.setRpcScore(peer, DEFAULT_RPC_SCORE);
   }
 
   public update(peer: PeerId, event: RpcScoreEvent): void {
