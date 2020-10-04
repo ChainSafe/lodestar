@@ -1,7 +1,10 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
-import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
+import {chunkifyInclusiveRange} from "../util/chunkify";
+import {linspace} from "../util/numpy";
+import {retry} from "../util/retry";
+import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
 
 /**
  * Binds return types to Ethereum JSON RPC methods
@@ -37,13 +40,31 @@ export class Eth1JsonRpcClient {
   /**
    * Fetches an arbitrary array of block numbers in batch
    */
-  async getBlocksByNumber(blockNumbers: number[], signal?: AbortSignal): Promise<Eth1Block[]> {
+  async getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<Eth1Block[]> {
     const method = "eth_getBlockByNumber";
-    const blocksRaw = await this.rpc.fetchBatch<IEthJsonRpcTypes[typeof method]>(
-      blockNumbers.map((blockNumber) => ({method, params: [toHex(blockNumber), false]})),
-      signal
+    const blocksRawArr = await retry(
+      (attempt) => {
+        // Large batch requests can return with code 200 but truncated, with broken JSON
+        // This retry will split a given block range into smaller ranges exponentially
+        // The underlying http client should handle network errors and retry
+        const chunkCount = 2 ** (attempt - 1);
+        const blockRanges = chunkifyInclusiveRange(fromBlock, toBlock, chunkCount);
+        return Promise.all(
+          blockRanges.map(([from, to]) =>
+            this.rpc.fetchBatch<IEthJsonRpcTypes[typeof method]>(
+              linspace(from, to).map((blockNumber) => ({method, params: [toHex(blockNumber), false]})),
+              signal
+            )
+          )
+        );
+      },
+      {
+        retries: 3,
+        shouldRetry: (lastError) => lastError instanceof ErrorParseJson,
+      }
     );
-    return blocksRaw.map(parseBlock);
+
+    return blocksRawArr.flat(1).map(parseBlock);
   }
 
   async getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<Eth1Block> {
