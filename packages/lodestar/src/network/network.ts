@@ -226,7 +226,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         })
         .map((enr: ENR) =>
           enr.peerId().then((peerId) => {
-            return {peerId, multiaddr: enr.multiaddrTCP!};
+            return {peerId, multiaddr: enr.getLocationMultiaddr("tcp")!};
           })
         )
     );
