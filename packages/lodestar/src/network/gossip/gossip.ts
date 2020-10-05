@@ -33,7 +33,6 @@ import {IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject) => void;
 
@@ -57,7 +56,8 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     // need to improve Gossipsub type to implement EventEmitter to avoid this cast
     this.pubsub =
       pubsub ||
-      ((new LodestarGossipsub(config, validator, this.logger, (libp2p as unknown) as Libp2p, {
+      // @ts-ignore
+      ((new LodestarGossipsub(config, validator, this.logger, libp2p, {
         gossipIncoming: true,
       }) as unknown) as IGossipSub);
     this.chain = chain;

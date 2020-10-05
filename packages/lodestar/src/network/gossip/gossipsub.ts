@@ -7,7 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {compress, uncompress} from "snappyjs";
 
-import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, GossipValidationError} from "./interface";
+import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
 import {
   getMessageId,
   getSubnetFromAttestationSubnetTopic,
@@ -20,6 +20,7 @@ import {GOSSIP_MAX_SIZE, ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {getTopicEncoding, GossipEncoding} from "./encoding";
 import {Libp2p} from "libp2p-gossipsub/src/interfaces";
 import {ForkDigest} from "@chainsafe/lodestar-types";
+import {GossipValidationError} from "./errors";
 
 type ValidatorFn = (topic: string, msg: InMessage) => Promise<void>;
 

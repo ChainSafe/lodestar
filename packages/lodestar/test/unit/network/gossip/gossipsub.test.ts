@@ -3,7 +3,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
 import {ExtendedValidatorResult, GossipEvent} from "../../../../src/network/gossip/constants";
-import {IGossipMessageValidator, GossipValidationError} from "../../../../src/network/gossip/interface";
+import {IGossipMessageValidator} from "../../../../src/network/gossip/interface";
 import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";

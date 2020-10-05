@@ -77,6 +77,7 @@
     "libp2p-mplex": "^0.10.0",
     "libp2p-noise": "^2.0.1",
     "libp2p-tcp": "^0.15.1",
+    "libp2p-interfaces": "^0.5.2",
     "multiaddr": "^8.0.0",
     "peer-id": "^0.14.0",
     "prom-client": "^11.5.3",
