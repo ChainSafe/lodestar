@@ -1,4 +1,5 @@
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {IBlockProcessJob} from "../interface";
 
@@ -146,13 +147,11 @@ type JobObject = {
   job: IBlockProcessJob;
 };
 
-export class BlockError extends Error {
-  public type: BlockErrorType;
+export class BlockError extends LodestarError<BlockErrorType> {
   public job: IBlockProcessJob;
 
   constructor({job, ...type}: BlockErrorType & JobObject) {
-    super(type.code);
+    super(type);
     this.job = job;
-    this.type = type;
   }
 }
