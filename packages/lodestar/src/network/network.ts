@@ -7,7 +7,7 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqResp";
 import {INetworkOptions} from "./options";

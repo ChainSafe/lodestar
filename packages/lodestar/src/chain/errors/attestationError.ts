@@ -1,4 +1,5 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum AttestationErrorCode {
   /**
@@ -189,11 +190,8 @@ export type AttestationErrorType =
       error: Error;
     };
 
-export class AttestationError extends Error {
-  public type: AttestationErrorType;
-
+export class AttestationError extends LodestarError<AttestationErrorType> {
   constructor(type: AttestationErrorType) {
-    super(type.code);
-    this.type = type;
+    super(type);
   }
 }

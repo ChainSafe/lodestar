@@ -5,7 +5,6 @@ import {Attestation, AttestationData, Checkpoint} from "@chainsafe/lodestar-type
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
-import {getAttestationPreState, getBlockStateContext} from "../utils";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
@@ -60,18 +59,28 @@ export async function validateGossipAttestation(
     return ExtendedValidatorResult.ignore;
   }
 
-  const attestationStateContext = await getBlockStateContext(chain.forkChoice, db, attestation.data.beaconBlockRoot);
-  if (!attestationStateContext) {
+  if (await db.badBlock.has(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)) {
+    logger.warn("Rejecting gossip committee attestation", {
+      reason: "attestation attests known bad block",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+
+  if (!chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     logger.warn("Ignored gossip committee attestation", {
-      reason: "missing attestation state/block",
+      reason: "missing attestation beaconBlockRoot block",
       ...attestationLogContext,
     });
     // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
-  const attestationPreStateContext = await getAttestationPreState(config, chain, db, attestation.data.target);
-  if (!attestationPreStateContext) {
+
+  let attestationPreStateContext;
+  try {
+    attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
+  } catch (e) {
     logger.warn("Ignored gossip committee attestation", {
       reason: "missing attestation prestate",
       ...attestationLogContext,
@@ -85,7 +94,6 @@ export async function validateGossipAttestation(
   if (subnet !== expectedSubnet) {
     logger.warn("Rejected gossip committee attestation", {
       reason: "wrong subnet",
-      subnet,
       expectedSubnet,
       ...attestationLogContext,
     });

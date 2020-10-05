@@ -2,7 +2,7 @@ import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
 import {getSyncProtocols, INetwork} from "../network";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
 import {FastSync, InitialSync} from "./initial";

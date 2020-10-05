@@ -8,7 +8,7 @@ import {ISlotRange, ISyncCheckpoint} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";

@@ -18,7 +18,7 @@ import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus, ZERO_HASH} from "..
 import {IBeaconDb} from "../../db";
 import {IBeaconChain} from "../../chain";
 import {createRpcProtocol, INetwork} from "../../network";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IReqRespHandler} from "./interface";
 import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";

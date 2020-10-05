@@ -1,4 +1,4 @@
-import {defaultLogLevel, ILoggerOptions, LogLevel} from "@chainsafe/lodestar-utils/lib/logger";
+import {defaultLogLevel, ILoggerOptions, LogLevel} from "@chainsafe/lodestar-utils";
 
 export interface IBeaconLoggerOptions {
   chain: ILoggerOptions;

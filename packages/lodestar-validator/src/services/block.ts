@@ -5,7 +5,7 @@
 import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,

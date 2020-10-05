@@ -1,6 +1,5 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {getAttestationPreState} from "../../network/gossip/utils";
 // eslint-disable-next-line max-len
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -35,9 +34,12 @@ export async function processAttestation(
       return;
     }
 
-    const attestationPreState = await getAttestationPreState(config, chain, db, target);
-    if (!attestationPreState) {
-      //should not happen
+    let attestationPreState;
+    try {
+      attestationPreState = await chain.regen.getCheckpointState(target);
+    } catch (e) {
+      // should not happen
+      logger.error("Attestation prestate not found", e);
       return;
     }
     await db.checkpointStateCache.add(target, attestationPreState);

@@ -3,7 +3,7 @@ import {RestBeaconApi} from "./beacon/beacon";
 import {AbstractApiClient} from "../../abstract";
 import {IBeaconApi} from "../../interface/beacon";
 import {IValidatorApi} from "../../interface/validators";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RestNodeApi} from "./node/node";
 import {INodeApi} from "../../interface/node";

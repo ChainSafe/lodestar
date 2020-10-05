@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {BeaconMetrics} from "../../../src/metrics";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 describe("BeaconMetrics", () => {
   const logger: ILogger = new WinstonLogger();

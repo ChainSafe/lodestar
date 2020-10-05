@@ -12,6 +12,7 @@ import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
 import {IBeaconClock, LocalClock} from "../../../../src/chain/clock";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
+import {StateRegenerator} from "../../../../src/chain/regen";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {silentLogger} from "../../../utils/logger";
@@ -22,6 +23,7 @@ describe("block process stream", function () {
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let clockStub: SinonStubbedInstance<IBeaconClock>;
+  let regenStub: SinonStubbedInstance<StateRegenerator>;
   let blockPoolStub: SinonStubbedInstance<BlockPool>;
   let stateTransitionStub: SinonStub;
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
@@ -34,6 +36,7 @@ describe("block process stream", function () {
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
     clockStub = sinon.createStubInstance(LocalClock);
     sinon.stub(clockStub, "currentSlot").get(() => 0);
+    regenStub = sinon.createStubInstance(StateRegenerator);
     stateTransitionStub = sandbox.stub(stateTransitionUtils, "fastStateTransition");
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
   });
@@ -49,6 +52,7 @@ describe("block process stream", function () {
       reprocess: false,
     };
     dbStub.block.get.withArgs(receivedJob.signedBlock.message.parentRoot.valueOf() as Uint8Array).resolves(null);
+    regenStub.getPreState.throws();
     const result = await pipe(
       [receivedJob],
       processBlock(
@@ -56,6 +60,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub
@@ -82,6 +87,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub
@@ -108,6 +114,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub
@@ -136,6 +143,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub
@@ -154,7 +162,7 @@ describe("block process stream", function () {
     };
     forkChoiceStub.getBlock.returns(generateBlockSummary());
     forkChoiceStub.getHead.returns(generateBlockSummary());
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
+    regenStub.getPreState.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 1));
     const result = await pipe(
@@ -164,6 +172,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub
@@ -182,10 +191,9 @@ describe("block process stream", function () {
       trusted: false,
       reprocess: false,
     };
-    const parentBlock = config.types.SignedBeaconBlock.defaultValue();
     forkChoiceStub.getBlock.returns(generateBlockSummary());
     forkChoiceStub.getHead.returns(generateBlockSummary());
-    dbStub.stateCache.get.resolves({state: generateState(), epochCtx: new EpochContext(config)});
+    regenStub.getPreState.resolves({state: generateState(), epochCtx: new EpochContext(config)});
     stateTransitionStub.returns({state: generateState(), epochCtx: new EpochContext(config)});
     forkChoiceStub.getHeadRoot.returns(Buffer.alloc(32, 2));
     dbStub.eth1Data.values.resolves([]);
@@ -198,6 +206,7 @@ describe("block process stream", function () {
         logger,
         dbStub,
         forkChoiceStub,
+        regenStub,
         (blockPoolStub as unknown) as BlockPool,
         eventBusStub,
         clockStub

@@ -5,7 +5,7 @@
 import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 
 export interface IArchiveStatesModules {

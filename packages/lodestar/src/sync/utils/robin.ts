@@ -11,8 +11,7 @@ export class RoundRobinArray<T> {
     const item = this.array[this.index++];
     if (item) {
       return item;
-    }
-    {
+    } else {
       this.index = 0;
       return this.array[this.index];
     }

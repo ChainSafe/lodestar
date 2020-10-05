@@ -12,7 +12,7 @@ import {expect} from "chai";
 import {BeaconDb} from "../../../src/db/api";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {ISyncOptions} from "../../../src/sync/options";
-import {IBeaconSync} from "../../../lib/sync";
+import {IBeaconSync} from "../../../src/sync";
 import {silentLogger} from "../../utils/logger";
 
 describe("sync", function () {

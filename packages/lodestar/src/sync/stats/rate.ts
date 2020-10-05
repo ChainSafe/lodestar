@@ -39,12 +39,12 @@ export class RateCounter {
     if (this.count == 0) {
       return 0;
     }
-    const diff = new Date().getTime() - this.since;
+    const diff = Date.now() - this.since;
     return this.count / (diff / 1000);
   }
 
   private resetRate = (): void => {
-    this.since = new Date().getTime();
+    this.since = Date.now();
     this.count = 0;
   };
 }

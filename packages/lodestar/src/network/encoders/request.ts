@@ -1,5 +1,5 @@
 import {Method, Methods, ReqRespEncoding} from "../../constants";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {decode, encode} from "varint";
 import BufferList from "bl";

@@ -5,14 +5,8 @@ import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {AggregateAndProof, Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {ExtendedValidatorResult} from "../constants";
 import {toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  isAggregatorFromCommitteeLength,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {getAttestationPreState} from "../utils";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
@@ -87,19 +81,16 @@ export async function validateAggregateAttestation(
   aggregateAndProof: SignedAggregateAndProof
 ): Promise<ExtendedValidatorResult> {
   const attestation = aggregateAndProof.message.aggregate;
-  const attestationPreState = await getAttestationPreState(config, chain, db, attestation.data.target);
-  if (!attestationPreState) {
+  let attestationPreState;
+  try {
+    // the target state, advanced to the attestation slot
+    attestationPreState = await chain.regen.getBlockSlotState(attestation.data.target.root, attestation.data.slot);
+  } catch (e) {
     logger.warn("Ignored gossip aggregate and proof", {reason: "missing attestation prestate", ...logContext});
     return ExtendedValidatorResult.ignore;
   }
 
   const {state, epochCtx} = attestationPreState;
-  // committee changes on epoch, so advance only if different epoch
-  const attEpoch = computeEpochAtSlot(config, attestation.data.slot);
-  if (attEpoch > computeEpochAtSlot(config, state.slot)) {
-    processSlots(epochCtx, state, computeStartSlotAtEpoch(config, attEpoch));
-  }
-
   try {
     const committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
     if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {

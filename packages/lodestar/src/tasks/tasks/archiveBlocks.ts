@@ -6,7 +6,7 @@ import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 

@@ -18,7 +18,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IValidatorApi} from "../../../interface/validators";
 import {HttpClient, urlJoin} from "../../../../util";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
 

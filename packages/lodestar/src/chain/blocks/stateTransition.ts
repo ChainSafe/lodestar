@@ -1,6 +1,6 @@
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {Slot} from "@chainsafe/lodestar-types";
-import {assert, ILogger} from "@chainsafe/lodestar-utils";
+import {assert} from "@chainsafe/lodestar-utils";
 import {
   ZERO_HASH,
   computeEpochAtSlot,
@@ -13,51 +13,6 @@ import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBlockProcessJob} from "../interface";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb} from "../../db";
-
-// TODO remove after state regenerator exists
-export async function getPreState(
-  config: IBeaconConfig,
-  db: IBeaconDb,
-  forkChoice: IForkChoice,
-  logger: ILogger,
-  job: IBlockProcessJob
-): Promise<ITreeStateContext> {
-  const parentBlock = forkChoice.getBlock(job.signedBlock.message.parentRoot.valueOf() as Uint8Array);
-  const blockRoot = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
-  if (!parentBlock) {
-    logger.debug(
-      `Block(${toHexString(blockRoot)}) at slot ${job.signedBlock.message.slot}` +
-        ` is missing parent block (${toHexString(job.signedBlock.message.parentRoot)}).`
-    );
-    throw new Error("Missing parent");
-  }
-  let stateCtx = await db.stateCache.get(parentBlock.stateRoot);
-  if (!stateCtx) {
-    logger.verbose("Missing state in cache", {
-      slot: job.signedBlock.message.slot,
-      blockRoot: toHexString(blockRoot),
-      parentRoot: toHexString(parentBlock.blockRoot),
-    });
-    const nearestEpoch = computeEpochAtSlot(config, job.signedBlock.message.slot - 1);
-    // when we restart from a skipped slot, we only have checkpoint state, not state
-    // we always do processSlotsToNearestCheckpoint when running state transition so this is reasonable
-    stateCtx = await db.checkpointStateCache.getLatest({
-      root: parentBlock.blockRoot,
-      epoch: nearestEpoch,
-    });
-    if (!stateCtx) {
-      logger.error("Missing state in cache", {
-        slot: job.signedBlock.message.slot,
-        blockRoot: toHexString(blockRoot),
-        parentRoot: toHexString(parentBlock.blockRoot),
-      });
-      throw new Error("Missing state in cache");
-    }
-  }
-  return stateCtx;
-}
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -115,6 +70,23 @@ export async function processSlotsToNearestCheckpoint(
     processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
     emitCheckpointEvent(emitter, postCtx);
     postCtx = cloneStateCtx(postCtx);
+  }
+  return postCtx;
+}
+
+/**
+ * Starting at `stateCtx.state.slot`,
+ * process slots forward towards `slot`,
+ * emitting "checkpoint" events after every epoch processed.
+ */
+export async function processSlotsByCheckpoint(
+  emitter: ChainEventEmitter,
+  stateCtx: ITreeStateContext,
+  slot: Slot
+): Promise<ITreeStateContext> {
+  const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
+  if (postCtx.state.slot < slot) {
+    processSlots(postCtx.epochCtx, postCtx.state, slot);
   }
   return postCtx;
 }

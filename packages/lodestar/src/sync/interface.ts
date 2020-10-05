@@ -1,6 +1,6 @@
 import {IService} from "../node";
 import {INetwork} from "../network";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, SyncingStatus, Root} from "@chainsafe/lodestar-types";
 import {InitialSync} from "./initial";
 import {IRegularSync} from "./regular";

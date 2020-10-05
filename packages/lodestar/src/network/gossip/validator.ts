@@ -10,18 +10,16 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {
-  computeStartSlotAtEpoch,
   isValidAttesterSlashing,
   isValidProposerSlashing,
   isValidVoluntaryExit,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {arrayIntersection, sszEqualPredicate} from "../../util/objects";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 
 /* eslint-disable @typescript-eslint/interface-name-prefix */
 interface GossipMessageValidatorModules {
@@ -89,11 +87,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     if (await this.db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
       return ExtendedValidatorResult.ignore;
     }
-    const {state, epochCtx} = await this.chain.getHeadStateContext();
-    const startSlot = computeStartSlotAtEpoch(this.config, voluntaryExit.message.epoch);
-    if (state.slot < startSlot) {
-      processSlots(epochCtx, state, startSlot);
-    }
+    const {state} = await this.chain.regen.getCheckpointState({
+      root: this.chain.forkChoice.getHeadRoot(),
+      epoch: voluntaryExit.message.epoch,
+    });
     if (!isValidVoluntaryExit(this.config, state, voluntaryExit)) {
       return ExtendedValidatorResult.reject;
     }

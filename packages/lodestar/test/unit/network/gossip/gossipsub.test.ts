@@ -6,7 +6,7 @@ import {GossipEvent, ExtendedValidatorResult} from "../../../../src/network/goss
 import {IGossipMessageValidator} from "../../../../src/network/gossip/interface";
 import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
-import {WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {createPeerId} from "../../../../src/network";
 import {compress} from "snappyjs";

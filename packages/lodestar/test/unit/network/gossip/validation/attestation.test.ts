@@ -1,28 +1,31 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, ForkChoice, ForkChoiceStore, IBeaconChain} from "../../../../../src/chain";
+import sinon, {createStubInstance, SinonStub, SinonStubbedInstance} from "sinon";
+import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {generateAttestation} from "../../../../utils/attestation";
-import {validateGossipAttestation} from "../../../../../src/network/gossip/validation";
-import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
 import {expect} from "chai";
+
+import {IndexedAttestation} from "@chainsafe/lodestar-types";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../../src/constants";
-import * as gossipUtils from "../../../../../src/network/gossip/utils";
-import {generateState} from "../../../../utils/state";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
-import {silentLogger} from "../../../../utils/logger";
 import {ProtoArray} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/regen";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../../src/constants";
+import {validateGossipAttestation} from "../../../../../src/network/gossip/validation";
+import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
+import {generateAttestation} from "../../../../utils/attestation";
+import {silentLogger} from "../../../../utils/logger";
+import {generateState} from "../../../../utils/state";
 
 describe("gossip attestation validation", function () {
   const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
+  let forkChoice: SinonStubbedInstance<IForkChoice>;
+  let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let getBlockStateContextStub: SinonStub;
-  let getAttestationPreStateStub: SinonStub;
   let computeAttestationSubnetStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
@@ -30,18 +33,16 @@ describe("gossip attestation validation", function () {
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
+    forkChoice = chain.forkChoice = createStubInstance(ForkChoice);
+    regen = chain.regen = createStubInstance(StateRegenerator);
     db = new StubbedBeaconDb(sinon, config);
     db.badBlock.has.resolves(false);
-    getBlockStateContextStub = sinon.stub(gossipUtils, "getBlockStateContext");
-    getAttestationPreStateStub = sinon.stub(gossipUtils, "getAttestationPreState");
     computeAttestationSubnetStub = sinon.stub(attestationUtils, "computeSubnetForAttestation");
     isValidIndexedAttestationStub = sinon.stub(blockUtils, "isValidIndexedAttestation");
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
   });
 
   afterEach(function () {
-    getBlockStateContextStub.restore();
-    getAttestationPreStateStub.restore();
     computeAttestationSubnetStub.restore();
     isValidIndexedAttestationStub.restore();
   });
@@ -101,16 +102,27 @@ describe("gossip attestation validation", function () {
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
-  it("should ignore - missing attestation block or state", async function () {
+  it("should ignore - validator already attested to target epoch", async function () {
+    const attestation = generateAttestation({
+      aggregationBits: [true] as BitList,
+    });
+    db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
+    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    expect(result).to.equal(ExtendedValidatorResult.ignore);
+    expect(chain.receiveAttestation.called).to.be.false;
+    expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
+  });
+
+  it("should ignore - missing attestation block", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves(null);
+    forkChoice.hasBlock.returns(false);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.true;
-    expect(getBlockStateContextStub.calledOnceWith(chain.forkChoice, db, attestation.data.beaconBlockRoot)).to.be.true;
+    expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
   });
 
   it("should ignore - missing attestation pre state context", async function () {
@@ -118,15 +130,12 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
-    getAttestationPreStateStub.resolves(null);
+    forkChoice.hasBlock.returns(true);
+    regen.getCheckpointState.throws();
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.true;
-    expect(getAttestationPreStateStub.calledOnceWith(config, chain, db, attestation.data.target)).to.be.true;
+    expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
   });
 
   it("should reject - attestation on wrong subnet", async function () {
@@ -134,15 +143,12 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(5);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
@@ -155,10 +161,7 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -166,7 +169,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(false);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -183,10 +186,7 @@ describe("gossip attestation validation", function () {
       },
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -199,7 +199,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -213,10 +213,7 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -229,7 +226,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -249,10 +246,7 @@ describe("gossip attestation validation", function () {
       },
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -265,7 +259,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -295,14 +289,18 @@ describe("gossip attestation validation", function () {
           root: Buffer.alloc(32),
         },
       }),
-      protoArray: new ProtoArray({pruneThreshold: 0, justifiedEpoch: 0, finalizedEpoch: 0}),
+      protoArray: ProtoArray.initialize({
+        slot: 0,
+        parentRoot: toHexString(Buffer.alloc(32)),
+        stateRoot: toHexString(Buffer.alloc(32)),
+        blockRoot: toHexString(Buffer.alloc(32)),
+        justifiedEpoch: 0,
+        finalizedEpoch: 0,
+      }),
       queuedAttestations: new Set(),
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -315,7 +313,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -354,10 +352,7 @@ describe("gossip attestation validation", function () {
       queuedAttestations: new Set(),
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoice.hasBlock.returns(true);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -370,7 +365,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
@@ -394,7 +389,7 @@ describe("gossip attestation validation", function () {
     attestationPreState.epochCtx.getIndexedAttestation = () => {
       return (attestation as unknown) as IndexedAttestation;
     };
-    getAttestationPreStateStub.resolves(attestationPreState);
+    regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
     chain.getFinalizedCheckpoint.resolves({epoch: 0, root: Buffer.alloc(32)});
@@ -402,10 +397,7 @@ describe("gossip attestation validation", function () {
     forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     forkChoiceStub.getAncestor.returns(Buffer.alloc(32));
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
-    getBlockStateContextStub.resolves({
-      state: generateState(),
-      epochCtx: new EpochContext(config),
-    });
+    forkChoiceStub.hasBlock.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chain.receiveAttestation.called).to.be.false;

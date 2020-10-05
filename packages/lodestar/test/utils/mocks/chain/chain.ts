@@ -1,4 +1,5 @@
 import {AbortController} from "abort-controller";
+import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {
@@ -21,6 +22,8 @@ import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
 import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
 import {LocalClock} from "../../../../src/chain/clock";
+import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
+import {StubbedBeaconDb} from "../../stub";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -35,6 +38,7 @@ export class MockBeaconChain implements IBeaconChain {
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
+  public regen: IStateRegenerator;
   public emitter: ChainEventEmitter;
 
   private state: TreeBacked<BeaconState> | null;
@@ -54,6 +58,12 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.regen = new StateRegenerator({
+      config: this.config,
+      emitter: this.emitter,
+      forkChoice: this.forkChoice,
+      db: new StubbedBeaconDb(sinon),
+    });
   }
 
   async getHeadBlock(): Promise<null> {
@@ -61,6 +71,20 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
+    return {
+      state: this.state!,
+      epochCtx: new EpochContext(this.config),
+    };
+  }
+
+  public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
+    return {
+      state: this.state!,
+      epochCtx: new EpochContext(this.config),
+    };
+  }
+
+  public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
     return {
       state: this.state!,
       epochCtx: new EpochContext(this.config),

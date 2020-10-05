@@ -22,7 +22,7 @@ import {IApiClient} from "../api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
