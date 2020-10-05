@@ -3,7 +3,7 @@ import {ApiClientEventEmitter, IApiClient, RestBeaconApi, RestValidatorApi} from
 import {IBeaconApi} from "../../src/api/interface/beacon";
 import {INodeApi} from "../../src/api/interface/node";
 import {IValidatorApi} from "../../src/api/interface/validators";
-import {BeaconEventEmitter, IEventsApi} from "../../src/api/interface/events";
+import {IEventsApi} from "../../src/api/interface/events";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
 import {RestNodeApi} from "../../src/api/impl/rest/node/node";
 import {EventEmitter} from "events";
@@ -15,7 +15,6 @@ export class SinonStubbedBeaconApi extends (EventEmitter as {new (): ApiClientEv
   validator: SinonStubbedInstance<IValidatorApi>;
   events: SinonStubbedInstance<IEventsApi>;
   clock: SinonStubbedInstance<LocalClock>;
-  emitter: BeaconEventEmitter;
   url!: string;
 
   connect: SinonStubbedMember<IApiClient["connect"]> = sinon.stub();
@@ -28,6 +27,5 @@ export class SinonStubbedBeaconApi extends (EventEmitter as {new (): ApiClientEv
     this.validator = sandbox.createStubInstance(RestValidatorApi);
     this.events = sandbox.createStubInstance(RestEventsApi);
     this.clock = sandbox.createStubInstance(LocalClock);
-    this.emitter = new EventEmitter();
   }
 }

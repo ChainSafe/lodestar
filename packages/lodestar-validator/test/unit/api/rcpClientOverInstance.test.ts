@@ -4,12 +4,12 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 import {ApiClientOverInstance} from "../../../src/api";
-import {BeaconEventType} from "../../../src/api/interface/events";
 import {RestEventsApi} from "../../../src/api/impl/rest/events/events";
 import {MockBeaconApi} from "../../utils/mocks/beacon";
 import {MockNodeApi} from "../../utils/mocks/node";
 import {MockValidatorApi} from "../../utils/mocks/validator";
 import {silentLogger} from "../../utils/logger";
+import {ClockEventType} from "../../../src/api/interface/clock";
 
 describe("RpcClientOverInstance test", function () {
   let clock: any, sandbox: any;
@@ -53,18 +53,18 @@ describe("RpcClientOverInstance test", function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     await rpcClient.connect();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_SLOT, cb);
+    rpcClient.on(ClockEventType.CLOCK_SLOT, cb);
     expect(cb.notCalled).to.be.true;
-    rpcClient.emitter.off(BeaconEventType.CLOCK_SLOT, cb);
+    rpcClient.off(ClockEventType.CLOCK_SLOT, cb);
   });
 
   it("should properly notify on new slot", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
     await rpcClient.connect();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_SLOT, cb);
+    rpcClient.on(ClockEventType.CLOCK_SLOT, cb);
     const slotEvent = new Promise((resolve) => {
-      rpcClient.emitter.on(BeaconEventType.CLOCK_SLOT, resolve);
+      rpcClient.on(ClockEventType.CLOCK_SLOT, resolve);
     });
     clock.tick((config.params.SECONDS_PER_SLOT + 1) * 1000);
     await slotEvent;
@@ -74,7 +74,7 @@ describe("RpcClientOverInstance test", function () {
   it("should properly notify on next slot", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_SLOT, cb);
+    rpcClient.on(ClockEventType.CLOCK_SLOT, cb);
     await rpcClient.connect();
     clock.tick((config.params.SECONDS_PER_SLOT + 1) * 1000);
     clock.tick((config.params.SECONDS_PER_SLOT + 1) * 1000);
@@ -85,7 +85,7 @@ describe("RpcClientOverInstance test", function () {
   it("should not notify new epoch because has not yet come", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_EPOCH, cb);
+    rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
     await rpcClient.connect();
     clock.tick((config.params.SLOTS_PER_EPOCH - 1) * config.params.SECONDS_PER_SLOT * 1000);
     expect(cb.notCalled).to.be.true;
@@ -94,7 +94,7 @@ describe("RpcClientOverInstance test", function () {
   it("should properly notify on new epoch", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_EPOCH, cb);
+    rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
     await rpcClient.connect();
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);
     expect(cb.withArgs({epoch: 1}).called).to.be.true;
@@ -103,7 +103,7 @@ describe("RpcClientOverInstance test", function () {
   it("should properly notify on subsequent epoch", async function () {
     const rpcClient = getRpcClient();
     const cb = sandbox.spy();
-    rpcClient.emitter.on(BeaconEventType.CLOCK_EPOCH, cb);
+    rpcClient.on(ClockEventType.CLOCK_EPOCH, cb);
     await rpcClient.connect();
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);
     clock.tick((config.params.SLOTS_PER_EPOCH + 1) * config.params.SECONDS_PER_SLOT * 1000);

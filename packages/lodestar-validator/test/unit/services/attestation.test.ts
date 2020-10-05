@@ -174,7 +174,7 @@ describe("validator attestation service", function () {
     dbStub.getAttestations.resolves([]);
     dbStub.setAttestation.resolves();
     const promise = service.onClockSlot({slot: 10});
-    rpcClientStub.emitter.emit(BeaconEventType.BLOCK, {block: new Uint8Array(32), slot: 10});
+    rpcClientStub.emit(BeaconEventType.BLOCK, {block: new Uint8Array(32), slot: 10});
     // don't need to wait for 1/3 slot time which is 4000
     clock.tick(1001);
     await promise;
