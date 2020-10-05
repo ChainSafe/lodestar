@@ -94,7 +94,7 @@ export class AttestationService {
       this.logger.error(`Failed to obtain attester duty for epoch ${epoch + 1}`, e);
       return;
     }
-    const fork = await this.provider.beacon.state.getFork("head");
+    const fork = await this.provider.beacon.getFork();
     if (!fork) return;
     for (const duty of attesterDuties) {
       const attesterIndex = this.publicKeys.findIndex((pubkey) => {
@@ -162,7 +162,7 @@ export class AttestationService {
     let attestation: Attestation | undefined;
     let fork: Fork, genesisValidatorsRoot: Root;
     try {
-      const fork = await this.provider.beacon.state.getFork("head");
+      const fork = await this.provider.beacon.getFork();
       if (!fork) return;
       attestation = await this.createAttestation(
         duty.attesterIndex,

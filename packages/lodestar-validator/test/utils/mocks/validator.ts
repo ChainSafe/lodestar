@@ -10,12 +10,11 @@ import {
   Eth1Data,
   Number64,
   ProposerDuty,
-  ValidatorIndex,
-  Slot,
-  SignedBeaconBlock,
   SignedAggregateAndProof,
+  SignedBeaconBlock,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {IValidatorApi} from "../../../src/api/interface/validators";
+import {IValidatorApi} from "../../../src/api/types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 
 export interface IMockValidatorAPIOpts {

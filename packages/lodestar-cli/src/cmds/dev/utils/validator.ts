@@ -6,6 +6,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {NodeApi} from "@chainsafe/lodestar/lib/api/impl/node/node";
 import {Eth1ForBlockProductionDisabled} from "@chainsafe/lodestar/lib/eth1";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
+import {ValidatorBeaconApiAdapter} from "../../../adapters/api/beacon";
 
 export function getValidatorApiClient(url: string, logger: ILogger, node: BeaconNode): IApiClient {
   if (url === "memory") {
@@ -13,7 +14,7 @@ export function getValidatorApiClient(url: string, logger: ILogger, node: Beacon
       config: node.config,
       validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
       node: new NodeApi({}, {...node}),
-      beacon: new BeaconApi({}, {...node}),
+      beacon: new ValidatorBeaconApiAdapter(new BeaconApi({}, {...node})),
       events: new EventsApi({}, {...node}) as IEventsApi,
     });
   } else {

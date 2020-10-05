@@ -1,21 +1,20 @@
 import sinon, {SinonSandbox, SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {ApiClientEventEmitter, IApiClient, RestBeaconApi, RestValidatorApi} from "../../src/api";
-import {IBeaconApi} from "../../src/api/interface/beacon";
-import {INodeApi} from "../../src/api/interface/node";
-import {IValidatorApi} from "../../src/api/interface/validators";
-import {IEventsApi} from "../../src/api/interface/events";
+import {IBeaconApiClient, IEventsApi, INodeApi, IValidatorApi} from "../../src/api/types";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
 import {RestNodeApi} from "../../src/api/impl/rest/node/node";
 import {EventEmitter} from "events";
+import {Root} from "@chainsafe/lodestar-types";
 
 // @ts-ignore
 export class SinonStubbedBeaconApi extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements SinonStubbedInstance<IApiClient> {
-  beacon: SinonStubbedInstance<IBeaconApi>;
+  beacon: SinonStubbedInstance<IBeaconApiClient>;
   node: SinonStubbedInstance<INodeApi>;
   validator: SinonStubbedInstance<IValidatorApi>;
   events: SinonStubbedInstance<IEventsApi>;
   url!: string;
+  genesisValidatorsRoot: Root = Buffer.alloc(32, 0);
 
   connect: SinonStubbedMember<IApiClient["connect"]> = sinon.stub();
   disconnect: SinonStubbedMember<IApiClient["disconnect"]> = sinon.stub();
@@ -30,4 +29,5 @@ export class SinonStubbedBeaconApi extends (EventEmitter as {new (): ApiClientEv
     this.validator = sandbox.createStubInstance(RestValidatorApi);
     this.events = sandbox.createStubInstance(RestEventsApi);
   }
+
 }

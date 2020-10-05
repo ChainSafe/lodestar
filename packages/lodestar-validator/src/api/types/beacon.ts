@@ -1,10 +1,7 @@
 import {BLSPubkey, Fork, Genesis, ValidatorResponse} from "@chainsafe/lodestar-types";
 
-export interface IBeaconApi {
-  state: {
-    getFork: (stateId: "head") => Promise<Fork | null>;
-  };
-
+export interface IBeaconApiClient {
+  getFork(): Promise<Fork | null>;
   /**
    * Requests the BeaconNode to provide validator details for given public key.
    */

@@ -1,14 +1,11 @@
 import {AbstractApiClient} from "../abstract";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IValidatorApi} from "../interface/validators";
-import {IBeaconApi} from "../interface/beacon";
-import {INodeApi} from "../interface/node";
-import {WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
-import {IEventsApi} from "../interface/events";
+import {IBeaconApiClient, IEventsApi, INodeApi, IValidatorApi} from "../types";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 
 export interface IApiClientOverInstanceOpts {
   config: IBeaconConfig;
-  beacon: IBeaconApi;
+  beacon: IBeaconApiClient;
   node: INodeApi;
   events: IEventsApi;
   validator: IValidatorApi;
@@ -18,7 +15,7 @@ export interface IApiClientOverInstanceOpts {
 export class ApiClientOverInstance extends AbstractApiClient {
   public url = "inmemory";
 
-  public beacon: IBeaconApi;
+  public beacon: IBeaconApiClient;
 
   public node: INodeApi;
 

@@ -1,5 +1,5 @@
 import {SyncingStatus} from "@chainsafe/lodestar-types";
-import {INodeApi} from "../../../src/api/interface/node";
+import {INodeApi} from "../../../src/api/types";
 
 export class MockNodeApi implements INodeApi {
   public async getVersion(): Promise<string> {

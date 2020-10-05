@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
 import {urlJoin} from "../../../../util";
 import {deserializeBeaconEventMessage} from "./util";
-import {IEventsApi} from "../../../interface/events";
+import {IEventsApi} from "../../../types";
 import {BeaconEvent, BeaconEventType} from "./types";
 import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodestar-utils";
 

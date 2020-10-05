@@ -16,7 +16,7 @@ import {
   Slot,
   SignedAggregateAndProof,
 } from "@chainsafe/lodestar-types";
-import {IValidatorApi} from "../../../interface/validators";
+import {IValidatorApi} from "../../../types";
 import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";

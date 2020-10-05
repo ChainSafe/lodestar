@@ -10,8 +10,6 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
   blocks: SinonStubbedInstance<IBeaconBlocksApi>;
   state: SinonStubbedInstance<IBeaconStateApi>;
   pool: SinonStubbedInstance<IBeaconPoolApi>;
-  getBlockStream: Sinon.SinonStubbedMember<IBeaconApi["getBlockStream"]>;
-  getFork: Sinon.SinonStubbedMember<IBeaconApi["getFork"]>;
   getValidator: Sinon.SinonStubbedMember<IBeaconApi["getValidator"]>;
   getGenesis: Sinon.SinonStubbedMember<IBeaconApi["getGenesis"]>;
   namespace: ApiNamespace.BEACON = ApiNamespace.BEACON;
@@ -20,8 +18,6 @@ export class StubbedBeaconApi implements SinonStubbedInstance<IBeaconApi> {
     this.state = sandbox.createStubInstance(BeaconStateApi);
     this.blocks = sandbox.createStubInstance(BeaconBlockApi);
     this.pool = sandbox.createStubInstance(BeaconPoolApi);
-    this.getBlockStream = sandbox.stub();
-    this.getFork = sandbox.stub();
     this.getGenesis = sandbox.stub();
     this.getValidator = sandbox.stub();
   }

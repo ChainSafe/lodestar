@@ -1,17 +1,14 @@
 import {RestValidatorApi} from "./validator/validator";
 import {RestBeaconApi} from "./beacon/beacon";
 import {AbstractApiClient} from "../../abstract";
-import {IBeaconApi} from "../../interface/beacon";
-import {IValidatorApi} from "../../interface/validators";
+import {IBeaconApiClient, IEventsApi, INodeApi, IValidatorApi} from "../../types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RestNodeApi} from "./node/node";
-import {INodeApi} from "../../interface/node";
 import {RestEventsApi} from "./events/events";
-import {IEventsApi} from "../../interface/events";
 
 export class ApiClientOverRest extends AbstractApiClient {
-  public beacon: IBeaconApi;
+  public beacon: IBeaconApiClient;
   public node: INodeApi;
   public events: IEventsApi;
   public validator: IValidatorApi;

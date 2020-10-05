@@ -2,16 +2,12 @@ import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ApiClientEventEmitter, IApiClient, INewEpochCallback, INewSlotCallback} from "./interface";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconApi} from "./interface/beacon";
-import {IValidatorApi} from "./interface/validators";
+import {IBeaconApiClient, IEventsApi, INodeApi, IValidatorApi} from "./types";
 import {EventEmitter} from "events";
-import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IEventsApi} from "./interface/events";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
-
   public genesisValidatorsRoot!: Root;
 
   protected config: IBeaconConfig;
@@ -27,7 +23,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   private genesisTime?: number;
 
   public abstract url: string;
-  abstract beacon: IBeaconApi;
+  abstract beacon: IBeaconApiClient;
   abstract node: INodeApi;
   abstract events: IEventsApi;
   abstract validator: IValidatorApi;

@@ -1,10 +1,7 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconApi} from "./interface/beacon";
-import {IValidatorApi} from "./interface/validators";
+import {IBeaconApiClient, IEventsApi, INodeApi, IValidatorApi} from "./types";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
-import {INodeApi} from "./interface/node";
-import {IEventsApi} from "./interface/events";
 
 export interface INewSlotCallback {
   (slot: Slot): void;
@@ -21,7 +18,7 @@ export interface IApiClientEvents {
 export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientEvents>;
 
 export interface IApiClient extends ApiClientEventEmitter {
-  beacon: IBeaconApi;
+  beacon: IBeaconApiClient;
 
   node: INodeApi;
 

@@ -3,14 +3,15 @@ import {ValidatorDB} from "../../../src/db/api";
 import {LevelDbController} from "../../../src/db/controller";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ApiClientOverInstance, interopKeypair, Validator} from "@chainsafe/lodestar-validator/lib";
-import {intDiv, LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import tmp from "tmp";
 import {ValidatorApi} from "../../../src/api/impl/validator";
 import {BeaconApi} from "../../../src/api/impl/beacon";
-import {NodeApi} from "../../../src/api/impl/node/node";
+import {NodeApi} from "../../../src/api/impl/node";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {EventsApi} from "../../../src/api/impl/events";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
+import {ValidatorBeaconApiAdapter} from "@chainsafe/lodestar-cli/src/adapters/api/beacon";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {
   const validatorsPerValidatorClient = intDiv(count, validatorClientCount);
@@ -74,7 +75,7 @@ export function getDevValidator({
       ),
       node: new NodeApi({}, {...node}),
       events: new EventsApi({}, {...node}) as IEventsApi,
-      beacon: new BeaconApi({}, {...node}),
+      beacon: new ValidatorBeaconApiAdapter(new BeaconApi({}, {...node})),
     }),
     logger: logger,
     keypairs: Array.from({length: count}, (_, i) => {

@@ -87,7 +87,7 @@ export default class BlockProposingService {
         slot,
         validator: toHexString(proposerPubKey),
       });
-      const fork = await this.provider.beacon.state.getFork("head");
+      const fork = await this.provider.beacon.getFork();
       if (!fork) return;
       await this.createAndPublishBlock(
         this.getPubKeyIndex(proposerPubKey),

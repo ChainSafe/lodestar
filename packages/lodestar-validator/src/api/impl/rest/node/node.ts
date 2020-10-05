@@ -1,7 +1,7 @@
 import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {INodeApi} from "../../../interface/node";
+import {INodeApi} from "../../../types";
 import {SyncingStatus} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz/lib/interface";
 

@@ -2,7 +2,6 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import EventSource from "eventsource";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
 import {AttesterDuty} from "@chainsafe/lodestar-types";
@@ -28,11 +27,7 @@ describe("validator attestation service", function () {
 
   beforeEach(() => {
     rpcClientStub = new SinonStubbedBeaconApi(sandbox);
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.getFork.resolves(generateFork());
     rpcClientStub.events.getEventStream.returns(
       new LodestarEventIterator(() => {
         return;
@@ -91,11 +86,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
     dbStub.getAttestations.resolves([]);
@@ -119,11 +110,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, [{...duty, attesterIndex: 0, isAggregator: false}]);
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestation.resolves(
       generateAttestation({
         data: generateAttestationData(0, 1),
@@ -154,11 +141,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(10, [{...duty, attesterIndex: 0, isAggregator: false}]);
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
     dbStub.getAttestations.resolves([]);
