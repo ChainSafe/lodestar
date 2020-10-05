@@ -106,11 +106,3 @@ export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) 
 export interface ILodestarGossipMessage extends Message {
   messageId: string;
 }
-
-export class GossipValidationError extends Error {
-  public code: string;
-  constructor(code: string, message?: string) {
-    super(message);
-    this.code = code;
-  }
-}
