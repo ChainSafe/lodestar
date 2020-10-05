@@ -16,6 +16,7 @@ import {
 import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 import {BeaconEventType} from "../api/interface/events";
+import {ClockEventType} from "../api/interface/clock";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
@@ -54,9 +55,9 @@ export default class BlockProposingService {
     // trigger getting duties for current epoch
     await this.updateDuties(currentEpoch);
 
-    this.provider.emitter.on(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
-    this.provider.emitter.on(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
-    this.provider.emitter.on(BeaconEventType.HEAD, this.onHead);
+    this.provider.on(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.on(ClockEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.on(BeaconEventType.HEAD, this.onHead);
   };
 
   public stop = async (): Promise<void> => {

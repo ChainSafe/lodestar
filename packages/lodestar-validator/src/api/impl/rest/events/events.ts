@@ -1,11 +1,9 @@
 import EventSource from "eventsource";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodestar-utils";
-
 import {urlJoin} from "../../../../util";
 import {deserializeBeaconEventMessage} from "./util";
-import {BeaconEvent, BeaconEventEmitter, BeaconEventType, IEventsApi} from "../../../interface/events";
-import {BlockEventPayload} from "@chainsafe/lodestar-types";
+import {BeaconEvent, BeaconEventType, IEventsApi} from "../../../interface/events";
 
 export class RestEventsApi implements IEventsApi {
   private readonly config: IBeaconConfig;
@@ -30,14 +28,5 @@ export class RestEventsApi implements IEventsApi {
         eventSource.close();
       };
     });
-  }
-}
-
-export async function pipeToEmitter(
-  stream: IStoppableEventIterable<BeaconEvent>,
-  emitter: BeaconEventEmitter
-): Promise<void> {
-  for await (const evt of stream) {
-    emitter.emit(evt.type as BeaconEventType.BLOCK, evt.message as BlockEventPayload);
   }
 }

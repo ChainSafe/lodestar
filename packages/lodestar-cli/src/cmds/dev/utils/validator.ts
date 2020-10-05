@@ -14,7 +14,7 @@ export function getValidatorApiClient(url: string, logger: ILogger, node: Beacon
       validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
       node: new NodeApi({}, {...node}),
       beacon: new BeaconApi({}, {...node}),
-      events: (new EventsApi({}, {...node}) as unknown) as IEventsApi,
+      events: new EventsApi({}, {...node}) as IEventsApi,
     });
   } else {
     return new ApiClientOverRest(node.config, url, logger);

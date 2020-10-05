@@ -4,10 +4,16 @@ import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
-import {BeaconEventEmitter, IEventsApi} from "./interface/events";
+import {BeaconBlockEvent, BeaconChainReorgEvent, BeaconEventType, HeadEvent, IEventsApi} from "./interface/events";
+import {ClockEpochEvent, ClockEventType, ClockSlotEvent} from "./interface/clock";
 
 export interface IApiClientEvents {
   beaconChainStarted: () => void;
+  [BeaconEventType.BLOCK]: (evt: BeaconBlockEvent["message"]) => void;
+  [BeaconEventType.CHAIN_REORG]: (evt: BeaconChainReorgEvent["message"]) => void;
+  [BeaconEventType.HEAD]: (evt: HeadEvent["message"]) => void;
+  [ClockEventType.CLOCK_SLOT]: (evt: ClockSlotEvent["message"]) => void;
+  [ClockEventType.CLOCK_EPOCH]: (evt: ClockEpochEvent["message"]) => void;
 }
 
 export type ApiClientEventEmitter = StrictEventEmitter<EventEmitter, IApiClientEvents>;
@@ -22,7 +28,6 @@ export interface IApiClient extends ApiClientEventEmitter {
   node: INodeApi;
   events: IEventsApi;
   validator: IValidatorApi;
-  emitter: BeaconEventEmitter;
   clock: IBeaconClock;
 
   url: string;
