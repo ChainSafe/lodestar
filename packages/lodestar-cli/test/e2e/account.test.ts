@@ -8,7 +8,7 @@ import {ValidatorDirManager} from "../../src/validatorDir";
 import {getAccountPaths} from "../../src/cmds/account/paths";
 import {init} from "../../src/cmds/init";
 import {TestnetName, fetchBootnodes} from "../../src/testnets";
-import {spadinaConfig} from "../../src/testnets/spadina";
+import {medallaConfig} from "../../src/testnets/medalla";
 import {existsSync, readFileSync, readdirSync} from "fs";
 import lockFile from "lockfile";
 import {registerCommandToYargs} from "../../src/util";
@@ -19,7 +19,7 @@ describe("account cli", function () {
   const spy = stub(console, "log");
   const lockSpy = stub(lockFile, "lockSync");
 
-  const testnetName = "spadina";
+  const testnetName = "medalla";
   const initDefaults = {
     rootDir,
     preset: "mainnet",
@@ -51,7 +51,7 @@ describe("account cli", function () {
     expect(existsSync(beaconConfigPath)).to.be.true;
 
     const beaconConfig = JSON.parse(readFileSync(beaconConfigPath, "utf8"));
-    let templateConfigCopy = JSON.parse(JSON.stringify(spadinaConfig));
+    let templateConfigCopy = JSON.parse(JSON.stringify(medallaConfig));
     templateConfigCopy = {
       ...templateConfigCopy,
       beaconDir: rootDir,
@@ -131,7 +131,7 @@ describe("account cli", function () {
     registerCommandToYargs(lodestar, account);
     expect(existsSync(`${rootDir}/keystores/${validatorId}/.lock`)).to.be.false;
     await new Promise((resolve) => lodestar.parse(["account", "validator", "deposit"], resolve));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     expect(existsSync(`${rootDir}/keystores/${validatorId}/eth1-deposit-tx-hash.txt`)).to.be.true;
   });
 });
