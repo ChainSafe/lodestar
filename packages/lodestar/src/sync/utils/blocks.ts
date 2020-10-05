@@ -34,11 +34,11 @@ export async function getBlockRangeFromPeer(
   peer: PeerId,
   chunk: ISlotRange
 ): Promise<SignedBeaconBlock[] | null> {
-  return (await rpc.beaconBlocksByRange(peer, {
+  return await rpc.beaconBlocksByRange(peer, {
     startSlot: chunk.start,
     step: 1,
     count: chunk.end - chunk.start + 1,
-  })) as SignedBeaconBlock[];
+  });
 }
 
 export async function getBlockRange(
