@@ -67,7 +67,7 @@ This command will:
 To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
 
 ```
-yarn run cli account validator import --testnet medalla --directory <path to your launchpad keys>
+./lodestar account validator import --testnet medalla --directory <path to your launchpad keys>
 ```
 
 You will be prompted to enter a password. Use the same one you used to create the keys initially.
@@ -75,7 +75,7 @@ You will be prompted to enter a password. Use the same one you used to create th
 To confirm your keys have been imported run:
 
 ```
-yarn run cli account validator list --testnet medalla
+./lodestar account validator list --testnet medalla
 ```
 
 This command will print the public address of every active keystore.

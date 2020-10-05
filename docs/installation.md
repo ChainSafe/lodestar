@@ -34,7 +34,7 @@ yarn run build
 Lodestar should now be ready for use:
 
 ```bash
-yarn run cli --help
+./lodestar --help
 ```
 
 ## Install from NPM
