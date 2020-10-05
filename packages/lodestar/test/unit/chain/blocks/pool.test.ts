@@ -3,19 +3,15 @@ import pushable, {Pushable} from "it-pushable";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
-import {generateBlockSummary} from "../../../utils/block";
 
 describe("block pool", function () {
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
   let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>> & AsyncIterable<IBlockProcessJob>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     sourceStub = {
       ...pushable<IBlockProcessJob>(),
@@ -25,8 +21,7 @@ describe("block pool", function () {
   });
 
   it("should add pending blocks", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
+    const pool = new BlockPool(config, sourceStub, eventBusStub);
     pool.addPendingBlock({
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
@@ -49,7 +44,7 @@ describe("block pool", function () {
       // @ts-ignore
       eventBusStub.emit.withArgs("unknownBlockRoot", config.types.SignedBeaconBlock.defaultValue().message.parentRoot)
         .callCount
-    ).to.be.equal(1);
+    ).to.be.equal(2);
     expect(
       // @ts-ignore
       eventBusStub.emit.withArgs("unknownBlockRoot", differentParentRoot.message.parentRoot).callCount
@@ -57,8 +52,7 @@ describe("block pool", function () {
   });
 
   it("should emit ancestor root", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
+    const pool = new BlockPool(config, sourceStub, eventBusStub);
     // firstBlock -> secondBlock
     const firstBlock = config.types.SignedBeaconBlock.defaultValue();
     const ancestorRoot = firstBlock.message.parentRoot;
@@ -78,25 +72,8 @@ describe("block pool", function () {
     expect(eventBusStub.emit.withArgs("unknownBlockRoot", ancestorRoot).callCount).to.be.equal(2);
   });
 
-  it("should not request missing block is too far ahead", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
-    const block = config.types.SignedBeaconBlock.defaultValue();
-    block.message.slot = 30;
-    pool.addPendingBlock({
-      signedBlock: block,
-      trusted: false,
-      reprocess: false,
-    });
-    expect(
-      // @ts-ignore
-      eventBusStub.emit.callCount
-    ).to.be.equal(0);
-  });
-
   it("should remove block when parent found", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
+    const pool = new BlockPool(config, sourceStub, eventBusStub);
     const requiredBlock = config.types.SignedBeaconBlock.defaultValue();
     const pendingBlock = config.types.SignedBeaconBlock.defaultValue();
     pendingBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(requiredBlock.message);
@@ -117,8 +94,7 @@ describe("block pool", function () {
   });
 
   it("should sort pending blocks", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
+    const pool = new BlockPool(config, sourceStub, eventBusStub);
     const requiredBlock = config.types.SignedBeaconBlock.defaultValue();
     const pendingBlock = config.types.SignedBeaconBlock.defaultValue();
     pendingBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(requiredBlock.message);
@@ -145,7 +121,7 @@ describe("block pool", function () {
   });
 
   it("should proceed without pending blocks", function () {
-    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
+    const pool = new BlockPool(config, sourceStub, eventBusStub);
 
     pool.onProcessedBlock(config.types.SignedBeaconBlock.defaultValue());
     expect(sourceStub.push.notCalled).to.be.true;

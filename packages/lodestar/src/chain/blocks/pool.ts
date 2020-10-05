@@ -5,7 +5,6 @@ import {toHexString} from "@chainsafe/ssz";
 
 import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {findUnknownAncestor} from "./util";
 
 export class BlockPool {
@@ -15,18 +14,11 @@ export class BlockPool {
   private readonly config: IBeaconConfig;
   private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
   private readonly eventBus: ChainEventEmitter;
-  private readonly forkChoice: IForkChoice;
 
-  constructor(
-    config: IBeaconConfig,
-    blockProcessorSource: Pushable<IBlockProcessJob>,
-    eventBus: ChainEventEmitter,
-    forkChoice: IForkChoice
-  ) {
+  constructor(config: IBeaconConfig, blockProcessorSource: Pushable<IBlockProcessJob>, eventBus: ChainEventEmitter) {
     this.config = config;
     this.blockProcessorSource = blockProcessorSource;
     this.eventBus = eventBus;
-    this.forkChoice = forkChoice;
   }
 
   public addPendingBlock(job: IBlockProcessJob): void {
@@ -36,15 +28,12 @@ export class BlockPool {
       pendingBlockPool.push(job);
     } else {
       this.unknownParentBlockPool.set(key, [job]);
-      //this prevents backward syncing, tolerance is 20 blocks
-      if (job.signedBlock.message.slot <= this.forkChoice.getHead().slot + 20) {
-        const pendingBlocks = Array.from(this.unknownParentBlockPool.values()).flat();
-        this.eventBus.emit(
-          "unknownBlockRoot",
-          findUnknownAncestor(this.config, pendingBlocks, job.signedBlock.message.parentRoot)
-        );
-      }
     }
+    const pendingBlocks = Array.from(this.unknownParentBlockPool.values()).flat();
+    this.eventBus.emit(
+      "unknownBlockRoot",
+      findUnknownAncestor(this.config, pendingBlocks, job.signedBlock.message.parentRoot)
+    );
   }
 
   public addPendingSlotBlock(job: IBlockProcessJob): void {

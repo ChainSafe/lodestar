@@ -60,7 +60,7 @@ export class BlockProcessor implements IService {
     this.eventBus = eventBus;
     this.clock = clock;
     this.attestationProcessor = attestationProcessor;
-    this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus, forkChoice);
+    this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus);
   }
 
   public async start(): Promise<void> {
