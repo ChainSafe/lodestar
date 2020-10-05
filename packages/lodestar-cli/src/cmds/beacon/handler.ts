@@ -13,7 +13,7 @@ import {initCmd} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
-import {onProcessSIGINT} from "../../util/process";
+import {onGracefulShutdown} from "../../util/process";
 
 /**
  * Run a beacon node
@@ -48,7 +48,7 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
 
   const node = new BeaconNode(options, {config, libp2p, logger});
 
-  onProcessSIGINT(async () => {
+  onGracefulShutdown(async () => {
     await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
   }, logger.info.bind(logger));
 

@@ -17,7 +17,7 @@ import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
-import {onProcessSIGINT} from "../../util/process";
+import {onGracefulShutdown} from "../../util/process";
 
 /**
  * Run a beacon node
@@ -62,7 +62,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
 
   let validators: Validator[] = [];
 
-  onProcessSIGINT(async () => {
+  onGracefulShutdown(async () => {
     await Promise.all([
       Promise.all(validators.map((v) => v.stop())),
       node.stop(),
