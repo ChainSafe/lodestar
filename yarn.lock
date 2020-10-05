@@ -946,7 +946,7 @@
     "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
 
-"@chainsafe/discv5@^0.4.1", "@chainsafe/discv5@^0.4.2":
+"@chainsafe/discv5@^0.4.2":
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.4.2.tgz#e8b7737925ba1a0d80c2d946d821edf501a53d20"
   integrity sha512-qQN3PPWD1zikEPSVNx7lGiM7gGsveYYxT04KyIWEPOOYr/8b/tvHC6d+jbKPjsccYPbrudYRqdl3u30tZKrryA==
@@ -8611,11 +8611,11 @@ libp2p-tcp@^0.15.0, libp2p-tcp@^0.15.1:
     multiaddr "^8.0.0"
     stream-to-it "^0.2.2"
 
-"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git#tuyen/libp2p-0.29-types":
+"libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#38ddd242a35d53968c346034a81088898ac219f3"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#ad21ab3ed5c3914aab64fa8adaa6db34f6555d64"
   dependencies:
-    "@chainsafe/discv5" "^0.4.1"
+    "@chainsafe/discv5" "^0.4.2"
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.18.0"
     multiaddr "^8.0.0"
