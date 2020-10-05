@@ -93,6 +93,9 @@ export type BlockErrorType =
       currentSlot: Slot;
     }
   | {
+      code: BlockErrorCode.ERR_STATE_ROOT_MISMATCH;
+    }
+  | {
       code: BlockErrorCode.ERR_GENESIS_BLOCK;
     }
   | {

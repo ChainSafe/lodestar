@@ -1,161 +1,134 @@
-import {toHexString} from "@chainsafe/ssz";
+import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {Attestation, AttestationRootHex, BlockRootHex, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {IAttestationProcessor, IBeaconChain} from "../interface";
-import {IBeaconDb} from "../../db/api";
-import {GENESIS_EPOCH} from "../../constants";
-import {processAttestation} from "./processor";
 
-export class AttestationProcessor implements IAttestationProcessor {
-  private readonly config: IBeaconConfig;
-  private db: IBeaconDb;
-  private logger: ILogger;
-  private chain: IBeaconChain;
-  private forkChoice: IForkChoice;
-  //using map inside map to ensure unique attestation
-  private pendingBlockAttestations: Map<BlockRootHex, Map<AttestationRootHex, Attestation>>;
-  private pendingSlotAttestations: Map<Slot, Map<AttestationRootHex, Attestation>>;
+import {IAttestationJob} from "../interface";
+import {AttestationProcessor} from "./processor";
 
-  public constructor(
-    chain: IBeaconChain,
-    {config, db, logger}: {config: IBeaconConfig; db: IBeaconDb; logger: ILogger}
-  ) {
-    this.config = config;
-    this.db = db;
-    this.logger = logger;
-    this.chain = chain;
-    this.forkChoice = chain.forkChoice;
-    this.pendingBlockAttestations = new Map();
-    this.pendingSlotAttestations = new Map();
-  }
-
-  public async start(): Promise<void> {
-    //checks if attestation is waiting on specific slot
-    this.chain.emitter.on("clock:slot", this.onNewSlot);
-  }
-  public async stop(): Promise<void> {
-    this.chain.emitter.off("clock:slot", this.onNewSlot);
-  }
-
+export class AttestationPool {
   /**
-   * Resolves quickly but attestation process might be delayed
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#validate_on_attestation
-   *
-   * @param attestation
+   * Attestations indexed by attestationRoot
    */
-  public async receiveAttestation(attestation: Attestation): Promise<void> {
-    const attestationHash = this.config.types.Attestation.hashTreeRoot(attestation);
-    const attestationLogContext = {
-      attestationHash: toHexString(attestationHash),
-      target: attestation.data.target.epoch,
-    };
-    this.logger.info("Attestation received to process pool", attestationLogContext);
-    const target = attestation.data.target;
-    const currentSlot = this.chain.clock.currentSlot;
-    const currentEpoch = this.chain.clock.currentEpoch;
-    const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
-    if (target.epoch < previousEpoch) {
-      this.logger.warn("Attestation dropped from pool", {
-        reason: "target too old",
-        currentEpoch,
-        ...attestationLogContext,
-      });
+  public attestations: Map<AttestationRootHex, IAttestationJob>;
+  /**
+   * Attestations indexed by blockRoot, then attestationRoot
+   */
+  public attestationsByBlock: Map<BlockRootHex, Map<AttestationRootHex, IAttestationJob>>;
+  /**
+   * Attestations indexed by slot, then attestationRoot
+   */
+  public attestationsBySlot: Map<Slot, Map<AttestationRootHex, IAttestationJob>>;
+
+  private readonly config: IBeaconConfig;
+  private processor: AttestationProcessor;
+
+  public constructor({config, processor}: {config: IBeaconConfig; processor: AttestationProcessor}) {
+    this.config = config;
+    this.processor = processor;
+    this.attestations = new Map();
+    this.attestationsByBlock = new Map();
+    this.attestationsBySlot = new Map();
+  }
+
+  public putByBlock(blockRoot: Root, job: IAttestationJob): void {
+    // put attestation in two indices:
+    // attestations
+    const attestationKey = this.getAttestationKey(job.attestation);
+    this.attestations.set(attestationKey, job);
+    // attestations by block
+    const blockKey = toHexString(blockRoot);
+    let attestationsAtBlock = this.attestationsByBlock.get(blockKey);
+    if (!attestationsAtBlock) {
+      attestationsAtBlock = new Map();
+      this.attestationsByBlock.set(blockKey, attestationsAtBlock);
     }
-    if (target.epoch > currentEpoch) {
-      this.logger.verbose("Delaying attestation", {
-        reason: "target ahead of current epoch",
-        currentEpoch,
-        ...attestationLogContext,
-      });
-      return this.addPendingSlotAttestation(
-        computeStartSlotAtEpoch(this.config, target.epoch),
-        attestation,
-        attestationHash
-      );
+    attestationsAtBlock.set(attestationKey, job);
+  }
+
+  public putBySlot(slot: Slot, job: IAttestationJob): void {
+    // put attestation in two indices:
+    // attestations
+    const attestationKey = this.getAttestationKey(job.attestation);
+    this.attestations.set(attestationKey, job);
+    // attestations by slot
+    let attestationsAtSlot = this.attestationsBySlot.get(slot);
+    if (!attestationsAtSlot) {
+      attestationsAtSlot = new Map();
+      this.attestationsBySlot.set(slot, attestationsAtSlot);
     }
-    for (const blockRoot of [target.root, attestation.data.beaconBlockRoot]) {
-      if (!this.forkChoice.getBlock(blockRoot)) {
-        this.logger.verbose("Delaying attestation", {
-          reason: "missing either target or attestation block",
-          blockRoot: toHexString(blockRoot),
-          ...attestationLogContext,
-        });
-        this.addPendingBlockAttestation(blockRoot, attestation, attestationHash);
-        return;
+    attestationsAtSlot.set(attestationKey, job);
+  }
+
+  public remove(job: IAttestationJob): void {
+    // remove block from three indices:
+    // attestations
+    const attestationKey = this.getAttestationKey(job.attestation);
+    this.attestations.delete(attestationKey);
+    // attestations by block
+    // both target and beaconBlockRoot
+    const targetKey = toHexString(job.attestation.data.target.root);
+    const attestationsAtTarget = this.attestationsByBlock.get(targetKey);
+    if (attestationsAtTarget) {
+      attestationsAtTarget.delete(attestationKey);
+      if (!attestationsAtTarget.size) {
+        this.attestationsByBlock.delete(targetKey);
       }
     }
-    if (currentSlot < attestation.data.slot + 1) {
-      this.logger.verbose("Delaying attestation", {
-        reason: "current slot less than attestation slot",
-        currentSlot,
-        attestationSlot: attestation.data.slot,
-        ...attestationLogContext,
-      });
-      this.addPendingSlotAttestation(attestation.data.slot + 1, attestation, attestationHash);
-      return;
+    const bbrKey = toHexString(job.attestation.data.beaconBlockRoot);
+    const attestationsAtBbr = this.attestationsByBlock.get(bbrKey);
+    if (attestationsAtBbr) {
+      attestationsAtBbr.delete(attestationKey);
+      if (!attestationsAtBbr.size) {
+        this.attestationsByBlock.delete(bbrKey);
+      }
     }
-    //don't wait for this to resolve
-    processAttestation(this.config, this.chain, this.logger, this.db, attestation).catch((e) => {
-      this.logger.error("Error processing attestation", e);
-    });
+    // attestations by slot
+    const slotKey = job.attestation.data.slot;
+    const attestationsAtSlot = this.attestationsBySlot.get(slotKey);
+    if (attestationsAtSlot) {
+      attestationsAtSlot.delete(attestationKey);
+      if (!attestationsAtSlot.size) {
+        this.attestationsBySlot.delete(slotKey);
+      }
+    }
   }
 
-  public async receiveBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+  public async onBlock(signedBlock: SignedBeaconBlock): Promise<void> {
     // process block's attestations
     const attestations = signedBlock.message.body.attestations;
-    // process one by one in order to cache checkpoit state
-    for (const attestation of attestations) {
-      await this.receiveAttestation(attestation);
-    }
+    const jobs = readOnlyMap(attestations, (attestation) => ({
+      attestation,
+      // attestation signatures from blocks have already been verified
+      validSignature: true,
+    }));
+    await Promise.all(jobs.map((job) => this.processor.processAttestationJob(job)));
     // process pending attestations due to this block
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-    const blockPendingAttestations =
-      this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
-    for (const [_, attestation] of blockPendingAttestations) {
-      try {
-        await this.receiveAttestation(attestation);
-      } catch (e) {
-        this.logger.warn("Failed to process attestation. Reason: " + e.message);
-      }
-    }
-    this.pendingBlockAttestations.delete(toHexString(blockRoot));
+    const key = toHexString(blockRoot);
+    const attestationsAtBlock = Array.from(this.attestationsByBlock.get(key)?.values() ?? []);
+    this.attestationsByBlock.delete(key);
+    await Promise.all(
+      attestationsAtBlock.map((job) => {
+        this.remove(job);
+        return this.processor.processAttestationJob(job);
+      })
+    );
   }
 
-  public getPendingBlockAttestations(blockRootHex: string): Attestation[] {
-    return Array.from(this.pendingBlockAttestations.get(blockRootHex)?.values() ?? []);
+  public async onClockSlot(slot: Slot): Promise<void> {
+    // Attestations can only affect the fork choice of subsequent slots.
+    // Process the attestations in `slot - 1`, rather than `slot`
+    const attestationsAtSlot = Array.from(this.attestationsBySlot.get(slot - 1)?.values() ?? []);
+    this.attestationsBySlot.delete(slot - 1);
+    await Promise.all(
+      attestationsAtSlot.map((job) => {
+        this.remove(job);
+        return this.processor.processAttestationJob(job);
+      })
+    );
   }
 
-  public getPendingSlotAttestations(slot: Slot): Attestation[] {
-    return Array.from(this.pendingSlotAttestations.get(slot)?.values() ?? []);
+  private getAttestationKey(attestation: Attestation): string {
+    return toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
   }
-
-  private addPendingBlockAttestation(blockRoot: Root, attestation: Attestation, attestationHash: Root): void {
-    this.chain.emitter.emit("unknownBlockRoot", blockRoot);
-    const blockPendingAttestations =
-      this.pendingBlockAttestations.get(toHexString(blockRoot)) || new Map<AttestationRootHex, Attestation>();
-    blockPendingAttestations.set(toHexString(attestationHash), attestation);
-    this.pendingBlockAttestations.set(toHexString(blockRoot), blockPendingAttestations);
-  }
-
-  private addPendingSlotAttestation(slot: Slot, attestation: Attestation, attestationHash: Root): void {
-    const blockPendingAttestations =
-      this.pendingSlotAttestations.get(slot) ?? new Map<AttestationRootHex, Attestation>();
-    blockPendingAttestations.set(toHexString(attestationHash), attestation);
-    this.pendingSlotAttestations.set(slot, blockPendingAttestations);
-  }
-
-  private onNewSlot = async (slot: Slot): Promise<void> => {
-    const pendingSlotAttestation = this.pendingSlotAttestations.get(slot) ?? new Map();
-    for (const [_, attestation] of pendingSlotAttestation) {
-      try {
-        await this.receiveAttestation(attestation);
-      } catch (e) {
-        this.logger.warn("Failed to process attestation. Reason: " + e.message);
-      }
-    }
-    this.pendingSlotAttestations.delete(slot);
-  };
 }

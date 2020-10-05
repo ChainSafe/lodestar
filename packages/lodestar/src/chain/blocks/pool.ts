@@ -1,81 +1,128 @@
-import {Pushable} from "it-pushable";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 
 import {IBlockProcessJob} from "../interface";
-import {ChainEventEmitter} from "../emitter";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {findUnknownAncestor} from "./util";
+import {BlockProcessor} from "./processor";
 
+/**
+ * The BlockPool is a cache of blocks that are pending processing.
+ *
+ * Pending blocks come in two varieties:
+ * - blocks with unknown parents
+ * - blocks with future slots
+ */
 export class BlockPool {
-  private unknownParentBlockPool = new Map<string, IBlockProcessJob[]>();
-  private pendingSlotBlockPool = new Map<Slot, IBlockProcessJob[]>();
+  /**
+   * Blocks indexed by blockRoot
+   */
+  public blocks: Map<string, IBlockProcessJob>;
+  /**
+   * Blocks indexed by parentRoot, then blockRoot
+   */
+  public blocksByParent: Map<string, Map<string, IBlockProcessJob>>;
+  /**
+   * Blocks indexed by slot, then blockRoot
+   */
+  public blocksBySlot: Map<Slot, Map<string, IBlockProcessJob>>;
 
   private readonly config: IBeaconConfig;
-  private readonly blockProcessorSource: Pushable<IBlockProcessJob>;
-  private readonly eventBus: ChainEventEmitter;
-  private readonly forkChoice: IForkChoice;
+  private readonly processor: BlockProcessor;
 
-  constructor(
-    config: IBeaconConfig,
-    blockProcessorSource: Pushable<IBlockProcessJob>,
-    eventBus: ChainEventEmitter,
-    forkChoice: IForkChoice
-  ) {
+  constructor({config, processor}: {config: IBeaconConfig; processor: BlockProcessor}) {
     this.config = config;
-    this.blockProcessorSource = blockProcessorSource;
-    this.eventBus = eventBus;
-    this.forkChoice = forkChoice;
+    this.processor = processor;
+
+    this.blocks = new Map();
+    this.blocksByParent = new Map();
+    this.blocksBySlot = new Map();
   }
 
-  public addPendingBlock(job: IBlockProcessJob): void {
-    const key = this.getKey(job.signedBlock);
-    const pendingBlockPool = this.unknownParentBlockPool.get(key);
-    if (pendingBlockPool) {
-      pendingBlockPool.push(job);
-    } else {
-      this.unknownParentBlockPool.set(key, [job]);
-      //this prevents backward syncing, tolerance is 20 blocks
-      if (job.signedBlock.message.slot <= this.forkChoice.getHead().slot + 20) {
-        const pendingBlocks = Array.from(this.unknownParentBlockPool.values()).flat();
-        this.eventBus.emit(
-          "unknownBlockRoot",
-          findUnknownAncestor(this.config, pendingBlocks, job.signedBlock.message.parentRoot)
-        );
+  public addByParent(job: IBlockProcessJob): void {
+    const {signedBlock} = job;
+    // put block in two indices:
+    // blocks
+    const blockKey = this.getBlockKey(signedBlock);
+    this.blocks.set(blockKey, job);
+    // blocks by parent
+    const parentKey = this.getParentKey(signedBlock);
+    let blocksWithParent = this.blocksByParent.get(parentKey);
+    if (!blocksWithParent) {
+      blocksWithParent = new Map();
+      this.blocksByParent.set(parentKey, blocksWithParent);
+    }
+    blocksWithParent.set(blockKey, job);
+  }
+
+  public addBySlot(job: IBlockProcessJob): void {
+    const {signedBlock} = job;
+    // put block in two indices:
+    // blocks
+    const blockKey = this.getBlockKey(signedBlock);
+    this.blocks.set(blockKey, job);
+    // blocks by slot
+    const slotKey = this.getSlotKey(signedBlock);
+    let blocksAtSlot = this.blocksBySlot.get(slotKey);
+    if (!blocksAtSlot) {
+      blocksAtSlot = new Map();
+      this.blocksBySlot.set(slotKey, blocksAtSlot);
+    }
+    blocksAtSlot.set(blockKey, job);
+  }
+
+  public remove(job: IBlockProcessJob): void {
+    // remove block from three indices:
+    // blocks
+    const blockKey = this.getBlockKey(job.signedBlock);
+    this.blocks.delete(blockKey);
+    // blocks by slot
+    const slotKey = this.getSlotKey(job.signedBlock);
+    const blocksAtSlot = this.blocksBySlot.get(slotKey);
+    if (blocksAtSlot) {
+      blocksAtSlot.delete(blockKey);
+      if (!blocksAtSlot.size) {
+        this.blocksBySlot.delete(slotKey);
+      }
+    }
+    // blocks by parent
+    const parentKey = this.getParentKey(job.signedBlock);
+    const blocksWithParent = this.blocksByParent.get(parentKey);
+    if (blocksWithParent) {
+      blocksWithParent.delete(blockKey);
+      if (!blocksWithParent.size) {
+        this.blocksByParent.delete(parentKey);
       }
     }
   }
 
-  public addPendingSlotBlock(job: IBlockProcessJob): void {
-    const pendingBlockPool = this.pendingSlotBlockPool.get(job.signedBlock.message.slot);
-    if (pendingBlockPool) {
-      pendingBlockPool.push(job);
-    } else {
-      this.pendingSlotBlockPool.set(job.signedBlock.message.slot, [job]);
-    }
-  }
-
-  public onProcessedBlock(block: SignedBeaconBlock): void {
-    const key = toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
-    const jobs = this.unknownParentBlockPool.get(key);
-    if (jobs) {
-      this.unknownParentBlockPool.delete(key);
-      jobs
-        .sort((a, b) => a.signedBlock.message.slot - b.signedBlock.message.slot)
-        .forEach((job) => {
-          this.blockProcessorSource.push(job);
-        });
-    }
-  }
-
-  public onNewSlot = (slot: Slot): void => {
-    const jobs = this.pendingSlotBlockPool.get(slot) ?? [];
-    jobs.forEach((job) => this.blockProcessorSource.push(job));
-    this.pendingSlotBlockPool.delete(slot);
+  public onClockSlot = (slot: Slot): void => {
+    const blocksAtSlot = this.blocksBySlot.get(slot) ?? new Map();
+    this.blocksBySlot.delete(slot);
+    blocksAtSlot.forEach((job) => {
+      this.processor.processBlockJob(job).catch(() => /* unreachable */ ({}));
+      this.remove(job);
+    });
   };
 
-  private getKey(block: SignedBeaconBlock): string {
+  public onBlock = (block: SignedBeaconBlock): void => {
+    const parentKey = this.getParentKey(block);
+    const blocksWithParent = this.blocksByParent.get(parentKey) ?? new Map();
+    this.blocksByParent.delete(parentKey);
+    blocksWithParent.forEach((job) => {
+      this.processor.processBlockJob(job).catch(() => /* unreachable */ ({}));
+      this.remove(job);
+    });
+  };
+
+  private getParentKey(block: SignedBeaconBlock): string {
     return toHexString(block.message.parentRoot);
+  }
+
+  private getSlotKey(block: SignedBeaconBlock): number {
+    return block.message.slot;
+  }
+
+  private getBlockKey(block: SignedBeaconBlock): string {
+    return toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
   }
 }

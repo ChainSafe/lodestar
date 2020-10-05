@@ -113,6 +113,16 @@ export function emitForkChoiceHeadEvents(
   }
 }
 
+export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockProcessJob, postCtx: ITreeStateContext): void {
+  emitter.emit("block", job.signedBlock, postCtx, job);
+}
+
+export function emitVoluntaryExitEvents(emitter: ChainEventEmitter, job: IBlockProcessJob): void {
+  job.signedBlock.message.body.voluntaryExits.forEach((exit) => {
+    emitter.emit("voluntaryExit", exit);
+  });
+}
+
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
@@ -134,6 +144,8 @@ export async function runStateTransition(
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
   }
+  emitBlockEvent(emitter, job, postStateContext);
+  emitVoluntaryExitEvents(emitter, job);
   const head = forkChoice.getHead();
   emitForkChoiceHeadEvents(emitter, forkChoice, head, oldHead);
   return postStateContext;

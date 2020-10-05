@@ -13,25 +13,28 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
-import {BlockError} from "./interface";
+import {IBlockProcessJob} from "./interface";
+import {AttestationError, BlockError} from "./errors";
 
 export interface IChainEvents {
   // old, to be deprecated
   unknownBlockRoot: (root: Root) => void;
-  block: (signedBlock: SignedBeaconBlock) => void;
-  checkpoint: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
-  attestation: (attestation: Attestation) => void;
-  voluntaryExit: (exit: SignedVoluntaryExit) => void;
-  justified: (checkpoint: Checkpoint) => void;
-  finalized: (checkpoint: Checkpoint) => void;
   forkVersion: () => void;
-  forkDigest: (forkDigest: ForkDigest) => void;
 
   // new
+  attestation: (attestation: Attestation) => void;
+  block: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockProcessJob) => void;
+  checkpoint: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
+  justified: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
+  finalized: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
+  voluntaryExit: (exit: SignedVoluntaryExit) => void;
+  forkDigest: (forkDigest: ForkDigest) => void;
+
   "clock:slot": (slot: Slot) => void;
   "clock:epoch": (epoch: Epoch) => void;
 
   "error:block": (error: BlockError) => void;
+  "error:attestation": (error: AttestationError) => void;
 
   "forkChoice:head": (head: IBlockSummary) => void;
   "forkChoice:reorg": (head: IBlockSummary, oldHead: IBlockSummary, depth: number) => void;
