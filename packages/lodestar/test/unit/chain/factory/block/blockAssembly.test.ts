@@ -2,16 +2,19 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
-import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {generateState} from "../../../../utils/state";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BeaconChain} from "../../../../../src/chain";
-import {generateEmptyBlock, generateEmptySignedBlock} from "../../../../utils/block";
-import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {BeaconChain} from "../../../../../src/chain";
+import {LocalClock} from "../../../../../src/chain/clock";
+import {assembleBlock} from "../../../../../src/chain/factory/block";
+import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
+import {StateRegenerator} from "../../../../../src/chain/regen";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
+import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
+import {generateState} from "../../../../utils/state";
+import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 
 describe("block assembly", function () {
   const sandbox = sinon.createSandbox();
@@ -19,6 +22,7 @@ describe("block assembly", function () {
   let assembleBodyStub: any,
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
+    regenStub: SinonStubbedInstance<StateRegenerator>,
     stateTransitionStub: any,
     beaconDB: StubbedBeaconDb;
 
@@ -26,9 +30,10 @@ describe("block assembly", function () {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
 
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
-    chainStub.forkChoice = forkChoiceStub;
+    forkChoiceStub = chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.clock = sandbox.createStubInstance(LocalClock);
+    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
 
     beaconDB = new StubbedBeaconDb(sandbox);
   });
@@ -38,8 +43,9 @@ describe("block assembly", function () {
   });
 
   it("should assemble block", async function () {
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
-    chainStub.getHeadStateContext.resolves({
+    sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
+    regenStub.getBlockSlotState.resolves({
       state: generateState({slot: 1}),
       epochCtx: new EpochContext(config),
     });
@@ -57,8 +63,7 @@ describe("block assembly", function () {
       expect(result.slot).to.equal(1);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
-      expect(chainStub.getHeadStateContext.calledOnce).to.be.true;
-      expect(chainStub.getHeadBlock.calledOnce).to.be.true;
+      expect(regenStub.getBlockSlotState.calledTwice).to.be.true;
       expect(assembleBodyStub.calledOnce).to.be.true;
     } catch (e) {
       expect.fail(e.stack);

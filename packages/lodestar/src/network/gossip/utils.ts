@@ -2,7 +2,7 @@
  * @module network/gossip
  */
 
-import {Checkpoint, ForkDigest, Root, Slot} from "@chainsafe/lodestar-types";
+import {ForkDigest} from "@chainsafe/lodestar-types";
 import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
 import {Message} from "libp2p-gossipsub/src/message";
@@ -10,13 +10,6 @@ import {utils} from "libp2p-pubsub";
 import {IGossipEvents, ILodestarGossipMessage} from "./interface";
 import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
-import {IBeaconChain} from "../../chain";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {IBeaconDb} from "../../db/api";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ZERO_HASH} from "../../constants";
 
 export function getGossipTopic(
@@ -77,46 +70,4 @@ export function normalizeInRpcMessage(rawMessage: Message): ILodestarGossipMessa
 
 export function getMessageId(rawMessage: Message): string {
   return Buffer.from(hash(rawMessage.data || ZERO_HASH)).toString("base64");
-}
-
-export async function getBlockStateContext(
-  forkChoice: IForkChoice,
-  db: IBeaconDb,
-  blockRoot: Root,
-  slot?: Slot
-): Promise<ITreeStateContext | null> {
-  const parentSummary = forkChoice.getBlock(blockRoot);
-  if (!parentSummary) {
-    return null;
-  }
-  const stateEpochCtx = await db.stateCache.get(parentSummary.stateRoot);
-  if (!stateEpochCtx) return null;
-  //only advance state transition if asked for future block
-  slot = slot ?? parentSummary.slot;
-  if (stateEpochCtx.state.slot < slot) {
-    processSlots(stateEpochCtx.epochCtx, stateEpochCtx.state, slot);
-  }
-  return stateEpochCtx;
-}
-
-export async function getAttestationPreState(
-  config: IBeaconConfig,
-  chain: IBeaconChain,
-  db: IBeaconDb,
-  cp: Checkpoint
-): Promise<ITreeStateContext | null> {
-  const preStateContext = await db.checkpointStateCache.get(cp);
-  if (preStateContext) {
-    return preStateContext;
-  }
-  const baseState = await chain.getStateContextByBlockRoot(cp.root);
-  if (!baseState) {
-    return null;
-  }
-  const epochStartSlot = computeStartSlotAtEpoch(config, cp.epoch);
-  if (epochStartSlot > baseState.state.slot) {
-    processSlots(baseState.epochCtx, baseState.state, epochStartSlot);
-    await db.checkpointStateCache.add(cp, baseState);
-  }
-  return baseState;
 }
