@@ -1,15 +1,17 @@
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {Message} from "libp2p-gossipsub/src/message";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
-import {GossipEvent, ExtendedValidatorResult} from "../../../../src/network/gossip/constants";
-import {IGossipMessageValidator} from "../../../../src/network/gossip/interface";
+import {ExtendedValidatorResult, GossipEvent} from "../../../../src/network/gossip/constants";
+import {IGossipMessageValidator, GossipValidationError} from "../../../../src/network/gossip/interface";
 import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
-import {createPeerId} from "../../../../src/network";
-import {compress} from "snappyjs";
+import {expect, assert} from "chai";
+import {Libp2p} from "libp2p-gossipsub/src/interfaces";
+import {createNode} from "../../../utils/network";
+import {GossipEncoding} from "../../../../src/network/gossip/encoding";
+import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 
 const forkValue = Buffer.alloc(4);
 
@@ -17,50 +19,55 @@ describe("gossipsub", function () {
   const sandbox = sinon.createSandbox();
   let validator: IGossipMessageValidator;
   let gossipSub: LodestarGossipsub;
-  let message: Message;
+  let message: InMessage;
 
   beforeEach(async function () {
     const signedBLock = generateEmptySignedBlock();
     message = {
-      data: compress(Buffer.from(config.types.SignedBeaconBlock.serialize(signedBLock))),
-      from: Buffer.from("0"),
-      seqno: Buffer.from("0"),
-      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue)],
+      data: config.types.SignedBeaconBlock.serialize(signedBLock),
+      from: "0",
+      receivedFrom: "0",
+      seqno: new Uint8Array(),
+      topicIDs: [getGossipTopic(GossipEvent.BLOCK, forkValue, GossipEncoding.SSZ)],
+      signature: undefined,
+      key: undefined,
     };
     validator = {} as IGossipMessageValidator;
-    const registrar = {
-      handle: (): null => null,
-      register: (): string => "",
-      unregister: (): boolean => false,
-    };
-    const peerId = await createPeerId();
-    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(), peerId, registrar, {});
+    const multiaddr = "/ip4/127.0.0.1/tcp/0";
+    const libp2p = await createNode(multiaddr);
+    gossipSub = new LodestarGossipsub(config, validator, new WinstonLogger(), (libp2p as unknown) as Libp2p, {});
   });
 
   afterEach(function () {
     sandbox.restore();
   });
 
-  it("should return false because of failed validation", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
-      Promise.resolve(ExtendedValidatorResult.reject);
-    const result = await gossipSub.validate(message, undefined!);
-    expect(result).to.be.false;
+  it("should throw exception because of failed validation", async () => {
+    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.reject);
+    try {
+      await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+      assert.fail("Expect error here");
+    } catch (e) {
+      expect(e.code).to.be.equal(ERR_TOPIC_VALIDATOR_REJECT);
+    }
   });
 
   it("should return true if pass validator function", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
-      Promise.resolve(ExtendedValidatorResult.accept);
-    const result = await gossipSub.validate(message, undefined!);
-    expect(result).to.be.true;
+    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.accept);
+    await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+    // no error means pass validation
   });
 
   it("should return false because of duplicate", async () => {
-    validator.isValidIncomingBlock = (): Promise<ExtendedValidatorResult> =>
-      Promise.resolve(ExtendedValidatorResult.accept);
-    const result = await gossipSub.validate(message, undefined!);
-    expect(result).to.be.true;
+    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.accept);
+    await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+    // pass validation
     // receive again => duplicate
-    expect(await gossipSub.validate(message, undefined!)).to.be.false;
+    try {
+      await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
+      assert.fail("Expect error here because of duplicate");
+    } catch (e) {
+      expect(e.message).to.be.equal("Duplicate message for topic /eth2/00000000/beacon_block/ssz");
+    }
   });
 });

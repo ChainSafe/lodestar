@@ -47,7 +47,7 @@ export async function createNodeJsLibp2p(
   const enr = network.discv5?.enr;
   if (enr && typeof enr !== "string") {
     const enrInstance = enr as ENR;
-    if (enrInstance.multiaddrUDP && !isLocalMultiAddr(enrInstance.multiaddrUDP)) {
+    if (enrInstance.getLocationMultiaddr("udp") && !isLocalMultiAddr(enrInstance.getLocationMultiaddr("udp"))) {
       clearMultiaddrUDP(enrInstance);
     }
   }

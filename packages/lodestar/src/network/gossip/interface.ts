@@ -15,7 +15,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
 import {Message} from "libp2p-gossipsub/src/message";
 import {IBeaconChain} from "../../chain";
@@ -51,6 +51,7 @@ export interface IGossipSub extends EventEmitter {
   stop(): Promise<void>;
   subscribe(topics: string[] | string): void;
   unsubscribe(topics: string[] | string): void;
+  registerLibp2pTopicValidators(forkDigest: ForkDigest): void;
 }
 
 export interface IGossip extends IService, GossipEventEmitter {
@@ -104,4 +105,12 @@ export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) 
 
 export interface ILodestarGossipMessage extends Message {
   messageId: string;
+}
+
+export class GossipValidationError extends Error {
+  public code: string;
+  constructor(code: string, message?: string) {
+    super(message);
+    this.code = code;
+  }
 }
