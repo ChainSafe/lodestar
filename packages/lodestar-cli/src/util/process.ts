@@ -22,6 +22,7 @@ export function onProcessSIGINT(
 
       await cleanUpFunction();
       logFn("Cleanup completed");
+      process.exit(0);
     });
   }
 }
