@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
-import {IBlockProcessJob} from "./interface";
+import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
 
 export interface IChainEvents {
@@ -23,7 +23,7 @@ export interface IChainEvents {
 
   // new
   attestation: (attestation: Attestation) => void;
-  block: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockProcessJob) => void;
+  block: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockJob) => void;
   checkpoint: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
   justified: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
   finalized: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;

@@ -2,7 +2,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 
-import {IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 import {BlockProcessor} from "./processor";
 
 /**
@@ -16,15 +16,15 @@ export class BlockPool {
   /**
    * Blocks indexed by blockRoot
    */
-  public blocks: Map<string, IBlockProcessJob>;
+  public blocks: Map<string, IBlockJob>;
   /**
    * Blocks indexed by parentRoot, then blockRoot
    */
-  public blocksByParent: Map<string, Map<string, IBlockProcessJob>>;
+  public blocksByParent: Map<string, Map<string, IBlockJob>>;
   /**
    * Blocks indexed by slot, then blockRoot
    */
-  public blocksBySlot: Map<Slot, Map<string, IBlockProcessJob>>;
+  public blocksBySlot: Map<Slot, Map<string, IBlockJob>>;
 
   private readonly config: IBeaconConfig;
   private readonly processor: BlockProcessor;
@@ -38,7 +38,7 @@ export class BlockPool {
     this.blocksBySlot = new Map();
   }
 
-  public addByParent(job: IBlockProcessJob): void {
+  public addByParent(job: IBlockJob): void {
     const {signedBlock} = job;
     // put block in two indices:
     // blocks
@@ -54,7 +54,7 @@ export class BlockPool {
     blocksWithParent.set(blockKey, job);
   }
 
-  public addBySlot(job: IBlockProcessJob): void {
+  public addBySlot(job: IBlockJob): void {
     const {signedBlock} = job;
     // put block in two indices:
     // blocks
@@ -70,7 +70,7 @@ export class BlockPool {
     blocksAtSlot.set(blockKey, job);
   }
 
-  public remove(job: IBlockProcessJob): void {
+  public remove(job: IBlockJob): void {
     // remove block from three indices:
     // blocks
     const blockKey = this.getBlockKey(job.signedBlock);

@@ -2,9 +2,9 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {IBlockProcessJob} from "../interface";
-import {BlockError, BlockErrorCode} from "../errors";
+import {IBlockJob} from "../interface";
 import {IBeaconClock} from "../clock";
+import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateBlock({
   config,
@@ -15,7 +15,7 @@ export async function validateBlock({
   config: IBeaconConfig;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
-  job: IBlockProcessJob;
+  job: IBlockJob;
 }): Promise<void> {
   try {
     const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);

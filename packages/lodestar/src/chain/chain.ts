@@ -36,7 +36,7 @@ import {GenesisBuilder} from "./genesis/genesis";
 import {ChainEventEmitter} from "./emitter";
 import {ForkChoiceStore} from "./forkChoice";
 
-import {IBeaconChain, IBlockProcessJob} from "./interface";
+import {IBeaconChain, IBlockJob} from "./interface";
 import {IChainOptions} from "./options";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
@@ -559,7 +559,7 @@ export class BeaconChain implements IBeaconChain {
   private onBlock = async (
     block: SignedBeaconBlock,
     postStateContext: ITreeStateContext,
-    job: IBlockProcessJob
+    job: IBlockJob
   ): Promise<void> => {
     this.logger.debug("Block processed", {
       slot: block.message.slot,

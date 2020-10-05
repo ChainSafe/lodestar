@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {findUnknownAncestor} from "../../../../src/chain/blocks/util";
-import {IBlockProcessJob} from "../../../chain";
+import {IBlockJob} from "../../../chain";
 
 describe("findUnknownAncestor", function () {
   it("should return same root if not found", () => {
@@ -20,7 +20,7 @@ describe("findUnknownAncestor", function () {
     const ancestorRoot = firstBlock.message.parentRoot;
     const secondBlock = config.types.SignedBeaconBlock.defaultValue();
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
-    const jobs: IBlockProcessJob[] = [firstBlock, secondBlock].map((block) => ({
+    const jobs: IBlockJob[] = [firstBlock, secondBlock].map((block) => ({
       signedBlock: block,
       trusted: false,
       reprocess: false,

@@ -1,7 +1,7 @@
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter} from "../emitter";
-import {IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
 import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode} from "../errors";
@@ -15,7 +15,7 @@ export async function processBlock({
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  job: IBlockProcessJob;
+  job: IBlockJob;
 }): Promise<void> {
   try {
     const preStateContext = await regen.getPreState(job.signedBlock.message);

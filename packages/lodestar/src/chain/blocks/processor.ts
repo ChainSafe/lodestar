@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {IBlockProcessJob as IBlockJob} from "../interface";
+import {IBlockJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";

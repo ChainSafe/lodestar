@@ -20,7 +20,7 @@ import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 
-export interface IBlockProcessJob {
+export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
   trusted: boolean;
   reprocess: boolean;

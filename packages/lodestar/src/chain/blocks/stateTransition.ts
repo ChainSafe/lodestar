@@ -12,7 +12,7 @@ import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
-import {IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -113,11 +113,11 @@ export function emitForkChoiceHeadEvents(
   }
 }
 
-export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockProcessJob, postCtx: ITreeStateContext): void {
+export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockJob, postCtx: ITreeStateContext): void {
   emitter.emit("block", job.signedBlock, postCtx, job);
 }
 
-export function emitVoluntaryExitEvents(emitter: ChainEventEmitter, job: IBlockProcessJob): void {
+export function emitVoluntaryExitEvents(emitter: ChainEventEmitter, job: IBlockJob): void {
   job.signedBlock.message.body.voluntaryExits.forEach((exit) => {
     emitter.emit("voluntaryExit", exit);
   });
@@ -127,7 +127,7 @@ export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
   stateContext: ITreeStateContext,
-  job: IBlockProcessJob
+  job: IBlockJob
 ): Promise<ITreeStateContext> {
   const config = stateContext.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;

@@ -8,7 +8,7 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as stateTransitionUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
+import {ChainEventEmitter, IBlockJob} from "../../../../src/chain";
 import {IBeaconClock, LocalClock} from "../../../../src/chain/clock";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {processBlock} from "../../../../src/chain/blocks/process";
@@ -46,7 +46,7 @@ describe("block process stream", function () {
   });
 
   it("missing parent block", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,
@@ -72,7 +72,7 @@ describe("block process stream", function () {
   });
 
   it("future slot", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,
@@ -99,7 +99,7 @@ describe("block process stream", function () {
   });
 
   it("missing parent state", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,
@@ -125,7 +125,7 @@ describe("block process stream", function () {
   });
 
   it("failed state transition", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,
@@ -155,7 +155,7 @@ describe("block process stream", function () {
   });
 
   it("successful block process - not new chain head", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,
@@ -186,7 +186,7 @@ describe("block process stream", function () {
   });
 
   it("successful block process - new chain head", async function () {
-    const receivedJob: IBlockProcessJob = {
+    const receivedJob: IBlockJob = {
       signedBlock: config.types.SignedBeaconBlock.defaultValue(),
       trusted: false,
       reprocess: false,

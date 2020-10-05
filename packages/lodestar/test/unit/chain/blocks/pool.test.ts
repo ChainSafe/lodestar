@@ -5,20 +5,20 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ChainEventEmitter, IBlockProcessJob} from "../../../../src/chain";
+import {ChainEventEmitter, IBlockJob} from "../../../../src/chain";
 import {BlockPool} from "../../../../src/chain/blocks/pool";
 import {generateBlockSummary} from "../../../utils/block";
 
 describe("block pool", function () {
   let eventBusStub: SinonStubbedInstance<ChainEventEmitter>;
-  let sourceStub: SinonStubbedInstance<Pushable<IBlockProcessJob>> & AsyncIterable<IBlockProcessJob>;
+  let sourceStub: SinonStubbedInstance<Pushable<IBlockJob>> & AsyncIterable<IBlockJob>;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
     eventBusStub = sinon.createStubInstance(ChainEventEmitter);
     sourceStub = {
-      ...pushable<IBlockProcessJob>(),
+      ...pushable<IBlockJob>(),
       push: sinon.stub(),
       end: sinon.stub(),
     };
