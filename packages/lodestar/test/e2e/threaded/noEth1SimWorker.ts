@@ -18,14 +18,14 @@ import {getDevValidator} from "../../utils/node/validator";
     logger: logger.child({module: `Node ${nodeIndex}`}),
   });
 
+  await node.start();
+
   const validator = getDevValidator({
     node,
     startIndex,
     count: validatorsPerNode,
     logger: logger.child({module: `Validator ${startIndex}-${startIndex + validatorsPerNode}`}),
   });
-
-  await node.start();
   await validator.start();
 
   node.chain.emitter.on(checkpointEvent, (checkpoint) => {

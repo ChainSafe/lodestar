@@ -10,7 +10,7 @@ import {BeaconApi} from "../../../src/api/impl/beacon";
 import {NodeApi} from "../../../src/api/impl/node";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {EventsApi} from "../../../src/api/impl/events";
-import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
+import {IEventsApi} from "@chainsafe/lodestar-validator";
 import {ValidatorBeaconApiAdapter} from "@chainsafe/lodestar-cli/src/adapters/api/beacon";
 
 export function getDevValidators(node: BeaconNode, count = 8, validatorClientCount = 1): Validator[] {

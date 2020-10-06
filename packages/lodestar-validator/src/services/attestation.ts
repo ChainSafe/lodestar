@@ -160,9 +160,9 @@ export class AttestationService {
     const abortSignal = this.controller?.signal;
     await this.waitForAttestationBlock(duty.attestationSlot, abortSignal);
     let attestation: Attestation | undefined;
-    let fork: Fork, genesisValidatorsRoot: Root;
+    let fork: Fork | null;
     try {
-      const fork = await this.provider.beacon.getFork();
+      fork = await this.provider.beacon.getFork();
       if (!fork) return;
       attestation = await this.createAttestation(
         duty.attesterIndex,
@@ -192,7 +192,10 @@ export class AttestationService {
 
         try {
           if (attestation) {
-            await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+            if (!fork) {
+              throw new Error("Missing fork");
+            }
+            await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork);
           }
         } catch (e) {
           this.logger.error("Failed to aggregate attestations", e);
@@ -241,8 +244,7 @@ export class AttestationService {
     attesterIndex: number,
     duty: IAttesterDuty,
     attestation: Attestation,
-    fork: Fork,
-    genesisValidatorsRoot: Root
+    fork: Fork
   ): Promise<void> => {
     this.logger.info(`Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.attestationSlot}`);
     let aggregateAndProof: AggregateAndProof;
@@ -259,11 +261,16 @@ export class AttestationService {
       attesterIndex,
       duty.attestationSlot,
       fork,
-      genesisValidatorsRoot
+      this.provider.genesisValidatorsRoot
     );
     const signedAggregateAndProof: SignedAggregateAndProof = {
       message: aggregateAndProof,
-      signature: this.getAggregateAndProofSignature(attesterIndex, fork, genesisValidatorsRoot, aggregateAndProof),
+      signature: this.getAggregateAndProofSignature(
+        attesterIndex,
+        fork,
+        this.provider.genesisValidatorsRoot,
+        aggregateAndProof
+      ),
     };
     try {
       await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);

@@ -3,16 +3,16 @@ import {
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
+  Epoch,
   Gwei,
   Number64,
+  Root,
   Slot,
   Uint64,
   ValidatorIndex,
-  Root,
   Version,
-  Epoch,
 } from "./primitive";
-import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
+import {SignedBeaconBlockHeader, Validator} from "./misc";
 
 export interface SignedBeaconHeaderResponse {
   root: Root;

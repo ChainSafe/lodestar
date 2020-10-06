@@ -9,7 +9,7 @@ export class ValidatorBeaconApiAdapter implements IBeaconApiClient {
     this.api = api;
   }
 
-  public getFork(): Promise<Fork | null> {
+  public async getFork(): Promise<Fork | null> {
     return this.api.state.getFork("head");
   }
   /**
