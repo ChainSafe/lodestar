@@ -73,7 +73,7 @@ export function getDevValidator({
         }
       ),
       node: new NodeApi({}, {...node}),
-      events: (new EventsApi({}, {...node}) as unknown) as IEventsApi,
+      events: new EventsApi({}, {...node}) as IEventsApi,
       beacon: new BeaconApi({}, {...node}),
     }),
     logger: logger,

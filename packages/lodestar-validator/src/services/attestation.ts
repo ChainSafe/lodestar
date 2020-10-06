@@ -34,6 +34,7 @@ import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import {BeaconEventType} from "../api/interface/events";
+import {ClockEventType} from "../api/interface/clock";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -72,18 +73,18 @@ export class AttestationService {
     await this.updateDuties(currentEpoch);
     await this.updateDuties(currentEpoch + 1);
 
-    this.provider.emitter.on(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
-    this.provider.emitter.on(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
-    this.provider.emitter.on(BeaconEventType.HEAD, this.onHead);
+    this.provider.on(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.on(ClockEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.on(BeaconEventType.HEAD, this.onHead);
   };
 
   public stop = async (): Promise<void> => {
     if (this.controller) {
       this.controller.abort();
     }
-    this.provider.emitter.off(BeaconEventType.CLOCK_EPOCH, this.onClockEpoch);
-    this.provider.emitter.off(BeaconEventType.CLOCK_SLOT, this.onClockSlot);
-    this.provider.emitter.off(BeaconEventType.HEAD, this.onHead);
+    this.provider.off(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.off(ClockEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.off(BeaconEventType.HEAD, this.onHead);
   };
 
   public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
@@ -220,12 +221,12 @@ export class AttestationService {
       const onSuccess = (): void => {
         clearTimeout(timeout);
         signal.removeEventListener("abort", onAbort);
-        this.provider.emitter.removeListener(BeaconEventType.BLOCK, onBlock);
+        this.provider.removeListener(BeaconEventType.BLOCK, onBlock);
         resolve();
       };
       const onAbort = (): void => {
         clearTimeout(timeout);
-        this.provider.emitter.removeListener(BeaconEventType.BLOCK, onBlock);
+        this.provider.removeListener(BeaconEventType.BLOCK, onBlock);
         reject();
       };
       const onTimeout = (): void => {
@@ -240,7 +241,7 @@ export class AttestationService {
       };
       signal.addEventListener("abort", onAbort, {once: true});
       const timeout = setTimeout(onTimeout, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
-      this.provider.emitter.on(BeaconEventType.BLOCK, onBlock);
+      this.provider.on(BeaconEventType.BLOCK, onBlock);
     });
   }
 

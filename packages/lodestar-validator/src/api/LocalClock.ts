@@ -1,10 +1,8 @@
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {BeaconEventEmitter, BeaconEventType} from "./interface/events";
-
-import {IBeaconClock} from "./interface";
+import {ApiClientEventEmitter, IBeaconClock} from "./interface";
+import {ClockEventType} from "./interface/clock";
 
 /**
  * A local clock, the clock time is assumed to be trusted
@@ -13,7 +11,7 @@ export class LocalClock implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
   private timeoutId: NodeJS.Timeout;
-  private readonly emitter: BeaconEventEmitter;
+  private readonly emitter: ApiClientEventEmitter;
   private readonly signal?: AbortSignal;
   private _currentSlot: number;
 
@@ -25,7 +23,7 @@ export class LocalClock implements IBeaconClock {
   }: {
     config: IBeaconConfig;
     genesisTime: number;
-    emitter: BeaconEventEmitter;
+    emitter: ApiClientEventEmitter;
     signal?: AbortSignal;
   }) {
     this.config = config;
@@ -60,13 +58,13 @@ export class LocalClock implements IBeaconClock {
     while (this._currentSlot < clockSlot) {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
-      this.emitter.emit(BeaconEventType.CLOCK_SLOT, {
+      this.emitter.emit(ClockEventType.CLOCK_SLOT, {
         slot: this._currentSlot,
       });
       const previousEpoch = computeEpochAtSlot(this.config, previousSlot);
       const currentEpoch = computeEpochAtSlot(this.config, this._currentSlot);
       if (previousEpoch < currentEpoch) {
-        this.emitter.emit(BeaconEventType.CLOCK_EPOCH, {
+        this.emitter.emit(ClockEventType.CLOCK_EPOCH, {
           epoch: currentEpoch,
         });
       }

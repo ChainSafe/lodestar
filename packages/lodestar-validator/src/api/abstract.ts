@@ -6,14 +6,13 @@ import {IValidatorApi} from "./interface/validators";
 import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
 import {ILogger, IStoppableEventIterable} from "@chainsafe/lodestar-utils";
-import {BeaconEvent, BeaconEventEmitter, BeaconEventType, IEventsApi} from "./interface/events";
+import {BeaconEvent, BeaconEventType, IEventsApi} from "./interface/events";
 import {LocalClock} from "./LocalClock";
-import {pipeToEmitter} from "@chainsafe/lodestar-validator/src/api/impl/rest/events/events";
+import {pipeToEmitter} from "./impl/rest/events/util";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
   public clock!: IBeaconClock;
-  public emitter!: BeaconEventEmitter;
 
   protected config: IBeaconConfig;
   protected logger: ILogger;
@@ -36,7 +35,6 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     super();
     this.config = config;
     this.logger = logger;
-    this.emitter = new EventEmitter();
   }
 
   public async connect(): Promise<void> {
@@ -89,15 +87,14 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
     this.stream = this.events.getEventStream([
       BeaconEventType.BLOCK,
       BeaconEventType.HEAD,
-      BeaconEventType.CLOCK_SLOT,
-      BeaconEventType.CLOCK_EPOCH,
+      BeaconEventType.CHAIN_REORG,
     ]);
-    this.streamPromise = pipeToEmitter(this.stream, this.emitter);
+    this.streamPromise = pipeToEmitter(this.stream, this);
     // CLOCK_SLOT and CLOCK_EPOCH currently being emitted from this LocalClock
     this.clock = new LocalClock({
       config: this.config,
       genesisTime,
-      emitter: this.emitter,
+      emitter: this,
       signal: this.controller.signal,
     });
   }
