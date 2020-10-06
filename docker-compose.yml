@@ -2,21 +2,30 @@ version: "3.4"
 services:
   lodestar:
     build: .
+    restart: always
     volumes:
       - lodestar:/usr/app/.spadina
     command: beacon --testnet spadina
-    ports:
-      - "8008:8008"
 
   prometheus:
-    image: prom/prometheus:latest
+    build: docker/prometheus
+    restart: always
+    volumes:
+      - 'prometheus:/prometheus'
     depends_on:
       - lodestar
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    build: docker/grafana
+    restart: always
     ports:
-      - "9090:9090"
+      - "3000:3000"
+    volumes:
+      - 'grafana:/var/lib/grafana'
+    depends_on:
+      - prometheus
 
 volumes:
   lodestar:
   prometheus:
+  grafana:
