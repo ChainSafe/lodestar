@@ -9,7 +9,8 @@ import {INodeApi} from "./interface/node";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "./interface/events";
 
-export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
+export abstract class AbstractApiClient
+  extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
   protected config: IBeaconConfig;
   protected logger: ILogger;
