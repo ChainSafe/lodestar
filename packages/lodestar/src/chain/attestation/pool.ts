@@ -5,26 +5,34 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob} from "../interface";
 import {AttestationProcessor} from "./processor";
 
+/**
+ * The AttestationPool is a cache of attestations that are pending processing.
+ *
+ * Pending attestations come in two varieties:
+ * - attestations for unknown blocks
+ * - attestations for future slots
+ */
 export class AttestationPool {
+  private readonly config: IBeaconConfig;
+  private processor: AttestationProcessor;
+
   /**
    * Attestations indexed by attestationRoot
    */
-  public attestations: Map<AttestationRootHex, IAttestationJob>;
+  private attestations: Map<AttestationRootHex, IAttestationJob>;
   /**
    * Attestations indexed by blockRoot, then attestationRoot
    */
-  public attestationsByBlock: Map<BlockRootHex, Map<AttestationRootHex, IAttestationJob>>;
+  private attestationsByBlock: Map<BlockRootHex, Map<AttestationRootHex, IAttestationJob>>;
   /**
    * Attestations indexed by slot, then attestationRoot
    */
-  public attestationsBySlot: Map<Slot, Map<AttestationRootHex, IAttestationJob>>;
-
-  private readonly config: IBeaconConfig;
-  private processor: AttestationProcessor;
+  private attestationsBySlot: Map<Slot, Map<AttestationRootHex, IAttestationJob>>;
 
   public constructor({config, processor}: {config: IBeaconConfig; processor: AttestationProcessor}) {
     this.config = config;
     this.processor = processor;
+
     this.attestations = new Map();
     this.attestationsByBlock = new Map();
     this.attestationsBySlot = new Map();
@@ -74,12 +82,12 @@ export class AttestationPool {
         this.attestationsByBlock.delete(targetKey);
       }
     }
-    const bbrKey = toHexString(job.attestation.data.beaconBlockRoot);
-    const attestationsAtBbr = this.attestationsByBlock.get(bbrKey);
-    if (attestationsAtBbr) {
-      attestationsAtBbr.delete(attestationKey);
-      if (!attestationsAtBbr.size) {
-        this.attestationsByBlock.delete(bbrKey);
+    const beaconBlockRootKey = toHexString(job.attestation.data.beaconBlockRoot);
+    const attestationsAtBeaconBlockRoot = this.attestationsByBlock.get(beaconBlockRootKey);
+    if (attestationsAtBeaconBlockRoot) {
+      attestationsAtBeaconBlockRoot.delete(attestationKey);
+      if (!attestationsAtBeaconBlockRoot.size) {
+        this.attestationsByBlock.delete(beaconBlockRootKey);
       }
     }
     // attestations by slot
@@ -91,6 +99,22 @@ export class AttestationPool {
         this.attestationsBySlot.delete(slotKey);
       }
     }
+  }
+
+  public get(attestationRoot: Root): IAttestationJob | undefined {
+    return this.attestations.get(toHexString(attestationRoot));
+  }
+
+  public has(attestationRoot: Root): boolean {
+    return Boolean(this.get(attestationRoot));
+  }
+
+  public getByBlock(blockRoot: Root): IAttestationJob[] {
+    return Array.from(this.attestationsByBlock.get(toHexString(blockRoot))?.values() ?? []);
+  }
+
+  public getBySlot(slot: Slot): IAttestationJob[] {
+    return Array.from(this.attestationsBySlot.get(slot)?.values() ?? []);
   }
 
   public async onBlock(signedBlock: SignedBeaconBlock): Promise<void> {
