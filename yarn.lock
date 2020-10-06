@@ -2702,17 +2702,12 @@
   resolved "https://registry.yarnpkg.com/@types/lockfile/-/lockfile-1.0.1.tgz#434a3455e89843312f01976e010c60f1bcbd56f7"
   integrity sha512-65WZedEm4AnOsBDdsapJJG42MhROu3n4aSSiu87JXF/pSdlubxZxp3S1yz3kTfkJ2KBPud4CpjoHVAptOm9Zmw==
 
-"@types/lodash@^4.14.157":
+"@types/lodash@^4.14.157", "@types/lodash@^4.14.161":
   version "4.14.161"
   resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.161.tgz#a21ca0777dabc6e4f44f3d07f37b765f54188b18"
   integrity sha512-EP6O3Jkr7bXvZZSZYlsgt5DIjiGr0dXP1/jVEwVLTFgg0d+3lWVQkRavYVQszV7dYUwvg0B8R0MBDpcmXg7XIA==
 
-"@types/lodash@^4.14.161":
-  version "4.14.161"
-  resolved "https://registry.yarnpkg.com/@types/lodash/-/lodash-4.14.161.tgz#a21ca0777dabc6e4f44f3d07f37b765f54188b18"
-  integrity sha512-EP6O3Jkr7bXvZZSZYlsgt5DIjiGr0dXP1/jVEwVLTFgg0d+3lWVQkRavYVQszV7dYUwvg0B8R0MBDpcmXg7XIA==
-
-"@types/long@^4.0.0":
+"@types/long@^4.0.1":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@types/long/-/long-4.0.1.tgz#459c65fa1867dafe6a8f322c4c51695663cc55e9"
   integrity sha512-5tXH6Bx/kNGd3MgffdmP4dy2Z+G4eaXw0SE81Tq3BNadtnMR5/ySMzX4SLEzHJzSmPNn4HIdpQsBvXMUykr58w==
@@ -2845,10 +2840,10 @@
   resolved "https://registry.yarnpkg.com/@types/triple-beam/-/triple-beam-1.3.2.tgz#38ecb64f01aa0d02b7c8f4222d7c38af6316fef8"
   integrity sha512-txGIh+0eDFzKGC25zORnswy+br1Ha7hj5cMVwKIU7+s0U2AxxJru/jZSMU6OC9MJWP6+pc/hc6ZjyZShpsyY2g==
 
-"@types/uuid@8.0.0":
-  version "8.0.0"
-  resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-8.0.0.tgz#165aae4819ad2174a17476dbe66feebd549556c0"
-  integrity sha512-xSQfNcvOiE5f9dyd4Kzxbof1aTrLobL278pGLKOZI6esGfZ7ts9Ka16CzIN6Y8hFHE1C7jIBZokULhK1bOgjRw==
+"@types/uuid@8.3.0":
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-8.3.0.tgz#215c231dff736d5ba92410e6d602050cce7e273f"
+  integrity sha512-eQ9qFW/fhfGJF8WKHGEHZEyVWfZxrT+6CLIJGBcZPfxUh/+BnEj+UCGYMlr9qZuX/2AltsvwrGqp0LhEW8D0zQ==
 
 "@types/varint@^5.0.0":
   version "5.0.0"
@@ -8511,22 +8506,57 @@ libp2p-crypto@^0.18.0:
     uint8arrays "^1.1.0"
     ursa-optional "^0.10.1"
 
-"libp2p-gossipsub@file:../gossipsub-js":
-  version "0.6.2"
+libp2p-gossipsub@^0.6.3:
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.6.3.tgz#190a33edfba6f349267d5a3d0d0a8c6147ebebed"
+  integrity sha512-eaRGtMYns29zPYDjbyvtdIJRGfmnsdwmx5QxqPUcHbmUnwDX1FfeKxT1hY8EuDhhGSsinoZO9w3d6TXUrr1jbQ==
   dependencies:
     "@types/debug" "^4.1.5"
     debug "^4.1.1"
     denque "^1.4.1"
     err-code "^2.0.0"
     it-pipe "^1.0.1"
-    libp2p-interfaces "https://github.com/mpetrunic/js-libp2p-interfaces.git#mpetrunic/typescript-types"
+    libp2p-interfaces "^0.5.2"
     peer-id "^0.14.0"
     protons "^2.0.0"
     time-cache "^0.3.0"
 
-libp2p-interfaces@^0.5.1, "libp2p-interfaces@https://github.com/mpetrunic/js-libp2p-interfaces.git#mpetrunic/typescript-types":
+libp2p-interfaces@^0.5.1:
   version "0.5.1"
   resolved "https://github.com/mpetrunic/js-libp2p-interfaces.git#409a42ced648a5f40413b60039962d5c1f3013ae"
+  dependencies:
+    abort-controller "^3.0.0"
+    abortable-iterator "^3.0.0"
+    chai "^4.2.0"
+    chai-checkmark "^1.0.1"
+    class-is "^1.1.0"
+    debug "^4.1.1"
+    delay "^4.3.0"
+    detect-node "^2.0.4"
+    dirty-chai "^2.0.1"
+    err-code "^2.0.0"
+    it-goodbye "^2.0.1"
+    it-length-prefixed "^3.1.0"
+    it-pair "^1.0.0"
+    it-pipe "^1.1.0"
+    it-pushable "^1.4.0"
+    libp2p-crypto "^0.18.0"
+    libp2p-tcp "^0.15.0"
+    multiaddr "^8.0.0"
+    multibase "^3.0.0"
+    p-defer "^3.0.0"
+    p-limit "^2.3.0"
+    p-wait-for "^3.1.0"
+    peer-id "^0.14.0"
+    protons "^2.0.0"
+    sinon "^9.0.2"
+    streaming-iterables "^5.0.2"
+    uint8arrays "^1.1.0"
+
+libp2p-interfaces@^0.5.2:
+  version "0.5.2"
+  resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-0.5.2.tgz#8794f0753b26c98270d03d63d753f456c5d0a766"
+  integrity sha512-jnf7D2tJ0eemfQp0j+u4s9fRlILduqXuanCpXt0QSxwqj8LVXUvglQddqoHjH6LGzxBvWXdOAk/ZXEUCcH4ZTw==
   dependencies:
     abort-controller "^3.0.0"
     abortable-iterator "^3.0.0"
@@ -8875,12 +8905,7 @@ lodash.uniq@^4.5.0:
   resolved "https://registry.yarnpkg.com/lodash.uniq/-/lodash.uniq-4.5.0.tgz#d0225373aeb652adc1bc82e4945339a842754773"
   integrity sha1-0CJTc662Uq3BvILklFM5qEJ1R3M=
 
-lodash@^4.1.2, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.4, lodash@^4.2.1:
-  version "4.17.20"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
-  integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
-
-lodash@^4.17.20:
+lodash@^4.1.2, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.15, lodash@^4.17.19, lodash@^4.17.20, lodash@^4.17.4, lodash@^4.2.1:
   version "4.17.20"
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
   integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
@@ -11921,7 +11946,7 @@ source-map-resolve@^0.5.0:
     source-map-url "^0.4.0"
     urix "^0.1.0"
 
-source-map-support@^0.5.13, source-map-support@^0.5.19:
+source-map-support@^0.5.13, source-map-support@^0.5.16, source-map-support@^0.5.17, source-map-support@^0.5.19, source-map-support@~0.5.12:
   version "0.5.19"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.19.tgz#a98b62f86dcaf4f67399648c085291ab9e8fed61"
   integrity sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw==

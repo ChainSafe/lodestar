@@ -14,7 +14,7 @@ import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/rege
 import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../../src/constants";
 import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
-import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
+import * as validationUtils from "../../../../../src/network/gossip/validation/utils/signature";
 import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
 import {generateState} from "../../../../utils/state";
 import {silentLogger} from "../../../../utils/logger";
