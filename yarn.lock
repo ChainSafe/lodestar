@@ -8521,39 +8521,7 @@ libp2p-gossipsub@^0.6.3:
     protons "^2.0.0"
     time-cache "^0.3.0"
 
-libp2p-interfaces@^0.5.1:
-  version "0.5.1"
-  resolved "https://github.com/mpetrunic/js-libp2p-interfaces.git#409a42ced648a5f40413b60039962d5c1f3013ae"
-  dependencies:
-    abort-controller "^3.0.0"
-    abortable-iterator "^3.0.0"
-    chai "^4.2.0"
-    chai-checkmark "^1.0.1"
-    class-is "^1.1.0"
-    debug "^4.1.1"
-    delay "^4.3.0"
-    detect-node "^2.0.4"
-    dirty-chai "^2.0.1"
-    err-code "^2.0.0"
-    it-goodbye "^2.0.1"
-    it-length-prefixed "^3.1.0"
-    it-pair "^1.0.0"
-    it-pipe "^1.1.0"
-    it-pushable "^1.4.0"
-    libp2p-crypto "^0.18.0"
-    libp2p-tcp "^0.15.0"
-    multiaddr "^8.0.0"
-    multibase "^3.0.0"
-    p-defer "^3.0.0"
-    p-limit "^2.3.0"
-    p-wait-for "^3.1.0"
-    peer-id "^0.14.0"
-    protons "^2.0.0"
-    sinon "^9.0.2"
-    streaming-iterables "^5.0.2"
-    uint8arrays "^1.1.0"
-
-libp2p-interfaces@^0.5.2:
+libp2p-interfaces@^0.5.1, libp2p-interfaces@^0.5.2:
   version "0.5.2"
   resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-0.5.2.tgz#8794f0753b26c98270d03d63d753f456c5d0a766"
   integrity sha512-jnf7D2tJ0eemfQp0j+u4s9fRlILduqXuanCpXt0QSxwqj8LVXUvglQddqoHjH6LGzxBvWXdOAk/ZXEUCcH4ZTw==
