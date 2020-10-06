@@ -5,7 +5,6 @@ import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition/lib/fa
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IBeaconDb} from "../db";
-import {linspace} from "../util/numpy";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
@@ -178,8 +177,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       lastProcessedDepositBlockNumber
     );
 
-    const blockNumbers = linspace(fromBlock, toBlock);
-    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(blockNumbers, this.signal);
+    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock, this.signal);
     this.logger.verbose(`Fetched eth1 blocks ${eth1Blocks.length}`, {fromBlock, toBlock});
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);
