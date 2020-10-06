@@ -4,4 +4,4 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       # Run in a docker-compose context with a "lodestar" service. Uses internal docker DNS
-      - targets: ['lodestar:8008']
+      - targets: ["lodestar:8008"]

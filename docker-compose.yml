@@ -11,7 +11,7 @@ services:
     build: docker/prometheus
     restart: always
     volumes:
-      - 'prometheus:/prometheus'
+      - "prometheus:/prometheus"
     depends_on:
       - lodestar
 
@@ -21,7 +21,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - 'grafana:/var/lib/grafana'
+      - "grafana:/var/lib/grafana"
     depends_on:
       - prometheus
 
