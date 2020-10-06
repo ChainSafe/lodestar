@@ -19,6 +19,7 @@ import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constan
 import {generateAttestation} from "../../../../utils/attestation";
 import {silentLogger} from "../../../../utils/logger";
 import {generateState} from "../../../../utils/state";
+import {LocalClock} from "../../../../../src/chain/clock";
 
 describe("gossip attestation validation", function () {
   const logger = silentLogger;
@@ -33,6 +34,8 @@ describe("gossip attestation validation", function () {
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
+    chain.clock = createStubInstance(LocalClock);
+    sinon.stub(chain.clock, "currentSlot").get(() => 0);
     forkChoice = chain.forkChoice = createStubInstance(ForkChoice);
     regen = chain.regen = createStubInstance(StateRegenerator);
     db = new StubbedBeaconDb(sinon, config);

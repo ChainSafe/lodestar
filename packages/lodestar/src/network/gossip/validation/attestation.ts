@@ -47,7 +47,7 @@ export async function validateGossipAttestation(
     return ExtendedValidatorResult.reject;
   }
 
-  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), attestation.data.slot)) {
+  if (!hasValidAttestationSlot(config, chain.clock.currentSlot, attestation.data.slot)) {
     logger.warn("Ignored gossip committee attestation", {reason: "Invalid slot time", ...attestationLogContext});
     // attestation might be valid later so passing to attestation pool
     await chain.receiveAttestation(attestation);

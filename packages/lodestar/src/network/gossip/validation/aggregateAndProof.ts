@@ -26,7 +26,7 @@ export async function validateGossipAggregateAndProof(
   const attestationRoot = config.types.Attestation.hashTreeRoot(aggregate);
   const logContext = getLogContext(aggregate, aggregateAndProof, root, attestationRoot);
   logger.verbose("Started gossip aggregate and proof validation", logContext);
-  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), aggregate.data.slot)) {
+  if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
     logger.warn("Ignored gossip aggregate and proof", {
       reason: "invalid slot time",
       currentSlot: chain.clock.currentSlot,
