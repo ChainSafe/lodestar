@@ -327,32 +327,10 @@ describe("gossip attestation validation", function () {
         beaconBlockRoot: Buffer.alloc(32),
       },
     });
-    chain.forkChoice = new ForkChoice({
-      config,
-      fcStore: new ForkChoiceStore({
-        emitter: new ChainEventEmitter(),
-        currentSlot: 0,
-        justifiedCheckpoint: {
-          epoch: 0,
-          root: Buffer.alloc(32),
-        },
-        finalizedCheckpoint: {
-          epoch: 10,
-          root: Buffer.alloc(32),
-        },
-      }),
-      protoArray: ProtoArray.initialize({
-        slot: 0,
-        parentRoot: toHexString(Buffer.alloc(32)),
-        stateRoot: toHexString(Buffer.alloc(32)),
-        blockRoot: toHexString(Buffer.alloc(32)),
-        justifiedEpoch: 0,
-        finalizedEpoch: 0,
-      }),
-      queuedAttestations: new Set(),
-    });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
+    forkChoice.isDescendant.returns(true);
+    forkChoice.isDescendantOfFinalized.returns(false);
     const attestationPreState = {
       state: generateState(),
       epochCtx: new EpochContext(config),
@@ -398,6 +376,8 @@ describe("gossip attestation validation", function () {
     forkChoiceStub.getAncestor.returns(Buffer.alloc(32));
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoiceStub.hasBlock.returns(true);
+    forkChoiceStub.isDescendant.returns(true);
+    forkChoiceStub.isDescendantOfFinalized.returns(true);
     const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chain.receiveAttestation.called).to.be.false;

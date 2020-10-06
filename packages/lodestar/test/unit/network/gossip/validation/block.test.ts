@@ -182,6 +182,7 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
+    forkChoiceStub.isDescendantOfFinalized.returns(true);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     regenStub.getBlockSlotState.resolves({
       state: generateState(),
