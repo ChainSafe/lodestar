@@ -7,7 +7,7 @@ To quickly test and run Lodestar we recommend to start a local testnet. We recom
 Run a beacon node with 8 validators and default settings. State will be written to .tmp/state.ssz
 
 ```bash
-yarn run cli dev --dev.genesisValidators 8 --dev.reset
+./lodestar dev --dev.genesisValidators 8 --dev.reset
 ```
 
 **Terminal 2**
@@ -15,7 +15,7 @@ yarn run cli dev --dev.genesisValidators 8 --dev.reset
 Connect to bootnode (node 1 default multiaddrs) but without starting validators.
 
 ```bash
-yarn run cli dev --dev.startValidators 0:0 \
+./lodestar dev --dev.startValidators 0:0 \
   --genesisStateFile ./dev/genesis.ssz \
   --network.localMultiaddrs /ip4/127.0.0.1/tcp/30607 \
   --sync.minPeers 1

@@ -5,7 +5,7 @@ Running a Lodestar node on the [Witti](https://github.com/goerli/witti) multi-cl
 Make sure lodestar in installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/) and make sure Lodestar is available in your environment.
 
 ```
-yarn run cli --help
+./lodestar --help
 ```
 
 ## Initialize beacon configuration
@@ -78,7 +78,7 @@ We recommend initializing lodestar into a specific directory, which is helpful f
 To initialize the Lodestar configuration, run the command:
 
 ```bash
-yarn run cli beacon init \
+./lodestar beacon init \
     --eth1.enabled=false \
     --chain.genesisStateFile=genesis.ssz \
     --template-config-file witti.json \
@@ -101,7 +101,7 @@ As a result, new files should had been created in `.witti/beacon` with a directo
 To start a Lodestar beacon run the command:
 
 ```bash
-yarn run cli beacon run \
+./lodestar beacon run \
     --root-dir .witti
 ```
 
