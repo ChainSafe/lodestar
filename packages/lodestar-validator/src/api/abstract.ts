@@ -10,7 +10,8 @@ import {BeaconEvent, BeaconEventType, IEventsApi} from "./interface/events";
 import {LocalClock} from "./LocalClock";
 import {pipeToEmitter} from "./impl/rest/events/util";
 
-export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
+export abstract class AbstractApiClient
+  extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
   public clock!: IBeaconClock;
 
