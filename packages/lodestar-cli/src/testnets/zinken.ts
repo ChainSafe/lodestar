@@ -59,7 +59,8 @@ export const zinkenConfig: IBeaconNodeOptionsPartial = {
       enabled: true,
       bindAddr: "/ip4/0.0.0.0/udp/9000",
       bootEnrs: [
-        // TODO: add these when they become available
+        "enr:-KG4QHPtVnKHEOkEJT1f5C6Hs-C_c4SlipTfkPrDIikLTzhqA_3m6bTq-CirsljlVP4IJybXelHE7J3l9DojR14_ZHUGhGV0aDKQ2jUIggAAAAP__________4JpZIJ2NIJpcIQSv2qciXNlY3AyNTZrMaECi_CNPDkKPilhimY7aEY-mBtSzI8AKMDvvv_I2Un74_qDdGNwgiMog3VkcIIjKA",
+        "enr:-Ku4QH63huZ12miIY0kLI9dunG5fwKpnn-zR3XyA_kH6rQpRD1VoyLyzIcFysCJ09JDprdX-EzXp-Nc8swYqBznkXggBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpDaNQiCAAAAA___________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQILqxBY-_SF8o_5FjFD3yM92s50zT_ciFi8hStde5AEjIN1ZHCCH0A",
       ],
     },
     maxPeers: 25,
