@@ -25,15 +25,13 @@ function deserializeEventData<T extends BeaconEvent["message"]>(type: ContainerT
   return type.fromJson(JSON.parse(data));
 }
 
-export async function pipeToEmitter(
-  stream: IStoppableEventIterable<BeaconEvent>,
-  emitter: ApiClientEventEmitter
-): Promise<void> {
+export async function pipeToEmitter<
+  T extends BeaconEvent["type"] = BeaconEventType.BLOCK | BeaconEventType.HEAD | BeaconEventType.CHAIN_REORG
+>(stream: IStoppableEventIterable<BeaconEvent>, emitter: ApiClientEventEmitter): Promise<void> {
   for await (const evt of stream) {
-    //I have no idea how to type this.
-    // I've tried conditional typing but it didn't work
-    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-    // @ts-ignore
-    emitter.emit(evt.type, evt.message);
+    emitter.emit<BeaconEvent["type"], ApiClientEventEmitter>(
+      evt.type,
+      evt.message as ({type: T} extends BeaconEvent ? BeaconEvent : never)["message"]
+    );
   }
 }
