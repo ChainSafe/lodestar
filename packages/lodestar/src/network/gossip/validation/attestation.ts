@@ -120,9 +120,18 @@ export async function validateGossipAttestation(
     });
     return ExtendedValidatorResult.reject;
   }
-  if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
+  try {
+    if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
+      logger.warn("Rejected gossip committee attestation", {
+        reason: "committee index not within the expected range",
+        ...attestationLogContext,
+      });
+      return ExtendedValidatorResult.reject;
+    }
+  } catch (error) {
+    logger.warn(error);
     logger.warn("Rejected gossip committee attestation", {
-      reason: "committee index not within the expected range",
+      reason: error.message,
       ...attestationLogContext,
     });
     return ExtendedValidatorResult.reject;
@@ -166,7 +175,7 @@ export function isUnaggregatedAttestation(attestation: Attestation): boolean {
 }
 
 export function isCommitteeIndexWithinRange(epochCtx: EpochContext, attestationData: AttestationData): boolean {
-  return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.target.epoch);
+  return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
