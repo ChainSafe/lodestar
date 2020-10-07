@@ -1,5 +1,4 @@
 node_modules
-Dockerfile
 .git
 
 # Docs
@@ -15,6 +14,14 @@ README.md
 .github
 .codeclimate.yml
 .codecov.yml
+
+# Tooling
+/docker
+prometheus.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
 
 # Tests
 packages/**/test
