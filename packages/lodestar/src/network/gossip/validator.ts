@@ -61,7 +61,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       else if (e.code === BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID) return ExtendedValidatorResult.reject;
       else if (e.code === BlockErrorCode.ERR_PARENT_UNKNOWN) return ExtendedValidatorResult.ignore;
       else if (e.code === BlockErrorCode.ERR_PRESTATE_MISSING) return ExtendedValidatorResult.reject;
-      else if (e.code === BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR) return ExtendedValidatorResult.reject;
+      else if (e.code === BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK) return ExtendedValidatorResult.reject;
       else if (e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER) return ExtendedValidatorResult.reject;
     }
     return ExtendedValidatorResult.accept;
@@ -75,7 +75,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestation, subnet);
     } catch (e) {
       this.logger.error("Error while validating gossip attestation", e);
-      if (e.code === AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE) return ExtendedValidatorResult.reject;
+      if (e.code === AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE) return ExtendedValidatorResult.reject;
       else if (e.code === AttestationErrorCode.ERR_INVALID_SUBNET_ID) return ExtendedValidatorResult.reject;
       else if (e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE) return ExtendedValidatorResult.ignore;
       else if (e.code === AttestationErrorCode.ERR_BAD_TARGET_EPOCH) return ExtendedValidatorResult.reject;
@@ -85,13 +85,14 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         return ExtendedValidatorResult.reject;
       else if (e.code === AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN) return ExtendedValidatorResult.ignore;
       else if (e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE) return ExtendedValidatorResult.reject;
-      // else if ()
-      // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue aggregates for processing once block is retrieved).
+      else if (e.code === AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK) return ExtendedValidatorResult.ignore;
       else if (e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK) return ExtendedValidatorResult.reject;
-      else if (e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT)
+      else if (e.code === AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT)
         return ExtendedValidatorResult.reject;
-      else if (e.code === AttestationErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK)
+      else if (e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK)
         return ExtendedValidatorResult.reject;
+      else if (e.code === AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE) return ExtendedValidatorResult.ignore;
+      else if (e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION) return ExtendedValidatorResult.reject;
     }
     return ExtendedValidatorResult.accept;
   };

@@ -80,7 +80,7 @@ export enum BlockErrorCode {
   /**
    * The finalized checkpoint is not an ancestor of the block.
    */
-  ERR_CHECKPOINT_NOT_AN_ANCESTOR = "ERR_CHECKPOINT_NOT_AN_ANCESTOR",
+  ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK = "ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK",
   /**
    * Block did not pass validation during block processing.
    */
@@ -151,7 +151,7 @@ export type BlockErrorType =
       error: Error;
     }
   | {
-      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR;
+      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK;
       blockSlot: Slot;
     }
   | {

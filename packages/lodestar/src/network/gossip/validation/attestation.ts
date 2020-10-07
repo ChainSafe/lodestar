@@ -11,6 +11,7 @@ import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
 import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -31,73 +32,79 @@ export async function validateGossipAttestation(
   logger.verbose("Started gossip committee attestation validation", attestationLogContext);
 
   if (!isUnaggregatedAttestation(attestation)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "not unaggregated attesation",
-      aggregationBits: JSON.stringify(attestation.aggregationBits),
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
+      // aggregationBits: JSON.stringify(attestation.aggregationBits),
+      numBits: Array.from(attestation.aggregationBits).filter((bit) => !!bit).length,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
 
   if (await isAttestingToInValidBlock(db, attestation)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "attestation block is invalid",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
 
   if (!hasValidAttestationSlot(config, chain.clock.currentSlot, attestation.data.slot)) {
-    logger.warn("Ignored gossip committee attestation", {reason: "Invalid slot time", ...attestationLogContext});
     // attestation might be valid later so passing to attestation pool
     await chain.receiveAttestation(attestation);
-    return ExtendedValidatorResult.ignore;
+
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
+      ...attestationLogContext,
+    });
   }
 
   // no other validator attestation for same target epoch has been seen
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
-    return ExtendedValidatorResult.ignore;
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN,
+      ...attestationLogContext,
+      root: attestation.data.beaconBlockRoot as Uint8Array,
+    });
   }
 
   if (await db.badBlock.has(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)) {
-    logger.warn("Rejecting gossip committee attestation", {
-      reason: "attestation attests known bad block",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
 
   if (!chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
-    logger.warn("Ignored gossip committee attestation", {
-      reason: "missing attestation beaconBlockRoot block",
-      ...attestationLogContext,
-    });
     // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
-    return ExtendedValidatorResult.ignore;
+
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK,
+      beaconBlockRoot: attestation.data.beaconBlockRoot as Uint8Array,
+      ...attestationLogContext,
+    });
   }
 
   let attestationPreStateContext;
   try {
     attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
-    logger.warn("Ignored gossip committee attestation", {
-      reason: "missing attestation prestate",
-      ...attestationLogContext,
-    });
     // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
-    return ExtendedValidatorResult.ignore;
+
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+      ...attestationLogContext,
+    });
   }
 
   const expectedSubnet = computeSubnetForAttestation(config, attestationPreStateContext.epochCtx, attestation);
   if (subnet !== expectedSubnet) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "wrong subnet",
-      expectedSubnet,
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_INVALID_SUBNET_ID,
+      received: subnet,
+      expected: expectedSubnet,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   if (
     !isValidIndexedAttestation(
@@ -107,59 +114,50 @@ export async function validateGossipAttestation(
       true
     )
   ) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "invalid indexed attestation",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   if (!doesEpochSlotMatchTarget(config, attestation.data)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "epoch slot does not match target",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   try {
     if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
-      logger.warn("Rejected gossip committee attestation", {
-        reason: "committee index not within the expected range",
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
+        index: attestation.data.index,
         ...attestationLogContext,
       });
-      return ExtendedValidatorResult.reject;
     }
   } catch (error) {
     logger.warn(error);
-    logger.warn("Rejected gossip committee attestation", {
-      reason: error.message,
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
+      index: attestation.data.index,
       ...attestationLogContext,
     });
-    // throw new AttestationError({
-    //   code: AttestationErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
-    // });
-    return ExtendedValidatorResult.reject;
   }
   if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "number of aggregation bits does not match the committee size",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   if (!chain.forkChoice.isDescendant(attestation.data.target.root, attestation.data.beaconBlockRoot)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason: "target block is not an ancestor of the block named in the LMD vote",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   if (!chain.forkChoice.isDescendantOfFinalized(attestation.data.beaconBlockRoot)) {
-    logger.warn("Rejected gossip committee attestation", {
-      reason:
-        "current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT,
       ...attestationLogContext,
     });
-    return ExtendedValidatorResult.reject;
   }
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
   logger.profile("gossipAttestationValidation");

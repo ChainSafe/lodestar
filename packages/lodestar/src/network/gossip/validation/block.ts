@@ -23,54 +23,36 @@ export async function validateGossipBlock(
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {
-    logger.warn("Ignoring gossip block", {
-      reason: "finalized slot",
-      blockSlot,
-      finalizedSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
       code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
       blockSlot,
       finalizedSlot,
       job: blockJob,
     });
-    // return ExtendedValidatorResult.ignore;
   }
 
   const currentSlot = chain.clock.currentSlot;
   if (currentSlot < blockSlot) {
-    logger.warn("Ignoring gossip block", {
-      reason: "future slot",
+    await chain.receiveBlock(block);
+    throw new BlockError({
+      code: BlockErrorCode.ERR_FUTURE_SLOT,
       blockSlot,
       currentSlot,
-      blockRoot: toHexString(blockRoot),
+      // blockRoot: toHexString(blockRoot),
+      job: blockJob,
     });
-    await chain.receiveBlock(block);
-    // return ExtendedValidatorResult.ignore;
   }
 
   if (await db.badBlock.has(blockRoot)) {
-    logger.warn("Rejecting gossip block", {
-      reason: "bad block",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
       blockSlot,
       blockRoot,
       job: blockJob,
     });
-    // return ExtendedValidatorResult.reject;
   }
 
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
-    logger.warn("Ignoring gossip block", {
-      reason: "same proposer submitted twice",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
       slot: blockSlot,
@@ -78,73 +60,53 @@ export async function validateGossipBlock(
       proposer: block.message.proposerIndex,
       job: blockJob,
     });
-    // return ExtendedValidatorResult.ignore;
   }
 
   let blockContext;
   try {
     blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
-    logger.warn("Ignoring gossip block", {
-      reason: "missing parent",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-      parent: toHexString(block.message.parentRoot),
-    });
-    //temporary skip rest of validation and put in block pool
-    //rest of validation is performed in state transition anyways
+    // temporary skip rest of validation and put in block pool
+    // rest of validation is performed in state transition anyways
     await chain.receiveBlock(block);
 
     throw new BlockError({
       code: BlockErrorCode.ERR_PARENT_UNKNOWN,
+      // blockSlot,
+      // blockRoot: toHexString(blockRoot),
       parentRoot: block.message.parentRoot,
       job: blockJob,
     });
-    // return ExtendedValidatorResult.ignore;
   }
 
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
-    logger.warn("Rejecting gossip block", {
-      reason: "invalid signature",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
+      // blockSlot,
+      // blockRoot: toHexString(blockRoot),
     });
-    // return ExtendedValidatorResult.reject;
   }
 
   if (!isExpectedProposer(blockContext.epochCtx, block.message)) {
-    logger.warn("Rejecting gossip block", {
-      reason: "wrong proposer",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
       blockProposer: block.message.proposerIndex,
       // shufflingProposer,
+      // blockSlot,
+      // blockRoot: toHexString(blockRoot),
       job: blockJob,
     });
-    // return ExtendedValidatorResult.reject;
   }
   if (!chain.forkChoice.isDescendantOfFinalized(blockRoot)) {
-    logger.warn("Rejecting gossip block", {
-      reason: "finalized checkpoint not an ancestor of block",
-      blockSlot,
-      blockRoot: toHexString(blockRoot),
-    });
     throw new BlockError({
-      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR,
+      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK,
       job: blockJob,
       blockSlot,
+      // blockRoot: toHexString(blockRoot),
     });
-    // return ExtendedValidatorResult.reject;
   }
   logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
-  // return ExtendedValidatorResult.accept;
 }
 
 export async function hasProposerAlreadyProposed(

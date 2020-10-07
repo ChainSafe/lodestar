@@ -99,11 +99,23 @@ export enum AttestationErrorCode {
   /**
    * The attestation target block is not an ancestor of the block defined by attestation.data.beacon_block_root.
    */
-  ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT = "ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT",
+  ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT = "ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT",
   /**
    * The finalized checkpoint is not an ancestor of the block named in the LMD vote.
    */
-  ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
+  ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
+  /**
+   * Committee index out of range.
+   */
+  ERR_COMMITTEE_INDEX_OUT_OF_RANGE = "ERR_COMMITTEE_INDEX_OUT_OF_RANGE",
+  /**
+   * Invalid indexed attestation.
+   */
+  ERR_INVALID_INDEXED_ATTESTATION = "ERR_INVALID_INDEXED_ATTESTATION",
+  /**
+   * Missing attestation pre-state.
+   */
+  ERR_MISSING_ATTESTATION_PRESTATE = "ERR_MISSING_ATTESTATION_PRESTATE",
 }
 
 export type AttestationErrorType =
@@ -200,10 +212,20 @@ export type AttestationErrorType =
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK;
     }
   | {
-      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_ROOT;
+      code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT;
     }
   | {
-      code: AttestationErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_LMD_BLOCK;
+      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK;
+    }
+  | {
+      code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+    }
+  | {
+      code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION;
+    }
+  | {
+      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
     };
 
 export class AttestationError extends LodestarError<AttestationErrorType> {
