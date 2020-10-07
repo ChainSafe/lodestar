@@ -56,6 +56,28 @@ describe("block pool", function () {
     ).to.be.equal(1);
   });
 
+  it("should emit ancestor root", function () {
+    const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
+    // firstBlock -> secondBlock
+    const firstBlock = config.types.SignedBeaconBlock.defaultValue();
+    const ancestorRoot = firstBlock.message.parentRoot;
+    pool.addPendingBlock({
+      signedBlock: firstBlock,
+      trusted: false,
+      reprocess: false,
+    });
+    const secondBlock = config.types.SignedBeaconBlock.defaultValue();
+    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    pool.addPendingBlock({
+      signedBlock: secondBlock,
+      trusted: false,
+      reprocess: false,
+    });
+    // @ts-ignore
+    expect(eventBusStub.emit.withArgs("unknownBlockRoot", ancestorRoot).callCount).to.be.equal(2);
+  });
+
   it("should not request missing block is too far ahead", function () {
     const pool = new BlockPool(config, sourceStub, eventBusStub, forkChoiceStub);
     forkChoiceStub.getHead.returns(generateBlockSummary());

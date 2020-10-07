@@ -1,6 +1,5 @@
 import {registerForkEndpoint} from "./fork";
 import {LodestarApiPlugin} from "../../interface";
-import {registerBlockStreamEndpoint} from "./blockStream";
 import {registerGetValidatorEndpoint} from "./validator";
 import {FastifyInstance} from "fastify";
 import {
@@ -18,7 +17,6 @@ import {
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
   registerForkEndpoint(fastify, opts);
   registerGetValidatorEndpoint(fastify, opts);
-  registerBlockStreamEndpoint(fastify, opts);
   done();
 };
 

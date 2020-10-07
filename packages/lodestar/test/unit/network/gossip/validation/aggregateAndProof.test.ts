@@ -1,28 +1,30 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
 import {expect} from "chai";
-import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../../src/constants";
+
 import {List} from "@chainsafe/ssz";
-import * as gossipUtils from "../../../../../src/network/gossip/utils";
-import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
-import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
-import {LocalClock} from "../../../../../src/chain/clock";
-import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {generateState} from "../../../../utils/state";
-import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PrivateKey, PublicKey} from "@chainsafe/bls";
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
+import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+
+import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
+import {LocalClock} from "../../../../../src/chain/clock";
+import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/regen";
+import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../../src/constants";
+import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
+import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
+import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
+import {generateState} from "../../../../utils/state";
 import {silentLogger} from "../../../../utils/logger";
+import {StubbedBeaconDb} from "../../../../utils/stub";
 
 describe("gossip aggregate and proof test", function () {
   const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
+  let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
-  let getAttestationPreStateStub: SinonStub;
   let isAggregatorStub: SinonStub;
   let isValidSelectionProofStub: SinonStub;
   let isValidSignatureStub: SinonStub;
@@ -33,9 +35,10 @@ describe("gossip aggregate and proof test", function () {
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     chain.clock = sinon.createStubInstance(LocalClock);
+    sinon.stub(chain.clock, "currentSlot").get(() => 0);
+    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.resolves(false);
-    getAttestationPreStateStub = sinon.stub(gossipUtils, "getAttestationPreState");
     isAggregatorStub = sinon.stub(validatorUtils, "isAggregatorFromCommitteeLength");
     isValidSelectionProofStub = sinon.stub(validationUtils, "isValidSelectionProofSignature");
     isValidSignatureStub = sinon.stub(validationUtils, "isValidAggregateAndProofSignature");
@@ -43,7 +46,6 @@ describe("gossip aggregate and proof test", function () {
   });
 
   afterEach(function () {
-    getAttestationPreStateStub.restore();
     isAggregatorStub.restore();
     isValidSelectionProofStub.restore();
     isValidSignatureStub.restore();
@@ -52,7 +54,9 @@ describe("gossip aggregate and proof test", function () {
 
   it("should ignore - invalid slot (too old)", async function () {
     //move genesis time in past so current slot is high
-    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT);
+    chain.getGenesisTime.returns(
+      Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
+    );
     sinon
       .stub(chain.clock, "currentSlot")
       .get(() =>
@@ -77,12 +81,7 @@ describe("gossip aggregate and proof test", function () {
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
     sinon
       .stub(chain.clock, "currentSlot")
-      .get(() =>
-        getCurrentSlot(
-          config,
-          Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1
-        )
-      );
+      .get(() => getCurrentSlot(config, Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1));
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {
@@ -146,10 +145,10 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    getAttestationPreStateStub.resolves(false);
+    regen.getBlockSlotState.throws();
     const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
     expect(result).to.be.equal(ExtendedValidatorResult.ignore);
-    expect(getAttestationPreStateStub.withArgs(config, chain, db, item.message.aggregate.data.target).calledOnce).to.be
+    expect(regen.getBlockSlotState.withArgs(item.message.aggregate.data.target.root, sinon.match.any).calledOnce).to.be
       .true;
   });
 
@@ -164,9 +163,9 @@ describe("gossip aggregate and proof test", function () {
     });
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([]);
     const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
@@ -188,9 +187,9 @@ describe("gossip aggregate and proof test", function () {
     });
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(false);
@@ -212,9 +211,9 @@ describe("gossip aggregate and proof test", function () {
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -245,9 +244,9 @@ describe("gossip aggregate and proof test", function () {
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -279,9 +278,9 @@ describe("gossip aggregate and proof test", function () {
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
@@ -306,9 +305,9 @@ describe("gossip aggregate and proof test", function () {
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
-    getAttestationPreStateStub.resolves({
+    regen.getBlockSlotState.resolves({
       state,
-      epochCtx,
+      epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);

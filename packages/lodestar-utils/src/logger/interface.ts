@@ -27,9 +27,14 @@ export const customColors = {
 
 export const defaultLogLevel = LogLevel.info;
 
+export type LogFormat = "human" | "json";
+export const logFormats: LogFormat[] = ["human", "json"];
+
 export interface ILoggerOptions {
   level?: LogLevel;
   module?: string;
+  format?: LogFormat;
+  hideTimestamp?: boolean;
 }
 
 export type Context = Json;

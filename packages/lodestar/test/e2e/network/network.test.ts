@@ -3,7 +3,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {createPeerId, Libp2pNetwork} from "../../../src/network";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {INetworkOptions} from "../../../src/network/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import Libp2p from "libp2p";

@@ -29,12 +29,9 @@ describe("eth1 / httpEth1Client", function () {
   };
 
   it("getBlocksByNumber: Should fetch a block range", async function () {
-    const blockNumbers = linspace(
-      firstGoerliBlocks[0].blockNumber,
-      firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber
-    );
-    const blocks = await eth1JsonRpcClient.getBlocksByNumber(blockNumbers);
-
+    const fromBlock = firstGoerliBlocks[0].blockNumber;
+    const toBlock = firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber;
+    const blocks = await eth1JsonRpcClient.getBlocksByNumber(fromBlock, toBlock);
     expect(blocks).to.deep.equal(firstGoerliBlocks);
   });
 

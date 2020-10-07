@@ -1,7 +1,7 @@
 import {IApiClient} from "./api";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
 import {IValidatorDB} from "./db/interface";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IValidatorOptions {

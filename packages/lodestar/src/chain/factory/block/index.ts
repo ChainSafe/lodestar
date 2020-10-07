@@ -2,12 +2,12 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, BeaconBlockHeader, Bytes96, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BeaconBlock, Bytes96, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {blockToHeader, EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
 import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
@@ -23,26 +23,18 @@ export async function assembleBlock(
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
-  const [parentBlock, stateContext] = await Promise.all([chain.getHeadBlock(), chain.getHeadStateContext()]);
-  const parentHeader: BeaconBlockHeader = blockToHeader(config, parentBlock!.message);
-  const headState = stateContext!.state.clone();
-  headState.slot = slot;
+  const head = chain.forkChoice.getHead();
+  const stateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot);
   const block: BeaconBlock = {
     slot,
     proposerIndex,
-    parentRoot: config.types.BeaconBlockHeader.hashTreeRoot(parentHeader),
+    parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(config, db, eth1, headState, randaoReveal, graffiti),
+    body: await assembleBody(config, db, eth1, stateContext.state, randaoReveal, graffiti),
   };
 
-  let epochCtx: EpochContext;
-  if (!stateContext!.epochCtx) {
-    epochCtx = new EpochContext(config);
-    epochCtx.loadState(stateContext!.state);
-  } else {
-    epochCtx = stateContext!.epochCtx;
-  }
-  block.stateRoot = computeNewStateRoot(config, {state: stateContext!.state, epochCtx}, block);
+  const preStateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot - 1);
+  block.stateRoot = computeNewStateRoot(config, preStateContext, block);
 
   return block;
 }

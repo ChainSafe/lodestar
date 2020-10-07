@@ -1,5 +1,5 @@
 import Axios, {AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse} from "axios";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import querystring from "querystring";
 
 export interface IHttpClientOptions {

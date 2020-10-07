@@ -6,6 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {IBlockProcessJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {findUnknownAncestor} from "./util";
 
 export class BlockPool {
   private unknownParentBlockPool = new Map<string, IBlockProcessJob[]>();
@@ -37,7 +38,11 @@ export class BlockPool {
       this.unknownParentBlockPool.set(key, [job]);
       //this prevents backward syncing, tolerance is 20 blocks
       if (job.signedBlock.message.slot <= this.forkChoice.getHead().slot + 20) {
-        this.eventBus.emit("unknownBlockRoot", job.signedBlock.message.parentRoot);
+        const pendingBlocks = Array.from(this.unknownParentBlockPool.values()).flat();
+        this.eventBus.emit(
+          "unknownBlockRoot",
+          findUnknownAncestor(this.config, pendingBlocks, job.signedBlock.message.parentRoot)
+        );
       }
     }
   }

@@ -18,7 +18,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
 import {IValidatorDB} from "./db/interface";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {initBLS} from "@chainsafe/bls";

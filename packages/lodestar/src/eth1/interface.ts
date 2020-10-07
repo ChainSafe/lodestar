@@ -13,8 +13,8 @@ export interface IEth1Provider {
   deployBlock: number;
   getBlockNumber(signal?: AbortSignal): Promise<number>;
   getBlockByNumber(blockNumber: number, signal?: AbortSignal): Promise<Eth1Block>;
-  getBlocksByNumber(blockNumbers: number[], signal?: AbortSignal): Promise<Eth1Block[]>;
-  getDepositEvents(fromBlock: number, toBlock?: number, signal?: AbortSignal): Promise<DepositEvent[]>;
+  getBlocksByNumber(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<Eth1Block[]>;
+  getDepositEvents(fromBlock: number, toBlock: number, signal?: AbortSignal): Promise<DepositEvent[]>;
   validateContract(signal?: AbortSignal): Promise<void>;
 }
 

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -11,6 +11,7 @@ import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transiti
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../src/chain";
+import {StateRegenerator} from "../../../../src/chain/regen";
 import {IBeaconDb} from "../../../../src/db";
 import {GossipMessageValidator} from "../../../../src/network/gossip/validator";
 import {ExtendedValidatorResult} from "../../../../src/network/gossip/constants";
@@ -28,7 +29,8 @@ describe("GossipMessageValidator", () => {
     isValidIncomingVoluntaryExitStub: any,
     isValidIncomingProposerSlashingStub: any,
     isValidIncomingAttesterSlashingStub: any,
-    chainStub: StubbedChain;
+    chainStub: StubbedChain,
+    regenStub: SinonStubbedInstance<StateRegenerator>;
 
   beforeEach(() => {
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
@@ -36,6 +38,7 @@ describe("GossipMessageValidator", () => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
 
     dbStub = new StubbedBeaconDb(sandbox);
     validator = new GossipMessageValidator({
@@ -64,7 +67,7 @@ describe("GossipMessageValidator", () => {
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
+      regenStub.getCheckpointState.resolves({state, epochCtx});
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(ExtendedValidatorResult.ignore);
       expect(isValidIncomingVoluntaryExitStub.called).to.be.false;
     });
@@ -82,7 +85,7 @@ describe("GossipMessageValidator", () => {
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
+      regenStub.getCheckpointState.resolves({state, epochCtx});
       isValidIncomingVoluntaryExitStub.returns(false);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(ExtendedValidatorResult.reject);
       expect(isValidIncomingVoluntaryExitStub.called).to.be.true;
@@ -101,7 +104,7 @@ describe("GossipMessageValidator", () => {
       });
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      chainStub.getHeadStateContext.resolves({state, epochCtx});
+      regenStub.getCheckpointState.resolves({state, epochCtx});
       isValidIncomingVoluntaryExitStub.returns(true);
       expect(await validator.isValidIncomingVoluntaryExit(voluntaryExit)).to.be.equal(ExtendedValidatorResult.accept);
     });

@@ -5,7 +5,7 @@ import {getSyncPeers} from "../../../../src/sync/utils/peers";
 import {expect} from "chai";
 import {generatePeer} from "../../../utils/peer";
 import PeerId from "peer-id";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../lib/network/peers/score";
+import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers/score";
 
 describe("sync peer utils", function () {
   let networkStub: SinonStubbedInstance<INetwork>;

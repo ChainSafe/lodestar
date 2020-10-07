@@ -1,12 +1,11 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockProcessJob} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
-import {BeaconBlock, Number64, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {getBlockStateContext} from "../utils";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
 
 export async function validateGossipBlock(
@@ -39,11 +38,17 @@ export async function validateGossipBlock(
     // return ExtendedValidatorResult.ignore;
   }
 
-  //if slot is in future, wait for it's time before resuming
-  //this won't fix block queue since it could resume before we synced to this slot and
-  // fail with missing parent state/block
-  // TODO: queue those blocks and submit to gossip handler directly when parent processed
-  await waitForBlockSlot(config, chain.getGenesisTime(), blockSlot);
+  const currentSlot = chain.clock.currentSlot;
+  if (currentSlot < blockSlot) {
+    logger.warn("Ignoring gossip block", {
+      reason: "future slot",
+      blockSlot,
+      currentSlot,
+      blockRoot: toHexString(blockRoot),
+    });
+    await chain.receiveBlock(block);
+    // return ExtendedValidatorResult.ignore;
+  }
 
   if (await db.badBlock.has(blockRoot)) {
     logger.warn("Rejecting gossip block", {
@@ -60,7 +65,7 @@ export async function validateGossipBlock(
     // return ExtendedValidatorResult.reject;
   }
 
-  if (await hasProposerAlreadyProposed(chain, block.message)) {
+  if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     logger.warn("Ignoring gossip block", {
       reason: "same proposer submitted twice",
       blockSlot,
@@ -76,8 +81,10 @@ export async function validateGossipBlock(
     // return ExtendedValidatorResult.ignore;
   }
 
-  const blockContext = await getBlockStateContext(chain.forkChoice, db, block.message.parentRoot, block.message.slot);
-  if (!blockContext) {
+  let blockContext;
+  try {
+    blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
+  } catch (e) {
     logger.warn("Ignoring gossip block", {
       reason: "missing parent",
       blockSlot,
@@ -123,9 +130,7 @@ export async function validateGossipBlock(
     });
     // return ExtendedValidatorResult.reject;
   }
-  if (
-    toHexString(await chain.forkChoice.getAncestor(blockRoot, finalizedSlot)) !== toHexString(finalizedCheckpoint.root)
-  ) {
+  if (!chain.forkChoice.isDescendantOfFinalized(blockRoot)) {
     logger.warn("Rejecting gossip block", {
       reason: "finalized checkpoint not an ancestor of block",
       blockSlot,
@@ -142,18 +147,13 @@ export async function validateGossipBlock(
   // return ExtendedValidatorResult.accept;
 }
 
-export async function waitForBlockSlot(config: IBeaconConfig, genesisTime: Number64, blockSlot: Slot): Promise<void> {
-  const blockTime = (genesisTime + blockSlot * config.params.SECONDS_PER_SLOT) * 1000;
-  const currentTime = Date.now();
-  const tolerance = blockTime - currentTime;
-  if (tolerance > 0) {
-    await sleep(tolerance);
-  }
-}
-
-export async function hasProposerAlreadyProposed(chain: IBeaconChain, block: BeaconBlock): Promise<boolean> {
-  const existingBlock = await chain.getCanonicalBlockAtSlot(block.slot);
-  return existingBlock?.message.proposerIndex === block.proposerIndex;
+export async function hasProposerAlreadyProposed(
+  db: IBeaconDb,
+  blockRoot: Uint8Array,
+  proposerIndex: ValidatorIndex
+): Promise<boolean> {
+  const existingBlock = await db.block.get(blockRoot);
+  return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
 export function isExpectedProposer(epochCtx: EpochContext, block: BeaconBlock): boolean {

@@ -5,7 +5,7 @@ Running a Lodestar node on the [Medalla](https://github.com/goerli/medalla) mult
 Make sure lodestar is installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/).
 
 ```
-yarn run cli --help
+./lodestar --help
 ```
 
 ## Run a beacon node
@@ -13,7 +13,7 @@ yarn run cli --help
 To start a Lodestar beacon run the command:
 
 ```bash
-yarn run cli beacon --testnet medalla
+./lodestar beacon --testnet medalla
 ```
 
 <!-- prettier-ignore-start -->
@@ -58,7 +58,7 @@ The `--testnet medalla` flag automatically sets the following configuration opti
 To start a Lodestar validator run the command:
 
 ```bash
-yarn run cli validator --testnet medalla
+./lodestar validator --testnet medalla
 ```
 
 You should see confirmation that modules have started. 

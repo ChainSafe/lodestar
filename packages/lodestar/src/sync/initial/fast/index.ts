@@ -5,7 +5,7 @@ import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain} from "../../../chain";
 import {getSyncProtocols, INetwork} from "../../../network";
-import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import defaultOptions, {ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
@@ -123,15 +123,17 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
 
   private async sync(): Promise<void> {
     await pipe(this.syncTriggerSource, async (source) => {
-      const config = this.config;
-      const chain = this.chain;
-      const network = this.network;
-      const logger = this.logger;
-      const opts = this.opts;
-      const getLastProcessedBlock = this.getLastProcessedBlock;
-      const setBlockImportTarget = this.setBlockImportTarget;
-      const updateBlockImportTarget = this.updateBlockImportTarget;
-      const getInitialSyncPeers = this.getInitialSyncPeers;
+      const {
+        config,
+        chain,
+        network,
+        logger,
+        opts,
+        getLastProcessedBlock,
+        setBlockImportTarget,
+        updateBlockImportTarget,
+        getInitialSyncPeers,
+      } = this;
       return (async function () {
         for await (const slotRange of source) {
           const lastSlot = await pipe(
@@ -224,10 +226,9 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
    * Returns peers which has same finalized Checkpoint
    */
   private getInitialSyncPeers = async (): Promise<PeerId[]> => {
-    const targetCheckpoint = this.targetCheckpoint;
     return getSyncPeers(this.network, (peer) => {
       const status = this.network.peerMetadata.getStatus(peer);
-      return !!status && status.finalizedEpoch >= (targetCheckpoint?.epoch ?? 0);
+      return !!status && status.finalizedEpoch >= (this.targetCheckpoint?.epoch ?? 0);
     });
   };
 }

@@ -8,5 +8,5 @@
 To run any other command or explore Lodestar options run the help command.
 
 ```bash
-yarn run cli --help
+./lodestar --help
 ```

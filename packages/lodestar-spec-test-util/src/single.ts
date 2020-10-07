@@ -4,10 +4,9 @@ import {readdirSync, readFileSync, writeFile} from "fs";
 import {describe, it} from "mocha";
 import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
-import {loadYamlFile} from "@chainsafe/lodestar-utils/lib/nodejs";
 import {Type} from "@chainsafe/ssz";
 
-import {isDirectory} from "./util";
+import {isDirectory, loadYamlFile} from "./util";
 
 export enum InputType {
   SSZ = "ssz",

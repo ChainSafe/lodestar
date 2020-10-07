@@ -3,11 +3,10 @@
  */
 
 import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
-
-import {LodestarEventIterator} from "../../../util/events";
 import {IBeaconBlocksApi} from "./blocks";
 import {IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
+import {IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 
 export interface IBeaconApi {
   blocks: IBeaconBlocksApi;
@@ -23,5 +22,5 @@ export interface IBeaconApi {
 
   getGenesis(): Promise<Genesis | null>;
 
-  getBlockStream(): LodestarEventIterator<SignedBeaconBlock>;
+  getBlockStream(): IStoppableEventIterable<SignedBeaconBlock>;
 }

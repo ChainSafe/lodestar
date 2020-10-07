@@ -3,7 +3,7 @@
   "include": ["src"],
   "exclude": [],
   "compilerOptions": {
-    "typeRoots": ["../../node_modules/@types", "../../node_modules/libp2p-ts/types"],
+    "typeRoots": ["../../node_modules/@types", "../../node_modules/libp2p-ts/types", "./types"],
     "outDir": "lib",
     "rootDir": "./src"
   }

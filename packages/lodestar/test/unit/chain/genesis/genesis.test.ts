@@ -62,9 +62,10 @@ describe("genesis builder", function () {
       deployBlock: events[0].blockNumber,
       getBlockNumber: async () => 2000,
       getBlockByNumber: async (number) => blocks[number],
-      getBlocksByNumber: async (numbers) => blocks.filter((b) => numbers.includes(b.blockNumber)),
+      getBlocksByNumber: async (fromBlock, toBlock) =>
+        blocks.filter((b) => b.blockNumber >= fromBlock && b.blockNumber <= toBlock),
       getDepositEvents: async (fromBlock, toBlock) =>
-        events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= (toBlock || fromBlock)),
+        events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= toBlock),
       validateContract: async () => {
         return;
       },
@@ -92,10 +93,11 @@ describe("genesis builder", function () {
       deployBlock: events[0].blockNumber,
       getBlockNumber: async () => 2000,
       getBlockByNumber: async (number) => blocks[number],
-      getBlocksByNumber: async (numbers) => blocks.filter((b) => numbers.includes(b.blockNumber)),
+      getBlocksByNumber: async (fromBlock, toBlock) =>
+        blocks.filter((b) => b.blockNumber >= fromBlock && b.blockNumber <= toBlock),
       getDepositEvents: async (fromBlock, toBlock) => {
         controller.abort();
-        return events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= (toBlock || fromBlock));
+        return events.filter((e) => e.blockNumber >= fromBlock && e.blockNumber <= toBlock);
       },
       validateContract: async () => {
         return;

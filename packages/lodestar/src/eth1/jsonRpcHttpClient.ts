@@ -3,7 +3,7 @@
 import fetch from "cross-fetch";
 import {AbortSignal} from "abort-controller";
 import {IJsonRpcClient, IRpcPayload} from "./interface";
-import {serializeContext} from "@chainsafe/lodestar-utils";
+import {toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
 /**
@@ -88,7 +88,13 @@ function parseJson<T>(json: string): T {
   try {
     return JSON.parse(json);
   } catch (e) {
-    throw Error(`Error parsing JSON: ${e.message}\n${json.slice(0, maxStringLengthToPrint)}`);
+    throw new ErrorParseJson(json, e);
+  }
+}
+
+export class ErrorParseJson extends Error {
+  constructor(json: string, e: Error) {
+    super(`Error parsing JSON: ${e.message}\n${json.slice(0, maxStringLengthToPrint)}`);
   }
 }
 
@@ -101,10 +107,10 @@ export class ErrorJsonRpcResponse extends Error {
         ? res.error.message
         : typeof res.error.code === "number"
         ? parseJsonRpcErrorCode(res.error.code)
-        : serializeContext(res.error)
+        : toString(toJson(res.error))
       : "no result";
 
-    super(`JSON RPC error: ${errorMessage}, ${serializeContext((payload as unknown) as Json)}`);
+    super(`JSON RPC error: ${errorMessage}, ${toString(toJson((payload as unknown) as Json))}`);
 
     this.response = res;
     this.payload = payload;
