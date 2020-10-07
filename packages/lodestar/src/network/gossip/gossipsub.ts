@@ -100,8 +100,8 @@ export class LodestarGossipsub extends Gossipsub {
   /**
    * Should throw ERR_TOPIC_VALIDATOR_IGNORE or ERR_TOPIC_VALIDATOR_REJECT
    * If we don't throw it means accept
-   * Refer to https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.1/src/pubsub/index.js#L515
-   * and https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.0/ts/index.ts#L442
+   * Refer to https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L529
+   * and https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.3/ts/index.ts#L447
    */
   public libP2pTopicValidator = async (topic: string, message: InMessage): Promise<void> => {
     if (!this.genericIsValid(message)) {
@@ -136,7 +136,7 @@ export class LodestarGossipsub extends Gossipsub {
   };
 
   /**
-   * Override https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.1/src/pubsub/index.js#L414
+   * Override https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L428
    * we want to emit our transformed object instead of the raw message here.
    */
   public _emitMessage(message: InMessage): void {
@@ -149,7 +149,7 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   /**
-   * Override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.0/ts/index.ts#L1029
+   * Override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.3/ts/index.ts#L1034
    */
   public _publish(message: InMessage): Promise<void> {
     assert.true(message.topicIDs && message.topicIDs.length === 1, "lodestar only support 1 topic per message");

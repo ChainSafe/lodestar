@@ -137,7 +137,8 @@ describe("[network] network", function () {
     });
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // wait for peers to be connected in libp2p-interfaces
+    await new Promise((resolve) => setTimeout(resolve, 200));
     validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -189,7 +190,8 @@ describe("[network] network", function () {
         resolve(signedBlock);
       });
     });
-    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // wait for peers to be connected in libp2p-interfaces
+    await new Promise((resolve) => setTimeout(resolve, 200));
     validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
@@ -209,7 +211,8 @@ describe("[network] network", function () {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
     });
-    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // wait for peers to be connected in libp2p-interfaces
+    await new Promise((resolve) => setTimeout(resolve, 200));
     validator.isValidIncomingAggregateAndProof.resolves(ExtendedValidatorResult.accept);
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
@@ -228,7 +231,8 @@ describe("[network] network", function () {
       netA.gossip.subscribeToAttestationSubnet(forkDigest, 0, resolve);
       callback = resolve;
     });
-    await new Promise((resolve) => netB.gossip.once("gossipsub:heartbeat", resolve));
+    // wait for peers to be connected in libp2p-interfaces
+    await new Promise((resolve) => setTimeout(resolve, 200));
     const attestation = generateEmptyAttestation();
     attestation.data.index = 0;
     validator.isValidIncomingCommitteeAttestation.resolves(ExtendedValidatorResult.accept);
