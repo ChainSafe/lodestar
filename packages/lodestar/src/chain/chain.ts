@@ -3,7 +3,7 @@
  */
 
 import {AbortController} from "abort-controller";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {readOnlyMap, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   Attestation,
   BeaconState,
@@ -64,8 +64,8 @@ export class BeaconChain implements IBeaconChain {
   public clock!: IBeaconClock;
   public emitter: ChainEventEmitter;
   public regen!: IStateRegenerator;
-  public attestationPool!: AttestationPool;
-  public blockPool!: BlockPool;
+  public pendingAttestations!: AttestationPool;
+  public pendingBlocks!: BlockPool;
   private attestationProcessor!: AttestationProcessor;
   private blockProcessor!: BlockProcessor;
   private readonly config: IBeaconConfig;
@@ -203,16 +203,18 @@ export class BeaconChain implements IBeaconChain {
       db: this.db,
       signal: this.abortController!.signal,
     });
+    this.pendingAttestations = new AttestationPool({
+      config: this.config,
+    });
+    this.pendingBlocks = new BlockPool({
+      config: this.config,
+    });
     this.attestationProcessor = new AttestationProcessor({
       config: this.config,
       forkChoice: this.forkChoice,
       emitter: this.emitter,
       clock: this.clock,
       regen: this.regen,
-    });
-    this.attestationPool = new AttestationPool({
-      config: this.config,
-      processor: this.attestationProcessor,
     });
     this.blockProcessor = new BlockProcessor({
       config: this.config,
@@ -221,10 +223,6 @@ export class BeaconChain implements IBeaconChain {
       regen: this.regen,
       emitter: this.emitter,
       signal: this.abortController!.signal,
-    });
-    this.blockPool = new BlockPool({
-      config: this.config,
-      processor: this.blockProcessor,
     });
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     this.emitter.on("forkVersion", this.handleForkVersionChanged);
@@ -522,8 +520,20 @@ export class BeaconChain implements IBeaconChain {
   private onClockSlot = async (slot: Slot): Promise<void> => {
     this.logger.verbose("Clock slot", {slot});
     this.forkChoice.updateTime(slot);
-    this.blockPool.onClockSlot(slot);
-    await this.attestationPool.onClockSlot(slot);
+    await Promise.all(
+      // Attestations can only affect the fork choice of subsequent slots.
+      // Process the attestations in `slot - 1`, rather than `slot`
+      this.pendingAttestations.getBySlot(slot - 1).map((job) => {
+        this.pendingAttestations.remove(job);
+        return this.attestationProcessor.processAttestationJob(job);
+      })
+    );
+    await Promise.all(
+      this.pendingBlocks.getBySlot(slot).map((job) => {
+        this.pendingBlocks.remove(job);
+        return this.blockProcessor.processBlockJob(job);
+      })
+    );
   };
 
   private onForkChoiceJustified = async (cp: Checkpoint): Promise<void> => {
@@ -561,9 +571,10 @@ export class BeaconChain implements IBeaconChain {
     postStateContext: ITreeStateContext,
     job: IBlockJob
   ): Promise<void> => {
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
     this.logger.debug("Block processed", {
       slot: block.message.slot,
-      root: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message)),
+      root: toHexString(blockRoot),
     });
     this.metrics.currentSlot.set(block.message.slot);
     await this.db.stateCache.add(postStateContext);
@@ -571,11 +582,30 @@ export class BeaconChain implements IBeaconChain {
       await this.db.block.add(block);
     }
     if (!job.trusted) {
-      await this.attestationPool.onBlock(block);
+      // Only process attestations in response to an "untrusted" block
+      await Promise.all([
+        // process the attestations in the block
+        ...readOnlyMap(block.message.body.attestations, (attestation) => {
+          return this.attestationProcessor.processAttestationJob({
+            attestation,
+            // attestation signatures from blocks have already been verified
+            validSignature: true,
+          });
+        }),
+        // process pending attestations which needed the block
+        ...this.pendingAttestations.getByBlock(blockRoot).map((job) => {
+          this.pendingAttestations.remove(job);
+          return this.attestationProcessor.processAttestationJob(job);
+        }),
+      ]);
     }
     await this.db.processBlockOperations(block);
-    this.blockPool.onBlock(block);
-    await this.attestationPool.onBlock(block);
+    await Promise.all(
+      this.pendingBlocks.getByParent(blockRoot).map((job) => {
+        this.pendingBlocks.remove(job);
+        return this.blockProcessor.processBlockJob(job);
+      })
+    );
   };
 
   private onErrorAttestation = async (err: AttestationError): Promise<void> => {
@@ -591,17 +621,17 @@ export class BeaconChain implements IBeaconChain {
           reason: err.type.code,
           attestationRoot: toHexString(attestationRoot),
         });
-        this.attestationPool.putBySlot(err.type.attestationSlot, err.job);
+        this.pendingAttestations.putBySlot(err.type.attestationSlot, err.job);
         break;
       case AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT:
         this.logger.debug("Add attestation to pool", {
           reason: err.type.code,
           attestationRoot: toHexString(attestationRoot),
         });
-        this.attestationPool.putByBlock(err.type.root, err.job);
+        this.pendingAttestations.putByBlock(err.type.root, err.job);
         break;
       case AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK:
-        this.attestationPool.putByBlock(err.type.beaconBlockRoot, err.job);
+        this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
         break;
       default:
         await this.db.attestation.remove(err.job.attestation);
@@ -621,14 +651,14 @@ export class BeaconChain implements IBeaconChain {
           reason: err.type.code,
           blockRoot: toHexString(blockRoot),
         });
-        this.blockPool.addBySlot(err.job);
+        this.pendingBlocks.addBySlot(err.job);
         break;
       case BlockErrorCode.ERR_PARENT_UNKNOWN:
         this.logger.debug("Add block to pool", {
           reason: err.type.code,
           blockRoot: toHexString(blockRoot),
         });
-        this.blockPool.addByParent(err.job);
+        this.pendingBlocks.addByParent(err.job);
         break;
       case BlockErrorCode.ERR_INCORRECT_PROPOSER:
       case BlockErrorCode.ERR_REPEAT_PROPOSAL:

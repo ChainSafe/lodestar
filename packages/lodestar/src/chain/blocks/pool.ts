@@ -3,7 +3,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 
 import {IBlockJob} from "../interface";
-import {BlockProcessor} from "./processor";
 
 /**
  * The BlockPool is a cache of blocks that are pending processing.
@@ -13,6 +12,7 @@ import {BlockProcessor} from "./processor";
  * - blocks with future slots
  */
 export class BlockPool {
+  private readonly config: IBeaconConfig;
   /**
    * Blocks indexed by blockRoot
    */
@@ -26,12 +26,8 @@ export class BlockPool {
    */
   private blocksBySlot: Map<Slot, Map<string, IBlockJob>>;
 
-  private readonly config: IBeaconConfig;
-  private readonly processor: BlockProcessor;
-
-  constructor({config, processor}: {config: IBeaconConfig; processor: BlockProcessor}) {
+  constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
-    this.processor = processor;
 
     this.blocks = new Map();
     this.blocksByParent = new Map();
@@ -110,25 +106,6 @@ export class BlockPool {
   public getBySlot(slot: Slot): IBlockJob[] {
     return Array.from(this.blocksBySlot.get(slot)?.values() ?? []);
   }
-
-  public onClockSlot = (slot: Slot): void => {
-    const blocksAtSlot = this.blocksBySlot.get(slot) ?? new Map();
-    this.blocksBySlot.delete(slot);
-    blocksAtSlot.forEach((job) => {
-      this.processor.processBlockJob(job).catch(() => /* unreachable */ ({}));
-      this.remove(job);
-    });
-  };
-
-  public onBlock = (block: SignedBeaconBlock): void => {
-    const parentKey = this.getParentKey(block);
-    const blocksWithParent = this.blocksByParent.get(parentKey) ?? new Map();
-    this.blocksByParent.delete(parentKey);
-    blocksWithParent.forEach((job) => {
-      this.processor.processBlockJob(job).catch(() => /* unreachable */ ({}));
-      this.remove(job);
-    });
-  };
 
   private getParentKey(block: SignedBeaconBlock): string {
     return toHexString(block.message.parentRoot);
