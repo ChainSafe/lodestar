@@ -478,10 +478,10 @@ export class BeaconChain implements IBeaconChain {
       await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state
-    this.metrics.currentSlot.set(state.slot);
+    this.metrics.headSlot.set(state.slot);
     this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
     this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+    this.metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
 
@@ -493,13 +493,13 @@ export class BeaconChain implements IBeaconChain {
 
   private onFinalized = async (cp: Checkpoint): Promise<void> => {
     this.logger.important("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
-    this.metrics.currentFinalizedEpoch.set(cp.epoch);
+    this.metrics.finalizedEpoch.set(cp.epoch);
   };
 
   private onCheckpoint = async (cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> => {
     this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
     await this.db.checkpointStateCache.add(cp, stateContext);
-    this.metrics.currentEpochLiveValidators.set(stateContext.epochCtx.currentShuffling.activeIndices.length);
+    this.metrics.currentValidators.set({active: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
     const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
     if (parentBlockSummary) {
       const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
@@ -549,6 +549,7 @@ export class BeaconChain implements IBeaconChain {
       headSlot: head.slot,
       headRoot: toHexString(head.blockRoot),
     });
+    this.metrics.headSlot.set(head.slot);
   };
 
   private onForkChoiceReorg = async (head: IBlockSummary, oldHead: IBlockSummary, depth: number): Promise<void> => {
@@ -576,7 +577,6 @@ export class BeaconChain implements IBeaconChain {
       slot: block.message.slot,
       root: toHexString(blockRoot),
     });
-    this.metrics.currentSlot.set(block.message.slot);
     await this.db.stateCache.add(postStateContext);
     if (!job.reprocess) {
       await this.db.block.add(block);
