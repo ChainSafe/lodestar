@@ -4,8 +4,8 @@ services:
     build: .
     restart: always
     volumes:
-      - lodestar:/usr/app/.spadina
-    command: beacon --testnet spadina
+      - lodestar:/usr/app/.${TESTNET:-spadina}
+    command: beacon --testnet ${TESTNET:-spadina}
 
   prometheus:
     build: docker/prometheus
