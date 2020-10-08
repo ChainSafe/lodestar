@@ -1,113 +1,67 @@
-import pushable from "it-pushable";
-import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import pipe from "it-pipe";
-import abortable from "abortable-iterator";
-import {AbortController} from "abort-controller";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {validateBlock} from "./validate";
-import {processBlock} from "./process";
-import {BlockPool} from "./pool";
-import {postProcess} from "./post";
-import {IService} from "../../node";
-import {IBeaconDb} from "../../db/api";
-import {IBeaconMetrics} from "../../metrics";
-import {IAttestationProcessor, IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 import {ChainEventEmitter} from "../emitter";
-import {convertBlock} from "./convertBlock";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";
+import {JobQueue} from "../../util/queue";
 
-export class BlockProcessor implements IService {
-  private readonly config: IBeaconConfig;
-  private readonly logger: ILogger;
-  private readonly db: IBeaconDb;
-  private readonly forkChoice: IForkChoice;
-  private readonly clock: IBeaconClock;
-  private readonly regen: IStateRegenerator;
-  private readonly metrics: IBeaconMetrics;
-  private readonly eventBus: ChainEventEmitter;
-  private readonly attestationProcessor: IAttestationProcessor;
+import {processBlock} from "./process";
+import {validateBlock} from "./validate";
 
-  /**
-   * map where key is required parent block root and value are blocks that require that parent block
-   */
-  private pendingBlocks: BlockPool;
+type BlockProcessorModules = {
+  config: IBeaconConfig;
+  forkChoice: IForkChoice;
+  regen: IStateRegenerator;
+  emitter: ChainEventEmitter;
+  clock: IBeaconClock;
+};
 
-  private blockProcessingSource = pushable<IBlockProcessJob>();
+/**
+ * BlockProcessor processes block jobs in a queued fashion, one after the other.
+ */
+export class BlockProcessor {
+  private modules: BlockProcessorModules;
+  private jobQueue: JobQueue;
 
-  private controller: AbortController = new AbortController();
-
-  constructor(
-    config: IBeaconConfig,
-    logger: ILogger,
-    db: IBeaconDb,
-    forkChoice: IForkChoice,
-    regen: IStateRegenerator,
-    metrics: IBeaconMetrics,
-    eventBus: ChainEventEmitter,
-    clock: IBeaconClock,
-    attestationProcessor: IAttestationProcessor
-  ) {
-    this.config = config;
-    this.logger = logger;
-    this.db = db;
-    this.forkChoice = forkChoice;
-    this.regen = regen;
-    this.metrics = metrics;
-    this.eventBus = eventBus;
-    this.clock = clock;
-    this.attestationProcessor = attestationProcessor;
-    this.pendingBlocks = new BlockPool(config, this.blockProcessingSource, this.eventBus, forkChoice);
+  constructor({
+    signal,
+    queueSize = 256,
+    ...modules
+  }: BlockProcessorModules & {
+    signal: AbortSignal;
+    queueSize?: number;
+  }) {
+    this.modules = modules;
+    this.jobQueue = new JobQueue({queueSize, signal});
   }
 
-  public async start(): Promise<void> {
-    const abortSignal = this.controller.signal;
-    // TODO: Add more robust error handling of this pipe
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    void pipe(
-      //source of blocks
-      this.blockProcessingSource,
-      //middleware to allow to stop block processing
-      function (source: AsyncIterable<IBlockProcessJob>) {
-        //use onAbort to collect and save pending blocks
-        return abortable(source, abortSignal, {returnOnAbort: true});
-      },
-      convertBlock(this.config),
-      validateBlock(this.config, this.logger, this.forkChoice, this.eventBus),
-      processBlock(
-        this.config,
-        this.logger,
-        this.db,
-        this.forkChoice,
-        this.regen,
-        this.pendingBlocks,
-        this.eventBus,
-        this.clock
-      ),
-      postProcess(
-        this.config,
-        this.logger,
-        this.db,
-        this.forkChoice,
-        this.metrics,
-        this.eventBus,
-        this.attestationProcessor
-      )
-    );
+  public async processBlockJob(job: IBlockJob): Promise<void> {
+    return this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
   }
+}
 
-  public async stop(): Promise<void> {
-    this.controller.abort();
-  }
-
-  public onNewSlot = (slot: Slot): void => {
-    this.pendingBlocks.onNewSlot(slot);
-  };
-
-  public receiveBlock(block: SignedBeaconBlock, trusted = false, reprocess = false): void {
-    this.blockProcessingSource.push({signedBlock: block, trusted, reprocess});
+/**
+ * Validate and process a block
+ *
+ * The only effects of running this are:
+ * - forkChoice update, in the case of a valid block
+ * - various events emitted: checkpoint, forkChoice:*, head, block, error:block
+ * - (state cache update, from state regeneration)
+ *
+ * All other effects are provided by downstream event handlers
+ */
+export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
+  try {
+    // First convert incoming blocks to TreeBacked backing (for efficiency reasons)
+    // The root is computed multiple times, the contents are hash-tree-rooted multiple times,
+    // and some of the contents end up in the state as tree-form.
+    job.signedBlock = modules.config.types.SignedBeaconBlock.tree.createValue(job.signedBlock);
+    await validateBlock({...modules, job});
+    await processBlock({...modules, job});
+  } catch (e) {
+    // above functions only throw BlockError
+    modules.emitter.emit("error:block", e);
   }
 }

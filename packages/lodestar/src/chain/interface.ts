@@ -17,20 +17,22 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
-import {IService} from "../node";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 
-export interface IBlockProcessJob {
+export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
   trusted: boolean;
   reprocess: boolean;
 }
 
-export type BlockError = {
-  message?: string;
-  job: IBlockProcessJob;
-};
+export interface IAttestationJob {
+  attestation: Attestation;
+  /**
+   * `true` if the signature has already been verified
+   */
+  validSignature: boolean;
+}
 
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
@@ -99,11 +101,4 @@ export interface IBeaconChain {
    * Initialize the chain with a weak subjectivity state
    */
   initializeWeakSubjectivityState(weakSubjectivityState: TreeBacked<BeaconState>): Promise<void>;
-}
-
-export interface IAttestationProcessor extends IService {
-  receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
-  receiveAttestation(attestation: Attestation): Promise<void>;
-  getPendingBlockAttestations(blockRootHex: string): Attestation[];
-  getPendingSlotAttestations(slot: Slot): Attestation[];
 }
