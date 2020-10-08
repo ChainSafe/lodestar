@@ -152,7 +152,7 @@ export class LodestarGossipsub extends Gossipsub {
    * Override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.3/ts/index.ts#L1034
    */
   public _publish(message: InMessage): Promise<void> {
-    assert.true(message.topicIDs && message.topicIDs.length === 1, "lodestar only support 1 topic per message");
+    assert.true(message.topicIDs && message.topicIDs.length === 1, "lodestar only supports 1 topic per message");
     assert.true(!!message.data, "message to publish should have data");
     const encoding = getTopicEncoding(message.topicIDs[0]);
     if (encoding === GossipEncoding.SSZ_SNAPPY) {
