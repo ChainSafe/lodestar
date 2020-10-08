@@ -44,7 +44,7 @@ export async function getDevBeaconNode({
         eth1: {enabled: false},
       } as Partial<IBeaconNodeOptions>,
       options
-    ),
+    ) as Partial<IBeaconNodeOptions>,
     {
       config,
       logger: logger || silentLogger,

@@ -30,7 +30,7 @@ describe("gossip aggregate and proof test", function () {
   let isValidSignatureStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
 
-  beforeEach(function () {
+  beforeEach(async function () {
     chain = sinon.createStubInstance(BeaconChain);
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
@@ -220,13 +220,7 @@ describe("gossip aggregate and proof test", function () {
     const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(
-      isValidSelectionProofStub.withArgs(
-        config,
-        state,
-        item.message.aggregate.data.slot,
-        epochCtx.index2pubkey[item.message.aggregatorIndex],
-        sinon.match.any
-      ).calledOnce
+      isValidSelectionProofStub.calledOnce
     ).to.be.true;
   });
 
