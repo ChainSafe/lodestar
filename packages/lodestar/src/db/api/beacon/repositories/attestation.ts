@@ -1,11 +1,10 @@
-import {Attestation, BeaconState, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
+import {Attestation, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IDatabaseController} from "../../../controller";
 import {Bucket} from "../../schema";
 import {Repository} from "./abstract";
-import {TreeBacked} from "@chainsafe/ssz";
 
 /**
  * Attestation indexed by root
@@ -35,8 +34,8 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
     return attestations.filter((attestation) => attestation.data.target.epoch === epoch);
   }
 
-  public async removeOld(state: TreeBacked<BeaconState>): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
+  public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
     const attestations: Attestation[] = await this.values();
     await this.batchRemove(
       attestations.filter((a) => {

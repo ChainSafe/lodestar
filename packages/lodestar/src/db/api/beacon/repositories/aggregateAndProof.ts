@@ -18,6 +18,13 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
     super(config, db, Bucket.aggregateAndProof, config.types.AggregateAndProof);
   }
 
+  /**
+   * Id is hashTreeRoot of aggregated attestation
+   */
+  public getId(value: AggregateAndProof): Uint8Array {
+    return this.config.types.Attestation.hashTreeRoot(value.aggregate);
+  }
+
   public async getBlockAttestations(state: TreeBacked<BeaconState>): Promise<Attestation[]> {
     const aggregates: AggregateAndProof[] = await this.values();
     return aggregates
@@ -42,26 +49,19 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
   }
 
   public async hasAttestation(attestation: Attestation): Promise<boolean> {
-    const aggregates: AggregateAndProof[] = await this.values();
-    const index = aggregates.findIndex((aggregate) =>
-      this.config.types.Attestation.equals(aggregate.aggregate, attestation)
-    );
-    return index !== -1;
+    const id = this.config.types.Attestation.hashTreeRoot(attestation);
+    const found = await this.get(id);
+    return !!found;
   }
 
   public async removeIncluded(attestations: ArrayLike<Attestation>): Promise<void> {
-    const aggregates = await this.values();
-    await this.batchRemove(
-      aggregates.filter((a) => {
-        return attestations.findIndex((attestation: Attestation) => {
-          return this.config.types.Attestation.equals(a.aggregate, attestation);
-        });
-      })
-    );
+    const ids: Uint8Array[] = [];
+    attestations.forEach((attestation) => ids.push(this.config.types.Attestation.hashTreeRoot(attestation)));
+    await this.batchDelete(ids);
   }
 
-  public async removeOld(state: TreeBacked<BeaconState>): Promise<void> {
-    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, state.finalizedCheckpoint.epoch);
+  public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+    const finalizedEpochStartSlot = computeStartSlotAtEpoch(this.config, finalizedEpoch);
     const aggregates: AggregateAndProof[] = await this.values();
     await this.batchRemove(
       aggregates.filter((a) => {
