@@ -500,17 +500,17 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
     await this.db.checkpointStateCache.add(cp, stateContext);
     this.metrics.currentEpochLiveValidators.set(stateContext.epochCtx.currentShuffling.activeIndices.length);
-    const preStateCtx = await this.getStateContextByBlockRoot(stateContext.state.latestBlockHeader.parentRoot);
-    if (preStateCtx) {
+    const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
+    if (parentBlockSummary) {
       const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
       const justifiedEpoch = justifiedCheckpoint.epoch;
-      const preJustifiedEpoch = preStateCtx.state.currentJustifiedCheckpoint.epoch;
+      const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
         this.emitter.emit("justified", justifiedCheckpoint, stateContext);
       }
       const finalizedCheckpoint = stateContext.state.finalizedCheckpoint;
       const finalizedEpoch = finalizedCheckpoint.epoch;
-      const preFinalizedEpoch = preStateCtx.state.finalizedCheckpoint.epoch;
+      const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
       if (finalizedEpoch > preFinalizedEpoch) {
         this.emitter.emit("finalized", finalizedCheckpoint, stateContext);
       }
