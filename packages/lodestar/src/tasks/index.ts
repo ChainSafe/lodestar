@@ -81,7 +81,11 @@ export class TasksService implements IService {
       finalized
     ).run();
     await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
-    await this.db.checkpointStateCache.pruneFinalized(finalized.epoch);
+    await Promise.all([
+      this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
+      this.db.attestation.pruneFinalized(finalized.epoch),
+      this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
+    ]);
     // tasks rely on extended fork choice
     this.chain.forkChoice.prune();
   };
