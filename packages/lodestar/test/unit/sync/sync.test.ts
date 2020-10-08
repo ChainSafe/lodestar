@@ -58,7 +58,6 @@ describe("sync", function () {
 
   it("is synced should be true", async function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
     await sync.start();
     expect(sync.isSynced()).to.be.true;
@@ -66,16 +65,14 @@ describe("sync", function () {
 
   it("is synced should be false", async function () {
     const sync = getSync({minPeers: 1, maxSlotImport: 10, blockPerChunk: 10});
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
-    sync.start();
+    await sync.start();
     expect(sync.isSynced()).to.be.false;
     await sync.stop();
   });
 
   it("get sync status if synced", async function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
-    chainStub.getHeadBlock.resolves(generateEmptySignedBlock());
     networkStub.getPeers.returns([]);
     await sync.start();
     const status = await sync.getSyncStatus();
@@ -86,7 +83,6 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
@@ -101,7 +97,6 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
@@ -116,7 +111,6 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
@@ -131,7 +125,6 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    chainStub.getHeadBlock.onFirstCall().resolves(generateEmptySignedBlock()).onSecondCall().resolves(block);
     // @ts-ignore
     sync.mode = SyncMode.WAITING_PEERS;
     const status = await sync.getSyncStatus();
