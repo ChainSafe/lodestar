@@ -56,7 +56,8 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     // need to improve Gossipsub type to implement EventEmitter to avoid this cast
     this.pubsub =
       pubsub ||
-      ((new LodestarGossipsub(config, validator, this.logger, libp2p.peerId, libp2p.registrar, {
+      // @ts-ignore
+      ((new LodestarGossipsub(config, validator, this.logger, libp2p, {
         gossipIncoming: true,
       }) as unknown) as IGossipSub);
     this.chain = chain;
@@ -64,6 +65,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   public async start(): Promise<void> {
     await this.pubsub.start();
+    this.pubsub.registerLibp2pTopicValidators(this.chain.currentForkDigest);
     this.registerHandlers(this.chain.currentForkDigest);
     this.chain.emitter.on("forkDigest", this.handleForkDigest);
     this.emit("gossip:start");
@@ -191,6 +193,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
     this.logger.important(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
+    this.pubsub.registerLibp2pTopicValidators(this.chain.currentForkDigest);
     this.unregisterHandlers();
     this.registerHandlers(forkDigest);
   };
