@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain, IBlockProcessJob} from "../../../chain";
+import {IBeaconChain, IBlockJob} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -13,7 +13,7 @@ export async function validateGossipBlock(
   chain: IBeaconChain,
   db: IBeaconDb,
   logger: ILogger,
-  blockJob: IBlockProcessJob
+  blockJob: IBlockJob
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;

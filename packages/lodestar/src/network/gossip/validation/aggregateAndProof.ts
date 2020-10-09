@@ -11,6 +11,8 @@ import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
+import { Attestation } from "@chainsafe/lodestar-types/src/ssz/generators/operations";
+import { AttestationError, AttestationErrorCode } from "../../../chain/errors";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -18,7 +20,7 @@ export async function validateGossipAggregateAndProof(
   db: IBeaconDb,
   logger: ILogger,
   signedAggregateAndProof: SignedAggregateAndProof
-): Promise<ExtendedValidatorResult> {
+): Promise<void> {
   logger.profile("gossipAggregateAndProofValidation");
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
@@ -27,36 +29,42 @@ export async function validateGossipAggregateAndProof(
   const logContext = getLogContext(aggregate, aggregateAndProof, root, attestationRoot);
   logger.verbose("Started gossip aggregate and proof validation", logContext);
   if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
-    logger.warn("Ignored gossip aggregate and proof", {
-      reason: "invalid slot time",
-      currentSlot: chain.clock.currentSlot,
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
+      // currentSlot: chain.clock.currentSlot,
       ...logContext,
+      job: ,
     });
     // TODO: aggregate and proof pool to wait until proper slot to replay
-    return ExtendedValidatorResult.ignore;
   }
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
-    logger.warn("Ignored gossip aggregate and proof", {
-      reason: "seen aggregator and target index",
-      targetEpoch: aggregate.data.target.epoch,
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
+      // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
+      job: ,
     });
-    return ExtendedValidatorResult.ignore;
   }
   if (!hasAttestationParticipants(aggregate)) {
     logger.warn("Rejected gossip aggregate and proof", {
       reason: "missing attestation participants",
       ...logContext,
     });
-    return ExtendedValidatorResult.reject;
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
+      // targetEpoch: aggregate.data.target.epoch,
+      ...logContext,
+      job: ,
+    });
   }
 
   if (await isAttestingToInValidBlock(db, aggregate)) {
-    logger.warn("Rejected gossip aggregate and proof", {
-      reason: "attesting to invalid block",
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
+      // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
+      job: ,
     });
-    return ExtendedValidatorResult.reject;
   }
 
   // TODO: check pool of aggregates if already seen (not a dos vector check)
@@ -65,7 +73,6 @@ export async function validateGossipAggregateAndProof(
 
   logger.profile("gossipAggregateAndProofValidation");
   logger.info("Received gossip aggregate and proof passed validation", logContext);
-  return result;
 }
 
 export function hasAttestationParticipants(attestation: Attestation): boolean {
@@ -86,16 +93,24 @@ export async function validateAggregateAttestation(
     // the target state, advanced to the attestation slot
     attestationPreState = await chain.regen.getBlockSlotState(attestation.data.target.root, attestation.data.slot);
   } catch (e) {
-    logger.warn("Ignored gossip aggregate and proof", {reason: "missing attestation prestate", ...logContext});
-    return ExtendedValidatorResult.ignore;
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+      // targetEpoch: aggregate.data.target.epoch,
+      ...logContext,
+      job: ,
+    });
   }
 
   const {state, epochCtx} = attestationPreState;
   try {
     const committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
     if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
-      logger.warn("Rejected gossip aggregate and proof", {reason: "aggregator not in committee", ...logContext});
-      return ExtendedValidatorResult.reject;
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
+        // targetEpoch: aggregate.data.target.epoch,
+        ...logContext,
+        job: ,
+      });
     }
     if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
       logger.warn("Rejected gossip aggregate and proof", {reason: "not valid aggregator", ...logContext});
@@ -112,7 +127,12 @@ export async function validateAggregateAttestation(
       )
     ) {
       logger.warn("Rejected gossip aggregate and proof", {reason: "invalid selection proof signature", ...logContext});
-      return ExtendedValidatorResult.reject;
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
+        // targetEpoch: aggregate.data.target.epoch,
+        ...logContext,
+        job: ,
+      });
     }
 
     if (
@@ -125,22 +145,30 @@ export async function validateAggregateAttestation(
       )
     ) {
       logger.warn("Rejected gossip aggregate and proof", {reason: "invalid signature", ...logContext});
-      return ExtendedValidatorResult.reject;
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
+        // targetEpoch: aggregate.data.target.epoch,
+        ...logContext,
+        job: ,
+      });
     }
 
     // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
     if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
       logger.warn("Rejected gossip aggregate and proof", {reason: "invalid indexed attestation", ...logContext});
-      return ExtendedValidatorResult.reject;
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
+        // targetEpoch: aggregate.data.target.epoch,
+        ...logContext,
+        job: ,
+      });
     }
   } catch (e) {
     // if any errors are thrown in the process of checking for REJECTs, return a REJECT
     logger.warn("Rejected gossip aggregate and proof", {reason: e.message, ...logContext});
-    return ExtendedValidatorResult.reject;
+    // TODO: make error type for this
   }
-
-  return ExtendedValidatorResult.accept;
 }
 
 // & object so we can spread it

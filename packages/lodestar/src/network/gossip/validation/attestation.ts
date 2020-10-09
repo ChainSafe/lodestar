@@ -4,7 +4,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
-import {IBeaconChain} from "../../../chain";
+import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
@@ -18,9 +18,10 @@ export async function validateGossipAttestation(
   chain: IBeaconChain,
   db: IBeaconDb,
   logger: ILogger,
-  attestation: Attestation,
+  attestationJob: IAttestationJob,
   subnet: number
 ): Promise<ExtendedValidatorResult> {
+  const attestation = attestationJob.attestation;
   logger.profile("gossipAttestationValidation");
   const attestationRoot = config.types.Attestation.hashTreeRoot(attestation);
   const attestationLogContext = {
@@ -37,6 +38,7 @@ export async function validateGossipAttestation(
       // aggregationBits: JSON.stringify(attestation.aggregationBits),
       numBits: Array.from(attestation.aggregationBits).filter((bit) => !!bit).length,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -44,6 +46,7 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -54,6 +57,7 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -63,6 +67,7 @@ export async function validateGossipAttestation(
       code: AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN,
       ...attestationLogContext,
       root: attestation.data.beaconBlockRoot as Uint8Array,
+      job: attestationJob,
     });
   }
 
@@ -70,6 +75,7 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -81,6 +87,7 @@ export async function validateGossipAttestation(
       code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK,
       beaconBlockRoot: attestation.data.beaconBlockRoot as Uint8Array,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -94,6 +101,7 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
 
@@ -104,6 +112,7 @@ export async function validateGossipAttestation(
       received: subnet,
       expected: expectedSubnet,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   if (
@@ -117,12 +126,14 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   if (!doesEpochSlotMatchTarget(config, attestation.data)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   try {
@@ -131,6 +142,7 @@ export async function validateGossipAttestation(
         code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
         index: attestation.data.index,
         ...attestationLogContext,
+        job: attestationJob,
       });
     }
   } catch (error) {
@@ -139,24 +151,28 @@ export async function validateGossipAttestation(
       code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
       index: attestation.data.index,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   if (!chain.forkChoice.isDescendant(attestation.data.target.root, attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   if (!chain.forkChoice.isDescendantOfFinalized(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT,
       ...attestationLogContext,
+      job: attestationJob,
     });
   }
   await db.seenAttestationCache.addCommitteeAttestation(attestation);

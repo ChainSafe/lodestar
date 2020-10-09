@@ -116,11 +116,11 @@ export enum AttestationErrorCode {
    */
   ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
   /**
-   * The attestation target block is not an ancestor of the block defined by attestation.data.beacon_block_root.
+   * The current finalized checkpoint is not an ancestor of the block defined by attestation.data.beacon_block_root.
    */
   ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT = "ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT",
   /**
-   * The finalized checkpoint is not an ancestor of the block named in the LMD vote.
+   * The The attestation target block is not an ancestor of the block named in the LMD vote.
    */
   ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
   /**
