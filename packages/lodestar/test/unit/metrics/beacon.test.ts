@@ -11,11 +11,11 @@ describe("BeaconMetrics", () => {
     expect(m.registry.getMetricsAsArray().length).to.be.gt(0);
     expect(m.registry.metrics()).to.not.equal("");
     // check updating beacon-specific metrics
-    expect(m.registry.getSingleMetricAsString("beaconchain_peers").match(/beaconchain_peers 0/)).to.not.be.null;
+    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 0/)).to.not.be.null;
     m.peers.set(1);
-    expect(m.registry.getSingleMetricAsString("beaconchain_peers").match(/beaconchain_peers 1/)).to.not.be.null;
+    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 1/)).to.not.be.null;
     m.peers.set(20);
-    expect(m.registry.getSingleMetricAsString("beaconchain_peers").match(/beaconchain_peers 20/)).to.not.be.null;
+    expect(m.registry.getSingleMetricAsString("libp2p_peers").match(/libp2p_peers 20/)).to.not.be.null;
     await m.stop();
   });
 });
