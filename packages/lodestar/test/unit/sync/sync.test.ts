@@ -67,15 +67,6 @@ describe("sync", function () {
     expect(sync.isSynced()).to.be.true;
   });
 
-  it("is synced should be false", async function () {
-    const sync = getSync({minPeers: 1, maxSlotImport: 10, blockPerChunk: 10});
-    forkChoiceStub.getHead.returns({slot: 0} as IBlockSummary);
-    networkStub.getPeers.returns([]);
-    await sync.start();
-    expect(sync.isSynced()).to.be.false;
-    await sync.stop();
-  });
-
   it("get sync status if synced", async function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     forkChoiceStub.getHead.returns({slot: 0} as IBlockSummary);
