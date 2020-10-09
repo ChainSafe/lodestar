@@ -1,7 +1,22 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
+import {IAttestationJob} from "../interface";
+
 export enum AttestationErrorCode {
+  /**
+   * The target state cannot be fetched
+   */
+  ERR_TARGET_STATE_MISSING = "ERR_TARGET_STATE_MISSING",
+  /**
+   * The attestation is from a slot that is later than the current slot (with respect to the gossip clock disparity).
+   */
+  ERR_FUTURE_SLOT = "ERR_FUTURE_SLOT",
+  /**
+   * The attestation is from a slot that is prior to the earliest permissible slot
+   * (with respect to the gossip clock disparity).
+   */
+  ERR_PAST_SLOT = "ERR_PAST_SLOT",
   /**
    * The attestation is from a slot that is out of range.
    */
@@ -43,6 +58,10 @@ export enum AttestationErrorCode {
    * The `attestation.data.slot` is not from the same epoch as `data.target.epoch`.
    */
   ERR_BAD_TARGET_EPOCH = "ERR_BAD_TARGET_EPOCH",
+  /**
+   * The `attestation.data.beaconBlockRoot` is not a descendant of `data.target.root`.
+   */
+  ERR_HEAD_NOT_TARGET_DESCENDANT = "ERR_HEAD_NOT_TARGET_DESCENDANT",
   /**
    * The target root of the attestation points to a block that we have not verified.
    */
@@ -123,6 +142,19 @@ export type AttestationErrorType =
       code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE;
     }
   | {
+      code: AttestationErrorCode.ERR_TARGET_STATE_MISSING;
+    }
+  | {
+      code: AttestationErrorCode.ERR_FUTURE_SLOT;
+      attestationSlot: Slot;
+      latestPermissibleSlot: Slot;
+    }
+  | {
+      code: AttestationErrorCode.ERR_PAST_SLOT;
+      attestationSlot: Slot;
+      earliestPermissibleSlot: Slot;
+    }
+  | {
       code: AttestationErrorCode.ERR_EMPTY_AGGREGATION_BITFIELD;
     }
   | {
@@ -155,6 +187,9 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH;
+    }
+  | {
+      code: AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT;
     }
   | {
       code: AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT;
@@ -228,8 +263,15 @@ export type AttestationErrorType =
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
     };
 
+type IJobObject = {
+  job: IAttestationJob;
+};
+
 export class AttestationError extends LodestarError<AttestationErrorType> {
-  constructor(type: AttestationErrorType) {
+  public job: IAttestationJob;
+
+  constructor({job, ...type}: AttestationErrorType & IJobObject) {
     super(type);
+    this.job = job;
   }
 }

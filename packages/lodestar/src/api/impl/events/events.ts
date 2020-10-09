@@ -33,7 +33,9 @@ export class EventsApi implements IEventsApi {
 
       topics.forEach((topic) => {
         const eventHandler = eventHandlerMapping[topic];
-        this.chain.emitter.on(eventHandler.chainEvent, eventHandler.handler);
+        if (eventHandler) {
+          this.chain.emitter.on(eventHandler.chainEvent, eventHandler.handler);
+        }
       });
       return () => {
         topics.forEach((topic) => {

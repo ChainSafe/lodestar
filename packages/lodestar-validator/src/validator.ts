@@ -60,8 +60,6 @@ export class Validator {
     this.logger.info("Chain start has occured!");
     if (!this.blockService) throw Error("blockService not setup");
     if (!this.attestationService) throw Error("attestationService not setup");
-    this.apiClient.onNewSlot(this.blockService.onNewSlot);
-    this.apiClient.onNewSlot(this.attestationService.onNewSlot);
     // Run both services at once to prevent missing first attestation
     await Promise.all([this.blockService.start(), this.attestationService.start()]);
   };

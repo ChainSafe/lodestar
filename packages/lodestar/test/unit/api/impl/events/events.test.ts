@@ -47,7 +47,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.BLOCK]);
       const block = generateSignedBlock();
-      chainEventEmmitter.emit("block", block);
+      chainEventEmmitter.emit("block", block, null as any, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.BLOCK);
@@ -83,7 +83,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.FINALIZED_CHECKPOINT]);
       const checkpoint = generateState().finalizedCheckpoint;
-      chainEventEmmitter.emit("finalized", checkpoint);
+      chainEventEmmitter.emit("finalized", checkpoint, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.FINALIZED_CHECKPOINT);

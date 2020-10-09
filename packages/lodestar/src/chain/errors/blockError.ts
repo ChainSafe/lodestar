@@ -1,7 +1,7 @@
 import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
-import {IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 
 export enum BlockErrorCode {
   /**
@@ -101,6 +101,9 @@ export type BlockErrorType =
       currentSlot: Slot;
     }
   | {
+      code: BlockErrorCode.ERR_STATE_ROOT_MISMATCH;
+    }
+  | {
       code: BlockErrorCode.ERR_GENESIS_BLOCK;
     }
   | {
@@ -161,11 +164,11 @@ export type BlockErrorType =
     };
 
 type JobObject = {
-  job: IBlockProcessJob;
+  job: IBlockJob;
 };
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  public job: IBlockProcessJob;
+  public job: IBlockJob;
 
   constructor({job, ...type}: BlockErrorType & JobObject) {
     super(type);

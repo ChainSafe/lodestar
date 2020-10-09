@@ -1,9 +1,9 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {IBlockProcessJob} from "../interface";
+import {IBlockJob} from "../interface";
 
-export function findUnknownAncestor(config: IBeaconConfig, jobs: IBlockProcessJob[] = [], root: Root): Root {
+export function findUnknownAncestor(config: IBeaconConfig, jobs: IBlockJob[] = [], root: Root): Root {
   const blocksByRoot = new Map<string, SignedBeaconBlock>();
   const blocks = jobs.map((job) => job.signedBlock);
   blocks.forEach((block) => blocksByRoot.set(toHexString(config.types.BeaconBlock.hashTreeRoot(block.message)), block));

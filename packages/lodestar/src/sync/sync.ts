@@ -73,7 +73,7 @@ export class BeaconSync implements IBeaconSync {
       clearInterval(this.peerCountTimer);
     }
     this.mode = SyncMode.SYNCED;
-    this.startingBlock = (await this.chain.getHeadBlock())!.message.slot;
+    this.startingBlock = this.chain.forkChoice.getHead().slot;
   }
 
   public async stop(): Promise<void> {
@@ -95,7 +95,7 @@ export class BeaconSync implements IBeaconSync {
   }
 
   public async getSyncStatus(): Promise<SyncingStatus> {
-    const headSlot = (await this.chain.getHeadBlock())!.message.slot;
+    const headSlot = this.chain.forkChoice.getHead().slot;
     let target: Slot;
     let syncDistance: bigint;
     switch (this.mode) {

@@ -2,17 +2,25 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {findUnknownAncestor} from "../../../../src/chain/blocks/util";
-import {IBlockProcessJob} from "../../../chain";
+import {IBlockJob} from "../../../../src/chain";
 
 describe("findUnknownAncestor", function () {
   it("should return same root if not found", () => {
     const root = Buffer.alloc(32, 1);
     expect(findUnknownAncestor(config, [], root)).to.be.deep.equal(root);
-    expect(findUnknownAncestor(config, [{
-      signedBlock: config.types.SignedBeaconBlock.defaultValue(),
-      trusted: false,
-      reprocess: false,
-    }], root)).to.be.deep.equal(root);
+    expect(
+      findUnknownAncestor(
+        config,
+        [
+          {
+            signedBlock: config.types.SignedBeaconBlock.defaultValue(),
+            trusted: false,
+            reprocess: false,
+          },
+        ],
+        root
+      )
+    ).to.be.deep.equal(root);
   });
 
   it("should return ancestor root", function () {
@@ -20,7 +28,7 @@ describe("findUnknownAncestor", function () {
     const ancestorRoot = firstBlock.message.parentRoot;
     const secondBlock = config.types.SignedBeaconBlock.defaultValue();
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
-    const jobs: IBlockProcessJob[] = [firstBlock, secondBlock].map((block) => ({
+    const jobs: IBlockJob[] = [firstBlock, secondBlock].map((block) => ({
       signedBlock: block,
       trusted: false,
       reprocess: false,

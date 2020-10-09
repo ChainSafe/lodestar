@@ -27,7 +27,7 @@ describe("node api implementation", function () {
       const peerId = await PeerId.create({keyType: "secp256k1"});
       const keypair = createKeypairFromPeerId(peerId);
       const enr = ENR.createV4(keypair.publicKey);
-      enr.multiaddrTCP = new Multiaddr("/ip4/127.0.0.1/tcp/36001");
+      enr.setLocationMultiaddr(new Multiaddr("/ip4/127.0.0.1/tcp/36001"));
       networkStub.getEnr.returns(enr);
       networkStub.peerId = peerId;
       networkStub.metadata = {

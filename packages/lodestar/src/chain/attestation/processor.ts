@@ -1,63 +1,50 @@
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString} from "@chainsafe/ssz";
-// eslint-disable-next-line max-len
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Attestation} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../interface";
-import {IBeaconDb} from "../../db/api";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+
+import {IAttestationJob} from "../interface";
+import {IBeaconClock} from "../clock";
+import {ChainEventEmitter} from "../emitter";
+import {IStateRegenerator} from "../regen";
+
+import {processAttestation} from "./process";
+import {validateAttestation} from "./validate";
+
+type AttestationProcessorModules = {
+  config: IBeaconConfig;
+  emitter: ChainEventEmitter;
+  forkChoice: IForkChoice;
+  clock: IBeaconClock;
+  regen: IStateRegenerator;
+};
+
+export class AttestationProcessor {
+  private modules: AttestationProcessorModules;
+
+  public constructor(modules: AttestationProcessorModules) {
+    this.modules = modules;
+  }
+
+  public async processAttestationJob(job: IAttestationJob): Promise<void> {
+    await processAttestationJob(this.modules, job);
+  }
+}
 
 /**
- * Method expects valid attestation which is
- * going to be applied in forkchoice.
+ * Validate and process an attestation
+ *
+ * The only effects of running this are:
+ * - forkChoice update, in the case of a valid attestation
+ * - various events emitted: attestation, error:attestation
+ * - (state cache update, from state regeneration)
+ *
+ * All other effects are provided by downstream event handlers
  */
-export async function processAttestation(
-  config: IBeaconConfig,
-  chain: IBeaconChain,
-  logger: ILogger,
-  db: IBeaconDb,
-  attestation: Attestation
-): Promise<void> {
-  const attestationHash = config.types.Attestation.hashTreeRoot(attestation);
-  const target = attestation.data.target;
+export async function processAttestationJob(modules: AttestationProcessorModules, job: IAttestationJob): Promise<void> {
   try {
-    //LMD vote must be consistent with FFG vote target
-    const targetSlot = computeStartSlotAtEpoch(config, target.epoch);
-    if (
-      !config.types.Root.equals(target.root, chain.forkChoice.getAncestor(attestation.data.beaconBlockRoot, targetSlot))
-    ) {
-      logger.verbose("Dropping attestation from processing", {
-        reason: "attestation ancensor isnt target root",
-        attestationHash: toHexString(attestationHash),
-      });
-      return;
-    }
-
-    let attestationPreState;
-    try {
-      attestationPreState = await chain.regen.getCheckpointState(target);
-    } catch (e) {
-      // should not happen
-      logger.error("Attestation prestate not found", e);
-      return;
-    }
-    await db.checkpointStateCache.add(target, attestationPreState);
-    const indexedAttestation = attestationPreState.epochCtx.getIndexedAttestation(attestation);
-    //TODO: we could signal to skip this in case it came from validated from gossip or from block
-    //we need to check this again, because gossip validation might put it in pool before it validated signature
-    if (!isValidIndexedAttestation(attestationPreState.epochCtx, attestationPreState.state, indexedAttestation, true)) {
-      logger.verbose("Dropping attestation from processing", {
-        reason: "invalid indexed attestation",
-        attestationHash: toHexString(attestationHash),
-      });
-      return;
-    }
-    chain.forkChoice.onAttestation(indexedAttestation);
-    logger.debug(`Attestation ${toHexString(attestationHash)} passed to fork choice`);
-    chain.emitter.emit("attestation", attestation);
+    await validateAttestation({...modules, job});
+    await processAttestation({...modules, job});
   } catch (e) {
-    logger.warn("Failed to process attestation", {root: toHexString(attestationHash), reason: e.message});
-    await db.attestation.remove(attestation);
+    // above functions only throw AttestationError
+    modules.emitter.emit("error:attestation", e);
   }
 }
