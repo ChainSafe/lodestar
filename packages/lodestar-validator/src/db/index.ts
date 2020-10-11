@@ -2,4 +2,5 @@
  * @module db
  */
 
-export {ValidatorDB, IValidatorDB} from "./api";
+export {IValidatorDB} from "./interface";
+export {ValidatorDB} from "./validatorDb";
