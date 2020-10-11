@@ -1,0 +1,48 @@
+{
+  "name": "@chainsafe/lodestar-db",
+  "version": "0.11.0",
+  "description": "DB modules of Lodestar",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "benchmark": "ts-node test/benchmarks",
+    "build": "yarn run build:lib && yarn run build:types",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
+    "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
+    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
+    "coverage": "codecov -F lodestar-fork-choice",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "pretest": "yarn run check-types",
+    "test": "yarn test:unit",
+    "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@chainsafe/lodestar-config": "^0.11.0",
+    "@chainsafe/lodestar-types": "^0.11.0",
+    "@chainsafe/lodestar-utils": "^0.11.0",
+    "@chainsafe/ssz": "^0.6.13",
+    "it-all": "^1.0.4",
+    "it-pushable": "^1.4.0",
+    "level": "^6.0.1",
+    "levelup": "^4.4.0"
+  }
+}

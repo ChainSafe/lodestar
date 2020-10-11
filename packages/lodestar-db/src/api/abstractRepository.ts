@@ -1,8 +1,8 @@
 import {ArrayLike, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
-import {Bucket, encodeKey as _encodeKey} from "../../schema";
+import {IDatabaseController, IFilterOptions, IKeyValue} from "../controller";
+import {Bucket, encodeKey as _encodeKey} from "../schema";
 
 export type Id = Uint8Array | string | number | bigint;
 
