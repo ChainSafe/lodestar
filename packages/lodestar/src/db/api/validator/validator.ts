@@ -5,10 +5,8 @@
 import {toHexString} from "@chainsafe/ssz";
 import {Attestation, BLSPubkey, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-
-import {DatabaseService, IDatabaseApiOptions} from "../abstract";
+import {DatabaseService, IDatabaseApiOptions, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 import {IAttestationSearchOptions, IValidatorDB} from "./interface";
-import {Bucket, encodeKey} from "../schema";
 
 export class ValidatorDB extends DatabaseService implements IValidatorDB {
   public constructor(opts: IDatabaseApiOptions) {

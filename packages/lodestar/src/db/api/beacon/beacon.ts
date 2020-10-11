@@ -3,7 +3,7 @@
  */
 
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {DatabaseService, IDatabaseApiOptions} from "../abstract";
+import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
   AggregateAndProofRepository,

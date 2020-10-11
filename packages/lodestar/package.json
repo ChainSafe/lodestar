@@ -45,6 +45,7 @@
     "@chainsafe/discv5": "^0.4.2",
     "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
     "@chainsafe/lodestar-config": "^0.11.0",
+    "@chainsafe/lodestar-db": "^0.11.0",
     "@chainsafe/lodestar-params": "^0.11.0",
     "@chainsafe/lodestar-types": "^0.11.0",
     "@chainsafe/lodestar-utils": "^0.11.0",

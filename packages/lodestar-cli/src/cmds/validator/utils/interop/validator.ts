@@ -3,7 +3,8 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator";
 import {IApiClient, interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {LevelDbController, ValidatorDB} from "@chainsafe/lodestar/lib/db";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {ValidatorDB} from "@chainsafe/lodestar/lib/db";
 import {join} from "path";
 import {mkdirSync} from "fs";
 
