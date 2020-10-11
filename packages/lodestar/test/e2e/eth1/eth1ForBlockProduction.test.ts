@@ -5,11 +5,12 @@ import {promisify} from "es6-promisify";
 import leveldown from "leveldown";
 import {AbortController} from "abort-controller";
 import {WinstonLogger, LogLevel, sleep} from "@chainsafe/lodestar-utils";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
 import {getMedallaConfig, medalla} from "../../utils/medalla";
-import {BeaconDb, LevelDbController} from "../../../src/db";
+import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
