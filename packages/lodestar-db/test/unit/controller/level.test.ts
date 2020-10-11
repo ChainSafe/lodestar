@@ -1,16 +1,13 @@
-import {assert, expect} from "chai";
-// @ts-ignore
-import level from "level";
+import {expect} from "chai";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 // @ts-ignore
 import leveldown from "leveldown";
 import all from "it-all";
-import {LevelDbController} from "../../../../src/db/controller";
-import {promisify} from "es6-promisify";
-import {silentLogger} from "../../../utils/logger";
+import {LevelDbController} from "../../../src/controller";
 
 describe("LevelDB controller", () => {
   const dbLocation = "./.__testdb";
-  const db = new LevelDbController({name: dbLocation}, {logger: silentLogger});
+  const db = new LevelDbController({name: dbLocation}, {logger: new WinstonLogger()});
 
   before(async () => {
     await db.start();
@@ -18,7 +15,12 @@ describe("LevelDB controller", () => {
 
   after(async () => {
     await db.stop();
-    await promisify<void, string>(leveldown.destroy)(dbLocation);
+    await new Promise((resolve, reject) => {
+      leveldown.destroy(dbLocation, (err: Error) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   });
 
   it("test put/get/delete", async () => {
