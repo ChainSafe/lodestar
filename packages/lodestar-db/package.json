@@ -40,7 +40,7 @@
     "@chainsafe/lodestar-types": "^0.11.0",
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "it-all": "^1.0.4",
+    "it-all": "^1.0.2",
     "it-pushable": "^1.4.0",
     "level": "^6.0.1",
     "levelup": "^4.4.0"
