@@ -18,7 +18,6 @@ import {AttestationError, BlockError} from "./errors";
 
 export interface IChainEvents {
   // old, to be deprecated
-  unknownBlockRoot: (root: Root) => void;
   forkVersion: () => void;
 
   // new
@@ -40,6 +39,8 @@ export interface IChainEvents {
   "forkChoice:reorg": (head: IBlockSummary, oldHead: IBlockSummary, depth: number) => void;
   "forkChoice:justified": (checkpoint: Checkpoint) => void;
   "forkChoice:finalized": (checkpoint: Checkpoint) => void;
+
+  "block:unknownRoot": (root: Root) => void;
   // TODO more events
 }
 

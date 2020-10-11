@@ -103,6 +103,18 @@ export class BlockPool {
     return Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
   }
 
+  public getMissingAncestor(blockRoot: Root): Root {
+    let root = blockRoot;
+    while (this.blocks.has(toHexString(root))) {
+      root = this.blocks.get(toHexString(root))?.signedBlock.message.parentRoot!;
+    }
+    return root;
+  }
+
+  public getPendingBlocks(): IBlockJob[] {
+    return Array.from(this.blocks.values() ?? []);
+  }
+
   public getBySlot(slot: Slot): IBlockJob[] {
     return Array.from(this.blocksBySlot.get(slot)?.values() ?? []);
   }

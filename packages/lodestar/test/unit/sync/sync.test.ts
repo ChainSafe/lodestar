@@ -15,6 +15,7 @@ import {ISyncOptions} from "../../../src/sync/options";
 import {IBeaconSync} from "../../../src/sync";
 import {silentLogger} from "../../utils/logger";
 import {ForkChoice, IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 describe("sync", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -23,7 +24,7 @@ describe("sync", function () {
   let attestationCollectorStub: SinonStubbedInstance<AttestationCollector>;
   let gossipStub: SinonStubbedInstance<IGossipHandler>;
   let networkStub: SinonStubbedInstance<INetwork>;
-  let regularSyncStub: SinonStubbedInstance<IRegularSync>;
+  let regularSync: IRegularSync;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
   let clock: SinonFakeTimers;
 
@@ -32,7 +33,7 @@ describe("sync", function () {
       chain: chainStub,
       config,
       db: sinon.createStubInstance(BeaconDb),
-      regularSync: regularSyncStub,
+      regularSync: regularSync,
       initialSync: initialSyncStub,
       network: networkStub,
       reqRespHandler: reqRespStub,
@@ -50,20 +51,37 @@ describe("sync", function () {
     attestationCollectorStub = sinon.createStubInstance(AttestationCollector);
     gossipStub = sinon.createStubInstance(BeaconGossipHandler);
     networkStub = sinon.createStubInstance(Libp2pNetwork);
-    regularSyncStub = sinon.createStubInstance(NaiveRegularSync);
     initialSyncStub = sinon.createStubInstance(FastSync);
     clock = sinon.useFakeTimers();
+    regularSync = new NaiveRegularSync({}, {
+      config,
+      network: networkStub,
+      chain: chainStub,
+      logger: new WinstonLogger(),
+    });
+    sinon.stub(regularSync, "start").resolves();
+    sinon.stub(regularSync, "stop").resolves();
   });
 
   afterEach(() => {
     clock.restore();
+    sinon.restore();
   });
 
-  it("is synced should be true", async function () {
+  it("not synced after start", async function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     forkChoiceStub.getHead.returns({slot: 0} as IBlockSummary);
     networkStub.getPeers.returns([]);
     await sync.start();
+    expect(sync.isSynced()).to.be.false;
+  });
+
+  it("is synced after regular sync finishes", async function () {
+    const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
+    forkChoiceStub.getHead.returns({slot: 0} as IBlockSummary);
+    networkStub.getPeers.returns([]);
+    await sync.start();
+    regularSync.emit("syncCompleted");
     expect(sync.isSynced()).to.be.true;
   });
 
@@ -80,16 +98,12 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    forkChoiceStub.getHead
-      .onFirstCall()
-      .returns({slot: 0} as IBlockSummary)
-      .onSecondCall()
-      .returns({slot: block.message.slot} as IBlockSummary);
+    forkChoiceStub.getHead.returns({slot: block.message.slot} as IBlockSummary);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
     sync.mode = SyncMode.REGULAR_SYNCING;
-    regularSyncStub.getHighestBlock.resolves(15);
+    sinon.stub(regularSync, "getHighestBlock").resolves(15);
     const status = await sync.getSyncStatus();
     expect(status.headSlot.toString()).to.be.deep.equal("15");
     expect(status.syncDistance.toString()).to.be.deep.equal("5");
@@ -99,11 +113,7 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    forkChoiceStub.getHead
-      .onFirstCall()
-      .returns({slot: 0} as IBlockSummary)
-      .onSecondCall()
-      .returns({slot: block.message.slot} as IBlockSummary);
+    forkChoiceStub.getHead.returns({slot: block.message.slot} as IBlockSummary);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
@@ -118,11 +128,7 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    forkChoiceStub.getHead
-      .onFirstCall()
-      .returns({slot: 0} as IBlockSummary)
-      .onSecondCall()
-      .returns({slot: block.message.slot} as IBlockSummary);
+    forkChoiceStub.getHead.returns({slot: block.message.slot} as IBlockSummary);
     networkStub.getPeers.returns([]);
     await sync.start();
     // @ts-ignore
@@ -137,11 +143,7 @@ describe("sync", function () {
     const sync = getSync({minPeers: 0, maxSlotImport: 10, blockPerChunk: 10});
     const block = generateEmptySignedBlock();
     block.message.slot = 10;
-    forkChoiceStub.getHead
-      .onFirstCall()
-      .returns({slot: 0} as IBlockSummary)
-      .onSecondCall()
-      .returns({slot: block.message.slot} as IBlockSummary);
+    forkChoiceStub.getHead.returns({slot: block.message.slot} as IBlockSummary);
     // @ts-ignore
     sync.mode = SyncMode.WAITING_PEERS;
     const status = await sync.getSyncStatus();
