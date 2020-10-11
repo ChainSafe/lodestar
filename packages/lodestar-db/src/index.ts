@@ -2,7 +2,7 @@
  * @module db
  */
 
-export * from "./api/abstract";
-export * from "./api/abstractRepository";
+export * from "./databaseService";
+export * from "./abstractRepository";
 export * from "./controller";
 export * from "./schema";

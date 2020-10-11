@@ -18,7 +18,6 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "benchmark": "ts-node test/benchmarks",
     "build": "yarn run build:lib && yarn run build:types",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
@@ -33,7 +32,7 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit",
-    "test:unit": "mocha --colors -r ts-node/register 'test/unit/**/*.test.ts'"
+    "test:unit": "mocha 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@chainsafe/lodestar-config": "^0.11.0",

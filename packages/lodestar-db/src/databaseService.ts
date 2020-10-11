@@ -1,4 +1,4 @@
-import {IDatabaseController} from "../controller";
+import {IDatabaseController} from "./controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IDatabaseApiOptions {

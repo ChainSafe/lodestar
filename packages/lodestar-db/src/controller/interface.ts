@@ -2,6 +2,10 @@
  * @module db/controller
  */
 
+export interface IDatabaseOptions {
+  name: string;
+}
+
 export interface IFilterOptions<K> {
   gt?: K;
   gte?: K;
