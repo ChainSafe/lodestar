@@ -94,7 +94,7 @@ export async function validateGossipBlock(
     });
     return ExtendedValidatorResult.reject;
   }
-  if (!chain.forkChoice.isDescendantOfFinalized(blockRoot)) {
+  if (!chain.forkChoice.isDescendantOfFinalized(block.message.parentRoot)) {
     logger.warn("Rejecting gossip block", {
       reason: "finalized checkpoint not an ancestor of block",
       blockSlot,
