@@ -41,7 +41,7 @@ import {ChainEventEmitter} from "./emitter";
 import {ForkChoiceStore} from "./forkChoice";
 import {GenesisBuilder} from "./genesis/genesis";
 import {getEmptyBlock} from "./genesis/util";
-import {getChainEventHandlers} from "./handlers";
+import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
@@ -77,7 +77,6 @@ export class BeaconChain implements IBeaconChain {
   protected genesisTime: Number64 = 0;
 
   private abortController?: AbortController;
-  private eventHandlers?: ReturnType<typeof getChainEventHandlers>;
 
   public constructor(opts: IChainOptions, {config, db, eth1Provider, logger, metrics}: IBeaconChainModules) {
     this.opts = opts;
@@ -226,19 +225,11 @@ export class BeaconChain implements IBeaconChain {
       signal: this.abortController!.signal,
     });
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    this.eventHandlers = getChainEventHandlers(this);
-    this.eventHandlers.forEach((handler, event) => {
-      this.emitter.on(event, handler);
-    });
+    handleChainEvents(this, this.abortController.signal);
   }
 
   public async stop(): Promise<void> {
     this.abortController!.abort();
-    if (this.eventHandlers) {
-      this.eventHandlers.forEach((handler, event) => {
-        this.emitter.off(event, handler);
-      });
-    }
   }
 
   public get currentForkDigest(): ForkDigest {
