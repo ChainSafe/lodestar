@@ -6,57 +6,44 @@ import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
-import {BeaconChain} from "../chain";
+import {IChainEvents} from "./emitter";
+import {BeaconChain} from "./chain";
+
+interface IEventMap<Events, Key extends keyof Events = keyof Events, Value extends Events[Key] = Events[Key]>
+  extends Map<Key, Value> {
+  set<Key extends keyof Events>(key: Key, value: Events[Key]): this;
+}
 
 /**
  * Attach ChainEventEmitter event handlers
  * Listen on `signal` to remove event handlers
  */
 export function handleChainEvents(chain: BeaconChain, signal: AbortSignal): void {
-  const _onClockSlot = onClockSlot.bind(chain);
-  const _onForkVersion = onForkVersion.bind(chain);
-  const _onCheckpoint = onCheckpoint.bind(chain);
-  const _onJustified = onJustified.bind(chain);
-  const _onFinalized = onFinalized.bind(chain);
-  const _onForkChoiceJustified = onForkChoiceJustified.bind(chain);
-  const _onForkChoiceFinalized = onForkChoiceFinalized.bind(chain);
-  const _onForkChoiceHead = onForkChoiceHead.bind(chain);
-  const _onForkChoiceReorg = onForkChoiceReorg.bind(chain);
-  const _onAttestation = onAttestation.bind(chain);
-  const _onBlock = onBlock.bind(chain);
-  const _onErrorAttestation = onErrorAttestation.bind(chain);
-  const _onErrorBlock = onErrorBlock.bind(chain);
+  const handlers: IEventMap<IChainEvents> = new Map();
+  handlers.set("clock:slot", onClockSlot.bind(chain));
+  handlers.set("forkVersion", onForkVersion.bind(chain));
+  handlers.set("checkpoint", onCheckpoint.bind(chain));
+  handlers.set("justified", onJustified.bind(chain));
+  handlers.set("finalized", onFinalized.bind(chain));
+  handlers.set("forkChoice:justified", onForkChoiceJustified.bind(chain));
+  handlers.set("forkChoice:finalized", onForkChoiceFinalized.bind(chain));
+  handlers.set("forkChoice:head", onForkChoiceHead.bind(chain));
+  handlers.set("forkChoice:reorg", onForkChoiceReorg.bind(chain));
+  handlers.set("attestation", onAttestation.bind(chain));
+  handlers.set("block", onBlock.bind(chain));
+  handlers.set("error:attestation", onErrorAttestation.bind(chain));
+  handlers.set("error:block", onErrorBlock.bind(chain));
 
-  chain.emitter.on("clock:slot", _onClockSlot);
-  chain.emitter.on("forkVersion", _onForkVersion);
-  chain.emitter.on("checkpoint", _onCheckpoint);
-  chain.emitter.on("justified", _onJustified);
-  chain.emitter.on("finalized", _onFinalized);
-  chain.emitter.on("forkChoice:justified", _onForkChoiceJustified);
-  chain.emitter.on("forkChoice:finalized", _onForkChoiceFinalized);
-  chain.emitter.on("forkChoice:head", _onForkChoiceHead);
-  chain.emitter.on("forkChoice:reorg", _onForkChoiceReorg);
-  chain.emitter.on("attestation", _onAttestation);
-  chain.emitter.on("block", _onBlock);
-  chain.emitter.on("error:attestation", _onErrorAttestation);
-  chain.emitter.on("error:block", _onErrorBlock);
+  handlers.forEach((handler, event) => {
+    chain.emitter.on(event, handler);
+  });
 
   signal.addEventListener(
     "abort",
     () => {
-      chain.emitter.removeListener("clock:slot", _onClockSlot);
-      chain.emitter.removeListener("forkVersion", _onForkVersion);
-      chain.emitter.removeListener("checkpoint", _onCheckpoint);
-      chain.emitter.removeListener("justified", _onJustified);
-      chain.emitter.removeListener("finalized", _onFinalized);
-      chain.emitter.removeListener("forkChoice:justified", _onForkChoiceJustified);
-      chain.emitter.removeListener("forkChoice:finalized", _onForkChoiceFinalized);
-      chain.emitter.removeListener("forkChoice:head", _onForkChoiceHead);
-      chain.emitter.removeListener("forkChoice:reorg", _onForkChoiceReorg);
-      chain.emitter.removeListener("attestation", _onAttestation);
-      chain.emitter.removeListener("block", _onBlock);
-      chain.emitter.removeListener("error:attestation", _onErrorAttestation);
-      chain.emitter.removeListener("error:block", _onErrorBlock);
+      handlers.forEach((handler, event) => {
+        chain.emitter.removeListener(event, handler);
+      });
     },
     {once: true}
   );
