@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
 
-import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
+import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../src/chain";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {ExtendedValidatorResult} from "../../../../../src/network/gossip/constants";
@@ -17,6 +17,7 @@ import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
   let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
   let verifySignatureStub: SinonStub;
@@ -25,6 +26,8 @@ describe("gossip block validation", function () {
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.clock = sinon.createStubInstance(LocalClock);
+    forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    chainStub.forkChoice = forkChoiceStub;
     regenStub = chainStub.regen = sinon.createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sinon, config);
     verifySignatureStub = sinon.stub(specUtils, "verifyBlockSignature");
@@ -34,7 +37,7 @@ describe("gossip block validation", function () {
     verifySignatureStub.restore();
   });
 
-  it("block slot is finalized", async function () {
+  it("should ignore - block slot is finalized", async function () {
     const block = generateSignedBlock();
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 1,
@@ -46,7 +49,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
   });
 
-  it("bad block", async function () {
+  it("should reject - bad block", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -61,7 +64,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getCanonicalBlockAtSlot.notCalled).to.be.true;
   });
 
-  it("already proposed", async function () {
+  it("should ignore - already proposed", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -77,7 +80,7 @@ describe("gossip block validation", function () {
     expect(regenStub.getBlockSlotState.notCalled).to.be.true;
   });
 
-  it("missing parent", async function () {
+  it("should ignore - missing parent", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -95,7 +98,7 @@ describe("gossip block validation", function () {
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
-  it("invalid signature", async function () {
+  it("should reject - invalid signature", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -118,7 +121,7 @@ describe("gossip block validation", function () {
     expect(verifySignatureStub.calledOnce).to.be.true;
   });
 
-  it("wrong proposer", async function () {
+  it("should reject - wrong proposer", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -144,7 +147,7 @@ describe("gossip block validation", function () {
     expect(epochCtxStub.getBeaconProposer.withArgs(block.message.slot).calledOnce).to.be.true;
   });
 
-  it("valid block", async function () {
+  it("should accept - valid block", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -152,7 +155,8 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(false);
-    dbStub.block.get.resolves(null);
+    chainStub.getCanonicalBlockAtSlot.resolves(null);
+    forkChoiceStub.isDescendantOfFinalized.returns(true);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     regenStub.getBlockSlotState.resolves({
       state: generateState(),
@@ -160,6 +164,7 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
+    forkChoiceStub.getAncestor.resolves(Buffer.alloc(32));
     const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;

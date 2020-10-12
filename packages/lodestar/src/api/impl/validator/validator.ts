@@ -169,6 +169,7 @@ export class ValidatorApi implements IValidatorApi {
     await this.checkSyncStatus();
     await Promise.all([
       this.db.aggregateAndProof.add(signedAggregateAndProof.message),
+      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
       this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
     ]);
   }
