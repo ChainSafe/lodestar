@@ -64,6 +64,7 @@ export async function validateGossipBlock(
 
   let blockContext;
   try {
+    // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
     blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
     // temporary skip rest of validation and put in block pool
@@ -96,14 +97,6 @@ export async function validateGossipBlock(
       // blockSlot,
       // blockRoot: toHexString(blockRoot),
       job: blockJob,
-    });
-  }
-  if (!chain.forkChoice.isDescendantOfFinalized(blockRoot)) {
-    throw new BlockError({
-      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK,
-      job: blockJob,
-      blockSlot,
-      // blockRoot: toHexString(blockRoot),
     });
   }
   logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
