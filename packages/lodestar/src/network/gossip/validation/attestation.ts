@@ -189,5 +189,5 @@ export function doAggregationBitsMatchCommitteeSize(
 }
 
 export function doesEpochSlotMatchTarget(config: IBeaconConfig, attestationData: AttestationData): boolean {
-  return attestationData.target.epoch === computeEpochAtSlot(config, attestationData.slot);
+  return config.types.Epoch.equals(attestationData.target.epoch, computeEpochAtSlot(config, attestationData.slot));
 }
