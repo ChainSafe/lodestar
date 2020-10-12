@@ -1,12 +1,12 @@
-import {IResponseChunk} from "./interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {P2pErrorMessage, ResponseBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
-import {decode, encode} from "varint";
 import {AbortController} from "abort-controller";
-import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import BufferList from "bl";
-import {ResponseBody, P2pErrorMessage} from "@chainsafe/lodestar-types";
+import {decode, encode} from "varint";
+import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
+import {IResponseChunk} from "./interface";
+import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 
 export function eth2ResponseEncode(
   config: IBeaconConfig,
@@ -78,16 +78,12 @@ export function eth2ResponseDecode(
         if (buffer.length === 0) continue;
         if (status && status !== RpcResponseStatus.SUCCESS) {
           try {
-            const err = config.types.P2pErrorMessage.deserialize(buffer.slice());
-            errorMessage = decodeP2pErrorMessage(config, err);
+            errorMessage = decodeP2pErrorMessage(config, buffer.slice());
             buffer = new BufferList();
           } catch (e) {
-            logger.warn(`Failed to get error message from other node, method ${method}, error ${e.message}`);
+            logger.warn("Failed to get error message from response", {method, requestId, error: e.message});
           }
-          logger.warn(
-            `eth2ResponseDecode: Received err status '${status}' with message ` +
-              `'${errorMessage}' for method ${method} and request ${requestId}`
-          );
+          logger.warn("eth2ResponseDecode: Received err status", {status, errorMessage, method, requestId});
           controller.abort();
           continue;
         }
@@ -150,14 +146,21 @@ export function eth2ResponseDecode(
   };
 }
 
+/**
+ * Encodes error message per eth2 spec.
+ * https://github.com/ethereum/eth2.0-specs/blob/v1.0.0-rc.0/specs/phase0/p2p-interface.md#responding-side
+ */
 export function encodeP2pErrorMessage(config: IBeaconConfig, err: string): P2pErrorMessage {
   const encoder = new TextEncoder();
-  const bytes = encoder.encode(err.substring(0, 256));
-  return config.types.P2pErrorMessage.deserialize(bytes);
+  return config.types.P2pErrorMessage.deserialize(encoder.encode(err).slice(0, 256));
 }
 
-export function decodeP2pErrorMessage(config: IBeaconConfig, err: P2pErrorMessage): string {
-  const bytes = config.types.P2pErrorMessage.serialize(err);
+/**
+ * Decodes error message from network bytes and removes non printable, non ascii characters.
+ *
+ */
+export function decodeP2pErrorMessage(config: IBeaconConfig, err: Uint8Array): string {
   const encoder = new TextDecoder();
-  return encoder.decode(bytes);
+  //remove non ascii characters from string
+  return encoder.decode(err).replace(/[^\x20-\x7F]/g, "");
 }
