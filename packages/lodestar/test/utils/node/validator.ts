@@ -1,6 +1,6 @@
 import {BeaconNode} from "../../../src/node";
-import {ValidatorDB} from "../../../src/db/api";
-import {LevelDbController} from "../../../src/db/controller";
+import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {ApiClientOverInstance, interopKeypair, Validator} from "@chainsafe/lodestar-validator/lib";
 import {intDiv, LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";

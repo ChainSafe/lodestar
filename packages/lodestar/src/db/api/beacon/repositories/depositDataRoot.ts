@@ -2,10 +2,7 @@ import {List, TreeBacked, Vector} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-
-import {Repository} from "./abstract";
-import {IDatabaseController, IKeyValue} from "../../../controller";
-import {Bucket} from "../../schema";
+import {IDatabaseController, Bucket, Repository, IKeyValue} from "@chainsafe/lodestar-db";
 
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;

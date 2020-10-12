@@ -1,9 +1,6 @@
 import {SignedVoluntaryExit, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class VoluntaryExitRepository extends Repository<ValidatorIndex, SignedVoluntaryExit> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {

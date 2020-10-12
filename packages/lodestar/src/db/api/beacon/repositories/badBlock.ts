@@ -1,8 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * bad block roots

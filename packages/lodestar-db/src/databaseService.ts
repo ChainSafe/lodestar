@@ -1,13 +1,12 @@
-import {IDatabaseController} from "../controller";
+import {IDatabaseController} from "./controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IService} from "../../node";
 
 export interface IDatabaseApiOptions {
   config: IBeaconConfig;
   controller: IDatabaseController<Buffer, Buffer>;
 }
 
-export abstract class DatabaseService implements IService {
+export abstract class DatabaseService {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 

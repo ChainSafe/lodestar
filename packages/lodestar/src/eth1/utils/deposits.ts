@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Deposit, Root, DepositEvent, Eth1Data, BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
-import {IFilterOptions} from "../../db";
+import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {getTreeAtIndex} from "../../util/tree";
 
 export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: Eth1Data) => Promise<T[]>;

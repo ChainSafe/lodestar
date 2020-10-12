@@ -1,7 +1,8 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {BeaconDb, LevelDbController} from "../../../src/db";
+import {BeaconDb} from "../../../src/db";
 import {
   AggregateAndProofRepository,
   AttestationRepository,

@@ -7,7 +7,6 @@ coverage/**
 *.swp
 .idea
 beaconchain
-lodestar-db
 lodestar-config.toml
 keys/
 test-db

@@ -1,7 +1,6 @@
 import {assert} from "chai";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-
-import {Bucket, encodeKey} from "../../../src/db/api/schema";
+import {Bucket, encodeKey} from "../../src/schema";
 
 describe("encodeKey", () => {
   const testCases = [

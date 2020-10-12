@@ -3,10 +3,7 @@ import {BeaconState, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class StateArchiveRepository extends Repository<Epoch, TreeBacked<BeaconState>> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
