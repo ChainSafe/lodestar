@@ -109,6 +109,14 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
       return this.blockProcessor.processBlockJob(job);
     })
   );
+  const pendingJobs = this.pendingBlocks.getPendingBlocks();
+  this.logger.debug("Block pools: ", {
+    pendingBlocks: pendingJobs
+      .map((job) => job.signedBlock.message.slot)
+      .sort((a, b) => a - b)
+      .join(","),
+    currentSlot: this.clock.currentSlot,
+  });
 }
 
 export async function onForkVersion(this: BeaconChain): Promise<void> {
@@ -277,6 +285,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         blockRoot: toHexString(blockRoot),
       });
       this.pendingBlocks.addByParent(err.job);
+      this.emitter.emit("block:unknownRoot", this.pendingBlocks.getMissingAncestor(blockRoot));
       break;
     case BlockErrorCode.ERR_INCORRECT_PROPOSER:
     case BlockErrorCode.ERR_REPEAT_PROPOSAL:
