@@ -81,11 +81,12 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   public async stop(): Promise<void> {
     this.targetSlotRangeSource.end();
-    if (this.controller) {
+    if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
     this.chain.emitter.removeListener("block", this.onProcessedBlock);
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
+    this.subscribeToBlock = false;
   }
 
   public getHighestBlock(): Slot {
