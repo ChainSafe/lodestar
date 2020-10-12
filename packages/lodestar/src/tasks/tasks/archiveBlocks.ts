@@ -41,22 +41,34 @@ export class ArchiveBlocksTask implements ITask {
   public async run(): Promise<void> {
     this.logger.profile("Archive Blocks");
     const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
-    const keysToDelete: Uint8Array[] = [];
-    let totalArchived = 0;
-    for await (const {key, value} of await this.db.block.entriesStream()) {
-      if (value.message.slot > finalizedSlot) {
-        continue;
-      }
-      if (this.forkChoice.isDescendant(key, this.finalized.root)) {
-        await this.db.blockArchive.add(value);
-        totalArchived++;
-      }
-      keysToDelete.push(key);
-    }
-    await this.db.block.batchDelete(keysToDelete);
+    // Use fork choice to determine the blocks to archive and delete
+    const canonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
+    const nonCanonicalSummaries = this.forkChoice
+      .forwardIterateBlockSummaries()
+      .filter(
+        (summary) =>
+          summary.slot < finalizedSlot && !this.forkChoice.isDescendant(summary.blockRoot, this.finalized.root)
+      );
+    // first archive the canonical blocks
+    const canonicalBlockEntries = (
+      await Promise.all(
+        canonicalSummaries.map(async (summary) => {
+          const block = (await this.db.block.get(summary.blockRoot))!;
+          return {
+            key: summary.slot,
+            value: block,
+          };
+        })
+      )
+    ).filter((kv) => kv.value);
+    await this.db.blockArchive.batchPut(canonicalBlockEntries);
+    // delete all canonical and non-canonical blocks at once
+    await this.db.block.batchDelete(
+      canonicalSummaries.concat(nonCanonicalSummaries).map((summary) => summary.blockRoot)
+    );
     this.logger.profile("Archive Blocks");
     this.logger.info("Archiving of finalized blocks complete.", {
-      totalArchived,
+      totalArchived: canonicalSummaries.length,
       finalizedEpoch: this.finalized.epoch,
     });
   }
