@@ -1,4 +1,4 @@
-import {ReqResp} from "../../../../src/network/reqResp";
+import {ReqResp} from "../../../network/reqresp/reqResp";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {chunkify, getBlockRange, getBlockRangeFromPeer, isValidChainOfBlocks} from "../../../../src/sync/utils";
 import {expect} from "chai";

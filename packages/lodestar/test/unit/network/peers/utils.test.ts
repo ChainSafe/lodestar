@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import PeerId from "peer-id";
-import {ReqResp} from "../../../../src/network/reqResp";
+import {ReqResp} from "../../../network/reqresp/reqResp";
 import {expect} from "chai";
 import {
   findMissingSubnets,

@@ -2,7 +2,7 @@ import {assert, expect} from "chai";
 
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {ReqResp} from "../../../src/network/reqResp";
+import {ReqResp} from "../../network/reqresp/reqResp";
 import {NodejsNode} from "../../../src/network/nodejs";
 import {INetworkOptions} from "../../../src/network/options";
 import {generateEmptySignedBlock} from "../../utils/block";

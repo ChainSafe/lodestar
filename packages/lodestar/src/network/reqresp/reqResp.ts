@@ -1,15 +1,11 @@
 /**
  * @module network
  */
-import {EventEmitter} from "events";
-import LibP2p from "libp2p";
-import {pipe} from "it-pipe";
-import {Type} from "@chainsafe/ssz";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
   Goodbye,
-  IBeaconSSZTypes,
   Metadata,
   Ping,
   RequestBody,
@@ -17,76 +13,23 @@ import {
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  Method,
-  MethodRequestType,
-  ReqRespEncoding,
-  RequestId,
-  RESP_TIMEOUT,
-  RpcResponseStatus,
-  TTFB_TIMEOUT,
-} from "../constants";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {duplex as abortDuplex} from "abortable-iterator";
 import {AbortController} from "abort-controller";
-import all from "it-all";
-import {
-  createResponseEvent,
-  createRpcProtocol,
-  dialProtocol,
-  eth2ResponseTimer,
-  isRequestOnly,
-  isRequestSingleChunk,
-  randomRequestId,
-} from "./util";
-import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
-import {INetworkOptions} from "./options";
+import {EventEmitter} from "events";
+import {pipe} from "it-pipe";
+import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {RpcError, updateRpcScore} from "./error";
-import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
-import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
-import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
-import {IPeerMetadataStore} from "./peers/interface";
-import {RpcScoreEvent, IRpcScoreTracker} from "./peers/score";
-
-interface IReqEventEmitterClass {
-  new (): ReqEventEmitter;
-}
-
-interface IRespEventEmitterClass {
-  new (): RespEventEmitter;
-}
-
-interface IReqRespModules {
-  config: IBeaconConfig;
-  libp2p: LibP2p;
-  logger: ILogger;
-  peerMetadata: IPeerMetadataStore;
-  blockProviderScores: IRpcScoreTracker;
-}
-
-class ResponseEventListener extends (EventEmitter as IRespEventEmitterClass) {
-  public waitForResponse(
-    config: IBeaconConfig,
-    requestId: string,
-    responseListener: ResponseCallbackFn
-  ): NodeJS.Timeout {
-    const responseEvent = createResponseEvent(requestId);
-    this.once(responseEvent, responseListener);
-    return setTimeout(() => {
-      this.removeListener(responseEvent, responseListener);
-      const errorGenerator: AsyncGenerator<IResponseChunk> = (async function* () {
-        yield {
-          requestId,
-          status: RpcResponseStatus.SERVER_ERROR,
-          body: encodeP2pErrorMessage(config, "Timeout processing request"),
-        };
-      })();
-      responseListener(errorGenerator);
-    }, RESP_TIMEOUT);
-  }
-}
+import {IReqEventEmitterClass, IReqRespModules, ResponseEventListener, sendRequest} from ".";
+import {Method, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
+import {IResponseChunk, IValidatedRequestBody} from "../encoders/interface";
+import {eth2RequestDecode} from "../encoders/request";
+import {encodeP2pErrorMessage, eth2ResponseEncode} from "../encoders/response";
+import {RpcError, updateRpcScore} from "../error";
+import {IReqResp, ResponseCallbackFn} from "../interface";
+import {INetworkOptions} from "../options";
+import {IPeerMetadataStore} from "../peers/interface";
+import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
+import {createResponseEvent, createRpcProtocol, randomRequestId} from "../util";
 
 export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
@@ -177,19 +120,47 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   public async status(peerId: PeerId, request: Status): Promise<Status | null> {
-    return await this.sendRequest<Status>(peerId, Method.Status, request);
+    return await sendRequest<Status>(
+      {libp2p: this.libp2p, logger: this.logger, config: this.config},
+      peerId,
+      Method.Status,
+      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+      request,
+      this.controller?.signal
+    );
   }
 
   public async goodbye(peerId: PeerId, request: Goodbye): Promise<void> {
-    await this.sendRequest<Goodbye>(peerId, Method.Goodbye, request);
+    await sendRequest<Goodbye>(
+      {libp2p: this.libp2p, logger: this.logger, config: this.config},
+      peerId,
+      Method.Goodbye,
+      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+      request,
+      this.controller?.signal
+    );
   }
 
   public async ping(peerId: PeerId, request: Ping): Promise<Ping | null> {
-    return await this.sendRequest<Ping>(peerId, Method.Ping, request);
+    return await sendRequest<Ping>(
+      {libp2p: this.libp2p, logger: this.logger, config: this.config},
+      peerId,
+      Method.Ping,
+      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+      request,
+      this.controller?.signal
+    );
   }
 
   public async metadata(peerId: PeerId): Promise<Metadata | null> {
-    return await this.sendRequest<Metadata>(peerId, Method.Metadata);
+    return await sendRequest<Metadata>(
+      {libp2p: this.libp2p, logger: this.logger, config: this.config},
+      peerId,
+      Method.Metadata,
+      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+      undefined,
+      this.controller?.signal
+    );
   }
 
   public async beaconBlocksByRange(
@@ -197,7 +168,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[] | null> {
     try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request);
+      const result = await sendRequest<SignedBeaconBlock[]>(
+        {libp2p: this.libp2p, logger: this.logger, config: this.config},
+        peerId,
+        Method.BeaconBlocksByRange,
+        this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+        request,
+        this.controller?.signal
+      );
       this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
       return result;
     } catch (e) {
@@ -211,7 +189,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     request: BeaconBlocksByRootRequest
   ): Promise<SignedBeaconBlock[] | null> {
     try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request);
+      const result = await sendRequest<SignedBeaconBlock[]>(
+        {libp2p: this.libp2p, logger: this.logger, config: this.config},
+        peerId,
+        Method.BeaconBlocksByRoot,
+        this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
+        request,
+        this.controller?.signal
+      );
       this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
       return result;
     } catch (e) {
@@ -261,38 +246,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     };
   }
 
-  private handleResponses<T extends ResponseBody | ResponseBody[]>(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding,
-    requestId: RequestId,
-    requestSingleChunk: boolean,
-    requestOnly: boolean,
-    body?: RequestBody
-  ): (source: AsyncIterable<T>) => Promise<T | null> {
-    return async (source) => {
-      const responses = await all(source);
-      if (requestSingleChunk && responses.length === 0) {
-        // allow empty response for beacon blocks by range/root
-        this.logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
-          peer: peerId.toB58String(),
-        });
-        return null;
-      }
-      const finalResponse = requestSingleChunk ? responses[0] : responses;
-      this.logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
-        requestId,
-        encoding,
-        body:
-          body != null &&
-          (this.config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(
-            body
-          ),
-      });
-      return requestOnly ? null : (finalResponse as T);
-    };
-  }
-
   private getResponse = (
     peerId: PeerId,
     method: Method,
@@ -320,57 +273,4 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       yield* await sourcePromise;
     })();
   };
-
-  private async sendRequest<T extends ResponseBody | ResponseBody[]>(
-    peerId: PeerId,
-    method: Method,
-    body?: RequestBody
-  ): Promise<T | null> {
-    const encoding = this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
-    const requestOnly = isRequestOnly(method);
-    const requestSingleChunk = isRequestSingleChunk(method);
-    const requestId = randomRequestId();
-    try {
-      return await pipe(
-        this.sendRequestStream(peerId, method, encoding, requestId, body),
-        this.handleResponses<T>(peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
-      );
-    } catch (e) {
-      this.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
-        method,
-        reason: e.message,
-      });
-      throw e;
-    }
-  }
-
-  private sendRequestStream<T extends ResponseBody>(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding,
-    requestId: RequestId,
-    body?: RequestBody
-  ): AsyncIterable<T> {
-    const {libp2p, config, logger} = this;
-    const localControllerSignal = this.controller?.signal;
-    return (async function* () {
-      const protocol = createRpcProtocol(method, encoding);
-      logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-      let conn: {stream: Stream};
-      try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, localControllerSignal)) as {stream: Stream};
-      } catch (e) {
-        throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
-      }
-      logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
-      const controller = new AbortController();
-      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
-      conn.stream.reset();
-      yield* pipe(
-        abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
-        eth2ResponseTimer(controller),
-        eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
-      );
-    })();
-  }
 }

@@ -18,7 +18,7 @@ import {BeaconChain} from "../../../src/chain";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
 import {IBeaconDb} from "../../../src/db/api";
 import {Libp2pNetwork} from "../../../src/network";
-import {ReqResp} from "../../../src/network/reqResp";
+import {ReqResp} from "../../network/reqresp/reqResp";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
