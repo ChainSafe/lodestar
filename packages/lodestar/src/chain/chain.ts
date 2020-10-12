@@ -499,7 +499,7 @@ export class BeaconChain implements IBeaconChain {
   private onCheckpoint = async (cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> => {
     this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
     await this.db.checkpointStateCache.add(cp, stateContext);
-    this.metrics.currentValidators.set({active: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
+    this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
     const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
     if (parentBlockSummary) {
       const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;

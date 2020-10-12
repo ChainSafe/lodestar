@@ -95,11 +95,13 @@ export class BeaconMetrics extends Metrics implements IBeaconMetrics {
     });
     this.currentValidators = new Gauge({
       name: "beacon_current_validators",
+      labelNames: ["status"],
       help: "number of validators in current epoch",
       registers,
     });
     this.previousValidators = new Gauge({
       name: "beacon_previous_validators",
+      labelNames: ["status"],
       help: "number of validators in previous epoch",
       registers,
     });
