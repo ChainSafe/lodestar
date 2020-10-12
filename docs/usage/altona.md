@@ -5,7 +5,7 @@ Running a Lodestar node on the [Altona](https://github.com/goerli/altona) multi-
 Make sure lodestar is installed in your local environment. The following command should return a non error message. If it fails, go the [install guide](../../installation/).
 
 ```
-yarn run cli --help
+./lodestar --help
 ```
 
 ## Run a beacon node
@@ -13,7 +13,7 @@ yarn run cli --help
 To start a Lodestar beacon run the command:
 
 ```bash
-yarn run cli beacon --testnet altona
+./lodestar beacon --testnet altona
 ```
 
 Immediatelly you should see confirmation that the different modules have started

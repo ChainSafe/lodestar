@@ -1,10 +1,9 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import EventSource from "eventsource";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {urlJoin} from "../../../../util";
 import {deserializeBeaconEventMessage} from "./util";
-import {IEventsApi} from "../../../interface/events";
-import {BeaconEvent, BeaconEventType} from "./types";
-import {IStoppableEventIterable, LodestarEventIterator} from "@chainsafe/lodestar-utils";
+import {BeaconEvent, BeaconEventType, IEventsApi} from "../../../interface/events";
 
 export class RestEventsApi implements IEventsApi {
   private readonly config: IBeaconConfig;

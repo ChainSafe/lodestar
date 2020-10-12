@@ -13,7 +13,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
-import {onProcessSIGINT} from "../../util/process";
+import {onGracefulShutdown} from "../../util/process";
 
 /**
  * Run a validator client
@@ -66,7 +66,7 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
     }
   );
 
-  onProcessSIGINT(async () => {
+  onGracefulShutdown(async () => {
     await Promise.all(validators.map((v) => v.stop()));
   }, logger.info.bind(logger));
 

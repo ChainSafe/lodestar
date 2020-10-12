@@ -76,7 +76,11 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 /**
  * Extract stack property from context to allow appending at the end of the log
  */
-function splitContextAndStackTrace(context?: Context | Error): {context: string; stack?: string} {
+function splitContextAndStackTrace(context?: Context | Error): {context?: string; stack?: string} {
+  if (!context) {
+    return {};
+  }
+
   const json = toJson(context);
 
   if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {

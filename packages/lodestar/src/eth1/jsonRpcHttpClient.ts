@@ -88,7 +88,13 @@ function parseJson<T>(json: string): T {
   try {
     return JSON.parse(json);
   } catch (e) {
-    throw Error(`Error parsing JSON: ${e.message}\n${json.slice(0, maxStringLengthToPrint)}`);
+    throw new ErrorParseJson(json, e);
+  }
+}
+
+export class ErrorParseJson extends Error {
+  constructor(json: string, e: Error) {
+    super(`Error parsing JSON: ${e.message}\n${json.slice(0, maxStringLengthToPrint)}`);
   }
 }
 

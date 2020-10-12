@@ -1,13 +1,39 @@
-supporting-docs
-.github
-assets
-.idea
-.tmp
-.git
-Dockerfile
-*.log
-**/*.log
 node_modules
+.git
+
+# Docs
+assets
+supporting-docs
+docs
+typedocs
+mkdocs.yml
+LICENSE
+README.md
+
+# Github & configs
+.github
+.codeclimate.yml
+.codecov.yml
+
+# Tooling
+/docker
+prometheus.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# Tests
+packages/**/test
+.__testdb
+
+# Lodestar artifacts
+**/*-db
+.lodestar
+.medalla
+.spadina
+
+# Other / artifacts
 **/.nyc_output
 **/coverage
 **/node_modules
@@ -15,4 +41,7 @@ node_modules
 **/lib
 **/.tmp
 **/dist
-**/*-db
+*.log
+**/*.log
+.idea
+.tmp

@@ -26,8 +26,8 @@ export class NodeApi implements INodeApi {
     const enr = this.network.getEnr();
     const keypair = createKeypairFromPeerId(this.network.peerId);
     const discoveryAddresses = [] as string[];
-    if (enr?.multiaddrTCP) discoveryAddresses.push(enr.multiaddrTCP.toString());
-    if (enr?.multiaddrUDP) discoveryAddresses.push(enr.multiaddrUDP.toString());
+    if (enr?.getLocationMultiaddr("tcp")) discoveryAddresses.push(enr?.getLocationMultiaddr("tcp")?.toString()!);
+    if (enr?.getLocationMultiaddr("udp")) discoveryAddresses.push(enr?.getLocationMultiaddr("udp")?.toString()!);
     return {
       peerId: this.network.peerId.toB58String(),
       enr: enr?.encodeTxt(keypair.privateKey) || "",
