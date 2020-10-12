@@ -211,9 +211,8 @@ describe("[sync] rpc", function () {
         } else {
           // i should be 1
           const errBuf = val.slice();
-          const err = config.types.P2pErrorMessage.deserialize(errBuf);
           // message from the server side
-          expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid Request");
+          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid Request");
         }
         i++;
       }
