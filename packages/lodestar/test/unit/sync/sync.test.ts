@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance, SinonFakeTimers} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../src/chain";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
@@ -26,13 +26,13 @@ describe("sync", function () {
   let networkStub: SinonStubbedInstance<INetwork>;
   let regularSync: IRegularSync;
   let initialSyncStub: SinonStubbedInstance<InitialSync>;
-  let clock: SinonFakeTimers;
+  const sandbox = sinon.createSandbox();
 
   const getSync = (opts: ISyncOptions): IBeaconSync => {
     return new BeaconSync(opts, {
       chain: chainStub,
       config,
-      db: sinon.createStubInstance(BeaconDb),
+      db: sandbox.createStubInstance(BeaconDb),
       regularSync: regularSync,
       initialSync: initialSyncStub,
       network: networkStub,
@@ -44,28 +44,26 @@ describe("sync", function () {
   };
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
-    chainStub.forkChoice = forkChoiceStub = sinon.createStubInstance(ForkChoice);
+    chainStub = sandbox.createStubInstance(BeaconChain);
+    chainStub.forkChoice = forkChoiceStub = sandbox.createStubInstance(ForkChoice);
     chainStub.emitter = new ChainEventEmitter();
-    reqRespStub = sinon.createStubInstance(BeaconReqRespHandler);
-    attestationCollectorStub = sinon.createStubInstance(AttestationCollector);
-    gossipStub = sinon.createStubInstance(BeaconGossipHandler);
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
-    initialSyncStub = sinon.createStubInstance(FastSync);
-    clock = sinon.useFakeTimers();
+    reqRespStub = sandbox.createStubInstance(BeaconReqRespHandler);
+    attestationCollectorStub = sandbox.createStubInstance(AttestationCollector);
+    gossipStub = sandbox.createStubInstance(BeaconGossipHandler);
+    networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    initialSyncStub = sandbox.createStubInstance(FastSync);
     regularSync = new NaiveRegularSync({}, {
       config,
       network: networkStub,
       chain: chainStub,
       logger: new WinstonLogger(),
     });
-    sinon.stub(regularSync, "start").resolves();
-    sinon.stub(regularSync, "stop").resolves();
+    sandbox.stub(regularSync, "start").resolves();
+    sandbox.stub(regularSync, "stop").resolves();
   });
 
-  afterEach(() => {
-    clock.restore();
-    sinon.restore();
+  afterEach(async () => {
+    sandbox.restore();
   });
 
   it("not synced after start", async function () {
@@ -103,7 +101,7 @@ describe("sync", function () {
     await sync.start();
     // @ts-ignore
     sync.mode = SyncMode.REGULAR_SYNCING;
-    sinon.stub(regularSync, "getHighestBlock").resolves(15);
+    sandbox.stub(regularSync, "getHighestBlock").resolves(15);
     const status = await sync.getSyncStatus();
     expect(status.headSlot.toString()).to.be.deep.equal("15");
     expect(status.syncDistance.toString()).to.be.deep.equal("5");
