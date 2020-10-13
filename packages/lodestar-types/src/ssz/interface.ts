@@ -85,6 +85,8 @@ export interface IBeaconSSZTypes {
   SyncingStatus: ContainerType<t.SyncingStatus>;
   AttesterDuty: ContainerType<t.AttesterDuty>;
   ProposerDuty: ContainerType<t.ProposerDuty>;
+  // Validator slashing protection
+  SlashingProtectionAttestation: ContainerType<t.SlashingProtectionAttestation>;
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
@@ -168,6 +170,8 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "AggregateAndProof",
   "SignedAggregateAndProof",
   "CommitteeAssignment",
+  // Validator slashing protection
+  "SlashingProtectionAttestation",
   // wire
   "Status",
   "Goodbye",

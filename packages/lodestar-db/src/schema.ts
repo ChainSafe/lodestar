@@ -35,6 +35,8 @@ export enum Bucket {
   validator = 16,
   lastProposedBlock = 17,
   proposedAttestations = 18,
+  // validator slashing protection
+  slashingProtectionAttestation = 21,
 }
 
 export enum Key {

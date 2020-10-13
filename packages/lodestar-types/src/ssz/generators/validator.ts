@@ -29,3 +29,12 @@ export const SignedAggregateAndProof = (ssz: IBeaconSSZTypes): ContainerType =>
       signature: ssz.BLSSignature,
     },
   });
+
+export const SlashingProtectionAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      sourceEpoch: ssz.Epoch,
+      targetEpoch: ssz.Epoch,
+      signingRoot: ssz.Root,
+    },
+  });
