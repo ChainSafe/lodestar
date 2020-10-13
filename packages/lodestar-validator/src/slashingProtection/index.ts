@@ -3,8 +3,12 @@ import {checkAndInsertBlockProposal, SlashingProtectionBlockRepository} from "./
 import {checkAndInsertAttestation, SlashingProtectionAttestationRepository} from "./attestation";
 import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {ISlashingProtection} from "./interface";
+import {SlashingProtectionManager} from "./manager";
 
-export {ISlashingProtection};
+export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
+export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
+export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
+export {ISlashingProtection, SlashingProtectionManager};
 
 export class SlashingProtection extends DatabaseService implements ISlashingProtection {
   private blockRepository: SlashingProtectionBlockRepository;

@@ -29,6 +29,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
+    "test:e2e": "mocha --timeout 5000 'test/e2e/**/*.test.ts'",
     "coverage": "codecov -F lodestar-validator",
     "benchmark": "ts-node test/benchmarks"
   },

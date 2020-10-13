@@ -6,7 +6,7 @@ import {IInterchangeCompleteV4, parseInterchangeCompleteV4, serializeInterchange
 
 export type Interchange = IInterchangeCompleteV4;
 export type InterchangeFormatVersion = {format: "complete"; version: "4"};
-export {IInterchangeLodestar};
+export {IInterchangeLodestar, InterchangeError, InterchangeErrorErrorCode};
 
 export function parseInterchange(
   interchange: Interchange,

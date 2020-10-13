@@ -30,7 +30,7 @@ export enum InvalidAttestationErrorCode {
   TARGET_LESS_THAN_OR_EQ_LOWER_BOUND = "ERR_INVALID_ATTESTATION_TARGET_LESS_THAN_OR_EQ_LOWER_BOUND",
 }
 
-export type InvalidAttestationErrorType =
+type InvalidAttestationErrorType =
   | {
       code: InvalidAttestationErrorCode.DOUBLE_VOTE;
       att: SlashingProtectionAttestation;

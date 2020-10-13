@@ -12,7 +12,7 @@ export enum InvalidBlockErrorCode {
   SLOT_LESS_THAN_LOWER_BOUND = "ERR_INVALID_BLOCK_SLOT_LESS_THAN_LOWER_BOUND",
 }
 
-export type InvalidBlockErrorType =
+type InvalidBlockErrorType =
   | {
       code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL;
       block: SlashingProtectionBlock;
