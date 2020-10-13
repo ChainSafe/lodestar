@@ -160,8 +160,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         return ExtendedValidatorResult.ignore;
       }
       await this.updateAttestationSeenCaches(signedAggregationAndProof.message);
-      // TODO: use ignore or reject for default error handle?
-      // return ExtendedValidatorResult.ignore;
     }
     return ExtendedValidatorResult.accept;
   };
@@ -172,6 +170,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
     } catch (e) {
+      this.logger.error("Error while validating gossip voluntary exit", e);
       if (e.code === ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
         this.logger.warn("Ignoring gossip voluntary exit", e.toObject());
         return ExtendedValidatorResult.ignore;
@@ -189,6 +188,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
     } catch (e) {
+      this.logger.error("Error while validating gossip proposer slashing", e);
       if (e.code === ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
         this.logger.warn("Ignoring gossip proposer slashing", e.toObject());
         return ExtendedValidatorResult.ignore;
@@ -206,6 +206,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);
     } catch (e) {
+      this.logger.error("Error while validating gossip attester slashing", e);
       if (e.code === AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
         this.logger.warn("Ignoring gossip attester slashing", e.toObject());
         return ExtendedValidatorResult.ignore;

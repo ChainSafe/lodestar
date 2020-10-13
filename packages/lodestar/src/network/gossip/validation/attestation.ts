@@ -1,4 +1,3 @@
-import {ExtendedValidatorResult} from "../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
@@ -20,7 +19,7 @@ export async function validateGossipAttestation(
   logger: ILogger,
   attestationJob: IAttestationJob,
   subnet: number
-): Promise<ExtendedValidatorResult> {
+): Promise<void> {
   const attestation = attestationJob.attestation;
   logger.profile("gossipAttestationValidation");
   const attestationRoot = config.types.Attestation.hashTreeRoot(attestation);
@@ -35,13 +34,11 @@ export async function validateGossipAttestation(
   if (!isUnaggregatedAttestation(attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
-      // aggregationBits: JSON.stringify(attestation.aggregationBits),
-      numBits: Array.from(attestation.aggregationBits).filter((bit) => !!bit).length,
+      aggregationBits: attestation.aggregationBits,
       ...attestationLogContext,
       job: attestationJob,
     });
   }
-
   if (await isAttestingToInValidBlock(db, attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
@@ -57,6 +54,7 @@ export async function validateGossipAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
       ...attestationLogContext,
+      currentSlot: chain.clock.currentSlot,
       job: attestationJob,
     });
   }
@@ -178,7 +176,6 @@ export async function validateGossipAttestation(
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
   logger.profile("gossipAttestationValidation");
   logger.info("Received valid committee attestation", attestationLogContext);
-  return ExtendedValidatorResult.accept;
 }
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {

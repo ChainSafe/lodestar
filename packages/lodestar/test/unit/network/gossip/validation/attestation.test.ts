@@ -60,20 +60,20 @@ describe("gossip attestation validation", function () {
 
   it("should reject - attestation has empty aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: ([] as boolean[]) as BitList});
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
   it("should reject - attestation has more aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: [true, true] as BitList});
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
   it("should reject - attestation block is invalid", async function () {
     const attestation = generateAttestation({aggregationBits: [true] as BitList});
     db.badBlock.has.resolves(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(db.badBlock.has.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)).to.be.true;
   });
@@ -85,7 +85,7 @@ describe("gossip attestation validation", function () {
         slot: getCurrentSlot(config, chain.getGenesisTime()) - ATTESTATION_PROPAGATION_SLOT_RANGE - 1,
       },
     });
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
@@ -97,7 +97,7 @@ describe("gossip attestation validation", function () {
         slot: getCurrentSlot(config, chain.getGenesisTime()) + 5,
       },
     });
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
@@ -107,7 +107,7 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
@@ -118,7 +118,7 @@ describe("gossip attestation validation", function () {
       aggregationBits: [true] as BitList,
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
@@ -130,7 +130,7 @@ describe("gossip attestation validation", function () {
     });
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(false);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.true;
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
@@ -143,7 +143,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     regen.getCheckpointState.throws();
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chain.receiveAttestation.called).to.be.true;
     expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
@@ -161,7 +161,7 @@ describe("gossip attestation validation", function () {
     };
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(5);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState.epochCtx, attestation)).to.be.true;
@@ -181,7 +181,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(false);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -207,7 +207,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -239,7 +239,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -262,7 +262,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -291,7 +291,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
@@ -343,7 +343,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
@@ -371,7 +371,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.reject);
   });
 
@@ -401,7 +401,7 @@ describe("gossip attestation validation", function () {
     forkChoiceStub.hasBlock.returns(true);
     forkChoiceStub.isDescendant.returns(true);
     forkChoiceStub.isDescendantOfFinalized.returns(true);
-    const result = await validateGossipAttestation(config, chain, db, logger, attestation, 0);
+    const result = await validateGossipAttestation(config, chain, db, logger, {attestation, validSignature: false}, 0);
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chain.receiveAttestation.called).to.be.false;
     expect(db.seenAttestationCache.addCommitteeAttestation.calledOnce).to.be.true;

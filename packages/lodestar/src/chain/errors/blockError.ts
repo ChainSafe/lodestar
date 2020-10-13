@@ -117,7 +117,6 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL;
       proposer: ValidatorIndex;
-      slot: Slot;
     }
   | {
       code: BlockErrorCode.ERR_BLOCK_SLOT_LIMIT_REACHED;
@@ -125,7 +124,6 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER;
       blockProposer: ValidatorIndex;
-      // shufflingProposer: ValidatorIndex;
     }
   | {
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID;

@@ -43,7 +43,11 @@ describe("gossip block validation", function () {
       epoch: 1,
       root: Buffer.alloc(32),
     });
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
@@ -57,7 +61,11 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     dbStub.badBlock.has.resolves(true);
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -73,7 +81,11 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -90,7 +102,11 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.throws();
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.ignore);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -112,7 +128,11 @@ describe("gossip block validation", function () {
       epochCtx: new EpochContext(config),
     });
     verifySignatureStub.returns(false);
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -137,7 +157,11 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex + 1);
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.reject);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -165,7 +189,11 @@ describe("gossip block validation", function () {
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
     forkChoiceStub.getAncestor.resolves(Buffer.alloc(32));
-    const result = await validateGossipBlock(config, chainStub, dbStub, logger, block);
+    const result = await validateGossipBlock(config, chainStub, dbStub, logger, {
+      signedBlock: block,
+      trusted: false,
+      reprocess: false,
+    });
     expect(result).to.equal(ExtendedValidatorResult.accept);
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;

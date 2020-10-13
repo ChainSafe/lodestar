@@ -8,7 +8,7 @@ import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
-import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
+import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../../src/chain";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/regen";
 import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
@@ -72,12 +72,15 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.ignore);
   });
 
   it("should ignore - invalid slot (too eager)", async function () {
-    //move genesis time so slot 0 has not yet come
+    // move genesis time so slot 0 has not yet come
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
     sinon
       .stub(chain.clock, "currentSlot")
@@ -89,7 +92,10 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.ignore);
   });
 
@@ -102,7 +108,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     db.seenAttestationCache.hasAggregateAndProof.resolves(true);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.ignore);
     expect(db.seenAttestationCache.hasAggregateAndProof.withArgs(item.message).calledOnce).to.be.true;
   });
@@ -116,7 +125,10 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
   });
 
@@ -130,7 +142,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     db.badBlock.has.resolves(true);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(db.badBlock.has.withArgs(item.message.aggregate.data.beaconBlockRoot.valueOf() as Uint8Array).calledOnce).to
       .be.true;
@@ -146,7 +161,10 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     regen.getBlockSlotState.throws();
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.ignore);
     expect(regen.getBlockSlotState.withArgs(item.message.aggregate.data.target.root, sinon.match.any).calledOnce).to.be
       .true;
@@ -168,7 +186,10 @@ describe("gossip aggregate and proof test", function () {
       epochCtx: (epochCtx as unknown) as EpochContext,
     });
     epochCtx.getBeaconCommittee.returns([]);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(
       epochCtx.getBeaconCommittee.withArgs(item.message.aggregate.data.slot, item.message.aggregate.data.index)
@@ -193,7 +214,10 @@ describe("gossip aggregate and proof test", function () {
     });
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(false);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(isAggregatorStub.withArgs(config, 1, item.message.selectionProof).calledOnce).to.be.true;
   });
@@ -218,11 +242,12 @@ describe("gossip aggregate and proof test", function () {
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(false);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
-    expect(
-      isValidSelectionProofStub.calledOnce
-    ).to.be.true;
+    expect(isValidSelectionProofStub.calledOnce).to.be.true;
   });
 
   it("should reject - invalid signature", async function () {
@@ -246,7 +271,10 @@ describe("gossip aggregate and proof test", function () {
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(false);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(
       isValidSignatureStub.withArgs(
@@ -281,7 +309,10 @@ describe("gossip aggregate and proof test", function () {
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(true);
     isValidIndexedAttestationStub.returns(false);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.reject);
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -308,7 +339,10 @@ describe("gossip aggregate and proof test", function () {
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(true);
     isValidIndexedAttestationStub.returns(true);
-    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item);
+    const result = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      attestation: item.message.aggregate,
+      validSignature: false,
+    } as IAttestationJob);
     expect(result).to.be.equal(ExtendedValidatorResult.accept);
   });
 });

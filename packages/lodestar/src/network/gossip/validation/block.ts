@@ -18,6 +18,10 @@ export async function validateGossipBlock(
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
+  const logContext = {
+    blockSlot,
+    blockRoot,
+  };
   logger.verbose("Started gossip block validation", {blockSlot, blockRoot: toHexString(blockRoot)});
   const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
@@ -25,7 +29,7 @@ export async function validateGossipBlock(
   if (blockSlot <= finalizedSlot) {
     throw new BlockError({
       code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
-      blockSlot,
+      ...logContext,
       finalizedSlot,
       job: blockJob,
     });
@@ -36,9 +40,8 @@ export async function validateGossipBlock(
     await chain.receiveBlock(block);
     throw new BlockError({
       code: BlockErrorCode.ERR_FUTURE_SLOT,
-      blockSlot,
+      ...logContext,
       currentSlot,
-      // blockRoot: toHexString(blockRoot),
       job: blockJob,
     });
   }
@@ -46,8 +49,7 @@ export async function validateGossipBlock(
   if (await db.badBlock.has(blockRoot)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
-      blockSlot,
-      blockRoot,
+      ...logContext,
       job: blockJob,
     });
   }
@@ -55,8 +57,7 @@ export async function validateGossipBlock(
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
-      slot: blockSlot,
-      // blockRoot,
+      ...logContext,
       proposer: block.message.proposerIndex,
       job: blockJob,
     });
@@ -73,8 +74,7 @@ export async function validateGossipBlock(
 
     throw new BlockError({
       code: BlockErrorCode.ERR_PARENT_UNKNOWN,
-      // blockSlot,
-      // blockRoot: toHexString(blockRoot),
+      ...logContext,
       parentRoot: block.message.parentRoot,
       job: blockJob,
     });
@@ -83,19 +83,26 @@ export async function validateGossipBlock(
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
+      ...logContext,
       job: blockJob,
-      // blockSlot,
-      // blockRoot: toHexString(blockRoot),
     });
   }
-
-  if (!isExpectedProposer(blockContext.epochCtx, block.message)) {
+  let validProposer;
+  try {
+    validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
+    if (!validProposer) {
+      throw new BlockError({
+        code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
+        ...logContext,
+        blockProposer: block.message.proposerIndex,
+        job: blockJob,
+      });
+    }
+  } catch (error) {
     throw new BlockError({
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
+      ...logContext,
       blockProposer: block.message.proposerIndex,
-      // shufflingProposer,
-      // blockSlot,
-      // blockRoot: toHexString(blockRoot),
       job: blockJob,
     });
   }
