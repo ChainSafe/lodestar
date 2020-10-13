@@ -4,7 +4,7 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {BLSSignature, CommitteeIndex, Slot, ValidatorIndex} from "./primitive";
+import {BLSSignature, CommitteeIndex, Root, Slot, ValidatorIndex} from "./primitive";
 import {Attestation} from "./operations";
 
 export interface CommitteeAssignment {
@@ -22,4 +22,9 @@ export interface AggregateAndProof {
 export interface SignedAggregateAndProof {
   message: AggregateAndProof;
   signature: BLSSignature;
+}
+
+export interface SlashingProtectionBlock {
+  slot: Slot;
+  signingRoot: Root;
 }
