@@ -24,9 +24,8 @@ export async function checkAndInsertAttestation(
   // Merging those ranges
   //   0 <= s2 < t1 - 1
   //   s1 + 1 <= t2
-  const potentialAttestationConflicts = await signedAttestationDb.getByPubkeyAndTargetEpoch(pubKey, {
-    gte: att.sourceEpoch + 1,
-  });
+  // EDIT: fetch the entire range or tests do not pass
+  const potentialAttestationConflicts = await signedAttestationDb.getByPubkeyAndTargetEpoch(pubKey, {});
 
   // Although it's not required to avoid slashing, we disallow attestations
   // which are obviously invalid by virtue of their source epoch exceeding their target.
