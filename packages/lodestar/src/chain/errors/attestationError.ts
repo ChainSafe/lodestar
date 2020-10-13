@@ -135,6 +135,10 @@ export enum AttestationErrorCode {
    * Missing attestation pre-state.
    */
   ERR_MISSING_ATTESTATION_PRESTATE = "ERR_MISSING_ATTESTATION_PRESTATE",
+  /**
+   * Invalid aggregator.
+   */
+  ERR_INVALID_AGGREGATOR = "ERR_INVALID_AGGREGATOR",
 }
 
 export type AttestationErrorType =
@@ -261,6 +265,9 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
+    }
+  | {
+      code: AttestationErrorCode.ERR_INVALID_AGGREGATOR;
     };
 
 type IJobObject = {

@@ -1,5 +1,6 @@
 import {IGossipMessageValidator} from "./interface";
 import {
+  AggregateAndProof,
   Attestation,
   AttesterSlashing,
   ProposerSlashing,
@@ -16,8 +17,6 @@ import {validateGossipAggregateAndProof, validateGossipAttestation, validateGoss
 import {BlockErrorCode} from "../../chain/errors/blockError";
 import {IBlockJob} from "../../chain";
 import {AttestationErrorCode} from "../../chain/errors/attestationError";
-import {GossipValidationError} from "./errors";
-import {ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
 import {AttesterSlashingErrorCode} from "../../chain/errors/attesterSlashingError";
 import {validateGossipAttesterSlashing} from "./validation/attesterSlashing";
 import {ProposerSlashingErrorCode} from "../../chain/errors/proposerSlahingError";
@@ -45,6 +44,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     this.logger = logger;
   }
 
+  async updateAttestationSeenCaches(aggregateAndProof: AggregateAndProof): Promise<void> {
+    await Promise.all([
+      this.db.aggregateAndProof.add(aggregateAndProof),
+      this.db.seenAttestationCache.addAggregateAndProof(aggregateAndProof),
+    ]);
+  }
+
   public isValidIncomingBlock = async (signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult> => {
     try {
       const blockJob = {
@@ -61,6 +67,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === BlockErrorCode.ERR_REPEAT_PROPOSAL ||
         e.code === BlockErrorCode.ERR_PARENT_UNKNOWN
       ) {
+        this.logger.warn("Ignoring gossip block", e.toObject());
         return ExtendedValidatorResult.ignore;
       } else if (
         e.code === BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID ||
@@ -68,6 +75,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK ||
         e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER
       ) {
+        this.logger.warn("Rejecting gossip block", e.toObject());
         return ExtendedValidatorResult.reject;
       }
     }
@@ -98,6 +106,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK ||
         e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION
       ) {
+        this.logger.warn("Rejecting gossip attestation", e.toObject());
         return ExtendedValidatorResult.reject;
       } else if (
         e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE ||
@@ -105,6 +114,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK ||
         e.code === AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE
       ) {
+        this.logger.warn("Ignoring gossip attestation", e.toObject());
         return ExtendedValidatorResult.ignore;
       }
     }
@@ -115,7 +125,19 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     signedAggregationAndProof: SignedAggregateAndProof
   ): Promise<ExtendedValidatorResult> => {
     try {
-      await validateGossipAggregateAndProof(this.config, this.chain, this.db, this.logger, signedAggregationAndProof);
+      const attestationJob = {
+        attestation: signedAggregationAndProof.message.aggregate,
+        validSignature: false,
+      } as IAttestationJob;
+      await validateGossipAggregateAndProof(
+        this.config,
+        this.chain,
+        this.db,
+        this.logger,
+        signedAggregationAndProof,
+        attestationJob
+      );
+      await this.updateAttestationSeenCaches(signedAggregationAndProof.message);
     } catch (e) {
       this.logger.error("Error while validating gossip aggregate and proof", e);
       if (
@@ -124,19 +146,22 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE ||
         e.code === AttestationErrorCode.ERR_INVALID_SELECTION_PROOF ||
         e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE ||
-        e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION
+        e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION ||
+        e.code === AttestationErrorCode.ERR_INVALID_AGGREGATOR
       ) {
+        this.logger.warn("Rejecting gossip aggregate & Proof", e.toObject());
         return ExtendedValidatorResult.reject;
-        // throw GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE);
       } else if (
         e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE ||
         e.code === AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN ||
         e.code === AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE
       ) {
+        this.logger.warn("Ignoring gossip aggregate & Proof", e.toObject());
         return ExtendedValidatorResult.ignore;
-        // throw GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
       }
-      return ExtendedValidatorResult.ignore;
+      await this.updateAttestationSeenCaches(signedAggregationAndProof.message);
+      // TODO: use ignore or reject for default error handle?
+      // return ExtendedValidatorResult.ignore;
     }
     return ExtendedValidatorResult.accept;
   };
@@ -148,8 +173,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
     } catch (e) {
       if (e.code === ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
+        this.logger.warn("Ignoring gossip voluntary exit", e.toObject());
         return ExtendedValidatorResult.ignore;
       } else if (e.code === ProposerSlashingErrorCode.ERR_INVALID_SLASHING) {
+        this.logger.warn("Rejecting gossip voluntary exit", e.toObject());
         return ExtendedValidatorResult.reject;
       }
     }
@@ -163,8 +190,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
     } catch (e) {
       if (e.code === ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
+        this.logger.warn("Ignoring gossip proposer slashing", e.toObject());
         return ExtendedValidatorResult.ignore;
       } else if (e.code === ProposerSlashingErrorCode.ERR_INVALID_SLASHING) {
+        this.logger.warn("Rejecting gossip proposer slashing", e.toObject());
         return ExtendedValidatorResult.reject;
       }
     }
@@ -178,8 +207,10 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);
     } catch (e) {
       if (e.code === AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS) {
+        this.logger.warn("Ignoring gossip attester slashing", e.toObject());
         return ExtendedValidatorResult.ignore;
       } else if (e.code === AttesterSlashingErrorCode.ERR_INVALID_SLASHING) {
+        this.logger.warn("Rejecting gossip attester slashing", e.toObject());
         return ExtendedValidatorResult.reject;
       }
     }

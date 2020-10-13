@@ -1,9 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../../chain";
+import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {AggregateAndProof, Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
-import {ExtendedValidatorResult} from "../constants";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
@@ -11,15 +10,15 @@ import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
-import { Attestation } from "@chainsafe/lodestar-types/src/ssz/generators/operations";
-import { AttestationError, AttestationErrorCode } from "../../../chain/errors";
+import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
   logger: ILogger,
-  signedAggregateAndProof: SignedAggregateAndProof
+  signedAggregateAndProof: SignedAggregateAndProof,
+  attestationJob: IAttestationJob
 ): Promise<void> {
   logger.profile("gossipAggregateAndProofValidation");
   const aggregateAndProof = signedAggregateAndProof.message;
@@ -33,7 +32,7 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
       // currentSlot: chain.clock.currentSlot,
       ...logContext,
-      job: ,
+      job: attestationJob,
     });
     // TODO: aggregate and proof pool to wait until proper slot to replay
   }
@@ -42,7 +41,7 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
       // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
-      job: ,
+      job: attestationJob,
     });
   }
   if (!hasAttestationParticipants(aggregate)) {
@@ -54,7 +53,7 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
       // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
-      job: ,
+      job: attestationJob,
     });
   }
 
@@ -63,13 +62,13 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
-      job: ,
+      job: attestationJob,
     });
   }
 
   // TODO: check pool of aggregates if already seen (not a dos vector check)
 
-  const result = await validateAggregateAttestation(config, chain, db, logger, logContext, signedAggregateAndProof);
+  await validateAggregateAttestation(config, chain, db, logger, logContext, signedAggregateAndProof, attestationJob);
 
   logger.profile("gossipAggregateAndProofValidation");
   logger.info("Received gossip aggregate and proof passed validation", logContext);
@@ -85,8 +84,9 @@ export async function validateAggregateAttestation(
   db: IBeaconDb,
   logger: ILogger,
   logContext: ReturnType<typeof getLogContext>,
-  aggregateAndProof: SignedAggregateAndProof
-): Promise<ExtendedValidatorResult> {
+  aggregateAndProof: SignedAggregateAndProof,
+  attestationJob: IAttestationJob
+): Promise<void> {
   const attestation = aggregateAndProof.message.aggregate;
   let attestationPreState;
   try {
@@ -97,7 +97,7 @@ export async function validateAggregateAttestation(
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
       // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
-      job: ,
+      job: attestationJob,
     });
   }
 
@@ -109,12 +109,17 @@ export async function validateAggregateAttestation(
         code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
-        job: ,
+        job: attestationJob,
       });
     }
     if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
       logger.warn("Rejected gossip aggregate and proof", {reason: "not valid aggregator", ...logContext});
-      return ExtendedValidatorResult.reject;
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_INVALID_AGGREGATOR,
+        // targetEpoch: aggregate.data.target.epoch,
+        ...logContext,
+        job: attestationJob,
+      });
     }
     const aggregator = epochCtx.index2pubkey[aggregateAndProof.message.aggregatorIndex];
     if (
@@ -131,7 +136,7 @@ export async function validateAggregateAttestation(
         code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
-        job: ,
+        job: attestationJob,
       });
     }
 
@@ -149,7 +154,7 @@ export async function validateAggregateAttestation(
         code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
-        job: ,
+        job: attestationJob,
       });
     }
 
@@ -161,7 +166,7 @@ export async function validateAggregateAttestation(
         code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
-        job: ,
+        job: attestationJob,
       });
     }
   } catch (e) {
