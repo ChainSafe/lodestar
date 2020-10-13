@@ -41,6 +41,7 @@ export async function validateGossipAggregateAndProof(
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
       // targetEpoch: aggregate.data.target.epoch,
       ...logContext,
+      root: attestationRoot,
       job: attestationJob,
     });
   }
@@ -109,6 +110,7 @@ export async function validateAggregateAttestation(
         code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
+        aggregatorIndex: aggregateAndProof.message.aggregatorIndex,
         job: attestationJob,
       });
     }
@@ -131,11 +133,11 @@ export async function validateAggregateAttestation(
         Signature.fromCompressedBytes(aggregateAndProof.message.selectionProof.valueOf() as Uint8Array)
       )
     ) {
-      logger.warn("Rejected gossip aggregate and proof", {reason: "invalid selection proof signature", ...logContext});
       throw new AttestationError({
         code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
         // targetEpoch: aggregate.data.target.epoch,
         ...logContext,
+        aggregatorIndex: aggregateAndProof.message.aggregatorIndex,
         job: attestationJob,
       });
     }
