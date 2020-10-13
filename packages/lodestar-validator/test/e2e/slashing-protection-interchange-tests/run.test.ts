@@ -1,13 +1,14 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-// @ts-ignore
-import leveldown from "leveldown";
 import {fromHexString} from "@chainsafe/ssz";
 import {SlashingProtectionAttestation, SlashingProtectionBlock} from "@chainsafe/lodestar-types";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+// Test files
+import {loadTestCases} from "@chainsafe/slashing-protection-interchange-tests";
+// Code to test
 import {
   SlashingProtection,
   SlashingProtectionManager,
@@ -15,7 +16,6 @@ import {
   InvalidAttestationError,
   InvalidBlockError,
 } from "../../../src/slashingProtection";
-import {loadTestCases} from "./specs";
 
 chai.use(chaiAsPromised);
 
