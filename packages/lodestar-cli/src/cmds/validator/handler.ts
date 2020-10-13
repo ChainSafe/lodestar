@@ -3,8 +3,7 @@ import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Validator} from "@chainsafe/lodestar-validator";
-import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
+import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
@@ -50,14 +49,9 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
 
       return new Validator({
         config,
-        db: new ValidatorDB({
+        slashingProtection: new SlashingProtection({
           config: config,
-          controller: new LevelDbController(
-            {
-              name: dbPath,
-            },
-            {logger: childLogger}
-          ),
+          controller: new LevelDbController({name: dbPath}, {logger: childLogger}),
         }),
         api,
         logger: childLogger,
