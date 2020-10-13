@@ -1,7 +1,7 @@
 import {BLSPubkey, SlashingProtectionBlock, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {checkAndInsertBlockProposal, SlashingProtectionBlockRepository} from "./block";
 import {checkAndInsertAttestation, SlashingProtectionAttestationRepository} from "./attestation";
-import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar/lib/db/api/abstract";
+import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {ISlashingProtection} from "./interface";
 
 export {ISlashingProtection};

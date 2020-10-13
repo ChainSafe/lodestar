@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController} from "@chainsafe/lodestar/lib/db";
-import {Bucket, encodeKey} from "@chainsafe/lodestar/lib/db/api/schema";
+import {IDatabaseController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 
 interface ITargetEpochFilter {
@@ -13,7 +12,7 @@ interface ITargetEpochFilter {
 export class SlashingProtectionAttestationRepository {
   protected type: Type<SlashingProtectionAttestation>;
   protected db: IDatabaseController<Buffer, Buffer>;
-  protected bucket = 0; // Bucket.slashingProtectionAttestation;
+  protected bucket = Bucket.slashingProtectionAttestation;
 
   constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
     this.db = db;

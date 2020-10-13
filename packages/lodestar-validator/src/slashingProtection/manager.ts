@@ -1,5 +1,5 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar/lib/db/api/abstract";
+import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {SlashingProtectionBlockRepository} from "./block";
 import {SlashingProtectionAttestationRepository} from "./attestation";
 import {
