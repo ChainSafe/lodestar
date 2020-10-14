@@ -52,7 +52,7 @@ describe("gossip aggregate and proof test", function () {
     isValidIndexedAttestationStub.restore();
   });
 
-  it("should ignore - invalid slot (too old)", async function () {
+  it("should throw error - invalid slot (too old)", async function () {
     //move genesis time in past so current slot is high
     chain.getGenesisTime.returns(
       Math.floor(Date.now() / 1000) - (ATTESTATION_PROPAGATION_SLOT_RANGE + 1) * config.params.SECONDS_PER_SLOT
@@ -82,7 +82,7 @@ describe("gossip aggregate and proof test", function () {
     }
   });
 
-  it("should ignore - invalid slot (too eager)", async function () {
+  it("should throw error - invalid slot (too eager)", async function () {
     // move genesis time so slot 0 has not yet come
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000) + MAXIMUM_GOSSIP_CLOCK_DISPARITY + 1);
     sinon
@@ -105,7 +105,7 @@ describe("gossip aggregate and proof test", function () {
     }
   });
 
-  it("should ignore - already seen", async function () {
+  it("should throw error - already seen", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         data: {
@@ -125,7 +125,7 @@ describe("gossip aggregate and proof test", function () {
     expect(db.seenAttestationCache.hasAggregateAndProof.withArgs(item.message).calledOnce).to.be.true;
   });
 
-  it("should reject - no attestation participants", async function () {
+  it("should throw error - no attestation participants", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([false]) as List<boolean>,
@@ -144,7 +144,7 @@ describe("gossip aggregate and proof test", function () {
     }
   });
 
-  it("should reject - attesting to invalid block", async function () {
+  it("should throw error - attesting to invalid block", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -166,7 +166,7 @@ describe("gossip aggregate and proof test", function () {
       .be.true;
   });
 
-  it("should ignore - missing attestation prestate", async function () {
+  it("should throw error - missing attestation prestate", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -188,7 +188,7 @@ describe("gossip aggregate and proof test", function () {
       .true;
   });
 
-  it("should reject - aggregator not in committee", async function () {
+  it("should throw error - aggregator not in committee", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -218,7 +218,7 @@ describe("gossip aggregate and proof test", function () {
     ).to.be.true;
   });
 
-  it("should reject - not aggregator", async function () {
+  it("should throw error - not aggregator", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -246,7 +246,7 @@ describe("gossip aggregate and proof test", function () {
     expect(isAggregatorStub.withArgs(config, 1, item.message.selectionProof).calledOnce).to.be.true;
   });
 
-  it("should reject - invalid selection proof signature", async function () {
+  it("should throw error - invalid selection proof signature", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -277,7 +277,7 @@ describe("gossip aggregate and proof test", function () {
     expect(isValidSelectionProofStub.calledOnce).to.be.true;
   });
 
-  it("should reject - invalid signature", async function () {
+  it("should throw error - invalid signature", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,
@@ -317,7 +317,7 @@ describe("gossip aggregate and proof test", function () {
     ).to.be.true;
   });
 
-  it("should reject - invalid indexed attestation", async function () {
+  it("should throw error - invalid indexed attestation", async function () {
     const item = generateSignedAggregateAndProof({
       aggregate: {
         aggregationBits: Array.from([true]) as List<boolean>,

@@ -58,7 +58,7 @@ describe("gossip attestation validation", function () {
     isValidIndexedAttestationStub.restore();
   });
 
-  it("should reject - attestation has empty aggregation bits", async function () {
+  it("should throw error - attestation has empty aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: ([] as boolean[]) as BitList});
     try {
       await validateGossipAttestation(
@@ -77,7 +77,7 @@ describe("gossip attestation validation", function () {
     }
   });
 
-  it("should reject - attestation has more aggregation bits", async function () {
+  it("should throw error - attestation has more aggregation bits", async function () {
     const attestation = generateAttestation({aggregationBits: [true, true] as BitList});
     try {
       await validateGossipAttestation(
@@ -96,7 +96,7 @@ describe("gossip attestation validation", function () {
     }
   });
 
-  it("should reject - attestation block is invalid", async function () {
+  it("should throw error - attestation block is invalid", async function () {
     const attestation = generateAttestation({aggregationBits: [true] as BitList});
     db.badBlock.has.resolves(true);
     try {
@@ -117,7 +117,7 @@ describe("gossip attestation validation", function () {
     expect(db.badBlock.has.calledOnceWith(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)).to.be.true;
   });
 
-  it("should ignore - old attestation", async function () {
+  it("should throw error - old attestation", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -142,7 +142,7 @@ describe("gossip attestation validation", function () {
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
-  it("should ignore - future attestation", async function () {
+  it("should throw error - future attestation", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -167,7 +167,7 @@ describe("gossip attestation validation", function () {
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
-  it("should ignore - validator already attested to target epoch", async function () {
+  it("should throw error - validator already attested to target epoch", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -191,7 +191,7 @@ describe("gossip attestation validation", function () {
     expect(db.seenAttestationCache.hasCommitteeAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
-  it("should ignore - missing attestation block", async function () {
+  it("should throw error - missing attestation block", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -216,7 +216,7 @@ describe("gossip attestation validation", function () {
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
   });
 
-  it("should ignore - missing attestation pre state context", async function () {
+  it("should throw error - missing attestation pre state context", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -242,7 +242,7 @@ describe("gossip attestation validation", function () {
     expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
   });
 
-  it("should reject - attestation on wrong subnet", async function () {
+  it("should throw error - attestation on wrong subnet", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -273,7 +273,7 @@ describe("gossip attestation validation", function () {
     expect(computeAttestationSubnetStub.calledOnceWith(config, attestationPreState.epochCtx, attestation)).to.be.true;
   });
 
-  it("should reject - invalid indexed attestation", async function () {
+  it("should throw error - invalid indexed attestation", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -306,7 +306,7 @@ describe("gossip attestation validation", function () {
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
-  it("should reject - committee index not within the expected range", async function () {
+  it("should throw error - committee index not within the expected range", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -345,7 +345,7 @@ describe("gossip attestation validation", function () {
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
-  it("should reject - crosslink committee retrieval: out of range epoch", async function () {
+  it("should throw error - crosslink committee retrieval: out of range epoch", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -390,7 +390,7 @@ describe("gossip attestation validation", function () {
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
-  it("should reject - number of aggregation bits does not match the committee size", async function () {
+  it("should throw error - number of aggregation bits does not match the committee size", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
@@ -429,7 +429,7 @@ describe("gossip attestation validation", function () {
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
 
-  it("should reject - epoch slot does not match target", async function () {
+  it("should throw error - epoch slot does not match target", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -469,7 +469,7 @@ describe("gossip attestation validation", function () {
     }
   });
 
-  it("should reject - target block is not an ancestor of the block named in the LMD vote", async function () {
+  it("should throw error - target block is not an ancestor of the block named in the LMD vote", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {
@@ -534,7 +534,7 @@ describe("gossip attestation validation", function () {
     }
   });
 
-  it("should reject - current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root", async function () {
+  it("should throw error - current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root", async function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
       data: {

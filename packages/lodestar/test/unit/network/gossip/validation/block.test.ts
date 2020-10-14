@@ -37,7 +37,7 @@ describe("gossip block validation", function () {
     verifySignatureStub.restore();
   });
 
-  it("should ignore - block slot is finalized", async function () {
+  it("should throw error - block slot is finalized", async function () {
     const block = generateSignedBlock();
     chainStub.getFinalizedCheckpoint.resolves({
       epoch: 1,
@@ -56,7 +56,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
   });
 
-  it("should reject - bad block", async function () {
+  it("should throw error - bad block", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -78,7 +78,7 @@ describe("gossip block validation", function () {
     expect(chainStub.getCanonicalBlockAtSlot.notCalled).to.be.true;
   });
 
-  it("should ignore - already proposed", async function () {
+  it("should throw error - already proposed", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -101,7 +101,7 @@ describe("gossip block validation", function () {
     expect(regenStub.getBlockSlotState.notCalled).to.be.true;
   });
 
-  it("should ignore - missing parent", async function () {
+  it("should throw error - missing parent", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -126,7 +126,7 @@ describe("gossip block validation", function () {
     expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
-  it("should reject - invalid signature", async function () {
+  it("should throw error - invalid signature", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
@@ -156,7 +156,7 @@ describe("gossip block validation", function () {
     expect(verifySignatureStub.calledOnce).to.be.true;
   });
 
-  it("should reject - wrong proposer", async function () {
+  it("should throw error - wrong proposer", async function () {
     sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
     const block = generateSignedBlock({message: {slot: 1}});
     chainStub.getFinalizedCheckpoint.resolves({
