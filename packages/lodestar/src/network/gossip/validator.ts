@@ -11,7 +11,6 @@ import {
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../chain";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
