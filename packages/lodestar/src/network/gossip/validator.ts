@@ -11,6 +11,7 @@ import {
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../chain";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
@@ -71,9 +72,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         return ExtendedValidatorResult.ignore;
       } else if (
         e.code === BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID ||
-        e.code === BlockErrorCode.ERR_PRESTATE_MISSING ||
-        e.code === BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK ||
-        e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER
+        e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER ||
+        e.code === BlockErrorCode.ERR_KNOWN_BAD_BLOCK
       ) {
         this.logger.warn("Rejecting gossip block", e.toObject());
         return ExtendedValidatorResult.reject;
@@ -100,7 +100,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === AttestationErrorCode.ERR_BAD_TARGET_EPOCH ||
         e.code === AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET ||
         e.code === AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS ||
-        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE ||
+        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE || // TODO: where is this?
         e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK ||
         e.code === AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT ||
         e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK ||

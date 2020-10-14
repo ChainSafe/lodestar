@@ -65,7 +65,7 @@ export async function validateGossipAggregateAndProof(
   await validateAggregateAttestation(config, chain, logContext, signedAggregateAndProof, attestationJob);
 
   logger.profile("gossipAggregateAndProofValidation");
-  logger.info("Received gossip aggregate and proof passed validation", logContext);
+  logger.info("Received valid gossip aggregate and proof", logContext);
 }
 
 export function hasAttestationParticipants(attestation: Attestation): boolean {

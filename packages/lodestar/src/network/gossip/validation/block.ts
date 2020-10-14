@@ -106,6 +106,7 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
+
   logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
 }
 

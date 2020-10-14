@@ -78,10 +78,6 @@ export enum BlockErrorCode {
    */
   ERR_BEACON_CHAIN_ERROR = "ERR_BEACON_CHAIN_ERROR",
   /**
-   * The finalized checkpoint is not an ancestor of the block.
-   */
-  ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK = "ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK",
-  /**
    * Block did not pass validation during block processing.
    */
   ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
@@ -150,10 +146,6 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR;
       error: Error;
-    }
-  | {
-      code: BlockErrorCode.ERR_CHECKPOINT_NOT_AN_ANCESTOR_OF_BLOCK;
-      blockSlot: Slot;
     }
   | {
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK;
