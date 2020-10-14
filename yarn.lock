@@ -3433,28 +3433,20 @@ any-promise@^1.0.0:
   resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
   integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
-any-signal@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-1.1.0.tgz#8e43cd0ae03266261d5061595ecf8aaad1828872"
-  integrity sha512-mtwqpy58ys+/dRdH5Z8VArUluVrfz9/5BXo8tvSZ9kcQr3k9yyOPnGrYCBJQfcC5IlMrr63kDBlf5GyQCFn+Fw==
-  dependencies:
-    abort-controller "^3.0.0"
-
-any-signal@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.0.0.tgz#fdf0e92f770b6bc7ad5f03673e8cb2f4b9886404"
-  integrity sha512-+X8EDF+4D+ZlZbgfW49Ma8Q0jnBQyfKUbehpur4C7v5q/EroaYQ5gwZvJquEyTCCPvO1jM6p0dtHanVggdT3OQ==
-  dependencies:
-    abort-controller "^3.0.0"
-    native-abort-controller "0.0.3"
-
-any-signal@^2.1.0:
+any-signal@2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.1.0.tgz#8736f59e0bcb9a0f4b6af3995e520bd789fdc69d"
   integrity sha512-RzrSTVJLe4BK8jk5kw94mXNsMfG6D0I12Mv724xjbqb+9MQn5lWwnzd82Xo5iH0/aBSxYsEUNTLp2ncmzkYaCw==
   dependencies:
     abort-controller "^3.0.0"
     native-abort-controller "0.0.3"
+
+any-signal@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-1.1.0.tgz#8e43cd0ae03266261d5061595ecf8aaad1828872"
+  integrity sha512-mtwqpy58ys+/dRdH5Z8VArUluVrfz9/5BXo8tvSZ9kcQr3k9yyOPnGrYCBJQfcC5IlMrr63kDBlf5GyQCFn+Fw==
+  dependencies:
+    abort-controller "^3.0.0"
 
 anymatch@^2.0.0:
   version "2.0.0"
