@@ -35,8 +35,12 @@ describe("Run single node single thread interop validators (no eth1) until check
         options: {sync: {minPeers: 0}},
         validatorCount: testCase.vc * testCase.validators,
       });
-      const justificationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, testCase.event, timeout - 10 * 1000);
-      const validators = getDevValidators(bn, testCase.validators, testCase.vc);
+      const justificationEventListener = waitForEvent<Checkpoint>(
+        bn.chain.emitter,
+        testCase.event,
+        timeout - 10 * 1000
+      );
+      const validators = getDevValidators(bn, testCase.validators, testCase.vc, true);
       await bn.start();
       await Promise.all(validators.map((v) => v.start()));
       try {
