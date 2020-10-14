@@ -59,7 +59,7 @@ export function getDevValidator({
   logger?: ILogger;
   useRestApi?: boolean;
 }): Validator {
-  if (!logger) logger = new WinstonLogger({level: LogLevel.debug, module: "validator"});
+  if (!logger) logger = new WinstonLogger({level: LogLevel.info, module: "validator"});
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,
@@ -81,7 +81,11 @@ export function getDevValidator({
 }
 
 export function getDevValidatorRestApiClient(node: BeaconNode, logger: ILogger): IApiClient {
-  return new ApiClientOverRest(node.config, "http://127.0.0.1:9596", logger.child({module: "api"}));
+  return new ApiClientOverRest(
+    node.config,
+    "http://127.0.0.1:9596",
+    logger.child({module: "api", level: LogLevel.warn})
+  );
 }
 
 export function getDevValidatorInstanceApiClient(node: BeaconNode, logger: ILogger): IApiClient {
@@ -91,7 +95,7 @@ export function getDevValidatorInstanceApiClient(node: BeaconNode, logger: ILogg
       {},
       {
         ...node,
-        logger,
+        logger: logger.child({module: "api", level: LogLevel.warn}),
         eth1: new Eth1ForBlockProductionDisabled(),
       }
     ),
