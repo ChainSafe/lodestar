@@ -99,7 +99,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         e.code === AttestationErrorCode.ERR_BAD_TARGET_EPOCH ||
         e.code === AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET ||
         e.code === AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS ||
-        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE || // TODO: where is this?
+        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE || // TODO: where is this being checked?
         e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK ||
         e.code === AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT ||
         e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK ||
