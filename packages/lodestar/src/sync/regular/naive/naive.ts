@@ -18,7 +18,7 @@ import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
 import {getSyncPeers} from "../../utils/peers";
-import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
+import {BlockError, BlockErrorCode} from "../../../chain/errors";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
