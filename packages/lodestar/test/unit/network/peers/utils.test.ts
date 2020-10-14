@@ -1,7 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import PeerId from "peer-id";
-import {ReqResp} from "../../../network/reqresp/reqResp";
 import {expect} from "chai";
 import {
   findMissingSubnets,
@@ -12,6 +11,7 @@ import {
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
 import {silentLogger} from "../../../utils/logger";
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
+import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 
 describe("network peer utils", function () {
   const logger = silentLogger;

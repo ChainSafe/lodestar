@@ -1,18 +1,20 @@
-import {assert, expect} from "chai";
-
+/* import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {ReqResp} from "../../network/reqresp/reqResp";
-import {NodejsNode} from "../../../src/network/nodejs";
-import {INetworkOptions} from "../../../src/network/options";
-import {generateEmptySignedBlock} from "../../utils/block";
-import {createNode} from "../../utils/network";
+import {assert, expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {TTFB_TIMEOUT} from "../../../src/constants";
-import {IPeerMetadataStore} from "../../../src/network/peers/interface";
-import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
-import {silentLogger} from "../../utils/logger";
-import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../src/network/peers/score";
+import {TTFB_TIMEOUT} from "../../../../src/constants/network";
+import {NodejsNode} from "../../../../src/network/nodejs/bundle";
+import {INetworkOptions} from "../../../../src/network/options";
+import {
+  IPeerMetadataStore,
+  IRpcScoreTracker,
+  Libp2pPeerMetadataStore,
+  SimpleRpcScoreTracker,
+} from "../../../../src/network/peers";
+import {ReqResp, sendResponse, sendResponseStream} from "../../../../src/network/reqresp";
+import {generateEmptySignedBlock} from "../../../utils/block";
+import {silentLogger} from "../../../utils/logger";
+import {createNode} from "../../../utils/network";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -84,9 +86,17 @@ describe("[network] rpc", () => {
   it("can send/receive status messages from connected peers", async function () {
     this.timeout(10000);
     // send status from A to B, await status response
-    rpcB.once("request", (peerInfo, method, id, body) => {
-      setTimeout(() => {
-        rpcB.sendResponse(id, null, body as Status);
+    rpcB.once("request", (request, peerId, sink) => {
+      setTimeout(async () => {
+        await sendResponse(
+          {config, logger: silentLogger},
+          request.id,
+          request.method,
+          request.encoding,
+          sink,
+          null,
+          request.body as Status
+        );
       }, 100);
     });
     try {
@@ -103,9 +113,17 @@ describe("[network] rpc", () => {
       assert.fail("status not received");
     }
     // send status from B to A, await status response
-    rpcA.once("request", (peerInfo, method, id, body) => {
-      setTimeout(() => {
-        rpcA.sendResponse(id, null, body as Status);
+    rpcA.once("request", (request, peerId, sink) => {
+      setTimeout(async () => {
+        await sendResponse(
+          {config, logger: silentLogger},
+          request.id,
+          request.method,
+          request.encoding,
+          sink,
+          null,
+          request.body as Status
+        );
       }, 100);
     });
     try {
@@ -133,14 +151,18 @@ describe("[network] rpc", () => {
       return block;
     };
     // send block by range requests from A to B
-    rpcB.on("request", (peerInfo, method, id, body) => {
-      const requestBody = body as BeaconBlocksByRangeRequest;
+    rpcB.on("request", async (request, peerId, sink) => {
+      const requestBody = request.body as BeaconBlocksByRangeRequest;
       const blocks: SignedBeaconBlock[] = [];
       for (let i = requestBody.startSlot; i < +requestBody.startSlot + requestBody.count; i++) {
         blocks.push(generateBlockForSlot(i));
       }
-      rpcB.sendResponseStream(
-        id,
+      await sendResponseStream(
+        {config, logger: silentLogger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
         null,
         (async function* () {
           yield* blocks;
@@ -173,12 +195,16 @@ describe("[network] rpc", () => {
 
   it("allow empty lists in streamed response", async function () {
     this.timeout(6000);
-    rpcB.on("request", (peerInfo, method, id) => {
-      rpcB.sendResponseStream(
-        id,
+    rpcB.on("request", async (request, peerId, sink) => {
+      await sendResponseStream(
+        {config, logger: silentLogger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
         null,
         (async function* (): any {
-          if (id === "-1") yield null;
+          if (request.id === "-1") yield null;
         })()
       );
     });
@@ -242,3 +268,4 @@ describe("[network] rpc", () => {
     timer.restore();
   });
 });
+ */

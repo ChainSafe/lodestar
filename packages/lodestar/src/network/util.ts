@@ -5,7 +5,7 @@
 
 import PeerId from "peer-id";
 import {Type} from "@chainsafe/ssz";
-import {AbortController} from "abort-controller";
+import {AbortController, AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
@@ -13,6 +13,7 @@ import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
 import {RESPONSE_TIMEOUT_ERR} from "./error";
+import {anySignal} from "any-signal";
 
 // req/resp
 
@@ -141,21 +142,24 @@ export async function dialProtocol(
   const timer = setTimeout(() => {
     abortController.abort();
   }, timeout);
-  const abortHandler = (): void => abortController.abort();
-  signal?.addEventListener("abort", abortHandler, {once: true});
+  const signals = [abortController.signal];
+  if (signal) {
+    signals.push(signal);
+  }
+  const abortSignal = anySignal(signals);
+  abortSignal.addEventListener("abort", () => console.error("Dial aborted"));
   try {
-    const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortController.signal} as object);
-    if (!conn) {
+    console.error("dialing");
+    const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortSignal});
+    console.error("conn", conn, );
+    if (!conn || conn instanceof Promise) {
       throw new Error("timeout");
     }
     return conn;
-    // eslint-disable-next-line no-useless-catch
   } catch (e) {
     const err = new Error(e.code || e.message);
-    // err.stack = e.stack;
     throw err;
   } finally {
-    signal?.removeEventListener("abort", abortHandler);
     clearTimeout(timer);
   }
 }

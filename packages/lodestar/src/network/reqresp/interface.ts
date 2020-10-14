@@ -1,14 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {RequestId, RequestBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ReqEventEmitter, RespEventEmitter} from "..";
+import {ReqEventEmitter} from "..";
+import {Method, ReqRespEncoding} from "../../constants";
 import {IPeerMetadataStore, IRpcScoreTracker} from "../peers";
 
 export interface IReqEventEmitterClass {
   new (): ReqEventEmitter;
-}
-
-export interface IRespEventEmitterClass {
-  new (): RespEventEmitter;
 }
 
 export interface IReqRespModules {
@@ -18,3 +16,10 @@ export interface IReqRespModules {
   peerMetadata: IPeerMetadataStore;
   blockProviderScores: IRpcScoreTracker;
 }
+
+export type ReqRespRequest<Body extends RequestBody | null = null> = {
+  method: Method;
+  id: RequestId;
+  body: Body;
+  encoding: ReqRespEncoding;
+};

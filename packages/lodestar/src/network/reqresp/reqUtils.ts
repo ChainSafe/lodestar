@@ -1,6 +1,6 @@
 import {IBeaconSSZTypes, RequestBody, RequestId, ResponseBody} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
-import AbortController from "abort-controller";
+import AbortController, {AbortSignal} from "abort-controller";
 import {duplex as abortDuplex} from "abortable-iterator";
 import all from "it-all";
 import pipe from "it-pipe";
@@ -13,8 +13,8 @@ import {
   isRequestSingleChunk,
   randomRequestId,
 } from "..";
-import {IBeaconConfig} from "../../../../lodestar-config/lib/interface";
-import {ILogger} from "../../../../lodestar-utils/lib/logger/interface";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT} from "../../constants";
 import {eth2RequestEncode} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
@@ -27,6 +27,9 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   body?: RequestBody,
   signal?: AbortSignal
 ): Promise<T | null> {
+  if (signal?.aborted) {
+    throw new Error("aborted");
+  }
   const requestOnly = isRequestOnly(method);
   const requestSingleChunk = isRequestSingleChunk(method);
   const requestId = randomRequestId();
@@ -66,7 +69,7 @@ export function sendRequestStream<T extends ResponseBody>(
     logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
     const controller = new AbortController();
     await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
-    conn.stream.reset();
+    logger.verbose("sent request", {peer: peerId.toB58String(), method});
     yield* pipe(
       abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
       eth2ResponseTimer(controller),

@@ -2,7 +2,8 @@
  * @module sync
  */
 
-import PeerId from "peer-id";
+import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
@@ -13,18 +14,19 @@ import {
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_EPOCH, Method, RequestId, RpcResponseStatus, ZERO_HASH} from "../../constants";
-import {IBeaconDb} from "../../db";
-import {IBeaconChain} from "../../chain";
-import {createRpcProtocol, INetwork} from "../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IReqRespHandler} from "./interface";
-import {computeStartSlotAtEpoch, GENESIS_SLOT, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
+import PeerId from "peer-id";
+import {IBeaconChain} from "../../chain";
+import {GENESIS_EPOCH, Method, RpcResponseStatus, ZERO_HASH} from "../../constants";
+import {IBeaconDb} from "../../db";
+import {createRpcProtocol, INetwork} from "../../network";
 import {RpcError} from "../../network/error";
-import {createStatus, syncPeersStatus} from "../utils/sync";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
+import {ReqRespRequest} from "../../network/reqresp";
+import {sendResponse, sendResponseStream} from "../../network/reqresp/respUtils";
+import {createStatus, syncPeersStatus} from "../utils/sync";
+import {IReqRespHandler} from "./interface";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;
@@ -68,7 +70,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async stop(): Promise<void> {
     this.network.removeListener("peer:connect", this.handshake);
-    this.network.reqResp.removeListener("request", this.onRequest);
     await Promise.all(
       this.network
         .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, "ssz_snappy")]})
@@ -80,29 +81,38 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           }
         })
     );
+    this.network.reqResp.removeListener("request", this.onRequest);
   }
 
-  public onRequest = async (peerId: PeerId, method: Method, id: RequestId, body?: RequestBody): Promise<void> => {
-    switch (method) {
+  public onRequest = async (
+    request: ReqRespRequest<RequestBody | null>,
+    peerId: PeerId,
+    sink: Sink<unknown, unknown>
+  ): Promise<void> => {
+    switch (request.method) {
       case Method.Status:
-        return await this.onStatus(peerId, id, body as Status);
+        return await this.onStatus(request as ReqRespRequest<Status>, peerId, sink);
       case Method.Goodbye:
-        return await this.onGoodbye(peerId, id, body as Goodbye);
+        return await this.onGoodbye(request as ReqRespRequest<Goodbye>, peerId, sink);
       case Method.Ping:
-        return await this.onPing(peerId, id, body as Ping);
+        return await this.onPing(request as ReqRespRequest<Ping>, peerId, sink);
       case Method.Metadata:
-        return await this.onMetadata(peerId, id);
+        return await this.onMetadata(request as ReqRespRequest<null>, peerId, sink);
       case Method.BeaconBlocksByRange:
-        return await this.onBeaconBlocksByRange(id, body as BeaconBlocksByRangeRequest);
+        return await this.onBeaconBlocksByRange(request as ReqRespRequest<BeaconBlocksByRangeRequest>, peerId, sink);
       case Method.BeaconBlocksByRoot:
-        return await this.onBeaconBlocksByRoot(id, body as BeaconBlocksByRootRequest);
+        return await this.onBeaconBlocksByRoot(request as ReqRespRequest<BeaconBlocksByRootRequest>, peerId, sink);
       default:
-        this.logger.error(`Invalid request method ${method} from ${peerId.toB58String()}`);
+        this.logger.error("Invalid request - unsupported method", {
+          id: request.id,
+          method: request.method,
+          peer: peerId.toB58String(),
+        });
     }
   };
 
-  public async onStatus(peerId: PeerId, id: RequestId, request: Status): Promise<void> {
-    if (await this.shouldDisconnectOnStatus(request)) {
+  public async onStatus(request: ReqRespRequest<Status>, peerId: PeerId, sink: Sink<unknown, unknown>): Promise<void> {
+    if (await this.shouldDisconnectOnStatus(request.body)) {
       try {
         await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
       } catch {
@@ -111,14 +121,29 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       }
     }
     // set status on peer
-    this.network.peerMetadata.setStatus(peerId, request);
+    this.network.peerMetadata.setStatus(peerId, request.body);
     // send status response
     try {
       const status = await createStatus(this.chain);
-      this.network.reqResp.sendResponse(id, null, status);
+      await sendResponse(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        null,
+        status
+      );
     } catch (e) {
       this.logger.error("Failed to create response status", e.message);
-      this.network.reqResp.sendResponse(id, e);
+      await sendResponse(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        e
+      );
     }
   }
 
@@ -188,71 +213,123 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     return false;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async onGoodbye(peerId: PeerId, id: RequestId, request: Goodbye): Promise<void> {
+  public async onGoodbye(
+    request: ReqRespRequest<Goodbye>,
+    peerId: PeerId,
+    sink: Sink<unknown, unknown>
+  ): Promise<void> {
     this.logger.info(`Received goodbye request from ${peerId.toB58String()}, reason=${request}`);
-    this.network.reqResp.sendResponse(id, null, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
-    // //  TODO: fix once we can check if response is sent
-    const disconnect = this.network.disconnect.bind(this.network);
-    setTimeout(async () => {
-      try {
-        await disconnect(peerId);
-      } catch (e) {
-        //ignored probably peer disconnected already
-      }
-    }, 400);
+    await sendResponse(
+      {config: this.config, logger: this.logger},
+      request.id,
+      request.method,
+      request.encoding,
+      sink,
+      null,
+      BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN)
+    );
+    await this.network.disconnect(peerId);
   }
 
-  public async onPing(peerId: PeerId, id: RequestId, request: Ping): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, this.network.metadata.seqNumber);
+  public async onPing(request: ReqRespRequest<Ping>, peerId: PeerId, sink: Sink<unknown, unknown>): Promise<void> {
+    await sendResponse(
+      {config: this.config, logger: this.logger},
+      request.id,
+      request.method,
+      request.encoding,
+      sink,
+      null,
+      this.network.metadata.seqNumber
+    );
     // no need to wait
-    handlePeerMetadataSequence(this.network, this.logger, peerId, request).catch(() => {
+    handlePeerMetadataSequence(this.network, this.logger, peerId, request.body).catch(() => {
       this.logger.warn(`Failed to handle peer ${peerId.toB58String()} metadata sequence ${request}`);
     });
   }
 
-  public async onMetadata(peerId: PeerId, id: RequestId): Promise<void> {
-    this.network.reqResp.sendResponse(id, null, this.network.metadata.metadata);
+  public async onMetadata(request: ReqRespRequest<null>, peerId: PeerId, sink: Sink<unknown, unknown>): Promise<void> {
+    await sendResponse(
+      {config: this.config, logger: this.logger},
+      request.id,
+      request.method,
+      request.encoding,
+      sink,
+      null,
+      this.network.metadata.metadata
+    );
   }
 
-  public async onBeaconBlocksByRange(id: RequestId, request: BeaconBlocksByRangeRequest): Promise<void> {
-    if (request.step < 1 || request.startSlot < GENESIS_SLOT || request.count < 1) {
-      this.logger.error(
-        `Invalid request id ${id} start: ${request.startSlot} step: ${request.step}` + ` count: ${request.count}`
+  public async onBeaconBlocksByRange(
+    request: ReqRespRequest<BeaconBlocksByRangeRequest>,
+    peerId: PeerId,
+    sink: Sink<unknown, unknown>
+  ): Promise<void> {
+    if (request.body.step < 1 || request.body.startSlot < GENESIS_SLOT || request.body.count < 1) {
+      this.logger.error("Invalid request", {
+        id: request.id,
+        method: request.method,
+        ...request.body,
+      });
+      await sendResponse(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request")
       );
-      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.ERR_INVALID_REQ, "Invalid request"));
       return;
     }
-    if (request.count > 1000) {
-      this.logger.warn(`Request id ${id} asked for ${request.count} blocks, just return 1000 maximum`);
-      request.count = 1000;
+    if (request.body.count > 1000) {
+      this.logger.warn(`Request id ${request.id} asked for ${request.body.count} blocks, just return 1000 maximum`);
+      request.body.count = 1000;
     }
     try {
-      if (request.count > MAX_REQUEST_BLOCKS) {
+      if (request.body.count > MAX_REQUEST_BLOCKS) {
         this.logger.warn(
-          `Request id ${id} asked for ${request.count} blocks, ` + `just return ${MAX_REQUEST_BLOCKS} maximum`
+          `Request id ${request.id} asked for ${request.body.count} blocks, ` +
+            `just return ${MAX_REQUEST_BLOCKS} maximum`
         );
-        request.count = MAX_REQUEST_BLOCKS;
+        request.body.count = MAX_REQUEST_BLOCKS;
       }
       const archiveBlocksStream = this.db.blockArchive.valuesStream({
-        gte: request.startSlot,
-        lt: request.startSlot + request.count * request.step,
-        step: request.step,
+        gte: request.body.startSlot,
+        lt: request.body.startSlot + request.body.count * request.body.step,
+        step: request.body.step,
       });
-      const responseStream = this.injectRecentBlocks(this.config, archiveBlocksStream, this.chain, request);
-      this.network.reqResp.sendResponseStream(id, null, responseStream);
+      const responseStream = this.injectRecentBlocks(this.config, archiveBlocksStream, this.chain, request.body);
+      await sendResponseStream(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        null,
+        responseStream
+      );
     } catch (e) {
-      this.logger.error(`Error processing request id ${id}: ${e.message}`);
-      this.network.reqResp.sendResponse(id, new RpcError(RpcResponseStatus.SERVER_ERROR, e.message));
+      this.logger.error(`Error processing request id ${request.id}: ${e.message}`);
+      await sendResponse(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        new RpcError(RpcResponseStatus.SERVER_ERROR, e.message)
+      );
     }
   }
 
-  public async onBeaconBlocksByRoot(id: RequestId, request: BeaconBlocksByRootRequest): Promise<void> {
+  public async onBeaconBlocksByRoot(
+    request: ReqRespRequest<BeaconBlocksByRootRequest>,
+    peerId: PeerId,
+    sink: Sink<unknown, unknown>
+  ): Promise<void> {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
       const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
       const blockGenerator = (async function* () {
-        for (const blockRoot of request) {
+        for (const blockRoot of request.body) {
           const root = blockRoot.valueOf() as Uint8Array;
           const block = (await getBlock(root)) || (await getFinalizedBlock(root));
           if (block) {
@@ -260,9 +337,24 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           }
         }
       })();
-      this.network.reqResp.sendResponseStream(id, null, blockGenerator);
+      await sendResponseStream(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        null,
+        blockGenerator
+      );
     } catch (e) {
-      this.network.reqResp.sendResponse(id, e);
+      await sendResponse(
+        {config: this.config, logger: this.logger},
+        request.id,
+        request.method,
+        request.encoding,
+        sink,
+        e
+      );
     }
   }
 

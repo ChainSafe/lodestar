@@ -3448,6 +3448,14 @@ any-signal@^2.0.0:
     abort-controller "^3.0.0"
     native-abort-controller "0.0.3"
 
+any-signal@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.1.0.tgz#8736f59e0bcb9a0f4b6af3995e520bd789fdc69d"
+  integrity sha512-RzrSTVJLe4BK8jk5kw94mXNsMfG6D0I12Mv724xjbqb+9MQn5lWwnzd82Xo5iH0/aBSxYsEUNTLp2ncmzkYaCw==
+  dependencies:
+    abort-controller "^3.0.0"
+    native-abort-controller "0.0.3"
+
 anymatch@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/anymatch/-/anymatch-2.0.0.tgz#bcb24b4f37934d9aa7ac17b4adaf89e7c76ef2eb"
