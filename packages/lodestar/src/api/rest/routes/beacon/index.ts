@@ -11,6 +11,7 @@ import {
   getGenesis,
   getPoolAttestations,
   getStateFinalityCheckpoints,
+  publishBlock,
 } from "../../controllers/beacon";
 
 //old
@@ -42,6 +43,7 @@ export function registerBeaconRoutes(server: FastifyInstance): void {
       fastify.get(getBlock.url, getBlock.opts, getBlock.handler);
       fastify.get(getBlockRoot.url, getBlockRoot.opts, getBlockRoot.handler);
       fastify.get(getBlockAttestations.url, getBlockAttestations.opts, getBlockAttestations.handler);
+      fastify.post(publishBlock.url, publishBlock.opts, publishBlock.handler);
     },
     {prefix: "/v1/beacon"}
   );
