@@ -93,6 +93,13 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.chain.emitter.removeListener("checkpoint", this.checkSyncCompleted);
   }
 
+  /**
+   * Make sure we get up-to-date lastProcessedBlock from sync().
+   */
+  public getLastProcessedBlock(): ISyncCheckpoint {
+    return this.lastProcessedBlock;
+  }
+
   public getHighestBlock(): Slot {
     return computeStartSlotAtEpoch(this.config, this.targetCheckpoint!.epoch);
   }
@@ -129,11 +136,11 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         network,
         logger,
         opts,
-        getLastProcessedBlock,
         setBlockImportTarget,
         updateBlockImportTarget,
         getInitialSyncPeers,
       } = this;
+      const getLastProcessedBlock = this.getLastProcessedBlock.bind(this);
       return (async function () {
         for await (const slotRange of source) {
           const lastSlot = await pipe(
@@ -214,13 +221,6 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       .map((peer) => this.network.peerMetadata.getStatus(peer.id))
       .filter(notNullish);
   }
-
-  /**
-   * Make sure we get up-to-date lastProcessedBlock from sync().
-   */
-  private getLastProcessedBlock = (): ISyncCheckpoint => {
-    return this.lastProcessedBlock;
-  };
 
   /**
    * Returns peers which has same finalized Checkpoint

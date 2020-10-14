@@ -55,6 +55,11 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.subscribeToBlock = false;
   }
 
+  public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
+    this.lastProcessedBlock = lastProcessedBlock;
+    this.currentTarget = lastProcessedBlock.slot;
+  }
+
   public async start(): Promise<void> {
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
@@ -65,14 +70,11 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       await this.stop();
       return;
     }
-    this.currentTarget = headSlot;
-    this.lastProcessedBlock = this.chain.forkChoice.getHead();
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
     await this.waitForBestPeer(this.controller.signal);
-    const newTarget = this.getNewTarget();
-    this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
+    this.logger.info("Regular Sync: Setting target", {newTargetSlot: this.getNewTarget()});
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
     // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
     this.chain.emitter.on("block", this.onProcessedBlock);

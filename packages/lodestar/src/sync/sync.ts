@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncCheckpoint, ISyncModules} from "./interface";
 import defaultOptions, {ISyncOptions} from "./options";
 import {getSyncProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -68,7 +68,7 @@ export class BeaconSync implements IBeaconSync {
     }
     this.peerCountTimer = setInterval(this.logPeerCount, 3 * this.config.params.SECONDS_PER_SLOT * 1000);
     await this.startInitialSync();
-    await this.startRegularSync();
+    await this.startRegularSync(this.initialSync.getLastProcessedBlock());
     if (this.peerCountTimer) {
       clearInterval(this.peerCountTimer);
     }
@@ -143,10 +143,14 @@ export class BeaconSync implements IBeaconSync {
     await this.initialSync.start();
   }
 
-  private async startRegularSync(): Promise<void> {
+  /**
+   * This can also be used to recover when the node is out of sync
+   */
+  private async startRegularSync(lastProcessedBlock: ISyncCheckpoint): Promise<void> {
     if (this.mode === SyncMode.STOPPED) return;
     this.mode = SyncMode.REGULAR_SYNCING;
     await this.initialSync.stop();
+    this.regularSync.setLastProcessedBlock(lastProcessedBlock);
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.syncCompleted);
     await this.gossip.start();

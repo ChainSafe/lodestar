@@ -1,5 +1,5 @@
 import {IService} from "../../node";
-import {ISyncModule, ISyncModules} from "../index";
+import {ISyncCheckpoint, ISyncModule, ISyncModules} from "../index";
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
@@ -9,6 +9,10 @@ export interface IRegularSyncEvents {
 
 export type RegularSyncEventEmitter = StrictEventEmitter<EventEmitter, IRegularSyncEvents>;
 
-export type IRegularSync = IService & ISyncModule & RegularSyncEventEmitter;
+export type IRegularSync = IService &
+  ISyncModule &
+  RegularSyncEventEmitter & {
+    setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void;
+  };
 
 export type IRegularSyncModules = Pick<ISyncModules, "config" | "chain" | "network" | "logger">;
