@@ -14,7 +14,7 @@ import {AttesterSlashingErrorCode} from "../../../../../src/chain/errors/atteste
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingAttesterSlashingStub: any, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb, isValidIncomingAttesterSlashingStub: SinonStub, chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
