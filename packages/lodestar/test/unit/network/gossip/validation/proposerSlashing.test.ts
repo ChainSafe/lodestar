@@ -14,7 +14,7 @@ import {validateGossipProposerSlashing} from "../../../../../src/network/gossip/
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, isValidIncomingProposerSlashingStub: any, chainStub: StubbedChain;
+  let dbStub: StubbedBeaconDb, isValidIncomingProposerSlashingStub: SinonStub, chainStub: StubbedChain;
 
   beforeEach(() => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
