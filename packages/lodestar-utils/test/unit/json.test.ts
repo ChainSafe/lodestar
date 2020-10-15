@@ -74,10 +74,9 @@ describe("Json helper", () => {
         const data = "foo";
         const error = new SampleError(data);
         return {
-          id: "External error with metadata",
+          id: "External error with metadata (ignored)",
           arg: error,
           json: {
-            data,
             message: error.message,
             stack: error.stack,
           },

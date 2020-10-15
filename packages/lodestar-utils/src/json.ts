@@ -1,10 +1,5 @@
 import {Json, toHexString} from "@chainsafe/ssz";
-import {pick} from "lodash";
 import {LodestarError} from "./errors";
-
-export function errorToObject(obj: Error): Json {
-  return pick(obj, Object.getOwnPropertyNames(obj)) as Json;
-}
 
 export function toJson(arg: unknown): Json {
   switch (typeof arg) {
@@ -47,6 +42,13 @@ export function toString(json: Json, nested = false): string {
     default:
       return String(json);
   }
+}
+
+function errorToObject(err: Error): Json {
+  return {
+    message: err.message,
+    ...(err.stack ? {stack: err.stack} : {}),
+  };
 }
 
 /**
