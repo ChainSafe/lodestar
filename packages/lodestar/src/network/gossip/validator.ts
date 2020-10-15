@@ -52,18 +52,18 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       } as IBlockJob;
       await validateGossipBlock(this.config, this.chain, this.db, this.logger, blockJob);
     } catch (e) {
-      this.logger.error("Error while validating gossip block", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip block");
+      switch (e.type.code) {
         case BlockErrorCode.ERR_FUTURE_SLOT:
         case BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT:
         case BlockErrorCode.ERR_REPEAT_PROPOSAL:
         case BlockErrorCode.ERR_PARENT_UNKNOWN:
-          this.logger.warn("Ignoring gossip block", e.toObject());
+          this.logger.warn("Ignoring gossip block", e.type);
           return ExtendedValidatorResult.ignore;
         case BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID:
         case BlockErrorCode.ERR_INCORRECT_PROPOSER:
         case BlockErrorCode.ERR_KNOWN_BAD_BLOCK:
-          this.logger.warn("Rejecting gossip block", e.toObject());
+          this.logger.warn("Rejecting gossip block", e.type);
           return ExtendedValidatorResult.reject;
         default:
           break;
@@ -83,8 +83,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       } as IAttestationJob;
       await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestationJob, subnet);
     } catch (e) {
-      this.logger.error("Error while validating gossip attestation", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip attestation");
+      switch (e.type.code) {
         case AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE:
         case AttestationErrorCode.ERR_INVALID_SUBNET_ID:
         case AttestationErrorCode.ERR_BAD_TARGET_EPOCH:
@@ -95,13 +95,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT:
         case AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
         case AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION:
-          this.logger.warn("Rejecting gossip attestation", e.toObject());
+          this.logger.warn("Rejecting gossip attestation", e.type);
           return ExtendedValidatorResult.reject;
         case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
         case AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
-          this.logger.warn("Ignoring gossip attestation", e.toObject());
+          this.logger.warn("Ignoring gossip attestation", e.type);
           return ExtendedValidatorResult.ignore;
         default:
           break;
@@ -127,8 +127,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         attestationJob
       );
     } catch (e) {
-      this.logger.error("Error while validating gossip aggregate and proof", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip aggregate and proof");
+      switch (e.type.code) {
         case AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS:
         case AttestationErrorCode.ERR_KNOWN_BAD_BLOCK:
         case AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE:
@@ -136,12 +136,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_INVALID_SIGNATURE:
         case AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION:
         case AttestationErrorCode.ERR_INVALID_AGGREGATOR:
-          this.logger.warn("Rejecting gossip aggregate & Proof", e.toObject());
+          this.logger.warn("Rejecting gossip aggregate & Proof", e.type);
           return ExtendedValidatorResult.reject;
         case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
         case AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
-          this.logger.warn("Ignoring gossip aggregate & Proof", e.toObject());
+          this.logger.warn("Ignoring gossip aggregate & Proof", e.type);
           return ExtendedValidatorResult.ignore;
         default:
           break;
@@ -157,13 +157,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipVoluntaryExit(this.config, this.chain, this.db, voluntaryExit);
     } catch (e) {
-      this.logger.error("Error while validating gossip voluntary exit", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip voluntary exit");
+      switch (e.type.code) {
         case ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
-          this.logger.warn("Ignoring gossip voluntary exit", e.toObject());
+          this.logger.warn("Ignoring gossip voluntary exit", e.type);
           return ExtendedValidatorResult.ignore;
         case ProposerSlashingErrorCode.ERR_INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip voluntary exit", e.toObject());
+          this.logger.warn("Rejecting gossip voluntary exit", e.type);
           return ExtendedValidatorResult.reject;
         default:
           break;
@@ -178,13 +178,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipProposerSlashing(this.config, this.chain, this.db, proposerSlashing);
     } catch (e) {
-      this.logger.error("Error while validating gossip proposer slashing", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip proposer slashing");
+      switch (e.type.code) {
         case ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
-          this.logger.warn("Ignoring gossip proposer slashing", e.toObject());
+          this.logger.warn("Ignoring gossip proposer slashing", e.type);
           return ExtendedValidatorResult.ignore;
         case ProposerSlashingErrorCode.ERR_INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip proposer slashing", e.toObject());
+          this.logger.warn("Rejecting gossip proposer slashing", e.type);
           return ExtendedValidatorResult.reject;
         default:
           break;
@@ -199,13 +199,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
     try {
       await validateGossipAttesterSlashing(this.config, this.chain, this.db, attesterSlashing);
     } catch (e) {
-      this.logger.error("Error while validating gossip attester slashing", e);
-      switch (e.code) {
+      this.logger.error("Error while validating gossip attester slashing");
+      switch (e.type.code) {
         case AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
-          this.logger.warn("Ignoring gossip attester slashing", e.toObject());
+          this.logger.warn("Ignoring gossip attester slashing", e.type);
           return ExtendedValidatorResult.ignore;
         case AttesterSlashingErrorCode.ERR_INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip attester slashing", e.toObject());
+          this.logger.warn("Rejecting gossip attester slashing", e.type);
           return ExtendedValidatorResult.reject;
         default:
           break;
