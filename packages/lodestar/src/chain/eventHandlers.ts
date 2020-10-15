@@ -104,9 +104,13 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
     })
   );
   await Promise.all(
-    this.pendingBlocks.getBySlot(slot).map((job) => {
-      this.pendingBlocks.remove(job);
-      return this.blockProcessor.processBlockJob(job);
+    this.pendingBlocks.getBySlot(slot).map(async (root) => {
+      const pendingBlock = await this.db.pendingBlock.get(root);
+      if (pendingBlock) {
+        this.pendingBlocks.remove(pendingBlock);
+        await this.db.pendingBlock.delete(root);
+        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+      }
     })
   );
   const pendingJobs = this.pendingBlocks.getPendingBlocks();
@@ -226,9 +230,13 @@ export async function onBlock(
   }
   await this.db.processBlockOperations(block);
   await Promise.all(
-    this.pendingBlocks.getByParent(blockRoot).map((job) => {
-      this.pendingBlocks.remove(job);
-      return this.blockProcessor.processBlockJob(job);
+    this.pendingBlocks.getByParent(blockRoot).map(async (root) => {
+      const pendingBlock = await this.db.pendingBlock.get(root);
+      if (pendingBlock) {
+        this.pendingBlocks.remove(pendingBlock);
+        await this.db.pendingBlock.delete(root);
+        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+      }
     })
   );
 }
@@ -276,14 +284,16 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      this.pendingBlocks.addBySlot(err.job);
+      await this.db.pendingBlock.add(err.job.signedBlock);
+      this.pendingBlocks.addBySlot(err.job.signedBlock);
       break;
     case BlockErrorCode.ERR_PARENT_UNKNOWN:
       this.logger.debug("Add block to pool", {
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      this.pendingBlocks.addByParent(err.job);
+      await this.db.pendingBlock.add(err.job.signedBlock);
+      this.pendingBlocks.addByParent(err.job.signedBlock);
       break;
     case BlockErrorCode.ERR_INCORRECT_PROPOSER:
     case BlockErrorCode.ERR_REPEAT_PROPOSAL:
