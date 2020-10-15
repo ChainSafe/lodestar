@@ -31,7 +31,7 @@ const opts: fastify.RouteShorthandOptions<Server, IncomingMessage, ServerRespons
       properties: {
         validator_pubkeys: {
           type: "array",
-          maxItems: 5,
+          maxItems: 64,
           items: {
             type: "string",
           },
