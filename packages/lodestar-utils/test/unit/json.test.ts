@@ -3,6 +3,10 @@ import {expect} from "chai";
 import {LodestarError, toJson, toString} from "../../src";
 
 describe("Json helper", () => {
+  const circularReference = {};
+  // @ts-ignore
+  circularReference.myself = circularReference;
+
   describe("toJson", () => {
     interface ITestCase {
       id: string;
@@ -91,6 +95,9 @@ describe("Json helper", () => {
           },
         };
       },
+
+      // Circular references
+      {id: "circular reference", arg: circularReference, json: circularReference},
     ];
 
     for (const testCase of testCases) {
@@ -129,6 +136,9 @@ describe("Json helper", () => {
       {id: "object of basic types", json: {a: 1, b: 2}, output: "a=1, b=2"},
       // eslint-disable-next-line quotes
       {id: "object of objects", json: {a: {b: 1}}, output: `a={"b":1}`},
+
+      // Circular references
+      {id: "circular reference", json: circularReference, output: "myself=ERROR_CIRCULAR_REFERENCE"},
     ];
 
     for (const testCase of testCases) {
