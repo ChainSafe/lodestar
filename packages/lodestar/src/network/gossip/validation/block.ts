@@ -20,9 +20,9 @@ export async function validateGossipBlock(
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
   const logContext = {
     blockSlot,
-    blockRoot,
+    blockRoot: toHexString(blockRoot),
   };
-  logger.verbose("Started gossip block validation", {blockSlot, blockRoot: toHexString(blockRoot)});
+  logger.verbose("Started gossip block validation", logContext);
   const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
@@ -107,7 +107,7 @@ export async function validateGossipBlock(
     });
   }
 
-  logger.info("Received valid gossip block", {blockSlot, blockRoot: toHexString(blockRoot)});
+  logger.info("Received valid gossip block", logContext);
 }
 
 export async function hasProposerAlreadyProposed(

@@ -19,9 +19,9 @@ export enum AttestationErrorCode {
    */
   ERR_PAST_SLOT = "ERR_PAST_SLOT",
   /**
-   * The attestation is from a slot that is out of range.
+   * The attestation has an invalid slot time.
    */
-  ERR_SLOT_OUT_OF_RANGE = "ERR_SLOT_OUT_OF_RANGE",
+  ERR_INVALID_SLOT_TIME = "ERR_INVALID_SLOT_TIME",
   /**
    * The attestations aggregation bits were empty when they shouldn't be.
    */
@@ -54,7 +54,7 @@ export enum AttestationErrorCode {
   /**
    * The `attestation.data.beacon_block_root` block is unknown.
    */
-  ERR_UNKNOWN_HEAD_BLOCK = "ERR_UNKNOWN_HEAD_BLOCK",
+  ERR_UNKNOWN_BEACON_BLOCK_ROOT = "ERR_UNKNOWN_BEACON_BLOCK_ROOT",
   /**
    * The `attestation.data.slot` is not from the same epoch as `data.target.epoch`.
    */
@@ -142,9 +142,24 @@ export enum AttestationErrorCode {
   ERR_INVALID_AGGREGATOR = "ERR_INVALID_AGGREGATOR",
 }
 
-export type AttestationErrorType =
+export type AttestationLogContext = {
+  attestationSlot: Slot;
+  attestationBlockRoot: string;
+  attestationRoot: string;
+  subnet: number;
+};
+
+export type AggregateAndProofLogContext = {
+  attestationSlot: Slot;
+  aggregatorIndex: number;
+  aggregateRoot: string;
+  attestationRoot: string;
+  targetEpoch: Epoch;
+};
+
+export type AttestationErrorType = (
   | {
-      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE;
+      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME;
       currentSlot: number;
     }
   | {
@@ -181,14 +196,13 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN;
-      root: Uint8Array;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_INDEX_TOO_HIGH;
       aggregatorIndex: ValidatorIndex;
     }
   | {
-      code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK;
+      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT;
       beaconBlockRoot: Uint8Array;
     }
   | {
@@ -270,7 +284,9 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_INVALID_AGGREGATOR;
-    };
+    }
+) &
+  (AttestationLogContext | AggregateAndProofLogContext);
 
 type IJobObject = {
   job: IAttestationJob;

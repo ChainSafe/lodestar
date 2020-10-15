@@ -1,8 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
-import {Context, ILogger} from "@chainsafe/lodestar-utils";
-import {AggregateAndProof, Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
@@ -10,7 +10,7 @@ import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {AggregateAndProofLogContext, AttestationError, AttestationErrorCode} from "../../../chain/errors";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -25,11 +25,17 @@ export async function validateGossipAggregateAndProof(
   const aggregate = aggregateAndProof.aggregate;
   const root = config.types.AggregateAndProof.hashTreeRoot(aggregateAndProof);
   const attestationRoot = config.types.Attestation.hashTreeRoot(aggregate);
-  const logContext = getLogContext(aggregate, aggregateAndProof, root, attestationRoot);
+  const logContext = {
+    attestationSlot: aggregate.data.slot,
+    aggregatorIndex: aggregateAndProof.aggregatorIndex,
+    aggregateRoot: toHexString(root),
+    attestationRoot: toHexString(attestationRoot),
+    targetEpoch: aggregate.data.target.epoch,
+  };
   logger.verbose("Started gossip aggregate and proof validation", logContext);
   if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
+      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
       currentSlot: chain.clock.currentSlot,
       ...logContext,
       job: attestationJob,
@@ -40,7 +46,6 @@ export async function validateGossipAggregateAndProof(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
       ...logContext,
-      root: attestationRoot,
       job: attestationJob,
     });
   }
@@ -75,7 +80,7 @@ export function hasAttestationParticipants(attestation: Attestation): boolean {
 export async function validateAggregateAttestation(
   config: IBeaconConfig,
   chain: IBeaconChain,
-  logContext: ReturnType<typeof getLogContext>,
+  logContext: AggregateAndProofLogContext,
   aggregateAndProof: SignedAggregateAndProof,
   attestationJob: IAttestationJob
 ): Promise<void> {
@@ -100,7 +105,6 @@ export async function validateAggregateAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
       ...logContext,
-      aggregatorIndex: aggregateAndProof.message.aggregatorIndex,
       job: attestationJob,
     });
   }
@@ -108,7 +112,6 @@ export async function validateAggregateAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
       ...logContext,
-      aggregatorIndex: aggregateAndProof.message.aggregatorIndex,
       job: attestationJob,
     });
   }
@@ -132,7 +135,6 @@ export async function validateAggregateAttestation(
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
       ...logContext,
-      aggregatorIndex: aggregateAndProof.message.aggregatorIndex,
       job: attestationJob,
     });
   }
@@ -161,20 +163,4 @@ export async function validateAggregateAttestation(
       job: attestationJob,
     });
   }
-}
-
-// & object so we can spread it
-function getLogContext(
-  aggregate: Attestation,
-  aggregateAndProof: AggregateAndProof,
-  root: Uint8Array,
-  attestationRoot: Uint8Array
-): Context & object {
-  return {
-    attestationSlot: aggregate.data.slot,
-    aggregatorIndex: aggregateAndProof.aggregatorIndex,
-    root: toHexString(root),
-    attestationRoot: toHexString(attestationRoot),
-    targetEpoch: aggregate.data.target.epoch,
-  };
 }

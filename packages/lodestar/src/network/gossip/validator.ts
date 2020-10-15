@@ -61,19 +61,21 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipBlock(this.config, this.chain, this.db, this.logger, blockJob);
     } catch (e) {
       this.logger.error("Error while validating gossip block", e);
-      if (
-        e.code === BlockErrorCode.ERR_FUTURE_SLOT ||
-        e.code === BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT ||
-        e.code === BlockErrorCode.ERR_REPEAT_PROPOSAL ||
-        e.code === BlockErrorCode.ERR_PARENT_UNKNOWN
-      ) {
+      const blockIgnoreCodes = [
+        BlockErrorCode.ERR_FUTURE_SLOT,
+        BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+        BlockErrorCode.ERR_REPEAT_PROPOSAL,
+        BlockErrorCode.ERR_PARENT_UNKNOWN,
+      ];
+      const blockRejectCodes = [
+        BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
+        BlockErrorCode.ERR_INCORRECT_PROPOSER,
+        BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
+      ];
+      if (blockIgnoreCodes.includes(e.code)) {
         this.logger.warn("Ignoring gossip block", e.toObject());
         return ExtendedValidatorResult.ignore;
-      } else if (
-        e.code === BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID ||
-        e.code === BlockErrorCode.ERR_INCORRECT_PROPOSER ||
-        e.code === BlockErrorCode.ERR_KNOWN_BAD_BLOCK
-      ) {
+      } else if (blockRejectCodes.includes(e.code)) {
         this.logger.warn("Rejecting gossip block", e.toObject());
         return ExtendedValidatorResult.reject;
       }
@@ -93,26 +95,28 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await validateGossipAttestation(this.config, this.chain, this.db, this.logger, attestationJob, subnet);
     } catch (e) {
       this.logger.error("Error while validating gossip attestation", e);
-      if (
-        e.code === AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE ||
-        e.code === AttestationErrorCode.ERR_INVALID_SUBNET_ID ||
-        e.code === AttestationErrorCode.ERR_BAD_TARGET_EPOCH ||
-        e.code === AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET ||
-        e.code === AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS ||
-        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE || // TODO: where is this being checked?
-        e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK ||
-        e.code === AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT ||
-        e.code === AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK ||
-        e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION
-      ) {
+      const attestationRejectCodes = [
+        AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
+        AttestationErrorCode.ERR_INVALID_SUBNET_ID,
+        AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
+        AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
+        AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
+        AttestationErrorCode.ERR_INVALID_SIGNATURE, // TODO: where is this being checked?
+        AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
+        AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT,
+        AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK,
+        AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
+      ];
+      const attestationIgnoreCodes = [
+        AttestationErrorCode.ERR_INVALID_SLOT_TIME,
+        AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN,
+        AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
+        AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+      ];
+      if (attestationRejectCodes.includes(e.code)) {
         this.logger.warn("Rejecting gossip attestation", e.toObject());
         return ExtendedValidatorResult.reject;
-      } else if (
-        e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE ||
-        e.code === AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN ||
-        e.code === AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK ||
-        e.code === AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE
-      ) {
+      } else if (attestationIgnoreCodes.includes(e.code)) {
         this.logger.warn("Ignoring gossip attestation", e.toObject());
         return ExtendedValidatorResult.ignore;
       }
@@ -139,22 +143,24 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       await this.updateAttestationSeenCaches(signedAggregationAndProof.message);
     } catch (e) {
       this.logger.error("Error while validating gossip aggregate and proof", e);
-      if (
-        e.code === AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS ||
-        e.code === AttestationErrorCode.ERR_KNOWN_BAD_BLOCK ||
-        e.code === AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE ||
-        e.code === AttestationErrorCode.ERR_INVALID_SELECTION_PROOF ||
-        e.code === AttestationErrorCode.ERR_INVALID_SIGNATURE ||
-        e.code === AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION ||
-        e.code === AttestationErrorCode.ERR_INVALID_AGGREGATOR
-      ) {
+      const aggregateAndProofRejectCodes = [
+        AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
+        AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
+        AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
+        AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
+        AttestationErrorCode.ERR_INVALID_SIGNATURE,
+        AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
+        AttestationErrorCode.ERR_INVALID_AGGREGATOR,
+      ];
+      const aggregateAndProofIgnoreCodes = [
+        AttestationErrorCode.ERR_INVALID_SLOT_TIME,
+        AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
+        AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+      ];
+      if (aggregateAndProofRejectCodes.includes(e.code)) {
         this.logger.warn("Rejecting gossip aggregate & Proof", e.toObject());
         return ExtendedValidatorResult.reject;
-      } else if (
-        e.code === AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE ||
-        e.code === AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN ||
-        e.code === AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE
-      ) {
+      } else if (aggregateAndProofIgnoreCodes.includes(e.code)) {
         this.logger.warn("Ignoring gossip aggregate & Proof", e.toObject());
         return ExtendedValidatorResult.ignore;
       }

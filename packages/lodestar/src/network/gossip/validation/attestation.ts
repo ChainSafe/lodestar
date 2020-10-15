@@ -52,7 +52,7 @@ export async function validateGossipAttestation(
     await chain.receiveAttestation(attestation);
 
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE,
+      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
       ...attestationLogContext,
       currentSlot: chain.clock.currentSlot,
       job: attestationJob,
@@ -82,7 +82,7 @@ export async function validateGossipAttestation(
     await chain.receiveAttestation(attestation);
 
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK,
+      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
       beaconBlockRoot: attestation.data.beaconBlockRoot as Uint8Array,
       ...attestationLogContext,
       job: attestationJob,
