@@ -19,7 +19,7 @@ import {VoluntaryExitErrorCode} from "../../../../../src/chain/errors/voluntaryE
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb,
-    isValidIncomingVoluntaryExitStub: any,
+    isValidIncomingVoluntaryExitStub: SinonStub,
     chainStub: StubbedChain,
     regenStub: SinonStubbedInstance<StateRegenerator>;
 
