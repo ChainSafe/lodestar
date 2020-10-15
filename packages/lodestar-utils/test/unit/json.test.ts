@@ -53,10 +53,7 @@ describe("Json helper", () => {
         return {
           id: "Normal error",
           arg: error,
-          json: {
-            message: error.message,
-            stack: error.stack,
-          },
+          json: error.message,
         };
       },
       () => {
@@ -72,11 +69,7 @@ describe("Json helper", () => {
         return {
           id: "External error with metadata",
           arg: error,
-          json: {
-            data,
-            message: error.message,
-            stack: error.stack,
-          },
+          json: "SAMPLE ERROR",
         };
       },
       () => {
