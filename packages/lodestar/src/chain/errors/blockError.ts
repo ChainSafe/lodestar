@@ -84,8 +84,8 @@ export enum BlockErrorCode {
 }
 
 export type BlockErrorLogContext = {
-  blockSlot: Slot;
-  blockRoot: string;
+  blockSlot?: Slot;
+  blockRoot?: string;
 };
 
 export type BlockErrorType = (

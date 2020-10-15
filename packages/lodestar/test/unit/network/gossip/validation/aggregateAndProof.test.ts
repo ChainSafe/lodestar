@@ -78,7 +78,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
     }
   });
 
@@ -101,7 +101,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
     }
   });
 

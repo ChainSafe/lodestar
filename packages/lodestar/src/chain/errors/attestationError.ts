@@ -143,18 +143,18 @@ export enum AttestationErrorCode {
 }
 
 export type AttestationLogContext = {
-  attestationSlot: Slot;
-  attestationBlockRoot: string;
-  attestationRoot: string;
-  subnet: number;
+  attestationSlot?: Slot;
+  attestationBlockRoot?: string;
+  attestationRoot?: string;
+  subnet?: number;
 };
 
 export type AggregateAndProofLogContext = {
-  attestationSlot: Slot;
-  aggregatorIndex: number;
-  aggregateRoot: string;
-  attestationRoot: string;
-  targetEpoch: Epoch;
+  attestationSlot?: Slot;
+  aggregatorIndex?: number;
+  aggregateRoot?: string;
+  attestationRoot?: string;
+  targetEpoch?: Epoch;
 };
 
 export type AttestationErrorType = (
@@ -180,11 +180,9 @@ export type AttestationErrorType = (
     }
   | {
       code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF;
-      aggregatorIndex: ValidatorIndex;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE;
-      aggregatorIndex: ValidatorIndex;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_PUBKEY_UNKNOWN;

@@ -137,7 +137,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
     }
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
@@ -162,7 +162,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_SLOT_OUT_OF_RANGE);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
     }
     expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
@@ -210,7 +210,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT);
     }
     expect(chain.receiveAttestation.called).to.be.true;
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
