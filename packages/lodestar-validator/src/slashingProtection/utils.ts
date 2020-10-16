@@ -1,13 +1,17 @@
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Root} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
-export function isEqualRoot(root1: Root, root2: Root): boolean {
-  return toHexString(root1) === toHexString(root2);
+export function isEqualRoot(config: IBeaconConfig, root1: Root, root2: Root): boolean {
+  return config.types.Root.equals(root1, root2);
 }
 
-export function isZeroRoot(root: Root): boolean {
-  return isEqualRoot(root, ZERO_HASH);
+export function isZeroRoot(config: IBeaconConfig, root: Root): boolean {
+  return isEqualRoot(config, root, ZERO_HASH);
+}
+
+export function isEqualNonZeroRoot(config: IBeaconConfig, root1: Root, root2: Root): boolean {
+  return !isZeroRoot(config, root1) && !isZeroRoot(config, root2) && isEqualRoot(config, root1, root2);
 }
 
 /**

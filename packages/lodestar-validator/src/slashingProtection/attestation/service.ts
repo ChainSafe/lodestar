@@ -1,5 +1,6 @@
 import {BLSPubkey, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
-import {isEqualRoot, isZeroRoot, minEpoch} from "../utils";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {isEqualNonZeroRoot, minEpoch} from "../utils";
 import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors";
 import {AttestationByTargetRepository, AttestationLowerBoundRepository} from "./dbRepository";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround";
@@ -10,15 +11,18 @@ enum SafeStatus {
 }
 
 export class SlashingProtectionAttestationService {
+  private config: IBeaconConfig;
   private attestationByTarget: AttestationByTargetRepository;
   private attestationLowerBound: AttestationLowerBoundRepository;
   private minMaxSurround: MinMaxSurround;
 
   constructor(
+    config: IBeaconConfig,
     signedAttestationDb: AttestationByTargetRepository,
     attestationLowerBound: AttestationLowerBoundRepository,
     minMaxSurround: MinMaxSurround
   ) {
+    this.config = config;
     this.attestationByTarget = signedAttestationDb;
     this.attestationLowerBound = attestationLowerBound;
     this.minMaxSurround = minMaxSurround;
@@ -53,7 +57,7 @@ export class SlashingProtectionAttestationService {
     const sameTargetAtt = await this.attestationByTarget.get(pubKey, att.targetEpoch);
     if (sameTargetAtt) {
       // Interchange format allows for attestations without signing_root, then assume root is equal
-      if (!isZeroRoot(sameTargetAtt.signingRoot) && isEqualRoot(att.signingRoot, sameTargetAtt.signingRoot)) {
+      if (isEqualNonZeroRoot(this.config, sameTargetAtt.signingRoot, att.signingRoot)) {
         return SafeStatus.SAME_DATA;
       } else {
         throw new InvalidAttestationError({code: InvalidAttestationErrorCode.DOUBLE_VOTE, att, prev: sameTargetAtt});

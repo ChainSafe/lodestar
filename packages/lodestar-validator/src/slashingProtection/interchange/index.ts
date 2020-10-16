@@ -1,4 +1,5 @@
 import {Root} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isEqualRoot} from "../utils";
 import {IInterchangeLodestar} from "./types";
 import {InterchangeError, InterchangeErrorErrorCode} from "./errors";
@@ -9,6 +10,7 @@ export type InterchangeFormatVersion = {format: "complete"; version: "4"};
 export {IInterchangeLodestar, InterchangeError, InterchangeErrorErrorCode};
 
 export function parseInterchange(
+  config: IBeaconConfig,
   interchange: Interchange,
   expectedGenesisValidatorsRoot: Root
 ): IInterchangeLodestar["data"] {
@@ -20,7 +22,7 @@ export function parseInterchange(
       switch (version) {
         case "4": {
           const {data, genesisValidatorsRoot} = parseInterchangeCompleteV4(interchange);
-          if (!isEqualRoot(genesisValidatorsRoot, expectedGenesisValidatorsRoot)) {
+          if (!isEqualRoot(config, genesisValidatorsRoot, expectedGenesisValidatorsRoot)) {
             throw new InterchangeError({
               code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH,
               root: genesisValidatorsRoot,
