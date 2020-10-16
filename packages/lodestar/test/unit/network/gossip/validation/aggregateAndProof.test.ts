@@ -16,12 +16,10 @@ import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from
 import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
 import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
 import {generateState} from "../../../../utils/state";
-import {silentLogger} from "../../../../utils/logger";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {AttestationErrorCode} from "../../../../../src/chain/errors";
 
 describe("gossip aggregate and proof test", function () {
-  const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
   let db: StubbedBeaconDb;
@@ -73,7 +71,7 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -96,7 +94,7 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -115,7 +113,7 @@ describe("gossip aggregate and proof test", function () {
     });
     db.seenAttestationCache.hasAggregateAndProof.resolves(true);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -135,7 +133,7 @@ describe("gossip aggregate and proof test", function () {
       },
     });
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -155,7 +153,7 @@ describe("gossip aggregate and proof test", function () {
     });
     db.badBlock.has.resolves(true);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -177,7 +175,7 @@ describe("gossip aggregate and proof test", function () {
     });
     regen.getBlockSlotState.throws();
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -205,7 +203,7 @@ describe("gossip aggregate and proof test", function () {
     });
     epochCtx.getBeaconCommittee.returns([]);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -236,7 +234,7 @@ describe("gossip aggregate and proof test", function () {
     epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
     isAggregatorStub.returns(false);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -267,7 +265,7 @@ describe("gossip aggregate and proof test", function () {
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(false);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -299,7 +297,7 @@ describe("gossip aggregate and proof test", function () {
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(false);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
@@ -340,12 +338,12 @@ describe("gossip aggregate and proof test", function () {
     isValidSignatureStub.returns(true);
     isValidIndexedAttestationStub.returns(false);
     try {
-      await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+      await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SIGNATURE);
     }
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
   });
@@ -372,7 +370,7 @@ describe("gossip aggregate and proof test", function () {
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(true);
     isValidIndexedAttestationStub.returns(true);
-    const validationTest = await validateGossipAggregateAndProof(config, chain, db, logger, item, {
+    const validationTest = await validateGossipAggregateAndProof(config, chain, db, item, {
       attestation: item.message.aggregate,
       validSignature: false,
     } as IAttestationJob);

@@ -16,14 +16,12 @@ import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/rege
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../../src/constants";
 import {validateGossipAttestation} from "../../../../../src/network/gossip/validation";
 import {generateAttestation} from "../../../../utils/attestation";
-import {silentLogger} from "../../../../utils/logger";
 import {generateState} from "../../../../utils/state";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
 import {AttestationErrorCode} from "../../../../../src/chain/errors";
 
 describe("gossip attestation validation", function () {
-  const logger = silentLogger;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<IForkChoice>;
   let regen: SinonStubbedInstance<IStateRegenerator>;
@@ -65,7 +63,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -84,7 +81,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -104,7 +100,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -129,7 +124,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -154,7 +148,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -177,7 +170,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -202,7 +194,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -228,7 +219,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -259,7 +249,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -292,7 +281,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -300,7 +288,7 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SIGNATURE);
     }
     expect(chain.receiveAttestation.called).to.be.false;
     expect(isValidIndexedAttestationStub.calledOnce).to.be.true;
@@ -331,7 +319,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -376,7 +363,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -415,7 +401,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -457,7 +442,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -522,7 +506,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -563,7 +546,6 @@ describe("gossip attestation validation", function () {
         config,
         chain,
         db,
-        logger,
         {
           attestation,
           validSignature: false,
@@ -608,7 +590,6 @@ describe("gossip attestation validation", function () {
       config,
       chain,
       db,
-      logger,
       {
         attestation,
         validSignature: false,

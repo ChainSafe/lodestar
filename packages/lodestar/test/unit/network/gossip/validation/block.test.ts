@@ -12,7 +12,6 @@ import {validateGossipBlock} from "../../../../../src/network/gossip/validation"
 import {generateSignedBlock} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {generateState} from "../../../../utils/state";
-import {silentLogger} from "../../../../utils/logger";
 import {BlockErrorCode} from "../../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
@@ -21,7 +20,6 @@ describe("gossip block validation", function () {
   let regenStub: SinonStubbedInstance<StateRegenerator>;
   let dbStub: StubbedBeaconDb;
   let verifySignatureStub: SinonStub;
-  const logger = silentLogger;
 
   beforeEach(function () {
     chainStub = sinon.createStubInstance(BeaconChain);
@@ -44,7 +42,7 @@ describe("gossip block validation", function () {
       root: Buffer.alloc(32),
     });
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -65,7 +63,7 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(true);
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -88,7 +86,7 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(generateSignedBlock({message: {proposerIndex: block.message.proposerIndex}}));
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -112,7 +110,7 @@ describe("gossip block validation", function () {
     dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.throws();
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -141,7 +139,7 @@ describe("gossip block validation", function () {
     });
     verifySignatureStub.returns(false);
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -173,7 +171,7 @@ describe("gossip block validation", function () {
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex + 1);
     try {
-      await validateGossipBlock(config, chainStub, dbStub, logger, {
+      await validateGossipBlock(config, chainStub, dbStub, {
         signedBlock: block,
         trusted: false,
         reprocess: false,
@@ -207,7 +205,7 @@ describe("gossip block validation", function () {
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(block.message.proposerIndex);
     forkChoiceStub.getAncestor.resolves(Buffer.alloc(32));
-    const validationTest = await validateGossipBlock(config, chainStub, dbStub, logger, {
+    const validationTest = await validateGossipBlock(config, chainStub, dbStub, {
       signedBlock: block,
       trusted: false,
       reprocess: false,
