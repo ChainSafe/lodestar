@@ -1104,6 +1104,11 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.0"
 
+"@chainsafe/slashing-protection-interchange-tests@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/slashing-protection-interchange-tests/-/slashing-protection-interchange-tests-4.0.0.tgz#431837fb113447223bb6fc73954a39d15d58314f"
+  integrity sha512-H9sc2PFzsK0YRtjwtaZeJ1k8zIhhvPRZYksbzEuLKBss2iIYsCpNKzvHdbjb6uG/S3LBihpuBc53oJ2az82KSQ==
+
 "@chainsafe/snappy-stream@3.0.5":
   version "3.0.5"
   resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-3.0.5.tgz#9e98a7bdee5ad4aeff67d270ec64a5fbbb7fd6a0"

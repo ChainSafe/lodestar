@@ -32,9 +32,15 @@ export enum Bucket {
   proposerSlashing = 14, // ValidatorIndex -> ProposerSlashing
   attesterSlashing = 15, // Root -> AttesterSlashing
   // validator
-  validator = 16,
-  lastProposedBlock = 17,
-  proposedAttestations = 18,
+  // validator = 16, // DEPRECATED on v0.11.0
+  // lastProposedBlock = 17, // DEPRECATED on v0.11.0
+  // proposedAttestations = 18, // DEPRECATED on v0.11.0
+  // validator slashing protection
+  slashingProtectionBlockBySlot = 20,
+  slashingProtectionAttestationByTarget = 21,
+  slashingProtectionAttestationLowerBound = 22,
+  slashingProtectionMinSpanDistance = 23,
+  slashingProtectionMaxSpanDistance = 24,
 }
 
 export enum Key {

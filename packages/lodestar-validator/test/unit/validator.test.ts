@@ -5,8 +5,7 @@ import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";
 import {MockBeaconApi} from "../utils/mocks/beacon";
 import {MockValidatorApi} from "../utils/mocks/validator";
-import {IValidatorOptions, Validator} from "../../src";
-import {MockValidatorDB} from "../utils/mocks/MockValidatorDB";
+import {IValidatorOptions, SlashingProtection, Validator} from "../../src";
 import {MockNodeApi} from "../utils/mocks/node";
 import {silentLogger} from "../utils/logger";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
@@ -27,7 +26,7 @@ describe("Validator", () => {
       api: apiClient,
       keypairs: [Keypair.generate()],
       config,
-      db: sinon.createStubInstance(MockValidatorDB),
+      slashingProtection: sinon.createStubInstance(SlashingProtection),
       logger: silentLogger,
     };
 

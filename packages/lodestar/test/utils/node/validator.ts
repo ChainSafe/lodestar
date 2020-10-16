@@ -1,8 +1,7 @@
 import {BeaconNode} from "../../../src/node";
-import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {ApiClientOverInstance, interopKeypair, Validator} from "@chainsafe/lodestar-validator/lib";
+import {ApiClientOverInstance, interopKeypair, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {intDiv, LogLevel, WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
 import tmp from "tmp";
 import {ValidatorApi} from "../../../src/api/impl/validator";
@@ -53,28 +52,16 @@ export function getDevValidator({
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,
-    db: new ValidatorDB({
-      config: node.config,
-      controller: new LevelDbController(
-        {
-          name: tmpDir.name,
-        },
-        {logger}
-      ),
-    }),
     api: new ApiClientOverInstance({
       config: node.config,
-      validator: new ValidatorApi(
-        {},
-        {
-          ...node,
-          logger,
-          eth1: new Eth1ForBlockProductionDisabled(),
-        }
-      ),
+      validator: new ValidatorApi({}, {...node, logger, eth1: new Eth1ForBlockProductionDisabled()}),
       node: new NodeApi({}, {...node}),
       events: new EventsApi({}, {...node}) as IEventsApi,
       beacon: new BeaconApi({}, {...node}),
+    }),
+    slashingProtection: new SlashingProtection({
+      config: node.config,
+      controller: new LevelDbController({name: tmpDir.name}, {logger}),
     }),
     logger: logger,
     keypairs: Array.from({length: count}, (_, i) => {
