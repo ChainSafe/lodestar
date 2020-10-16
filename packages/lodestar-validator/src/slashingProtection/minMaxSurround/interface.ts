@@ -1,18 +1,23 @@
-export type Att = {target: number; source: number};
+import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
+
+export type Att = {
+  target: number;
+  source: number;
+};
 
 export interface IMinMaxSurround {
-  check(att: Att): Promise<void>;
-  checkAndInsert(att: Att): Promise<void>;
+  assertNoSurround(pubKey: BLSPubkey, att: Att): Promise<void>;
+  insertAttestation(pubKey: BLSPubkey, att: Att): Promise<void>;
 }
 
 export interface IDistanceEntry {
-  source: number;
-  distance: number;
+  source: Epoch;
+  distance: Epoch;
 }
 
 export type IDistanceStore = {
   [P in "minSpan" | "maxSpan"]: {
-    get(epoch: number): Promise<number | null>;
-    setBatch(values: IDistanceEntry[]): Promise<void>;
+    get(pubKey: BLSPubkey, epoch: Epoch): Promise<Epoch | null>;
+    setBatch(pubKey: BLSPubkey, values: IDistanceEntry[]): Promise<void>;
   };
 };

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {DistanceStoreMemory, storeToSpansPerEpoch} from "./utils";
+import {DistanceStoreMemory, storeToSpansPerEpoch, emptyPubkey} from "./utils";
 import {Att, MinMaxSurround} from "../../../../src/slashingProtection/minMaxSurround";
 
 const updateSpansTests: {
@@ -33,9 +33,10 @@ describe("Update spans test", () => {
   for (const {name, att, spansByEpoch} of updateSpansTests) {
     it(name, async () => {
       const store = new DistanceStoreMemory();
-      const minMaxSurround = new MinMaxSurround({store});
+      const minMaxSurround = new MinMaxSurround(store);
 
-      await minMaxSurround.checkAndInsert(att);
+      await minMaxSurround.assertNoSurround(emptyPubkey, att);
+      await minMaxSurround.insertAttestation(emptyPubkey, att);
 
       const spansByEpochResult = await storeToSpansPerEpoch(store);
       expect(spansByEpochResult).to.deep.equal(spansByEpoch);

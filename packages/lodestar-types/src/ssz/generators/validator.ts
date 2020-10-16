@@ -46,3 +46,11 @@ export const SlashingProtectionAttestation = (ssz: IBeaconSSZTypes): ContainerTy
       signingRoot: ssz.Root,
     },
   });
+
+export const SlashingProtectionAttestationLowerBound = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      minSourceEpoch: ssz.Epoch,
+      minTargetEpoch: ssz.Epoch,
+    },
+  });

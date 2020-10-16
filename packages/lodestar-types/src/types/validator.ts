@@ -24,19 +24,18 @@ export interface SignedAggregateAndProof {
   signature: BLSSignature;
 }
 
-/**
- * For validator slashing protection
- */
 export interface SlashingProtectionBlock {
   slot: Slot;
   signingRoot: Root;
 }
 
-/**
- * For validator slashing protection
- */
 export interface SlashingProtectionAttestation {
   sourceEpoch: Epoch;
   targetEpoch: Epoch;
   signingRoot: Root;
+}
+
+export interface SlashingProtectionAttestationLowerBound {
+  minSourceEpoch: Epoch;
+  minTargetEpoch: Epoch;
 }

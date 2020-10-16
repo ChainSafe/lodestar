@@ -36,8 +36,11 @@ export enum Bucket {
   lastProposedBlock = 17,
   proposedAttestations = 18,
   // validator slashing protection
-  slashingProtectionBlock = 20,
-  slashingProtectionAttestation = 21,
+  slashingProtectionBlockBySlot = 20,
+  slashingProtectionAttestationByTarget = 21,
+  slashingProtectionAttestationLowerBound = 22,
+  slashingProtectionMinSpanDistance = 23,
+  slashingProtectionMaxSpanDistance = 24,
 }
 
 export enum Key {

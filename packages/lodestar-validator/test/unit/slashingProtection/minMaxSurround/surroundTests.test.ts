@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {DistanceStoreMemory} from "./utils";
+import {DistanceStoreMemory, emptyPubkey} from "./utils";
 import {MinMaxSurround, SurroundAttestationError} from "../../../../src/slashingProtection/minMaxSurround";
 
 chai.use(chaiAsPromised);
@@ -206,11 +206,11 @@ describe("surroundTests", () => {
         store.maxSpan.map.set(parseInt(epoch), maxSpan);
       }
 
-      const minMaxSurround = new MinMaxSurround({store});
+      const minMaxSurround = new MinMaxSurround(store);
 
       if (shouldSlash) {
         try {
-          await minMaxSurround.check({source: sourceEpoch, target: targetEpoch});
+          await minMaxSurround.assertNoSurround(emptyPubkey, {source: sourceEpoch, target: targetEpoch});
           throw Error("Should slash");
         } catch (e) {
           if (e instanceof SurroundAttestationError) {
@@ -222,7 +222,7 @@ describe("surroundTests", () => {
           }
         }
       } else {
-        await minMaxSurround.check({source: sourceEpoch, target: targetEpoch});
+        await minMaxSurround.assertNoSurround(emptyPubkey, {source: sourceEpoch, target: targetEpoch});
       }
     });
   }

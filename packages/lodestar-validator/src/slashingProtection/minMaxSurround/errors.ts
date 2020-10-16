@@ -5,11 +5,11 @@ export enum SurroundAttestationErrorCode {
   /**
    * The provided attestation is surrounding at least another attestation from the store
    */
-  IS_SURROUNDING = "ERR_INVALID_BLOCK_IS_SURROUNDING",
+  IS_SURROUNDING = "ERR_SURROUND_ATTESTATION_IS_SURROUNDING",
   /**
    * The provided attestation is surrounded by at least another attestation from the store
    */
-  IS_SURROUNDED = "ERR_INVALID_BLOCK_IS_SURROUNDED",
+  IS_SURROUNDED = "ERR_SURROUND_ATTESTATION_IS_SURROUNDED",
 }
 
 type SurroundAttestationErrorType =

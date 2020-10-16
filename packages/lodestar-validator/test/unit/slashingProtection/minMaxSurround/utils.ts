@@ -1,16 +1,19 @@
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {BLSPubkey} from "@chainsafe/lodestar-types";
 import {IDistanceStore, IDistanceEntry} from "../../../../src/slashingProtection/minMaxSurround";
 
+export const emptyPubkey = config.types.BLSPubkey.defaultValue();
 export class DistanceMapStore {
   map: Map<number, number>;
   constructor() {
     this.map = new Map<number, number>();
   }
 
-  async get(epoch: number): Promise<number | null> {
+  async get(pubkey: BLSPubkey, epoch: number): Promise<number | null> {
     return this.map.get(epoch) ?? null;
   }
 
-  async setBatch(values: IDistanceEntry[]): Promise<void> {
+  async setBatch(pubkey: BLSPubkey, values: IDistanceEntry[]): Promise<void> {
     for (const {source, distance} of values) {
       this.map.set(source, distance);
     }
@@ -35,7 +38,10 @@ export async function storeToSpansPerEpoch(store: DistanceStoreMemory): Promise<
   const maxSpanEpochs = Array.from(store.maxSpan.map.keys());
   const epochs = [...new Set([...minSpanEpochs, ...maxSpanEpochs])].sort();
   for (const epoch of epochs) {
-    spansPerEpoch[epoch] = [(await store.minSpan.get(epoch)) || 0, (await store.maxSpan.get(epoch)) || 0];
+    spansPerEpoch[epoch] = [
+      (await store.minSpan.get(emptyPubkey, epoch)) || 0,
+      (await store.maxSpan.get(emptyPubkey, epoch)) || 0,
+    ];
   }
   return spansPerEpoch;
 }
