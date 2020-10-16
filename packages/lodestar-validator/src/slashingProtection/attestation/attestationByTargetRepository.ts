@@ -1,9 +1,4 @@
-import {
-  BLSPubkey,
-  Epoch,
-  SlashingProtectionAttestation,
-  SlashingProtectionAttestationLowerBound,
-} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
@@ -43,29 +38,5 @@ export class AttestationByTargetRepository {
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
     return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), 8, "be")]));
-  }
-}
-
-export class AttestationLowerBoundRepository {
-  protected type: Type<SlashingProtectionAttestationLowerBound>;
-  protected db: IDatabaseController<Buffer, Buffer>;
-  protected bucket = Bucket.slashingProtectionAttestationLowerBound;
-
-  constructor(opts: IDatabaseApiOptions) {
-    this.db = opts.controller;
-    this.type = opts.config.types.SlashingProtectionAttestationLowerBound;
-  }
-
-  async get(pubkey: BLSPubkey): Promise<SlashingProtectionAttestationLowerBound | null> {
-    const att = await this.db.get(this.encodeKey(pubkey));
-    return att && this.type.deserialize(att);
-  }
-
-  async set(pubkey: BLSPubkey, value: SlashingProtectionAttestationLowerBound): Promise<void> {
-    await this.db.put(this.encodeKey(pubkey), Buffer.from(this.type.serialize(value)));
-  }
-
-  private encodeKey(pubkey: BLSPubkey): Buffer {
-    return encodeKey(this.bucket, Buffer.from(pubkey));
   }
 }

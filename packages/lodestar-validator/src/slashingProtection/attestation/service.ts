@@ -1,9 +1,10 @@
 import {BLSPubkey, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isEqualNonZeroRoot, minEpoch} from "../utils";
-import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors";
-import {AttestationByTargetRepository, AttestationLowerBoundRepository} from "./dbRepository";
 import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround";
+import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors";
+import {AttestationByTargetRepository} from "./attestationByTargetRepository";
+import {AttestationLowerBoundRepository} from "./attestationLowerBoundRepository";
 
 enum SafeStatus {
   SAME_DATA = "SAFE_STATUS_SAME_DATA",
