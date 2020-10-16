@@ -2,7 +2,7 @@ import {BLSPubkey, SlashingProtectionAttestation} from "@chainsafe/lodestar-type
 import {isEqualRoot, isZeroRoot, minEpoch} from "../utils";
 import {InvalidAttestationError, InvalidAttestationErrorCode} from "./errors";
 import {AttestationByTargetRepository, AttestationLowerBoundRepository} from "./dbRepository";
-import {MinMaxSurround} from "../minMaxSurround";
+import {MinMaxSurround, SurroundAttestationError, SurroundAttestationErrorCode} from "../minMaxSurround";
 
 enum SafeStatus {
   SAME_DATA = "SAFE_STATUS_SAME_DATA",
@@ -61,7 +61,20 @@ export class SlashingProtectionAttestationService {
     }
 
     // Check for a surround vote
-    await this.minMaxSurround.assertNoSurround(pubKey, {source: att.sourceEpoch, target: att.targetEpoch});
+    try {
+      await this.minMaxSurround.assertNoSurround(pubKey, {source: att.sourceEpoch, target: att.targetEpoch});
+    } catch (e) {
+      if (e instanceof SurroundAttestationError) {
+        const prev = await this.attestationByTarget.get(pubKey, e.type.att2Target).catch(() => null);
+        switch (e.type.code) {
+          case SurroundAttestationErrorCode.IS_SURROUNDING:
+            throw new InvalidAttestationError({code: InvalidAttestationErrorCode.NEW_SURROUNDS_PREV, att, prev});
+          case SurroundAttestationErrorCode.IS_SURROUNDED:
+            throw new InvalidAttestationError({code: InvalidAttestationErrorCode.PREV_SURROUNDS_NEW, att, prev});
+        }
+      }
+      throw e;
+    }
 
     // Refuse to sign any attestation with:
     // - source.epoch < min(att.source_epoch for att in data.signed_attestations if att.pubkey == attester_pubkey), OR

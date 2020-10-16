@@ -39,12 +39,14 @@ type InvalidAttestationErrorType =
   | {
       code: InvalidAttestationErrorCode.NEW_SURROUNDS_PREV;
       att: SlashingProtectionAttestation;
-      prev: SlashingProtectionAttestation;
+      // Since using min-max surround, the actual attestation may not be available
+      prev: SlashingProtectionAttestation | null;
     }
   | {
       code: InvalidAttestationErrorCode.PREV_SURROUNDS_NEW;
       att: SlashingProtectionAttestation;
-      prev: SlashingProtectionAttestation;
+      // Since using min-max surround, the actual attestation may not be available
+      prev: SlashingProtectionAttestation | null;
     }
   | {
       code: InvalidAttestationErrorCode.SOURCE_EXCEEDS_TARGET;
