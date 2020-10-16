@@ -1,7 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
@@ -16,11 +15,9 @@ export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  logger: ILogger,
   signedAggregateAndProof: SignedAggregateAndProof,
   attestationJob: IAttestationJob
 ): Promise<void> {
-  logger.profile("gossipAggregateAndProofValidation");
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
   const root = config.types.AggregateAndProof.hashTreeRoot(aggregateAndProof);
@@ -32,7 +29,6 @@ export async function validateGossipAggregateAndProof(
     attestationRoot: toHexString(attestationRoot),
     targetEpoch: aggregate.data.target.epoch,
   };
-  logger.verbose("Started gossip aggregate and proof validation", logContext);
   if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
@@ -68,9 +64,6 @@ export async function validateGossipAggregateAndProof(
   // TODO: check pool of aggregates if already seen (not a dos vector check)
 
   await validateAggregateAttestation(config, chain, logContext, signedAggregateAndProof, attestationJob);
-
-  logger.profile("gossipAggregateAndProofValidation");
-  logger.info("Received valid gossip aggregate and proof", logContext);
 }
 
 export function hasAttestationParticipants(attestation: Attestation): boolean {
@@ -158,7 +151,7 @@ export async function validateAggregateAttestation(
 
   if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
+      code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
       ...logContext,
       job: attestationJob,
     });

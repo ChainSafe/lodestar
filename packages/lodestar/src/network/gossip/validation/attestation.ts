@@ -1,5 +1,4 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
@@ -16,12 +15,10 @@ export async function validateGossipAttestation(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  logger: ILogger,
   attestationJob: IAttestationJob,
   subnet: number
 ): Promise<void> {
   const attestation = attestationJob.attestation;
-  logger.profile("gossipAttestationValidation");
   const attestationRoot = config.types.Attestation.hashTreeRoot(attestation);
   const attestationLogContext = {
     attestationSlot: attestation.data.slot,
@@ -29,7 +26,6 @@ export async function validateGossipAttestation(
     attestationRoot: toHexString(attestationRoot),
     subnet,
   };
-  logger.verbose("Started gossip committee attestation validation", attestationLogContext);
 
   if (!isUnaggregatedAttestation(attestation)) {
     throw new AttestationError({
@@ -122,7 +118,7 @@ export async function validateGossipAttestation(
     )
   ) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION,
+      code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
       ...attestationLogContext,
       job: attestationJob,
     });
@@ -144,7 +140,6 @@ export async function validateGossipAttestation(
       });
     }
   } catch (error) {
-    logger.warn(error);
     throw new AttestationError({
       code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE,
       index: attestation.data.index,
@@ -174,8 +169,6 @@ export async function validateGossipAttestation(
     });
   }
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
-  logger.profile("gossipAttestationValidation");
-  logger.info("Received valid committee attestation", attestationLogContext);
 }
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {

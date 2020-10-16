@@ -83,12 +83,7 @@ export enum BlockErrorCode {
   ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
 }
 
-export type BlockErrorLogContext = {
-  blockSlot?: Slot;
-  blockRoot?: string;
-};
-
-export type BlockErrorType = (
+export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_PRESTATE_MISSING;
     }
@@ -154,9 +149,7 @@ export type BlockErrorType = (
     }
   | {
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK;
-    }
-) &
-  BlockErrorLogContext;
+    };
 
 type JobObject = {
   job: IBlockJob;

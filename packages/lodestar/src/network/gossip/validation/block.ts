@@ -3,8 +3,6 @@ import {IBeaconChain, IBlockJob} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
 
@@ -12,24 +10,18 @@ export async function validateGossipBlock(
   config: IBeaconConfig,
   chain: IBeaconChain,
   db: IBeaconDb,
-  logger: ILogger,
   blockJob: IBlockJob
 ): Promise<void> {
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-  const logContext = {
-    blockSlot,
-    blockRoot: toHexString(blockRoot),
-  };
-  logger.verbose("Started gossip block validation", logContext);
   const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {
     throw new BlockError({
       code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
-      ...logContext,
+      blockSlot,
       finalizedSlot,
       job: blockJob,
     });
@@ -40,8 +32,8 @@ export async function validateGossipBlock(
     await chain.receiveBlock(block);
     throw new BlockError({
       code: BlockErrorCode.ERR_FUTURE_SLOT,
-      ...logContext,
       currentSlot,
+      blockSlot,
       job: blockJob,
     });
   }
@@ -49,7 +41,6 @@ export async function validateGossipBlock(
   if (await db.badBlock.has(blockRoot)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
-      ...logContext,
       job: blockJob,
     });
   }
@@ -57,7 +48,6 @@ export async function validateGossipBlock(
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
-      ...logContext,
       proposer: block.message.proposerIndex,
       job: blockJob,
     });
@@ -74,7 +64,6 @@ export async function validateGossipBlock(
 
     throw new BlockError({
       code: BlockErrorCode.ERR_PARENT_UNKNOWN,
-      ...logContext,
       parentRoot: block.message.parentRoot,
       job: blockJob,
     });
@@ -83,7 +72,6 @@ export async function validateGossipBlock(
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
-      ...logContext,
       job: blockJob,
     });
   }
@@ -93,7 +81,6 @@ export async function validateGossipBlock(
     if (!validProposer) {
       throw new BlockError({
         code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
-        ...logContext,
         blockProposer: block.message.proposerIndex,
         job: blockJob,
       });
@@ -101,13 +88,10 @@ export async function validateGossipBlock(
   } catch (error) {
     throw new BlockError({
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
-      ...logContext,
       blockProposer: block.message.proposerIndex,
       job: blockJob,
     });
   }
-
-  logger.info("Received valid gossip block", logContext);
 }
 
 export async function hasProposerAlreadyProposed(

@@ -129,10 +129,6 @@ export enum AttestationErrorCode {
    */
   ERR_COMMITTEE_INDEX_OUT_OF_RANGE = "ERR_COMMITTEE_INDEX_OUT_OF_RANGE",
   /**
-   * Invalid indexed attestation.
-   */
-  ERR_INVALID_INDEXED_ATTESTATION = "ERR_INVALID_INDEXED_ATTESTATION",
-  /**
    * Missing attestation pre-state.
    */
   ERR_MISSING_ATTESTATION_PRESTATE = "ERR_MISSING_ATTESTATION_PRESTATE",
@@ -273,9 +269,6 @@ export type AttestationErrorType = (
   | {
       code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE;
       index: number;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID_INDEXED_ATTESTATION;
     }
   | {
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
