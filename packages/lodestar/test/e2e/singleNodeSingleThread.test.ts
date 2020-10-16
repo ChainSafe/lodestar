@@ -21,10 +21,11 @@ describe("Run single node single thread interop validators (no eth1) until check
     validators: number;
     event: "justified" | "finalized";
     params: Partial<IBeaconParams>;
+    maxEpoch?: number;
   }[] = [
-    {vc: 8, validators: 8, event: "justified", params: testParams},
-    {vc: 8, validators: 8, event: "finalized", params: testParams},
-    {vc: 1, validators: 32, event: "justified", params: manyValidatorParams},
+    {vc: 8, validators: 8, event: "justified", params: testParams, maxEpoch: 10},
+    {vc: 8, validators: 8, event: "finalized", params: testParams, maxEpoch: 10},
+    {vc: 1, validators: 32, event: "justified", params: manyValidatorParams, maxEpoch: 10},
   ];
 
   for (const testCase of testCases) {
@@ -35,12 +36,27 @@ describe("Run single node single thread interop validators (no eth1) until check
         options: {sync: {minPeers: 0}},
         validatorCount: testCase.vc * testCase.validators,
       });
-      const justificationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, testCase.event, timeout - 10 * 1000);
+
+      const justificationEventListener = waitForEvent<Checkpoint>(
+        bn.chain.emitter,
+        testCase.event,
+        timeout - 10 * 1000
+      );
+
+      // Stop test if maxEpoch is exceeded
+      const epochTimeout = new Promise<void>((resolve, reject) => {
+        bn.chain.emitter.on("clock:epoch", (epoch) => {
+          if (testCase.maxEpoch && epoch >= testCase.maxEpoch)
+            reject(Error(`Event ${testCase.event} not reached before max epoch ${testCase.maxEpoch}`));
+        });
+      });
+
       const validators = getDevValidators(bn, testCase.validators, testCase.vc);
       await bn.start();
       await Promise.all(validators.map((v) => v.start()));
+
       try {
-        await justificationEventListener;
+        await Promise.race([justificationEventListener, epochTimeout]);
       } catch (e) {
         await Promise.all(validators.map((v) => v.stop()));
         await bn.stop();

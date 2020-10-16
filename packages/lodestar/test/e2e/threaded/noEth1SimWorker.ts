@@ -38,4 +38,8 @@ import {getDevValidator} from "../../utils/node/validator";
       })
     );
   });
+
+  node.chain.emitter.on("clock:epoch", (epoch) => {
+    parentPort!.postMessage({event: "clock:epoch", epoch});
+  });
 })();

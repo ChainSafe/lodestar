@@ -3,10 +3,10 @@ import os from "os";
 import {Worker} from "worker_threads";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {waitForEvent} from "../utils/events/resolver";
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justified";
+  const maxEpoch = 10;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,
@@ -58,16 +58,22 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
       // Wait for finalized checkpoint on all nodes
       try {
         await Promise.all(
-          workers.map((worker, i) =>
-            waitForEvent<IJustifiedCheckpointEvent>(worker, "message", 240000, (evt) => {
-              if (evt.event === checkpointEvent) {
-                const {epoch, root} = evt.checkpoint;
-                console.log(`BeaconNode #${i} justifiedCheckpoint`, {epoch, root});
-                return true;
-              } else {
-                return false;
-              }
-            })
+          workers.map(
+            (worker, i) =>
+              new Promise((resolve, reject) => {
+                worker.on("message", (evt) => {
+                  switch (evt.event) {
+                    case checkpointEvent:
+                      console.log(`BeaconNode #${i} justifiedCheckpoint`, evt.checkpoint);
+                      return resolve();
+
+                    case "clock:epoch":
+                      if (evt.epoch > maxEpoch) {
+                        return reject(Error(`Event ${checkpointEvent} not reached before max epoch ${maxEpoch}`));
+                      }
+                  }
+                });
+              })
           )
         );
         console.log("Success: Terminating workers");

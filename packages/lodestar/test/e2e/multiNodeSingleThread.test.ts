@@ -9,6 +9,7 @@ import {BeaconNode} from "../../src/node";
 
 describe.skip("Run multi node single thread interop validators (no eth1) until checkpoint", function () {
   const checkpointEvent = "justified";
+  const maxEpoch = 10;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 3,
@@ -83,7 +84,20 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       // printBeaconCliMetrics(nodes[0]);
 
       // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000)));
+      await Promise.all(
+        nodes.map((node) =>
+          Promise.race([
+            waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000),
+            // Stop test if maxEpoch is exceeded
+            new Promise<void>((resolve, reject) => {
+              node.chain.emitter.on("clock:epoch", (epoch) => {
+                if (epoch >= maxEpoch)
+                  reject(Error(`Event ${checkpointEvent} not reached before max epoch ${maxEpoch}`));
+              });
+            }),
+          ])
+        )
+      );
       logger.info("All nodes reached justified checkpoint");
     });
   }
