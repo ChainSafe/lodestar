@@ -11,7 +11,6 @@ import {loadTestCases} from "@chainsafe/slashing-protection-interchange-tests";
 // Code to test
 import {
   SlashingProtection,
-  SlashingProtectionManager,
   InterchangeError,
   InvalidAttestationError,
   InvalidBlockError,
@@ -27,7 +26,6 @@ describe("slashing-protection-interchange-tests", () => {
 
   for (const testCase of testCases) {
     describe(testCase.name, async () => {
-      const slashingProtectionManager = new SlashingProtectionManager({config, controller});
       const slashingProtection = new SlashingProtection({config, controller});
 
       beforeEach(async () => {
@@ -41,10 +39,10 @@ describe("slashing-protection-interchange-tests", () => {
 
         const genesisValidatorsRoot = fromHexString(testCase.genesis_validators_root);
         if (testCase.should_succeed) {
-          await slashingProtectionManager.importInterchange(testCase.interchange, genesisValidatorsRoot);
+          await slashingProtection.importInterchange(testCase.interchange, genesisValidatorsRoot);
         } else {
           await expect(
-            slashingProtectionManager.importInterchange(testCase.interchange, genesisValidatorsRoot)
+            slashingProtection.importInterchange(testCase.interchange, genesisValidatorsRoot)
           ).to.not.be.rejectedWith(InterchangeError);
         }
       });
