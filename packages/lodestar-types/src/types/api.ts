@@ -12,7 +12,7 @@ import {
   Version,
   Epoch,
 } from "./primitive";
-import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
+import {Fork, SignedBeaconBlockHeader, Validator, Checkpoint} from "./misc";
 
 export interface SignedBeaconHeaderResponse {
   root: Root;
@@ -96,4 +96,15 @@ export interface ChainReorg {
   oldHeadState: Root;
   newHeadState: Root;
   epoch: Epoch;
+}
+
+export interface FinalityCheckpoints {
+  previousJustified: Checkpoint;
+  currentJustified: Checkpoint;
+  finalized: Checkpoint;
+}
+
+export interface ValidatorBalance {
+  index: ValidatorIndex;
+  balance: Gwei;
 }

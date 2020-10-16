@@ -103,6 +103,8 @@ export interface IBeaconSSZTypes {
   BlockEventPayload: ContainerType<t.BlockEventPayload>;
   FinalizedCheckpoint: ContainerType<t.FinalizedCheckpoint>;
   ChainReorg: ContainerType<t.ChainReorg>;
+  FinalityCheckpoints: ContainerType<t.FinalityCheckpoints>;
+  ValidatorBalance: ContainerType<t.ValidatorBalance>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
