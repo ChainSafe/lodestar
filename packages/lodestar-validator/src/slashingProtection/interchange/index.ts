@@ -13,7 +13,7 @@ export function parseInterchange(
   config: IBeaconConfig,
   interchange: Interchange,
   expectedGenesisValidatorsRoot: Root
-): IInterchangeLodestar["data"] {
+): IInterchangeLodestar {
   const format = interchange?.metadata?.interchange_format;
   const version = interchange?.metadata?.interchange_format_version;
 
@@ -21,15 +21,15 @@ export function parseInterchange(
     case "complete":
       switch (version) {
         case "4": {
-          const {data, genesisValidatorsRoot} = parseInterchangeCompleteV4(interchange);
-          if (!isEqualRoot(config, genesisValidatorsRoot, expectedGenesisValidatorsRoot)) {
+          const interchangeLodestar = parseInterchangeCompleteV4(config, interchange);
+          if (!isEqualRoot(config, interchangeLodestar.genesisValidatorsRoot, expectedGenesisValidatorsRoot)) {
             throw new InterchangeError({
               code: InterchangeErrorErrorCode.GENESIS_VALIDATOR_MISMATCH,
-              root: genesisValidatorsRoot,
+              root: interchangeLodestar.genesisValidatorsRoot,
               extectedRoot: expectedGenesisValidatorsRoot,
             });
           }
-          return data;
+          return interchangeLodestar;
         }
 
         default:
@@ -42,6 +42,7 @@ export function parseInterchange(
 }
 
 export function serializeInterchange(
+  config: IBeaconConfig,
   interchangeLodestar: IInterchangeLodestar,
   {format, version}: InterchangeFormatVersion
 ): Interchange {
@@ -49,7 +50,7 @@ export function serializeInterchange(
     case "complete":
       switch (version) {
         case "4":
-          return serializeInterchangeCompleteV4(interchangeLodestar);
+          return serializeInterchangeCompleteV4(config, interchangeLodestar);
 
         default:
           throw new InterchangeError({code: InterchangeErrorErrorCode.UNSUPPORTED_VERSION, version});

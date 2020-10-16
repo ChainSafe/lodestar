@@ -51,8 +51,8 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
   }
 
   public async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {
-    const validators = parseInterchange(this.config, interchange, genesisValidatorsRoot);
-    for (const validator of validators) {
+    const {data} = parseInterchange(this.config, interchange, genesisValidatorsRoot);
+    for (const validator of data) {
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
       await this.attestationService.importAttestations(validator.pubkey, validator.signedAttestations);
     }
@@ -71,6 +71,6 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
         signedAttestations: await this.attestationService.exportAttestations(pubkey),
       });
     }
-    return serializeInterchange({data: validatorData, genesisValidatorsRoot}, formatVersion);
+    return serializeInterchange(this.config, {data: validatorData, genesisValidatorsRoot}, formatVersion);
   }
 }
