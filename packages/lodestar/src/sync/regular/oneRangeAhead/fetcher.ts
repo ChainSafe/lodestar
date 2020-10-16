@@ -8,7 +8,7 @@ import {defaultOptions, IRegularSyncOptions} from "../options";
 import {IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {getBlockRange} from "../../utils";
-import {ISlotRange} from "../../interface";
+import {ISlotRange, ISyncCheckpoint} from "../../interface";
 
 // TODO: reusable, unit test
 export class BlockRangeFetcher {
@@ -30,6 +30,11 @@ export class BlockRangeFetcher {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.getPeers = getPeers;
+  }
+
+  public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
+    this.rangeStart = lastProcessedBlock.slot;
+    this.rangeEnd = this.rangeStart + 1;
   }
 
   /**

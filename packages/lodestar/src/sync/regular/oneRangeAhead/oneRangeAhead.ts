@@ -12,7 +12,8 @@ import {GossipEvent} from "../../../network/gossip/constants";
 import {checkBestPeer, getBestPeer} from "../../utils";
 import {getSyncPeers} from "../../utils/peers";
 import {BlockRangeFetcher} from "./fetcher";
-import {processUntilComplete} from "./processor";
+import {BlockRangeProcessor} from "./processor";
+import {ISyncCheckpoint} from "../../interface";
 
 /**
  * One Range Ahead regular sync: fetch one range in advance and buffer blocks.
@@ -31,6 +32,8 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   private fetcher: BlockRangeFetcher;
 
+  private processor: BlockRangeProcessor;
+
   private controller!: AbortController;
 
   private blockBuffer: SignedBeaconBlock[];
@@ -42,6 +45,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.fetcher = new BlockRangeFetcher(options, modules, this.getSyncPeers.bind(this));
+    this.processor = new BlockRangeProcessor(modules);
     this.blockBuffer = [];
   }
 
@@ -57,6 +61,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     }
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.controller = new AbortController();
+    await this.processor.start();
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
     // await Promise.all([this.sync(), this.setTarget()]);
     this.sync().catch((e) => {
@@ -68,7 +73,12 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
+    await this.processor.stop();
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
+  }
+
+  public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
+    this.fetcher.setLastProcessedBlock(lastProcessedBlock);
   }
 
   public getHighestBlock(): Slot {
@@ -92,7 +102,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       const lastSlot = this.blockBuffer[this.blockBuffer.length - 1].message.slot;
       const result = await Promise.all([
         this.fetcher.next(),
-        processUntilComplete(this.config, this.chain, [...this.blockBuffer], this.controller.signal),
+        this.processor.processUntilComplete([...this.blockBuffer], this.controller.signal),
       ]);
       this.blockBuffer = result[0];
       this.logger.info(`Regular Sync: Synced up to slot ${lastSlot} `, {
