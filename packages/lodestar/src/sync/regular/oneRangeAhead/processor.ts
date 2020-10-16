@@ -24,7 +24,7 @@ export async function processUntilComplete(
       const root = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
       if (config.types.Root.equals(root, lastRoot)) {
         chain.emitter.removeListener("block", onProcessedBlock);
-        cleanUp();
+        chain.emitter.removeListener("error:block", onErrorBlock);
         resolve();
       }
     };
@@ -32,10 +32,6 @@ export async function processUntilComplete(
       if (err.type.code === BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN) {
         await onProcessedBlock(err.job.signedBlock);
       }
-    };
-    const cleanUp = (): void => {
-      chain.emitter.removeListener("block", onProcessedBlock);
-      chain.emitter.removeListener("error:block", onErrorBlock);
     };
     chain.emitter.on("block", onProcessedBlock);
     chain.emitter.on("error:block", onErrorBlock);

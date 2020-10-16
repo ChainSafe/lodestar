@@ -41,8 +41,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    const headSlot = this.chain.forkChoice.getHead().slot;
-    this.fetcher = new BlockRangeFetcher(options, modules, headSlot, this.getSyncPeers.bind(this));
+    this.fetcher = new BlockRangeFetcher(options, modules, this.getSyncPeers.bind(this));
     this.blockBuffer = [];
   }
 
@@ -110,6 +109,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       this.logger.info("Regular Sync: wait for best peer");
       this.bestPeer = undefined;
       await this.waitForBestPeer(this.controller.signal);
+      if (this.controller.signal.aborted) return [];
     }
     return [this.bestPeer!];
   };

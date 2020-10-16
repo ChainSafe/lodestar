@@ -8,6 +8,7 @@ import {defaultOptions, IRegularSyncOptions} from "../options";
 import {IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {getBlockRange} from "../../utils";
+import {ISlotRange} from "../../interface";
 
 // TODO: reusable, unit test
 export class BlockRangeFetcher {
@@ -20,22 +21,14 @@ export class BlockRangeFetcher {
   private rangeStart: Slot = 0;
   // exclusive
   private rangeEnd: Slot = 0;
-  private bestPeer: PeerId | undefined;
   private getPeers: () => Promise<PeerId[]>;
 
-  constructor(
-    options: Partial<IRegularSyncOptions>,
-    modules: IRegularSyncModules,
-    rangeStart: Slot,
-    getPeers: () => Promise<PeerId[]>
-  ) {
+  constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules, getPeers: () => Promise<PeerId[]>) {
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
-    this.rangeStart = rangeStart;
-    this.rangeEnd = this.rangeStart + 1;
     this.getPeers = getPeers;
   }
 
@@ -47,13 +40,16 @@ export class BlockRangeFetcher {
     this.rangeEnd = this.getNewTarget();
     let result: SignedBeaconBlock[] | null = null;
     while (!result || !result!.length) {
-      if (result && !result!.length) await this.handleEmptyRange();
-      const slotRange = {start: this.rangeStart, end: this.rangeEnd};
+      let slotRange: ISlotRange | null = null;
       try {
         const peers = await this.getPeers();
+        // node is stopped
+        if (!peers || !peers.length) return [];
+        if (result && !result!.length) await this.handleEmptyRange(peers);
+        slotRange = {start: this.rangeStart, end: this.rangeEnd};
         result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
       } catch (e) {
-        this.logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+        this.logger.debug("Failed to get block range " + JSON.stringify(slotRange || {}) + ". Error: " + e.message);
         result = null;
       }
     }
@@ -61,12 +57,12 @@ export class BlockRangeFetcher {
     return result!;
   }
 
-  private async handleEmptyRange(): Promise<void> {
-    if (!this.bestPeer) {
+  private async handleEmptyRange(peers: PeerId[] = []): Promise<void> {
+    if (!this.getPeers.length) {
       return;
     }
     const range = {start: this.rangeStart, end: this.rangeEnd};
-    const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)?.headSlot ?? 0;
+    const peerHeadSlot = Math.max(...peers.map((peer) => this.network.peerMetadata.getStatus(peer)?.headSlot ?? 0));
     this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
