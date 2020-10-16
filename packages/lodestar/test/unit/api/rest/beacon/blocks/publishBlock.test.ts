@@ -2,14 +2,14 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
-import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
-import {generateAttestation} from "../../../../../utils/attestation";
+import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
+import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {silentLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
 
-describe("rest - beacon - getPoolAttestations", function () {
+describe("rest - beacon - publishBlock", function () {
   let restApi: RestApi;
   let api: StubbedApi;
 
@@ -36,13 +36,21 @@ describe("rest - beacon - getPoolAttestations", function () {
   });
 
   it("should succeed", async function () {
-    api.beacon.pool.getAttestations.withArgs({committeeIndex: 1, slot: 1}).resolves([generateAttestation()]);
-    const response = await supertest(restApi.server.server)
-      .get(urlJoin(BEACON_PREFIX, getPoolAttestations.url))
-      // eslint-disable-next-line @typescript-eslint/camelcase
-      .query({slot: "1", committee_index: "1"})
+    const block = generateEmptySignedBlock();
+    api.beacon.blocks.publishBlock.resolves();
+    await supertest(restApi.server.server)
+      .post(urlJoin(BEACON_PREFIX, publishBlock.url))
+      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as object)
       .expect(200)
+      .expect("Content-Type", "application/json");
+  });
+
+  it("bad body", async function () {
+    await supertest(restApi.server.server)
+      .post(urlJoin(BEACON_PREFIX, publishBlock.url))
+      .send({})
+      .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.data.length).to.be.equal(1);
+    expect(api.beacon.blocks.publishBlock.notCalled).to.be.true;
   });
 });

@@ -1,9 +1,11 @@
-import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import sinon from "sinon";
-import {generateAttestation, generateAttestationData} from "../../../../../utils/attestation";
 import {expect} from "chai";
+import sinon from "sinon";
+import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
+import {Libp2pNetwork} from "../../../../../../src/network/network";
+import {BeaconSync} from "../../../../../../src/sync/sync";
+import {generateAttestation, generateAttestationData} from "../../../../../utils/attestation";
+import {StubbedBeaconDb} from "../../../../../utils/stub";
 
 describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
@@ -16,6 +18,8 @@ describe("beacon pool api impl", function () {
       {
         config,
         db: dbStub,
+        sync: sinon.createStubInstance(BeaconSync),
+        network: sinon.createStubInstance(Libp2pNetwork),
       }
     );
   });
