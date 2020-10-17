@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
-import defaultOptions, {ISyncOptions} from "./options";
+import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -179,7 +179,7 @@ export class BeaconSync implements IBeaconSync {
 
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...");
-    const minPeers = this.opts.minPeers ?? defaultOptions.minPeers;
+    const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     while (this.mode !== SyncMode.STOPPED && this.getSyncPeers().length < minPeers) {
       this.logger.warn(`Current peerCount=${this.getSyncPeers().length}, required = ${minPeers}`);
       await sleep(3000);

@@ -12,3 +12,4 @@ export * from "./recursivelyFind";
 export * from "./sleep";
 export * from "./stripOffNewlines";
 export * from "./subObject";
+export * from "./types";

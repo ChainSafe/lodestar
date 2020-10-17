@@ -1,4 +1,5 @@
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {apiNamespaces} from "@chainsafe/lodestar/src/api";
 import {ICliCommandOptions} from "../../util";
 
 export interface IBeaconNodeApiArgs {
@@ -12,7 +13,7 @@ export interface IBeaconNodeApiArgs {
 export function toApiOptions(args: IBeaconNodeApiArgs): IBeaconNodeOptions["api"] {
   return {
     rest: {
-      api: args["api.rest.api"],
+      api: args["api.rest.api"] as IBeaconNodeOptions["api"]["rest"]["api"],
       cors: args["api.rest.cors"],
       enabled: args["api.rest.enabled"],
       host: args["api.rest.host"],
@@ -24,7 +25,7 @@ export function toApiOptions(args: IBeaconNodeApiArgs): IBeaconNodeOptions["api"
 export const apiOptions: ICliCommandOptions<IBeaconNodeApiArgs> = {
   "api.rest.api": {
     type: "array",
-    choices: ["beacon", "node", "validator"],
+    choices: apiNamespaces,
     description: "Pick namespaces to expose for HTTP API",
     defaultDescription: JSON.stringify(defaultOptions.api.rest.api),
     group: "api",
