@@ -74,7 +74,7 @@
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.19",
     "uuidv4": "^6.1.1",
-    "yargs": "^16.0.3"
+    "yargs": "^16.1.0"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.3",
@@ -84,6 +84,6 @@
     "@types/js-yaml": "^3.12.5",
     "@types/lodash": "^4.14.157",
     "@types/rimraf": "^2.0.3",
-    "@types/yargs": "^15.0.7"
+    "@types/yargs": "^15.0.9"
   }
 }
