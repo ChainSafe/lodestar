@@ -6,15 +6,11 @@ import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/mi
 
 import {writeFile, readFile} from "../util";
 
-export async function writeParamsConfig(filename: string, config: IBeaconConfig): Promise<void> {
-  await writeParams(filename, config.params);
-}
-
-export async function writeParams(filename: string, params: IBeaconParams): Promise<void> {
+export async function writeBeaconParams(filename: string, params: IBeaconParams): Promise<void> {
   await writeFile(filename, BeaconParams.toJson(params));
 }
 
-export async function readParamsConfig(filename: string): Promise<IBeaconParams> {
+export async function readBeaconParams(filename: string): Promise<IBeaconParams> {
   return await readFile(filename);
 }
 
@@ -27,6 +23,29 @@ export function getBeaconConfig(preset: string, additionalParams: Record<string,
     default:
       throw Error(`Unsupported spec: ${preset}`);
   }
+}
+
+export async function initializeAndWriteBeaconParams({
+  paramsFile,
+  preset,
+  testnet,
+  additionalParams,
+}: {
+  paramsFile: string;
+  preset: string;
+  testnet?: string;
+  additionalParams?: Record<string, unknown>;
+}): Promise<void> {
+  // Auto-setup for testnets
+  if (testnet) {
+    const paramsUrl = getTestnetParamsUrl(testnet);
+    if (paramsUrl) {
+      return await downloadFile(paramsFile, paramsUrl);
+    }
+  }
+
+  const config = getBeaconConfig(preset, additionalParams);
+  return await writeBeaconParams(paramsFile, config.params);
 }
 
 export async function getMergedIBeaconConfig(

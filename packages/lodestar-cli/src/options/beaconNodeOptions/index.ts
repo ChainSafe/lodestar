@@ -1,29 +1,24 @@
 import {IBeaconNodeOptions as _IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {RecursivePartial} from "../../util";
-import {apiOptions, toApiOptions, IBeaconNodeApiArgs} from "./api";
-import {eth1Options, toEth1Options, IBeaconNodeEth1Args} from "./eth1";
-import {loggerOptions, toLoggerOptions, IBeaconNodeLoggerArgs} from "./logger";
-import {metricsOptions, toMetricsOptions, IBeaconNodeMetricsArgs} from "./metrics";
-import {networkOptions, toNetworkOptions, IBeaconNodeNetworkArgs} from "./network";
-import {syncOptions, toSyncOptions, IBeaconNodeSyncArgs} from "./sync";
+import * as api from "./api";
+import * as eth1 from "./eth1";
+import * as logger from "./logger";
+import * as metrics from "./metrics";
+import * as network from "./network";
+import * as sync from "./sync";
 
-export type IBeaconNodeArgs = IBeaconNodeApiArgs &
-  IBeaconNodeEth1Args &
-  IBeaconNodeLoggerArgs &
-  IBeaconNodeMetricsArgs &
-  IBeaconNodeNetworkArgs &
-  IBeaconNodeSyncArgs;
+export type IBeaconNodeArgs = api.IArgs & eth1.IArgs & logger.IArgs & metrics.IArgs & network.IArgs & sync.IArgs;
 
 export function toBeaconNodeOptions(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   return {
-    api: toApiOptions(args),
+    api: api.parseArgs(args),
     chain: {},
     db: {},
-    eth1: toEth1Options(args),
-    logger: toLoggerOptions(args),
-    metrics: toMetricsOptions(args),
-    network: toNetworkOptions(args),
-    sync: toSyncOptions(args),
+    eth1: eth1.parseArgs(args),
+    logger: logger.parseArgs(args),
+    metrics: metrics.parseArgs(args),
+    network: network.parseArgs(args),
+    sync: sync.parseArgs(args),
   };
 }
 
@@ -32,10 +27,10 @@ export type IBeaconNodeOptions = _IBeaconNodeOptions;
 export type IBeaconNodeOptionsPartial = RecursivePartial<_IBeaconNodeOptions>;
 
 export const beaconNodeOptions = {
-  ...apiOptions,
-  ...eth1Options,
-  ...loggerOptions,
-  ...metricsOptions,
-  ...networkOptions,
-  ...syncOptions,
+  ...api.options,
+  ...eth1.options,
+  ...logger.options,
+  ...metrics.options,
+  ...network.options,
+  ...sync.options,
 };

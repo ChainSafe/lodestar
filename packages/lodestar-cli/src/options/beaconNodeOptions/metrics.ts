@@ -1,7 +1,7 @@
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {ICliCommandOptions} from "../../util";
 
-export interface IBeaconNodeMetricsArgs {
+export interface IArgs {
   "metrics.enabled": boolean;
   "metrics.gatewayUrl": string;
   "metrics.pushGateway": boolean;
@@ -9,7 +9,7 @@ export interface IBeaconNodeMetricsArgs {
   "metrics.timeout": number;
 }
 
-export function toMetricsOptions(args: IBeaconNodeMetricsArgs): IBeaconNodeOptions["metrics"] {
+export function parseArgs(args: IArgs): IBeaconNodeOptions["metrics"] {
   return {
     enabled: args["metrics.enabled"],
     gatewayUrl: args["metrics.gatewayUrl"],
@@ -19,7 +19,7 @@ export function toMetricsOptions(args: IBeaconNodeMetricsArgs): IBeaconNodeOptio
   };
 }
 
-export const metricsOptions: ICliCommandOptions<IBeaconNodeMetricsArgs> = {
+export const options: ICliCommandOptions<IArgs> = {
   "metrics.enabled": {
     type: "boolean",
     description: "Enable metrics",

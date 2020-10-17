@@ -1,5 +1,8 @@
-import * as fs from "fs";
-import * as path from "path";
+import fs from "fs";
+import path from "path";
+import stream from "stream";
+import {promisify} from "util";
+import got from "got";
 import {load, dump, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {Json} from "@chainsafe/ssz";
 import {ensureDirExists} from "./fs";
@@ -80,4 +83,27 @@ export function readFileSync<T = Json>(filename: string): T {
   const fileFormat = path.extname(filename).substr(1);
   const contents = fs.readFileSync(filename, "utf-8");
   return parse(contents, fileFormat as FileFormat);
+}
+
+/**
+ * Download from URL or copy from local filesystem
+ * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
+ */
+export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string): Promise<void> {
+  if (urlOrPathSrc.startsWith("http")) {
+    await downloadFile(pathDest, urlOrPathSrc);
+  } else {
+    fs.mkdirSync(path.parse(pathDest).dir, {recursive: true});
+    await fs.promises.copyFile(urlOrPathSrc, pathDest);
+  }
+}
+
+/**
+ * Downloads a genesis file per testnet if it does not exist
+ */
+export async function downloadFile(filepath: string, url: string): Promise<void> {
+  if (!fs.existsSync(filepath)) {
+    fs.mkdirSync(path.parse(filepath).dir, {recursive: true});
+    await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(filepath));
+  }
 }

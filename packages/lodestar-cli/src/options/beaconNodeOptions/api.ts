@@ -2,7 +2,7 @@ import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/o
 import {apiNamespaces} from "@chainsafe/lodestar/src/api";
 import {ICliCommandOptions} from "../../util";
 
-export interface IBeaconNodeApiArgs {
+export interface IArgs {
   "api.rest.api": string[];
   "api.rest.cors": string;
   "api.rest.enabled": boolean;
@@ -10,7 +10,7 @@ export interface IBeaconNodeApiArgs {
   "api.rest.port": number;
 }
 
-export function toApiOptions(args: IBeaconNodeApiArgs): IBeaconNodeOptions["api"] {
+export function parseArgs(args: IArgs): IBeaconNodeOptions["api"] {
   return {
     rest: {
       api: args["api.rest.api"] as IBeaconNodeOptions["api"]["rest"]["api"],
@@ -22,7 +22,7 @@ export function toApiOptions(args: IBeaconNodeApiArgs): IBeaconNodeOptions["api"
   };
 }
 
-export const apiOptions: ICliCommandOptions<IBeaconNodeApiArgs> = {
+export const options: ICliCommandOptions<IArgs> = {
   "api.rest.api": {
     type: "array",
     choices: apiNamespaces,

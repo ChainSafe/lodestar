@@ -1,13 +1,13 @@
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {ICliCommandOptions} from "../../util";
 
-export interface IBeaconNodeEth1Args {
+export interface IArgs {
   "eth1.enabled": boolean;
   "eth1.providerUrl": string;
   "eth1.depositContractDeployBlock": number;
 }
 
-export function toEth1Options(args: IBeaconNodeEth1Args): IBeaconNodeOptions["eth1"] {
+export function parseArgs(args: IArgs): IBeaconNodeOptions["eth1"] {
   return {
     enabled: args["eth1.enabled"],
     providerUrl: args["eth1.providerUrl"],
@@ -15,7 +15,7 @@ export function toEth1Options(args: IBeaconNodeEth1Args): IBeaconNodeOptions["et
   };
 }
 
-export const eth1Options: ICliCommandOptions<IBeaconNodeEth1Args> = {
+export const options: ICliCommandOptions<IArgs> = {
   "eth1.enabled": {
     description: "Whether to follow the eth1 chain",
     type: "boolean",

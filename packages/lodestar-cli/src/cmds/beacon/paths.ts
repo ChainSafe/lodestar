@@ -1,5 +1,5 @@
 import {IGlobalArgs} from "../../options";
-import {getGlobalPaths} from "../../paths/global";
+import {getGlobalPaths, IGlobalPaths} from "../../paths/global";
 import {joinIfRelative} from "../../util";
 
 export type IBeaconPaths = {
@@ -25,12 +25,13 @@ export type IBeaconPaths = {
  * ```
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
-export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs, "rootDir">): IBeaconPaths {
-  options = {
-    ...options,
-    ...getGlobalPaths(options),
-  };
-  const rootDir = options.rootDir;
+export function getBeaconPaths(
+  options: Partial<IBeaconPaths> & Pick<IGlobalArgs, "rootDir">
+): IBeaconPaths & IGlobalPaths {
+  // Compute global paths first
+  const globalPaths = getGlobalPaths(options);
+
+  const rootDir = globalPaths.rootDir;
   const beaconDir = rootDir;
   const dbDir = joinIfRelative(beaconDir, options.dbDir || "chain-db");
   const peerStoreDir = joinIfRelative(beaconDir, options.dbDir || "peerstore");
@@ -40,7 +41,7 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
   const logFile = options.logFile && joinIfRelative(beaconDir, options.logFile);
 
   return {
-    ...options,
+    ...globalPaths,
     beaconDir,
     dbDir,
     configFile,
@@ -48,7 +49,7 @@ export function getBeaconPaths(options: Partial<IBeaconPaths> & Pick<IGlobalArgs
     peerIdFile,
     enrFile,
     logFile,
-  } as IBeaconPaths;
+  };
 }
 
 /**
