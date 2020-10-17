@@ -1,12 +1,12 @@
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {Attestation, Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {toJson} from "@chainsafe/lodestar-utils";
+import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
-import {IChainEvents} from "./emitter";
+import {ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
 interface IEventMap<Events, Key extends keyof Events = keyof Events, Value extends Events[Key] = Events[Key]>
@@ -14,35 +14,73 @@ interface IEventMap<Events, Key extends keyof Events = keyof Events, Value exten
   set<Key extends keyof Events>(key: Key, value: Events[Key]): this;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends [void] ? [] : [T];
+
+/**
+ * Returns a function that runs an async handler function with input args,
+ * If the handler function successfully completes,
+ * then emits the event on the event emitter using the same args
+ */
+function wrapHandler<
+  Key extends keyof IChainEvents = keyof IChainEvents,
+  Value extends IChainEvents[Key] = IChainEvents[Key]
+>(event: Key, emitter: ChainEventEmitter, logger: ILogger, handler: (...args: Parameters<Value>) => Promise<void>) {
+  return async (...args: Parameters<Value>): Promise<void> => {
+    try {
+      await handler(...args);
+      emitter.emit(event, ...((args as unknown) as ListenerType<Value>));
+    } catch (e) {
+      logger.error(`Error handling event: ${event}`, e);
+    }
+  };
+}
+
 /**
  * Attach ChainEventEmitter event handlers
  * Listen on `signal` to remove event handlers
+ *
+ * Events are handled in the following way:
+ * Because the chain relies on event handlers to perform side effects (eg: cache/db updates),
+ * We require the chain's event handlers to run and complete in full before external event handlers are allowed to run.
+ *
+ * This is accomplished by maintaining a separate `chain.internalEmitter` and `chain.emitter`.
+ * Chain submodules emit events on the `internalEmitter`, where chain event handlers are listening.
+ * Once a chain event emitter is completed, the same event, with the same args, is emitted on `chain.emitter`, for consumption by external parties.
  */
-export function handleChainEvents(chain: BeaconChain, signal: AbortSignal): void {
+export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void {
   const handlers: IEventMap<IChainEvents> = new Map();
-  handlers.set("clock:slot", onClockSlot.bind(chain));
-  handlers.set("forkVersion", onForkVersion.bind(chain));
-  handlers.set("checkpoint", onCheckpoint.bind(chain));
-  handlers.set("justified", onJustified.bind(chain));
-  handlers.set("finalized", onFinalized.bind(chain));
-  handlers.set("forkChoice:justified", onForkChoiceJustified.bind(chain));
-  handlers.set("forkChoice:finalized", onForkChoiceFinalized.bind(chain));
-  handlers.set("forkChoice:head", onForkChoiceHead.bind(chain));
-  handlers.set("forkChoice:reorg", onForkChoiceReorg.bind(chain));
-  handlers.set("attestation", onAttestation.bind(chain));
-  handlers.set("block", onBlock.bind(chain));
-  handlers.set("error:attestation", onErrorAttestation.bind(chain));
-  handlers.set("error:block", onErrorBlock.bind(chain));
+  const emitter = this.emitter;
+  const logger = this.logger;
+  handlers.set("clock:slot", wrapHandler("clock:slot", emitter, logger, onClockSlot.bind(this)));
+  handlers.set("forkVersion", wrapHandler("forkVersion", emitter, logger, onForkVersion.bind(this)));
+  handlers.set("checkpoint", wrapHandler("checkpoint", emitter, logger, onCheckpoint.bind(this)));
+  handlers.set("justified", wrapHandler("justified", emitter, logger, onJustified.bind(this)));
+  handlers.set("finalized", wrapHandler("finalized", emitter, logger, onFinalized.bind(this)));
+  handlers.set(
+    "forkChoice:justified",
+    wrapHandler("forkChoice:justified", emitter, logger, onForkChoiceJustified.bind(this))
+  );
+  handlers.set(
+    "forkChoice:finalized",
+    wrapHandler("forkChoice:finalized", emitter, logger, onForkChoiceFinalized.bind(this))
+  );
+  handlers.set("forkChoice:head", wrapHandler("forkChoice:head", emitter, logger, onForkChoiceHead.bind(this)));
+  handlers.set("forkChoice:reorg", wrapHandler("forkChoice:reorg", emitter, logger, onForkChoiceReorg.bind(this)));
+  handlers.set("attestation", wrapHandler("attestation", emitter, logger, onAttestation.bind(this)));
+  handlers.set("block", wrapHandler("block", emitter, logger, onBlock.bind(this)));
+  handlers.set("error:attestation", wrapHandler("error:attestation", emitter, logger, onErrorAttestation.bind(this)));
+  handlers.set("error:block", wrapHandler("error:block", emitter, logger, onErrorBlock.bind(this)));
 
   handlers.forEach((handler, event) => {
-    chain.emitter.on(event, handler);
+    this.internalEmitter.on(event, handler);
   });
 
   signal.addEventListener(
     "abort",
     () => {
       handlers.forEach((handler, event) => {
-        chain.emitter.removeListener(event, handler);
+        this.internalEmitter.removeListener(event, handler);
       });
     },
     {once: true}
@@ -70,7 +108,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
 
 export async function onForkVersion(this: BeaconChain): Promise<void> {
   this._currentForkDigest = await this.getCurrentForkDigest();
-  this.emitter.emit("forkDigest", this._currentForkDigest);
+  this.internalEmitter.emit("forkDigest", this._currentForkDigest);
 }
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
@@ -83,13 +121,13 @@ export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateConte
     const justifiedEpoch = justifiedCheckpoint.epoch;
     const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
     if (justifiedEpoch > preJustifiedEpoch) {
-      this.emitter.emit("justified", justifiedCheckpoint, stateContext);
+      this.internalEmitter.emit("justified", justifiedCheckpoint, stateContext);
     }
     const finalizedCheckpoint = stateContext.state.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
     if (finalizedEpoch > preFinalizedEpoch) {
-      this.emitter.emit("finalized", finalizedCheckpoint, stateContext);
+      this.internalEmitter.emit("finalized", finalizedCheckpoint, stateContext);
     }
   }
 }

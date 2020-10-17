@@ -75,7 +75,7 @@ export class BeaconChain implements IBeaconChain {
   protected readonly metrics: IBeaconMetrics;
   protected readonly opts: IChainOptions;
   protected genesisTime: Number64 = 0;
-
+  protected internalEmitter: ChainEventEmitter;
   private abortController?: AbortController;
 
   public constructor(opts: IChainOptions, {config, db, eth1Provider, logger, metrics}: IBeaconChainModules) {
@@ -86,6 +86,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.metrics = metrics;
     this.emitter = new ChainEventEmitter();
+    this.internalEmitter = new ChainEventEmitter();
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
   }
@@ -186,7 +187,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock({
       config: this.config,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       genesisTime: state.genesisTime,
       signal: this.abortController.signal,
     });
@@ -198,7 +199,7 @@ export class BeaconChain implements IBeaconChain {
     await this.db.checkpointStateCache.add(checkpoint, {state, epochCtx});
     this.regen = new QueuedStateRegenerator({
       config: this.config,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       forkChoice: this.forkChoice,
       db: this.db,
       signal: this.abortController!.signal,
@@ -212,7 +213,7 @@ export class BeaconChain implements IBeaconChain {
     this.attestationProcessor = new AttestationProcessor({
       config: this.config,
       forkChoice: this.forkChoice,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       clock: this.clock,
       regen: this.regen,
     });
@@ -221,11 +222,11 @@ export class BeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice,
       clock: this.clock,
       regen: this.regen,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       signal: this.abortController!.signal,
     });
     this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    handleChainEvents(this, this.abortController.signal);
+    handleChainEvents.bind(this)(this.abortController.signal);
   }
 
   public async stop(): Promise<void> {
@@ -409,7 +410,7 @@ export class BeaconChain implements IBeaconChain {
       };
     }
     const fcStore = new ForkChoiceStore({
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       currentSlot: this.clock.currentSlot,
       justifiedCheckpoint,
       finalizedCheckpoint,
