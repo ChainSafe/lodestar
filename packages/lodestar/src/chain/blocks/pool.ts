@@ -95,6 +95,10 @@ export class BlockPool {
     return fromHexString(root);
   }
 
+  public getTotalPendingBlocks(): number {
+    return this.blocks.size;
+  }
+
   public getByParent(parentRoot: Root): Uint8Array[] {
     const hexArr = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
     return hexArr.map((hex) => fromHexString(hex));

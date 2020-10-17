@@ -292,8 +292,10 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      await this.db.pendingBlock.add(err.job.signedBlock);
+      // add to pendingBlocks first which is not await
+      // this is to process a block range
       this.pendingBlocks.addByParent(err.job.signedBlock);
+      await this.db.pendingBlock.add(err.job.signedBlock);
       break;
     case BlockErrorCode.ERR_INCORRECT_PROPOSER:
     case BlockErrorCode.ERR_REPEAT_PROPOSAL:

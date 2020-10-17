@@ -5,7 +5,7 @@ import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 /**
  * Blocks by root
  *
- * Used to store unfinalized blocks
+ * Used to store pending blocks
  */
 export class PendingBlockRepository extends Repository<Uint8Array, SignedBeaconBlock> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
