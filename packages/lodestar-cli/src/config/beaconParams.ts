@@ -1,10 +1,11 @@
 import {existsSync} from "fs";
+import deepmerge from "deepmerge";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
 import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
-
 import {writeFile, readFile} from "../util";
+import {getTestnetBeaconParams, TestnetName} from "../testnets";
 
 export async function writeBeaconParams(filename: string, params: IBeaconParams): Promise<void> {
   await writeFile(filename, BeaconParams.toJson(params));
@@ -33,18 +34,16 @@ export async function initializeAndWriteBeaconParams({
 }: {
   paramsFile: string;
   preset: string;
-  testnet?: string;
+  testnet?: TestnetName;
   additionalParams?: Record<string, unknown>;
 }): Promise<void> {
   // Auto-setup for testnets
-  if (testnet) {
-    const paramsUrl = getTestnetParamsUrl(testnet);
-    if (paramsUrl) {
-      return await downloadFile(paramsFile, paramsUrl);
-    }
-  }
+  const additionalParamsTestnet = testnet && getTestnetBeaconParams(testnet);
 
-  const config = getBeaconConfig(preset, additionalParams);
+  const config = getBeaconConfig(
+    preset,
+    deepmerge<Record<string, unknown>>(additionalParamsTestnet || {}, additionalParams || {})
+  );
   return await writeBeaconParams(paramsFile, config.params);
 }
 
