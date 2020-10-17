@@ -47,10 +47,6 @@ for (const cmd of cmds) {
   registerCommandToYargs(lodestar, cmd);
 }
 
-lodestar
-  .recommendCommands()
-  // .strictCommands() is not documented in @types/yargs: 15.0.7
-  // @ts-ignore
-  .strictCommands();
+lodestar.recommendCommands().strict();
 
 lodestar.parse();
