@@ -1,4 +1,3 @@
-import {existsSync} from "fs";
 import deepmerge from "deepmerge";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
@@ -7,53 +6,76 @@ import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/mi
 import {writeFile, readFile} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
 
-export async function writeBeaconParams(filename: string, params: IBeaconParams): Promise<void> {
-  await writeFile(filename, BeaconParams.toJson(params));
+interface IBeaconParamsArgs {
+  paramsFile: string;
+  preset: string;
+  testnet?: TestnetName;
+  additionalParamsCli?: Record<string, unknown>;
 }
 
-export async function readBeaconParams(filename: string): Promise<IBeaconParams> {
-  return await readFile(filename);
+/**
+ * Initializes IBeaconConfig with params from (in order)
+ * - preset
+ * - Testnet params (diff)
+ * - existing params file
+ * - CLI flags
+ */
+export function getBeaconConfig(kwargs: IBeaconParamsArgs): IBeaconConfig {
+  return createIBeaconConfig(getBeaconParams(kwargs));
 }
 
-export function getBeaconConfig(preset: string, additionalParams: Record<string, unknown> = {}): IBeaconConfig {
+/**
+ * Computes merged IBeaconParams type from (in order)
+ * - preset
+ * - Testnet params (diff)
+ * - existing params file
+ * - CLI flags
+ */
+export function getBeaconParams({preset, testnet, paramsFile, additionalParamsCli}: IBeaconParamsArgs): IBeaconParams {
+  const presetBeaconParams = getPresetBeaconParams(preset);
+  const additionalParams = mergeBeaconParams(
+    // Default testnet params
+    testnet ? getTestnetBeaconParams(testnet) : {},
+    // Existing user custom params from file
+    readBeaconParamsIfExists(paramsFile),
+    // Params from CLI flags
+    additionalParamsCli || {}
+  );
+  return {...presetBeaconParams, ...createIBeaconParams(additionalParams)};
+}
+
+function getPresetBeaconParams(preset: string): IBeaconParams {
   switch (preset) {
     case "mainnet":
-      return createIBeaconConfig({...mainnetParams, ...createIBeaconParams(additionalParams)});
+      return mainnetParams;
     case "minimal":
-      return createIBeaconConfig({...minimalParams, ...createIBeaconParams(additionalParams)});
+      return minimalParams;
     default:
       throw Error(`Unsupported spec: ${preset}`);
   }
 }
 
-export async function initializeAndWriteBeaconParams({
-  paramsFile,
-  preset,
-  testnet,
-  additionalParams,
-}: {
-  paramsFile: string;
-  preset: string;
-  testnet?: TestnetName;
-  additionalParams?: Record<string, unknown>;
-}): Promise<void> {
-  // Auto-setup for testnets
-  const additionalParamsTestnet = testnet && getTestnetBeaconParams(testnet);
-
-  const config = getBeaconConfig(
-    preset,
-    deepmerge<Record<string, unknown>>(additionalParamsTestnet || {}, additionalParams || {})
-  );
-  return await writeBeaconParams(paramsFile, config.params);
+export function writeBeaconParams(filename: string, params: IBeaconParams): void {
+  writeFile(filename, BeaconParams.toJson(params));
 }
 
-export async function getMergedIBeaconConfig(
-  preset: string,
-  paramsFile: string,
-  options: Record<string, unknown>
-): Promise<IBeaconConfig> {
-  return getBeaconConfig(preset, {
-    ...(existsSync(paramsFile) ? await readParamsConfig(paramsFile) : {}),
-    ...options,
-  });
+function readBeaconParamsIfExists(filename: string): Partial<IBeaconParams> {
+  try {
+    return readFile(filename);
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return {};
+    } else {
+      throw e;
+    }
+  }
+}
+
+/**
+ * Typesafe wrapper to merge partial IBeaconNodeOptions objects
+ */
+function mergeBeaconParams(...itemsArr: Partial<IBeaconParams>[]): Partial<IBeaconParams> {
+  return itemsArr.reduce((mergedItems, item) => {
+    return deepmerge(mergedItems, item);
+  }, itemsArr[0]);
 }

@@ -1,4 +1,4 @@
-import {IBeaconNodeOptions as _IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {RecursivePartial} from "../../util";
 import * as api from "./api";
 import * as eth1 from "./eth1";
@@ -7,7 +7,12 @@ import * as metrics from "./metrics";
 import * as network from "./network";
 import * as sync from "./sync";
 
-export type IBeaconNodeArgs = api.IArgs & eth1.IArgs & logger.IArgs & metrics.IArgs & network.IArgs & sync.IArgs;
+export type IBeaconNodeArgs = api.IApiArgs &
+  eth1.IEth1Args &
+  logger.ILoggerArgs &
+  metrics.IMetricsArgs &
+  network.INetworkArgs &
+  sync.ISyncArgs;
 
 export function toBeaconNodeOptions(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   return {
@@ -21,10 +26,6 @@ export function toBeaconNodeOptions(args: IBeaconNodeArgs): RecursivePartial<IBe
     sync: sync.parseArgs(args),
   };
 }
-
-// Re-export for convenience
-export type IBeaconNodeOptions = _IBeaconNodeOptions;
-export type IBeaconNodeOptionsPartial = RecursivePartial<_IBeaconNodeOptions>;
 
 export const beaconNodeOptions = {
   ...api.options,

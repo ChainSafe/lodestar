@@ -3,10 +3,10 @@ import {LogLevel, LogLevels} from "@chainsafe/lodestar-utils";
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {ICliCommandOptions} from "../../util";
 
-const getArgKey = (logModule: keyof IBeaconNodeOptions["logger"]): keyof IArgs =>
-  `logger.${logModule}.level` as keyof IArgs;
+const getArgKey = (logModule: keyof IBeaconNodeOptions["logger"]): keyof ILoggerArgs =>
+  `logger.${logModule}.level` as keyof ILoggerArgs;
 
-export interface IArgs {
+export interface ILoggerArgs {
   "logger.chain.level": string;
   "logger.db.level": string;
   "logger.eth1.level": string;
@@ -20,7 +20,7 @@ export interface IArgs {
 
 type LoggerModule = keyof typeof defaultOptions.logger;
 
-export function parseArgs(args: IArgs): Partial<IBeaconNodeOptions["logger"]> {
+export function parseArgs(args: ILoggerArgs): Partial<IBeaconNodeOptions["logger"]> {
   return Object.keys(defaultOptions.logger).reduce((options: Partial<IBeaconNodeOptions["logger"]>, logModule) => {
     const logModuleKey = logModule as keyof IBeaconNodeOptions["logger"];
     const level = args[getArgKey(logModuleKey)];
@@ -33,15 +33,18 @@ export function parseArgs(args: IArgs): Partial<IBeaconNodeOptions["logger"]> {
  * Generates an option for each module in defaultOptions.logger
  * chain, db, eth1, etc
  */
-export const options: ICliCommandOptions<IArgs> = Object.keys(defaultOptions.logger).reduce((options, logModule) => {
-  const logModuleKey = logModule as keyof IBeaconNodeOptions["logger"];
-  options[getArgKey(logModuleKey)] = {
-    hidden: true,
-    type: "string",
-    choices: LogLevels,
-    description: `Logging verbosity level for ${logModule}`,
-    defaultDescription: (defaultOptions.logger[logModule as LoggerModule] || {}).level,
-    group: "log",
-  };
-  return options;
-}, {} as {[key in keyof IArgs]: Options});
+export const options: ICliCommandOptions<ILoggerArgs> = Object.keys(defaultOptions.logger).reduce(
+  (options, logModule) => {
+    const logModuleKey = logModule as keyof IBeaconNodeOptions["logger"];
+    options[getArgKey(logModuleKey)] = {
+      hidden: true,
+      type: "string",
+      choices: LogLevels,
+      description: `Logging verbosity level for ${logModule}`,
+      defaultDescription: (defaultOptions.logger[logModule as LoggerModule] || {}).level,
+      group: "log",
+    };
+    return options;
+  },
+  {} as {[key in keyof ILoggerArgs]: Options}
+);

@@ -2,11 +2,11 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
+import {getBeaconConfig} from "../../../../config/beaconParams";
+import {getGlobalPaths} from "../../../../paths/global";
 import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
-import {initCmd} from "../../../init/handler";
-import {getMergedIBeaconConfig} from "../../../../config/params";
 
 interface IValidatorCreateArgs {
   name: string;
@@ -69,15 +69,21 @@ and pre-computed deposit RPL data",
     },
   },
 
-  handler: async (options) => {
-    await initBLS(); // Necessary to compute validator pubkey from privKey
-    await initCmd(options);
+  handler: async (args) => {
+    // Necessary to compute validator pubkey from privKey
+    await initBLS();
 
-    const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
-    const accountPaths = getAccountPaths(options);
-    const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+    const config = getBeaconConfig({
+      paramsFile: getGlobalPaths(args).paramsFile,
+      preset: args.preset,
+      testnet: args.testnet,
+      additionalParamsCli: args.params,
+    });
+
+    const {name, passphraseFile, storeWithdrawalKeystore, count} = args;
+    const accountPaths = getAccountPaths(args);
     const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
-    const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
+    const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
 
     if (depositGwei > maxEffectiveBalance)
       throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);

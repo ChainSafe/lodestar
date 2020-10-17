@@ -16,8 +16,8 @@ export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
     },
   ],
 
-  handler: async (options) => {
-    const accountPaths = getAccountPaths(options);
+  handler: async (args) => {
+    const accountPaths = getAccountPaths(args);
     const walletManager = new WalletManager(accountPaths);
     for (const {name} of walletManager.wallets()) {
       // eslint-disable-next-line no-console

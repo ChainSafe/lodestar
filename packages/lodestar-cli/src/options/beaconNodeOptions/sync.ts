@@ -1,17 +1,17 @@
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {ICliCommandOptions} from "../../util";
 
-export interface IArgs {
+export interface ISyncArgs {
   "sync.minPeers": number;
 }
 
-export function parseArgs(args: IArgs): IBeaconNodeOptions["sync"] {
+export function parseArgs(args: ISyncArgs): IBeaconNodeOptions["sync"] {
   return {
     minPeers: args["sync.minPeers"],
   };
 }
 
-export const options: ICliCommandOptions<IArgs> = {
+export const options: ICliCommandOptions<ISyncArgs> = {
   "sync.minPeers": {
     type: "number",
     description: "Minimum number of peers before the beacon chain starts syncing",

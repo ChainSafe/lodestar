@@ -16,8 +16,8 @@ export const list: ICliCommand<{}, IAccountValidatorArgs & IGlobalArgs> = {
     },
   ],
 
-  handler: (options) => {
-    const accountPaths = getAccountPaths(options);
+  handler: (args) => {
+    const accountPaths = getAccountPaths(args);
 
     const validatorDirManager = new ValidatorDirManager(accountPaths);
     const validatorPubKeys = validatorDirManager.iterDir();

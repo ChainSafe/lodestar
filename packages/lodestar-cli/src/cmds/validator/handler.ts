@@ -5,29 +5,32 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {getBeaconConfig} from "../../config/beaconParams";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getMergedIBeaconConfig} from "../../config/params";
-import {initCmd} from "../init/handler";
 import {onGracefulShutdown} from "../../util/process";
 
 /**
  * Run a validator client
  */
-export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
-  await initCmd(options);
 
-  const server = options.server;
-  const force = options.force;
-  const graffiti = options.graffiti || getDefaultGraffiti();
-  const accountPaths = getAccountPaths(options);
-  const validatorPaths = getValidatorPaths(options);
-  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+  const server = args.server;
+  const force = args.force;
+  const graffiti = args.graffiti || getDefaultGraffiti();
+  const accountPaths = getAccountPaths(args);
+  const validatorPaths = getValidatorPaths(args);
+  const config = getBeaconConfig({
+    paramsFile: validatorPaths.paramsFile,
+    preset: args.preset,
+    testnet: args.testnet,
+    additionalParamsCli: args.params,
+  });
 
   const logger = new WinstonLogger();
 

@@ -2,11 +2,45 @@ import fs from "fs";
 import _yargs from "yargs/yargs";
 import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
-import {IBeaconNodeOptions} from "../options";
-import {readFileSync, writeFile, getSubObject, setSubObject, RecursivePartial} from "../util";
-import {IBeaconArgs, beaconOptions} from "../cmds/beacon/options";
-import {getTestnetConfig, TestnetName} from "../testnets";
+import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {readFile, writeFile, RecursivePartial} from "../util";
+import {fetchBootnodes, getTestnetBeaconNodeOptions, TestnetName} from "../testnets";
+
+export class BeaconNodeOptions {
+  private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;
+
+  constructor({
+    beaconNodeArgs,
+    configFile,
+    testnet,
+  }: {
+    beaconNodeArgs: RecursivePartial<IBeaconNodeOptions>;
+    configFile?: string;
+    testnet?: TestnetName;
+  }) {
+    this.beaconNodeOptions = mergeBeaconNodeOptions(
+      testnet ? getTestnetBeaconNodeOptions(testnet) : {},
+      configFile ? readBeaconNodeOptions(configFile) : {},
+      beaconNodeArgs
+    );
+  }
+
+  get(): RecursivePartial<IBeaconNodeOptions> {
+    return this.beaconNodeOptions;
+  }
+
+  getWithDefaults(): IBeaconNodeOptions {
+    return mergeBeaconNodeOptionsWithDefaults(defaultOptions, this.beaconNodeOptions);
+  }
+
+  set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
+    this.beaconNodeOptions = deepmerge(this.beaconNodeOptions, beaconNodeOptionsPartial as IBeaconNodeOptions);
+  }
+
+  writeTo(filepath: string): void {
+    writeFile(filepath, this.beaconNodeOptions as Json);
+  }
+}
 
 /**
  * Reads, parses and merges BeaconNodeOptions from:
@@ -23,85 +57,73 @@ export function processBeaconNodeOptions({
   configFile?: string;
   testnet?: TestnetName;
 }): IBeaconNodeOptions {
-  return mergeBeaconNodeOptions(
+  return mergeBeaconNodeOptionsWithDefaults(
     // All required properties are defined
     defaultOptions,
     // Required properties may not be defined
-    beaconNodeArgs,
-    configFile ? readBeaconConfig(configFile) : {},
-    testnet ? getTestnetConfig(testnet) : {}
+    testnet ? getTestnetBeaconNodeOptions(testnet) : {},
+    configFile ? readBeaconNodeOptions(configFile) : {},
+    beaconNodeArgs
   );
 }
 
-export async function initializeBeaconNodeOptions(testnet?: TestnetName) {
-  // Auto-setup testnet
+export async function fetchTestnetBootnodesAsBeaconNodeOptions(
+  testnet?: TestnetName
+): Promise<RecursivePartial<IBeaconNodeOptions>> {
   if (testnet) {
     try {
-      if (!testnetConfig.network) testnetConfig.network = {};
-      if (!testnetConfig.network.discv5) testnetConfig.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
-      testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(args.testnet);
+      return {
+        network: {
+          discv5: {
+            bootEnrs: await fetchBootnodes(testnet),
+          },
+        },
+      };
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${e.stack}`);
     }
   }
-
-  // Only download files if params file does not exist
-  if (!fs.existsSync(beaconPaths.paramsFile)) {
-    const paramsUrl = getTestnetParamsUrl(args.testnet);
-    if (paramsUrl) {
-      await downloadFile(beaconPaths.paramsFile, paramsUrl);
-    }
-  }
+  return {};
 }
 
-export function createBeaconConfig(args: Partial<IBeaconNodeOptions>): Partial<IBeaconNodeOptions> {
-  const cliDefaults = _yargs().default(args).options(beaconOptions).parse([]) as Partial<IBeaconNodeOptions>;
-  // cliDefaults contains a bunch of extra keys created from yargs' leniency
-  // don't create hidden options
-  const config: Partial<IBeaconNodeOptions> = {};
-  for (const [alias, option] of Object.entries(beaconOptions)) {
-    // handle duck typed access to a subobject
-    const preferredNameArr = alias.split(".");
-    const value = getSubObject(cliDefaults, preferredNameArr);
-    if (value !== undefined && (value !== option.default || !option.hidden)) {
-      setSubObject(config, preferredNameArr, value);
-    }
-  }
-  return config;
-}
-
-export async function writeBeaconConfig(filename: string, config: Partial<IBeaconNodeOptions>): Promise<void> {
-  await writeFile(filename, config as Json);
+export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {
+  writeFile(filename, config as Json);
 }
 
 /**
  * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
  * If the config file is not found, the default values will apply.
  */
-export function readBeaconConfig(filename: string): RecursivePartial<IBeaconNodeOptions> {
+export function readBeaconNodeOptions(filename: string): RecursivePartial<IBeaconNodeOptions> {
   if (fs.existsSync(filename)) {
-    return readFileSync(filename);
+    return readFile(filename);
   } else {
     return {};
   }
 }
 
 /**
- * Reads config files and merges their options with default options and user options
- * @param options
+ * Typesafe wrapper to merge partial IBeaconNodeOptions objects
  */
 export function mergeBeaconNodeOptions(
-  defaultOptions: IBeaconNodeOptions,
-  ...optionsArr: RecursivePartial<IBeaconNodeOptions>[]
-): IBeaconNodeOptions {
-  return (optionsArr as IBeaconNodeOptions[]).reduce((mergedBeaconOptions, options) => {
+  ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
+): RecursivePartial<IBeaconNodeOptions> {
+  return partialOptionsArr.reduce((mergedBeaconOptions, options) => {
     return deepmerge(mergedBeaconOptions, options, {arrayMerge});
-  }, defaultOptions);
+  }, partialOptionsArr[0]);
 }
 
-export async function initBeaconConfig(filename: string, args: Partial<IBeaconNodeOptions>): Promise<void> {
-  await writeBeaconConfig(filename, createBeaconConfig(args));
+/**
+ * Typesafe wrapper to merge IBeaconNodeOptions objects
+ */
+export function mergeBeaconNodeOptionsWithDefaults(
+  defaultOptions: IBeaconNodeOptions,
+  ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
+): IBeaconNodeOptions {
+  return (partialOptionsArr as IBeaconNodeOptions[]).reduce((mergedBeaconOptions, options) => {
+    return deepmerge(mergedBeaconOptions, options, {arrayMerge});
+  }, defaultOptions);
 }
 
 /**

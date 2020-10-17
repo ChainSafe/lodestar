@@ -15,10 +15,10 @@ export interface IGlobalPaths {
  * ```
  */
 
-export function getGlobalPaths(options: Partial<IGlobalArgs> & Pick<IGlobalArgs, "rootDir">): IGlobalPaths {
+export function getGlobalPaths(args: Partial<IGlobalArgs> & Pick<IGlobalArgs, "rootDir">): IGlobalPaths {
   // Set rootDir to testnet name iff rootDir is not set explicitly
-  const rootDir = options.rootDir || (options.testnet ? `.${options.testnet}` : "./.lodestar");
-  const paramsFile = joinIfRelative(rootDir, options.paramsFile || "config.yaml");
+  const rootDir = args.rootDir || (args.testnet ? `.${args.testnet}` : "./.lodestar");
+  const paramsFile = joinIfRelative(rootDir, args.paramsFile || "config.yaml");
   return {
     rootDir,
     paramsFile,

@@ -13,50 +13,44 @@ import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 import {getValidatorApiClient} from "./utils/validator";
-import {mergeConfigOptions} from "../../config/beacon";
-import {getBeaconConfig} from "../../util";
-import {getBeaconPaths} from "../beacon/paths";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {onGracefulShutdown} from "../../util/process";
+import {initializeOptionsAndConfig} from "@chainsafe/lodestar-cli/src/cmds/init/handler";
 
 /**
  * Run a beacon node
  */
-export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void> {
+export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
-  options = mergeConfigOptions(options);
-  const peerId = await createPeerId();
-  if (!options.network.discv5) options.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
-  options.network.discv5.enr = await createEnr(peerId);
-  const beaconPaths = getBeaconPaths(options);
-  options = {...options, ...beaconPaths};
-  const config = getBeaconConfig(options.preset, options.params);
-  const libp2p = await createNodeJsLibp2p(peerId, options.network);
-  const logger = new WinstonLogger();
+  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
 
-  const chainDir = join(options.rootDir, "dev", "beacon");
-  const validatorsDir = join(options.rootDir, "dev", "validators");
+  // ENR setup
+  const peerId = await createPeerId();
+  const enr = await createEnr(peerId);
+  beaconNodeOptions.set({network: {discv5: {enr}}});
+
+  const chainDir = join(args.rootDir, "dev", "beacon");
+  const validatorsDir = join(args.rootDir, "dev", "validators");
   mkdirSync(chainDir, {recursive: true});
   mkdirSync(validatorsDir, {recursive: true});
 
-  options.db.name = join(chainDir, "db-" + peerId.toB58String());
-  options.eth1.enabled = false;
+  // TODO: Rename db.name to db.path or db.location
+  const dbPath = join(chainDir, "db-" + peerId.toB58String());
+  beaconNodeOptions.set({db: {name: dbPath}});
+  beaconNodeOptions.set({eth1: {enabled: false}});
 
-  const node = new BeaconNode(options, {
-    config,
-    libp2p,
-    logger,
-  });
+  // BeaconNode setup
+  const options = beaconNodeOptions.getWithDefaults();
+  const libp2p = await createNodeJsLibp2p(peerId, options.network);
+  const logger = new WinstonLogger();
+  const node = new BeaconNode(options, {config, libp2p, logger});
 
-  if (options.genesisValidators) {
-    const state = await initDevChain(node, options.genesisValidators);
-    storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
-  } else if (options.genesisStateFile) {
+  if (args.genesisValidators) {
+    const state = await initDevChain(node, args.genesisValidators);
+    storeSSZState(node.config, state, join(args.rootDir, "dev", "genesis.ssz"));
+  } else if (args.genesisStateFile) {
     await node.chain.initializeBeaconChain(
-      config.types.BeaconState.tree.deserialize(
-        await fs.promises.readFile(join(options.rootDir, options.genesisStateFile))
-      )
+      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(join(args.rootDir, args.genesisStateFile)))
     );
   }
 
@@ -67,7 +61,7 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
       Promise.all(validators.map((v) => v.stop())),
       node.stop(),
       async () => {
-        if (options.reset) {
+        if (args.reset) {
           logger.info("Cleaning db directories");
           await promisify(rimraf)(chainDir);
           await promisify(rimraf)(validatorsDir);
@@ -78,9 +72,9 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
 
   await node.start();
 
-  if (options.startValidators) {
-    const range = options.startValidators.split(":").map((s) => parseInt(s));
-    const api = getValidatorApiClient(options.server, logger, node);
+  if (args.startValidators) {
+    const range = args.startValidators.split(":").map((s) => parseInt(s));
+    const api = getValidatorApiClient(args.server, logger, node);
     validators = Array.from({length: range[1] + range[0]}, (v, i) => i + range[0]).map((index) => {
       return getInteropValidator(
         node.config,

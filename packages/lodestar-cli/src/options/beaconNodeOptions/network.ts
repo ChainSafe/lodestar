@@ -1,7 +1,7 @@
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import {ICliCommandOptions} from "../../util";
 
-export interface IArgs {
+export interface INetworkArgs {
   "network.discv5.enabled": boolean;
   "network.discv5.bindAddr": string;
   "network.discv5.bootEnrs": string[];
@@ -10,7 +10,7 @@ export interface IArgs {
   "network.localMultiaddrs": string[];
 }
 
-export function parseArgs(args: IArgs): IBeaconNodeOptions["network"] {
+export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   return {
     discv5: {
       // ### TODO: declare discv5.enable in its types
@@ -25,7 +25,7 @@ export function parseArgs(args: IArgs): IBeaconNodeOptions["network"] {
   };
 }
 
-export const options: ICliCommandOptions<IArgs> = {
+export const options: ICliCommandOptions<INetworkArgs> = {
   "network.discv5.enabled": {
     type: "boolean",
     // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type

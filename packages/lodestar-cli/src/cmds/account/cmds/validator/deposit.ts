@@ -1,11 +1,11 @@
 import {BigNumber} from "ethers";
 import {toHexString} from "@chainsafe/ssz";
+import {getBeaconConfig} from "../../../../config/beaconParams";
+import {getGlobalPaths} from "../../../../paths/global";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getEthersSigner, YargsError, ICliCommand} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
-import {initCmd} from "../../../init/handler";
-import {getMergedIBeaconConfig} from "../../../../config/params";
 import {IGlobalArgs} from "../../../../options";
 
 const DEPOSIT_GAS_LIMIT = 400000;
@@ -88,11 +88,15 @@ The deposit contract address will be determined by the spec config flag.",
     },
   },
 
-  handler: async (options) => {
-    await initCmd(options);
-    const validatorName = options.validator;
-    const accountPaths = getAccountPaths(options);
-    const config = await getMergedIBeaconConfig(options.preset, accountPaths.paramsFile, options.params);
+  handler: async (args) => {
+    const validatorName = args.validator;
+    const accountPaths = getAccountPaths(args);
+    const config = getBeaconConfig({
+      paramsFile: getGlobalPaths(args).paramsFile,
+      preset: args.preset,
+      testnet: args.testnet,
+      additionalParamsCli: args.params,
+    });
 
     if (!config.params.DEPOSIT_CONTRACT_ADDRESS) throw new YargsError("deposit_contract not in configuration");
     const depositContractAddress = toHexString(config.params.DEPOSIT_CONTRACT_ADDRESS);
@@ -114,7 +118,7 @@ The deposit contract address will be determined by the spec config flag.",
     console.log(`Starting ${validatorDirsToSubmit.length} deposits`);
 
     const eth1Signer = await getEthersSigner({
-      ...options,
+      ...args,
       chainId: config.params.DEPOSIT_NETWORK_ID,
     });
 

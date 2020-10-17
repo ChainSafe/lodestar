@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions, IENRArgs, enrOptions} from "../../options";
+import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {ICliCommandOptions} from "../../util";
 
@@ -83,7 +83,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconNodeOptions & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
+export type IBeaconArgs = IBeaconNodeArgs & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconPathsOptions,

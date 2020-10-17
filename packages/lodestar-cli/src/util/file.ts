@@ -22,8 +22,8 @@ export const yamlSchema = new Schema({
 /**
  * Maybe create a directory
  */
-export async function mkdir(dirname: string): Promise<void> {
-  await fs.promises.mkdir(dirname, {recursive: true});
+export function mkdir(dirname: string): void {
+  fs.mkdirSync(dirname, {recursive: true});
 }
 
 export enum FileFormat {
@@ -62,10 +62,10 @@ export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
  *
  * Serialize either to json, yaml, or toml
  */
-export async function writeFile(filename: string, obj: Json): Promise<void> {
+export function writeFile(filename: string, obj: Json): void {
   ensureDirExists(path.parse(filename).dir);
   const fileFormat = path.extname(filename).substr(1);
-  await fs.promises.writeFile(filename, stringify(obj, fileFormat as FileFormat), "utf-8");
+  fs.writeFileSync(filename, stringify(obj, fileFormat as FileFormat), "utf-8");
 }
 
 /**
@@ -73,13 +73,7 @@ export async function writeFile(filename: string, obj: Json): Promise<void> {
  *
  * Parse either from json, yaml, or toml
  */
-export async function readFile<T = Json>(filename: string): Promise<T> {
-  const fileFormat = path.extname(filename).substr(1);
-  const contents = await fs.promises.readFile(filename, "utf-8");
-  return parse(contents, fileFormat as FileFormat);
-}
-
-export function readFileSync<T = Json>(filename: string): T {
+export function readFile<T = Json>(filename: string): T {
   const fileFormat = path.extname(filename).substr(1);
   const contents = fs.readFileSync(filename, "utf-8");
   return parse(contents, fileFormat as FileFormat);

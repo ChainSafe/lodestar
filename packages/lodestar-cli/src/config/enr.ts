@@ -1,6 +1,6 @@
 import {ENR} from "@chainsafe/discv5";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
 import Multiaddr from "multiaddr";
-import {IBeaconNodeOptions} from "../options";
 import {IENRJson} from "../options/enrOptions";
 
 export function overwriteEnrWithCliArgs(enr: ENR, enrArgs: IENRJson, beaconArgs: IBeaconNodeOptions): void {

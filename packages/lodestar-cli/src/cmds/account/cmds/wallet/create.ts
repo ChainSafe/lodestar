@@ -68,11 +68,11 @@ wallets are supported presently.",
     },
   },
 
-  handler: async (options) => {
+  handler: async (args) => {
     await initBLS();
 
-    const {name, type, passphraseFile, mnemonicOutputPath} = options;
-    const accountPaths = getAccountPaths(options);
+    const {name, type, passphraseFile, mnemonicOutputPath} = args;
+    const accountPaths = getAccountPaths(args);
 
     // Create a new random mnemonic.
     const mnemonic = bip39.generateMnemonic();

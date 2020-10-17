@@ -66,10 +66,10 @@ has the '.json' extension will be attempted to be imported.",
     },
   },
 
-  handler: async (options) => {
-    const singleKeystorePath = options.keystore;
-    const directoryPath = options.directory;
-    const {keystoresDir, secretsDir} = getAccountPaths(options);
+  handler: async (args) => {
+    const singleKeystorePath = args.keystore;
+    const directoryPath = args.directory;
+    const {keystoresDir, secretsDir} = getAccountPaths(args);
 
     const keystorePaths = singleKeystorePath
       ? [singleKeystorePath]
