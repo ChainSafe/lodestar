@@ -12,6 +12,11 @@ const bottomBanner = "For more information, check the CLI reference https://chai
 
 const lodestar = yargs
   .env("LODESTAR")
+  .parserConfiguration({
+    // As of yargs v16.1.0 dot-notation breaks strictOptions()
+    // Manually processing options is typesafe tho more verbose
+    "dot-notation": false,
+  })
   .options(globalOptions)
   // blank scriptName so that help text doesn't display the cli name before each command
   .scriptName("")
