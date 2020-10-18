@@ -14,11 +14,11 @@ export type IBeaconNodeArgs = api.IApiArgs &
   network.INetworkArgs &
   sync.ISyncArgs;
 
-export function toBeaconNodeOptions(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
+export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
   return {
     api: api.parseArgs(args),
-    chain: {},
-    db: {},
+    // chain: {},
+    // db: {},
     eth1: eth1.parseArgs(args),
     logger: logger.parseArgs(args),
     metrics: metrics.parseArgs(args),
