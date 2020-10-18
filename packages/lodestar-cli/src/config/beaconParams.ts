@@ -4,24 +4,52 @@ import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/ma
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {writeFile, readFileIfExists} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
+import {getGlobalPaths, IGlobalPaths} from "../paths/global";
+import {IGlobalArgs} from "../options";
 import {IBeaconParamsUnparsed} from "./types";
+import {parseBeaconParamsArgs} from "@chainsafe/lodestar-cli/src/options";
+
+type IBeaconParamsCliArgs = {
+  preset: string;
+  testnet?: TestnetName;
+  paramsFile: string;
+} & Partial<IGlobalPaths> &
+  Pick<IGlobalArgs, "rootDir">;
 
 interface IBeaconParamsArgs {
   preset: string;
   testnet?: TestnetName;
   paramsFile: string;
-  additionalParamsCli?: IBeaconParamsUnparsed;
+  additionalParamsCli: IBeaconParamsUnparsed;
 }
 
 /**
- * Initializes IBeaconConfig with params from (in order)
- * - preset
- * - Testnet params (diff)
- * - existing params file
- * - CLI flags
+ * Convenience method to parse yargs CLI args and call getBeaconParams
+ * @see getBeaconConfig
  */
-export function getBeaconConfig(kwargs: IBeaconParamsArgs): IBeaconConfig {
-  return createIBeaconConfig(getBeaconParams(kwargs));
+export function getBeaconConfigFromArgs(args: IBeaconParamsCliArgs): IBeaconConfig {
+  return createIBeaconConfig(getBeaconParamsFromArgs(args));
+}
+
+/**
+ * Convenience method to parse yargs CLI args and call getBeaconParams
+ * @see getBeaconParams
+ */
+export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IBeaconParams {
+  return getBeaconParams({
+    preset: args.preset,
+    testnet: args.testnet,
+    paramsFile: getGlobalPaths(args).paramsFile,
+    additionalParamsCli: parseBeaconParamsArgs(args as Record<string, string | number>),
+  });
+}
+
+/**
+ * Initializes IBeaconConfig with params
+ * @see getBeaconParams
+ */
+export function getBeaconConfig(args: IBeaconParamsArgs): IBeaconConfig {
+  return createIBeaconConfig(getBeaconParams(args));
 }
 
 /**

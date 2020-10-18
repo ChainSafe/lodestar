@@ -1,7 +1,6 @@
 import {BigNumber} from "ethers";
 import {toHexString} from "@chainsafe/ssz";
-import {getBeaconConfig} from "../../../../config";
-import {getGlobalPaths} from "../../../../paths/global";
+import {getBeaconConfigFromArgs} from "../../../../config";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getEthersSigner, YargsError, ICliCommand} from "../../../../util";
@@ -91,12 +90,7 @@ The deposit contract address will be determined by the spec config flag.",
   handler: async (args) => {
     const validatorName = args.validator;
     const accountPaths = getAccountPaths(args);
-    const config = getBeaconConfig({
-      paramsFile: getGlobalPaths(args).paramsFile,
-      preset: args.preset,
-      testnet: args.testnet,
-      additionalParamsCli: args.params,
-    });
+    const config = getBeaconConfigFromArgs(args);
 
     if (!config.params.DEPOSIT_CONTRACT_ADDRESS) throw new YargsError("deposit_contract not in configuration");
     const depositContractAddress = toHexString(config.params.DEPOSIT_CONTRACT_ADDRESS);

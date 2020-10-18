@@ -1,5 +1,12 @@
 import fs from "fs";
-import {BeaconNodeOptions, getBeaconConfig, writeBeaconParams, initPeerId, initEnr, readPeerId} from "../../config";
+import {
+  BeaconNodeOptions,
+  getBeaconConfigFromArgs,
+  writeBeaconParams,
+  initPeerId,
+  initEnr,
+  readPeerId,
+} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir, joinIfRelative, downloadOrCopyFile} from "../../util";
 import {getGenesisFileUrl, fetchBootnodes} from "../../testnets";
@@ -59,12 +66,7 @@ export async function initializeOptionsAndConfig(
   }
 
   // initialize params file, if it doesn't exist
-  const config = getBeaconConfig({
-    paramsFile: beaconPaths.paramsFile,
-    preset: args.preset,
-    testnet: args.testnet,
-    additionalParamsCli: args.params,
-  });
+  const config = getBeaconConfigFromArgs(args);
 
   return {beaconNodeOptions, config};
 }

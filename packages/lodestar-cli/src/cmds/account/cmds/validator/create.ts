@@ -2,8 +2,7 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getBeaconConfig} from "../../../../config";
-import {getGlobalPaths} from "../../../../paths/global";
+import {getBeaconConfigFromArgs} from "../../../../config";
 import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
@@ -73,12 +72,7 @@ and pre-computed deposit RPL data",
     // Necessary to compute validator pubkey from privKey
     await initBLS();
 
-    const config = getBeaconConfig({
-      paramsFile: getGlobalPaths(args).paramsFile,
-      preset: args.preset,
-      testnet: args.testnet,
-      additionalParamsCli: args.params,
-    });
+    const config = getBeaconConfigFromArgs(args);
 
     const {name, passphraseFile, storeWithdrawalKeystore, count} = args;
     const accountPaths = getAccountPaths(args);

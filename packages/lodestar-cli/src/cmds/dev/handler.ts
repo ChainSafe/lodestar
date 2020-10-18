@@ -14,7 +14,7 @@ import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
 import {getValidatorApiClient} from "./utils/validator";
 import {onGracefulShutdown} from "../../util/process";
-import {initializeOptionsAndConfig} from "@chainsafe/lodestar-cli/src/cmds/init/handler";
+import {initializeOptionsAndConfig} from "../init/handler";
 
 /**
  * Run a beacon node

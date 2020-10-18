@@ -5,7 +5,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {getBeaconConfig} from "../../config";
+import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
@@ -25,12 +25,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const graffiti = args.graffiti || getDefaultGraffiti();
   const accountPaths = getAccountPaths(args);
   const validatorPaths = getValidatorPaths(args);
-  const config = getBeaconConfig({
-    paramsFile: validatorPaths.paramsFile,
-    preset: args.preset,
-    testnet: args.testnet,
-    additionalParamsCli: args.params,
-  });
+  const config = getBeaconConfigFromArgs(args);
 
   const logger = new WinstonLogger();
 
