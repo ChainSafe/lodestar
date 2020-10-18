@@ -5,7 +5,6 @@ import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/mi
 import {writeFile, readFileIfExists} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
-import {IGlobalArgs} from "../options";
 import {IBeaconParamsUnparsed} from "./types";
 import {parseBeaconParamsArgs} from "@chainsafe/lodestar-cli/src/options";
 
@@ -13,8 +12,7 @@ type IBeaconParamsCliArgs = {
   preset: string;
   testnet?: TestnetName;
   paramsFile: string;
-} & Partial<IGlobalPaths> &
-  Pick<IGlobalArgs, "rootDir">;
+} & Partial<IGlobalPaths>;
 
 interface IBeaconParamsArgs {
   preset: string;
