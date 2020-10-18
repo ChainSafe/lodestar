@@ -4,14 +4,13 @@ import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
+import {overwriteEnrWithCliArgs, readPeerId, readEnr, writeEnr} from "../../config";
+import {onGracefulShutdown} from "../../util/process";
 import {IGlobalArgs} from "../../options";
-import {readPeerId, readEnr, writeEnr} from "../../network";
+import {parseEnrArgs} from "../../options/enrOptions";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
-import {overwriteEnrWithCliArgs} from "../../config/enr";
-import {onGracefulShutdown} from "../../util/process";
-import {parseEnrArgs} from "../../options/enrOptions";
 
 /**
  * Run a beacon node

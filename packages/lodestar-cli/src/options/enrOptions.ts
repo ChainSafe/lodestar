@@ -1,4 +1,5 @@
 import {Options} from "yargs";
+import {IENRJson} from "../config";
 
 export interface IENRArgs {
   "enr.ip"?: string;
@@ -7,15 +8,6 @@ export interface IENRArgs {
   "enr.udp"?: number;
   "enr.tcp6"?: number;
   "enr.udp6"?: number;
-}
-
-export interface IENRJson {
-  ip?: string;
-  tcp?: number;
-  ip6?: string;
-  udp?: number;
-  tcp6?: number;
-  udp6?: number;
 }
 
 export function parseEnrArgs(args: IENRArgs): IENRJson {

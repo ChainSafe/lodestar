@@ -1,9 +1,7 @@
 import fs from "fs";
-import {BeaconNodeOptions} from "../../config/beaconNodeOptions";
-import {getBeaconConfig, writeBeaconParams} from "../../config/beaconParams";
+import {BeaconNodeOptions, getBeaconConfig, writeBeaconParams, initPeerId, initEnr, readPeerId} from "../../config";
 import {IGlobalArgs, toBeaconNodeOptions} from "../../options";
 import {mkdir, joinIfRelative, downloadOrCopyFile} from "../../util";
-import {initPeerId, initEnr, readPeerId} from "../../network";
 import {getGenesisFileUrl, fetchBootnodes} from "../../testnets";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
@@ -25,9 +23,9 @@ export async function initializeOptionsAndConfig(
 }> {
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({
-    beaconNodeArgs: toBeaconNodeOptions(args),
-    configFile: beaconPaths.configFile,
     testnet: args.testnet,
+    configFile: beaconPaths.configFile,
+    beaconNodeOptionsCli: toBeaconNodeOptions(args),
   });
 
   // Auto-setup testnet

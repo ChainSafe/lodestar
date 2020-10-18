@@ -1,16 +1,16 @@
-import deepmerge from "deepmerge";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
 import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
-import {writeFile, readFile} from "../util";
+import {writeFile, readFileIfExists} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
+import {IBeaconParamsUnparsed} from "./types";
 
 interface IBeaconParamsArgs {
-  paramsFile: string;
   preset: string;
   testnet?: TestnetName;
-  additionalParamsCli?: Record<string, unknown>;
+  paramsFile: string;
+  additionalParamsCli?: IBeaconParamsUnparsed;
 }
 
 /**
@@ -55,27 +55,19 @@ function getPresetBeaconParams(preset: string): IBeaconParams {
   }
 }
 
-export function writeBeaconParams(filename: string, params: IBeaconParams): void {
-  writeFile(filename, BeaconParams.toJson(params));
+export function writeBeaconParams(filepath: string, params: IBeaconParams): void {
+  writeFile(filepath, BeaconParams.toJson(params));
 }
 
-function readBeaconParamsIfExists(filename: string): Partial<IBeaconParams> {
-  try {
-    return readFile(filename);
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return {};
-    } else {
-      throw e;
-    }
-  }
+function readBeaconParamsIfExists(filepath: string): IBeaconParamsUnparsed {
+  return readFileIfExists(filepath) || {};
 }
 
 /**
  * Typesafe wrapper to merge partial IBeaconNodeOptions objects
  */
-function mergeBeaconParams(...itemsArr: Partial<IBeaconParams>[]): Partial<IBeaconParams> {
+function mergeBeaconParams(...itemsArr: IBeaconParamsUnparsed[]): IBeaconParamsUnparsed {
   return itemsArr.reduce((mergedItems, item) => {
-    return deepmerge(mergedItems, item);
+    return {...mergedItems, ...item};
   }, itemsArr[0]);
 }

@@ -1,6 +1,6 @@
 import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IBeaconParamsUnparsed} from "../config/types";
 import {RecursivePartial} from "../util";
 import * as altona from "./altona";
 import * as medalla from "./medalla";
@@ -13,7 +13,7 @@ export const testnetNames: TestnetName[] = ["altona", "medalla", "spadina", "zin
 function getTestnetData(
   testnet: TestnetName
 ): {
-  beaconParams: Partial<IBeaconParams>;
+  beaconParams: IBeaconParamsUnparsed;
   depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   bootnodesFileUrl: string;
@@ -33,7 +33,7 @@ function getTestnetData(
   }
 }
 
-export function getTestnetBeaconParams(testnet: TestnetName): Partial<IBeaconParams> {
+export function getTestnetBeaconParams(testnet: TestnetName): IBeaconParamsUnparsed {
   return getTestnetData(testnet).beaconParams;
 }
 

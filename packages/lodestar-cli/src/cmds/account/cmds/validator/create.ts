@@ -2,7 +2,7 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getBeaconConfig} from "../../../../config/beaconParams";
+import {getBeaconConfig} from "../../../../config";
 import {getGlobalPaths} from "../../../../paths/global";
 import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";

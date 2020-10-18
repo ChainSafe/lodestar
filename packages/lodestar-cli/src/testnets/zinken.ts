@@ -1,15 +1,14 @@
-import {IBeaconParams} from "@chainsafe/lodestar-params";
-import {fromHexString} from "@chainsafe/ssz";
+import {IBeaconParamsUnparsed} from "../config/types";
 
 /* eslint-disable max-len */
 
-export const beaconParams: Partial<IBeaconParams> = {
+export const beaconParams: IBeaconParamsUnparsed = {
   DEPOSIT_CHAIN_ID: 5,
   DEPOSIT_NETWORK_ID: 5,
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1024,
   MIN_GENESIS_TIME: 1602504000,
-  DEPOSIT_CONTRACT_ADDRESS: Buffer.from(fromHexString("0x99F0Ec06548b086E46Cb0019C78D0b9b9F36cD53")),
-  GENESIS_FORK_VERSION: Buffer.from(fromHexString("0x00000003")),
+  DEPOSIT_CONTRACT_ADDRESS: "0x99F0Ec06548b086E46Cb0019C78D0b9b9F36cD53",
+  GENESIS_FORK_VERSION: "0x00000003",
   GENESIS_DELAY: 345600,
 };
 

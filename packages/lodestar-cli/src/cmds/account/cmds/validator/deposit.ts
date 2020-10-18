@@ -1,6 +1,6 @@
 import {BigNumber} from "ethers";
 import {toHexString} from "@chainsafe/ssz";
-import {getBeaconConfig} from "../../../../config/beaconParams";
+import {getBeaconConfig} from "../../../../config";
 import {getGlobalPaths} from "../../../../paths/global";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";

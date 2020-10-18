@@ -5,7 +5,7 @@ import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {getBeaconConfig} from "../../config/beaconParams";
+import {getBeaconConfig} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";

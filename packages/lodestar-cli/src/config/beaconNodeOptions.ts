@@ -1,34 +1,44 @@
-import fs from "fs";
-import _yargs from "yargs/yargs";
 import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
-import {readFile, writeFile, RecursivePartial} from "../util";
-import {fetchBootnodes, getTestnetBeaconNodeOptions, TestnetName} from "../testnets";
+import {writeFile, RecursivePartial, readFileIfExists} from "../util";
+import {getTestnetBeaconNodeOptions, TestnetName} from "../testnets";
 
 export class BeaconNodeOptions {
   private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;
 
+  /**
+   * Reads, parses and merges BeaconNodeOptions from (in order)
+   * - Testnet options (diff)
+   * - existing options file
+   * - CLI flags
+   */
   constructor({
-    beaconNodeArgs,
-    configFile,
     testnet,
+    configFile,
+    beaconNodeOptionsCli,
   }: {
-    beaconNodeArgs: RecursivePartial<IBeaconNodeOptions>;
-    configFile?: string;
     testnet?: TestnetName;
+    configFile?: string;
+    beaconNodeOptionsCli: RecursivePartial<IBeaconNodeOptions>;
   }) {
     this.beaconNodeOptions = mergeBeaconNodeOptions(
       testnet ? getTestnetBeaconNodeOptions(testnet) : {},
-      configFile ? readBeaconNodeOptions(configFile) : {},
-      beaconNodeArgs
+      configFile ? readBeaconNodeOptionsIfExists(configFile) : {},
+      beaconNodeOptionsCli
     );
   }
 
+  /**
+   * Returns current options
+   */
   get(): RecursivePartial<IBeaconNodeOptions> {
     return this.beaconNodeOptions;
   }
 
+  /**
+   * Returns merged current options with defaultOptions
+   */
   getWithDefaults(): IBeaconNodeOptions {
     return mergeBeaconNodeOptionsWithDefaults(defaultOptions, this.beaconNodeOptions);
   }
@@ -42,51 +52,6 @@ export class BeaconNodeOptions {
   }
 }
 
-/**
- * Reads, parses and merges BeaconNodeOptions from:
- * - CLI args
- * - existing config file
- * - default values
- */
-export function processBeaconNodeOptions({
-  beaconNodeArgs,
-  configFile,
-  testnet,
-}: {
-  beaconNodeArgs: RecursivePartial<IBeaconNodeOptions>;
-  configFile?: string;
-  testnet?: TestnetName;
-}): IBeaconNodeOptions {
-  return mergeBeaconNodeOptionsWithDefaults(
-    // All required properties are defined
-    defaultOptions,
-    // Required properties may not be defined
-    testnet ? getTestnetBeaconNodeOptions(testnet) : {},
-    configFile ? readBeaconNodeOptions(configFile) : {},
-    beaconNodeArgs
-  );
-}
-
-export async function fetchTestnetBootnodesAsBeaconNodeOptions(
-  testnet?: TestnetName
-): Promise<RecursivePartial<IBeaconNodeOptions>> {
-  if (testnet) {
-    try {
-      return {
-        network: {
-          discv5: {
-            bootEnrs: await fetchBootnodes(testnet),
-          },
-        },
-      };
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(`Error fetching latest bootnodes: ${e.stack}`);
-    }
-  }
-  return {};
-}
-
 export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {
   writeFile(filename, config as Json);
 }
@@ -95,12 +60,8 @@ export function writeBeaconNodeOptions(filename: string, config: Partial<IBeacon
  * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
  * If the config file is not found, the default values will apply.
  */
-export function readBeaconNodeOptions(filename: string): RecursivePartial<IBeaconNodeOptions> {
-  if (fs.existsSync(filename)) {
-    return readFile(filename);
-  } else {
-    return {};
-  }
+export function readBeaconNodeOptionsIfExists(filepath: string): RecursivePartial<IBeaconNodeOptions> {
+  return readFileIfExists(filepath) || {};
 }
 
 /**
