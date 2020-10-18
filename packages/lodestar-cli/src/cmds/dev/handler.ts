@@ -4,7 +4,7 @@ import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {createEnr, createPeerId} from "../../network";
+import {createEnr, createPeerId} from "../../config";
 import {IGlobalArgs} from "../../options";
 import rimraf from "rimraf";
 import {join} from "path";
@@ -26,7 +26,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // ENR setup
   const peerId = await createPeerId();
-  const enr = await createEnr(peerId);
+  const enr = createEnr(peerId);
   beaconNodeOptions.set({network: {discv5: {enr}}});
 
   const chainDir = join(args.rootDir, "dev", "beacon");

@@ -27,7 +27,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const options = beaconNodeOptions.getWithDefaults();
 
   // ENR setup
-  const enr = await readEnr(beaconPaths.enrFile);
+  const enr = readEnr(beaconPaths.enrFile);
   const enrArgs = parseEnrArgs(args);
   overwriteEnrWithCliArgs(enr, enrArgs, options);
   const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
