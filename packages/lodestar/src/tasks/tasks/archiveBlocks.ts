@@ -61,11 +61,11 @@ export class ArchiveBlocksTask implements ITask {
         })
       )
     ).filter((kv) => kv.value);
-    await this.db.blockArchive.batchPut(canonicalBlockEntries);
-    // delete all canonical and non-canonical blocks at once
-    await this.db.block.batchDelete(
-      canonicalSummaries.concat(nonCanonicalSummaries).map((summary) => summary.blockRoot)
-    );
+    await Promise.all([
+      this.db.blockArchive.batchPut(canonicalBlockEntries),
+      // delete all canonical and non-canonical blocks at once
+      this.db.block.batchDelete(canonicalSummaries.concat(nonCanonicalSummaries).map((summary) => summary.blockRoot)),
+    ]);
     this.logger.profile("Archive Blocks");
     this.logger.info("Archiving of finalized blocks complete.", {
       totalArchived: canonicalSummaries.length,
