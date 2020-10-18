@@ -7,19 +7,20 @@ import {IRegularSyncModules} from "..";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import {IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
-import {getBlockRange} from "../../utils";
+import {getBlockRange} from "../../utils/blocks";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
+import {ZERO_HASH} from "../../../constants";
 
-// TODO: reusable, unit test
 export class BlockRangeFetcher {
   protected readonly config: IBeaconConfig;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
   private readonly logger: ILogger;
   private readonly opts: IRegularSyncOptions;
-  // inclusive
+  // for control range across next() calls
+  private lastFetchBlock: ISyncCheckpoint;
+  // for each next() call
   private rangeStart: Slot = 0;
-  // exclusive
   private rangeEnd: Slot = 0;
   private getPeers: () => Promise<PeerId[]>;
 
@@ -30,19 +31,18 @@ export class BlockRangeFetcher {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.getPeers = getPeers;
+    this.lastFetchBlock = {blockRoot: ZERO_HASH, slot: 0};
   }
 
   public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
-    this.rangeStart = lastProcessedBlock.slot;
-    this.rangeEnd = this.rangeStart + 1;
+    this.lastFetchBlock = lastProcessedBlock;
   }
 
   /**
    * Get next block range.
    */
   public async next(): Promise<SignedBeaconBlock[]> {
-    this.rangeStart = this.rangeEnd;
-    this.rangeEnd = this.getNewTarget();
+    this.getNextRange();
     let result: SignedBeaconBlock[] | null = null;
     while (!result || !result!.length) {
       let slotRange: ISlotRange | null = null;
@@ -59,7 +59,16 @@ export class BlockRangeFetcher {
       }
     }
     // success
+    const lastBlock = result[result.length - 1].message;
+    this.lastFetchBlock = {blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
     return result!;
+  }
+
+  // always set range based on last fetch block bc sometimes the previous fetch may not return all blocks
+  private getNextRange(): void {
+    this.rangeStart = this.lastFetchBlock.slot + 1;
+    this.rangeEnd = this.rangeStart;
+    this.rangeEnd = this.getNewTarget();
   }
 
   private async handleEmptyRange(peers: PeerId[] = []): Promise<void> {
