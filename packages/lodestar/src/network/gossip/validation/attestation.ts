@@ -1,15 +1,16 @@
 import {ExtendedValidatorResult} from "../constants";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Attestation} from "@chainsafe/lodestar-types";
+import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconChain} from "../../../chain";
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
-// eslint-disable-next-line max-len
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
+import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -46,14 +47,14 @@ export async function validateGossipAttestation(
     return ExtendedValidatorResult.reject;
   }
 
-  if (!hasValidAttestationSlot(config, chain.getGenesisTime(), attestation)) {
+  if (!hasValidAttestationSlot(config, chain.clock.currentSlot, attestation.data.slot)) {
     logger.warn("Ignored gossip committee attestation", {reason: "Invalid slot time", ...attestationLogContext});
-    //attestation might be valid later so passing to attestation pool
+    // attestation might be valid later so passing to attestation pool
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
 
-  //no other validator attestation for same target epoch has been seen
+  // no other validator attestation for same target epoch has been seen
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     return ExtendedValidatorResult.ignore;
   }
@@ -71,7 +72,7 @@ export async function validateGossipAttestation(
       reason: "missing attestation beaconBlockRoot block",
       ...attestationLogContext,
     });
-    //attestation might be valid after we receive block
+    // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
@@ -84,7 +85,7 @@ export async function validateGossipAttestation(
       reason: "missing attestation prestate",
       ...attestationLogContext,
     });
-    //attestation might be valid after we receive block
+    // attestation might be valid after we receive block
     await chain.receiveAttestation(attestation);
     return ExtendedValidatorResult.ignore;
   }
@@ -112,6 +113,51 @@ export async function validateGossipAttestation(
     });
     return ExtendedValidatorResult.reject;
   }
+  if (!doesEpochSlotMatchTarget(config, attestation.data)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason: "epoch slot does not match target",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  try {
+    if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
+      logger.warn("Rejected gossip committee attestation", {
+        reason: "committee index not within the expected range",
+        ...attestationLogContext,
+      });
+      return ExtendedValidatorResult.reject;
+    }
+  } catch (error) {
+    logger.warn(error);
+    logger.warn("Rejected gossip committee attestation", {
+      reason: error.message,
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason: "number of aggregation bits does not match the committee size",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  if (!chain.forkChoice.isDescendant(attestation.data.target.root, attestation.data.beaconBlockRoot)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason: "target block is not an ancestor of the block named in the LMD vote",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
+  if (!chain.forkChoice.isDescendantOfFinalized(attestation.data.beaconBlockRoot)) {
+    logger.warn("Rejected gossip committee attestation", {
+      reason:
+        "current finalized_checkpoint not is an ancestor of the block defined by attestation.data.beacon_block_root",
+      ...attestationLogContext,
+    });
+    return ExtendedValidatorResult.reject;
+  }
   await db.seenAttestationCache.addCommitteeAttestation(attestation);
   logger.profile("gossipAttestationValidation");
   logger.info("Received valid committee attestation", attestationLogContext);
@@ -120,20 +166,28 @@ export async function validateGossipAttestation(
 
 export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Attestation): Promise<boolean> {
   const blockRoot = attestation.data.beaconBlockRoot.valueOf() as Uint8Array;
-  //TODO: check if source and target blocks are not in bad block repository
+  // TODO: check if source and target blocks are not in bad block repository
   return await db.badBlock.has(blockRoot);
-}
-
-/**
- * is ready to be included in block
- */
-export function hasValidAttestationSlot(config: IBeaconConfig, genesisTime: number, attestation: Attestation): boolean {
-  const currentSlot = getCurrentSlot(config, genesisTime);
-  return (
-    attestation.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= currentSlot && currentSlot >= attestation.data.slot
-  );
 }
 
 export function isUnaggregatedAttestation(attestation: Attestation): boolean {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1;
+}
+
+export function isCommitteeIndexWithinRange(epochCtx: EpochContext, attestationData: AttestationData): boolean {
+  return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
+}
+
+export function doAggregationBitsMatchCommitteeSize(
+  attestationPreStateContext: ITreeStateContext,
+  attestation: Attestation
+): boolean {
+  return (
+    attestation.aggregationBits.length ===
+    attestationPreStateContext.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
+  );
+}
+
+export function doesEpochSlotMatchTarget(config: IBeaconConfig, attestationData: AttestationData): boolean {
+  return config.types.Epoch.equals(attestationData.target.epoch, computeEpochAtSlot(config, attestationData.slot));
 }

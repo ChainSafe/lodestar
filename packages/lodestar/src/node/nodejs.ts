@@ -8,8 +8,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {initBLS} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {BeaconDb, LevelDbController} from "../db";
+import {BeaconDb} from "../db";
 import defaultConf, {IBeaconNodeOptions} from "./options";
 import {Eth1Provider, Eth1ForBlockProductionDisabled} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";

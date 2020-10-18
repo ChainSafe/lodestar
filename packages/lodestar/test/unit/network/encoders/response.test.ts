@@ -19,6 +19,7 @@ import {encode} from "varint";
 import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
 import {silentLogger} from "../../../utils/logger";
+import { randomBytes } from "crypto";
 
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {
@@ -311,9 +312,35 @@ describe("response decoders", function () {
   });
 
   describe("encodeP2pErrorMessage", () => {
-    it("should encode and decode error message correctly", () => {
-      const err = encodeP2pErrorMessage(config, "Invalid request");
-      expect(decodeP2pErrorMessage(config, err)).to.be.equal("Invalid request");
+    it("should encode error message", () => {
+      const err = "Invalid request";
+      const result = encodeP2pErrorMessage(config, err);
+      expect(result.length).to.be.lte(256);
+    });
+    it("should encode too long error message", () => {
+      const err = "e".repeat(1000);
+      const result = encodeP2pErrorMessage(config, err);
+      expect(result.length).to.be.equal(256);
+    });
+  });
+
+  describe("decodeP2pErrorMessage", () => {
+    it("should decode utf8 error message", () => {
+      const err = "Invalid request";
+      const result = decodeP2pErrorMessage(
+        config,
+        config.types.P2pErrorMessage.serialize(encodeP2pErrorMessage(config, err))
+      );
+      expect(result).to.be.equal(err);
+    });
+
+    it("should remove non ascii characters from error message", () => {
+      const err = "Error message\u03A9";
+      const result = decodeP2pErrorMessage(
+        config,
+        config.types.P2pErrorMessage.serialize(encodeP2pErrorMessage(config, err))
+      );
+      expect(result).to.be.equal("Error message");
     });
   });
 });

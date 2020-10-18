@@ -44,7 +44,11 @@ export async function validateGossipBlock(
   }
 
   if (await db.badBlock.has(blockRoot)) {
-    logger.warn("Rejecting gossip block", {reason: "bad block", blockSlot, blockRoot: toHexString(blockRoot)});
+    logger.warn("Rejecting gossip block", {
+      reason: "bad block",
+      blockSlot,
+      blockRoot: toHexString(blockRoot),
+    });
     return ExtendedValidatorResult.reject;
   }
 
@@ -59,6 +63,7 @@ export async function validateGossipBlock(
 
   let blockContext;
   try {
+    // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
     blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
     logger.warn("Ignoring gossip block", {
@@ -67,8 +72,8 @@ export async function validateGossipBlock(
       blockRoot: toHexString(blockRoot),
       parent: toHexString(block.message.parentRoot),
     });
-    //temporary skip rest of validation and put in block pool
-    //rest of validation is performed in state transition anyways
+    // temporary skip rest of validation and put in block pool
+    // rest of validation is performed in state transition anyways
     await chain.receiveBlock(block);
     return ExtendedValidatorResult.ignore;
   }

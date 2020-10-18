@@ -1,10 +1,7 @@
 import {Attestation, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * Attestation indexed by root

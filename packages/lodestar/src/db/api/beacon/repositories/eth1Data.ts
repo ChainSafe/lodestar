@@ -1,10 +1,7 @@
 import {Eth1Data, Eth1DataOrdered} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class Eth1DataRepository extends Repository<number, Eth1DataOrdered> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {

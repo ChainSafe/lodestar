@@ -1,4 +1,4 @@
-import {IFilterOptions} from "../../src/db";
+import {IFilterOptions} from "@chainsafe/lodestar-db";
 
 /**
  * Helper to filter an array with DB IFilterOptions options

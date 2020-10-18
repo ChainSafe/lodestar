@@ -1,9 +1,6 @@
 import {ProposerSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 export class ProposerSlashingRepository extends Repository<ValidatorIndex, ProposerSlashing> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {

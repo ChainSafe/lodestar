@@ -1,11 +1,11 @@
 import {IApiClient} from "./api";
 import {Keypair} from "@chainsafe/bls/lib/keypair";
-import {IValidatorDB} from "./db/interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ISlashingProtection} from "./slashingProtection";
 
 export interface IValidatorOptions {
-  db: IValidatorDB;
+  slashingProtection: ISlashingProtection;
   config: IBeaconConfig;
   api: IApiClient | string;
   keypairs: Keypair[];

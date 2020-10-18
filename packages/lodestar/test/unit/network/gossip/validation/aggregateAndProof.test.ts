@@ -35,6 +35,7 @@ describe("gossip aggregate and proof test", function () {
     db = new StubbedBeaconDb(sinon);
     chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     chain.clock = sinon.createStubInstance(LocalClock);
+    sinon.stub(chain.clock, "currentSlot").get(() => 0);
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
     db.badBlock.has.resolves(false);
     db.seenAttestationCache.hasAggregateAndProof.resolves(false);

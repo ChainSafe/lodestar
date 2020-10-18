@@ -4,8 +4,8 @@ import {Keypair} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
-import {IValidatorDB, ValidatorDB} from "../../../../../src/db";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
@@ -92,13 +92,7 @@ describe("produce block", function () {
   function getBlockProposingService(keypair: Keypair): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
-    const validatorDbStub = sinon.createStubInstance(ValidatorDB);
-    return new BlockProposingService(
-      config,
-      [keypair],
-      rpcClientStub,
-      (validatorDbStub as unknown) as IValidatorDB,
-      silentLogger
-    );
+    const slashingProtection = sinon.createStubInstance(SlashingProtection);
+    return new BlockProposingService(config, [keypair], rpcClientStub, slashingProtection, silentLogger);
   }
 });

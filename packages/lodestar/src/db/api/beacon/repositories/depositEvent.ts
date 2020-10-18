@@ -1,8 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DepositEvent} from "@chainsafe/lodestar-types";
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * DepositData indexed by deposit index

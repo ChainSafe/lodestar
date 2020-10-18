@@ -2,8 +2,15 @@
  * @module api/rpc
  */
 
-import {toHexString} from "@chainsafe/ssz";
 import {Signature, verify} from "@chainsafe/bls";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  computeStartSlotAtEpoch,
+  computeSubnetForSlot,
+  getDomain,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   AggregateAndProof,
   Attestation,
@@ -20,30 +27,22 @@ import {
   SignedBeaconBlock,
   Slot,
 } from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  computeSubnetForSlot,
-  getDomain,
-} from "@chainsafe/lodestar-beacon-state-transition";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-
-import {IBeaconDb} from "../../../db";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../chain";
-import {IApiOptions} from "../../options";
-import {INetwork} from "../../../network";
-import {IBeaconSync} from "../../../sync";
-import {IEth1ForBlockProduction} from "../../../eth1";
-import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
+import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
-import {assembleAttestation} from "../../../chain/factory/attestation";
+import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
+import {IBeaconDb} from "../../../db";
+import {IEth1ForBlockProduction} from "../../../eth1";
+import {INetwork} from "../../../network";
+import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
-import {ApiError} from "../errors/api";
 import {notNullish} from "../../../util/notNullish";
+import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
+import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
 
 export class ValidatorApi implements IValidatorApi {
@@ -77,7 +76,7 @@ export class ValidatorApi implements IValidatorApi {
     randaoReveal: Bytes96,
     graffiti = ""
   ): Promise<BeaconBlock> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
     if (validatorIndex === undefined) {
       throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
@@ -96,7 +95,7 @@ export class ValidatorApi implements IValidatorApi {
 
   public async produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation> {
     try {
-      await this.checkSyncStatus();
+      await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
       const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
@@ -111,12 +110,12 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     //it could discard attestations that would can be valid a bit later
     // await validateGossipAttestation(
     //   this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation
@@ -128,7 +127,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     assert.gte(epoch, 0, "Epoch must be positive");
     assert.lte(epoch, this.chain.clock.currentEpoch, "Must get proposer duties in current epoch");
     const {state, epochCtx} = await this.chain.getHeadStateContextAtCurrentEpoch();
@@ -143,7 +142,7 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     if (!validatorPubKeys || validatorPubKeys.length === 0) throw new Error("No validator to get attester duties");
     assert.lte(epoch, this.chain.clock.currentEpoch + 1, "Cannot get duties for epoch more than one ahead");
     const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
@@ -166,9 +165,10 @@ export class ValidatorApi implements IValidatorApi {
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     await Promise.all([
       this.db.aggregateAndProof.add(signedAggregateAndProof.message),
+      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
       this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
     ]);
   }
@@ -181,7 +181,7 @@ export class ValidatorApi implements IValidatorApi {
     attestationData: AttestationData,
     aggregator: BLSPubkey
   ): Promise<AggregateAndProof> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     const attestations = await this.getWireAttestations(
       computeEpochAtSlot(this.config, attestationData.slot),
       attestationData.index
@@ -231,7 +231,7 @@ export class ValidatorApi implements IValidatorApi {
     committeeIndex: CommitteeIndex,
     aggregatorPubkey: BLSPubkey
   ): Promise<void> {
-    await this.checkSyncStatus();
+    await checkSyncStatus(this.config, this.sync);
     const state = await this.chain.getHeadState();
     const domain = getDomain(this.config, state, DomainType.SELECTION_PROOF, computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
@@ -242,22 +242,5 @@ export class ValidatorApi implements IValidatorApi {
     await this.sync.collectAttestations(slot, committeeIndex);
     const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
     await this.network.searchSubnetPeers(String(subnet));
-  }
-
-  private async checkSyncStatus(): Promise<void> {
-    if (!this.sync.isSynced()) {
-      let syncStatus;
-      try {
-        syncStatus = await this.sync.getSyncStatus();
-      } catch (e) {
-        throw new ApiError(503, "Node is stopped");
-      }
-      if (syncStatus.syncDistance > this.config.params.SLOTS_PER_EPOCH) {
-        throw new ApiError(
-          503,
-          `Node is syncing, status: ${JSON.stringify(this.config.types.SyncingStatus.toJson(syncStatus))}`
-        );
-      }
-    }
   }
 }

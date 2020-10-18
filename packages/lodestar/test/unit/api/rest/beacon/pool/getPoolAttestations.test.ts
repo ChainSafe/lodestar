@@ -1,15 +1,13 @@
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getPoolAttestations} from "../../../../../../src/api/rest/controllers/beacon/pool";
-import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateAttestation} from "../../../../../utils/attestation";
 import {silentLogger} from "../../../../../utils/logger";
+import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
-import {getBlockRoot} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 
 describe("rest - beacon - getPoolAttestations", function () {
   let restApi: RestApi;
