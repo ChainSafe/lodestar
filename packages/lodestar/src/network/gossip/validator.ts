@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger, toJson} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IAttestationJob, IBeaconChain} from "../../chain";
 import {ExtendedValidatorResult} from "./constants";
 import {validateGossipAggregateAndProof, validateGossipAttestation, validateGossipBlock} from "./validation";
@@ -70,14 +70,14 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID:
         case BlockErrorCode.ERR_INCORRECT_PROPOSER:
         case BlockErrorCode.ERR_KNOWN_BAD_BLOCK:
-          this.logger.warn("Rejecting gossip block: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Rejecting gossip block: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
         case BlockErrorCode.ERR_FUTURE_SLOT:
         case BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT:
         case BlockErrorCode.ERR_REPEAT_PROPOSAL:
         case BlockErrorCode.ERR_PARENT_UNKNOWN:
         default:
-          this.logger.warn("Ignoring gossip block: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Ignoring gossip block: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
       }
     }
@@ -118,14 +118,14 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_KNOWN_BAD_BLOCK:
         case AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT:
         case AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
-          this.logger.warn("Rejecting gossip attestation: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Rejecting gossip attestation: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
         case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
         case AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
         default:
-          this.logger.warn("Ignoring gossip attestation: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Ignoring gossip attestation: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
       }
     }
@@ -167,13 +167,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_INVALID_SELECTION_PROOF:
         case AttestationErrorCode.ERR_INVALID_SIGNATURE:
         case AttestationErrorCode.ERR_INVALID_AGGREGATOR:
-          this.logger.warn("Rejecting gossip aggregate and Proof: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Rejecting gossip aggregate and Proof: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
         case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
         case AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
         default:
-          this.logger.warn("Ignoring gossip aggregate and Proof: ", toJson({...e.getMetadata(), ...logContext}));
+          this.logger.warn("Ignoring gossip aggregate and Proof: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
       }
     }
@@ -193,11 +193,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       }
       switch (e.type.code) {
         case VoluntaryExitErrorCode.ERR_INVALID_EXIT:
-          this.logger.warn("Rejecting gossip voluntary exit: ", toJson(e.getMetadata()));
+          this.logger.warn("Rejecting gossip voluntary exit: ", e.getMetadata());
           return ExtendedValidatorResult.reject;
         case VoluntaryExitErrorCode.ERR_EXIT_ALREADY_EXISTS:
         default:
-          this.logger.warn("Ignoring gossip voluntary exit: ", toJson(e.getMetadata()));
+          this.logger.warn("Ignoring gossip voluntary exit: ", e.getMetadata());
           return ExtendedValidatorResult.ignore;
       }
     }
@@ -217,11 +217,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       }
       switch (e.type.code) {
         case ProposerSlashingErrorCode.ERR_INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip proposer slashing: ", toJson(e.getMetadata()));
+          this.logger.warn("Rejecting gossip proposer slashing: ", e.getMetadata());
           return ExtendedValidatorResult.reject;
         case ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
         default:
-          this.logger.warn("Ignoring gossip proposer slashing: ", toJson(e.getMetadata()));
+          this.logger.warn("Ignoring gossip proposer slashing: ", e.getMetadata());
           return ExtendedValidatorResult.ignore;
       }
     }
@@ -241,11 +241,11 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       }
       switch (e.type.code) {
         case AttesterSlashingErrorCode.ERR_INVALID_SLASHING:
-          this.logger.warn("Rejecting gossip attester slashing: ", toJson(e.getMetadata()));
+          this.logger.warn("Rejecting gossip attester slashing: ", e.getMetadata());
           return ExtendedValidatorResult.reject;
         case AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
         default:
-          this.logger.warn("Ignoring gossip attester slashing: ", toJson(e.getMetadata()));
+          this.logger.warn("Ignoring gossip attester slashing: ", e.getMetadata());
           return ExtendedValidatorResult.ignore;
       }
     }

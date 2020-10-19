@@ -153,7 +153,7 @@ export type AggregateAndProofLogContext = {
   targetEpoch?: Epoch;
 };
 
-export type AttestationErrorType = (
+export type AttestationErrorType =
   | {
       code: AttestationErrorCode.ERR_INVALID_SLOT_TIME;
       currentSlot: number;
@@ -275,9 +275,7 @@ export type AttestationErrorType = (
     }
   | {
       code: AttestationErrorCode.ERR_INVALID_AGGREGATOR;
-    }
-) &
-  (AttestationLogContext | AggregateAndProofLogContext);
+    };
 
 type IJobObject = {
   job: IAttestationJob;
