@@ -1,8 +1,8 @@
 import {BLSPubkey, SlashingProtectionBlock} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BlockBySlotRepository} from "./dbRepository";
 import {isEqualNonZeroRoot} from "../utils";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors";
+import {BlockBySlotRepository} from "./blockBySlotRepository";
 
 enum SafeStatus {
   SAME_DATA = "SAFE_STATUS_SAME_DATA",
