@@ -4,11 +4,11 @@ import {IBeaconDb} from "../../../db/api";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
 import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -32,18 +32,25 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
-
-  if (!hasValidAttestationSlot(config, chain.clock.currentSlot, attestation.data.slot)) {
-    // attestation might be valid later so passing to attestation pool
-    await chain.receiveAttestation(attestation);
-
+  const latestPermissibleSlot = chain.clock.currentSlot;
+  const earliestPermissibleSlot = chain.clock.currentSlot - ATTESTATION_PROPAGATION_SLOT_RANGE;
+  const attestationSlot = attestation.data.slot;
+  if (attestationSlot < earliestPermissibleSlot) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
-      currentSlot: chain.clock.currentSlot,
+      code: AttestationErrorCode.ERR_PAST_SLOT,
+      earliestPermissibleSlot,
+      attestationSlot,
       job: attestationJob,
     });
   }
-
+  if (attestationSlot > latestPermissibleSlot) {
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_FUTURE_SLOT,
+      latestPermissibleSlot,
+      attestationSlot,
+      job: attestationJob,
+    });
+  }
   // no other validator attestation for same target epoch has been seen
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
@@ -52,32 +59,23 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
-
   if (await db.badBlock.has(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       job: attestationJob,
     });
   }
-
   if (!chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
-    // attestation might be valid after we receive block
-    await chain.receiveAttestation(attestation);
-
     throw new AttestationError({
       code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
       beaconBlockRoot: attestation.data.beaconBlockRoot as Uint8Array,
       job: attestationJob,
     });
   }
-
   let attestationPreStateContext;
   try {
     attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
-    // attestation might be valid after we receive block
-    await chain.receiveAttestation(attestation);
-
     throw new AttestationError({
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
       job: attestationJob,
@@ -106,7 +104,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
-  if (!doesEpochSlotMatchTarget(config, attestation.data)) {
+  if (!config.types.Epoch.equals(attestation.data.target.epoch, computeEpochAtSlot(config, attestationSlot))) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
       job: attestationJob,
@@ -170,8 +168,4 @@ export function doAggregationBitsMatchCommitteeSize(
     attestation.aggregationBits.length ===
     attestationPreStateContext.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
   );
-}
-
-export function doesEpochSlotMatchTarget(config: IBeaconConfig, attestationData: AttestationData): boolean {
-  return config.types.Epoch.equals(attestationData.target.epoch, computeEpochAtSlot(config, attestationData.slot));
 }

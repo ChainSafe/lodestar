@@ -73,9 +73,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           this.logger.warn("Rejecting gossip block: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
         case BlockErrorCode.ERR_FUTURE_SLOT:
+        case BlockErrorCode.ERR_PARENT_UNKNOWN:
+          await this.chain.receiveBlock(signedBlock);
+          this.logger.warn("Ignoring gossip block: ", {...e.getMetadata(), ...logContext});
+          return ExtendedValidatorResult.ignore;
         case BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT:
         case BlockErrorCode.ERR_REPEAT_PROPOSAL:
-        case BlockErrorCode.ERR_PARENT_UNKNOWN:
         default:
           this.logger.warn("Ignoring gossip block: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
@@ -120,10 +123,15 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
           this.logger.warn("Rejecting gossip attestation: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
-        case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
-        case AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
+          // attestation might be valid after we receive block
+          await this.chain.receiveAttestation(attestation);
+          this.logger.warn("Ignoring gossip attestation: ", {...e.getMetadata(), ...logContext});
+          return ExtendedValidatorResult.ignore;
+        case AttestationErrorCode.ERR_PAST_SLOT:
+        case AttestationErrorCode.ERR_FUTURE_SLOT:
+        case AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN:
         default:
           this.logger.warn("Ignoring gossip attestation: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
@@ -168,7 +176,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_INVALID_AGGREGATOR:
           this.logger.warn("Rejecting gossip aggregate and Proof: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.reject;
-        case AttestationErrorCode.ERR_INVALID_SLOT_TIME:
+        case AttestationErrorCode.ERR_PAST_SLOT:
+        case AttestationErrorCode.ERR_FUTURE_SLOT:
         case AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
         default:

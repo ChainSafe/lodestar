@@ -121,7 +121,6 @@ describe("gossip block validation", function () {
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
-    expect(chainStub.receiveBlock.calledOnce).to.be.true;
   });
 
   it("should throw error - invalid signature", async function () {

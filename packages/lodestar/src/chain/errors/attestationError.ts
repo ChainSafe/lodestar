@@ -18,10 +18,6 @@ export enum AttestationErrorCode {
    */
   ERR_PAST_SLOT = "ERR_PAST_SLOT",
   /**
-   * The attestation has an invalid slot time.
-   */
-  ERR_INVALID_SLOT_TIME = "ERR_INVALID_SLOT_TIME",
-  /**
    * The attestations aggregation bits were empty when they shouldn't be.
    */
   ERR_EMPTY_AGGREGATION_BITFIELD = "ERR_EMPTY_AGGREGATION_BITFIELD",
@@ -138,10 +134,6 @@ export enum AttestationErrorCode {
 }
 
 export type AttestationErrorType =
-  | {
-      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME;
-      currentSlot: number;
-    }
   | {
       code: AttestationErrorCode.ERR_TARGET_STATE_MISSING;
     }

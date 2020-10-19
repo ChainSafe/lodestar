@@ -26,10 +26,8 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
-
   const currentSlot = chain.clock.currentSlot;
   if (currentSlot < blockSlot) {
-    await chain.receiveBlock(block);
     throw new BlockError({
       code: BlockErrorCode.ERR_FUTURE_SLOT,
       currentSlot,
@@ -37,14 +35,12 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
-
   if (await db.badBlock.has(blockRoot)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
       job: blockJob,
     });
   }
-
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
@@ -58,17 +54,12 @@ export async function validateGossipBlock(
     // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
     blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
-    // temporary skip rest of validation and put in block pool
-    // rest of validation is performed in state transition anyways
-    await chain.receiveBlock(block);
-
     throw new BlockError({
       code: BlockErrorCode.ERR_PARENT_UNKNOWN,
       parentRoot: block.message.parentRoot,
       job: blockJob,
     });
   }
-
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,

@@ -131,9 +131,8 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_PAST_SLOT);
     }
-    expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
   it("should throw error - future attestation", async function () {
@@ -155,9 +154,8 @@ describe("gossip attestation validation", function () {
         0
       );
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_FUTURE_SLOT);
     }
-    expect(chain.receiveAttestation.calledOnceWith(attestation)).to.be.true;
   });
 
   it("should throw error - validator already attested to target epoch", async function () {
@@ -203,7 +201,6 @@ describe("gossip attestation validation", function () {
     } catch (error) {
       expect(error.type).to.have.property("code", AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT);
     }
-    expect(chain.receiveAttestation.called).to.be.true;
     expect(forkChoice.hasBlock.calledOnceWith(attestation.data.beaconBlockRoot)).to.be.true;
   });
 
@@ -228,7 +225,6 @@ describe("gossip attestation validation", function () {
     } catch (error) {
       expect(error.type).to.have.property("code", AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE);
     }
-    expect(chain.receiveAttestation.called).to.be.true;
     expect(regen.getCheckpointState.calledOnceWith(attestation.data.target)).to.be.true;
   });
 

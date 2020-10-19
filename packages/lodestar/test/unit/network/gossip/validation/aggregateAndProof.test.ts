@@ -76,7 +76,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_PAST_SLOT);
     }
   });
 
@@ -99,7 +99,7 @@ describe("gossip aggregate and proof test", function () {
         validSignature: false,
       } as IAttestationJob);
     } catch (error) {
-      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_INVALID_SLOT_TIME);
+      expect(error.type).to.have.property("code", AttestationErrorCode.ERR_FUTURE_SLOT);
     }
   });
 

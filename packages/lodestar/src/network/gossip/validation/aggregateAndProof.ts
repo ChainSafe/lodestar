@@ -7,8 +7,8 @@ import {isAttestingToInValidBlock} from "./attestation";
 import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
-import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
 import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -19,13 +19,25 @@ export async function validateGossipAggregateAndProof(
 ): Promise<void> {
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
-  if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
+
+  const latestPermissibleSlot = chain.clock.currentSlot;
+  const earliestPermissibleSlot = chain.clock.currentSlot - ATTESTATION_PROPAGATION_SLOT_RANGE;
+  const attestationSlot = aggregate.data.slot;
+  if (attestationSlot < earliestPermissibleSlot) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
-      currentSlot: chain.clock.currentSlot,
+      code: AttestationErrorCode.ERR_PAST_SLOT,
+      earliestPermissibleSlot,
+      attestationSlot,
       job: attestationJob,
     });
-    // TODO: aggregate and proof pool to wait until proper slot to replay
+  }
+  if (attestationSlot > latestPermissibleSlot) {
+    throw new AttestationError({
+      code: AttestationErrorCode.ERR_FUTURE_SLOT,
+      attestationSlot,
+      latestPermissibleSlot,
+      job: attestationJob,
+    });
   }
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
