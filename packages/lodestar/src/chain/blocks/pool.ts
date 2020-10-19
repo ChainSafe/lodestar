@@ -99,6 +99,10 @@ export class BlockPool {
     return this.blocks.size;
   }
 
+  public has(blockRoot: Root): boolean {
+    return Boolean(this.blocks.get(this.getBlockKeyByRoot(blockRoot)));
+  }
+
   public getByParent(parentRoot: Root): Uint8Array[] {
     const hexArr = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
     return hexArr.map((hex) => fromHexString(hex));
@@ -119,5 +123,9 @@ export class BlockPool {
 
   private getBlockKey(block: SignedBeaconBlock): string {
     return toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
+  }
+
+  private getBlockKeyByRoot(root: Root): string {
+    return toHexString(root);
   }
 }
