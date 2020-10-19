@@ -76,7 +76,7 @@ export async function onForkVersion(this: BeaconChain): Promise<void> {
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
   await this.db.checkpointStateCache.add(cp, stateContext);
-  this.metrics.currentEpochLiveValidators.set(stateContext.epochCtx.currentShuffling.activeIndices.length);
+  this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
   if (parentBlockSummary) {
     const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
@@ -102,7 +102,7 @@ export async function onJustified(this: BeaconChain, cp: Checkpoint, stateContex
 
 export async function onFinalized(this: BeaconChain, cp: Checkpoint): Promise<void> {
   this.logger.important("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
-  this.metrics.currentFinalizedEpoch.set(cp.epoch);
+  this.metrics.finalizedEpoch.set(cp.epoch);
 }
 
 export async function onForkChoiceJustified(this: BeaconChain, cp: Checkpoint): Promise<void> {
@@ -118,6 +118,7 @@ export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): 
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
   });
+  this.metrics.headSlot.set(head.slot);
 }
 
 export async function onForkChoiceReorg(
@@ -151,7 +152,6 @@ export async function onBlock(
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
-  this.metrics.currentSlot.set(block.message.slot);
   await this.db.stateCache.add(postStateContext);
   if (!job.reprocess) {
     await this.db.block.add(block);

@@ -448,10 +448,10 @@ export class BeaconChain implements IBeaconChain {
       await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state
-    this.metrics.currentSlot.set(state.slot);
+    this.metrics.headSlot.set(state.slot);
     this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
     this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+    this.metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
 }
