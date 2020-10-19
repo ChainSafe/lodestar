@@ -6,11 +6,12 @@ import {IRegularSyncModules} from "..";
 import {IBeaconChain} from "../../../chain";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
 import {sortBlocks} from "../../utils";
+import {IBlockRangeProcessor} from "./interface";
 
 /**
  * Process a block range until complete.
  */
-export class BlockRangeProcessor {
+export class BlockRangeProcessor implements IBlockRangeProcessor {
   protected readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly logger: ILogger;

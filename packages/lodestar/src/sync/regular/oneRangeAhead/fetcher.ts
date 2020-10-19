@@ -10,8 +10,9 @@ import {INetwork} from "../../../network";
 import {getBlockRange} from "../../utils/blocks";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {ZERO_HASH} from "../../../constants";
+import {IBlockRangeFetcher} from "./interface";
 
-export class BlockRangeFetcher {
+export class BlockRangeFetcher implements IBlockRangeFetcher {
   protected readonly config: IBeaconConfig;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;

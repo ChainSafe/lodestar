@@ -1,4 +1,3 @@
-
 import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -32,12 +31,16 @@ describe("BlockRangeFetcher", function () {
     clockStub = sinon.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
-    fetcher = new BlockRangeFetcher({}, {
-      config,
-      network: networkStub,
-      chain: chainStub,
-      logger,
-    }, getPeers);
+    fetcher = new BlockRangeFetcher(
+      {},
+      {
+        config,
+        network: networkStub,
+        chain: chainStub,
+        logger,
+      },
+      getPeers
+    );
   });
 
   afterEach(() => {

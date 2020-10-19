@@ -45,9 +45,13 @@ describe("BlockRangeProcessor", function () {
   it("should process blocks based on block:error ERR_BLOCK_IS_ALREADY_KNOWN event", async () => {
     await Promise.all([
       processor.processUntilComplete([firstBlock, secondBlock], abortController.signal),
-      chainStub.emitter.emit("error:block", new BlockError({
-        job: {signedBlock: secondBlock} as IBlockJob,
-        code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN})),
+      chainStub.emitter.emit(
+        "error:block",
+        new BlockError({
+          job: {signedBlock: secondBlock} as IBlockJob,
+          code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN,
+        })
+      ),
     ]);
   });
 });

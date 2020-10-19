@@ -5,7 +5,7 @@ import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
-import {IRegularSync, IRegularSyncModules, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
+import {IRegularSync, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
 import {IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {GossipEvent} from "../../../network/gossip/constants";
@@ -14,6 +14,7 @@ import {getSyncPeers} from "../../utils/peers";
 import {BlockRangeFetcher} from "./fetcher";
 import {BlockRangeProcessor} from "./processor";
 import {ISyncCheckpoint} from "../../interface";
+import {IBlockRangeFetcher, IBlockRangeProcessor, ORARegularSyncModules} from "./interface";
 
 /**
  * One Range Ahead regular sync: fetch one range in advance and buffer blocks.
@@ -30,22 +31,22 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   private bestPeer: PeerId | undefined;
 
-  private fetcher: BlockRangeFetcher;
+  private fetcher: IBlockRangeFetcher;
 
-  private processor: BlockRangeProcessor;
+  private processor: IBlockRangeProcessor;
 
   private controller!: AbortController;
 
   private blockBuffer: SignedBeaconBlock[];
 
-  constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules) {
+  constructor(options: Partial<IRegularSyncOptions>, modules: ORARegularSyncModules) {
     super();
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this.fetcher = new BlockRangeFetcher(options, modules, this.getSyncPeers.bind(this));
-    this.processor = new BlockRangeProcessor(modules);
+    this.fetcher = modules.fetcher || new BlockRangeFetcher(options, modules, this.getSyncPeers.bind(this));
+    this.processor = modules.processor || new BlockRangeProcessor(modules);
     this.blockBuffer = [];
   }
 
@@ -63,7 +64,6 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.controller = new AbortController();
     await this.processor.start();
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
-    // await Promise.all([this.sync(), this.setTarget()]);
     this.sync().catch((e) => {
       this.logger.error("Regular Sync: error", e);
     });
