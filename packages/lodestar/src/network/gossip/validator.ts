@@ -150,7 +150,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       } as IAttestationJob;
       this.logger.profile("gossipAggregateAndProofValidation");
       this.logger.verbose("Started gossip aggregate and proof validation", logContext);
-      await this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
       await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
       this.logger.info("Received valid gossip aggregate and proof", logContext);
       return ExtendedValidatorResult.accept;
@@ -176,6 +175,8 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           this.logger.warn("Ignoring gossip aggregate and Proof: ", {...e.getMetadata(), ...logContext});
           return ExtendedValidatorResult.ignore;
       }
+    } finally {
+      await this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message);
     }
   };
 
