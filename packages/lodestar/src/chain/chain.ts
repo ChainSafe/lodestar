@@ -75,6 +75,10 @@ export class BeaconChain implements IBeaconChain {
   protected readonly metrics: IBeaconMetrics;
   protected readonly opts: IChainOptions;
   protected genesisTime: Number64 = 0;
+  /**
+   * Internal event emitter is used internally to the chain to update chain state
+   * Once event have been handled internally, they are re-emitted externally for downstream consumers
+   */
   protected internalEmitter: ChainEventEmitter;
   private abortController?: AbortController;
 
