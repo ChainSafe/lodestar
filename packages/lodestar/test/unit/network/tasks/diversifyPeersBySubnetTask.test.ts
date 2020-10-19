@@ -32,6 +32,7 @@ describe("DiversifyPeersBySubnetTask", function () {
 
   it("should search all subnets, no peer", async () => {
     networkStub.getPeers.returns([]);
+    await task.handleSyncCompleted();
     await task.run();
     expect(networkStub.searchSubnetPeers.callCount).to.be.equal(64);
   });
@@ -64,6 +65,7 @@ describe("DiversifyPeersBySubnetTask", function () {
       attnets: attNets2,
       seqNumber: BigInt(1),
     });
+    await task.handleSyncCompleted();
     await task.run();
     expect(networkStub.searchSubnetPeers.callCount).to.be.equal(61);
   });
