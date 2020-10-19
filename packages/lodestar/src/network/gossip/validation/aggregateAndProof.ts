@@ -2,14 +2,13 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
 import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {hasValidAttestationSlot} from "./utils/hasValidAttestationSlot";
-import {AggregateAndProofLogContext, AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,
@@ -20,20 +19,10 @@ export async function validateGossipAggregateAndProof(
 ): Promise<void> {
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
-  const root = config.types.AggregateAndProof.hashTreeRoot(aggregateAndProof);
-  const attestationRoot = config.types.Attestation.hashTreeRoot(aggregate);
-  const logContext = {
-    attestationSlot: aggregate.data.slot,
-    aggregatorIndex: aggregateAndProof.aggregatorIndex,
-    aggregateRoot: toHexString(root),
-    attestationRoot: toHexString(attestationRoot),
-    targetEpoch: aggregate.data.target.epoch,
-  };
   if (!hasValidAttestationSlot(config, chain.clock.currentSlot, aggregate.data.slot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SLOT_TIME,
       currentSlot: chain.clock.currentSlot,
-      ...logContext,
       job: attestationJob,
     });
     // TODO: aggregate and proof pool to wait until proper slot to replay
@@ -41,7 +30,6 @@ export async function validateGossipAggregateAndProof(
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
-      ...logContext,
       job: attestationJob,
     });
   }
@@ -49,21 +37,19 @@ export async function validateGossipAggregateAndProof(
     // missing attestation participants
     throw new AttestationError({
       code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
-      ...logContext,
       job: attestationJob,
     });
   }
   if (await isAttestingToInValidBlock(db, aggregate)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
-      ...logContext,
       job: attestationJob,
     });
   }
 
   // TODO: check pool of aggregates if already seen (not a dos vector check)
 
-  await validateAggregateAttestation(config, chain, logContext, signedAggregateAndProof, attestationJob);
+  await validateAggregateAttestation(config, chain, signedAggregateAndProof, attestationJob);
 }
 
 export function hasAttestationParticipants(attestation: Attestation): boolean {
@@ -73,7 +59,6 @@ export function hasAttestationParticipants(attestation: Attestation): boolean {
 export async function validateAggregateAttestation(
   config: IBeaconConfig,
   chain: IBeaconChain,
-  logContext: AggregateAndProofLogContext,
   aggregateAndProof: SignedAggregateAndProof,
   attestationJob: IAttestationJob
 ): Promise<void> {
@@ -85,7 +70,6 @@ export async function validateAggregateAttestation(
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
-      ...logContext,
       job: attestationJob,
     });
   }
@@ -97,21 +81,18 @@ export async function validateAggregateAttestation(
   } catch (error) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
-      ...logContext,
       job: attestationJob,
     });
   }
   if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
-      ...logContext,
       job: attestationJob,
     });
   }
   if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_AGGREGATOR,
-      ...logContext,
       job: attestationJob,
     });
   }
@@ -127,7 +108,6 @@ export async function validateAggregateAttestation(
   ) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
-      ...logContext,
       job: attestationJob,
     });
   }
@@ -142,7 +122,6 @@ export async function validateAggregateAttestation(
   ) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
-      ...logContext,
       job: attestationJob,
     });
   }
@@ -152,7 +131,6 @@ export async function validateAggregateAttestation(
   if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
-      ...logContext,
       job: attestationJob,
     });
   }
