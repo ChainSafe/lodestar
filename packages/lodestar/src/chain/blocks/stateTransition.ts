@@ -13,6 +13,7 @@ import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -70,6 +71,8 @@ export async function processSlotsToNearestCheckpoint(
     processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
     emitCheckpointEvent(emitter, postCtx);
     postCtx = cloneStateCtx(postCtx);
+    // this avoids keeping our node busy processing blocks
+    await sleep(0);
   }
   return postCtx;
 }
@@ -148,5 +151,7 @@ export async function runStateTransition(
   emitVoluntaryExitEvents(emitter, job);
   const head = forkChoice.getHead();
   emitForkChoiceHeadEvents(emitter, forkChoice, head, oldHead);
+  // this avoids keeping our node busy processing blocks
+  await sleep(0);
   return postStateContext;
 }
