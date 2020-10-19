@@ -9,9 +9,9 @@ import {IBlockJob} from "./interface";
 import {ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
-interface IEventMap<Events, Key extends keyof Events = keyof Events, Value extends Events[Key] = Events[Key]>
-  extends Map<Key, Value> {
-  set<Key extends keyof Events>(key: Key, value: Events[Key]): this;
+interface IEventMap<Events, Event extends keyof Events = keyof Events, Callback extends Events[Event] = Events[Event]>
+  extends Map<Event, Callback> {
+  set<Event extends keyof Events>(key: Event, value: Events[Event]): this;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,13 +23,18 @@ type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends
  * then emits the event on the event emitter using the same args
  */
 function wrapHandler<
-  Key extends keyof IChainEvents = keyof IChainEvents,
-  Value extends IChainEvents[Key] = IChainEvents[Key]
->(event: Key, emitter: ChainEventEmitter, logger: ILogger, handler: (...args: Parameters<Value>) => Promise<void>) {
-  return async (...args: Parameters<Value>): Promise<void> => {
+  Event extends keyof IChainEvents = keyof IChainEvents,
+  Callback extends IChainEvents[Event] = IChainEvents[Event]
+>(
+  event: Event,
+  emitter: ChainEventEmitter,
+  logger: ILogger,
+  handler: (...args: Parameters<Callback>) => Promise<void>
+) {
+  return async (...args: Parameters<Callback>): Promise<void> => {
     try {
       await handler(...args);
-      emitter.emit(event, ...((args as unknown) as ListenerType<Value>));
+      emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
     } catch (e) {
       logger.error(`Error handling event: ${event}`, e);
     }
