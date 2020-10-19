@@ -138,21 +138,6 @@ export enum AttestationErrorCode {
   ERR_INVALID_AGGREGATOR = "ERR_INVALID_AGGREGATOR",
 }
 
-export type AttestationLogContext = {
-  attestationSlot?: Slot;
-  attestationBlockRoot?: string;
-  attestationRoot?: string;
-  subnet?: number;
-};
-
-export type AggregateAndProofLogContext = {
-  attestationSlot?: Slot;
-  aggregatorIndex?: number;
-  aggregateRoot?: string;
-  attestationRoot?: string;
-  targetEpoch?: Epoch;
-};
-
 export type AttestationErrorType =
   | {
       code: AttestationErrorCode.ERR_INVALID_SLOT_TIME;
