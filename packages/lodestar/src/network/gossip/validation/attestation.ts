@@ -55,7 +55,7 @@ export async function validateGossipAttestation(
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN,
-      root: attestation.data.beaconBlockRoot as Uint8Array,
+      root: config.types.Attestation.hashTreeRoot(attestation),
       job: attestationJob,
     });
   }
