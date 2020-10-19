@@ -18,11 +18,11 @@ export async function validateGossipAttestation(
   subnet: number
 ): Promise<void> {
   const attestation = attestationJob.attestation;
-
-  if (!isUnaggregatedAttestation(attestation)) {
+  const numBits = getAttestationAttesterCount(attestation);
+  if (numBits !== 1) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
-      aggregationBits: attestation.aggregationBits,
+      numBits,
       job: attestationJob,
     });
   }
@@ -154,8 +154,8 @@ export async function isAttestingToInValidBlock(db: IBeaconDb, attestation: Atte
   return await db.badBlock.has(blockRoot);
 }
 
-export function isUnaggregatedAttestation(attestation: Attestation): boolean {
-  return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1;
+export function getAttestationAttesterCount(attestation: Attestation): number {
+  return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length;
 }
 
 export function isCommitteeIndexWithinRange(epochCtx: EpochContext, attestationData: AttestationData): boolean {

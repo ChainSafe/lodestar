@@ -1,6 +1,5 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {BitList} from "@chainsafe/ssz";
 
 import {IAttestationJob} from "../interface";
 
@@ -204,7 +203,7 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET;
-      aggregationBits: BitList;
+      numBits: number;
     }
   | {
       code: AttestationErrorCode.ERR_PRIOR_ATTESTATION_KNOWN;
