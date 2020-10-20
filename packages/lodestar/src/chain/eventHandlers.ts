@@ -113,12 +113,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
       }
     })
   );
-  const pendingJobs = this.pendingBlocks.getPendingBlocks();
   this.logger.debug("Block pools: ", {
-    pendingBlocks: pendingJobs
-      .map((job) => job.signedBlock.message.slot)
-      .sort((a, b) => a - b)
-      .join(","),
+    pendingBlocks: this.pendingBlocks.getTotalPendingBlocks(),
     currentSlot: this.clock.currentSlot,
   });
 }
