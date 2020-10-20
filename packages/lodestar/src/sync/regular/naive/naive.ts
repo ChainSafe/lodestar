@@ -73,7 +73,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     await this.waitForBestPeer(this.controller.signal);
     const newTarget = this.getNewTarget();
     this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
-    this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
+    this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
     this.chain.emitter.on("block", this.onProcessedBlock);
     await Promise.all([this.sync(), this.setTarget()]);
@@ -85,7 +85,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.controller.abort();
     }
     this.chain.emitter.removeListener("block", this.onProcessedBlock);
-    this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
+    this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
   }
 
   public getHighestBlock(): Slot {

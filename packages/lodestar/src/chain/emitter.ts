@@ -5,21 +5,38 @@ import {
   Attestation,
   Checkpoint,
   Epoch,
-  ForkDigest,
   Root,
   SignedBeaconBlock,
   SignedVoluntaryExit,
   Slot,
+  Version,
 } from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
 
+export enum ChainEvent {
+  attestation = "attestation",
+  block = "block",
+  checkpoint = "checkpoint",
+  justified = "justified",
+  finalized = "finalized",
+  voluntaryExit = "voluntaryExit",
+  forkDigest = "forkDigest",
+  clockSlot = "clock:slot",
+  clockEpoch = "clock:epoch",
+  errorBlock = "error:block",
+  errorAttestation = "error:attestation",
+  forkChoiceHead = "forkChoice:head",
+  forkChoiceReorg = "forkChoice:reorg",
+  forkChoiceJustified = "forkChoice:justified",
+  forkChoiceFinalized = "forkChoice:finalized",
+}
+
 export interface IChainEvents {
   // old, to be deprecated
   unknownBlockRoot: (root: Root) => void;
-  forkVersion: () => void;
 
   // new
   attestation: (attestation: Attestation) => void;
@@ -28,7 +45,7 @@ export interface IChainEvents {
   justified: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
   finalized: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
   voluntaryExit: (exit: SignedVoluntaryExit) => void;
-  forkDigest: (forkDigest: ForkDigest) => void;
+  forkVersion: (version: Version) => void;
 
   "clock:slot": (slot: Slot) => void;
   "clock:epoch": (epoch: Epoch) => void;

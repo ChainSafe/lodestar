@@ -1,5 +1,5 @@
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
-import {Attestation, Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
@@ -111,9 +111,8 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   );
 }
 
-export async function onForkVersion(this: BeaconChain): Promise<void> {
-  this._currentForkDigest = await this.getCurrentForkDigest();
-  this.internalEmitter.emit("forkDigest", this._currentForkDigest);
+export async function onForkVersion(this: BeaconChain, version: Version): Promise<void> {
+  this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {

@@ -160,10 +160,12 @@ export class BeaconSync implements IBeaconSync {
 
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
-    this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.network, createStatus(this.chain)).catch((e) => {
+    this.statusSyncTimer = setInterval(async () => {
+      try {
+        await syncPeersStatus(this.network, await createStatus(this.chain));
+      } catch (e) {
         this.logger.error("Error on syncPeersStatus", e);
-      });
+      }
     }, interval);
   }
 

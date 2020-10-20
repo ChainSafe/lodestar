@@ -214,11 +214,11 @@ export function processSyncBlocks(
   };
 }
 
-export function createStatus(chain: IBeaconChain): Status {
+export async function createStatus(chain: IBeaconChain): Promise<Status> {
   const head = chain.forkChoice.getHead();
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   return {
-    forkDigest: chain.currentForkDigest,
+    forkDigest: await chain.getForkDigest(),
     finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
     finalizedEpoch: finalizedCheckpoint.epoch,
     headRoot: head.blockRoot,
