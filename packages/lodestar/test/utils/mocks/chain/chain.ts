@@ -121,7 +121,7 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state!.finalizedCheckpoint;
   }
 
-  public get currentForkDigest(): ForkDigest {
+  public async getForkDigest(): Promise<ForkDigest> {
     return computeForkDigest(this.config, this.state!.fork.currentVersion, this.state!.genesisValidatorsRoot);
   }
 

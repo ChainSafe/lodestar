@@ -67,14 +67,14 @@ describe("interopSubnetsJoiningTask", () => {
   });
 
   it("should handle fork digest change", async () => {
-    const oldForkDigest = chain.currentForkDigest;
+    const oldForkDigest = await chain.getForkDigest();
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-    expect(config.types.ForkDigest.equals(oldForkDigest, chain.currentForkDigest)).to.be.false;
+    expect(config.types.ForkDigest.equals(oldForkDigest, await chain.getForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
-    chain.emitter.emit("forkDigest", chain.currentForkDigest);
+    chain.emitter.emit("forkVersion", state.fork.currentVersion);
     await unSubscribePromise;
     expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(
       config.params.RANDOM_SUBNETS_PER_VALIDATOR

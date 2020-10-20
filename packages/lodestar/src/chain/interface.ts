@@ -47,7 +47,6 @@ export interface IBeaconChain {
   pendingBlocks: BlockPool;
   chainId: Uint16;
   networkId: Uint64;
-  currentForkDigest: ForkDigest;
   /**
    * Start beacon chain processing
    */
@@ -59,7 +58,11 @@ export interface IBeaconChain {
   stop(): Promise<void>;
 
   /**
-   * Return ENRForkID.
+   * Get ForkDigest from the head state
+   */
+  getForkDigest(): Promise<ForkDigest>;
+  /**
+   * Get ENRForkID from the head state
    */
   getENRForkID(): Promise<ENRForkID>;
   getGenesisTime(): Number64;
