@@ -18,6 +18,7 @@ import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
 import {getSyncPeers} from "../../utils/peers";
+import {BlockError, BlockErrorCode} from "../../../chain/errors";
 
 export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
@@ -76,16 +77,19 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
     this.chain.emitter.on("block", this.onProcessedBlock);
+    this.chain.emitter.on("error:block", this.onErrorBlock);
     await Promise.all([this.sync(), this.setTarget()]);
   }
 
   public async stop(): Promise<void> {
     this.targetSlotRangeSource.end();
-    if (this.controller) {
+    if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
     this.chain.emitter.removeListener("block", this.onProcessedBlock);
+    this.chain.emitter.removeListener("error:block", this.onErrorBlock);
     this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
+    this.subscribeToBlock = false;
   }
 
   public getHighestBlock(): Slot {
@@ -105,6 +109,12 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
     this.currentTarget = newTarget;
+  };
+
+  private onErrorBlock = async (err: BlockError): Promise<void> => {
+    if (err.type.code === BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN) {
+      await this.onProcessedBlock(err.job.signedBlock);
+    }
   };
 
   private onProcessedBlock = async (lastProcessedBlock: SignedBeaconBlock): Promise<void> => {

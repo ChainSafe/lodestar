@@ -5,7 +5,6 @@ import {
   Attestation,
   Checkpoint,
   Epoch,
-  Root,
   SignedBeaconBlock,
   SignedVoluntaryExit,
   Slot,
@@ -35,10 +34,6 @@ export enum ChainEvent {
 }
 
 export interface IChainEvents {
-  // old, to be deprecated
-  unknownBlockRoot: (root: Root) => void;
-
-  // new
   attestation: (attestation: Attestation) => void;
   block: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockJob) => void;
   checkpoint: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
@@ -57,7 +52,6 @@ export interface IChainEvents {
   "forkChoice:reorg": (head: IBlockSummary, oldHead: IBlockSummary, depth: number) => void;
   "forkChoice:justified": (checkpoint: Checkpoint) => void;
   "forkChoice:finalized": (checkpoint: Checkpoint) => void;
-  // TODO more events
 }
 
 export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}

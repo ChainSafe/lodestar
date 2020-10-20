@@ -109,6 +109,14 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
       return this.blockProcessor.processBlockJob(job);
     })
   );
+  const pendingJobs = this.pendingBlocks.getPendingBlocks();
+  this.logger.debug("Block pools: ", {
+    pendingBlocks: pendingJobs
+      .map((job) => job.signedBlock.message.slot)
+      .sort((a, b) => a - b)
+      .join(","),
+    currentSlot: this.clock.currentSlot,
+  });
 }
 
 export async function onForkVersion(this: BeaconChain, version: Version): Promise<void> {
