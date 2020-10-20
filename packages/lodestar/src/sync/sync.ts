@@ -14,6 +14,7 @@ import {IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
+import {BlockError, BlockErrorCode} from "../chain/errors";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -77,7 +78,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.emitter.removeListener("block:unknownRoot", this.onUnknownBlockRoot);
+    this.chain.emitter.removeListener("error:block", this.onUnknownBlockRoot);
     this.regularSync.removeListener("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
@@ -142,7 +143,7 @@ export class BeaconSync implements IBeaconSync {
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.syncCompleted);
-    this.chain.emitter.on("block:unknownRoot", this.onUnknownBlockRoot);
+    this.chain.emitter.on("error:block", this.onUnknownBlockRoot);
     await this.gossip.start();
     await this.regularSync.start();
   }
@@ -200,7 +201,10 @@ export class BeaconSync implements IBeaconSync {
       .map((peer) => peer.id);
   }
 
-  private onUnknownBlockRoot = async (root: Root): Promise<void> => {
+  private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
+    if (err.type.code !== BlockErrorCode.ERR_PARENT_UNKNOWN) return;
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
     const maxRetry = this.getUnknownRootPeers().length;
@@ -210,14 +214,14 @@ export class BeaconSync implements IBeaconSync {
         return;
       }
       try {
-        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
+        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
         if (blocks && blocks[0]) {
-          this.logger.verbose(`Fould block ${blocks[0].message.slot} for root ${toHexString(root)}`);
+          this.logger.verbose(`Found block ${blocks[0].message.slot} for root ${toHexString(unknownAncestorRoot)}`);
           return await this.chain.receiveBlock(blocks[0]);
         }
       } catch (e) {
-        this.logger.verbose("Failed to get unknown block root from peer", {
-          blockRoot: toHexString(root),
+        this.logger.verbose("Failed to get unknown ancestor root from peer", {
+          blockRoot: toHexString(unknownAncestorRoot),
           peer: peer.toB58String(),
           error: e.message,
           maxRetry,
@@ -226,6 +230,6 @@ export class BeaconSync implements IBeaconSync {
       }
       retry++;
     }
-    this.logger.error(`Failed to get unknown block root ${toHexString(root)}`);
+    this.logger.error(`Failed to get unknown ancestor root ${toHexString(unknownAncestorRoot)}`);
   };
 }

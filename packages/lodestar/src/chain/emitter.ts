@@ -6,7 +6,6 @@ import {
   Checkpoint,
   Epoch,
   ForkDigest,
-  Root,
   SignedBeaconBlock,
   SignedVoluntaryExit,
   Slot,
@@ -40,7 +39,6 @@ export interface IChainEvents {
   "forkChoice:justified": (checkpoint: Checkpoint) => void;
   "forkChoice:finalized": (checkpoint: Checkpoint) => void;
 
-  "block:unknownRoot": (root: Root) => void;
   // TODO more events
 }
 
