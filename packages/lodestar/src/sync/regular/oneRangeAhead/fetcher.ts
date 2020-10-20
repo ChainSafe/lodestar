@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
 import PeerId from "peer-id";
 import {IRegularSyncModules} from "..";
@@ -19,7 +19,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   private readonly logger: ILogger;
   private readonly opts: IRegularSyncOptions;
   // for control range across next() calls
-  private lastFetchBlock: ISyncCheckpoint;
+  private lastFetchCheckpoint: ISyncCheckpoint;
   // for each next() call
   private rangeStart: Slot = 0;
   private rangeEnd: Slot = 0;
@@ -32,44 +32,42 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.getPeers = getPeers;
-    this.lastFetchBlock = {blockRoot: ZERO_HASH, slot: 0};
+    this.lastFetchCheckpoint = {blockRoot: ZERO_HASH, slot: 0};
   }
 
   public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
-    this.lastFetchBlock = lastProcessedBlock;
+    this.lastFetchCheckpoint = lastProcessedBlock;
   }
 
   /**
    * Get next block range.
    */
   public async next(): Promise<SignedBeaconBlock[]> {
-    this.getNextRange();
+    this.updateNextRange();
     let result: SignedBeaconBlock[] | null = null;
     while (!result || !result!.length) {
       let slotRange: ISlotRange | null = null;
       try {
         const peers = await this.getPeers();
-        if (result && !result!.length) await this.handleEmptyRange(peers);
+        if (result && !result.length) await this.handleEmptyRange(peers);
         slotRange = {start: this.rangeStart, end: this.rangeEnd};
         result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
       } catch (e) {
-        this.logger.debug(
-          "Regular Sync: Failed to get block range " + JSON.stringify(slotRange || {}) + ". Error: " + e.message
-        );
-        // node is stopped for whatever reasons
-        if (e.message.trim() === "Aborted") return [];
+        this.logger.debug("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
+        // sync is stopped for whatever reasons
+        if (e instanceof ErrorAborted) return [];
         result = null;
       }
     }
     // success
     const lastBlock = result[result.length - 1].message;
-    this.lastFetchBlock = {blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
+    this.lastFetchCheckpoint = {blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
     return result!;
   }
 
   // always set range based on last fetch block bc sometimes the previous fetch may not return all blocks
-  private getNextRange(): void {
-    this.rangeStart = this.lastFetchBlock.slot + 1;
+  private updateNextRange(): void {
+    this.rangeStart = this.lastFetchCheckpoint.slot + 1;
     this.rangeEnd = this.rangeStart;
     this.rangeEnd = this.getNewTarget();
   }
@@ -80,11 +78,11 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     }
     const range = {start: this.rangeStart, end: this.rangeEnd};
     const peerHeadSlot = Math.max(...peers.map((peer) => this.network.peerMetadata.getStatus(peer)?.headSlot ?? 0));
-    this.logger.verbose(`Regular Sync: Not found any blocks for range ${JSON.stringify(range)}`);
+    this.logger.verbose("Regular Sync: Not found any blocks for range", {range});
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
       this.logger.verbose("Regular Sync: queried range is behind peer head, fetch next range", {
-        range: JSON.stringify(range),
+        ...range,
         peerHead: peerHeadSlot,
       });
       // don't trust empty range as it's rarely happen, peer may return it incorrectly or not up to date
