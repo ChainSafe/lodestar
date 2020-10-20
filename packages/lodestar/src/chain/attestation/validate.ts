@@ -66,7 +66,7 @@ export async function validateAttestation({
   }
   if (!forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK,
+      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
       beaconBlockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
       job,
     });

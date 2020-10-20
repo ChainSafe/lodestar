@@ -49,7 +49,7 @@ export enum AttestationErrorCode {
   /**
    * The `attestation.data.beacon_block_root` block is unknown.
    */
-  ERR_UNKNOWN_HEAD_BLOCK = "ERR_UNKNOWN_HEAD_BLOCK",
+  ERR_UNKNOWN_BEACON_BLOCK_ROOT = "ERR_UNKNOWN_BEACON_BLOCK_ROOT",
   /**
    * The `attestation.data.slot` is not from the same epoch as `data.target.epoch`.
    */
@@ -103,6 +103,34 @@ export enum AttestationErrorCode {
    * There was an error whilst processing the attestation. It is not known if it is valid or invalid.
    */
   ERR_BEACON_CHAIN_ERROR = "ERR_BEACON_CHAIN_ERROR",
+  /**
+   * Number of aggregation bits does not match committee size
+   */
+  ERR_WRONG_NUMBER_OF_AGGREGATION_BITS = "ERR_WRONG_NUMBER_OF_AGGREGATION_BITS",
+  /**
+   * Block did not pass validation during block processing.
+   */
+  ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
+  /**
+   * The current finalized checkpoint is not an ancestor of the block defined by attestation.data.beacon_block_root.
+   */
+  ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT = "ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT",
+  /**
+   * The The attestation target block is not an ancestor of the block named in the LMD vote.
+   */
+  ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK = "ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK",
+  /**
+   * Committee index out of range.
+   */
+  ERR_COMMITTEE_INDEX_OUT_OF_RANGE = "ERR_COMMITTEE_INDEX_OUT_OF_RANGE",
+  /**
+   * Missing attestation pre-state.
+   */
+  ERR_MISSING_ATTESTATION_PRESTATE = "ERR_MISSING_ATTESTATION_PRESTATE",
+  /**
+   * Invalid aggregator.
+   */
+  ERR_INVALID_AGGREGATOR = "ERR_INVALID_AGGREGATOR",
 }
 
 export type AttestationErrorType =
@@ -124,11 +152,9 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF;
-      aggregatorIndex: ValidatorIndex;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE;
-      aggregatorIndex: ValidatorIndex;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_PUBKEY_UNKNOWN;
@@ -140,14 +166,13 @@ export type AttestationErrorType =
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN;
-      root: Uint8Array;
     }
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_INDEX_TOO_HIGH;
       aggregatorIndex: ValidatorIndex;
     }
   | {
-      code: AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK;
+      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT;
       beaconBlockRoot: Uint8Array;
     }
   | {
@@ -204,6 +229,28 @@ export type AttestationErrorType =
   | {
       code: AttestationErrorCode.ERR_BEACON_CHAIN_ERROR;
       error: Error;
+    }
+  | {
+      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS;
+    }
+  | {
+      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK;
+    }
+  | {
+      code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT;
+    }
+  | {
+      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK;
+    }
+  | {
+      code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE;
+      index: number;
+    }
+  | {
+      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
+    }
+  | {
+      code: AttestationErrorCode.ERR_INVALID_AGGREGATOR;
     };
 
 type IJobObject = {

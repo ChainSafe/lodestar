@@ -150,7 +150,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK);
+      expect(e.type.code).to.equal(AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT);
     }
   });
 

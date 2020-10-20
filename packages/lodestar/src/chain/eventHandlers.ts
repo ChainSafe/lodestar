@@ -248,7 +248,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       });
       this.pendingAttestations.putByBlock(err.type.root, err.job);
       break;
-    case AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK:
+    case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
       this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
       break;
     default:
