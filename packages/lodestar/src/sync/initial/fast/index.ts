@@ -3,7 +3,7 @@
  */
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../../chain";
+import {ChainEvent, IBeaconChain} from "../../../chain";
 import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import defaultOptions, {ISyncOptions} from "../../options";
@@ -62,8 +62,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
 
   public async start(): Promise<void> {
     this.logger.info("Starting initial syncing");
-    this.chain.emitter.on("checkpoint", this.checkSyncCompleted);
-    this.chain.emitter.on("block", this.checkSyncProgress);
+    this.chain.emitter.on(ChainEvent.checkpoint, this.checkSyncCompleted);
+    this.chain.emitter.on(ChainEvent.block, this.checkSyncProgress);
     this.syncTriggerSource = pushable<ISlotRange>();
     this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses());
     // head may not be on finalized chain so we start from finalized block
@@ -89,8 +89,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.logger.info("initial sync stop");
     await this.stats.stop();
     this.syncTriggerSource.end();
-    this.chain.emitter.removeListener("block", this.checkSyncProgress);
-    this.chain.emitter.removeListener("checkpoint", this.checkSyncCompleted);
+    this.chain.emitter.removeListener(ChainEvent.block, this.checkSyncProgress);
+    this.chain.emitter.removeListener(ChainEvent.checkpoint, this.checkSyncCompleted);
   }
 
   public getHighestBlock(): Slot {

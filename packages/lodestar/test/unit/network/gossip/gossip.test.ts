@@ -3,7 +3,7 @@ import {INetworkOptions} from "../../../../src/network/options";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
-import {IBeaconChain} from "../../../../src/chain";
+import {ChainEvent, IBeaconChain} from "../../../../src/chain";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../src/network/gossip/constants";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
@@ -17,7 +17,7 @@ import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {silentLogger} from "../../../utils/logger";
-import { sleep } from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 describe("Network Gossip", function () {
   let gossip: Gossip;
@@ -169,7 +169,7 @@ describe("Network Gossip", function () {
       const received = new Promise((resolve) => {
         gossip.subscribeToBlock(forkDigest, resolve);
       });
-      chain.emitter.emit("forkVersion", state.fork.currentVersion);
+      chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
       await sleep(1);
       const block = generateEmptySignedBlock();
       pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest, GossipEncoding.SSZ_SNAPPY, new Map()), block);

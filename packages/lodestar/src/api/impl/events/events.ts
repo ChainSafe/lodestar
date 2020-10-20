@@ -1,7 +1,7 @@
 import {IEventsApi} from "./interfaces";
 import {ApiNamespace, IApiModules} from "../interface";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain, IChainEvents} from "../../../chain";
+import {ChainEvent, IBeaconChain, IChainEvents} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {
   ChainEventListener,
@@ -53,27 +53,27 @@ function getEventHandlerMapping(
 ): Record<BeaconEventType, {chainEvent: keyof IChainEvents; handler: ChainEventListener<keyof IChainEvents>}> {
   return {
     [BeaconEventType.HEAD]: {
-      chainEvent: "forkChoice:head",
+      chainEvent: ChainEvent.forkChoiceHead,
       handler: handleBeaconHeadEvent(config, push),
     },
     [BeaconEventType.BLOCK]: {
-      chainEvent: "block",
+      chainEvent: ChainEvent.block,
       handler: handleBeaconBlockEvent(config, push),
     },
     [BeaconEventType.ATTESTATION]: {
-      chainEvent: "attestation",
+      chainEvent: ChainEvent.attestation,
       handler: handleBeaconAttestationEvent(config, push),
     },
     [BeaconEventType.VOLUNTARY_EXIT]: {
-      chainEvent: "voluntaryExit",
+      chainEvent: ChainEvent.block,
       handler: handleVoluntaryExitEvent(config, push),
     },
     [BeaconEventType.FINALIZED_CHECKPOINT]: {
-      chainEvent: "finalized",
+      chainEvent: ChainEvent.finalized,
       handler: handleFinalizedCheckpointEvent(config, push),
     },
     [BeaconEventType.CHAIN_REORG]: {
-      chainEvent: "forkChoice:reorg",
+      chainEvent: ChainEvent.forkChoiceReorg,
       handler: handleChainReorgEvent(config, push),
     },
   };

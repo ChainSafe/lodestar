@@ -3,7 +3,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";
 import {IBeaconClock} from "../clock";
-import {ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IStateRegenerator} from "../regen";
 
 import {processAttestation} from "./process";
@@ -45,6 +45,6 @@ export async function processAttestationJob(modules: AttestationProcessorModules
     await processAttestation({...modules, job});
   } catch (e) {
     // above functions only throw AttestationError
-    modules.emitter.emit("error:attestation", e);
+    modules.emitter.emit(ChainEvent.errorAttestation, e);
   }
 }

@@ -12,7 +12,7 @@ import {
   ValidatorResponse,
 } from "@chainsafe/lodestar-types";
 
-import {IBeaconChain} from "../../../chain";
+import {ChainEvent, IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
@@ -95,9 +95,9 @@ export class BeaconApi implements IBeaconApi {
 
   public getBlockStream(): LodestarEventIterator<SignedBeaconBlock> {
     return new LodestarEventIterator<SignedBeaconBlock>(({push}) => {
-      this.chain.emitter.on("block", push);
+      this.chain.emitter.on(ChainEvent.block, push);
       return () => {
-        this.chain.emitter.off("block", push);
+        this.chain.emitter.off(ChainEvent.block, push);
       };
     });
   }

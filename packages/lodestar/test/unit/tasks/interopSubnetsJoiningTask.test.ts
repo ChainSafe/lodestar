@@ -3,7 +3,7 @@ import {INetwork, Libp2pNetwork} from "../../../src/network";
 import {IGossip} from "../../../src/network/gossip/interface";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
-import {IBeaconChain} from "../../../src/chain";
+import {ChainEvent, IBeaconChain} from "../../../src/chain";
 import {Gossip} from "../../../src/network/gossip/gossip";
 import {InteropSubnetsJoiningTask} from "../../../src/tasks/tasks/interopSubnetsJoiningTask";
 import {WinstonLogger, bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
@@ -74,7 +74,7 @@ describe("interopSubnetsJoiningTask", () => {
     expect(config.types.ForkDigest.equals(oldForkDigest, await chain.getForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
-    chain.emitter.emit("forkVersion", state.fork.currentVersion);
+    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
     await unSubscribePromise;
     expect(gossipStub.unsubscribeFromAttestationSubnet.callCount).to.be.equal(
       config.params.RANDOM_SUBNETS_PER_VALIDATOR

@@ -1,4 +1,4 @@
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
@@ -32,12 +32,12 @@ export class AttestationCollector implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("clock:slot", this.checkDuties);
+    this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
   }
 
   public async stop(): Promise<void> {
     this.timers.forEach((timer) => clearTimeout(timer));
-    this.chain.emitter.removeListener("clock:slot", this.checkDuties);
+    this.chain.emitter.removeListener(ChainEvent.clockSlot, this.checkDuties);
   }
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {

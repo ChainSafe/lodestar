@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {LocalClock} from "../../../../src/chain/clock/LocalClock";
-import {ChainEventEmitter} from "../../../../src/chain/emitter";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter";
 
 describe("LocalClock", function () {
   let realClock: SinonFakeTimers;
@@ -27,7 +27,7 @@ describe("LocalClock", function () {
       signal: abortController.signal,
     });
     const spy = sinon.spy();
-    emitter.on("clock:slot", spy);
+    emitter.on(ChainEvent.clockSlot, spy);
     realClock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(spy.calledOnce).to.be.true;
     expect(spy.calledWith(clock.currentSlot)).to.be.true;
@@ -44,7 +44,7 @@ describe("LocalClock", function () {
       signal: abortController.signal,
     });
     const spy = sinon.spy();
-    emitter.on("clock:epoch", spy);
+    emitter.on(ChainEvent.clockEpoch, spy);
     realClock.tick(config.params.SLOTS_PER_EPOCH * config.params.SECONDS_PER_SLOT * 1000);
     expect(spy.calledOnce).to.be.true;
     expect(spy.calledWith(clock.currentEpoch)).to.be.true;

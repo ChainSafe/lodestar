@@ -2,7 +2,7 @@ import {INetwork} from "../../network";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {randBetween, ILogger, intToBytes} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -37,13 +37,13 @@ export class InteropSubnetsJoiningTask {
 
   public async start(): Promise<void> {
     this.currentForkDigest = await this.chain.getForkDigest();
-    this.chain.emitter.on("forkVersion", this.handleForkVersion);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     await this.run(this.currentForkDigest);
     await this.scheduleNextForkSubscription();
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkVersion", this.handleForkVersion);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
