@@ -54,16 +54,11 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
-    if (headSlot >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
-      this.emit("syncCompleted");
-      await this.stop();
-      return;
-    }
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.controller = new AbortController();
     await this.processor.start();
     this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
+    this.chain.emitter.on("block", this.onProcessedBlock);
     this.sync().catch((e) => {
       this.logger.error("Regular Sync: error", e);
     });
@@ -75,6 +70,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     }
     await this.processor.stop();
     this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
+    this.chain.emitter.off("block", this.onProcessedBlock);
   }
 
   public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
@@ -95,6 +91,14 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     }
   };
 
+  private onProcessedBlock = async (signedBlock: SignedBeaconBlock): Promise<void> => {
+    if (signedBlock.message.slot >= this.chain.clock.currentSlot) {
+      this.logger.info(`Regular Sync: processed up to current slot ${signedBlock.message.slot}`);
+      this.emit("syncCompleted");
+      await this.stop();
+    }
+  };
+
   private async sync(): Promise<void> {
     this.blockBuffer = await this.fetcher.next();
     while (!this.controller.signal.aborted) {
@@ -104,6 +108,11 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
         this.fetcher.next(),
         this.processor.processUntilComplete([...this.blockBuffer], this.controller.signal),
       ]);
+      if (!result[0] || !result[0].length) {
+        // node is stopped
+        this.logger.info("Regular Sync: fetcher returns empty array, finish sync now");
+        return;
+      }
       this.blockBuffer = result[0];
       this.logger.info(`Regular Sync: Synced up to slot ${lastSlot} `, {
         currentSlot: this.chain.clock.currentSlot,

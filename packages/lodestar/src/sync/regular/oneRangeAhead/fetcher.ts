@@ -49,13 +49,15 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
       let slotRange: ISlotRange | null = null;
       try {
         const peers = await this.getPeers();
-        // node is stopped
-        if (!peers || !peers.length) return [];
         if (result && !result!.length) await this.handleEmptyRange(peers);
         slotRange = {start: this.rangeStart, end: this.rangeEnd};
         result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
       } catch (e) {
-        this.logger.debug("Failed to get block range " + JSON.stringify(slotRange || {}) + ". Error: " + e.message);
+        this.logger.debug(
+          "Regular Sync: Failed to get block range " + JSON.stringify(slotRange || {}) + ". Error: " + e.message
+        );
+        // node is stopped for whatever reasons
+        if (e.message.trim() === "Aborted") return [];
         result = null;
       }
     }

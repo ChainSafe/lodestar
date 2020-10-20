@@ -5,7 +5,7 @@ import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/f
 import sinon from "sinon";
 import {BlockRangeProcessor} from "../../../../../src/sync/regular/oneRangeAhead/processor";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../src/chain";
+import {BeaconChain, ChainEventEmitter, ForkChoice, IBeaconChain} from "../../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
@@ -35,6 +35,7 @@ describe("ORARegularSync", function () {
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub = sinon.createStubInstance(BeaconChain);
     chainStub.forkChoice = forkChoiceStub;
+    chainStub.emitter = new ChainEventEmitter();
     clockStub = sinon.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
     networkStub = sinon.createStubInstance(Libp2pNetwork);
