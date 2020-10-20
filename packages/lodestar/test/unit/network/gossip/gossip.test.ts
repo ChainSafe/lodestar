@@ -17,6 +17,7 @@ import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {silentLogger} from "../../../utils/logger";
+import { sleep } from "@chainsafe/lodestar-utils";
 
 describe("Network Gossip", function () {
   let gossip: Gossip;
@@ -60,14 +61,15 @@ describe("Network Gossip", function () {
     it("should subscribe to attestation subnet correctly", async () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "1", spy);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "1", anotherSpy);
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "2", spy);
+      const forkDigest = await chain.getForkDigest();
+      gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
+      gossip.subscribeToAttestationSubnet(forkDigest, "1", anotherSpy);
+      gossip.subscribeToAttestationSubnet(forkDigest, "2", spy);
       const attestation = generateEmptyAttestation();
       pubsub.emit(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
-          chain.currentForkDigest,
+          forkDigest,
           GossipEncoding.SSZ_SNAPPY,
           new Map([["subnet", "1"]])
         ),
@@ -80,26 +82,22 @@ describe("Network Gossip", function () {
 
     it("should unsubscribe to single subnet correctly", async () => {
       const spy = sandbox.spy();
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "1", spy);
+      const forkDigest = await chain.getForkDigest();
+      gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       // should not unsubscribe wrong subnet
-      gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, "1", spy);
+      gossip.unsubscribeFromAttestationSubnet(forkDigest, "1", spy);
       const attestation = generateEmptyAttestation();
       pubsub.emit(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
-          chain.currentForkDigest,
+          forkDigest,
           GossipEncoding.SSZ_SNAPPY,
           new Map([["subnet", "1"]])
         ),
         attestation
       );
       pubsub.emit(
-        getGossipTopic(
-          GossipEvent.ATTESTATION_SUBNET,
-          chain.currentForkDigest,
-          GossipEncoding.SSZ,
-          new Map([["subnet", "1"]])
-        ),
+        getGossipTopic(GossipEvent.ATTESTATION_SUBNET, forkDigest, GossipEncoding.SSZ, new Map([["subnet", "1"]])),
         attestation
       );
       expect(spy.callCount).to.be.equal(0);
@@ -107,16 +105,17 @@ describe("Network Gossip", function () {
 
     it("should unsubscribe across subnets correctly", async () => {
       const spy = sandbox.spy();
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "1", spy);
+      const forkDigest = await chain.getForkDigest();
+      gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       const spy2 = sandbox.spy();
-      gossip.subscribeToAttestationSubnet(chain.currentForkDigest, "2", spy2);
+      gossip.subscribeToAttestationSubnet(forkDigest, "2", spy2);
       // should not unsubscribe wrong subnet
-      gossip.unsubscribeFromAttestationSubnet(chain.currentForkDigest, "2", spy2);
+      gossip.unsubscribeFromAttestationSubnet(forkDigest, "2", spy2);
       const attestation = generateEmptyAttestation();
       pubsub.emit(
         getGossipTopic(
           GossipEvent.ATTESTATION_SUBNET,
-          chain.currentForkDigest,
+          forkDigest,
           GossipEncoding.SSZ_SNAPPY,
           new Map([["subnet", "1"]])
         ),
@@ -129,50 +128,51 @@ describe("Network Gossip", function () {
     it("should subscribe/unsubscribe to block correctly", async () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
-      gossip.subscribeToBlock(chain.currentForkDigest, spy);
-      gossip.subscribeToBlock(chain.currentForkDigest, anotherSpy);
+      const forkDigest = await chain.getForkDigest();
+      gossip.subscribeToBlock(forkDigest, spy);
+      gossip.subscribeToBlock(forkDigest, anotherSpy);
       const block = generateEmptySignedBlock();
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
       expect(spy.callCount).to.be.equal(1);
       expect(anotherSpy.callCount).to.be.equal(1);
       // unsubscribe spy
-      gossip.unsubscribe(chain.currentForkDigest, GossipEvent.BLOCK, spy, new Map());
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, GossipEncoding.SSZ), block);
+      gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, spy, new Map());
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest, GossipEncoding.SSZ), block);
       // still 1
       expect(spy.callCount).to.be.equal(1);
       // 1 more time => 2
       expect(anotherSpy.callCount).to.be.equal(3);
     });
 
-    it("should ignore unsubscribing strange listener", () => {
+    it("should ignore unsubscribing strange listener", async () => {
       const spy = sandbox.spy();
       const strangeListener = sandbox.spy();
-      gossip.subscribeToBlock(chain.currentForkDigest, spy);
+      const forkDigest = await chain.getForkDigest();
+      gossip.subscribeToBlock(forkDigest, spy);
       const block = generateEmptySignedBlock();
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
       expect(spy.callCount).to.be.equal(1);
-      gossip.unsubscribe(chain.currentForkDigest, GossipEvent.BLOCK, strangeListener, new Map());
-      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest), block);
+      gossip.unsubscribe(forkDigest, GossipEvent.BLOCK, strangeListener, new Map());
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
       expect(spy.callCount).to.be.equal(2);
     });
 
     // other topics are the same
 
-    it("should handle fork digest changed", async () => {
+    it("should handle fork version changed", async () => {
       // fork digest is changed after gossip started
-      const oldForkDigest = chain.currentForkDigest;
+      const oldForkDigest = await chain.getForkDigest();
       state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-      expect(config.types.ForkDigest.equals(chain.currentForkDigest, oldForkDigest)).to.be.false;
+      const forkDigest = await chain.getForkDigest();
+      expect(config.types.ForkDigest.equals(forkDigest, oldForkDigest)).to.be.false;
       const received = new Promise((resolve) => {
-        gossip.subscribeToBlock(chain.currentForkDigest, resolve);
+        gossip.subscribeToBlock(forkDigest, resolve);
       });
-      chain.emitter.emit("forkDigest", chain.currentForkDigest);
+      chain.emitter.emit("forkVersion", state.fork.currentVersion);
+      await sleep(1);
       const block = generateEmptySignedBlock();
-      pubsub.emit(
-        getGossipTopic(GossipEvent.BLOCK, chain.currentForkDigest, GossipEncoding.SSZ_SNAPPY, new Map()),
-        block
-      );
+      pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest, GossipEncoding.SSZ_SNAPPY, new Map()), block);
       await received;
     });
   });

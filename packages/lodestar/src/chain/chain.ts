@@ -65,7 +65,6 @@ export class BeaconChain implements IBeaconChain {
   public pendingAttestations!: AttestationPool;
   public pendingBlocks!: BlockPool;
 
-  protected _currentForkDigest!: ForkDigest;
   protected attestationProcessor!: AttestationProcessor;
   protected blockProcessor!: BlockProcessor;
   protected readonly config: IBeaconConfig;
@@ -229,16 +228,11 @@ export class BeaconChain implements IBeaconChain {
       emitter: this.internalEmitter,
       signal: this.abortController!.signal,
     });
-    this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
     handleChainEvents.bind(this)(this.abortController.signal);
   }
 
   public async stop(): Promise<void> {
     this.abortController!.abort();
-  }
-
-  public get currentForkDigest(): ForkDigest {
-    return this._currentForkDigest;
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
@@ -296,6 +290,11 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info("Beacon chain initialized with weak subjectivity state at slot", weakSubjectivityState.slot);
   }
 
+  public async getForkDigest(): Promise<ForkDigest> {
+    const {state} = await this.getHeadStateContext();
+    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+  }
+
   public async getENRForkID(): Promise<ENRForkID> {
     const state = await this.getHeadState();
     const currentVersion = state.fork.currentVersion;
@@ -304,8 +303,9 @@ export class BeaconChain implements IBeaconChain {
       this.config.params.ALL_FORKS.find((fork) =>
         this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4))
       );
+    const forkDigest = await this.getForkDigest();
     return {
-      forkDigest: this.currentForkDigest,
+      forkDigest,
       nextForkVersion: nextVersion
         ? intToBytes(nextVersion.currentVersion, 4)
         : (currentVersion.valueOf() as Uint8Array),
@@ -324,11 +324,6 @@ export class BeaconChain implements IBeaconChain {
       };
       this.emitter.on("block", listener);
     });
-  }
-
-  protected async getCurrentForkDigest(): Promise<ForkDigest> {
-    const {state} = await this.getHeadStateContext();
-    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
   }
 
   /**
