@@ -15,6 +15,7 @@ export class RpcError extends Error {
 }
 
 export const RESPONSE_TIMEOUT_ERR = "response timeout";
+export const REQUEST_TIMEOUT_ERR = "request timeout";
 
 export function isResponseTimeout(err: Error): boolean {
   return err.message.includes(RESPONSE_TIMEOUT_ERR);
