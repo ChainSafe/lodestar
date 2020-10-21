@@ -3,7 +3,7 @@ import {Root, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IRegularSyncModules} from "..";
-import {IBeaconChain} from "../../../chain";
+import {ChainEvent, IBeaconChain} from "../../../chain";
 import {BlockError, BlockErrorCode} from "../../../chain/errors";
 import {sortBlocks} from "../../utils";
 import {IBlockRangeProcessor} from "./interface";
@@ -24,13 +24,13 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("block", this.onProcessedBlock);
-    this.chain.emitter.on("error:block", this.onErrorBlock);
+    this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onErrorBlock);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("block", this.onProcessedBlock);
-    this.chain.emitter.removeListener("error:block", this.onErrorBlock);
+    this.chain.emitter.removeListener(ChainEvent.block, this.onProcessedBlock);
+    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onErrorBlock);
   }
 
   /**

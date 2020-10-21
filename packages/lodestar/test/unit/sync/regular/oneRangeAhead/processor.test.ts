@@ -1,6 +1,6 @@
 import {SinonStubbedInstance} from "sinon";
 import {BlockRangeProcessor} from "../../../../../src/sync/regular/oneRangeAhead/processor";
-import {BeaconChain, ChainEventEmitter, IBeaconChain, IBlockJob} from "../../../../../src/chain";
+import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain, IBlockJob} from "../../../../../src/chain";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon from "sinon";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -38,7 +38,7 @@ describe("BlockRangeProcessor", function () {
   it("should process blocks based on block event", async () => {
     await Promise.all([
       processor.processUntilComplete([firstBlock, secondBlock], abortController.signal),
-      chainStub.emitter.emit("block", secondBlock, {} as ITreeStateContext, {} as IBlockJob),
+      chainStub.emitter.emit(ChainEvent.block, secondBlock, {} as ITreeStateContext, {} as IBlockJob),
     ]);
   });
 
@@ -46,7 +46,7 @@ describe("BlockRangeProcessor", function () {
     await Promise.all([
       processor.processUntilComplete([firstBlock, secondBlock], abortController.signal),
       chainStub.emitter.emit(
-        "error:block",
+        ChainEvent.errorBlock,
         new BlockError({
           job: {signedBlock: secondBlock} as IBlockJob,
           code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN,

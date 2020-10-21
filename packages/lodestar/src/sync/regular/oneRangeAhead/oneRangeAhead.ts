@@ -6,7 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import {IRegularSync, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
-import {IBeaconChain} from "../../../chain";
+import {ChainEvent, IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {checkBestPeer, getBestPeer} from "../../utils";
@@ -58,7 +58,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.controller = new AbortController();
     await this.processor.start();
     this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
-    this.chain.emitter.on("block", this.onProcessedBlock);
+    this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     this.sync().catch((e) => {
       this.logger.error("Regular Sync: error", e);
     });
@@ -70,7 +70,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     }
     await this.processor.stop();
     this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
-    this.chain.emitter.off("block", this.onProcessedBlock);
+    this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 
   public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
