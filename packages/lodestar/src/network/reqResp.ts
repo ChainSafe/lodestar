@@ -370,6 +370,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream),
         new Promise((_, reject) => {
           setTimeout(() => {
+            conn.stream.close();
             reject(new Error(REQUEST_TIMEOUT_ERR));
           }, REQUEST_TIMEOUT);
         }),
