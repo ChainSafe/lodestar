@@ -9,11 +9,10 @@ import {
   SignedVoluntaryExit,
   ForkDigest,
 } from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ChainEvent} from "../../../src/chain";
 
 export class BeaconGossipHandler implements IGossipHandler {
   private readonly chain: IBeaconChain;
