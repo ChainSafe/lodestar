@@ -57,7 +57,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
     this.controller = new AbortController();
     await this.processor.start();
-    this.network.gossip.subscribeToBlock(this.chain.currentForkDigest, this.onGossipBlock);
+    this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     this.chain.emitter.on("block", this.onProcessedBlock);
     this.sync().catch((e) => {
       this.logger.error("Regular Sync: error", e);
@@ -69,7 +69,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       this.controller.abort();
     }
     await this.processor.stop();
-    this.network.gossip.unsubscribe(this.chain.currentForkDigest, GossipEvent.BLOCK, this.onGossipBlock);
+    this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
     this.chain.emitter.off("block", this.onProcessedBlock);
   }
 
