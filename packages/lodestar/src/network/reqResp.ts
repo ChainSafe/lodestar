@@ -365,16 +365,18 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
+      let requestTimer: NodeJS.Timeout | null = null;
       // write
       await Promise.race([
         pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream),
         new Promise((_, reject) => {
-          setTimeout(() => {
+          requestTimer = setTimeout(() => {
             conn.stream.close();
             reject(new Error(REQUEST_TIMEOUT_ERR));
           }, REQUEST_TIMEOUT);
         }),
       ]);
+      if (requestTimer) clearTimeout(requestTimer);
       // half-close the stream
       conn.stream.reset();
       // read
