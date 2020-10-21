@@ -23,6 +23,7 @@ import {
   MethodRequestType,
   ReqRespEncoding,
   RequestId,
+  REQUEST_TIMEOUT,
   RESP_TIMEOUT,
   RpcResponseStatus,
   TTFB_TIMEOUT,
@@ -43,7 +44,7 @@ import {
 import {IReqResp, ReqEventEmitter, RespEventEmitter, ResponseCallbackFn} from "./interface";
 import {INetworkOptions} from "./options";
 import PeerId from "peer-id";
-import {RpcError, updateRpcScore} from "./error";
+import {REQUEST_TIMEOUT_ERR, RpcError, updateRpcScore} from "./error";
 import {eth2RequestDecode, eth2RequestEncode} from "./encoders/request";
 import {encodeP2pErrorMessage, eth2ResponseDecode, eth2ResponseEncode} from "./encoders/response";
 import {IResponseChunk, IValidatedRequestBody} from "./encoders/interface";
@@ -364,8 +365,21 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       }
       logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
       const controller = new AbortController();
-      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      let requestTimer: NodeJS.Timeout | null = null;
+      // write
+      await Promise.race([
+        pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream),
+        new Promise((_, reject) => {
+          requestTimer = setTimeout(() => {
+            conn.stream.close();
+            reject(new Error(REQUEST_TIMEOUT_ERR));
+          }, REQUEST_TIMEOUT);
+        }),
+      ]);
+      if (requestTimer) clearTimeout(requestTimer);
+      // half-close the stream
       conn.stream.reset();
+      // read
       yield* pipe(
         abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
         eth2ResponseTimer(controller),

@@ -81,3 +81,4 @@ export const GOSSIP_MAX_SIZE = 2 ** 20;
 export const MAX_CHUNK_SIZE = 2 ** 20;
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
+export const REQUEST_TIMEOUT = 5 * 1000; // 5 sec
