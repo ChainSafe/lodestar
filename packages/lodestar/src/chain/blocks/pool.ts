@@ -1,8 +1,6 @@
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-
-import {IBlockJob} from "../interface";
 
 /**
  * The BlockPool is a cache of blocks that are pending processing.
@@ -14,17 +12,17 @@ import {IBlockJob} from "../interface";
 export class BlockPool {
   private readonly config: IBeaconConfig;
   /**
-   * Blocks indexed by blockRoot
+   * Map of root as key and parentRoot as value
    */
-  private blocks: Map<string, IBlockJob>;
+  private blocks: Map<string, string>;
   /**
    * Blocks indexed by parentRoot, then blockRoot
    */
-  private blocksByParent: Map<string, Map<string, IBlockJob>>;
+  private blocksByParent: Map<string, Set<string>>;
   /**
    * Blocks indexed by slot, then blockRoot
    */
-  private blocksBySlot: Map<Slot, Map<string, IBlockJob>>;
+  private blocksBySlot: Map<Slot, Set<string>>;
 
   constructor({config}: {config: IBeaconConfig}) {
     this.config = config;
@@ -34,45 +32,43 @@ export class BlockPool {
     this.blocksBySlot = new Map();
   }
 
-  public addByParent(job: IBlockJob): void {
-    const {signedBlock} = job;
+  public addByParent(signedBlock: SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
-    this.blocks.set(blockKey, job);
+    this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
     // blocks by parent
     const parentKey = this.getParentKey(signedBlock);
     let blocksWithParent = this.blocksByParent.get(parentKey);
     if (!blocksWithParent) {
-      blocksWithParent = new Map();
+      blocksWithParent = new Set();
       this.blocksByParent.set(parentKey, blocksWithParent);
     }
-    blocksWithParent.set(blockKey, job);
+    blocksWithParent.add(blockKey);
   }
 
-  public addBySlot(job: IBlockJob): void {
-    const {signedBlock} = job;
+  public addBySlot(signedBlock: SignedBeaconBlock): void {
     // put block in two indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
-    this.blocks.set(blockKey, job);
+    this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
     // blocks by slot
     const slotKey = this.getSlotKey(signedBlock);
     let blocksAtSlot = this.blocksBySlot.get(slotKey);
     if (!blocksAtSlot) {
-      blocksAtSlot = new Map();
+      blocksAtSlot = new Set();
       this.blocksBySlot.set(slotKey, blocksAtSlot);
     }
-    blocksAtSlot.set(blockKey, job);
+    blocksAtSlot.add(blockKey);
   }
 
-  public remove(job: IBlockJob): void {
+  public remove(signedBlock: SignedBeaconBlock): void {
     // remove block from three indices:
     // blocks
-    const blockKey = this.getBlockKey(job.signedBlock);
+    const blockKey = this.getBlockKey(signedBlock);
     this.blocks.delete(blockKey);
     // blocks by slot
-    const slotKey = this.getSlotKey(job.signedBlock);
+    const slotKey = this.getSlotKey(signedBlock);
     const blocksAtSlot = this.blocksBySlot.get(slotKey);
     if (blocksAtSlot) {
       blocksAtSlot.delete(blockKey);
@@ -81,7 +77,7 @@ export class BlockPool {
       }
     }
     // blocks by parent
-    const parentKey = this.getParentKey(job.signedBlock);
+    const parentKey = this.getParentKey(signedBlock);
     const blocksWithParent = this.blocksByParent.get(parentKey);
     if (blocksWithParent) {
       blocksWithParent.delete(blockKey);
@@ -91,32 +87,30 @@ export class BlockPool {
     }
   }
 
-  public get(blockRoot: Root): IBlockJob | undefined {
-    return this.blocks.get(toHexString(blockRoot));
+  public getMissingAncestor(blockRoot: Root): Root {
+    let root = toHexString(blockRoot);
+    while (this.blocks.has(root)) {
+      root = this.blocks.get(root)!;
+    }
+    return fromHexString(root);
+  }
+
+  public getTotalPendingBlocks(): number {
+    return this.blocks.size;
   }
 
   public has(blockRoot: Root): boolean {
-    return Boolean(this.get(blockRoot));
+    return Boolean(this.blocks.get(this.getBlockKeyByRoot(blockRoot)));
   }
 
-  public getByParent(parentRoot: Root): IBlockJob[] {
-    return Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
+  public getByParent(parentRoot: Root): Uint8Array[] {
+    const hexArr = Array.from(this.blocksByParent.get(toHexString(parentRoot))?.values() ?? []);
+    return hexArr.map((hex) => fromHexString(hex));
   }
 
-  public getMissingAncestor(blockRoot: Root): Root {
-    let root = blockRoot;
-    while (this.blocks.has(toHexString(root))) {
-      root = this.blocks.get(toHexString(root))?.signedBlock.message.parentRoot!;
-    }
-    return root;
-  }
-
-  public getPendingBlocks(): IBlockJob[] {
-    return Array.from(this.blocks.values() ?? []);
-  }
-
-  public getBySlot(slot: Slot): IBlockJob[] {
-    return Array.from(this.blocksBySlot.get(slot)?.values() ?? []);
+  public getBySlot(slot: Slot): Uint8Array[] {
+    const hexArr = Array.from(this.blocksBySlot.get(slot)?.values() ?? []);
+    return hexArr.map((hex) => fromHexString(hex));
   }
 
   private getParentKey(block: SignedBeaconBlock): string {
@@ -129,5 +123,9 @@ export class BlockPool {
 
   private getBlockKey(block: SignedBeaconBlock): string {
     return toHexString(this.config.types.BeaconBlock.hashTreeRoot(block.message));
+  }
+
+  private getBlockKeyByRoot(root: Root): string {
+    return toHexString(root);
   }
 }
