@@ -166,12 +166,10 @@ export class BeaconChain implements IBeaconChain {
     if (!slots) {
       return null;
     }
-    const blockRoots = slots
-      .map((slot) => {
-        const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-        return summary ? summary.blockRoot : null;
-      })
-      .filter(notNullish);
+    const blockRoots = this.forkChoice
+      .iterateBlockSummaries(this.forkChoice.getHeadRoot())
+      .filter((summary) => slots.includes(summary.slot))
+      .map((summary) => summary.blockRoot);
     // these blocks are on the same chain to head
     const unfinalizedBlocks = await Promise.all(blockRoots.map((blockRoot) => this.db.block.get(blockRoot)));
     return unfinalizedBlocks.filter(notNullish);
