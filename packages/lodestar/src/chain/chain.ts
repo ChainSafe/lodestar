@@ -37,7 +37,7 @@ import {notNullish} from "../util/notNullish";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
-import {ChainEventEmitter} from "./emitter";
+import {ChainEvent, ChainEventEmitter} from "./emitter";
 import {ForkChoiceStore} from "./forkChoice";
 import {GenesisBuilder} from "./genesis/genesis";
 import {getEmptyBlock} from "./genesis/util";
@@ -318,11 +318,11 @@ export class BeaconChain implements IBeaconChain {
       const listener = (signedBlock: SignedBeaconBlock): void => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
-          this.emitter.removeListener("block", listener);
+          this.emitter.removeListener(ChainEvent.block, listener);
           resolve();
         }
       };
-      this.emitter.on("block", listener);
+      this.emitter.on(ChainEvent.block, listener);
     });
   }
 

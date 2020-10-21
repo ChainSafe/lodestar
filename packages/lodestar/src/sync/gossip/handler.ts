@@ -13,6 +13,7 @@ import {IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {ChainEvent} from "../../../src/chain";
 
 export class BeaconGossipHandler implements IGossipHandler {
   private readonly chain: IBeaconChain;
@@ -31,12 +32,12 @@ export class BeaconGossipHandler implements IGossipHandler {
   public async start(): Promise<void> {
     this.currentForkDigest = await this.chain.getForkDigest();
     this.subscribe(this.currentForkDigest);
-    this.chain.emitter.on("forkVersion", this.handleForkVersion);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.removeListener("forkVersion", this.handleForkVersion);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   private handleForkVersion = async (): Promise<void> => {

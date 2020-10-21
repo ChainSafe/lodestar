@@ -8,7 +8,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IService} from "../node";
 import {IBeaconDb} from "../db/api";
-import {IBeaconChain} from "../chain";
+import {ChainEvent, IBeaconChain} from "../chain";
 import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
@@ -52,15 +52,15 @@ export class TasksService implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("forkChoice:finalized", this.onFinalizedCheckpoint);
-    this.chain.emitter.on("checkpoint", this.onCheckpoint);
+    this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+    this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.on("gossip:start", this.handleGossipStart);
     this.network.gossip.on("gossip:stop", this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkChoice:finalized", this.onFinalizedCheckpoint);
-    this.chain.emitter.removeListener("checkpoint", this.onCheckpoint);
+    this.chain.emitter.removeListener(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+    this.chain.emitter.removeListener(ChainEvent.checkpoint, this.onCheckpoint);
     this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
     this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
     await this.interopSubnetsTask.stop();

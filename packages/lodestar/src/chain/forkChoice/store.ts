@@ -3,6 +3,7 @@ import {EventEmitter} from "events";
 import {Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {IForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter} from "../../chain";
+import {ChainEvent} from "../emitter";
 
 /**
  * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
@@ -38,7 +39,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
   public set justifiedCheckpoint(checkpoint: Checkpoint) {
     this._justifiedCheckpoint = checkpoint;
-    this.emitter.emit("forkChoice:justified", checkpoint);
+    this.emitter.emit(ChainEvent.forkChoiceJustified, checkpoint);
   }
 
   public get finalizedCheckpoint(): Checkpoint {
@@ -47,6 +48,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
   public set finalizedCheckpoint(checkpoint: Checkpoint) {
     this._finalizedCheckpoint = checkpoint;
-    this.emitter.emit("forkChoice:finalized", checkpoint);
+    this.emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
   }
 }

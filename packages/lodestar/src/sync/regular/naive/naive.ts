@@ -3,7 +3,7 @@ import {AbortController, AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
 import {INetwork} from "../../../network";
-import {IBeaconChain} from "../../../chain";
+import {ChainEvent, IBeaconChain} from "../../../chain";
 import {defaultOptions, IRegularSyncOptions} from "../options";
 import deepmerge from "deepmerge";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -76,8 +76,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     this.logger.info("Regular Sync: Setting target", {newTargetSlot: newTarget});
     this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     // to avoid listening for "block" event from initial sync, only listen for "block" event of regular sync from here
-    this.chain.emitter.on("block", this.onProcessedBlock);
-    this.chain.emitter.on("error:block", this.onErrorBlock);
+    this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onErrorBlock);
     await Promise.all([this.sync(), this.setTarget()]);
   }
 
@@ -86,8 +86,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
-    this.chain.emitter.removeListener("block", this.onProcessedBlock);
-    this.chain.emitter.removeListener("error:block", this.onErrorBlock);
+    this.chain.emitter.removeListener(ChainEvent.block, this.onProcessedBlock);
+    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onErrorBlock);
     this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
     this.subscribeToBlock = false;
   }

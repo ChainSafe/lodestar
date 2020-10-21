@@ -29,7 +29,7 @@ import {
   SignedVoluntaryExit,
   Slot,
 } from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
@@ -68,7 +68,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     const forkDigest = await this.chain.getForkDigest();
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.registerHandlers(forkDigest);
-    this.chain.emitter.on("forkVersion", this.handleForkVersion);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     this.emit("gossip:start");
     this.logger.verbose("Gossip is started");
     this.statusInterval = setInterval(this.logSubscriptions, 60000);
@@ -77,7 +77,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public async stop(): Promise<void> {
     this.emit("gossip:stop");
     this.unregisterHandlers();
-    this.chain.emitter.removeListener("forkVersion", this.handleForkVersion);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
     await this.pubsub.stop();
     if (this.statusInterval) {
       clearInterval(this.statusInterval);

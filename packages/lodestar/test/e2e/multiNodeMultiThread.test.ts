@@ -4,9 +4,10 @@ import {Worker} from "worker_threads";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {waitForEvent} from "../utils/events/resolver";
+import {ChainEvent} from "../../src/chain";
 
 describe("Run multi node multi thread interop validators (no eth1) until checkpoint", function () {
-  const checkpointEvent = "justified";
+  const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
     SECONDS_PER_SLOT: 2,

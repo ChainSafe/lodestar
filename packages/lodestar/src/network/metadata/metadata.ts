@@ -2,7 +2,7 @@ import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
 import {Metadata} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IMetadataOpts {
@@ -35,11 +35,11 @@ export class MetadataController {
       this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
     }
-    this.chain.emitter.on("forkVersion", this.handleForkVersion);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkVersion", this.handleForkVersion);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   get seqNumber(): bigint {

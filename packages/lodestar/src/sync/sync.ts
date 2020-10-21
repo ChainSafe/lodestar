@@ -10,7 +10,7 @@ import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
-import {IBeaconChain} from "../chain";
+import {ChainEvent, IBeaconChain} from "../chain";
 import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
@@ -78,7 +78,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.emitter.removeListener("error:block", this.onUnknownBlockRoot);
+    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.regularSync.removeListener("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
@@ -143,7 +143,7 @@ export class BeaconSync implements IBeaconSync {
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.syncCompleted);
-    this.chain.emitter.on("error:block", this.onUnknownBlockRoot);
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     await this.gossip.start();
     await this.regularSync.start();
   }

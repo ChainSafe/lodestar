@@ -4,7 +4,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";
 import {AttestationError, AttestationErrorCode} from "../errors";
-import {ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IStateRegenerator} from "../regen";
 
 /**
@@ -54,5 +54,5 @@ export async function processAttestation({
     });
   }
   forkChoice.onAttestation(indexedAttestation);
-  emitter.emit("attestation", attestation);
+  emitter.emit(ChainEvent.attestation, attestation);
 }
