@@ -8,6 +8,7 @@ import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from
 import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
+import {cloneStateCtx} from "./blocks/stateTransition";
 
 interface IEventMap<Events, Event extends keyof Events = keyof Events, Callback extends Events[Event] = Events[Event]>
   extends Map<Event, Callback> {
@@ -134,7 +135,7 @@ export async function onForkVersion(this: BeaconChain, version: Version): Promis
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
-  await this.db.checkpointStateCache.add(cp, stateContext);
+  await this.db.checkpointStateCache.add(cp, createCachedStateContext(stateContext));
   this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
   if (parentBlockSummary) {
@@ -211,7 +212,7 @@ export async function onBlock(
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
-  await this.db.stateCache.add(postStateContext);
+  await this.db.stateCache.add(createCachedStateContext(postStateContext));
   if (!job.reprocess) {
     await this.db.block.add(block);
   }
@@ -315,4 +316,12 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
       });
       break;
   }
+}
+
+function createCachedStateContext(stateContext: ITreeStateContext): ITreeStateContext {
+  // epochProcess is temporary data and we don't need it anymore after adding to forkchoice
+  // doing this should save 31MB in-memory data per item at Medalla infinality time
+  const stateContextToCache = cloneStateCtx(stateContext);
+  stateContextToCache.epochCtx.epochProcess = undefined;
+  return stateContextToCache;
 }
