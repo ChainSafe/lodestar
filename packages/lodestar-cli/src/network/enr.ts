@@ -1,7 +1,8 @@
 import PeerId from "peer-id";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 
-import {writeFile, readFile} from "../util";
+import {writeFile} from "../util";
+import {FileENR} from "../cmds/beacon/fileEnr";
 
 export async function createEnr(peerId: PeerId): Promise<ENR> {
   const keypair = createKeypairFromPeerId(peerId);
@@ -13,8 +14,8 @@ export async function writeEnr(filename: string, enr: ENR, peerId: PeerId): Prom
   await writeFile(filename, enr.encodeTxt(keypair.privateKey));
 }
 
-export async function readEnr(filename: string): Promise<ENR> {
-  return ENR.decodeTxt(await readFile(filename));
+export async function readEnr(filename: string): Promise<FileENR> {
+  return new FileENR(filename);
 }
 
 export async function initEnr(filename: string, peerId: PeerId): Promise<void> {

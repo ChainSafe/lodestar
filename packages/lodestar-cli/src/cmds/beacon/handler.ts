@@ -28,7 +28,7 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
 
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
-  // read local enr from disk
+  // read local enr from disk; returns a FileENR which persists enr updates to a file
   const enr = await readEnr(beaconPaths.enrFile);
   // set enr overrides
   updateENR(enr, options);
