@@ -6,7 +6,7 @@ import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
 import {IGlobalArgs} from "../../options";
-import {readPeerId, readEnr, writeEnr} from "../../network";
+import {readPeerId, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
@@ -14,6 +14,7 @@ import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
 import {onGracefulShutdown} from "../../util/process";
+import {FileENR} from "./fileEnr";
 
 /**
  * Run a beacon node
@@ -29,7 +30,10 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk; returns a FileENR which persists enr updates to a file
-  const enr = await readEnr(beaconPaths.enrFile);
+  // const enr = await readEnr(beaconPaths.enrFile, peerId);
+  // const enr = await readEnr(beaconPaths.enrFile);
+  // const enr = new FileENR(beaconPaths.enrFile);
+  const enr = FileENR.initFromFile(beaconPaths.enrFile);
   // set enr overrides
   updateENR(enr, options);
   if (!options.network.discv5) options.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
