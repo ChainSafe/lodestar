@@ -30,10 +30,7 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   options = mergeConfigOptions(options);
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   // read local enr from disk; returns a FileENR which persists enr updates to a file
-  // const enr = await readEnr(beaconPaths.enrFile, peerId);
-  // const enr = await readEnr(beaconPaths.enrFile);
-  // const enr = new FileENR(beaconPaths.enrFile);
-  const enr = FileENR.initFromFile(beaconPaths.enrFile);
+  const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
   // set enr overrides
   updateENR(enr, options);
   if (!options.network.discv5) options.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
