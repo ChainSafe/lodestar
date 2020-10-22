@@ -1,5 +1,7 @@
 # lodestar-spec-test-util
 
+> This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
+
 Mocha / Chai utility for interacting with eth2.0 spec tests
 
 ## API
@@ -25,3 +27,7 @@ Compares actual vs expected for all test cases
 ## Profiling
 
 Set env variable GEN_PROFILE_DIR with path to directory where you wish your cpu profiles to be generated.
+
+## License
+
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)
