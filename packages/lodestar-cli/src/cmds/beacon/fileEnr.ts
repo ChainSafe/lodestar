@@ -21,10 +21,20 @@ export class FileENR extends ENR {
     return enr;
   }
 
-  set(key: ENRKey, value: ENRValue): this {
-    super.set(key, value);
+  saveToFile(): void {
     const keypair = createKeypairFromPeerId(this.localPeerId);
     writeFileSync(this.filename, this.encodeTxt(keypair.privateKey));
+  }
+
+  set(key: ENRKey, value: ENRValue): this {
+    super.set(key, value);
+    this.saveToFile();
     return this;
+  }
+
+  delete(key: ENRKey): boolean {
+    const result = super.delete(key);
+    this.saveToFile();
+    return result;
   }
 }
