@@ -1,6 +1,7 @@
 import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
 import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {writeFile, RecursivePartial, readFileIfExists} from "../util";
 import {getTestnetBeaconNodeOptions, TestnetName} from "../testnets";
 
@@ -71,7 +72,10 @@ export function mergeBeaconNodeOptions(
   ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
 ): RecursivePartial<IBeaconNodeOptions> {
   return partialOptionsArr.reduce((mergedBeaconOptions, options) => {
-    return deepmerge(mergedBeaconOptions, options, {arrayMerge});
+    return deepmerge(mergedBeaconOptions, options, {
+      arrayMerge: overwriteTargetArrayIfItems,
+      isMergeableObject: isPlainObject,
+    });
   }, partialOptionsArr[0]);
 }
 
@@ -82,9 +86,7 @@ export function mergeBeaconNodeOptionsWithDefaults(
   defaultOptions: IBeaconNodeOptions,
   ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
 ): IBeaconNodeOptions {
-  return (partialOptionsArr as IBeaconNodeOptions[]).reduce((mergedBeaconOptions, options) => {
-    return deepmerge(mergedBeaconOptions, options, {arrayMerge});
-  }, defaultOptions);
+  return mergeBeaconNodeOptions(defaultOptions, ...partialOptionsArr) as IBeaconNodeOptions;
 }
 
 /**
@@ -95,7 +97,7 @@ export function mergeBeaconNodeOptionsWithDefaults(
  * @param target
  * @param source
  */
-function arrayMerge(target: unknown[], source: unknown[]): unknown[] {
+function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {
   if (source.length === 0) {
     return target;
   }
