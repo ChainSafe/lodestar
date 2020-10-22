@@ -47,7 +47,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // BeaconNode setup
   const options = beaconNodeOptions.getWithDefaults();
-  console.log(options.network);
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
   const node = new BeaconNode(options, {config, libp2p, logger});
