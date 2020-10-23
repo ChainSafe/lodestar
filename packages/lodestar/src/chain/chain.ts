@@ -37,7 +37,7 @@ import {notNullish} from "../util/notNullish";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
-import {ChainEventEmitter} from "./emitter";
+import {ChainEvent, ChainEventEmitter} from "./emitter";
 import {ForkChoiceStore} from "./forkChoice";
 import {GenesisBuilder} from "./genesis/genesis";
 import {getEmptyBlock} from "./genesis/util";
@@ -65,7 +65,6 @@ export class BeaconChain implements IBeaconChain {
   public pendingAttestations!: AttestationPool;
   public pendingBlocks!: BlockPool;
 
-  protected _currentForkDigest!: ForkDigest;
   protected attestationProcessor!: AttestationProcessor;
   protected blockProcessor!: BlockProcessor;
   protected readonly config: IBeaconConfig;
@@ -75,7 +74,11 @@ export class BeaconChain implements IBeaconChain {
   protected readonly metrics: IBeaconMetrics;
   protected readonly opts: IChainOptions;
   protected genesisTime: Number64 = 0;
-
+  /**
+   * Internal event emitter is used internally to the chain to update chain state
+   * Once event have been handled internally, they are re-emitted externally for downstream consumers
+   */
+  protected internalEmitter: ChainEventEmitter;
   private abortController?: AbortController;
 
   public constructor(opts: IChainOptions, {config, db, eth1Provider, logger, metrics}: IBeaconChainModules) {
@@ -86,6 +89,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.metrics = metrics;
     this.emitter = new ChainEventEmitter();
+    this.internalEmitter = new ChainEventEmitter();
     this.chainId = 0; // TODO make this real
     this.networkId = BigInt(0); // TODO make this real
   }
@@ -162,12 +166,10 @@ export class BeaconChain implements IBeaconChain {
     if (!slots) {
       return null;
     }
-    const blockRoots = slots
-      .map((slot) => {
-        const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-        return summary ? summary.blockRoot : null;
-      })
-      .filter(notNullish);
+    const blockRoots = this.forkChoice
+      .iterateBlockSummaries(this.forkChoice.getHeadRoot())
+      .filter((summary) => slots.includes(summary.slot))
+      .map((summary) => summary.blockRoot);
     // these blocks are on the same chain to head
     const unfinalizedBlocks = await Promise.all(blockRoots.map((blockRoot) => this.db.block.get(blockRoot)));
     return unfinalizedBlocks.filter(notNullish);
@@ -186,7 +188,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info("Chain started, waiting blocks and attestations");
     this.clock = new LocalClock({
       config: this.config,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       genesisTime: state.genesisTime,
       signal: this.abortController.signal,
     });
@@ -198,7 +200,7 @@ export class BeaconChain implements IBeaconChain {
     await this.db.checkpointStateCache.add(checkpoint, {state, epochCtx});
     this.regen = new QueuedStateRegenerator({
       config: this.config,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       forkChoice: this.forkChoice,
       db: this.db,
       signal: this.abortController!.signal,
@@ -212,7 +214,7 @@ export class BeaconChain implements IBeaconChain {
     this.attestationProcessor = new AttestationProcessor({
       config: this.config,
       forkChoice: this.forkChoice,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       clock: this.clock,
       regen: this.regen,
     });
@@ -221,19 +223,14 @@ export class BeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice,
       clock: this.clock,
       regen: this.regen,
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       signal: this.abortController!.signal,
     });
-    this._currentForkDigest = computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
-    handleChainEvents(this, this.abortController.signal);
+    handleChainEvents.bind(this)(this.abortController.signal);
   }
 
   public async stop(): Promise<void> {
     this.abortController!.abort();
-  }
-
-  public get currentForkDigest(): ForkDigest {
-    return this._currentForkDigest;
   }
 
   public async receiveAttestation(attestation: Attestation): Promise<void> {
@@ -291,6 +288,11 @@ export class BeaconChain implements IBeaconChain {
     this.logger.info("Beacon chain initialized with weak subjectivity state at slot", weakSubjectivityState.slot);
   }
 
+  public async getForkDigest(): Promise<ForkDigest> {
+    const {state} = await this.getHeadStateContext();
+    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
+  }
+
   public async getENRForkID(): Promise<ENRForkID> {
     const state = await this.getHeadState();
     const currentVersion = state.fork.currentVersion;
@@ -299,8 +301,9 @@ export class BeaconChain implements IBeaconChain {
       this.config.params.ALL_FORKS.find((fork) =>
         this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4))
       );
+    const forkDigest = await this.getForkDigest();
     return {
-      forkDigest: this.currentForkDigest,
+      forkDigest,
       nextForkVersion: nextVersion
         ? intToBytes(nextVersion.currentVersion, 4)
         : (currentVersion.valueOf() as Uint8Array),
@@ -313,17 +316,12 @@ export class BeaconChain implements IBeaconChain {
       const listener = (signedBlock: SignedBeaconBlock): void => {
         const root = this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
         if (this.config.types.Root.equals(root, blockRoot)) {
-          this.emitter.removeListener("block", listener);
+          this.emitter.removeListener(ChainEvent.block, listener);
           resolve();
         }
       };
-      this.emitter.on("block", listener);
+      this.emitter.on(ChainEvent.block, listener);
     });
-  }
-
-  protected async getCurrentForkDigest(): Promise<ForkDigest> {
-    const {state} = await this.getHeadStateContext();
-    return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
   }
 
   /**
@@ -409,7 +407,7 @@ export class BeaconChain implements IBeaconChain {
       };
     }
     const fcStore = new ForkChoiceStore({
-      emitter: this.emitter,
+      emitter: this.internalEmitter,
       currentSlot: this.clock.currentSlot,
       justifiedCheckpoint,
       finalizedCheckpoint,
@@ -448,10 +446,10 @@ export class BeaconChain implements IBeaconChain {
       await this.initializeBeaconChain(state);
     }
     // set metrics based on beacon state
-    this.metrics.currentSlot.set(state.slot);
+    this.metrics.headSlot.set(state.slot);
     this.metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
     this.metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);
-    this.metrics.currentFinalizedEpoch.set(state.finalizedCheckpoint.epoch);
+    this.metrics.finalizedEpoch.set(state.finalizedCheckpoint.epoch);
     return state;
   }
 }

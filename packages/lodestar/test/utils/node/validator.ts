@@ -1,9 +1,14 @@
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {ApiClientOverInstance, IApiClient, interopKeypair, Validator} from "@chainsafe/lodestar-validator/lib";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
-import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
+import {
+  ApiClientOverInstance,
+  IApiClient,
+  interopKeypair,
+  SlashingProtection,
+  Validator,
+} from "@chainsafe/lodestar-validator";
 import tmp from "tmp";
 import {ApiClientOverRest} from "../../../../lodestar-validator/src/api/impl/rest/apiClient";
 import {BeaconApi} from "../../../src/api/impl/beacon";
@@ -63,16 +68,11 @@ export function getDevValidator({
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   return new Validator({
     config: node.config,
-    db: new ValidatorDB({
-      config: node.config,
-      controller: new LevelDbController(
-        {
-          name: tmpDir.name,
-        },
-        {logger}
-      ),
-    }),
     api: useRestApi ? getDevValidatorRestApiClient(node, logger) : getDevValidatorInstanceApiClient(node, logger),
+    slashingProtection: new SlashingProtection({
+      config: node.config,
+      controller: new LevelDbController({name: tmpDir.name}, {logger}),
+    }),
     logger: logger,
     keypairs: Array.from({length: count}, (_, i) => {
       return new Keypair(PrivateKey.fromBytes(interopKeypair(i + startIndex).privkey));

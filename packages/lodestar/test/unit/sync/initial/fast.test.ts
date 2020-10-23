@@ -5,7 +5,7 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
-import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
@@ -99,14 +99,14 @@ describe("fast sync", function () {
     getTargetStub.returns(target);
     networkStub.getPeers.returns([]);
     const endCallbackStub = sinon.stub(chainStub.emitter, "removeListener");
-    endCallbackStub.withArgs("checkpoint" as any, sinon.match.any).callsFake(() => {
+    endCallbackStub.withArgs(ChainEvent.checkpoint as any, sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledTwice).to.be.true;
       endCallbackStub.restore();
       done();
     });
     sync.start();
-    chainStub.emitter.emit("checkpoint", {epoch: 1, root: Buffer.alloc(32)} as Checkpoint, {} as any);
-    chainStub.emitter.emit("checkpoint", target, {} as any);
+    chainStub.emitter.emit(ChainEvent.checkpoint, {epoch: 1, root: Buffer.alloc(32)} as Checkpoint, {} as any);
+    chainStub.emitter.emit(ChainEvent.checkpoint, target, {} as any);
   });
 
   //TODO: make sync abortable (test hangs on sleeping 6s when waiting for peers)
@@ -139,13 +139,13 @@ describe("fast sync", function () {
     getTargetStub.onFirstCall().returns(target1).onSecondCall().returns(target2).onThirdCall().returns(target2);
     networkStub.getPeers.returns([]);
     const endCallbackStub = sinon.stub(chainStub.emitter, "removeListener");
-    endCallbackStub.withArgs("checkpoint" as any, sinon.match.any).callsFake(() => {
+    endCallbackStub.withArgs(ChainEvent.checkpoint as any, sinon.match.any).callsFake(() => {
       expect(getTargetStub.calledThrice).to.be.true;
       endCallbackStub.restore();
       done();
     });
     sync.start();
-    chainStub.emitter.emit("checkpoint", target1, {} as any);
-    chainStub.emitter.emit("checkpoint", target2, {} as any);
+    chainStub.emitter.emit(ChainEvent.checkpoint, target1, {} as any);
+    chainStub.emitter.emit(ChainEvent.checkpoint, target2, {} as any);
   });
 });

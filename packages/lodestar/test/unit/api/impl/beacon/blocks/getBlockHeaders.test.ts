@@ -13,6 +13,8 @@ import {
 import deepmerge from "deepmerge";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect} from "chai";
+import {Libp2pNetwork} from "../../../../../../src/network/network";
+import {BeaconSync} from "../../../../../../src/sync/sync";
 
 describe("api - beacon - getBlockHeaders", function () {
   let blockApi: BeaconBlockApi;
@@ -31,6 +33,8 @@ describe("api - beacon - getBlockHeaders", function () {
         chain: chainStub,
         config,
         db: dbStub,
+        network: sinon.createStubInstance(Libp2pNetwork),
+        sync: sinon.createStubInstance(BeaconSync),
       }
     );
   });

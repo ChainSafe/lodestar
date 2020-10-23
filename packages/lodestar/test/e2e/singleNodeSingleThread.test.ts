@@ -4,6 +4,7 @@ import {waitForEvent} from "../utils/events/resolver";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
+import {ChainEvent} from "../../src/chain";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -19,12 +20,12 @@ describe("Run single node single thread interop validators (no eth1) until check
   const testCases: {
     vc: number;
     validators: number;
-    event: "justified" | "finalized";
+    event: ChainEvent.justified | ChainEvent.finalized;
     params: Partial<IBeaconParams>;
   }[] = [
-    {vc: 8, validators: 8, event: "justified", params: testParams},
-    {vc: 8, validators: 8, event: "finalized", params: testParams},
-    {vc: 1, validators: 32, event: "justified", params: manyValidatorParams},
+    {vc: 8, validators: 8, event: ChainEvent.justified, params: testParams},
+    {vc: 8, validators: 8, event: ChainEvent.finalized, params: testParams},
+    {vc: 1, validators: 32, event: ChainEvent.justified, params: manyValidatorParams},
   ];
 
   for (const testCase of testCases) {

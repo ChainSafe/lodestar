@@ -7,7 +7,7 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
 import {processAttestation} from "../../../../src/chain/attestation/process";
-import {ChainEventEmitter} from "../../../../src/chain";
+import {ChainEvent, ChainEventEmitter} from "../../../../src/chain";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
@@ -95,7 +95,7 @@ describe("processAttestation", function () {
     try {
       const eventPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(reject, 1000);
-        emitter.once("attestation", () => {
+        emitter.once(ChainEvent.attestation, () => {
           clearTimeout(timeout);
           resolve();
         });

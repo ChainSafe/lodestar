@@ -7,6 +7,9 @@ import {IApiOptions} from "../../../options";
 import {IApiModules} from "../../interface";
 import {BlockId, IBeaconBlocksApi} from "./interface";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
+import {IBeaconSync} from "../../../../sync";
+import {checkSyncStatus} from "../../utils";
+import {INetwork} from "../../../../network/interface";
 
 export * from "./interface";
 
@@ -14,11 +17,18 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
   private readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
+  private readonly sync: IBeaconSync;
+  private readonly network: INetwork;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "chain" | "db">) {
+  public constructor(
+    opts: Partial<IApiOptions>,
+    modules: Pick<IApiModules, "config" | "network" | "sync" | "chain" | "db">
+  ) {
     this.config = modules.config;
+    this.sync = modules.sync;
     this.chain = modules.chain;
     this.db = modules.db;
+    this.network = modules.network;
   }
 
   public async getBlockHeaders(
@@ -102,5 +112,10 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
 
   public async getBlock(blockId: BlockId): Promise<SignedBeaconBlock | null> {
     return await resolveBlockId(this.config, this.chain.forkChoice, this.db, blockId);
+  }
+
+  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+    await checkSyncStatus(this.config, this.sync);
+    await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 }

@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Validator} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {IApiClient, interopKeypair} from "@chainsafe/lodestar-validator/lib";
-import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {join} from "path";
@@ -24,14 +23,9 @@ export function getInteropValidator(
   mkdirSync(dbPath, {recursive: true});
   return new Validator({
     config,
-    db: new ValidatorDB({
+    slashingProtection: new SlashingProtection({
       config: config,
-      controller: new LevelDbController(
-        {
-          name: dbPath,
-        },
-        {logger}
-      ),
+      controller: new LevelDbController({name: dbPath}, {logger}),
     }),
     api: modules.api,
     logger: logger,

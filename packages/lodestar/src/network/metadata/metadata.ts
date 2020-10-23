@@ -1,8 +1,8 @@
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ENR} from "@chainsafe/discv5";
-import {Metadata, ForkDigest} from "@chainsafe/lodestar-types";
+import {Metadata} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IMetadataOpts {
@@ -35,11 +35,11 @@ export class MetadataController {
       this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
     }
-    this.chain.emitter.on("forkDigest", this.handleForkDigest);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   get seqNumber(): bigint {
@@ -62,7 +62,8 @@ export class MetadataController {
     return this._metadata;
   }
 
-  private async handleForkDigest(forkDigest: ForkDigest): Promise<void> {
+  private async handleForkVersion(): Promise<void> {
+    const forkDigest = await this.chain.getForkDigest();
     this.logger.important(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
       this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
