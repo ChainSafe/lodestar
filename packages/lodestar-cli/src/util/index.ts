@@ -4,6 +4,7 @@ export * from "./ethers";
 export * from "./fs";
 export * from "./file";
 export * from "./graffiti";
+export * from "./object";
 export * from "./passphrase";
 export * from "./paths";
 export * from "./randomPassword";
