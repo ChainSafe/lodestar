@@ -44,9 +44,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: dbPath}});
   beaconNodeOptions.set({eth1: {enabled: false}});
+  const options = beaconNodeOptions.getWithDefaults();
 
   // BeaconNode setup
-  const options = beaconNodeOptions.getWithDefaults();
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = new WinstonLogger();
   const node = new BeaconNode(options, {config, libp2p, logger});
@@ -60,7 +60,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     );
   }
 
-  let validators: Validator[] = [];
+  const validators: Validator[] = [];
 
   onGracefulShutdown(async () => {
     await Promise.all([Promise.all(validators.map((v) => v.stop())), node.stop()]);
@@ -74,11 +74,11 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   await node.start();
 
   if (args.startValidators) {
-    const range = args.startValidators.split(":").map((s) => parseInt(s));
+    const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
     const api = getValidatorApiClient(args.server, logger, node);
-    validators = Array.from({length: range[1] + range[0]}, (v, i) => i + range[0]).map((index) => {
-      return getInteropValidator(node.config, validatorsDir, {api, logger}, index);
-    });
-    validators.forEach((v) => v.start());
+    for (let i = fromIndex; i < toIndex; i++) {
+      validators.push(getInteropValidator(node.config, validatorsDir, {api, logger}, i));
+    }
+    await Promise.all(validators.map((validator) => validator.start()));
   }
 }
