@@ -56,16 +56,6 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType =>
-  new ContainerType({
-    fields: {
-      index: ssz.ValidatorIndex,
-      pubkey: ssz.BLSPubkey,
-      balance: ssz.Gwei,
-      validator: ssz.Validator,
-    },
-  });
-
 export const Genesis = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {

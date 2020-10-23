@@ -1,7 +1,7 @@
 // this will need async once we wan't to resolve archive slot
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconState, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../../../db/api";
 import {StateId} from "./interface";
 import {fromHexString} from "@chainsafe/ssz";
@@ -41,4 +41,12 @@ export async function resolveStateId(
   }
 
   return null;
+}
+
+export function toValidatorResponse(index: ValidatorIndex, validator: Validator): ValidatorResponse {  
+  return {
+    index,
+    pubkey,
+    balance
+  }
 }

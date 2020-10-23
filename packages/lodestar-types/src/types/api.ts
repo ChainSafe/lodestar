@@ -56,14 +56,6 @@ export interface SyncingStatus {
   syncDistance: Uint64;
 }
 
-export interface ValidatorResponse {
-  index: ValidatorIndex;
-  // BLS public key
-  pubkey: BLSPubkey;
-  balance: Gwei;
-  validator: Validator;
-}
-
 export interface Genesis {
   genesisTime: Uint64;
   genesisValidatorsRoot: Root;
