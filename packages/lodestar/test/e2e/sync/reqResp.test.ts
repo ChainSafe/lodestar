@@ -1,30 +1,28 @@
-import {expect} from "chai";
-import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {encode} from "varint";
-
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
-import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
-import Libp2p from "libp2p";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {INetworkOptions} from "../../../src/network/options";
-import {BeaconMetrics} from "../../../src/metrics";
-import {generateState} from "../../utils/state";
-import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
-import {generateEmptySignedBlock} from "../../utils/block";
-import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
-import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
-import {sleep} from "../../utils/sleep";
-import {createNode} from "../../utils/network";
-import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {getBlockSummary} from "../../utils/headBlockInfo";
+import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
+import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {expect} from "chai";
 import pipe from "it-pipe";
-import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
+import Libp2p from "libp2p";
 import PeerId from "peer-id";
+import sinon from "sinon";
+import {encode} from "varint";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
+import {BeaconMetrics} from "../../../src/metrics";
+import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
+import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
+import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
+import {INetworkOptions} from "../../../src/network/options";
 import {ReqRespRequest} from "../../../src/network/reqresp";
+import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
+import {generateEmptySignedBlock} from "../../utils/block";
+import {getBlockSummary} from "../../utils/headBlockInfo";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain";
+import {createNode} from "../../utils/network";
+import {generateState} from "../../utils/state";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -213,7 +211,7 @@ describe("[sync] rpc", function () {
           // i should be 1
           const errBuf = val.slice();
           // message from the server side
-          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid Request");
+          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid request");
         }
         i++;
       }

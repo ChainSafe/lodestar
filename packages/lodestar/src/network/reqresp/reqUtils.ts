@@ -61,21 +61,23 @@ export function sendRequestStream<T extends ResponseBody>(
   return (async function* () {
     const protocol = createRpcProtocol(method, encoding);
     logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-    let conn: {stream: Stream};
-    try {
-      conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
-    } catch (e) {
-      throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
-    }
-    logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+    let conn: {stream: Stream} | undefined;
     const controller = new AbortController();
     let requestTimer: NodeJS.Timeout | null = null;
     // write
     await Promise.race([
-      pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream),
+      (async function () {
+        try {
+          conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
+        } catch (e) {
+          throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
+        }
+        logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+        await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      })(),
       new Promise((_, reject) => {
         requestTimer = setTimeout(() => {
-          conn.stream.close();
+          conn?.stream?.close();
           reject(new Error(REQUEST_TIMEOUT_ERR));
         }, REQUEST_TIMEOUT);
       }),
@@ -83,7 +85,7 @@ export function sendRequestStream<T extends ResponseBody>(
     if (requestTimer) clearTimeout(requestTimer);
     logger.verbose("sent request", {peer: peerId.toB58String(), method});
     yield* pipe(
-      abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
+      abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
       eth2ResponseTimer(controller),
       eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
     );

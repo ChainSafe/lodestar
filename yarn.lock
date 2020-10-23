@@ -3425,10 +3425,10 @@ any-promise@^1.0.0:
   resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
   integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
-any-signal@2.1.0:
-  version "2.1.0"
-  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.1.0.tgz#8736f59e0bcb9a0f4b6af3995e520bd789fdc69d"
-  integrity sha512-RzrSTVJLe4BK8jk5kw94mXNsMfG6D0I12Mv724xjbqb+9MQn5lWwnzd82Xo5iH0/aBSxYsEUNTLp2ncmzkYaCw==
+any-signal@2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.1.1.tgz#6458f7ce08cfdd8df21953016ae03ca129b07e35"
+  integrity sha512-kjyMTtHQsB3yZAVDZlLVucPJnmnrXhamB/rm3Td3jse5Q+16FXXolP4elWU0yLFDyrxTkjjDXtIdjSPiEznf3w==
   dependencies:
     abort-controller "^3.0.0"
     native-abort-controller "0.0.3"
