@@ -6,7 +6,7 @@ import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
 import {IGlobalArgs} from "../../options";
-import {readPeerId, writeEnr} from "../../network";
+import {readPeerId} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getMergedIBeaconConfig} from "../../config/params";
 import {initCmd} from "../init/handler";
@@ -50,7 +50,7 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   const node = new BeaconNode(options, {config, libp2p, logger});
 
   onGracefulShutdown(async () => {
-    await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
+    await Promise.all([node.stop()]);
   }, logger.info.bind(logger));
 
   if (options.weakSubjectivityStateFile) {

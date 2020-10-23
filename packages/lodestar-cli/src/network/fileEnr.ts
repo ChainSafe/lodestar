@@ -18,6 +18,14 @@ export class FileENR extends ENR {
 
   static initFromFile(filename: string, peerId: PeerId): FileENR {
     const enr = FileENR.decodeTxt(readFileSync(filename)) as FileENR;
+    return this.initFromENR(filename, peerId, enr);
+    // Object.setPrototypeOf(enr, FileENR.prototype);
+    // enr.filename = filename;
+    // enr.localPeerId = peerId;
+    // return enr;
+  }
+
+  static initFromENR(filename: string, peerId: PeerId, enr: FileENR): FileENR {
     Object.setPrototypeOf(enr, FileENR.prototype);
     enr.filename = filename;
     enr.localPeerId = peerId;
