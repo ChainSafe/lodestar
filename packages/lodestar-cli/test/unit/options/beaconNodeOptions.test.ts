@@ -31,6 +31,7 @@ describe("options / beaconNodeOptions", () => {
       "network.discv5.bindAddr": "addr",
       "network.discv5.bootEnrs": ["enr:-somedata"],
       "network.maxPeers": 40,
+      "network.minPeers": 20,
       "network.bootMultiaddrs": [],
       "network.localMultiaddrs": [],
 
@@ -73,6 +74,7 @@ describe("options / beaconNodeOptions", () => {
           bootEnrs: ["enr:-somedata"],
         },
         maxPeers: 40,
+        minPeers: 20,
         bootMultiaddrs: [],
         localMultiaddrs: [],
       },
@@ -82,7 +84,6 @@ describe("options / beaconNodeOptions", () => {
     };
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    const optionsWithoutUndefined = JSON.parse(JSON.stringify(options));
-    expect(optionsWithoutUndefined).to.deep.equal(expectedOptions);
+    expect(options).to.deep.equal(expectedOptions);
   });
 });

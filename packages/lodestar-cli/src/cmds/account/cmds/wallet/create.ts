@@ -19,7 +19,13 @@ interface IWalletCreateArgs {
   mnemonicOutputPath?: string;
 }
 
-export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobalArgs> = {
+export type ReturnType = {
+  mnemonic: string;
+  uuid: string;
+  password: string;
+};
+
+export const create: ICliCommand<IWalletCreateArgs, IAccountWalletArgs & IGlobalArgs, ReturnType> = {
   command: "create",
 
   describe: "Creates a new HD (hierarchical-deterministic) EIP-2386 wallet",
@@ -89,6 +95,7 @@ wallets are supported presently.",
 
     const walletManager = new WalletManager(accountPaths);
     const wallet = await walletManager.createWallet(name, type, mnemonic, password);
+    const uuid = wallet.toWalletObject().uuid;
 
     if (mnemonicOutputPath) {
       writeFile600Perm(mnemonicOutputPath, mnemonic);
@@ -113,9 +120,12 @@ wallets are supported presently.",
 
   Your wallet's UUID is:
 
-  \t${wallet.toWalletObject().uuid}
+  \t${uuid}
 
   You do not need to backup your UUID or keep it secret.
   `);
+
+    // Return values for testing
+    return {mnemonic, uuid, password};
   },
 };

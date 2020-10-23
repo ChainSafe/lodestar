@@ -3,7 +3,7 @@ import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {getBeaconConfigFromArgs} from "../../../../config";
-import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
+import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
 
@@ -15,7 +15,9 @@ interface IValidatorCreateArgs {
   count: number;
 }
 
-export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs> = {
+export type ReturnType = string[];
+
+export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
   command: "create",
 
   describe:
@@ -89,6 +91,7 @@ and pre-computed deposit RPL data",
 
     const walletPassword = readPassphraseFile(passphraseFile);
 
+    const pubkeys: string[] = [];
     for (let i = 0; i < count; i++) {
       const passwords = wallet.randomPasswords();
       const keystores = await wallet.nextValidator(walletPassword, passwords);
@@ -97,8 +100,13 @@ and pre-computed deposit RPL data",
       // Persist the nextaccount index after successfully creating the validator directory
       walletManager.writeWallet(wallet);
 
+      const pubkey = add0xPrefix(keystores.signing.pubkey);
       // eslint-disable-next-line no-console
-      console.log(`${i}/${count}\t${keystores.signing.pubkey}`);
+      console.log(`${i}/${count}\t${pubkey}`);
+      pubkeys.push(pubkey);
     }
+
+    // Return values for testing
+    return pubkeys;
   },
 };

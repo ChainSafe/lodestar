@@ -14,20 +14,21 @@ import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
+export type ReturnType = {
+  beaconNodeOptions: BeaconNodeOptions;
+  config: IBeaconConfig;
+};
+
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
+export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
   await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  return {beaconNodeOptions, config};
 }
 
-export async function initializeOptionsAndConfig(
-  args: IBeaconArgs & IGlobalArgs
-): Promise<{
-  beaconNodeOptions: BeaconNodeOptions;
-  config: IBeaconConfig;
-}> {
+export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({
     testnet: args.testnet,

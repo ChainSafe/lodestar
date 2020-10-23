@@ -2,11 +2,13 @@ import {ICliCommand, ICliCommandOptions} from "../../util";
 import {IGlobalArgs} from "../../options";
 import {IBeaconArgs, beaconOptions} from "../beacon/options";
 import {getBeaconPaths} from "../beacon/paths";
-import {initHandler} from "./handler";
+import {initHandler, ReturnType} from "./handler";
 
 const defaultBeaconPathsMedalla = getBeaconPaths({rootDir: ".medalla"});
 
-export const init: ICliCommand<IBeaconArgs, IGlobalArgs> = {
+export {ReturnType};
+
+export const init: ICliCommand<IBeaconArgs, IGlobalArgs, ReturnType> = {
   command: "init",
   describe:
     "Initialize Lodestar directories and files necessary to run a beacon chain node. \

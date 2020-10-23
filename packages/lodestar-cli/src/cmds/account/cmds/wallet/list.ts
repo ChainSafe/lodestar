@@ -4,7 +4,9 @@ import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
 
-export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
+export type ReturnType = string[];
+
+export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs, ReturnType> = {
   command: "list",
 
   describe: "Lists the names of all wallets",
@@ -19,9 +21,11 @@ export const list: ICliCommand<{}, IAccountWalletArgs & IGlobalArgs> = {
   handler: async (args) => {
     const accountPaths = getAccountPaths(args);
     const walletManager = new WalletManager(accountPaths);
-    for (const {name} of walletManager.wallets()) {
-      // eslint-disable-next-line no-console
-      console.log(name);
-    }
+    const walletNames = walletManager.wallets().map(({name}) => name);
+    // eslint-disable-next-line no-console
+    console.log(walletNames.join("\n"));
+
+    // Return values for testing
+    return walletNames;
   },
 };
