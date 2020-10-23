@@ -1,7 +1,7 @@
 const {FileENR} = require('./lib/cmds/beacon/fileEnr.js');
 const {readPeerId} = require('./lib/network/peerId.js');
 
-const enrFile = '.medalla/enr.json';
+const enrFile = '.medalla/enr';
 const peerIdFile = '.medalla/peer-id.json'
 const peerId = await readPeerId(peerIdFile);
 
