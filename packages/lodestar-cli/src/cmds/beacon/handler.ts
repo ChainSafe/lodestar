@@ -14,7 +14,7 @@ import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
 import {onGracefulShutdown} from "../../util/process";
-import {FileENR} from "./fileEnr";
+import {FileENR} from "../../network/fileEnr";
 
 /**
  * Run a beacon node
