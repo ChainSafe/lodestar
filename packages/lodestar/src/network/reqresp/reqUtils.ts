@@ -15,9 +15,10 @@ import {
 } from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT} from "../../constants";
+import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
 import {eth2RequestEncode} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
+import {REQUEST_TIMEOUT_ERR} from "../error";
 
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
@@ -68,7 +69,18 @@ export function sendRequestStream<T extends ResponseBody>(
     }
     logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
     const controller = new AbortController();
-    await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+    let requestTimer: NodeJS.Timeout | null = null;
+    // write
+    await Promise.race([
+      pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream),
+      new Promise((_, reject) => {
+        requestTimer = setTimeout(() => {
+          conn.stream.close();
+          reject(new Error(REQUEST_TIMEOUT_ERR));
+        }, REQUEST_TIMEOUT);
+      }),
+    ]);
+    if (requestTimer) clearTimeout(requestTimer);
     logger.verbose("sent request", {peer: peerId.toB58String(), method});
     yield* pipe(
       abortDuplex(conn.stream, controller.signal, {returnOnAbort: true}),
