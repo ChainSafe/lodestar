@@ -6,9 +6,8 @@ import fs from "fs";
 import PeerId from "peer-id";
 import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
-import {NodejsNode} from ".";
-import {defaultDiscv5Options, INetworkOptions} from "../options";
-import defaults from "../defaults";
+import {NodejsNode} from "./bundle";
+import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
 import {ENR} from "@chainsafe/discv5";
 import LevelDatastore from "datastore-level";
@@ -42,8 +41,8 @@ export async function createNodeJsLibp2p(
   autoDial = true
 ): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
-  const localMultiaddrs = network.localMultiaddrs || defaults.localMultiaddrs;
-  const bootMultiaddrs = network.bootMultiaddrs || defaults.bootMultiaddrs;
+  const localMultiaddrs = network.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
+  const bootMultiaddrs = network.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
   const enr = network.discv5?.enr;
   if (enr && typeof enr !== "string") {
     if (enr instanceof ENR) {
@@ -62,5 +61,6 @@ export async function createNodeJsLibp2p(
     bootMultiaddrs: bootMultiaddrs,
     discv5: network.discv5 || defaultDiscv5Options,
     maxConnections: network.maxPeers,
+    minConnections: network.minPeers,
   });
 }
