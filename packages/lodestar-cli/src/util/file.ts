@@ -102,7 +102,7 @@ export function readFileIfExists<T = Json>(filepath: string): T | null {
  * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
  */
 export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string): Promise<void> {
-  if (urlOrPathSrc.startsWith("http")) {
+  if (isUrl(urlOrPathSrc)) {
     await downloadFile(pathDest, urlOrPathSrc);
   } else {
     mkdir(path.parse(pathDest).dir);
@@ -118,4 +118,21 @@ export async function downloadFile(pathDest: string, url: string): Promise<void>
     mkdir(path.parse(pathDest).dir);
     await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
   }
+}
+
+/**
+ * Download from URL to memory or load from local filesystem
+ * @param urlOrPathSrc "/path/to/file.szz" | "https://url.to/file.szz"
+ */
+export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array> {
+  if (isUrl(pathOrUrl)) {
+    const res = await got.get(pathOrUrl, {encoding: "binary"});
+    return res.rawBody;
+  } else {
+    return await fs.promises.readFile(pathOrUrl);
+  }
+}
+
+function isUrl(pathOrUrl: string): boolean {
+  return pathOrUrl.startsWith("http");
 }

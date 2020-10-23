@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
@@ -11,6 +10,7 @@ import {parseEnrArgs} from "../../options/enrOptions";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
+import {initializeBeaconNodeState} from "./util";
 
 /**
  * Run a beacon node
@@ -40,7 +40,6 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   ]);
 
   // BeaconNode setup
-
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   const libp2p = await createNodeJsLibp2p(peerId, options.network, beaconPaths.peerStoreDir);
   const node = new BeaconNode(options, {config, libp2p, logger});
@@ -49,15 +48,6 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
   }, logger.info.bind(logger));
 
-  if (args.weakSubjectivityStateFile) {
-    const weakSubjectivityState = config.types.BeaconState.tree.deserialize(
-      await fs.promises.readFile(args.weakSubjectivityStateFile)
-    );
-    await node.chain.initializeWeakSubjectivityState(weakSubjectivityState);
-  } else if (args.genesisStateFile && !args.forceGenesis) {
-    await node.chain.initializeBeaconChain(
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(args.genesisStateFile))
-    );
-  }
+  await initializeBeaconNodeState(node, args);
   await node.start();
 }
