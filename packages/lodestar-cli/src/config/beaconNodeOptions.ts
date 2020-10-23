@@ -45,7 +45,7 @@ export class BeaconNodeOptions {
   }
 
   set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
-    this.beaconNodeOptions = deepmerge(this.beaconNodeOptions, beaconNodeOptionsPartial as IBeaconNodeOptions);
+    this.beaconNodeOptions = mergeBeaconNodeOptions(this.beaconNodeOptions, beaconNodeOptionsPartial);
   }
 
   writeTo(filepath: string): void {
@@ -72,6 +72,7 @@ export function mergeBeaconNodeOptions(
   ...partialOptionsArr: RecursivePartial<IBeaconNodeOptions>[]
 ): RecursivePartial<IBeaconNodeOptions> {
   return partialOptionsArr.reduce((mergedBeaconOptions, options) => {
+    // IBeaconNodeOptions contains instances so a deepmerge can only be done safely with `isMergeableObject: isPlainObject`
     return deepmerge(mergedBeaconOptions, options, {
       arrayMerge: overwriteTargetArrayIfItems,
       isMergeableObject: isPlainObject,
