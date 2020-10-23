@@ -4,7 +4,7 @@ import {IService} from "../../../node";
 
 export interface IBlockRangeFetcher {
   setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void;
-  next(): Promise<SignedBeaconBlock[]>;
+  getNextBlockRange(): Promise<SignedBeaconBlock[]>;
 }
 
 export interface IBlockRangeProcessor extends IService {

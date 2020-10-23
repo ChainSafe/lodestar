@@ -42,7 +42,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   /**
    * Get next block range.
    */
-  public async next(): Promise<SignedBeaconBlock[]> {
+  public async getNextBlockRange(): Promise<SignedBeaconBlock[]> {
     this.updateNextRange();
     let result: SignedBeaconBlock[] | null = null;
     while (!result || !result!.length) {
@@ -90,7 +90,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
       this.rangeEnd = this.getNewTarget();
     } else {
       this.logger.verbose("Regular Sync: Queried range passed peer head, sleep then try again", {
-        range: JSON.stringify(range),
+        range,
         peerHead: peerHeadSlot,
       });
       // don't want to disturb our peer if we pass peer head

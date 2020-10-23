@@ -40,7 +40,7 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
     if (!blocks || !blocks.length) return;
     await new Promise((resolve) => {
       const sortedBlocks = sortBlocks(blocks);
-      this.logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
+      this.logger.info("Imported blocks for slots: ", blocks.map((block) => block.message.slot).join(","));
       const lastRoot = this.config.types.BeaconBlock.hashTreeRoot(sortedBlocks[sortedBlocks.length - 1].message);
       this.target = {
         root: lastRoot,

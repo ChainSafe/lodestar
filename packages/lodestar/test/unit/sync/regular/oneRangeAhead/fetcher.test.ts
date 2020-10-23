@@ -51,7 +51,7 @@ describe("BlockRangeFetcher", function () {
     fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     getBlockRangeStub.resolves([generateEmptySignedBlock()]);
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1065}));
   });
 
@@ -66,9 +66,9 @@ describe("BlockRangeFetcher", function () {
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1020;
     getBlockRangeStub.onSecondCall().resolves([secondBlock]);
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1065}));
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.lastCall.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1011, end: 1075}));
   });
 
@@ -79,7 +79,7 @@ describe("BlockRangeFetcher", function () {
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
     getBlockRangeStub.onSecondCall().resolves([firstBlock]);
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1065}));
     expect(getBlockRangeStub.calledTwice).to.be.true;
   });
@@ -91,7 +91,7 @@ describe("BlockRangeFetcher", function () {
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
     getBlockRangeStub.onSecondCall().resolves([firstBlock]);
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1065}));
     expect(getBlockRangeStub.calledTwice).to.be.true;
   });
@@ -104,7 +104,7 @@ describe("BlockRangeFetcher", function () {
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
     getBlockRangeStub.onSecondCall().resolves([firstBlock]);
-    await fetcher.next();
+    await fetcher.getNextBlockRange();
     expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1065}));
     // same start, expand end
     expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1129}));

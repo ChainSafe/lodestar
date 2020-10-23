@@ -22,21 +22,13 @@ import {IBlockRangeFetcher, IBlockRangeProcessor, ORARegularSyncModules} from ".
  */
 export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
-
   private readonly network: INetwork;
-
   private readonly chain: IBeaconChain;
-
   private readonly logger: ILogger;
-
   private bestPeer: PeerId | undefined;
-
   private fetcher: IBlockRangeFetcher;
-
   private processor: IBlockRangeProcessor;
-
   private controller!: AbortController;
-
   private blockBuffer: SignedBeaconBlock[];
 
   constructor(options: Partial<IRegularSyncOptions>, modules: ORARegularSyncModules) {
@@ -100,12 +92,12 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
   };
 
   private async sync(): Promise<void> {
-    this.blockBuffer = await this.fetcher.next();
+    this.blockBuffer = await this.fetcher.getNextBlockRange();
     while (!this.controller.signal.aborted) {
       // blockBuffer is always not empty
       const lastSlot = this.blockBuffer[this.blockBuffer.length - 1].message.slot;
       const result = await Promise.all([
-        this.fetcher.next(),
+        this.fetcher.getNextBlockRange(),
         this.processor.processUntilComplete([...this.blockBuffer], this.controller.signal),
       ]);
       if (!result[0] || !result[0].length) {

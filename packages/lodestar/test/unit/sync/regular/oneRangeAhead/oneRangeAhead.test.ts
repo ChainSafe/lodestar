@@ -64,7 +64,7 @@ describe("ORARegularSync", function () {
   it("should call fetcher.next and processor.processUntilComplete upon start", async () => {
     forkChoiceStub.getHead.returns(generateBlockSummary({slot: 1000}));
     let slot = 1000;
-    fetcherStub.next.callsFake(
+    fetcherStub.getNextBlockRange.callsFake(
       async (): Promise<SignedBeaconBlock[]> => {
         await sleep(200);
         logger.info("Fetched slot " + slot);
@@ -94,7 +94,7 @@ describe("ORARegularSync", function () {
       }),
       sync.start(),
     ]);
-    const fetchCount = fetcherStub.next.callCount;
+    const fetchCount = fetcherStub.getNextBlockRange.callCount;
     const processCount = processorStub.processUntilComplete.callCount;
     expect(fetchCount).to.be.greaterThan(1);
     expect(processCount).to.be.greaterThan(1);
