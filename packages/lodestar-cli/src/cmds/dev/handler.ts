@@ -43,7 +43,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: dbPath}});
-  beaconNodeOptions.set({eth1: {enabled: false}});
   const options = beaconNodeOptions.getWithDefaults();
 
   // BeaconNode setup
