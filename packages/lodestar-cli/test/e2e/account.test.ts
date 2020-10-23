@@ -2,7 +2,7 @@ import yargs from "yargs/yargs";
 import {expect} from "chai";
 import {stub} from "sinon";
 
-import {rootDir, passphraseFile} from "./constants";
+import {rootDir, passphraseFile} from "../constants";
 import {account} from "../../src/cmds/account";
 import {ValidatorDirManager} from "../../src/validatorDir";
 import {getAccountPaths} from "../../src/cmds/account/paths";
