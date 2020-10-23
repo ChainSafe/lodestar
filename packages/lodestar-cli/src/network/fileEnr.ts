@@ -1,8 +1,11 @@
 import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
 import {writeFileSync} from "fs";
 import PeerId from "peer-id";
-import {readFileSync} from "../../util";
+import {readFileSync} from "../util";
 
+/**
+ * `FileENR` is an `ENR` that saves the ENR contents to a file on every modification
+ */
 export class FileENR extends ENR {
   private filename: string;
   private localPeerId: PeerId;
