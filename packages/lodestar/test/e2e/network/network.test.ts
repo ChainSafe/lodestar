@@ -128,7 +128,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
     const spy = sinon.spy();
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve) => {
       netA.gossip.subscribeToBlock(forkDigest, () => {
         spy();
@@ -198,7 +198,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToBlock(forkDigest, (signedBlock: SignedBeaconBlock): void => {
@@ -221,7 +221,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
@@ -239,7 +239,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     let callback: (attestation: {attestation: Attestation; subnet: number}) => void;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);

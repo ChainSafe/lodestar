@@ -67,20 +67,4 @@ describe("BeaconChain", function () {
       config.params.ALL_FORKS = undefined!;
     });
   });
-
-  describe("forkVersion event", () => {
-    it("should should receive forkDigest event", async () => {
-      chain.forkChoice.getHead = () => generateBlockSummary();
-      const spy = sinon.spy();
-      const received = new Promise((resolve) => {
-        chain.emitter.on("forkDigest", () => {
-          spy();
-          resolve();
-        });
-      });
-      chain.emitter.emit("forkVersion");
-      await received;
-      expect(spy.callCount).to.be.equal(1);
-    });
-  });
 });

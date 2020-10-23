@@ -1,12 +1,9 @@
 import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
-import all from "it-all";
-
-import {IDatabaseController, IFilterOptions, IKeyValue} from "../../../controller";
-import {Bucket, encodeKey} from "../../schema";
+import {IDatabaseController, Bucket, Repository, IFilterOptions, IKeyValue, encodeKey} from "@chainsafe/lodestar-db";
 import {ArrayLike} from "@chainsafe/ssz";
-import {Repository} from "./abstract";
+import all from "it-all";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;

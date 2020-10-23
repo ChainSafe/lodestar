@@ -1,5 +1,3 @@
-export * from "./abstract";
-
 export * from "./badBlock";
 export * from "./block";
 export * from "./blockArchive";

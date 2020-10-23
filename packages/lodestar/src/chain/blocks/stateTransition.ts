@@ -11,8 +11,9 @@ import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
-import {ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -28,7 +29,7 @@ export function emitCheckpointEvent(emitter: ChainEventEmitter, checkpointStateC
     blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(checkpointStateContext.state);
   }
   emitter.emit(
-    "checkpoint",
+    ChainEvent.checkpoint,
     {
       root: config.types.BeaconBlockHeader.hashTreeRoot(blockHeader),
       epoch: computeEpochAtSlot(config, slot),
@@ -70,6 +71,8 @@ export async function processSlotsToNearestCheckpoint(
     processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
     emitCheckpointEvent(emitter, postCtx);
     postCtx = cloneStateCtx(postCtx);
+    // this avoids keeping our node busy processing blocks
+    await sleep(0);
   }
   return postCtx;
 }
@@ -107,20 +110,14 @@ export function emitForkChoiceHeadEvents(
       const headHistory = forkChoice.iterateBlockSummaries(headRoot);
       const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
       const distance = oldHead.slot - (firstAncestor?.slot ?? oldHead.slot);
-      emitter.emit("forkChoice:reorg", head, oldHead, distance);
+      emitter.emit(ChainEvent.forkChoiceReorg, head, oldHead, distance);
     }
-    emitter.emit("forkChoice:head", head);
+    emitter.emit(ChainEvent.forkChoiceHead, head);
   }
 }
 
 export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockJob, postCtx: ITreeStateContext): void {
-  emitter.emit("block", job.signedBlock, postCtx, job);
-}
-
-export function emitVoluntaryExitEvents(emitter: ChainEventEmitter, job: IBlockJob): void {
-  job.signedBlock.message.body.voluntaryExits.forEach((exit) => {
-    emitter.emit("voluntaryExit", exit);
-  });
+  emitter.emit(ChainEvent.block, job.signedBlock, postCtx, job);
 }
 
 export async function runStateTransition(
@@ -145,8 +142,9 @@ export async function runStateTransition(
     emitCheckpointEvent(emitter, postStateContext);
   }
   emitBlockEvent(emitter, job, postStateContext);
-  emitVoluntaryExitEvents(emitter, job);
   const head = forkChoice.getHead();
   emitForkChoiceHeadEvents(emitter, forkChoice, head, oldHead);
+  // this avoids keeping our node busy processing blocks
+  await sleep(0);
   return postStateContext;
 }

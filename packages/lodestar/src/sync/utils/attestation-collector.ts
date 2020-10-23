@@ -1,7 +1,7 @@
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Attestation, CommitteeIndex, Slot} from "@chainsafe/lodestar-types";
+import {Attestation, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
 import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -32,16 +32,16 @@ export class AttestationCollector implements IService {
   }
 
   public async start(): Promise<void> {
-    this.chain.emitter.on("clock:slot", this.checkDuties);
+    this.chain.emitter.on(ChainEvent.clockSlot, this.checkDuties);
   }
 
   public async stop(): Promise<void> {
     this.timers.forEach((timer) => clearTimeout(timer));
-    this.chain.emitter.removeListener("clock:slot", this.checkDuties);
+    this.chain.emitter.removeListener(ChainEvent.clockSlot, this.checkDuties);
   }
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
-    const forkDigest = this.chain.currentForkDigest;
+    const forkDigest = await this.chain.getForkDigest();
     const headState = await this.chain.getHeadState();
     const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
     try {
@@ -58,7 +58,7 @@ export class AttestationCollector implements IService {
 
   private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
-    const forkDigest = this.chain.currentForkDigest;
+    const forkDigest = await this.chain.getForkDigest();
     const headState = await this.chain.getHeadState();
     this.timers = [];
     committees.forEach((committeeIndex) => {
@@ -66,15 +66,14 @@ export class AttestationCollector implements IService {
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
       this.timers.push(
         setTimeout(() => {
-          this.unsubscribeSubnet(subnet);
+          this.unsubscribeSubnet(subnet, forkDigest);
         }, this.config.params.SECONDS_PER_SLOT * 1000)
       );
     });
     this.aggregationDuties.delete(slot);
   };
 
-  private unsubscribeSubnet = (subnet: number): void => {
-    const forkDigest = this.chain.currentForkDigest;
+  private unsubscribeSubnet = (subnet: number, forkDigest: ForkDigest): void => {
     try {
       this.network.gossip.unsubscribeFromAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
     } catch (e) {

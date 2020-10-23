@@ -6,6 +6,8 @@
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-12.x-green)
 
+> This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
+
 ## Prerequisites
 
 - [Lerna](https://github.com/lerna/lerna)
@@ -24,3 +26,7 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 ## Contributors
 
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!
+
+## License
+
+LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)

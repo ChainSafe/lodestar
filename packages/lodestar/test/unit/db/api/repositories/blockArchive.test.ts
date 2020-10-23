@@ -2,12 +2,11 @@ import {expect} from "chai";
 import rimraf from "rimraf";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {intToBytes} from "@chainsafe/lodestar-utils";
+import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 
-import {LevelDbController} from "../../../../../src/db/controller";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
-import {Bucket, encodeKey} from "../../../../../src/db/api/schema";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("block archive repository", function () {

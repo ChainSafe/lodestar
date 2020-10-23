@@ -2,10 +2,7 @@ import {ArrayLike, TreeBacked} from "@chainsafe/ssz";
 import {Attestation, AggregateAndProof, BeaconState, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, isValidAttestationSlot} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IDatabaseController} from "../../../controller";
-import {Bucket} from "../../schema";
-import {Repository} from "./abstract";
+import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
 
 /**
  * AggregateAndProof indexed by root

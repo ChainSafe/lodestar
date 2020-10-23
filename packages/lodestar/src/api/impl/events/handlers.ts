@@ -1,4 +1,4 @@
-import {IChainEvents} from "../../../chain";
+import {ChainEvent, IChainEvents} from "../../../chain";
 import {BeaconEventType, BeaconEvent} from "./types";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -10,7 +10,7 @@ export type ChainEventListener<E extends keyof IChainEvents> = (...args: Listene
 export function handleBeaconHeadEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"forkChoice:head"> {
+): ChainEventListener<ChainEvent.forkChoiceHead> {
   return (payload) => {
     callback({
       type: BeaconEventType.HEAD,
@@ -27,7 +27,7 @@ export function handleBeaconHeadEvent(
 export function handleBeaconBlockEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"block"> {
+): ChainEventListener<ChainEvent.block> {
   return (payload) => {
     callback({
       type: BeaconEventType.BLOCK,
@@ -42,7 +42,7 @@ export function handleBeaconBlockEvent(
 export function handleBeaconAttestationEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"attestation"> {
+): ChainEventListener<ChainEvent.attestation> {
   return (payload) => {
     callback({
       type: BeaconEventType.ATTESTATION,
@@ -54,11 +54,13 @@ export function handleBeaconAttestationEvent(
 export function handleVoluntaryExitEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"voluntaryExit"> {
+): ChainEventListener<ChainEvent.block> {
   return (payload) => {
-    callback({
-      type: BeaconEventType.VOLUNTARY_EXIT,
-      message: payload,
+    payload.message.body.voluntaryExits.forEach((exit) => {
+      callback({
+        type: BeaconEventType.VOLUNTARY_EXIT,
+        message: exit,
+      });
     });
   };
 }
@@ -66,7 +68,7 @@ export function handleVoluntaryExitEvent(
 export function handleFinalizedCheckpointEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"finalized"> {
+): ChainEventListener<ChainEvent.finalized> {
   return (payload) => {
     callback({
       type: BeaconEventType.FINALIZED_CHECKPOINT,
@@ -83,7 +85,7 @@ export function handleFinalizedCheckpointEvent(
 export function handleChainReorgEvent(
   config: IBeaconConfig,
   callback: (value: BeaconEvent) => void
-): ChainEventListener<"forkChoice:reorg"> {
+): ChainEventListener<ChainEvent.forkChoiceReorg> {
   return (oldHead, newHead, depth) => {
     callback({
       type: BeaconEventType.CHAIN_REORG,

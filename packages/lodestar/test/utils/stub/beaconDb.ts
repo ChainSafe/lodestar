@@ -1,7 +1,8 @@
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {BeaconDb, LevelDbController} from "../../../src/db";
+import {BeaconDb} from "../../../src/db";
 import {
   AggregateAndProofRepository,
   AttestationRepository,
@@ -20,12 +21,14 @@ import {StateContextCache} from "../../../src/db/api/beacon/stateContextCache";
 import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
 import {CheckpointStateCache} from "../../../src/db/api/beacon/stateContextCheckpointsCache";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 
 export class StubbedBeaconDb extends BeaconDb {
   public db!: SinonStubbedInstance<LevelDbController>;
 
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
+  public pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
   public stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
   public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
@@ -51,6 +54,7 @@ export class StubbedBeaconDb extends BeaconDb {
     super({config, controller: null!});
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
+    this.pendingBlock = sinon.createStubInstance(PendingBlockRepository) as any;
     this.stateCache = sinon.createStubInstance(StateContextCache) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
     this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;

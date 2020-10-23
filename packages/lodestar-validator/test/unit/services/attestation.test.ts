@@ -5,7 +5,6 @@ import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {AttestationService} from "../../../src/services/attestation";
 import {toBufferBE} from "bigint-buffer";
 import {AttesterDuty} from "@chainsafe/lodestar-types";
-import {MockValidatorDB} from "../../utils/mocks/MockValidatorDB";
 import {generateFork} from "../../utils/fork";
 import {
   generateAttestation,
@@ -17,13 +16,15 @@ import {SinonStubbedBeaconApi} from "../../utils/apiStub";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {BeaconEventType} from "../../../src/api/interface/events";
 import {LocalClock} from "../../../src/api/LocalClock";
+import {InvalidAttestationError, InvalidAttestationErrorCode, SlashingProtection} from "../../../src";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
 describe("validator attestation service", function () {
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub: SinonStubbedBeaconApi, dbStub: any;
+  let rpcClientStub: SinonStubbedBeaconApi;
+  let slashingProtectionStub: sinon.SinonStubbedInstance<SlashingProtection>;
   const logger = silentLogger;
 
   beforeEach(() => {
@@ -39,7 +40,7 @@ describe("validator attestation service", function () {
         return;
       })
     );
-    dbStub = sandbox.createStubInstance(MockValidatorDB);
+    slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
   });
 
   afterEach(() => {
@@ -52,7 +53,7 @@ describe("validator attestation service", function () {
 
   it("on new epoch - no duty", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockEpoch({epoch: 1});
     expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
@@ -61,7 +62,7 @@ describe("validator attestation service", function () {
 
   it("on new epoch - with duty", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     const duty: AttesterDuty = {
       attestationSlot: 1,
       committeeIndex: 1,
@@ -77,14 +78,14 @@ describe("validator attestation service", function () {
 
   it("on  new slot - without duty", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockSlot({slot: 0});
   });
 
   it("on  new slot - with duty - not aggregator", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
@@ -102,20 +103,18 @@ describe("validator attestation service", function () {
     });
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
-    dbStub.getAttestations.resolves([]);
-    dbStub.setAttestation.resolves();
+    slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 1});
     clock.tick(4000);
     await Promise.resolve(promise);
     expect(rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, 1, 1).calledOnce).to.be.true;
     expect(rpcClientStub.validator.publishAttestation.calledOnce).to.be.true;
-    expect(dbStub.getAttestations.calledTwice).to.be.true;
-    expect(dbStub.setAttestation.calledOnce).to.be.true;
+    expect(slashingProtectionStub.checkAndInsertAttestation.calledOnce).to.be.true;
   });
 
   it("on  new slot - with duty - conflicting attestation", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
@@ -131,18 +130,15 @@ describe("validator attestation service", function () {
       chainId: BigInt(2),
       genesisValidatorsRoot: Buffer.alloc(32, 0),
     });
-    rpcClientStub.validator.produceAttestation.resolves(
-      generateAttestation({
-        data: generateAttestationData(0, 1),
-      })
-    );
+
+    // Simulate double vote detection
+    const attestation1 = generateAttestation({data: generateAttestationData(0, 1)});
+    rpcClientStub.validator.produceAttestation.resolves(attestation1);
     rpcClientStub.validator.publishAttestation.resolves();
-    dbStub.getAttestations.resolves([
-      {
-        data: generateAttestationData(0, 1),
-      },
-    ]);
-    dbStub.setAttestation.resolves();
+    slashingProtectionStub.checkAndInsertAttestation.rejects(
+      new InvalidAttestationError({code: InvalidAttestationErrorCode.DOUBLE_VOTE} as any)
+    );
+
     const promise = service.onClockSlot({slot: 1});
     clock.tick(4000);
     await Promise.resolve(promise);
@@ -153,7 +149,7 @@ describe("validator attestation service", function () {
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
-    const service = new AttestationService(config, [keypair], rpcClientStub, dbStub, logger);
+    const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
@@ -171,8 +167,7 @@ describe("validator attestation service", function () {
     });
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
-    dbStub.getAttestations.resolves([]);
-    dbStub.setAttestation.resolves();
+    slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 10});
     rpcClientStub.emit(BeaconEventType.BLOCK, {block: new Uint8Array(32), slot: 10});
     // don't need to wait for 1/3 slot time which is 4000

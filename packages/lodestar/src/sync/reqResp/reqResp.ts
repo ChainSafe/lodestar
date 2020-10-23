@@ -148,7 +148,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const currentForkDigest = this.chain.currentForkDigest;
+    const currentForkDigest = await this.chain.getForkDigest();
     if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
       this.logger.verbose(
         "Fork digest mismatch " +
@@ -360,7 +360,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private handshake = async (peerId: PeerId, direction: "inbound" | "outbound"): Promise<void> => {
     if (direction === "outbound") {
-      const request = createStatus(this.chain);
+      const request = await createStatus(this.chain);
       try {
         this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {

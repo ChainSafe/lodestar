@@ -1,6 +1,7 @@
 import {Deposit, DepositEvent, Eth1Data, Eth1Block} from "@chainsafe/lodestar-types";
+import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBeaconDb, IFilterOptions} from "../db";
+import {IBeaconDb} from "../db";
 import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";

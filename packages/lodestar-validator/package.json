@@ -29,6 +29,7 @@
     "pretest": "yarn run check-types",
     "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test": "yarn test:unit",
+    "test:e2e": "mocha --timeout 5000 'test/e2e/**/*.test.ts'",
     "coverage": "codecov -F lodestar-validator",
     "benchmark": "ts-node test/benchmarks"
   },
@@ -59,6 +60,7 @@
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
+    "@chainsafe/slashing-protection-interchange-tests": "^4.0.0",
     "@types/eventsource": "^1.1.2",
     "bigint-buffer": "^1.1.5"
   }

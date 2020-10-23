@@ -1,4 +1,4 @@
-import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {IBlockJob} from "../interface";
@@ -77,6 +77,10 @@ export enum BlockErrorCode {
    * There was an error whilst processing the block. It is not necessarily invalid.
    */
   ERR_BEACON_CHAIN_ERROR = "ERR_BEACON_CHAIN_ERROR",
+  /**
+   * Block did not pass validation during block processing.
+   */
+  ERR_KNOWN_BAD_BLOCK = "ERR_KNOWN_BAD_BLOCK",
 }
 
 export type BlockErrorType =
@@ -85,7 +89,7 @@ export type BlockErrorType =
     }
   | {
       code: BlockErrorCode.ERR_PARENT_UNKNOWN;
-      parentRoot: Uint8Array;
+      parentRoot: Root;
     }
   | {
       code: BlockErrorCode.ERR_FUTURE_SLOT;
@@ -109,7 +113,6 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL;
       proposer: ValidatorIndex;
-      slot: Slot;
     }
   | {
       code: BlockErrorCode.ERR_BLOCK_SLOT_LIMIT_REACHED;
@@ -117,7 +120,6 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_INCORRECT_PROPOSER;
       blockProposer: ValidatorIndex;
-      shufflingProposer: ValidatorIndex;
     }
   | {
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID;
@@ -144,6 +146,9 @@ export type BlockErrorType =
   | {
       code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR;
       error: Error;
+    }
+  | {
+      code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK;
     };
 
 type JobObject = {

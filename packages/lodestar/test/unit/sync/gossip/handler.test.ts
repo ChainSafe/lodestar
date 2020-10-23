@@ -1,5 +1,5 @@
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {IGossip} from "../../../../src/network/gossip/interface";
@@ -9,7 +9,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {expect} from "chai";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../utils/slashings";
 import {generateEmptySignedAggregateAndProof, generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
@@ -82,7 +82,7 @@ describe("gossip handler", function () {
     expect(dbStub.voluntaryExit.add.calledOnce).to.be.true;
   });
 
-  it("should handle fork digest changed", async function () {
+  it("should handle fork version changed", async function () {
     // handler is started and fork digest changed after that
     const state: BeaconState = generateState();
     const chain = new MockBeaconChain({
@@ -92,14 +92,16 @@ describe("gossip handler", function () {
       state: state as TreeBacked<BeaconState>,
       config,
     });
-    const oldForkDigest = chain.currentForkDigest;
+    const oldForkDigest = await chain.getForkDigest();
     const handler = new BeaconGossipHandler(chain, networkStub, dbStub, logger);
     await handler.start();
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(1);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-    expect(config.types.ForkDigest.equals(oldForkDigest, chain.currentForkDigest)).to.be.false;
-    chain.emitter.emit("forkDigest", chain.currentForkDigest);
+    expect(config.types.ForkDigest.equals(oldForkDigest, await chain.getForkDigest())).to.be.false;
+    chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
+    // allow event to be handled
+    await sleep(1);
     expect(gossipStub.unsubscribe.callCount).to.be.equal(5);
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(2);
     await chain.stop();

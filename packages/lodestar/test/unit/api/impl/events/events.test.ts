@@ -1,8 +1,8 @@
 import {BeaconEventType, EventsApi} from "../../../../../src/api/impl/events";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
-import {generateBlockSummary, generateSignedBlock} from "../../../../utils/block";
+import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
+import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
 import {expect} from "chai";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateState} from "../../../../utils/state";
@@ -22,8 +22,8 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.HEAD]);
       const headSummary = generateBlockSummary();
-      chainEventEmmitter.emit("forkChoice:reorg", headSummary, headSummary, 2);
-      chainEventEmmitter.emit("forkChoice:head", headSummary);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headSummary, headSummary, 2);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.HEAD);
@@ -35,7 +35,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.HEAD]);
       const headSummary = generateBlockSummary();
-      chainEventEmmitter.emit("forkChoice:head", headSummary);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.HEAD);
@@ -47,7 +47,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.BLOCK]);
       const block = generateSignedBlock();
-      chainEventEmmitter.emit("block", block, null as any, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.BLOCK);
@@ -59,7 +59,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.ATTESTATION]);
       const attestation = generateAttestation();
-      chainEventEmmitter.emit("attestation", attestation);
+      chainEventEmmitter.emit(ChainEvent.attestation, attestation);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.ATTESTATION);
@@ -71,7 +71,9 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.VOLUNTARY_EXIT]);
       const exit = generateEmptySignedVoluntaryExit();
-      chainEventEmmitter.emit("voluntaryExit", exit);
+      const block = generateEmptySignedBlock();
+      block.message.body.voluntaryExits.push(exit);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.VOLUNTARY_EXIT);
@@ -83,7 +85,7 @@ describe("Events api impl", function () {
       const api = new EventsApi({}, {config, chain: chainStub});
       const stream = api.getEventStream([BeaconEventType.FINALIZED_CHECKPOINT]);
       const checkpoint = generateState().finalizedCheckpoint;
-      chainEventEmmitter.emit("finalized", checkpoint, null as any);
+      chainEventEmmitter.emit(ChainEvent.finalized, checkpoint, null as any);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.FINALIZED_CHECKPOINT);
@@ -96,7 +98,7 @@ describe("Events api impl", function () {
       const stream = api.getEventStream([BeaconEventType.CHAIN_REORG]);
       const oldHead = generateBlockSummary({slot: 4});
       const newHead = generateBlockSummary({slot: 3});
-      chainEventEmmitter.emit("forkChoice:reorg", oldHead, newHead, 3);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, 3);
       const event = await stream[Symbol.asyncIterator]().next();
       expect(event?.value).to.not.be.null;
       expect(event.value.type).to.equal(BeaconEventType.CHAIN_REORG);
