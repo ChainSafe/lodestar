@@ -1,5 +1,5 @@
 import got from "got";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IBeaconParamsUnparsed} from "../config/types";
 import {RecursivePartial} from "../util";
 import * as altona from "./altona";

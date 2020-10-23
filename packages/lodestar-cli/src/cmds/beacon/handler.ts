@@ -1,5 +1,5 @@
 import {initBLS} from "@chainsafe/bls";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {consoleTransport} from "@chainsafe/lodestar-utils";

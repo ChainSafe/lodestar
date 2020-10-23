@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {TreeBacked} from "@chainsafe/ssz";
 import {getGenesisFileUrl} from "../../testnets";
 import {downloadOrLoadFile} from "../../util";

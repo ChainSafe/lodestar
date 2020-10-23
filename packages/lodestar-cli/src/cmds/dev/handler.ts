@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import {promisify} from "util";
 import {initBLS} from "@chainsafe/bls";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {Validator} from "@chainsafe/lodestar-validator/lib";

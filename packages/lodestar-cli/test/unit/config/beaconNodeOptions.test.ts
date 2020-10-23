@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import defaultOptions from "@chainsafe/lodestar/lib/node/options";
+import {defaultOptions} from "@chainsafe/lodestar";
 import {BeaconNodeOptions} from "../../../src/config";
 import {bootEnrs as medallaBootEnrs} from "../../../src/testnets/medalla";
 

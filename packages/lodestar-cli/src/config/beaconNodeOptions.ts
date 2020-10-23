@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
-import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {writeFile, RecursivePartial, readFileIfExists} from "../util";
 import {getTestnetBeaconNodeOptions, TestnetName} from "../testnets";

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {LogLevel} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "../../../src/util";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions";

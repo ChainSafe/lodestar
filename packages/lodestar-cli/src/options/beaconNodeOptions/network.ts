@@ -1,4 +1,4 @@
-import defaultOptions, {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
 export interface INetworkArgs {

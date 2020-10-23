@@ -1,4 +1,4 @@
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {RecursivePartial} from "../../util";
 import * as api from "./api";
 import * as eth1 from "./eth1";

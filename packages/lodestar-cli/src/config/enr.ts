@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import Multiaddr from "multiaddr";
-import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {writeFile, readFile} from "../util";
 

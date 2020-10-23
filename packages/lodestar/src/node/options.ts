@@ -22,7 +22,7 @@ export interface IBeaconNodeOptions {
   metrics: IMetricsOptions;
 }
 
-const config: IBeaconNodeOptions = {
+export const defaultOptions: IBeaconNodeOptions = {
   chain: defaultChainOptions,
   db: defaultDbOptions,
   api: defaultApiOptions,
@@ -32,5 +32,3 @@ const config: IBeaconNodeOptions = {
   logger: defaultLoggerOptions,
   metrics: defaultMetricsOptions,
 };
-
-export default config;
