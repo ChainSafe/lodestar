@@ -32,7 +32,7 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --file ./test/setup.ts --timeout 30000 'test/e2e/**/*.test.ts'",
+    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --timeout 30000 'test/e2e/**/*.test.ts'",
     "test": "yarn test:unit && yarn test:e2e",
     "coverage": "codecov -F lodestar",
     "benchmark": "ts-node test/benchmarks"
@@ -77,7 +77,6 @@
     "yargs": "^16.1.0"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "^1.4.3",
     "@types/expand-tilde": "^2.0.0",
     "@types/got": "^9.6.11",
     "@types/inquirer": "^7.3.0",
