@@ -7,7 +7,7 @@ import PeerId from "peer-id";
 import {promisify} from "es6-promisify";
 import LibP2p from "libp2p";
 import {NodejsNode} from ".";
-import {INetworkOptions} from "../options";
+import {defaultDiscv5Options, INetworkOptions} from "../options";
 import defaults from "../defaults";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
 import {ENR} from "@chainsafe/discv5";
@@ -60,7 +60,7 @@ export async function createNodeJsLibp2p(
     autoDial,
     datastore: peerStoreDir ? new LevelDatastore(peerStoreDir) : undefined,
     bootMultiaddrs: bootMultiaddrs,
-    discv5: network.discv5!,
+    discv5: network.discv5 || defaultDiscv5Options,
     maxConnections: network.maxPeers,
   });
 }
