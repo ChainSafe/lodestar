@@ -5,6 +5,8 @@
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-12.x-green)
 
+> This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
+
 Command line tool for Lodestar
 
 ## Getting started
@@ -19,3 +21,7 @@ We have an experimental new CLI called `lodestar` which currently provides a sub
 
 `./bin/lodestar beacon init` - this will write a configuration and network identity to disk, by default `./.lodestar`
 `./bin/lodestar beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodestar`
+
+## License
+
+LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)

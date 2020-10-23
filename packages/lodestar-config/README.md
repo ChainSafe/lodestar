@@ -6,6 +6,8 @@
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-12.x-green)
 
+> This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
+
 Configuration variables for an Eth2 network -- consists of params and ssz types (from [lodestar-params](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-params) and [lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-types) respectively).
 
 ## Usage
@@ -26,4 +28,4 @@ const BeaconStateType = mainnetConfig.types.BeaconState;
 
 ## License
 
-Apache-2.0
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)
