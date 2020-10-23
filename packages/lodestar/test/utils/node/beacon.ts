@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import {createEnr} from "@chainsafe/lodestar-cli/src/network";
+import {createEnr} from "@chainsafe/lodestar-cli/src/config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";

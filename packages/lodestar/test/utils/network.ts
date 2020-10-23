@@ -5,7 +5,7 @@ import PeerId from "peer-id";
 
 import {NodejsNode} from "../../src/network/nodejs";
 import {createPeerId} from "../../src/network";
-import defaults from "../../src/network/options";
+import {defaultDiscv5Options} from "../../src/network/options";
 
 export async function createNode(
   multiaddr: string,
@@ -20,7 +20,7 @@ export async function createNode(
     peerId,
     addresses: {listen: [multiaddr]},
     autoDial: false,
-    discv5: {...defaults.discv5, enr, bindAddr},
+    discv5: {...defaultDiscv5Options, enr, bindAddr},
     peerDiscovery,
   });
 }

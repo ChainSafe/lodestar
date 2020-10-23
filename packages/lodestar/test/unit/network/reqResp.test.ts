@@ -26,6 +26,7 @@ describe("[network] rpc", () => {
 
   const networkOptions: INetworkOptions = {
     maxPeers: 10,
+    minPeers: 10,
     localMultiaddrs: [],
     bootMultiaddrs: [],
     rpcTimeout: 5000,
