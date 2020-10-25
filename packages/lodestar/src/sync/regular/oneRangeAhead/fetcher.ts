@@ -53,14 +53,16 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
         slotRange = {start: this.rangeStart, end: this.rangeEnd};
         // result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
         // Work around of https://github.com/ChainSafe/lodestar/issues/1690
+        let timer: NodeJS.Timeout | null = null;
         result = (await Promise.race([
           getBlockRange(this.logger, this.network.reqResp, peers, slotRange),
           new Promise((_, reject) => {
-            setTimeout(() => {
+            timer = setTimeout(() => {
               reject(new Error("beacon_blocks_by_range timeout"));
-            }, 2 * 60 * 1000); // 2 minutes
+            }, 3 * 60 * 1000); // 3 minutes
           }),
         ])) as SignedBeaconBlock[] | null;
+        if (timer) clearTimeout(timer);
       } catch (e) {
         this.logger.debug("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
         // sync is stopped for whatever reasons
