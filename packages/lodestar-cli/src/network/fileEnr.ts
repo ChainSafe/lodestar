@@ -6,8 +6,8 @@ import PeerId from "peer-id";
  * `FileENR` is an `ENR` that saves the ENR contents to a file on every modification
  */
 export class FileENR extends ENR {
-  private filename!: string;
-  private localPeerId!: PeerId;
+  private filename: string;
+  private localPeerId: PeerId;
 
   constructor(
     filename: string,
@@ -27,7 +27,7 @@ export class FileENR extends ENR {
     const enr = FileENR.decodeTxt(readFileSync(filename, "utf8")) as FileENR;
     return this.initFromENR(filename, peerId, enr);
   }
-  static initFromENR(filename: string, peerId: PeerId, enr: FileENR): FileENR {
+  static initFromENR(filename: string, peerId: PeerId, enr: ENR): FileENR {
     const kvs = Array.from(enr.entries()).reduce((obj: Record<ENRKey, ENRValue>, kv) => {
       obj[kv[0]] = kv[1];
       return obj;
