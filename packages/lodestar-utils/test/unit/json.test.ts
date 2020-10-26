@@ -57,7 +57,10 @@ describe("Json helper", () => {
         return {
           id: "Normal error",
           arg: error,
-          json: error.message,
+          json: {
+            message: error.message,
+            stack: error.stack,
+          },
         };
       },
       () => {

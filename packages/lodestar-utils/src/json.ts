@@ -2,29 +2,26 @@ import {Json, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "./errors";
 
 export function toJson(arg: unknown): Json {
-  try {
-    switch (typeof arg) {
-      case "bigint":
-      case "symbol":
-      case "function":
-        return arg.toString();
-      case "object":
-        if (arg === null) return "null";
-        if (arg instanceof Uint8Array) return toHexString(arg);
-        if (arg instanceof LodestarError) return toJson(arg.toObject());
-        if (arg instanceof Error) return toJson(errorToObject(arg));
-        return arg as Json;
+  switch (typeof arg) {
+    case "bigint":
+    case "symbol":
+    case "function":
+      return arg.toString();
 
-      // Already valid JSON
-      case "number":
-      case "string":
-      case "undefined":
-      case "boolean":
-      default:
-        return arg as Json;
-    }
-  } catch (e) {
-    return "error converting object to json";
+    case "object":
+      if (arg === null) return "null";
+      if (arg instanceof Uint8Array) return toHexString(arg);
+      if (arg instanceof LodestarError) return toJson(arg.toObject());
+      if (arg instanceof Error) return toJson(errorToObject(arg));
+      return arg as Json;
+
+    // Already valid JSON
+    case "number":
+    case "string":
+    case "undefined":
+    case "boolean":
+    default:
+      return arg as Json;
   }
 }
 
