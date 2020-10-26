@@ -8938,10 +8938,10 @@ libp2p-utils@^0.2.0:
     ip-address "^6.1.0"
     multiaddr "^8.0.0"
 
-libp2p@^0.29.1:
-  version "0.29.1"
-  resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.29.1.tgz#d2fb64f4fecf647c8b7a4bc6ae8e3b29e32d0528"
-  integrity sha512-H14vxFDZXK5gFOqTRqwefwOkdWNg94us4qNezt36+oYDecYf/kwx+Ccb/vmaJ2lRxfwQtS9v2RCHzgFyUOaIUQ==
+libp2p@^0.29.2:
+  version "0.29.2"
+  resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.29.2.tgz#d7604688e2627582b10338a6ac6989572fd6d74d"
+  integrity sha512-figd1NEBHNMpRCztxH4ZJl4flu+lMiFPMbNTkkoDES6FSZ0+wI7C72z579jh63eN124rsxpFRZaPYmpbKXi9CQ==
   dependencies:
     abort-controller "^3.0.0"
     aggregate-error "^3.0.1"
