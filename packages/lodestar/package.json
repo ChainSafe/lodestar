@@ -38,6 +38,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --timeout 5000 'test/e2e/**/*.test.ts'",
+    "test:e2e:long": "TS_NODE_PROJECT=tsconfig.test.json mocha --timeout 5000 'test/e2e/**/*.long.test.ts'",
     "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
   },
   "dependencies": {
