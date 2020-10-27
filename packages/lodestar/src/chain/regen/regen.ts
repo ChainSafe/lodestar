@@ -141,6 +141,12 @@ export class StateRegenerator implements IStateRegenerator {
         code: RegenErrorCode.ERR_NO_SEED_STATE,
       });
     }
+    if (blocksToReplay.length > 5 * this.config.params.SLOTS_PER_EPOCH) {
+      throw new RegenError({
+        code: RegenErrorCode.ERR_TOO_MANY_BLOCK_PROCESSED,
+        stateRoot,
+      });
+    }
     for (const b of blocksToReplay.reverse()) {
       const block = await this.db.block.get(b.blockRoot);
       if (!block) {
