@@ -121,22 +121,4 @@ describe("cmds / account", function () {
     // Write order is not guarranteed, sort before comparing
     expect(validatorPubKeys.sort()).to.deep.equal(createdPubkeys.sort(), "Wrong validator pubkeys");
   });
-
-  // it("should make a deposit to validator registration contract", async function () {
-  //   expect(fs.existsSync(`${rootDir}/keystores`)).to.be.true;
-  //   const validatorId = fs.readdirSync(`${rootDir}/keystores`)[0];
-  //   expect(validatorId).to.not.be.undefined;
-  //   const lodestar = yargs()
-  //     .default({
-  //       ...accountDefaults,
-  //       rpcUrl: "http://127.0.0.1:8545",
-  //       validator: validatorId,
-  //     })
-  //     .help();
-  //   registerCommandToYargs(lodestar, account);
-  //   expect(fs.existsSync(`${rootDir}/keystores/${validatorId}/.lock`)).to.be.false;
-  //   await new Promise((resolve) => lodestar.parse(["account", "validator", "deposit"], resolve));
-  //   await new Promise((resolve) => setTimeout(resolve, 2000));
-  //   expect(fs.existsSync(`${rootDir}/keystores/${validatorId}/eth1-deposit-tx-hash.txt`)).to.be.true;
-  // });
 });
