@@ -115,7 +115,7 @@ describe("[sync] rpc", function () {
   });
 
   afterEach(async () => {
-    await chain.stop();
+    await chain.close();
     await Promise.all([rpcA.stop(), rpcB.stop()]);
     //allow goodbye to propagate
     await sleep(200);

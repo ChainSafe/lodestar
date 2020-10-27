@@ -124,4 +124,13 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceFinalized]: (checkpoint: Checkpoint) => void;
 }
 
+/**
+ * Emits important chain events that occur during normal chain operation.
+ *
+ * Chain events can be broken into several categories:
+ * - Clock: the chain's clock is updated
+ * - Fork Choice: the chain's fork choice is updated
+ * - Processing: the chain processes attestations and blocks, either successfully or with an error
+ * - Checkpointing: the chain processes epoch boundaries
+ */
 export class ChainEventEmitter extends (EventEmitter as {new (): StrictEventEmitter<EventEmitter, IChainEvents>}) {}

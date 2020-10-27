@@ -1,10 +1,13 @@
-import * as fs from "fs";
+import {AbortController} from "abort-controller";
+
 import {initBLS} from "@chainsafe/bls";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
-import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
-import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
-import {consoleTransport} from "@chainsafe/lodestar-utils";
+import {consoleTransport, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
+import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {BeaconDb} from "@chainsafe/lodestar/lib/db";
+
 import {IGlobalArgs} from "../../options";
 import {readPeerId, readEnr, writeEnr} from "../../network";
 import {mergeConfigOptions} from "../../config/beacon";
@@ -14,6 +17,7 @@ import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {updateENR} from "../../util/enr";
 import {onGracefulShutdown} from "../../util/process";
+import {initBeaconState} from "./initBeaconState";
 
 /**
  * Run a beacon node
@@ -38,29 +42,33 @@ export async function beaconHandler(options: IBeaconArgs & IGlobalArgs): Promise
   // TODO: Rename db.name to db.path or db.location
   options.db.name = beaconPaths.dbDir;
 
-  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
-  const libp2p = await createNodeJsLibp2p(peerId, options.network, options.peerStoreDir);
+  const abortController = new AbortController();
   const loggerTransports = [consoleTransport];
   if (options.logFile && beaconPaths.logFile) {
     loggerTransports.push(fileTransport(beaconPaths.logFile));
   }
   const logger = new WinstonLogger({}, loggerTransports);
-
-  const node = new BeaconNode(options, {config, libp2p, logger});
-
   onGracefulShutdown(async () => {
-    await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
+    abortController.abort();
+    await writeEnr(beaconPaths.enrFile, enr, peerId);
   }, logger.info.bind(logger));
 
-  if (options.weakSubjectivityStateFile) {
-    const weakSubjectivityState = config.types.BeaconState.tree.deserialize(
-      await fs.promises.readFile(options.weakSubjectivityStateFile)
-    );
-    await node.chain.initializeWeakSubjectivityState(weakSubjectivityState);
-  } else if (options.genesisStateFile && !options.forceGenesis) {
-    await node.chain.initializeBeaconChain(
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(options.genesisStateFile))
-    );
-  }
-  await node.start();
+  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+  const db = new BeaconDb({
+    config,
+    controller: new LevelDbController(options.db, {logger: logger.child(options.logger.db)}),
+  });
+  abortController.signal.addEventListener("abort", () => db.stop(), {once: true});
+  await db.start();
+
+  const anchorState = await initBeaconState(options, config, db, logger, abortController.signal);
+  const node = await BeaconNode.init({
+    opts: options,
+    config,
+    db,
+    logger,
+    libp2p: await createNodeJsLibp2p(peerId, options.network, options.peerStoreDir),
+    anchorState,
+  });
+  abortController.signal.addEventListener("abort", () => node.close(), {once: true});
 }

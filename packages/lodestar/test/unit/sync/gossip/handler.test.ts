@@ -104,6 +104,6 @@ describe("gossip handler", function () {
     await sleep(1);
     expect(gossipStub.unsubscribe.callCount).to.be.equal(5);
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(2);
-    await chain.stop();
+    await chain.close();
   });
 });

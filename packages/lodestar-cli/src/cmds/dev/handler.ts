@@ -1,23 +1,26 @@
 import fs, {mkdirSync} from "fs";
 import {promisify} from "util";
+import rimraf from "rimraf";
+import {join} from "path";
 import {initBLS} from "@chainsafe/bls";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {createEnr, createPeerId} from "../../network";
-import {IGlobalArgs} from "../../options";
-import rimraf from "rimraf";
-import {join} from "path";
-import {IDevArgs} from "./options";
 import {getInteropValidator} from "../validator/utils/interop/validator";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
-import {initDevChain, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
+import {initDevState, storeSSZState} from "@chainsafe/lodestar/lib/node/utils/state";
+import {BeaconDb} from "@chainsafe/lodestar/lib/db";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import {initStateFromAnchorState} from "@chainsafe/lodestar/lib/chain";
 import {getValidatorApiClient} from "./utils/validator";
 import {mergeConfigOptions} from "../../config/beacon";
 import {getBeaconConfig} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {onGracefulShutdown} from "../../util/process";
+import {createEnr, createPeerId} from "../../network";
+import {IGlobalArgs} from "../../options";
+import {IDevArgs} from "./options";
 
 /**
  * Run a beacon node
@@ -43,29 +46,41 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
   options.db.name = join(chainDir, "db-" + peerId.toB58String());
   options.eth1.enabled = false;
 
-  const node = new BeaconNode(options, {
-    config,
-    libp2p,
-    logger,
-  });
+  const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
+  await db.start();
 
+  let anchorState;
   if (options.genesisValidators) {
-    const state = await initDevChain(node, options.genesisValidators);
-    storeSSZState(node.config, state, join(options.rootDir, "dev", "genesis.ssz"));
+    anchorState = await initDevState(config, db, options.genesisValidators);
+    storeSSZState(config, anchorState, join(options.rootDir, "dev", "genesis.ssz"));
   } else if (options.genesisStateFile) {
-    await node.chain.initializeBeaconChain(
+    anchorState = await initStateFromAnchorState(
+      config,
+      db,
+      logger,
       config.types.BeaconState.tree.deserialize(
         await fs.promises.readFile(join(options.rootDir, options.genesisStateFile))
       )
     );
+  } else {
+    throw new Error("Unable to start node: no available genesis state");
   }
 
   let validators: Validator[] = [];
 
+  const node = await BeaconNode.init({
+    opts: options,
+    config,
+    db,
+    logger,
+    libp2p,
+    anchorState,
+  });
+
   onGracefulShutdown(async () => {
     await Promise.all([
       Promise.all(validators.map((v) => v.stop())),
-      node.stop(),
+      node.close(),
       async () => {
         if (options.reset) {
           logger.info("Cleaning db directories");
@@ -75,8 +90,6 @@ export async function devHandler(options: IDevArgs & IGlobalArgs): Promise<void>
       },
     ]);
   }, logger.info.bind(logger));
-
-  await node.start();
 
   if (options.startValidators) {
     const range = options.startValidators.split(":").map((s) => parseInt(s));

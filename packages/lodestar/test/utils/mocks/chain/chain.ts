@@ -25,6 +25,7 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
+import {AttestationPool} from "../../../../src/chain/attestation";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -42,6 +43,7 @@ export class MockBeaconChain implements IBeaconChain {
   public regen: IStateRegenerator;
   public emitter: ChainEventEmitter;
   public pendingBlocks: BlockPool;
+  public pendingAttestations: AttestationPool;
 
   private state: TreeBacked<BeaconState> | null;
   private config: IBeaconConfig;
@@ -61,6 +63,9 @@ export class MockBeaconChain implements IBeaconChain {
       signal: this.abortController.signal,
     });
     this.pendingBlocks = new BlockPool({
+      config: this.config,
+    });
+    this.pendingAttestations = new AttestationPool({
       config: this.config,
     });
     this.regen = new StateRegenerator({
@@ -125,14 +130,6 @@ export class MockBeaconChain implements IBeaconChain {
     return computeForkDigest(this.config, this.state!.fork.currentVersion, this.state!.genesisValidatorsRoot);
   }
 
-  public async initializeBeaconChain(): Promise<void> {
-    return undefined;
-  }
-
-  public async initializeWeakSubjectivityState(
-    weakSubjectivityState: TreeBacked<BeaconState>
-  ): Promise<void> {}
-
   public async getENRForkID(): Promise<ENRForkID> {
     return {
       forkDigest: Buffer.alloc(4),
@@ -153,11 +150,7 @@ export class MockBeaconChain implements IBeaconChain {
     return;
   }
 
-  async start(): Promise<void> {
-    return;
-  }
-
-  async stop(): Promise<void> {
+  async close(): Promise<void> {
     this.abortController.abort();
     return;
   }

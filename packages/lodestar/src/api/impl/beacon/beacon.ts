@@ -66,7 +66,7 @@ export class BeaconApi implements IBeaconApi {
 
   public async getFork(): Promise<ForkResponse> {
     const state = await this.chain.getHeadState();
-    const networkId: Uint64 = this.chain.networkId;
+    const networkId: Uint64 = BigInt(0);
     const fork = state
       ? state.fork
       : {

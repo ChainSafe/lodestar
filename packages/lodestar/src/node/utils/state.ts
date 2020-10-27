@@ -4,28 +4,23 @@ import {interopDeposits} from "./interop/deposits";
 import {getInteropState} from "./interop/state";
 import {mkdirSync, writeFileSync} from "fs";
 import {dirname} from "path";
-import {BeaconNode} from "../nodejs";
 import {IBeaconDb} from "../../db/api";
 import {TreeBacked} from "@chainsafe/ssz";
 
-export async function initDevChain(
-  node: BeaconNode,
+export async function initDevState(
+  config: IBeaconConfig,
+  db: IBeaconDb,
   validatorCount: number,
   genesisTime?: number
 ): Promise<TreeBacked<BeaconState>> {
-  const deposits = interopDeposits(
-    node.config,
-    node.config.types.DepositDataRootList.tree.defaultValue(),
-    validatorCount
-  );
-  await storeDeposits(node.config, node.db, deposits);
+  const deposits = interopDeposits(config, config.types.DepositDataRootList.tree.defaultValue(), validatorCount);
+  await storeDeposits(config, db, deposits);
   const state = getInteropState(
-    node.config,
-    await node.db.depositDataRoot.getTreeBacked(validatorCount - 1),
+    config,
+    await db.depositDataRoot.getTreeBacked(validatorCount - 1),
     genesisTime || Math.floor(Date.now() / 1000),
     deposits
   );
-  await node.chain.initializeBeaconChain(state);
   return state;
 }
 

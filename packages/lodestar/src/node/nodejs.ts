@@ -2,26 +2,25 @@
  * @module node
  */
 
-import deepmerge from "deepmerge";
+import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {initBLS} from "@chainsafe/bls";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {isPlainObject} from "@chainsafe/lodestar-utils";
-import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {BeaconDb} from "../db";
-import defaultConf, {IBeaconNodeOptions} from "./options";
-import {Eth1Provider, Eth1ForBlockProductionDisabled} from "../eth1";
+import {TreeBacked} from "@chainsafe/ssz";
+import {initBLS} from "@chainsafe/bls";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState} from "@chainsafe/lodestar-types";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
+import {BeaconDb, IBeaconDb} from "../db";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain} from "../chain";
-import {Eth1ForBlockProduction} from "../eth1";
-import {BeaconMetrics, HttpMetricsServer} from "../metrics";
+import {BeaconChain, IBeaconChain, initBeaconMetrics, restoreStateCaches} from "../chain";
+import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
-import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
-import {AbortController} from "abort-controller";
+import {IBeaconNodeOptions} from "./options";
+import {GossipMessageValidator} from "../network/gossip/validator";
+import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 
 export interface IService {
   start(): Promise<void>;
@@ -29,144 +28,208 @@ export interface IService {
   stop(): Promise<void>;
 }
 
-interface IBeaconNodeModules {
+export interface IBeaconNodeModules {
+  opts: IBeaconNodeOptions;
   config: IBeaconConfig;
-  logger: ILogger;
-  libp2p: LibP2p;
+  db: IBeaconDb;
+  metrics: IBeaconMetrics;
+  network: INetwork;
+  chain: IBeaconChain;
+  api: IApi;
+  sync: IBeaconSync;
+  chores: TasksService;
+  metricsServer?: HttpMetricsServer;
+  restApi?: RestApi;
+  controller?: AbortController;
 }
 
-// TODO move into src/node/beacon
+export interface IBeaconNodeInitModules {
+  opts: IBeaconNodeOptions;
+  config: IBeaconConfig;
+  db: IBeaconDb;
+  logger: ILogger;
+  libp2p: LibP2p;
+  anchorState: TreeBacked<BeaconState>;
+}
+
+export enum BeaconNodeStatus {
+  started = "started",
+  closing = "closing",
+  closed = "closed",
+}
+
 /**
- * Beacon Node configured for desktop (non-browser) use
+ * Beacon Node
  */
 export class BeaconNode {
-  public conf: IBeaconNodeOptions;
+  public opts: IBeaconNodeOptions;
   public config: IBeaconConfig;
-  public db: BeaconDb;
-  public metrics: BeaconMetrics;
-  public metricsServer: HttpMetricsServer;
+  public db: IBeaconDb;
+  public metrics: IBeaconMetrics;
+  public metricsServer?: HttpMetricsServer;
   public network: INetwork;
   public chain: IBeaconChain;
-  public api?: IApi;
+  public api: IApi;
   public restApi?: RestApi;
   public sync: IBeaconSync;
   public chores: TasksService;
 
-  private logger: ILogger;
-  private controller: AbortController;
+  public status: BeaconNodeStatus;
+  private controller?: AbortController;
 
-  public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, libp2p}: IBeaconNodeModules) {
-    this.controller = new AbortController();
-
-    this.conf = deepmerge(defaultConf, opts, {
-      //clone doesn't work very vell on classes like ethers.Provider
-      isMergeableObject: isPlainObject,
-    });
+  public constructor({
+    opts,
+    config,
+    db,
+    metrics,
+    metricsServer,
+    network,
+    chain,
+    api,
+    restApi,
+    sync,
+    chores,
+    controller,
+  }: IBeaconNodeModules) {
+    this.opts = opts;
     this.config = config;
-    this.logger = logger.child(this.conf.logger.node);
-    this.metrics = new BeaconMetrics(this.conf.metrics, {
-      logger: this.logger.child(this.conf.logger.metrics),
-    });
-    this.metricsServer = new HttpMetricsServer(this.conf.metrics, {
-      metrics: this.metrics,
-      logger: this.logger.child(this.conf.logger.metrics),
-    });
-    this.db = new BeaconDb({
+    this.metrics = metrics;
+    this.metricsServer = metricsServer;
+    this.db = db;
+    this.chain = chain;
+    this.api = api;
+    this.restApi = restApi;
+    this.network = network;
+    this.sync = sync;
+    this.chores = chores;
+    this.controller = controller;
+
+    this.status = BeaconNodeStatus.started;
+  }
+
+  public static async init<T extends BeaconNode = BeaconNode>({
+    opts,
+    config,
+    db,
+    logger,
+    libp2p,
+    anchorState,
+  }: IBeaconNodeInitModules): Promise<T> {
+    const controller = new AbortController();
+    await initBLS();
+    // start db if not already started
+    await (db as BeaconDb).start();
+    await restoreStateCaches(config, db, anchorState);
+
+    const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
+    initBeaconMetrics(metrics, anchorState);
+
+    const chain = new BeaconChain({
+      opts: opts.chain,
       config,
-      controller: new LevelDbController(this.conf.db, {
-        logger: this.logger.child(this.conf.logger.db),
-      }),
-    });
-    this.chain = new BeaconChain(this.conf.chain, {
-      config,
-      db: this.db,
-      eth1Provider: new Eth1Provider(config, this.conf.eth1),
-      logger: logger.child(this.conf.logger.chain),
-      metrics: this.metrics,
+      db,
+      logger: logger.child(opts.logger.chain),
+      metrics,
+      anchorState,
     });
 
     const gossipMessageValidator = new GossipMessageValidator({
-      chain: this.chain,
-      db: this.db,
+      chain,
+      db,
       config,
-      logger: this.logger.child(this.conf.logger.network),
+      logger: logger.child(opts.logger.network),
     });
-    this.network = new Libp2pNetwork(this.conf.network, {
+    const network = new Libp2pNetwork(opts.network, {
       config,
       libp2p,
-      logger: this.logger.child(this.conf.logger.network),
-      metrics: this.metrics,
+      logger: logger.child(opts.logger.network),
+      metrics,
       validator: gossipMessageValidator,
-      chain: this.chain,
+      chain,
     });
-    this.sync = new BeaconSync(this.conf.sync, {
+    const sync = new BeaconSync(opts.sync, {
       config,
-      db: this.db,
-      chain: this.chain,
-      network: this.network,
-      logger: this.logger.child(this.conf.logger.sync),
+      db,
+      chain,
+      network,
+      logger: logger.child(opts.logger.sync),
     });
-    this.chores = new TasksService(this.config, {
-      db: this.db,
-      chain: this.chain,
-      sync: this.sync,
-      network: this.network,
-      logger: this.logger.child(this.conf.logger.chores),
+    const chores = new TasksService(config, {
+      db,
+      chain,
+      sync,
+      network,
+      logger: logger.child(opts.logger.chores),
     });
-  }
 
-  public async start(): Promise<void> {
-    this.logger.info("Starting eth2 beacon node - LODESTAR!");
+    const api = new Api(opts.api, {
+      config,
+      logger: logger.child(opts.logger.api),
+      db,
+      eth1: opts.eth1.enabled
+        ? new Eth1ForBlockProduction({
+            config,
+            db,
+            eth1Provider: new Eth1Provider(config, opts.eth1),
+            logger: logger.child(opts.logger.eth1),
+            opts: opts.eth1,
+            signal: controller.signal,
+          })
+        : new Eth1ForBlockProductionDisabled(),
+      sync,
+      network,
+      chain,
+    });
+    const metricsServer = new HttpMetricsServer(opts.metrics, {
+      metrics: metrics,
+      logger: logger.child(opts.logger.metrics),
+    });
+    const restApi = await RestApi.init(opts.api.rest, {
+      config,
+      logger: logger.child(opts.logger.api),
+      api,
+    });
 
-    //if this wasm inits starts piling up, we can extract them to separate methods
-    await initBLS();
-    await this.metrics.start();
-    await this.metricsServer.start();
-    await this.db.start();
-    await this.chain.start();
-    await this.network.start();
+    await metrics.start();
+    await metricsServer.start();
+    await network.start();
+
     // TODO: refactor the sync module to respect the "start should resolve quickly" interface
     // Now if sync.start() is awaited it will stall the node start process
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.sync.start();
+    sync.start();
+    await chores.start();
 
-    this.api = new Api(this.conf.api, {
-      config: this.config,
-      logger: this.logger.child(this.conf.logger.api),
-      db: this.db,
-      eth1: this.conf.eth1.enabled
-        ? new Eth1ForBlockProduction({
-            config: this.config,
-            db: this.db,
-            eth1Provider: new Eth1Provider(this.config, this.conf.eth1),
-            logger: this.logger.child(this.conf.logger.eth1),
-            opts: this.conf.eth1,
-            signal: this.controller.signal,
-          })
-        : new Eth1ForBlockProductionDisabled(),
-      sync: this.sync,
-      network: this.network,
-      chain: this.chain,
-    });
-    this.restApi = await RestApi.init(this.conf.api.rest, {
-      config: this.config,
-      logger: this.logger.child(this.conf.logger.api),
-      api: this.api,
-    });
-    await this.chores.start();
+    return new this({
+      opts,
+      config,
+      db,
+      metrics,
+      metricsServer,
+      network,
+      chain,
+      api,
+      restApi,
+      sync,
+      chores,
+      controller,
+    }) as T;
   }
 
-  public async stop(): Promise<void> {
-    this.controller.abort();
-    await this.chores.stop();
-    if (this.restApi) await this.restApi.close();
-    await this.sync.stop();
-    await this.chain.stop();
-    await this.network.stop();
-    await this.db.stop();
-    await this.metricsServer.stop();
-    await this.metrics.stop();
+  public async close(): Promise<void> {
+    if (this.status === BeaconNodeStatus.started) {
+      this.status = BeaconNodeStatus.closing;
+      await this.chores.stop();
+      await (this.sync as BeaconSync).stop();
+      await this.network.stop();
+      if (this.metricsServer) await this.metricsServer.stop();
+      if (this.restApi) await this.restApi.close();
+
+      await (this.metrics as BeaconMetrics).stop();
+      await this.chain.close();
+      await (this.db as BeaconDb).stop();
+      if (this.controller) this.controller.abort();
+      this.status = BeaconNodeStatus.closed;
+    }
   }
 }
-
-export default BeaconNode;

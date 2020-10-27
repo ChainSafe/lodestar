@@ -53,7 +53,7 @@ describe("Network Gossip", function () {
 
   afterEach(async () => {
     await gossip.stop();
-    await chain.stop();
+    await chain.close();
     sandbox.restore();
   });
 
