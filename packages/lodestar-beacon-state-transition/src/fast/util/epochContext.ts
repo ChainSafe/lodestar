@@ -36,6 +36,9 @@ class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   }
 }
 
+/**
+ * Exchange Interface of EpochContext, this is what exported from lodestar-beacon-state-transition
+ **/
 export class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
@@ -49,7 +52,6 @@ export class EpochContext {
   public currentShuffling!: IEpochShuffling;
   public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
-  public epochProcess?: IEpochProcess;
 
   constructor(config: IBeaconConfig) {
     this.config = config;
@@ -91,7 +93,6 @@ export class EpochContext {
     ctx.previousShuffling = this.previousShuffling;
     ctx.currentShuffling = this.currentShuffling;
     ctx.nextShuffling = this.nextShuffling;
-    ctx.epochProcess = this.epochProcess;
     return ctx;
   }
 
@@ -235,5 +236,19 @@ export class EpochContext {
     } else {
       throw new Error(`crosslink committee retrieval: out of range epoch: ${epoch}`);
     }
+  }
+}
+
+/**
+ * Business object of lodestar-beacon-state-stransition module.
+ * This is internal/private at the module level.
+ */
+export class StateTransitionEpochContext extends EpochContext {
+  public epochProcess?: IEpochProcess;
+
+  public copy(): StateTransitionEpochContext {
+    const ctx = super.copy() as StateTransitionEpochContext;
+    ctx.epochProcess = this.epochProcess;
+    return ctx;
   }
 }

@@ -1,11 +1,17 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
+// lodestar state & epoch context business object
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
-  epochCtx: EpochContext;
+  epochCtx: ILodestarEpochContext;
 }
+
+// lodestar epoch context business object
+export type ILodestarEpochContext = EpochContext & {
+  epochBalances?: Gwei[];
+};
 
 /**
  * In memory cache of BeaconState and connected EpochContext

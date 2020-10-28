@@ -150,7 +150,7 @@ export class StateRegenerator implements IStateRegenerator {
         });
       }
       try {
-        stateCtx = await runStateTransition(this.emitter, this.forkChoice, stateCtx, {
+        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
           signedBlock: block,
           trusted: true,
           reprocess: true,

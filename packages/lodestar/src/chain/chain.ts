@@ -225,6 +225,7 @@ export class BeaconChain implements IBeaconChain {
       regen: this.regen,
       emitter: this.internalEmitter,
       signal: this.abortController!.signal,
+      db: this.db,
     });
     handleChainEvents.bind(this)(this.abortController.signal);
   }

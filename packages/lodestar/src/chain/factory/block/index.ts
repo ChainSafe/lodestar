@@ -10,7 +10,7 @@ import {assembleBody} from "./body";
 import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IEth1ForBlockProduction} from "../../../eth1";
 
 export async function assembleBlock(

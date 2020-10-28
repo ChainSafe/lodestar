@@ -1,11 +1,13 @@
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {Slot} from "@chainsafe/lodestar-types";
+import {byteArrayEquals, TreeBacked} from "@chainsafe/ssz";
+import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   ZERO_HASH,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   fastStateTransition,
+  IStateContext,
+  toIStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -14,6 +16,7 @@ import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
+import {IBeaconDb} from "../../db";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -69,6 +72,7 @@ export async function processSlotsToNearestCheckpoint(
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
     processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
+    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
     emitCheckpointEvent(emitter, postCtx);
     postCtx = cloneStateCtx(postCtx);
     // this avoids keeping our node busy processing blocks
@@ -87,9 +91,10 @@ export async function processSlotsByCheckpoint(
   stateCtx: ITreeStateContext,
   slot: Slot
 ): Promise<ITreeStateContext> {
-  const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
+  let postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
   if (postCtx.state.slot < slot) {
     processSlots(postCtx.epochCtx, postCtx.state, slot);
+    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
   }
   return postCtx;
 }
@@ -123,6 +128,7 @@ export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockJob, postC
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
+  db: IBeaconDb,
   stateContext: ITreeStateContext,
   job: IBlockJob
 ): Promise<ITreeStateContext> {
@@ -131,13 +137,20 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
   const checkpointStateContext = await processSlotsToNearestCheckpoint(emitter, stateContext, postSlot - 1);
   // if block is trusted don't verify proposer or op signature
-  const postStateContext = fastStateTransition(checkpointStateContext, job.signedBlock, {
-    verifyStateRoot: true,
-    verifyProposer: !job.trusted,
-    verifySignatures: !job.trusted,
-  }) as ITreeStateContext;
+  const postStateContext = toTreeStateContext(
+    fastStateTransition(checkpointStateContext, job.signedBlock, {
+      verifyStateRoot: true,
+      verifyProposer: !job.trusted,
+      verifySignatures: !job.trusted,
+    })
+  );
+
   const oldHead = forkChoice.getHead();
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, postStateContext.epochCtx.epochProcess);
+  // current justified checkpoint should be prev epoch or current epoch if it's just updated
+  // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
+  const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
+    ?.epochCtx.epochBalances;
+  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, justifiedBalances);
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
   }
@@ -147,4 +160,22 @@ export async function runStateTransition(
   // this avoids keeping our node busy processing blocks
   await sleep(0);
   return postStateContext;
+}
+
+/**
+ * Pull necessary data from epochProcess of exchange interface IStateContext
+ * and transform to lodestar ITreeStateContext.
+ * Make sure no epochProcess stays in ITreeStateContext.
+ */
+function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
+  const treeStateCtx: ITreeStateContext = {
+    state: stateCtx.state as TreeBacked<BeaconState>,
+    epochCtx: stateCtx.epochCtx,
+  };
+  if (stateCtx.epochProcess) {
+    treeStateCtx.epochCtx.epochBalances = stateCtx.epochProcess.statuses.map((s) =>
+      s.active ? s.validator.effectiveBalance : BigInt(0)
+    );
+  }
+  return treeStateCtx;
 }
