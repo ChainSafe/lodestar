@@ -1,7 +1,7 @@
 import {initBLS} from "@chainsafe/bls";
 import {before, after} from "mocha";
 import rimraf from "rimraf";
-import {rootDir, passphraseFile} from "./e2e/constants";
+import {rootDir, passphraseFile} from "../constants";
 import bre from "@nomiclabs/buidler";
 
 before(async () => {
