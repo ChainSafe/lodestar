@@ -1,25 +1,35 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState, ValidatorIndex, Root, FinalityCheckpoints, ValidatorBalance} from "@chainsafe/lodestar-types";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {
+  BeaconCommitteeResponse,
+  BeaconState,
+  Epoch,
+  FinalityCheckpoints,
+  Root,
+  ValidatorBalance,
+  ValidatorIndex,
+} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
+import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
 import {IApiOptions} from "../../../options";
-import {IApiModules} from "../../interface";
-import {IBeaconStateApi, StateId, IValidatorFilters} from "./interface";
-import {resolveStateId} from "./utils";
-import {MissingState} from "./errors";
 import {ValidatorResponse} from "../../../types/validator";
-import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
-import {ValidatorIndex} from "@chainsafe/lodestar-types/src/ssz/generators/primitive";
+import {IApiModules} from "../../interface";
+import {MissingState} from "./errors";
+import {IBeaconStateApi, ICommittesFilters, IValidatorFilters, StateId} from "./interface";
+import {getEpochBeaconCommittees, resolveStateId} from "./utils";
 
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
   private readonly forkChoice: IForkChoice;
+  private readonly chain: IBeaconChain;
 
   public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "db" | "chain">) {
     this.config = modules.config;
     this.db = modules.db;
     this.forkChoice = modules.chain.forkChoice;
+    this.chain = modules.chain;
   }
 
   public async getStateRoot(stateId: StateId): Promise<Root | null> {
@@ -41,25 +51,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     };
   }
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    const state = await this.getState(stateId);
-    if (!state) {
-      throw new MissingState();
-    }
-    let validators = state.validators;
-    if (filters?.indices) {
-      validators = filters.indices.map((index) => {
-        if (typeof index === "number") {
-          return validators[index];
-        } else {
-          //index is pubkey
-          return validators.find(validator => {
-            return this.config.types.equals("")
-          })
-        }
-      });
-    }
-
-    return;
+    throw new Error("Method not implemented.");
   }
 
   public async getStateValidator(
@@ -76,13 +68,34 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
   public async getStateCommittes(
     stateId: StateId,
-    epoch: number,
+    epoch: Epoch,
     filters?: ICommittesFilters
-  ): Promise<ValidatorBalance[]> {
-    throw new Error("Method not implemented.");
+  ): Promise<BeaconCommitteeResponse[]> {
+    const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    if (!stateContext) {
+      throw new MissingState();
+    }
+    const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(this.config, this.chain, stateContext, epoch);
+    return committes.flatMap((slotCommittees, committeeIndex) => {
+      if (filters?.index && filters.index !== committeeIndex) {
+        return [];
+      }
+      return slotCommittees.flatMap((committee, slot) => {
+        if (filters?.slot && filters.slot !== slot) {
+          return [];
+        }
+        return [
+          {
+            index: committeeIndex,
+            slot,
+            validators: committee as List<ValidatorIndex>,
+          },
+        ];
+      });
+    });
   }
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
-    return resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
   }
 }

@@ -13,6 +13,7 @@ import {
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
+import {BeaconCommitteeResponse} from "../types/api";
 
 export interface IBeaconSSZTypes {
   // primitive
@@ -104,6 +105,7 @@ export interface IBeaconSSZTypes {
   ChainReorg: ContainerType<t.ChainReorg>;
   FinalityCheckpoints: ContainerType<t.FinalityCheckpoints>;
   ValidatorBalance: ContainerType<t.ValidatorBalance>;
+  BeaconCommitteeResponse: ContainerType<t.BeaconCommitteeResponse>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -189,4 +191,5 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BlockEventPayload",
   "FinalizedCheckpoint",
   "ChainReorg",
+  "BeaconCommitteeResponse",
 ];

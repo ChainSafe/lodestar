@@ -31,7 +31,7 @@ export const ValidatorResponse = (config: IBeaconConfig): ContainerType<Validato
     fields: {
       index: config.types.ValidatorIndex,
       pubkey: config.types.BLSPubkey,
-      status: new StringType(),
+      status: new StringType<ValidatorStatus>(),
       validator: config.types.Validator,
     },
   });

@@ -1,12 +1,12 @@
 import {BasicType} from "@chainsafe/ssz";
 
-export class StringType extends BasicType<string> {
-  public toJson(value: string): string {
+export class StringType<T extends string = string> extends BasicType<T> {
+  public toJson(value: T): string {
     return value;
   }
 
-  public fromJson(data: string): string {
-    return data;
+  public fromJson(data: string): T {
+    return data as T;
   }
 
   public serialize(): Uint8Array {

@@ -3,14 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BLSPubkey,
-  ForkResponse,
-  Genesis,
-  SignedBeaconBlock,
-  Uint64,
-  ValidatorResponse,
-} from "@chainsafe/lodestar-types";
+import {BLSPubkey, ForkResponse, Genesis, SignedBeaconBlock, Uint64} from "@chainsafe/lodestar-types";
 
 import {IBeaconChain} from "../../../chain";
 import {IApiOptions} from "../../options";
@@ -23,6 +16,7 @@ import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
 import {IBeaconApi} from "./interface";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
+import {ValidatorResponse, ValidatorStatus} from "../../types/validator";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;
@@ -52,7 +46,7 @@ export class BeaconApi implements IBeaconApi {
     if (index) {
       return {
         validator: state.validators[index],
-        balance: state.balances[index],
+        status: ValidatorStatus.ACTIVE,
         pubkey: pubkey,
         index,
       };

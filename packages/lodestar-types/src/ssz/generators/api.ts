@@ -1,6 +1,5 @@
-import {IBeaconSSZTypes} from "../interface";
 import {ContainerType} from "@chainsafe/ssz";
-import {Checkpoint} from "./misc";
+import {IBeaconSSZTypes} from "../interface";
 
 export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
@@ -111,5 +110,14 @@ export const FinalityCheckpoints = (ssz: IBeaconSSZTypes): ContainerType =>
       previousJustified: ssz.Checkpoint,
       currentJustified: ssz.Checkpoint,
       finalized: ssz.Checkpoint,
+    },
+  });
+
+export const BeaconCommitteeResponse = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      index: ssz.CommitteeIndex,
+      slot: ssz.Slot,
+      validators: ssz.CommitteeIndices,
     },
   });

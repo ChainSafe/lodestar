@@ -1,7 +1,8 @@
-import * as fastify from "fastify";
-import {LodestarRestApiEndpoint} from "../../interface";
-import {IncomingMessage, Server, ServerResponse} from "http";
 import {fromHexString} from "@chainsafe/ssz";
+import * as fastify from "fastify";
+import {IncomingMessage, Server, ServerResponse} from "http";
+import {ValidatorResponse} from "../../../types/validator";
+import {LodestarRestApiEndpoint} from "../../interface";
 
 export interface IQuery {
   pubkey: string;
@@ -30,6 +31,6 @@ export const registerGetValidatorEndpoint: LodestarRestApiEndpoint = (server, {a
     reply
       .code(200)
       .type("application/json")
-      .send(config.types.ValidatorResponse.toJson(validator, {case: "snake"}));
+      .send(ValidatorResponse(config).toJson(validator, {case: "snake"}));
   });
 };
