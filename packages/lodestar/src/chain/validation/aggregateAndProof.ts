@@ -1,14 +1,14 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IAttestationJob, IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db/api";
+import {IAttestationJob, IBeaconChain} from "..";
+import {IBeaconDb} from "../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
 import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../constants";
+import {AttestationError, AttestationErrorCode} from "../errors";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
 export async function validateGossipAggregateAndProof(
   config: IBeaconConfig,

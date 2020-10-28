@@ -8,16 +8,16 @@ import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
-import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../../src/chain";
-import {LocalClock} from "../../../../../src/chain/clock";
-import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/regen";
-import {validateGossipAggregateAndProof} from "../../../../../src/network/gossip/validation";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../../src/constants";
-import * as validationUtils from "../../../../../src/network/gossip/validation/utils";
-import {generateSignedAggregateAndProof} from "../../../../utils/aggregateAndProof";
-import {generateState} from "../../../../utils/state";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {AttestationErrorCode} from "../../../../../src/chain/errors";
+import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
+import {LocalClock} from "../../../../src/chain/clock";
+import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
+import * as validationUtils from "../../../../src/chain/validation/utils";
+import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
+import {generateState} from "../../../utils/state";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {AttestationErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip aggregate and proof test", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;

@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, Epoch, SignedAggregateAndProof, Slot} from "@chainsafe/lodestar-types";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {computeEpochAtSlot, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {DomainType} from "../../../../constants";
+import {DomainType} from "../../../constants";
 
 export function isValidSelectionProofSignature(
   config: IBeaconConfig,
