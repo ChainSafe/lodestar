@@ -84,11 +84,8 @@ export function getCommonFinalizedCheckpoint(
 
 export function fetchBlockChunks(
   logger: ILogger,
-  chain: IBeaconChain,
   reqResp: IReqResp,
   getPeers: () => Promise<PeerId[]>,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  maxBlocksPerChunk?: number,
   signal?: AbortSignal
 ): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[] | null> {
   return (source) => {
