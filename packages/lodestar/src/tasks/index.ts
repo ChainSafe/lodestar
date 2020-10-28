@@ -91,12 +91,13 @@ export class TasksService implements IService {
   };
 
   private onCheckpoint = async (): Promise<void> => {
+    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
     await Promise.all([
       this.db.checkpointStateCache.prune(
         this.chain.forkChoice.getFinalizedCheckpoint().epoch,
         this.chain.forkChoice.getJustifiedCheckpoint().epoch
       ),
-      this.db.stateCache.prune(),
+      this.db.stateCache.prune(headStateRoot),
     ]);
   };
 }

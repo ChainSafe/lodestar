@@ -50,13 +50,15 @@ export class StateContextCache {
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
-  public prune(): void {
+  public prune(headStateRoot: ByteVector): void {
     const MAX_STATES = 96;
     const keys = Object.keys(this.cache);
     if (keys.length > MAX_STATES) {
       // object keys are stored in insertion order, delete keys starting from the front
       keys.slice(0, keys.length - MAX_STATES).forEach((key) => {
-        delete this.cache[key];
+        if (key !== toHexString(headStateRoot)) {
+          delete this.cache[key];
+        }
       });
     }
   }
