@@ -6,15 +6,15 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {BeaconChain} from "../../../../../src/chain";
-import {StateRegenerator} from "../../../../../src/chain/regen";
-import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
-import {generateValidators} from "../../../../utils/validator";
-import {generateInitialMaxBalances} from "../../../../utils/balances";
-import {generateState} from "../../../../utils/state";
-import {generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
-import {validateGossipVoluntaryExit} from "../../../../../src/network/gossip/validation/voluntaryExit";
-import {VoluntaryExitErrorCode} from "../../../../../src/chain/errors/voluntaryExitError";
+import {BeaconChain} from "../../../../src/chain";
+import {StateRegenerator} from "../../../../src/chain/regen";
+import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
+import {generateValidators} from "../../../utils/validator";
+import {generateInitialMaxBalances} from "../../../utils/balances";
+import {generateState} from "../../../utils/state";
+import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
+import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
+import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();

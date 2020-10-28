@@ -1,9 +1,9 @@
 import {isValidProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ProposerSlashing} from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../../chain";
-import {ProposerSlashingError, ProposerSlashingErrorCode} from "../../../chain/errors/proposerSlahingError";
-import {IBeaconDb} from "../../../db";
+import {IBeaconChain} from "..";
+import {ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/proposerSlahingError";
+import {IBeaconDb} from "../../db";
 
 export async function validateGossipProposerSlashing(
   config: IBeaconConfig,

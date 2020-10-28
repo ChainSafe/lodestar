@@ -5,14 +5,14 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
 
-import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../src/chain";
-import {LocalClock} from "../../../../../src/chain/clock";
-import {StateRegenerator} from "../../../../../src/chain/regen";
-import {validateGossipBlock} from "../../../../../src/network/gossip/validation";
-import {generateSignedBlock} from "../../../../utils/block";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {generateState} from "../../../../utils/state";
-import {BlockErrorCode} from "../../../../../src/chain/errors";
+import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
+import {LocalClock} from "../../../../src/chain/clock";
+import {StateRegenerator} from "../../../../src/chain/regen";
+import {validateGossipBlock} from "../../../../src/chain/validation";
+import {generateSignedBlock} from "../../../utils/block";
+import {StubbedBeaconDb} from "../../../utils/stub";
+import {generateState} from "../../../utils/state";
+import {BlockErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
