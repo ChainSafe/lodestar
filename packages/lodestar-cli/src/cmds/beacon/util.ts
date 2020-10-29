@@ -13,15 +13,15 @@ export async function initializeBeaconNodeState(node: BeaconNode, args: IBeaconA
   }
 
   if (args.weakSubjectivityStateFile) {
-    const weakSubjectivityState = await downloadOfLoadState(node.config, args.weakSubjectivityStateFile);
+    const weakSubjectivityState = await downloadOrLoadState(node.config, args.weakSubjectivityStateFile);
     await node.chain.initializeWeakSubjectivityState(weakSubjectivityState);
   } else if (args.genesisStateFile && !args.forceGenesis) {
-    const genesisState = await downloadOfLoadState(node.config, args.genesisStateFile);
+    const genesisState = await downloadOrLoadState(node.config, args.genesisStateFile);
     await node.chain.initializeBeaconChain(genesisState);
   }
 }
 
-async function downloadOfLoadState(config: IBeaconConfig, pathOrUrl: string): Promise<TreeBacked<BeaconState>> {
+async function downloadOrLoadState(config: IBeaconConfig, pathOrUrl: string): Promise<TreeBacked<BeaconState>> {
   const stateBuffer = await downloadOrLoadFile(pathOrUrl);
   return config.types.BeaconState.tree.deserialize(stateBuffer);
 }
