@@ -37,7 +37,7 @@ class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
 }
 
 /**
- * Exchange Interface of EpochContext, this is what exported from lodestar-beacon-state-transition
+ * The standard / Exchange Interface of EpochContext, this is what's exported from lodestar-beacon-state-transition
  **/
 export class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
@@ -245,7 +245,7 @@ export class EpochContext {
 }
 
 /**
- * Business object of lodestar-beacon-state-stransition module.
+ * State Transition specific version of EpochContext.
  * This is internal/private at the module level.
  */
 export class StateTransitionEpochContext extends EpochContext {

@@ -2,13 +2,13 @@ import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
-// lodestar state & epoch context business object
+// Lodestar specifc state context
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
   epochCtx: LodestarEpochContext;
 }
 
-// lodestar epoch context business object
+// Lodestar specific epoch context
 export class LodestarEpochContext extends EpochContext {
   public epochBalances?: Gwei[];
 

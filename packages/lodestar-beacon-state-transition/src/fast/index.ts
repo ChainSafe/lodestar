@@ -41,7 +41,7 @@ export function fastStateTransition(
 }
 
 /**
- * Trim epochProcess in epochCtx, and insert epochProcess to the final exchange interface IStateContext
+ * Trim epochProcess in epochCtx, and insert the standard/exchange interface epochProcess to the final IStateContext
  */
 export function toIStateContext(epochCtx: StateTransitionEpochContext, state: BeaconState): IStateContext {
   const epochProcess = epochCtx.epochProcess;
