@@ -20,7 +20,7 @@ export interface IBeaconPaths {
  * └── $beaconDir
  *     ├── beacon.config.json
  *     ├── peer-id.json
- *     ├── enr.json
+ *     ├── enr
  *     └── chain-db
  * ```
  */
@@ -37,7 +37,7 @@ export function getBeaconPaths(
   const peerStoreDir = joinIfRelative(beaconDir, args.dbDir || "peerstore");
   const configFile = joinIfRelative(beaconDir, args.configFile || "beacon.config.json");
   const peerIdFile = joinIfRelative(beaconDir, args.peerIdFile || "peer-id.json");
-  const enrFile = joinIfRelative(beaconDir, args.enrFile || "enr.json");
+  const enrFile = joinIfRelative(beaconDir, args.enrFile || "enr");
   const logFile = args.logFile && joinIfRelative(beaconDir, args.logFile);
 
   return {

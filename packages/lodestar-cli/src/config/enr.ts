@@ -3,6 +3,7 @@ import Multiaddr from "multiaddr";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ENR, createKeypairFromPeerId} from "@chainsafe/discv5";
 import {writeFile, readFile} from "../util";
+import {FileENR} from "./fileEnr";
 
 export interface IENRJson {
   ip?: string;
@@ -28,7 +29,7 @@ export function readEnr(filepath: string): ENR {
 }
 
 export function initEnr(filepath: string, peerId: PeerId): void {
-  writeEnr(filepath, createEnr(peerId), peerId);
+  FileENR.initFromENR(filepath, peerId, createEnr(peerId) as FileENR).saveToFile();
 }
 
 export function overwriteEnrWithCliArgs(enr: ENR, enrArgs: IENRJson, options: IBeaconNodeOptions): void {

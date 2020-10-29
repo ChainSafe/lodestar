@@ -3,7 +3,7 @@ import {BeaconNode} from "@chainsafe/lodestar";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {consoleTransport} from "@chainsafe/lodestar-utils";
-import {overwriteEnrWithCliArgs, readPeerId, readEnr, writeEnr} from "../../config";
+import {overwriteEnrWithCliArgs, readPeerId, FileENR} from "../../config";
 import {onGracefulShutdown} from "../../util/process";
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
@@ -27,7 +27,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const options = beaconNodeOptions.getWithDefaults();
 
   // ENR setup
-  const enr = readEnr(beaconPaths.enrFile);
+  const peerId = await readPeerId(beaconPaths.peerIdFile);
+  const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
   const enrArgs = parseEnrArgs(args);
   overwriteEnrWithCliArgs(enr, enrArgs, options);
   const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
@@ -40,12 +41,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   ]);
 
   // BeaconNode setup
-  const peerId = await readPeerId(beaconPaths.peerIdFile);
   const libp2p = await createNodeJsLibp2p(peerId, options.network, beaconPaths.peerStoreDir);
   const node = new BeaconNode(options, {config, libp2p, logger});
 
   onGracefulShutdown(async () => {
-    await Promise.all([node.stop(), writeEnr(beaconPaths.enrFile, enr, peerId)]);
+    await Promise.all([node.stop()]);
   }, logger.info.bind(logger));
 
   await initializeBeaconNodeState(node, args);
