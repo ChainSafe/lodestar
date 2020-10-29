@@ -594,6 +594,11 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    // at regular sync time we don't want to wait for clock time next epoch to update bestJustifiedCheckpoint
+    if (computeEpochAtSlot(this.config, state.slot) < computeEpochAtSlot(this.config, this.fcStore.currentSlot)) {
+      return true;
+    }
+
     // We know that the slot for `new_justified_checkpoint.root` is not greater than
     // `state.slot`, since a state cannot justify its own slot.
     //

@@ -12,7 +12,7 @@ import {
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -170,7 +170,7 @@ export async function runStateTransition(
 function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
   const treeStateCtx: ITreeStateContext = {
     state: stateCtx.state as TreeBacked<BeaconState>,
-    epochCtx: stateCtx.epochCtx,
+    epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
   };
   if (stateCtx.epochProcess) {
     treeStateCtx.epochCtx.epochBalances = stateCtx.epochProcess.statuses.map((s) =>

@@ -5,13 +5,20 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 // lodestar state & epoch context business object
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
-  epochCtx: ILodestarEpochContext;
+  epochCtx: LodestarEpochContext;
 }
 
 // lodestar epoch context business object
-export type ILodestarEpochContext = EpochContext & {
-  epochBalances?: Gwei[];
-};
+export class LodestarEpochContext extends EpochContext {
+  public epochBalances?: Gwei[];
+
+  // need to be return EpochContext in order to override
+  public copy(): EpochContext {
+    const ctx = new LodestarEpochContext(undefined, this);
+    ctx.epochBalances = this.epochBalances;
+    return ctx;
+  }
+}
 
 /**
  * In memory cache of BeaconState and connected EpochContext
@@ -78,7 +85,7 @@ export class StateContextCache {
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
+      epochCtx: item.epochCtx.copy() as LodestarEpochContext,
     };
   }
 }

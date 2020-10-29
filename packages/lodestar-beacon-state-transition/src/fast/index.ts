@@ -14,7 +14,7 @@ export function fastStateTransition(
   signedBlock: SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
-  const epochCtx = eiEpochCtx as StateTransitionEpochContext;
+  const epochCtx = new StateTransitionEpochContext(undefined, eiEpochCtx);
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;
 
@@ -48,7 +48,7 @@ export function toIStateContext(epochCtx: StateTransitionEpochContext, state: Be
   epochCtx.epochProcess = undefined;
   return {
     state: state,
-    epochCtx: epochCtx,
+    epochCtx: new EpochContext(undefined, epochCtx),
     epochProcess,
   };
 }
