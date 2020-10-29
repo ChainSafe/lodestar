@@ -6,11 +6,11 @@ import {generateEmptyAttesterSlashing} from "@chainsafe/lodestar-beacon-state-tr
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {BeaconChain} from "../../../../../src/chain";
-import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
-import {generateState} from "../../../../utils/state";
-import {validateGossipAttesterSlashing} from "../../../../../src/network/gossip/validation/attesterSlashing";
-import {AttesterSlashingErrorCode} from "../../../../../src/chain/errors/attesterSlashingError";
+import {BeaconChain} from "../../../../src/chain";
+import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
+import {generateState} from "../../../utils/state";
+import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
+import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();

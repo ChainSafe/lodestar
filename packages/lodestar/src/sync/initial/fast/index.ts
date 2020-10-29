@@ -128,7 +128,6 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         chain,
         network,
         logger,
-        opts,
         getLastProcessedBlock,
         setBlockImportTarget,
         updateBlockImportTarget,
@@ -138,7 +137,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         for await (const slotRange of source) {
           const lastSlot = await pipe(
             [slotRange],
-            fetchBlockChunks(logger, chain, network.reqResp, getInitialSyncPeers, opts.blockPerChunk),
+            fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
             processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
           );
           logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);

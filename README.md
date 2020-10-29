@@ -9,7 +9,7 @@
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-12.x-green)
 
-Lodestar is a Typescript implementation of the Ethereum 2.0 specification developed by ChainSafe.
+[Lodestar](https://lodestar.chainsafe.io) is a Typescript implementation of the Ethereum 2.0 specification developed by [ChainSafe Systems](https://chainsafe.io).
 
 ## Getting started
 

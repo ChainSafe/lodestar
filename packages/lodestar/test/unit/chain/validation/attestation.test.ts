@@ -1,6 +1,6 @@
 import sinon, {createStubInstance, SinonStub, SinonStubbedInstance} from "sinon";
-import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../../../../../src/chain";
-import {StubbedBeaconDb} from "../../../../utils/stub";
+import {BeaconChain, ChainEventEmitter, ForkChoiceStore, IBeaconChain} from "../../../../src/chain";
+import {StubbedBeaconDb} from "../../../utils/stub";
 import {expect} from "chai";
 
 import {Attestation, IndexedAttestation} from "@chainsafe/lodestar-types";
@@ -12,14 +12,14 @@ import {BitList, toHexString} from "@chainsafe/ssz";
 import {ProtoArray} from "@chainsafe/lodestar-fork-choice";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {IStateRegenerator, StateRegenerator} from "../../../../../src/chain/regen";
-import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../../src/constants";
-import {validateGossipAttestation} from "../../../../../src/network/gossip/validation";
-import {generateAttestation} from "../../../../utils/attestation";
-import {generateState} from "../../../../utils/state";
-import {LocalClock} from "../../../../../src/chain/clock";
+import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
+import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../src/constants";
+import {validateGossipAttestation} from "../../../../src/chain/validation";
+import {generateAttestation} from "../../../utils/attestation";
+import {generateState} from "../../../utils/state";
+import {LocalClock} from "../../../../src/chain/clock";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
-import {AttestationErrorCode} from "../../../../../src/chain/errors";
+import {AttestationErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip attestation validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
