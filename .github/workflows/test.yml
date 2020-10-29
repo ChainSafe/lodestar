@@ -42,7 +42,7 @@ jobs:
         run: node_modules/.bin/lerna run coverage
       - name: E2e tests
         run: yarn test:e2e
-      - name: E2e long tests
+      - name: E2e simulation tests
         run: yarn test:e2e:sim
       - name: Spec tests
         run: node_modules/.bin/lerna run test:spec-min
