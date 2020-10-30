@@ -3,6 +3,7 @@ name: CI Tests
 on: [pull_request, push]
 
 jobs:
+  # First previous test that ensures src builds, lint ok, unit test ok
   unit-test:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -20,7 +21,7 @@ jobs:
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - name: Bootstrap
+      - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile --ignore-optional
       - name: Build
@@ -30,8 +31,11 @@ jobs:
       - name: Lint
         run: yarn lint
       - name: Unit tests
-        run: yarn test:unit && yarn coverage
+        run: yarn test:unit
+      - name: Upload coverage data
+        run: yarn coverage
 
+  # Run expensive e2e and spec in paralel after unit tests are ok
   tests:
     name: Test
     runs-on: ubuntu-latest
@@ -60,7 +64,7 @@ jobs:
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - name: Bootstrap
+      - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
       - name: Build
