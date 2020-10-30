@@ -10,6 +10,7 @@ import {
   computeSubnetForSlot,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   AggregateAndProof,
@@ -29,10 +30,16 @@ import {
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../../chain";
+import {IAttestationJob, IBeaconChain, IBlockJob} from "../../../chain";
+import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
 import {assembleAttestation} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
+import {
+  validateGossipAggregateAndProof,
+  validateGossipAttestation,
+  validateGossipBlock,
+} from "../../../chain/validation";
 import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
@@ -111,15 +118,32 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
+    const blockJob = {
+      signedBlock: signedBlock,
+      trusted: false,
+      reprocess: false,
+    } as IBlockJob;
+    await validateGossipBlock(this.config, this.chain, this.db, blockJob);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    //it could discard attestations that would can be valid a bit later
-    // await validateGossipAttestation(
-    //   this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation
-    // );
+    const attestationJob = {
+      attestation,
+      validSignature: false,
+    } as IAttestationJob;
+    let attestationPreStateContext;
+    try {
+      attestationPreStateContext = await this.chain.regen.getCheckpointState(attestation.data.target);
+    } catch (e) {
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+        job: attestationJob,
+      });
+    }
+    const subnet = computeSubnetForAttestation(this.config, attestationPreStateContext.epochCtx, attestation);
+    await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation),
@@ -166,6 +190,12 @@ export class ValidatorApi implements IValidatorApi {
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
+    const attestation = signedAggregateAndProof.message.aggregate;
+    const attestationJob = {
+      attestation: attestation,
+      validSignature: false,
+    } as IAttestationJob;
+    await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
     await Promise.all([
       this.db.aggregateAndProof.add(signedAggregateAndProof.message),
       this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),

@@ -88,6 +88,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     const enr = this.getEnr();
     await this.metadata.start(enr!);
     await this.gossip.start();
+    await this.diversifyPeersTask.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
@@ -103,7 +104,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async handleSyncCompleted(): Promise<void> {
-    await Promise.all([this.diversifyPeersTask.start(), this.checkPeerAliveTask.start()]);
+    await Promise.all([this.checkPeerAliveTask.start(), this.diversifyPeersTask.handleSyncCompleted()]);
   }
 
   public getEnr(): ENR | undefined {

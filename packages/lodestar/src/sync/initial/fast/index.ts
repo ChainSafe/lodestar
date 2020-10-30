@@ -6,12 +6,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import defaultOptions, {ISyncOptions} from "../../options";
+import {defaultSyncOptions, ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
@@ -73,7 +73,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     if (
       !this.targetCheckpoint ||
       this.targetCheckpoint.epoch == GENESIS_EPOCH ||
-      this.targetCheckpoint.epoch <= computeEpochAtSlot(this.config, this.blockImportTarget)
+      this.targetCheckpoint.epoch <= this.chain.forkChoice.getFinalizedCheckpoint().epoch
     ) {
       this.logger.info("No peers with higher finalized epoch");
       await this.stop();
@@ -99,7 +99,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
 
   private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    const maxSlotImport = this.opts.maxSlotImport ?? defaultOptions.maxSlotImport;
+    const maxSlotImport = this.opts.maxSlotImport ?? defaultSyncOptions.maxSlotImport;
     if (fromSlot + maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
       return fromSlot + this.config.params.SLOTS_PER_EPOCH;
@@ -128,7 +128,6 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         chain,
         network,
         logger,
-        opts,
         getLastProcessedBlock,
         setBlockImportTarget,
         updateBlockImportTarget,
@@ -138,7 +137,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         for await (const slotRange of source) {
           const lastSlot = await pipe(
             [slotRange],
-            fetchBlockChunks(logger, chain, network.reqResp, getInitialSyncPeers, opts.blockPerChunk),
+            fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
             processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
           );
           logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);

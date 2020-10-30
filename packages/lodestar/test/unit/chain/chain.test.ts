@@ -8,9 +8,9 @@ import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
-import chainOpts from "../../../src/chain/options";
+import {defaultChainOptions} from "../../../src/chain/options";
 import {IEth1Provider, Eth1Provider} from "../../../src/eth1";
-import eth1Options from "../../../src/eth1/options";
+import {defaultEth1Options} from "../../../src/eth1/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateBlockSummary} from "../../utils/block";
 import {generateState} from "../../utils/state";
@@ -25,13 +25,13 @@ describe("BeaconChain", function () {
 
   beforeEach(async () => {
     dbStub = new StubbedBeaconDb(sandbox);
-    eth1Provider = new Eth1Provider(config, eth1Options);
+    eth1Provider = new Eth1Provider(config, defaultEth1Options);
     metrics = new BeaconMetrics({enabled: false} as any, {logger});
     const state: BeaconState = generateState();
     state.validators = generateValidators(5, {activationEpoch: 0});
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
-    chain = new BeaconChain(chainOpts, {config, db: dbStub, eth1Provider, logger, metrics});
+    chain = new BeaconChain(defaultChainOptions, {config, db: dbStub, eth1Provider, logger, metrics});
     await chain.start();
   });
 

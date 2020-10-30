@@ -153,12 +153,7 @@ describe("sync utils", function () {
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
       let result = pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(
-          logger,
-          sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp),
-          getPeersStub
-        ),
+        fetchBlockChunks(logger, sinon.createStubInstance(ReqResp), getPeersStub),
         all
       );
       await timer.tickAsync(30000);
@@ -172,12 +167,7 @@ describe("sync utils", function () {
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
       const result = await pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(
-          logger,
-          sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp),
-          getPeersStub
-        ),
+        fetchBlockChunks(logger, sinon.createStubInstance(ReqResp), getPeersStub),
         all
       );
       expect(result.length).to.be.equal(1);
