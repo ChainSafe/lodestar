@@ -3,20 +3,13 @@ name: CI Tests
 on: [pull_request, push]
 
 jobs:
-  quickTests:
-    name: Quick tests
+  # First previous test that ensures src builds, lint ok, unit test ok
+  unit-test:
+    name: Unit tests
     runs-on: ubuntu-latest
-    env:
-      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
     steps:
-      - name: Free disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-      - uses: actions/checkout@v1
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
@@ -28,36 +21,38 @@ jobs:
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - name: Bootstrap
+      - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --ignore-optional
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
       - name: Lint
         run: yarn lint
       - name: Unit tests
         run: yarn test:unit
-      - name: Coverage
-        run: node_modules/.bin/lerna run coverage
-      - name: E2e tests
-        run: yarn test:e2e
-      - name: E2e simulation tests
-        run: yarn test:e2e:sim
-      - name: Spec tests
-        run: node_modules/.bin/lerna run test:spec-min
-  specTests:
-    name: Spec tests
+      - name: Upload coverage data
+        run: yarn coverage
+
+  # Run expensive e2e and spec in paralel after unit tests are ok
+  tests:
+    name: Test
     runs-on: ubuntu-latest
+    needs: [unit-test]
+    strategy:
+      fail-fast: false
+      matrix:
+        cmd: [
+          'test:e2e',
+          'test:e2e:sim',
+          'test:spec-min',
+          'test:spec-fast',
+          'test:spec-main'
+        ]
     steps:
-      - name: Free disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-      - uses: actions/checkout@v1
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
@@ -69,11 +64,13 @@ jobs:
             node_modules
             packages/*/node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - name: Bootstrap
+      - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      - name: Fast-implementation Spec tests
-        run: node_modules/.bin/lerna run test:spec-fast
+      # </common-build>
+      - run: ./scripts/free-disk-space.sh
+        if: contains(matrix.cmd, 'test:spec')
+      - run: yarn ${{ matrix.cmd }}
