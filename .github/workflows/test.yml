@@ -28,9 +28,10 @@ jobs:
           name: built-src
           path: .
 
-  unitTest:
+  unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
+    needs: [build]
     env:
       GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
     steps:
@@ -51,7 +52,7 @@ jobs:
       - name: Spec tests
         run: node_modules/.bin/lerna run test:spec-min
 
-  specTests:
+  spec-tests:
     name: Spec tests
     runs-on: ubuntu-latest
     steps:
