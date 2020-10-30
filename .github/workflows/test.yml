@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
+      - run: ./scripts/free-disk-space.sh
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -23,7 +24,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional
+        run: yarn install --frozen-lockfile
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
