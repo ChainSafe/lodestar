@@ -3,61 +3,12 @@ name: CI Tests
 on: [pull_request, push]
 
 jobs:
-  build:
-    name: Quick tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: ./scripts/free-disk-space.sh
-      - uses: actions/setup-node@v2-beta
-        with:
-          node-version: "12.14.1"
-      - name: Restore dependencies
-        uses: actions/cache@master
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - name: Bootstrap
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
-      - uses: actions/upload-artifact@master
-        with:
-          name: built-src
-          path: .
-
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
-    needs: [build]
-    env:
-      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
     steps:
-      - uses: actions/download-artifact@master
-        with:
-          name: built-src
-          path: .
-      - name: Lint
-        run: yarn lint
-      - name: Unit tests
-        run: yarn test:unit
-      - name: Coverage
-        run: node_modules/.bin/lerna run coverage
-      - name: E2e tests
-        run: yarn test:e2e
-      - name: E2e simulation tests
-        run: yarn test:e2e:sim
-      - name: Spec tests
-        run: node_modules/.bin/lerna run test:spec-min
-
-  spec-tests:
-    name: Spec tests
-    runs-on: ubuntu-latest
-    steps:
+      # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
-      - run: ./scripts/free-disk-space.sh
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
@@ -75,5 +26,153 @@ jobs:
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      - name: Spec tests mainnet fast
+      # </common-build>
+      - name: Lint
+        run: yarn lint
+      - name: Unit tests
+        run: yarn test:unit
+      - name: Coverage
+        run: node_modules/.bin/lerna run coverage
+
+  e2e-tests:
+    name: E2e tests
+    runs-on: ubuntu-latest
+    env:
+      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - name: E2e tests
+        run: yarn test:e2e
+
+  e2e-sim-tests:
+    name: E2e tests
+    runs-on: ubuntu-latest
+    env:
+      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - name: E2e simulation tests
+        run: yarn test:e2e:sim
+
+  spec-min:
+    name: Spec min tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - run: ./scripts/free-disk-space.sh
+      - name: Spec min tests
+        run: node_modules/.bin/lerna run test:spec-min
+
+  spec-fast:
+    name: Spec min tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - run: ./scripts/free-disk-space.sh
+      - name: Spec min tests
         run: node_modules/.bin/lerna run test:spec-fast
+
+  spec-main:
+    name: Spec min tests
+    runs-on: ubuntu-latest
+    if: {{ github.ref == 'ref/head/master' }}
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - run: ./scripts/free-disk-space.sh
+      - name: Spec min tests
+        run: node_modules/.bin/lerna run test:spec-main
