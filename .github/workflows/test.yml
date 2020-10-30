@@ -3,20 +3,12 @@ name: CI Tests
 on: [pull_request, push]
 
 jobs:
-  quickTests:
+  build:
     name: Quick tests
     runs-on: ubuntu-latest
-    env:
-      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
     steps:
-      - name: Free disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-      - uses: actions/checkout@v1
+      - run: ./scripts/free-disk-space.sh
+      - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
@@ -31,9 +23,21 @@ jobs:
       - name: Bootstrap
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
-      - name: Build
-        run: node_modules/.bin/lerna run build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
+      - uses: actions/upload-artifact@master
+        with:
+          name: built-src
+          path: .
+
+  unitTest:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    env:
+      GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
+    steps:
+      - uses: actions/download-artifact@master
+        with:
+          name: built-src
+          path: .
       - name: Lint
         run: yarn lint
       - name: Unit tests
@@ -46,17 +50,12 @@ jobs:
         run: yarn test:e2e:sim
       - name: Spec tests
         run: node_modules/.bin/lerna run test:spec-min
+
   specTests:
     name: Spec tests
     runs-on: ubuntu-latest
     steps:
-      - name: Free disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
+      - run: ./scripts/free-disk-space.sh
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v2-beta
         with:
@@ -75,5 +74,5 @@ jobs:
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
-      - name: Fast-implementation Spec tests
+      - name: Spec tests mainnet fast
         run: node_modules/.bin/lerna run test:spec-fast

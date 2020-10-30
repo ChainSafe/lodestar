@@ -9,14 +9,8 @@ jobs:
   specTest:
     runs-on: ubuntu-latest
     steps:
-    - name: Free disk space
-      run: |
-        sudo swapoff -a
-        sudo rm -f /swapfile
-        sudo apt clean
-        docker rmi $(docker image ls -aq)
-        df -h
-    - uses: actions/checkout@v1
+    - run: ./scripts/free-disk-space.sh
+    - uses: actions/checkout@v2
     - uses: actions/setup-node@v2-beta
       with:
         node-version: '12.14.1'
