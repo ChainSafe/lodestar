@@ -30,13 +30,17 @@ export class BeaconGossipHandler implements IGossipHandler {
 
   public async start(): Promise<void> {
     this.currentForkDigest = await this.chain.getForkDigest();
-    this.subscribe(this.currentForkDigest);
+    this.subscribeBlockAndAttestation(this.currentForkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
     this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+  }
+
+  public handleSyncCompleted(): void {
+    this.subscribeValidatorTopics(this.currentForkDigest);
   }
 
   private handleForkVersion = async (): Promise<void> => {
@@ -48,8 +52,16 @@ export class BeaconGossipHandler implements IGossipHandler {
   };
 
   private subscribe = (forkDigest: ForkDigest): void => {
+    this.subscribeBlockAndAttestation(forkDigest);
+    this.subscribeValidatorTopics(forkDigest);
+  };
+
+  private subscribeBlockAndAttestation = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
     this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
+  };
+
+  private subscribeValidatorTopics = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.onAttesterSlashing);
     this.network.gossip.subscribeToProposerSlashing(forkDigest, this.onProposerSlashing);
     this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.onVoluntaryExit);
