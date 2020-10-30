@@ -16,9 +16,12 @@
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
     "lint": "lerna run lint --no-bail",
+    "coverage": "lerna run coverage --no-bail",
     "test:unit": "lerna run test:unit --no-bail",
     "test:e2e": "lerna run test:e2e --no-bail",
-    "test:e2e:sim": "lerna run test:e2e:sim --no-bail",
+    "test:spec-min": "lerna run test:spec-min --no-bail",
+    "test:spec-fast": "lerna run test:spec-fast --no-bail",
+    "test:spec-main": "lerna run test:spec-main --no-bail",
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
   },
   "devDependencies": {
