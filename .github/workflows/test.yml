@@ -3,30 +3,55 @@ name: CI Tests
 on: [pull_request, push]
 
 jobs:
+  unit-test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+      - name: Bootstrap
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - name: Lint
+        run: yarn lint
+      - name: Unit tests
+        run: yarn test:unit && yarn coverage
+
   tests:
     name: Test
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    needs: [unit-test]
     strategy:
       fail-fast: false
       matrix:
         cmd: [
-          'lint',
-          'test:unit',
-          'coverage',
           'test:e2e',
           'test:e2e:sim',
           'test:spec-min',
           'test:spec-fast',
           'test:spec-main'
         ]
-        os: [ubuntu-latest]
-        node: ["12.14.1"]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
-          node-version: ${{ matrix.node }}
+          node-version: "12.14.1"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
