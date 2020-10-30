@@ -7,8 +7,8 @@ jobs:
     name: Quick tests
     runs-on: ubuntu-latest
     steps:
-      - run: ./scripts/free-disk-space.sh
       - uses: actions/checkout@v2
+      - run: ./scripts/free-disk-space.sh
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
@@ -56,8 +56,8 @@ jobs:
     name: Spec tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - run: ./scripts/free-disk-space.sh
-      - uses: actions/checkout@v1
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
