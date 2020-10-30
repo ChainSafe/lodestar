@@ -59,6 +59,8 @@ export async function getDevBeaconNode({
             bootEnrs: [],
           },
           localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+          minPeers: 25,
+          maxPeers: 25,
         },
         null,
         true
