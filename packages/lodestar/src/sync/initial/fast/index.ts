@@ -11,7 +11,7 @@ import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../inte
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import pushable, {Pushable} from "it-pushable";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
@@ -73,7 +73,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     if (
       !this.targetCheckpoint ||
       this.targetCheckpoint.epoch == GENESIS_EPOCH ||
-      this.targetCheckpoint.epoch <= computeEpochAtSlot(this.config, this.blockImportTarget)
+      this.targetCheckpoint.epoch <= this.chain.forkChoice.getFinalizedCheckpoint().epoch
     ) {
       this.logger.info("No peers with higher finalized epoch");
       await this.stop();

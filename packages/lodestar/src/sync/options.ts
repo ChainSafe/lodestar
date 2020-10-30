@@ -12,5 +12,5 @@ export const defaultSyncOptions: Required<ISyncOptions> = {
   minPeers: 2,
   //2 epochs
   maxSlotImport: 64,
-  blockPerChunk: 20,
+  blockPerChunk: 64,
 };

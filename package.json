@@ -18,6 +18,7 @@
     "lint": "lerna run lint --no-bail",
     "test:unit": "lerna run test:unit --no-bail",
     "test:e2e": "lerna run test:e2e --no-bail",
+    "test:e2e:sim": "lerna run test:e2e:sim --no-bail",
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
   },
   "devDependencies": {
