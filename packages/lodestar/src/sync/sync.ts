@@ -11,10 +11,10 @@ import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {ChainEvent, IBeaconChain} from "../chain";
-import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../chain/errors";
+import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -50,7 +50,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
-    this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
+    this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);

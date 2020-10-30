@@ -12,7 +12,7 @@ const config: Required<ISyncOptions> = {
   minPeers: 2,
   //2 epochs
   maxSlotImport: 64,
-  blockPerChunk: 20,
+  blockPerChunk: 64,
 };
 
 export default config;
