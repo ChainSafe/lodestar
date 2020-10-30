@@ -5,8 +5,9 @@ on: [pull_request, push]
 jobs:
   tests:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         cmd: [
           'lint',
@@ -18,12 +19,14 @@ jobs:
           'test:spec-fast',
           'test:spec-main'
         ]
+        os: [ubuntu-latest]
+        node: ["12.14.1"]
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
-          node-version: "12.14.1"
+          node-version: ${{ matrix.node }}
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
