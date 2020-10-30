@@ -49,7 +49,7 @@ export class NodejsNode extends LibP2p {
       },
       connectionManager: {
         maxConnections: options.maxConnections,
-        minConnections: options.minConnections,
+        minConnections: options.minConnections ?? 0,
       },
       datastore: options.datastore,
       peerStore: {
