@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import defaultOptions, {ISyncOptions} from "../../options";
+import {defaultSyncOptions, ISyncOptions} from "../../options";
 import {IInitialSyncModules, InitialSync, InitialSyncEventEmitter} from "../interface";
 import {EventEmitter} from "events";
 import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
@@ -99,7 +99,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
 
   private getNewBlockImportTarget(fromSlot: Slot): Slot {
     const finalizedTargetSlot = this.getHighestBlock();
-    const maxSlotImport = this.opts.maxSlotImport ?? defaultOptions.maxSlotImport;
+    const maxSlotImport = this.opts.maxSlotImport ?? defaultSyncOptions.maxSlotImport;
     if (fromSlot + maxSlotImport > finalizedTargetSlot) {
       //first slot of epoch is skip slot
       return fromSlot + this.config.params.SLOTS_PER_EPOCH;

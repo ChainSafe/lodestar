@@ -3,12 +3,13 @@ import {expect} from "chai";
 import {before, after} from "mocha";
 import {existsSync} from "fs";
 import rimraf from "rimraf";
-import {initEnr, initPeerId, readPeerId} from "../../../src/network";
-import {FileENR} from "../../../src/network/fileEnr";
-import {rootDir} from "../../constants";
+import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config";
+import {testFilesDir} from "../../utils";
 import {getBeaconPaths} from "@chainsafe/lodestar-cli/src/cmds/beacon/paths";
 
 describe("fileENR", function () {
+  const rootDir = testFilesDir;
+
   before(async () => {
     await new Promise((resolve) => rimraf(rootDir, resolve));
   });

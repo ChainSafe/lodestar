@@ -27,6 +27,7 @@ import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
   maxPeers: 1,
+  minPeers: 1,
   bootMultiaddrs: [],
   rpcTimeout: 5000,
   connectTimeout: 5000,

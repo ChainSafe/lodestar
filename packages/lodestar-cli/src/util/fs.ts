@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 
 /**
  * Create a file with `600 (-rw-------)` permissions
@@ -6,6 +7,7 @@ import fs from "fs";
  * while no other user can access the file
  */
 export function writeFile600Perm(filepath: string, data: string): void {
+  ensureDirExists(path.dirname(filepath));
   fs.writeFileSync(filepath, data);
   fs.chmodSync(filepath, "0600");
 }

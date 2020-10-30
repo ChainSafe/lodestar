@@ -19,6 +19,13 @@ export const enum ApiNamespace {
   EVENTS = "events",
 }
 
+export const apiNamespaces: ApiNamespace[] = [
+  ApiNamespace.BEACON,
+  ApiNamespace.VALIDATOR,
+  ApiNamespace.NODE,
+  ApiNamespace.EVENTS,
+];
+
 export interface IApiModules {
   config: IBeaconConfig;
   logger: ILogger;
