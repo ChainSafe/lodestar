@@ -2,7 +2,7 @@ import {INetwork} from "..";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import PeerId from "peer-id";
-import {findMissingSubnets, selectPeersToDisconnect} from "../peers/utils";
+import {findMissingSubnets, gossipPeersToDisconnect, syncPeersToDisconnect} from "../peers/utils";
 
 export interface IDiversifyPeersModules {
   network: INetwork;
@@ -12,6 +12,7 @@ export interface IDiversifyPeersModules {
 /*
  ** A task to run periodically to make sure we have at least one peer per subnet
  ** so we can spread all attestations to the network and let them be aggregated in the end.
+ ** Also, we want this task to prune useless peers.
  */
 export class DiversifyPeersBySubnetTask {
   private readonly config: IBeaconConfig;
@@ -19,11 +20,13 @@ export class DiversifyPeersBySubnetTask {
 
   private readonly logger: ILogger;
   private testInterval?: NodeJS.Timeout;
+  private isSynced: boolean;
 
   public constructor(config: IBeaconConfig, modules: IDiversifyPeersModules) {
     this.config = config;
     this.network = modules.network;
     this.logger = modules.logger;
+    this.isSynced = false;
   }
 
   public async start(): Promise<void> {
@@ -39,19 +42,26 @@ export class DiversifyPeersBySubnetTask {
     }
   }
 
+  public async handleSyncCompleted(): Promise<void> {
+    this.isSynced = true;
+  }
+
   public run = async (): Promise<void> => {
     this.logger.info("Running DiversifyPeersBySubnetTask");
     this.logger.profile("DiversifyPeersBySubnetTask");
-    const missingSubnets = findMissingSubnets(this.network);
+    const missingSubnets = this.isSynced ? findMissingSubnets(this.network) : [];
     if (missingSubnets.length > 0) {
       this.logger.verbose(`Search for ${missingSubnets.length} peers with subnets: ` + missingSubnets.join(","));
     } else {
-      this.logger.info("Our peers subscribed to all subnets!");
-      this.logger.profile("DiversifyPeersBySubnetTask");
-      return;
+      this.logger.info(
+        this.isSynced
+          ? "Our peers subscribed to all subnets!"
+          : "Node not synced, no need to search for missing subnets"
+      );
     }
-    const toDiscPeers: PeerId[] =
-      selectPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || [];
+    const toDiscPeers: PeerId[] = this.isSynced
+      ? gossipPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || []
+      : syncPeersToDisconnect(this.network) || [];
     if (toDiscPeers.length > 0) {
       this.logger.verbose(`Disconnecting ${toDiscPeers.length} peers to find ${missingSubnets.length} new peers`);
       try {
