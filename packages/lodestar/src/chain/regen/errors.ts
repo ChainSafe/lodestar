@@ -5,6 +5,7 @@ export enum RegenErrorCode {
   ERR_STATE_NOT_IN_FORKCHOICE = "ERR_STATE_NOT_IN_FORKCHOICE",
   ERR_SLOT_BEFORE_BLOCK_SLOT = "ERR_SLOT_BEFORE_BLOCK_SLOT",
   ERR_NO_SEED_STATE = "ERR_NO_SEED_STATE",
+  ERR_TOO_MANY_BLOCK_PROCESSED = "ERR_TOO_MANY_BLOCK_PROCESSED",
   ERR_BLOCK_NOT_IN_DB = "ERR_BLOCK_NOT_IN_DB",
   ERR_STATE_TRANSITION_ERROR = "ERR_STATE_TRANSITION_ERROR",
 }
@@ -25,6 +26,10 @@ export type RegenErrorType =
     }
   | {
       code: RegenErrorCode.ERR_NO_SEED_STATE;
+    }
+  | {
+      code: RegenErrorCode.ERR_TOO_MANY_BLOCK_PROCESSED;
+      stateRoot: Root;
     }
   | {
       code: RegenErrorCode.ERR_BLOCK_NOT_IN_DB;

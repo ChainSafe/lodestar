@@ -1,5 +1,3 @@
 export type IChainOptions = {};
 
-const config: IChainOptions = {};
-
-export default config;
+export const defaultChainOptions: IChainOptions = {};

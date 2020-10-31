@@ -36,6 +36,9 @@ class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   }
 }
 
+/**
+ * The standard / Exchange Interface of EpochContext, this is what's exported from lodestar-beacon-state-transition
+ **/
 export class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
@@ -49,13 +52,17 @@ export class EpochContext {
   public currentShuffling!: IEpochShuffling;
   public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
-  public epochProcess?: IEpochProcess;
 
-  constructor(config: IBeaconConfig) {
-    this.config = config;
-    this.pubkey2index = new PubkeyIndexMap();
-    this.index2pubkey = [];
-    this.proposers = [];
+  constructor(config?: IBeaconConfig, epochCtx?: EpochContext) {
+    this.config = (epochCtx?.config || config)!;
+    this.pubkey2index = epochCtx?.pubkey2index || new PubkeyIndexMap();
+    this.index2pubkey = epochCtx?.index2pubkey || [];
+    this.proposers = epochCtx?.proposers || [];
+    if (epochCtx) {
+      this.previousShuffling = epochCtx.previousShuffling;
+      this.currentShuffling = epochCtx.currentShuffling;
+      this.nextShuffling = epochCtx.nextShuffling;
+    }
   }
 
   public loadState(state: BeaconState): void {
@@ -91,7 +98,6 @@ export class EpochContext {
     ctx.previousShuffling = this.previousShuffling;
     ctx.currentShuffling = this.currentShuffling;
     ctx.nextShuffling = this.nextShuffling;
-    ctx.epochProcess = this.epochProcess;
     return ctx;
   }
 
@@ -235,5 +241,20 @@ export class EpochContext {
     } else {
       throw new Error(`crosslink committee retrieval: out of range epoch: ${epoch}`);
     }
+  }
+}
+
+/**
+ * State Transition specific version of EpochContext.
+ * This is internal/private at the module level.
+ */
+export class StateTransitionEpochContext extends EpochContext {
+  public epochProcess?: IEpochProcess;
+
+  // need to return EpochContext in order to override
+  public copy(): EpochContext {
+    const ctx = new StateTransitionEpochContext(undefined, this);
+    ctx.epochProcess = this.epochProcess;
+    return ctx;
   }
 }

@@ -8,7 +8,7 @@ export interface IRestApiOptions {
   port: number;
 }
 
-export default {
+export const defaultApiRestOptions: IRestApiOptions = {
   enabled: false,
   api: [ApiNamespace.BEACON, ApiNamespace.NODE, ApiNamespace.VALIDATOR, ApiNamespace.EVENTS],
   host: "127.0.0.1",

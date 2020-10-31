@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
-import defaultOptions, {ISyncOptions} from "./options";
+import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -11,10 +11,10 @@ import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {ChainEvent, IBeaconChain} from "../chain";
-import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../chain/errors";
+import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -40,6 +40,8 @@ export class BeaconSync implements IBeaconSync {
 
   private statusSyncTimer?: NodeJS.Timeout;
   private peerCountTimer?: NodeJS.Timeout;
+  // avoid finding same root at the same time
+  private processingRoots: Set<string>;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -48,12 +50,13 @@ export class BeaconSync implements IBeaconSync {
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
-    this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
+    this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
+    this.processingRoots = new Set();
   }
 
   public async start(): Promise<void> {
@@ -179,7 +182,7 @@ export class BeaconSync implements IBeaconSync {
 
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...");
-    const minPeers = this.opts.minPeers ?? defaultOptions.minPeers;
+    const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     while (this.mode !== SyncMode.STOPPED && this.getSyncPeers().length < minPeers) {
       this.logger.warn(`Current peerCount=${this.getSyncPeers().length}, required = ${minPeers}`);
       await sleep(3000);
@@ -207,23 +210,33 @@ export class BeaconSync implements IBeaconSync {
     if (err.type.code !== BlockErrorCode.ERR_PARENT_UNKNOWN) return;
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
     const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
+    const missingRootHex = toHexString(unknownAncestorRoot);
+    if (this.processingRoots.has(missingRootHex)) {
+      return;
+    } else {
+      this.processingRoots.add(missingRootHex);
+      this.logger.verbose("Finding block for unknown ancestor root", missingRootHex);
+    }
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
     const maxRetry = this.getUnknownRootPeers().length;
+    let found = false;
     while (retry < maxRetry) {
       const peer = peerBalancer.next();
       if (!peer) {
-        return;
+        break;
       }
       try {
         const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
         if (blocks && blocks[0]) {
-          this.logger.verbose(`Found block ${blocks[0].message.slot} for root ${toHexString(unknownAncestorRoot)}`);
-          return await this.chain.receiveBlock(blocks[0]);
+          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, root: missingRootHex});
+          found = true;
+          await this.chain.receiveBlock(blocks[0]);
+          break;
         }
       } catch (e) {
         this.logger.verbose("Failed to get unknown ancestor root from peer", {
-          blockRoot: toHexString(unknownAncestorRoot),
+          blockRoot: missingRootHex,
           peer: peer.toB58String(),
           error: e.message,
           maxRetry,
@@ -231,7 +244,8 @@ export class BeaconSync implements IBeaconSync {
         });
       }
       retry++;
-    }
-    this.logger.error(`Failed to get unknown ancestor root ${toHexString(unknownAncestorRoot)}`);
+    } // end while
+    this.processingRoots.delete(missingRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", missingRootHex);
   };
 }
