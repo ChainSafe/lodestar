@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {expect} from "chai";
 import {readdirSync, readFileSync, writeFile} from "fs";
-import {describe, it} from "mocha";
+import {describe, it, before} from "mocha";
 import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
+import {initBLS} from "@chainsafe/bls";
 import {Type} from "@chainsafe/ssz";
 
 import {isDirectory, loadYamlFile} from "./util";
@@ -64,6 +65,10 @@ export function describeDirectorySpecTest<TestCase, Result>(
   testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
+  before(async function () {
+    await initBLS();
+  });
+
   options = {...defaultOptions, ...options};
   if (!isDirectory(testCaseDirectoryPath)) {
     throw new Error(`${testCaseDirectoryPath} is not directory`);

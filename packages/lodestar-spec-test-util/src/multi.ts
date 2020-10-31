@@ -2,7 +2,8 @@
 import {writeFile} from "fs";
 import {expect} from "chai";
 import profiler from "v8-profiler-next";
-import {describe, it} from "mocha";
+import {initBLS} from "@chainsafe/bls";
+import {describe, it, before} from "mocha";
 import {loadYamlFile} from "./util";
 
 export interface IBaseCase {
@@ -56,6 +57,10 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),
   timeout = 2000
 ): void {
+  before(async function () {
+    await initBLS();
+  });
+
   const testSpec = loadYamlFile(testYamlPath) as TestSpec<TestCase>;
 
   const testSuiteName = `${testSpec.runner} - ${testSpec.handler} - ${testSpec.title} - ${testSpec.config}`;
