@@ -29,7 +29,7 @@ import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {EMPTY_SIGNATURE, FAR_FUTURE_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {LodestarEpochContext, ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IEth1Provider} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {sortBlocks} from "../sync/utils";
@@ -225,6 +225,7 @@ export class BeaconChain implements IBeaconChain {
       regen: this.regen,
       emitter: this.internalEmitter,
       signal: this.abortController!.signal,
+      db: this.db,
     });
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -327,7 +328,10 @@ export class BeaconChain implements IBeaconChain {
   /**
    * Restore state cache and forkchoice from last finalized state.
    */
-  private async restoreHeadState(lastKnownState: TreeBacked<BeaconState>, epochCtx: EpochContext): Promise<void> {
+  private async restoreHeadState(
+    lastKnownState: TreeBacked<BeaconState>,
+    epochCtx: LodestarEpochContext
+  ): Promise<void> {
     const stateRoot = this.config.types.BeaconState.hashTreeRoot(lastKnownState);
     this.logger.info("Restoring from last known state", {
       slot: lastKnownState.slot,

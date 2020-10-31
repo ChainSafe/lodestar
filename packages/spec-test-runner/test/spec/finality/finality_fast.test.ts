@@ -13,11 +13,11 @@ describeDirectorySpecTest<IFinalityTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/finality/finality/pyspec_tests"),
   (testcase) => {
     let state = testcase.pre;
-    const epochCtx = new EpochContext(config);
+    let epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      ({state} = fastStateTransition({epochCtx, state}, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+      ({state, epochCtx} = fastStateTransition({epochCtx, state}, testcase[`blocks_${i}`] as SignedBeaconBlock, {
         verifyStateRoot: verify,
         verifyProposer: verify,
         verifySignatures: verify,

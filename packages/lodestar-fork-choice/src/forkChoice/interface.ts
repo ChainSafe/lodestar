@@ -3,12 +3,12 @@ import {
   BeaconState,
   Checkpoint,
   Epoch,
+  Gwei,
   IndexedAttestation,
   Root,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {IEpochProcess} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBlockSummary} from "./blockSummary";
 
 export interface IForkChoice {
@@ -52,10 +52,10 @@ export interface IForkChoice {
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    *
-   * `epochProcess` is passed in so that justified balances can be updated synchronously.
+   * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: BeaconBlock, state: BeaconState, epochProcess?: IEpochProcess): void;
+  onBlock(block: BeaconBlock, state: BeaconState, justifiedBalances?: Gwei[]): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
