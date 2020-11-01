@@ -31,8 +31,11 @@ jobs:
       # </common-build>
       - name: Spec min
         run: yarn test:spec-min
+        working-directory: packages/spec-test-runner
       - name: Spec fast
         run: yarn test:spec-fast
+        working-directory: packages/spec-test-runner
       - name: Spec main
         run: yarn test:spec-main
         if: github.ref == 'ref/head/master' && github.event_name == 'push'
+        working-directory: packages/spec-test-runner
