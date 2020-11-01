@@ -109,7 +109,7 @@ export class AttestationService {
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch, this.publicKeys);
     } catch (e) {
-      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e);
+      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e.message);
       return;
     }
     const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
