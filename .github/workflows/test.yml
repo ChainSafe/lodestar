@@ -4,7 +4,7 @@ on: [pull_request, push]
 
 jobs:
   tests-main:
-    name: Main
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
