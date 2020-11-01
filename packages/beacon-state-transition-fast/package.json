@@ -1,0 +1,57 @@
+{
+  "name": "@chainsafe/lodestar-beacon-state-transition-fast",
+  "description": "Beacon Chain state transition function and utils",
+  "license": "Apache-2.0",
+  "author": "ChainSafe Systems",
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "version": "0.11.0",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "build": "yarn build:lib && yarn build:types",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:release": "yarn clean && yarn build",
+    "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
+    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
+    "lint": "eslint --color --ext .ts src/",
+    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "prepublishOnly": "yarn build",
+    "test:unit": "mocha 'test/**/*.test.ts'"
+  },
+  "types": "lib/index.d.ts",
+  "dependencies": {
+    "@chainsafe/bls": "4.0.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.11.0",
+    "@chainsafe/lodestar-config": "^0.11.0",
+    "@chainsafe/lodestar-utils": "^0.11.0",
+    "@chainsafe/ssz": "^0.6.13",
+    "bigint-buffer": "^1.1.5",
+    "buffer-xor": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/buffer-xor": "^2.0.0",
+    "@types/mockery": "^1.4.29",
+    "mockery": "^2.1.0"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2",
+    "beacon",
+    "blockchain"
+  ]
+}
