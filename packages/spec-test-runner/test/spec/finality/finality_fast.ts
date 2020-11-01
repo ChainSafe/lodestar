@@ -18,11 +18,17 @@ const finalityTestDirpaths = fs
 const halfLen = Math.round(finalityTestDirpaths.length / 2);
 
 export function runFinalityTests1(): void {
-  finalityTestDirpaths.slice(0, halfLen).forEach(generateTestCaseFinality);
+  describe("finality fast 1", function () {
+    this.timeout(10000000);
+    finalityTestDirpaths.slice(0, halfLen).forEach(generateTestCaseFinality);
+  });
 }
 
 export function runFinalityTests2(): void {
-  finalityTestDirpaths.slice(halfLen).forEach(generateTestCaseFinality);
+  describe("finality fast 2", function () {
+    this.timeout(10000000);
+    finalityTestDirpaths.slice(halfLen).forEach(generateTestCaseFinality);
+  });
 }
 
 export function generateTestCaseFinality(testCaseDirectoryPath: string, index: number): void {
