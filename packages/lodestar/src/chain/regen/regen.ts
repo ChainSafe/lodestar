@@ -141,6 +141,13 @@ export class StateRegenerator implements IStateRegenerator {
         code: RegenErrorCode.ERR_NO_SEED_STATE,
       });
     }
+    const MAX_EPOCH_TO_PROCESS = 5;
+    if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * this.config.params.SLOTS_PER_EPOCH) {
+      throw new RegenError({
+        code: RegenErrorCode.ERR_TOO_MANY_BLOCK_PROCESSED,
+        stateRoot,
+      });
+    }
     for (const b of blocksToReplay.reverse()) {
       const block = await this.db.block.get(b.blockRoot);
       if (!block) {
@@ -150,7 +157,7 @@ export class StateRegenerator implements IStateRegenerator {
         });
       }
       try {
-        stateCtx = await runStateTransition(this.emitter, this.forkChoice, stateCtx, {
+        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
           signedBlock: block,
           trusted: true,
           reprocess: true,

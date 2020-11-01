@@ -8,14 +8,17 @@ import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
+import {StubbedBeaconDb} from "../../../utils/stub";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
   let forkChoice: SinonStubbedInstance<ForkChoice>;
+  let dbStub: StubbedBeaconDb;
   let regen: SinonStubbedInstance<StateRegenerator>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
+    dbStub = new StubbedBeaconDb(sinon);
     regen = sinon.createStubInstance(StateRegenerator);
   });
 
@@ -35,6 +38,7 @@ describe("processBlock", function () {
     try {
       await processBlock({
         forkChoice,
+        db: dbStub,
         regen,
         emitter,
         job,

@@ -49,7 +49,7 @@ describe("sync req resp", function () {
     chainStub.getHeadState.resolves(generateState());
     // @ts-ignore
     chainStub.config = config;
-    sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4));
+    chainStub.getForkDigest.resolves(Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = (reqRespStub as unknown) as ReqResp & SinonStubbedInstance<ReqResp>;
@@ -129,7 +129,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    sandbox.stub(chainStub, "currentForkDigest").get(() => Buffer.alloc(4).fill(1));
+    chainStub.getForkDigest.resolves(Buffer.alloc(4).fill(1));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
@@ -142,7 +142,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    sandbox.stub(chainStub, "currentForkDigest").get(() => body.forkDigest);
+    chainStub.getForkDigest.resolves(body.forkDigest);
     chainStub.getHeadState.resolves(
       generateState({
         slot: computeStartSlotAtEpoch(

@@ -8,13 +8,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Free disk space
-        run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
-          sudo apt clean
-          df -h
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -25,7 +19,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - name: Bootstrap
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --ignore-optional
 
       - name: Build and collect docs
         run: yarn build:docs

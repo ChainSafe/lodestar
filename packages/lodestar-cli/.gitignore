@@ -19,5 +19,8 @@ validators/
 keystores/
 .lodestar
 
+# Test artifacts
+.test-files
+
 # Wallet CLI artifacts
 .pass

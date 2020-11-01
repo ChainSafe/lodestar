@@ -11,7 +11,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {BeaconDb} from "../db";
-import defaultConf, {IBeaconNodeOptions} from "./options";
+import {defaultOptions, IBeaconNodeOptions} from "./options";
 import {Eth1Provider, Eth1ForBlockProductionDisabled} from "../eth1";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
@@ -22,6 +22,8 @@ import {Api, IApi, RestApi} from "../api";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {TasksService} from "../tasks";
 import {AbortController} from "abort-controller";
+
+export * from "./options";
 
 export interface IService {
   start(): Promise<void>;
@@ -58,7 +60,7 @@ export class BeaconNode {
   public constructor(opts: Partial<IBeaconNodeOptions>, {config, logger, libp2p}: IBeaconNodeModules) {
     this.controller = new AbortController();
 
-    this.conf = deepmerge(defaultConf, opts, {
+    this.conf = deepmerge(defaultOptions, opts, {
       //clone doesn't work very vell on classes like ethers.Provider
       isMergeableObject: isPlainObject,
     });
@@ -168,5 +170,3 @@ export class BeaconNode {
     await this.metrics.stop();
   }
 }
-
-export default BeaconNode;

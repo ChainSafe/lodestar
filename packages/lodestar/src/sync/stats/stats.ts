@@ -1,7 +1,7 @@
 import {ISyncStats} from "./interface";
 import {Slot} from "@chainsafe/lodestar-types";
 import {RateCounter} from "./rate";
-import {ChainEventEmitter} from "../../chain";
+import {ChainEvent, ChainEventEmitter} from "../../chain";
 
 export class SyncStats implements ISyncStats {
   private readonly chainEvents: ChainEventEmitter;
@@ -14,11 +14,11 @@ export class SyncStats implements ISyncStats {
 
   public async start(): Promise<void> {
     await this.rateCounter.start();
-    this.chainEvents.on("block", this.onBlockProcessed);
+    this.chainEvents.on(ChainEvent.block, this.onBlockProcessed);
   }
 
   public async stop(): Promise<void> {
-    this.chainEvents.removeListener("block", this.onBlockProcessed);
+    this.chainEvents.removeListener(ChainEvent.block, this.onBlockProcessed);
     await this.rateCounter.stop();
   }
 

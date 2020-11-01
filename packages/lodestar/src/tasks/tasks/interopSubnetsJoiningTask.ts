@@ -2,7 +2,7 @@ import {INetwork} from "../../network";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT} from "../../constants";
 import {randBetween, ILogger, intToBytes} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {computeStartSlotAtEpoch, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
@@ -20,7 +20,7 @@ export class InteropSubnetsJoiningTask {
   private readonly logger: ILogger;
   private currentSubnets: Set<number>;
   private nextForkSubnets: Set<number>;
-  private currentForkDigest: ForkDigest;
+  private currentForkDigest!: ForkDigest;
 
   private currentTimers: NodeJS.Timeout[] = [];
   private nextForkTimers: NodeJS.Timeout[] = [];
@@ -33,18 +33,17 @@ export class InteropSubnetsJoiningTask {
     this.logger = modules.logger;
     this.currentSubnets = new Set();
     this.nextForkSubnets = new Set();
-    this.currentForkDigest = this.chain.currentForkDigest;
   }
 
   public async start(): Promise<void> {
-    this.currentForkDigest = this.chain.currentForkDigest;
-    this.chain.emitter.on("forkDigest", this.handleForkDigest);
+    this.currentForkDigest = await this.chain.getForkDigest();
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     await this.run(this.currentForkDigest);
     await this.scheduleNextForkSubscription();
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
@@ -92,7 +91,8 @@ export class InteropSubnetsJoiningTask {
   /**
    * Transition from current fork to next fork.
    */
-  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+  private handleForkVersion = async (): Promise<void> => {
+    const forkDigest = await this.chain.getForkDigest();
     this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
     // at this time current fork digest and next fork digest subnets are subscribed in parallel
     // this cleans up current fork digest subnets subscription and keep subscribed to next fork digest subnets

@@ -2,7 +2,8 @@ import {Options, Argv} from "yargs";
 
 export type ICliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Options}>;
 
-export interface ICliCommand<OwnArgs = {}, ParentArgs = {}> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface ICliCommand<OwnArgs = {}, ParentArgs = {}, R = any> {
   command: string;
   describe: string;
   examples?: {command: string; description: string}[];
@@ -11,7 +12,7 @@ export interface ICliCommand<OwnArgs = {}, ParentArgs = {}> {
   // 2nd arg: subcommand parent options is = to this command options + parent options
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   subcommands?: ICliCommand<any, OwnArgs & ParentArgs>[];
-  handler?: (args: OwnArgs & ParentArgs) => void;
+  handler?: (args: OwnArgs & ParentArgs) => Promise<R>;
 }
 
 /**

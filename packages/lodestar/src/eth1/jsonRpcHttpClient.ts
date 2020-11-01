@@ -64,6 +64,10 @@ function parseRpcResponse<R>(res: IRpcResponse<R>, payload: IRpcPayload): R {
  * Fetches JSON and throws detailed errors in case the HTTP request is not ok
  */
 async function fetchJson<R, T = unknown>(url: string, json: T, signal?: AbortSignal): Promise<R> {
+  // If url is undefined node-fetch throws with `TypeError: Only absolute URLs are supported`
+  // Throw a better error instead
+  if (!url) throw Error(`Empty or undefined JSON RPC HTTP client url: ${url}`);
+
   const res = await fetch(url, {
     method: "post",
     body: JSON.stringify(json),

@@ -9,7 +9,7 @@ import {
   SignedVoluntaryExit,
   ForkDigest,
 } from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -29,17 +29,18 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async start(): Promise<void> {
-    this.currentForkDigest = this.chain.currentForkDigest;
+    this.currentForkDigest = await this.chain.getForkDigest();
     this.subscribe(this.currentForkDigest);
-    this.chain.emitter.on("forkDigest", this.handleForkDigest);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+  private handleForkVersion = async (): Promise<void> => {
+    const forkDigest = await this.chain.getForkDigest();
     this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
     this.unsubscribe(this.currentForkDigest);
     this.currentForkDigest = forkDigest;

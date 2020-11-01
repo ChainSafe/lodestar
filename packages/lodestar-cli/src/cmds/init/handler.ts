@@ -1,93 +1,85 @@
-import * as fs from "fs";
-import deepmerge from "deepmerge";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
-import {initBeaconConfig} from "../../config/beacon";
-import {IGlobalArgs} from "../../options";
-import {mkdir, getBeaconConfig, joinIfRelative} from "../../util";
-import {initPeerId, initEnr, readPeerId} from "../../network";
+import fs from "fs";
 import {
-  getTestnetConfig,
-  getGenesisFileUrl,
-  downloadFile,
-  fetchBootnodes,
-  getTestnetParamsUrl,
-  getRemoteFile,
-} from "../../testnets";
-import {writeParamsConfig} from "../../config/params";
+  BeaconNodeOptions,
+  getBeaconConfigFromArgs,
+  writeBeaconParams,
+  initPeerId,
+  initEnr,
+  readPeerId,
+} from "../../config";
+import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
+import {mkdir} from "../../util";
+import {fetchBootnodes} from "../../testnets";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
-/**
- * Handler runable from other commands
- */
-export async function initCmd(options: IGlobalArgs): Promise<void> {
-  await initHandler(options as IBeaconArgs & IGlobalArgs);
-}
+export type ReturnType = {
+  beaconNodeOptions: BeaconNodeOptions;
+  config: IBeaconConfig;
+};
 
 /**
  * Initialize lodestar-cli with an on-disk configuration
  */
-export async function initHandler(options: IBeaconArgs & IGlobalArgs): Promise<void> {
-  options = {
-    ...options,
-    ...getBeaconPaths(options),
-  };
+export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
+  const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
+  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  return {beaconNodeOptions, config};
+}
+
+export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
+  const beaconPaths = getBeaconPaths(args);
+  const beaconNodeOptions = new BeaconNodeOptions({
+    testnet: args.testnet,
+    configFile: beaconPaths.configFile,
+    beaconNodeOptionsCli: parseBeaconNodeArgs(args),
+  });
 
   // Auto-setup testnet
   // Only download files if params file does not exist
-  if (options.testnet && !fs.existsSync(options.paramsFile)) {
-    const testnetConfig = getTestnetConfig(options.testnet);
+  if (args.testnet && !fs.existsSync(beaconPaths.paramsFile)) {
     try {
-      if (!testnetConfig.network) testnetConfig.network = {};
-      if (!testnetConfig.network.discv5) testnetConfig.network.discv5 = {} as IDiscv5DiscoveryInputOptions;
-      testnetConfig.network.discv5.bootEnrs = await fetchBootnodes(options.testnet);
+      const bootEnrs = await fetchBootnodes(args.testnet);
+      beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(`Error fetching latest bootnodes: ${e.stack}`);
     }
-    // Mutate options so options will be written to disk in beacon configuration file
-    Object.assign(options, deepmerge(options, testnetConfig));
-    if (options.weakSubjectivityStateFile) {
-      const weakSubjectivityState = joinIfRelative(options.beaconDir, "weakSubjectivityState.ssz");
-      await getRemoteFile(weakSubjectivityState, options.weakSubjectivityStateFile);
-      options.weakSubjectivityStateFile = weakSubjectivityState;
-    } else {
-      const genesisFileUrl = getGenesisFileUrl(options.testnet);
-      if (genesisFileUrl) {
-        const genesisStateFile = joinIfRelative(options.beaconDir, options.genesisStateFile || "genesis.ssz");
-        options.genesisStateFile = genesisStateFile;
-        await downloadFile(options.genesisStateFile, genesisFileUrl);
-        options.eth1.enabled = false;
-      }
-    }
-
-    // testnet params
-    const paramsUrl = getTestnetParamsUrl(options.testnet);
-    if (paramsUrl) {
-      await downloadFile(options.paramsFile, paramsUrl);
-    }
   }
 
-  // initialize rootDir
-  await mkdir(options.rootDir);
-  // initialize params file -- if it doesn't exist
-  if (!fs.existsSync(options.paramsFile)) {
-    const config = getBeaconConfig(options.preset, options.params);
-    await writeParamsConfig(options.paramsFile, config);
-  }
-  // initialize beacon directory
-  await mkdir(options.beaconDir);
-  // initialize beacon configuration file -- if it doesn't exist
-  if (!fs.existsSync(options.configFile)) {
-    await initBeaconConfig(options.configFile, options);
-  }
-  // initialize beacon db path
-  await mkdir(options.dbDir);
-  // initialize peer id & ENR -- if either doesn't exist
-  if (!fs.existsSync(options.peerIdFile) || !fs.existsSync(options.enrFile)) {
-    await initPeerId(options.peerIdFile);
-    const peerId = await readPeerId(options.peerIdFile);
+  // initialize params file, if it doesn't exist
+  const config = getBeaconConfigFromArgs(args);
+
+  return {beaconNodeOptions, config};
+}
+
+export async function persistOptionsAndConfig(
+  args: IBeaconArgs & IGlobalArgs,
+  beaconNodeOptions: BeaconNodeOptions,
+  beaconConfig: IBeaconConfig
+): Promise<void> {
+  const beaconPaths = getBeaconPaths(args);
+
+  // initialize directories
+  mkdir(beaconPaths.rootDir);
+  mkdir(beaconPaths.beaconDir);
+  mkdir(beaconPaths.dbDir);
+
+  // initialize peer id & ENR, if either doesn't exist
+  if (!fs.existsSync(beaconPaths.peerIdFile) || !fs.existsSync(beaconPaths.enrFile)) {
+    await initPeerId(beaconPaths.peerIdFile);
+    const peerId = await readPeerId(beaconPaths.peerIdFile);
     // initialize local enr
-    await initEnr(options.enrFile, peerId);
+    initEnr(beaconPaths.enrFile, peerId);
+  }
+
+  if (!fs.existsSync(beaconPaths.paramsFile)) {
+    writeBeaconParams(beaconPaths.paramsFile, beaconConfig.params);
+  }
+
+  // initialize beacon configuration file, if it doesn't exist
+  if (!fs.existsSync(beaconPaths.configFile)) {
+    beaconNodeOptions.writeTo(beaconPaths.configFile);
   }
 }

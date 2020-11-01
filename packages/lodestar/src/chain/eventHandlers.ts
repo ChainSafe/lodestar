@@ -1,48 +1,100 @@
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
-import {Attestation, Checkpoint, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {toJson} from "@chainsafe/lodestar-utils";
+import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
+import {ILogger, toJson} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
-import {IChainEvents} from "./emitter";
+import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
-interface IEventMap<Events, Key extends keyof Events = keyof Events, Value extends Events[Key] = Events[Key]>
-  extends Map<Key, Value> {
-  set<Key extends keyof Events>(key: Key, value: Events[Key]): this;
+interface IEventMap<Events, Event extends keyof Events = keyof Events, Callback extends Events[Event] = Events[Event]>
+  extends Map<Event, Callback> {
+  set<Event extends keyof Events>(key: Event, value: Events[Event]): this;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends [void] ? [] : [T];
+
+/**
+ * Returns a function that runs an async handler function with input args,
+ * If the handler function successfully completes,
+ * then emits the event on the event emitter using the same args
+ */
+function wrapHandler<
+  Event extends keyof IChainEvents = keyof IChainEvents,
+  Callback extends IChainEvents[Event] = IChainEvents[Event]
+>(
+  event: Event,
+  emitter: ChainEventEmitter,
+  logger: ILogger,
+  handler: (...args: Parameters<Callback>) => Promise<void>
+) {
+  return async (...args: Parameters<Callback>): Promise<void> => {
+    try {
+      await handler(...args);
+      emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
+    } catch (e) {
+      logger.error(`Error handling event: ${event}`, e);
+    }
+  };
 }
 
 /**
  * Attach ChainEventEmitter event handlers
  * Listen on `signal` to remove event handlers
+ *
+ * Events are handled in the following way:
+ * Because the chain relies on event handlers to perform side effects (eg: cache/db updates),
+ * We require the chain's event handlers to run and complete in full before external event handlers are allowed to run.
+ *
+ * This is accomplished by maintaining a separate `chain.internalEmitter` and `chain.emitter`.
+ * Chain submodules emit events on the `internalEmitter`, where chain event handlers are listening.
+ * Once a chain event emitter is completed, the same event, with the same args, is emitted on `chain.emitter`, for consumption by external parties.
  */
-export function handleChainEvents(chain: BeaconChain, signal: AbortSignal): void {
+export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void {
   const handlers: IEventMap<IChainEvents> = new Map();
-  handlers.set("clock:slot", onClockSlot.bind(chain));
-  handlers.set("forkVersion", onForkVersion.bind(chain));
-  handlers.set("checkpoint", onCheckpoint.bind(chain));
-  handlers.set("justified", onJustified.bind(chain));
-  handlers.set("finalized", onFinalized.bind(chain));
-  handlers.set("forkChoice:justified", onForkChoiceJustified.bind(chain));
-  handlers.set("forkChoice:finalized", onForkChoiceFinalized.bind(chain));
-  handlers.set("forkChoice:head", onForkChoiceHead.bind(chain));
-  handlers.set("forkChoice:reorg", onForkChoiceReorg.bind(chain));
-  handlers.set("attestation", onAttestation.bind(chain));
-  handlers.set("block", onBlock.bind(chain));
-  handlers.set("error:attestation", onErrorAttestation.bind(chain));
-  handlers.set("error:block", onErrorBlock.bind(chain));
+  const emitter = this.emitter;
+  const logger = this.logger;
+  handlers.set(ChainEvent.clockSlot, wrapHandler(ChainEvent.clockSlot, emitter, logger, onClockSlot.bind(this)));
+  handlers.set(ChainEvent.forkVersion, wrapHandler(ChainEvent.forkVersion, emitter, logger, onForkVersion.bind(this)));
+  handlers.set(ChainEvent.checkpoint, wrapHandler(ChainEvent.checkpoint, emitter, logger, onCheckpoint.bind(this)));
+  handlers.set(ChainEvent.justified, wrapHandler(ChainEvent.justified, emitter, logger, onJustified.bind(this)));
+  handlers.set(ChainEvent.finalized, wrapHandler(ChainEvent.finalized, emitter, logger, onFinalized.bind(this)));
+  handlers.set(
+    ChainEvent.forkChoiceJustified,
+    wrapHandler(ChainEvent.forkChoiceJustified, emitter, logger, onForkChoiceJustified.bind(this))
+  );
+  handlers.set(
+    ChainEvent.forkChoiceFinalized,
+    wrapHandler(ChainEvent.forkChoiceFinalized, emitter, logger, onForkChoiceFinalized.bind(this))
+  );
+  handlers.set(
+    ChainEvent.forkChoiceHead,
+    wrapHandler(ChainEvent.forkChoiceHead, emitter, logger, onForkChoiceHead.bind(this))
+  );
+  handlers.set(
+    ChainEvent.forkChoiceReorg,
+    wrapHandler(ChainEvent.forkChoiceReorg, emitter, logger, onForkChoiceReorg.bind(this))
+  );
+  handlers.set(ChainEvent.attestation, wrapHandler(ChainEvent.attestation, emitter, logger, onAttestation.bind(this)));
+  handlers.set(ChainEvent.block, wrapHandler(ChainEvent.block, emitter, logger, onBlock.bind(this)));
+  handlers.set(
+    ChainEvent.errorAttestation,
+    wrapHandler(ChainEvent.errorAttestation, emitter, logger, onErrorAttestation.bind(this))
+  );
+  handlers.set(ChainEvent.errorBlock, wrapHandler(ChainEvent.errorBlock, emitter, logger, onErrorBlock.bind(this)));
 
   handlers.forEach((handler, event) => {
-    chain.emitter.on(event, handler);
+    this.internalEmitter.on(event, handler);
   });
 
   signal.addEventListener(
     "abort",
     () => {
       handlers.forEach((handler, event) => {
-        chain.emitter.removeListener(event, handler);
+        this.internalEmitter.removeListener(event, handler);
       });
     },
     {once: true}
@@ -61,35 +113,42 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
     })
   );
   await Promise.all(
-    this.pendingBlocks.getBySlot(slot).map((job) => {
-      this.pendingBlocks.remove(job);
-      return this.blockProcessor.processBlockJob(job);
+    this.pendingBlocks.getBySlot(slot).map(async (root) => {
+      const pendingBlock = await this.db.pendingBlock.get(root);
+      if (pendingBlock) {
+        this.pendingBlocks.remove(pendingBlock);
+        await this.db.pendingBlock.delete(root);
+        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+      }
     })
   );
+  this.logger.debug("Block pools: ", {
+    pendingBlocks: this.pendingBlocks.getTotalPendingBlocks(),
+    currentSlot: this.clock.currentSlot,
+  });
 }
 
-export async function onForkVersion(this: BeaconChain): Promise<void> {
-  this._currentForkDigest = await this.getCurrentForkDigest();
-  this.emitter.emit("forkDigest", this._currentForkDigest);
+export async function onForkVersion(this: BeaconChain, version: Version): Promise<void> {
+  this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
   await this.db.checkpointStateCache.add(cp, stateContext);
-  this.metrics.currentEpochLiveValidators.set(stateContext.epochCtx.currentShuffling.activeIndices.length);
+  this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
   if (parentBlockSummary) {
     const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
     const justifiedEpoch = justifiedCheckpoint.epoch;
     const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
     if (justifiedEpoch > preJustifiedEpoch) {
-      this.emitter.emit("justified", justifiedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, stateContext);
     }
     const finalizedCheckpoint = stateContext.state.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
     if (finalizedEpoch > preFinalizedEpoch) {
-      this.emitter.emit("finalized", finalizedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, stateContext);
     }
   }
 }
@@ -102,7 +161,7 @@ export async function onJustified(this: BeaconChain, cp: Checkpoint, stateContex
 
 export async function onFinalized(this: BeaconChain, cp: Checkpoint): Promise<void> {
   this.logger.important("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
-  this.metrics.currentFinalizedEpoch.set(cp.epoch);
+  this.metrics.finalizedEpoch.set(cp.epoch);
 }
 
 export async function onForkChoiceJustified(this: BeaconChain, cp: Checkpoint): Promise<void> {
@@ -118,6 +177,7 @@ export async function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): 
     headSlot: head.slot,
     headRoot: toHexString(head.blockRoot),
   });
+  this.metrics.headSlot.set(head.slot);
 }
 
 export async function onForkChoiceReorg(
@@ -151,7 +211,6 @@ export async function onBlock(
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
-  this.metrics.currentSlot.set(block.message.slot);
   await this.db.stateCache.add(postStateContext);
   if (!job.reprocess) {
     await this.db.block.add(block);
@@ -176,9 +235,13 @@ export async function onBlock(
   }
   await this.db.processBlockOperations(block);
   await Promise.all(
-    this.pendingBlocks.getByParent(blockRoot).map((job) => {
-      this.pendingBlocks.remove(job);
-      return this.blockProcessor.processBlockJob(job);
+    this.pendingBlocks.getByParent(blockRoot).map(async (root) => {
+      const pendingBlock = await this.db.pendingBlock.get(root);
+      if (pendingBlock) {
+        this.pendingBlocks.remove(pendingBlock);
+        await this.db.pendingBlock.delete(root);
+        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+      }
     })
   );
 }
@@ -205,7 +268,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       });
       this.pendingAttestations.putByBlock(err.type.root, err.job);
       break;
-    case AttestationErrorCode.ERR_UNKNOWN_HEAD_BLOCK:
+    case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
       this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
       break;
     default:
@@ -226,14 +289,18 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      this.pendingBlocks.addBySlot(err.job);
+      await this.db.pendingBlock.add(err.job.signedBlock);
+      this.pendingBlocks.addBySlot(err.job.signedBlock);
       break;
     case BlockErrorCode.ERR_PARENT_UNKNOWN:
       this.logger.debug("Add block to pool", {
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      this.pendingBlocks.addByParent(err.job);
+      // add to pendingBlocks first which is not await
+      // this is to process a block range
+      this.pendingBlocks.addByParent(err.job.signedBlock);
+      await this.db.pendingBlock.add(err.job.signedBlock);
       break;
     case BlockErrorCode.ERR_INCORRECT_PROPOSER:
     case BlockErrorCode.ERR_REPEAT_PROPOSAL:

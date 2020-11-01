@@ -4,7 +4,7 @@ import fastifyCors from "fastify-cors";
 import * as querystring from "querystring";
 import {IncomingMessage, Server, ServerResponse} from "http";
 import {ApiNamespace} from "../impl";
-import defaultOptions, {IRestApiOptions} from "./options";
+import {defaultApiRestOptions, IRestApiOptions} from "./options";
 import * as routes from "./routes";
 import {registerRoutes} from "./routes";
 import {IRestApiModules} from "./interface";
@@ -19,7 +19,7 @@ export class RestApi {
   }
 
   public static async init(opts: Partial<IRestApiOptions>, modules: IRestApiModules): Promise<RestApi> {
-    const _opts = {...defaultOptions, ...opts};
+    const _opts = {...defaultApiRestOptions, ...opts};
     const api = new RestApi(setupServer(_opts, modules));
     const logger = modules.logger;
     if (_opts.enabled) {

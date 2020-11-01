@@ -3,32 +3,29 @@ import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Validator} from "@chainsafe/lodestar-validator";
-import {ValidatorDB} from "@chainsafe/lodestar-validator/lib/db";
+import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getMergedIBeaconConfig} from "../../config/params";
-import {initCmd} from "../init/handler";
 import {onGracefulShutdown} from "../../util/process";
 
 /**
  * Run a validator client
  */
-export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs): Promise<void> {
+export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
   await initBLS();
-  await initCmd(options);
 
-  const server = options.server;
-  const force = options.force;
-  const graffiti = options.graffiti || getDefaultGraffiti();
-  const accountPaths = getAccountPaths(options);
-  const validatorPaths = getValidatorPaths(options);
-  const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+  const server = args.server;
+  const force = args.force;
+  const graffiti = args.graffiti || getDefaultGraffiti();
+  const accountPaths = getAccountPaths(args);
+  const validatorPaths = getValidatorPaths(args);
+  const config = getBeaconConfigFromArgs(args);
 
   const logger = new WinstonLogger();
 
@@ -50,14 +47,9 @@ export async function validatorHandler(options: IValidatorCliArgs & IGlobalArgs)
 
       return new Validator({
         config,
-        db: new ValidatorDB({
+        slashingProtection: new SlashingProtection({
           config: config,
-          controller: new LevelDbController(
-            {
-              name: dbPath,
-            },
-            {logger: childLogger}
-          ),
+          controller: new LevelDbController({name: dbPath}, {logger: childLogger}),
         }),
         api,
         logger: childLogger,

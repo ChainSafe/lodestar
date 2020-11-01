@@ -17,11 +17,11 @@ import BlockProposingService from "./services/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
-import {IValidatorDB} from "./db/interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {initBLS} from "@chainsafe/bls";
+import {ISlashingProtection} from "./slashingProtection";
 
 /**
  * Main class for the Validator client.
@@ -32,7 +32,7 @@ export class Validator {
   private apiClient: IApiClient;
   private blockService?: BlockProposingService;
   private attestationService?: AttestationService;
-  private db: IValidatorDB;
+  private slashingProtection: ISlashingProtection;
   private logger: ILogger;
   private isRunning: boolean;
 
@@ -41,7 +41,7 @@ export class Validator {
     this.config = opts.config;
     this.logger = opts.logger;
     this.isRunning = false;
-    this.db = opts.db;
+    this.slashingProtection = opts.slashingProtection;
     this.apiClient = this.initApiClient(opts.api);
   }
 
@@ -89,7 +89,7 @@ export class Validator {
       this.config,
       this.opts.keypairs,
       this.apiClient,
-      this.db,
+      this.slashingProtection,
       this.logger,
       this.opts.graffiti
     );
@@ -98,7 +98,7 @@ export class Validator {
       this.config,
       this.opts.keypairs,
       this.apiClient,
-      this.db,
+      this.slashingProtection,
       this.logger
     );
   }

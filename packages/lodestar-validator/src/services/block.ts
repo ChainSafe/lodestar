@@ -13,10 +13,10 @@ import {
   DomainType,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IValidatorDB} from "../";
 import {IApiClient} from "../api";
 import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
+import {ISlashingProtection} from "../slashingProtection";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
@@ -25,7 +25,7 @@ export default class BlockProposingService {
   private readonly privateKeys: PrivateKey[] = [];
   // validators public keys (order is important)
   private readonly publicKeys: BLSPubkey[] = [];
-  private readonly db: IValidatorDB;
+  private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
   private readonly graffiti?: string;
 
@@ -35,7 +35,7 @@ export default class BlockProposingService {
     config: IBeaconConfig,
     keypairs: Keypair[],
     provider: IApiClient,
-    db: IValidatorDB,
+    slashingProtection: ISlashingProtection,
     logger: ILogger,
     graffiti?: string
   ) {
@@ -45,7 +45,7 @@ export default class BlockProposingService {
       this.publicKeys.push(keypair.publicKey.toBytesCompressed());
     });
     this.provider = provider;
-    this.db = db;
+    this.slashingProtection = slashingProtection;
     this.logger = logger;
     this.graffiti = graffiti;
   }
@@ -114,10 +114,6 @@ export default class BlockProposingService {
     fork: Fork,
     genesisValidatorsRoot: Root
   ): Promise<SignedBeaconBlock | null> {
-    if (await this.hasProposedAlready(proposerIndex, slot)) {
-      this.logger.info(`Already proposed block in current epoch: ${computeEpochAtSlot(this.config, slot)}`);
-      return null;
-    }
     const epoch = computeEpochAtSlot(this.config, slot);
     const randaoDomain = getDomain(this.config, {fork, genesisValidatorsRoot} as BeaconState, DomainType.RANDAO, epoch);
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
@@ -141,13 +137,17 @@ export default class BlockProposingService {
       DomainType.BEACON_PROPOSER,
       computeEpochAtSlot(this.config, slot)
     );
-    const blockSigningRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
+    const signingRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
+
+    await this.slashingProtection.checkAndInsertBlockProposal(this.publicKeys[proposerIndex], {
+      slot: block.slot,
+      signingRoot,
+    });
 
     const signedBlock: SignedBeaconBlock = {
       message: block,
-      signature: this.privateKeys[proposerIndex].signMessage(blockSigningRoot).toBytesCompressed(),
+      signature: this.privateKeys[proposerIndex].signMessage(signingRoot).toBytesCompressed(),
     };
-    await this.storeBlock(proposerIndex, signedBlock);
     try {
       await this.provider.validator.publishBlock(signedBlock);
       this.logger.info(
@@ -161,17 +161,6 @@ export default class BlockProposingService {
 
   public getRpcClient(): IApiClient {
     return this.provider;
-  }
-
-  private async hasProposedAlready(proposerIndex: number, slot: Slot): Promise<boolean> {
-    // get last proposed block from database and check if belongs in same slot
-    const lastProposedBlock = await this.db.getBlock(this.publicKeys[proposerIndex]);
-    if (!lastProposedBlock) return false;
-    return this.config.types.Slot.equals(lastProposedBlock.message.slot, slot);
-  }
-
-  private async storeBlock(proposerIndex: number, signedBlock: SignedBeaconBlock): Promise<void> {
-    await this.db.setBlock(this.publicKeys[proposerIndex], signedBlock);
   }
 
   private getPubKeyIndex(search: BLSPubkey): number {

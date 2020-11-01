@@ -24,6 +24,7 @@ const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 const opts: INetworkOptions = {
   maxPeers: 1,
+  minPeers: 1,
   bootMultiaddrs: [],
   rpcTimeout: 5000,
   connectTimeout: 5000,
@@ -127,7 +128,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
     const spy = sinon.spy();
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve) => {
       netA.gossip.subscribeToBlock(forkDigest, () => {
         spy();
@@ -183,7 +184,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToBlock(forkDigest, (signedBlock: SignedBeaconBlock): void => {
@@ -206,7 +207,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
@@ -224,7 +225,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     let callback: (attestation: {attestation: Attestation; subnet: number}) => void;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);

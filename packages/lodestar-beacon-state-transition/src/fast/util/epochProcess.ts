@@ -18,7 +18,7 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {EpochContext} from "./epochContext";
+import {StateTransitionEpochContext} from "./epochContext";
 import {createIFlatValidator, isActiveIFlatValidator} from "./flatValidator";
 
 export interface IEpochProcess {
@@ -62,7 +62,7 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState(epochCtx: EpochContext, state: BeaconState): IEpochProcess {
+export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, state: BeaconState): IEpochProcess {
   const out = createIEpochProcess();
 
   const config = epochCtx.config;

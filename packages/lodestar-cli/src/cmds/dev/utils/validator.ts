@@ -1,6 +1,6 @@
 import {ApiClientOverInstance, IApiClient} from "@chainsafe/lodestar-validator/lib";
 import {BeaconApi, EventsApi, ValidatorApi} from "@chainsafe/lodestar/lib/api/impl";
-import {BeaconNode} from "@chainsafe/lodestar/lib/node";
+import {BeaconNode} from "@chainsafe/lodestar";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {NodeApi} from "@chainsafe/lodestar/lib/api/impl/node/node";
