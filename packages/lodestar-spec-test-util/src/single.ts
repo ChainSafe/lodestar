@@ -56,7 +56,7 @@ const defaultOptions: ISpecTestOptions<any, any> = {
   shouldError: () => false,
   shouldSkip: () => false,
   expectFunc: (testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
-  timeout: 4000,
+  timeout: 10 * 60 * 1000,
 };
 
 export function describeDirectorySpecTest<TestCase, Result>(

@@ -55,7 +55,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   shouldError = (testCase: TestCase, index: number) => false,
   shouldSkip = (testCase: TestCase, index: number) => false,
   expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),
-  timeout = 2000
+  timeout = 10 * 60 * 1000
 ): void {
   before(async function () {
     await initBLS();
