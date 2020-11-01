@@ -1,32 +1,27 @@
 import {join} from "path";
-import fs from "fs";
 import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {generateTestCase, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
+import {generateTestCase, readSubdirs, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IFinalityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
-const testCaseDirectoryPath = join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/finality/finality/pyspec_tests");
+// Split finality tests in two files so mocha --parallel can paralelize them
 
-const finalityTestDirpaths = fs
-  .readdirSync(testCaseDirectoryPath)
-  .map((name) => join(testCaseDirectoryPath, name))
-  .filter((dirpath) => fs.lstatSync(dirpath).isDirectory());
+const testCaseDirectoryPath = join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/finality/finality/pyspec_tests");
+const finalityTestDirpaths = readSubdirs(testCaseDirectoryPath);
 const halfLen = Math.round(finalityTestDirpaths.length / 2);
 
 export function runFinalityTests1(): void {
   describe("finality fast 1", function () {
-    this.timeout(10000000);
     finalityTestDirpaths.slice(0, halfLen).forEach(generateTestCaseFinality);
   });
 }
 
 export function runFinalityTests2(): void {
   describe("finality fast 2", function () {
-    this.timeout(10000000);
     finalityTestDirpaths.slice(halfLen).forEach(generateTestCaseFinality);
   });
 }

@@ -47,56 +47,47 @@ export interface ITestCaseMeta {
   directoryName: string;
 }
 
-const defaultOptions: ISpecTestOptions<any, any> = {
-  inputTypes: {},
-  inputProcessing: {},
-  sszTypes: {},
-  getExpected: (testCase) => testCase,
-  shouldError: () => false,
-  shouldSkip: () => false,
-  expectFunc: (testCase, expected, actual) => expect(actual).to.be.deep.equal(expected),
-  timeout: 10 * 60 * 1000,
-};
-
 export function describeDirectorySpecTest<TestCase, Result>(
   name: string,
-  testCaseDirectoryPath: string,
+  testCaseParentDirpath: string,
   testFunction: (testCase: TestCase, directoryName: string) => Result,
   options: Partial<ISpecTestOptions<TestCase, Result>>
 ): void {
-  options = {...defaultOptions, ...options};
-  if (!isDirectory(testCaseDirectoryPath)) {
-    throw new Error(`${testCaseDirectoryPath} is not directory`);
+  if (!isDirectory(testCaseParentDirpath)) {
+    throw new Error(`${testCaseParentDirpath} is not directory`);
   }
   describe(name, function () {
-    if (options.timeout) {
-      this.timeout(options.timeout || "10 min");
-    }
-
-    const testCases = readdirSync(testCaseDirectoryPath)
-      .map((name) => join(testCaseDirectoryPath, name))
-      .filter(isDirectory);
-
-    testCases.forEach((testCaseDirectory, index) => {
-      generateTestCase(testCaseDirectory, index, testFunction, options);
+    readSubdirs(testCaseParentDirpath).forEach((testCaseDirpath, index) => {
+      generateTestCase(testCaseDirpath, index, testFunction, options);
     });
   });
 }
 
+export function readSubdirs(dirpath: string): string[] {
+  return readdirSync(dirpath)
+    .map((name) => join(dirpath, name))
+    .filter(isDirectory);
+}
+
 export function generateTestCase<TestCase, Result>(
-  testCaseDirectoryPath: string,
+  testCaseDirpath: string,
   index: number,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
 ): void {
-  options = {...defaultOptions, ...options};
-  const name = basename(testCaseDirectoryPath);
+  const {getExpected, expectFunc, shouldError, shouldSkip} = options;
+  const name = basename(testCaseDirpath);
+
   it(name, function () {
-    const testCase = loadInputFiles(testCaseDirectoryPath, options);
-    if (options.shouldSkip && options.shouldSkip(testCase, name, index)) {
+    if (options.timeout) {
+      this.timeout(options.timeout);
+    }
+
+    const testCase = loadInputFiles(testCaseDirpath, options);
+    if (shouldSkip && shouldSkip(testCase, name, index)) {
       return this.skip();
     }
-    if (options.shouldError && options.shouldError(testCase)) {
+    if (shouldError && shouldError(testCase)) {
       try {
         testFunction(testCase, name);
       } catch (e) {
@@ -108,16 +99,20 @@ export function generateTestCase<TestCase, Result>(
       if (profilingDirectory) {
         profiler.startProfiling(profileId);
       }
+
       const result = testFunction(testCase, name);
+
       if (profilingDirectory) {
         const profile = profiler.stopProfiling(profileId);
-
         generateProfileReport(profile, profilingDirectory, profileId);
       }
-      if (!options.getExpected) throw Error("getExpected is not defined");
-      if (!options.expectFunc) throw Error("expectFunc is not defined");
-      const expected = options.getExpected(testCase);
-      options.expectFunc(testCase, expected, result);
+
+      const expected = getExpected ? getExpected(testCase) : testCase;
+      if (expectFunc) {
+        expectFunc(testCase, expected, result);
+      } else {
+        expect(result).to.be.deep.equal(expected);
+      }
     }
   });
 }
@@ -130,8 +125,7 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
       if (isDirectory(file)) {
         return false;
       }
-      if (!options.inputTypes) throw Error("inputTypes is not defined");
-      const extension = options.inputTypes[parse(file).name] || InputType.SSZ;
+      const extension = options.inputTypes?.[parse(file).name] || InputType.SSZ;
       return file.endsWith(extension);
     })
     .forEach((file) => {
@@ -140,9 +134,9 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
       if (file.endsWith(InputType.SSZ)) {
         testCase[`${inputName}_raw`] = readFileSync(file);
       }
-      if (!options.inputProcessing) throw Error("inputProcessing is not defined");
-      if (options.inputProcessing[inputName]) {
-        testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
+      const inputProcessingFn = options.inputProcessing?.[inputName];
+      if (inputProcessingFn) {
+        testCase[inputName] = inputProcessingFn(testCase[inputName]);
       }
     });
   return testCase as TestCase;
@@ -150,8 +144,11 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
 
 function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
   if (file.endsWith(InputType.SSZ)) {
-    if (!options.sszTypes) throw Error("sszTypes is not defined");
-    return options.sszTypes[inputName].deserialize(readFileSync(file));
+    const sszType = options.sszTypes?.[inputName];
+    if (!sszType) {
+      throw Error(`No sszType for ${inputName}`);
+    }
+    return sszType.deserialize(readFileSync(file));
   } else {
     return loadYamlFile(file);
   }
