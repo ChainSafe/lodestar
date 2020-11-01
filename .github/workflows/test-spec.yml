@@ -1,10 +1,10 @@
-name: Tests
+name: Spec tests
 
 on: [pull_request, push]
 
 jobs:
-  tests-main:
-    name: Tests
+  tests-spec:
+    name: Spec tests
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
@@ -12,6 +12,8 @@ jobs:
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12.14.1"
+      # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
+      # - run: ./scripts/free-disk-space.sh
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -19,19 +21,18 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional
+        run: yarn install --frozen-lockfile
       - name: Build
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-      - name: Lint
-        run: yarn lint
-      - name: Unit tests
-        run: yarn test:unit
-      - name: Upload coverage data
-        run: yarn coverage
-      - name: E2e tests
-        run: yarn test:e2e
+      - name: Spec min
+        run: yarn test:spec-min
+      - name: Spec fast
+        run: yarn test:spec-fast
+      - name: Spec main
+        run: yarn test:spec-main
+        if: github.ref == 'ref/head/master' && github.event_name == 'push'
