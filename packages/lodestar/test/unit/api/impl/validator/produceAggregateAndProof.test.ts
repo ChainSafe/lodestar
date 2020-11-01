@@ -4,7 +4,8 @@ import {IValidatorApi, ValidatorApi} from "../../../../../src/api/impl/validator
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {PrivateKey, verifyAggregate} from "@chainsafe/bls";
 import {Attestation} from "@chainsafe/lodestar-types";
-import {computeDomain, computeSigningRoot, DomainType, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {expect} from "chai";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
