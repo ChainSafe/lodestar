@@ -1,6 +1,5 @@
-import {IBeaconSSZTypes} from "../interface";
 import {ContainerType} from "@chainsafe/ssz";
-import {Checkpoint} from "./misc";
+import {IBeaconSSZTypes} from "../interface";
 
 export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({

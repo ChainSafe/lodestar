@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
+import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
+  Epoch,
   Gwei,
   Number64,
+  Root,
   Slot,
   Uint64,
   ValidatorIndex,
-  Root,
   Version,
-  Epoch,
 } from "./primitive";
-import {Fork, SignedBeaconBlockHeader, Validator, Checkpoint} from "./misc";
 
 export interface SignedBeaconHeaderResponse {
   root: Root;
