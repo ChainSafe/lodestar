@@ -83,12 +83,13 @@ export function describeDirectorySpecTest<TestCase, Result>(
   });
 }
 
-function generateTestCase<TestCase, Result>(
+export function generateTestCase<TestCase, Result>(
   testCaseDirectoryPath: string,
   index: number,
   testFunction: (...args: any) => Result,
   options: ISpecTestOptions<TestCase, Result>
 ): void {
+  options = {...defaultOptions, ...options};
   const name = basename(testCaseDirectoryPath);
   it(name, function () {
     const testCase = loadInputFiles(testCaseDirectoryPath, options);
