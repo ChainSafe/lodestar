@@ -64,23 +64,6 @@ export class BeaconApi implements IBeaconApi {
     }
   }
 
-  public async getFork(): Promise<ForkResponse> {
-    const state = await this.chain.getHeadState();
-    const networkId: Uint64 = this.chain.networkId;
-    const fork = state
-      ? state.fork
-      : {
-          previousVersion: Buffer.alloc(4),
-          currentVersion: Buffer.alloc(4),
-          epoch: 0,
-        };
-    return {
-      fork,
-      chainId: networkId,
-      genesisValidatorsRoot: state.genesisValidatorsRoot,
-    };
-  }
-
   public async getGenesis(): Promise<Genesis | null> {
     const state = await this.chain.getHeadState();
     if (state) {

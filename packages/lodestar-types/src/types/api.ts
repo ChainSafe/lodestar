@@ -27,12 +27,6 @@ export interface SubscribeToCommitteeSubnetPayload {
   aggregatorPubkey: BLSPubkey;
 }
 
-export interface ForkResponse {
-  chainId: Uint64;
-  fork: Fork;
-  genesisValidatorsRoot: Root;
-}
-
 export interface AttesterDuty {
   // The validator's public key, uniquely identifying them
   validatorPubkey: BLSPubkey;

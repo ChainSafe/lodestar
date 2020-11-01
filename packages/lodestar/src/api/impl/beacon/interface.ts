@@ -13,11 +13,6 @@ export interface IBeaconApi {
   state: IBeaconStateApi;
   pool: IBeaconPoolApi;
 
-  /**
-   * Requests the BeaconNode to provide which fork version it is currently on.
-   */
-  getFork(): Promise<ForkResponse>;
-
   getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null>;
 
   getGenesis(): Promise<Genesis | null>;

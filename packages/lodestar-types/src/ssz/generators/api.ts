@@ -21,15 +21,6 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
     },
   });
 
-export const ForkResponse = (ssz: IBeaconSSZTypes): ContainerType =>
-  new ContainerType({
-    fields: {
-      fork: ssz.Fork,
-      chainId: ssz.Uint64,
-      genesisValidatorsRoot: ssz.Root,
-    },
-  });
-
 export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
