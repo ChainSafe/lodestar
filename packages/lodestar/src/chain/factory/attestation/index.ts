@@ -1,6 +1,6 @@
 import {TreeBacked, List} from "@chainsafe/ssz";
 import {Attestation, BeaconState, Slot, ValidatorIndex, CommitteeIndex} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {assembleAttestationData} from "./data";
 import {EMPTY_SIGNATURE} from "../../../constants";

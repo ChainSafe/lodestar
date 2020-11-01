@@ -1,12 +1,13 @@
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {verifyBlockSignature} from "./util";
-import {IStateContext} from "./util";
-import {StateTransitionEpochContext} from "./util/epochContext";
-import {EpochContext} from "./util/epochContext";
+import {verifyBlockSignature, IStateContext} from "./util";
+import {EpochContext, StateTransitionEpochContext} from "./util/epochContext";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
 
-export {IStateContext, EpochContext};
+export * from "./block";
+export * from "./epoch";
+export * from "./slot";
+export * from "./util";
 
 export function fastStateTransition(
   {state, epochCtx: eiEpochCtx}: IStateContext,

@@ -1,15 +1,13 @@
 import {byteArrayEquals, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
+import {ZERO_HASH, computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {
-  ZERO_HASH,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
+  processSlots,
   fastStateTransition,
   IStateContext,
   toIStateContext,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";

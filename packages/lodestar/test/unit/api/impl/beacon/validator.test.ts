@@ -7,7 +7,7 @@ import {BeaconApi, IBeaconApi} from "../../../../../src/api/impl/beacon";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {generateState} from "../../../../utils/state";
 import {generateValidator} from "../../../../utils/validator";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {PrivateKey, PublicKey} from "@chainsafe/bls";
 
 describe("get validator details api", function () {

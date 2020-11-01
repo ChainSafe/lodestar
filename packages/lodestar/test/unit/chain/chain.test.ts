@@ -5,7 +5,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {defaultChainOptions} from "../../../src/chain/options";

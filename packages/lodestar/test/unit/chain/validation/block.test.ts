@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
+import * as specUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";

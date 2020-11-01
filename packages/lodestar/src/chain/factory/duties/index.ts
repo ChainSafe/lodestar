@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AttesterDuty, BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 export function assembleAttesterDuty(

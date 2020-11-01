@@ -1,6 +1,6 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {

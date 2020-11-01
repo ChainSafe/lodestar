@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {assembleAttesterDuty} from "../../../../../src/chain/factory/duties";
 
 describe("assemble validator duty", function () {

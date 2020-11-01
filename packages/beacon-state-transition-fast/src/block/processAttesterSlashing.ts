@@ -1,8 +1,7 @@
 import {AttesterSlashing, BeaconState} from "@chainsafe/lodestar-types";
 import {isSlashableValidator, isSlashableAttestationData} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "../util";
+import {EpochContext, isValidIndexedAttestation} from "../util";
 import {slashValidator} from "./slashValidator";
-import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttesterSlashing(
   epochCtx: EpochContext,

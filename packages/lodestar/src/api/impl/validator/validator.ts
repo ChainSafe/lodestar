@@ -10,7 +10,7 @@ import {
   computeSubnetForSlot,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   AggregateAndProof,

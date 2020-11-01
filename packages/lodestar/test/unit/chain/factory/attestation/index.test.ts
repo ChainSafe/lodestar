@@ -5,7 +5,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, AttestationData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import * as attestationDataProduction from "../../../../../src/chain/factory/attestation/data";
 import {assembleAttestation} from "../../../../../src/chain/factory/attestation";

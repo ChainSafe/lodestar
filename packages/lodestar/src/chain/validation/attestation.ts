@@ -2,11 +2,13 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {
+  EpochContext,
+  computeSubnetForAttestation,
+  isValidIndexedAttestation,
+} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 

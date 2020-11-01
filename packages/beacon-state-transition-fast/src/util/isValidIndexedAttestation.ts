@@ -1,7 +1,7 @@
 import {Signature} from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {DomainType, computeSigningRoot, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "../util";
+import {EpochContext} from "./epochContext";
 
 export function isValidIndexedAttestation(
   epochCtx: EpochContext,

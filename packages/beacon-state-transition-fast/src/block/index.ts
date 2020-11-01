@@ -1,27 +1,19 @@
-import {EpochContext} from "../util";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
-
+import {EpochContext} from "../util";
 import {processBlockHeader} from "./processBlockHeader";
 import {processRandao} from "./processRandao";
 import {processEth1Data} from "./processEth1Data";
 import {processOperations} from "./processOperations";
-import {processAttestation} from "./processAttestation";
-import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processDeposit} from "./processDeposit";
-import {processProposerSlashing} from "./processProposerSlashing";
-import {processVoluntaryExit} from "./processVoluntaryExit";
 
-export {
-  processBlockHeader,
-  processRandao,
-  processEth1Data,
-  processOperations,
-  processAttestation,
-  processAttesterSlashing,
-  processDeposit,
-  processProposerSlashing,
-  processVoluntaryExit,
-};
+export * from "./processBlockHeader";
+export * from "./processRandao";
+export * from "./processEth1Data";
+export * from "./processOperations";
+export * from "./processAttestation";
+export * from "./processAttesterSlashing";
+export * from "./processDeposit";
+export * from "./processProposerSlashing";
+export * from "./processVoluntaryExit";
 
 export function processBlock(
   epochCtx: EpochContext,

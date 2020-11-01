@@ -4,13 +4,11 @@
 
 import {BeaconBlock, Bytes96, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {fastStateTransition, IStateContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconDb} from "../../../db/api";
 import {assembleBody} from "./body";
-import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IEth1ForBlockProduction} from "../../../eth1";
 
 export async function assembleBlock(

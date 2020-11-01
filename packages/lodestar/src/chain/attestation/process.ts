@@ -1,5 +1,5 @@
 // eslint-disable-next-line max-len
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IAttestationJob} from "../interface";

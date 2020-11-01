@@ -3,9 +3,11 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlashings} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
-import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {
+  EpochContext,
+  processSlashings,
+  prepareEpochProcessState,
+} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
