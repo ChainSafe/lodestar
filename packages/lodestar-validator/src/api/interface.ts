@@ -1,4 +1,4 @@
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, Root} from "@chainsafe/lodestar-types";
 import {IBeaconApi} from "./interface/beacon";
 import {IValidatorApi} from "./interface/validators";
 import StrictEventEmitter from "strict-event-emitter-types";
@@ -29,7 +29,7 @@ export interface IApiClient extends ApiClientEventEmitter {
   events: IEventsApi;
   validator: IValidatorApi;
   clock: IBeaconClock;
-
+  genesisValidatorsRoot: Root;
   url: string;
 
   /**

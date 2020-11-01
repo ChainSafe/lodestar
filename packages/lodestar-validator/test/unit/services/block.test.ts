@@ -1,24 +1,24 @@
-import sinon from "sinon";
-import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair} from "@chainsafe/bls";
-import {generateEmptySignedBlock, generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {generateEmptyBlock, generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
+import {expect} from "chai";
+import sinon from "sinon";
+import {InvalidBlockError, InvalidBlockErrorCode, SlashingProtection} from "../../../src";
 import BlockProposingService from "../../../src/services/block";
+import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
-import {SinonStubbedBeaconApi} from "../../utils/apiStub";
 import {silentLogger} from "../../utils/logger";
-import {SlashingProtection, InvalidBlockError, InvalidBlockErrorCode} from "../../../src";
 
 describe("block proposing service", function () {
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub: SinonStubbedBeaconApi;
+  let rpcClientStub: SinonStubbedApi;
   let slashingProtectionStub: sinon.SinonStubbedInstance<SlashingProtection>;
   const logger = silentLogger;
 
   beforeEach(() => {
-    rpcClientStub = new SinonStubbedBeaconApi(sandbox);
+    rpcClientStub = new SinonStubbedApi(sandbox);
     slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
   });
 

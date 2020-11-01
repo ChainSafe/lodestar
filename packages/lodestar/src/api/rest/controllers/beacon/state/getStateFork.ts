@@ -3,7 +3,7 @@ import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
 
 export const getStateFork: ApiController<DefaultQuery, {stateId: string}> = {
-  url: "/state/:stateId/fork",
+  url: "/states/:stateId/fork",
 
   handler: async function (req, resp) {
     try {

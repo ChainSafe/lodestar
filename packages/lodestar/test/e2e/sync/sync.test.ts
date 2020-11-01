@@ -23,8 +23,8 @@ describe("syncing", function () {
       validatorCount,
     });
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    const validators = getDevValidators(bn, 8);
     await bn.start();
+    const validators = getDevValidators(bn, 8);
     validators.forEach((v) => v.start());
     try {
       await finalizationEventListener;

@@ -1,17 +1,19 @@
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   BeaconBlock,
   BeaconState,
   Bytes32,
   Fork,
-  Number64,
-  SyncingStatus,
-  Root,
-  Uint64,
   Genesis,
+  Number64,
+  Root,
+  SyncingStatus,
+  Uint64,
 } from "@chainsafe/lodestar-types";
-import {IBeaconApi} from "../../../src/api/interface/beacon";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {IBeaconApi, IBeaconStateApi} from "../../../src/api/interface/beacon";
+import {RestBeaconStateApi} from "../../../src/api/impl/rest/beacon/state";
 
 export interface IMockBeaconApiOpts {
   version?: Bytes32;
@@ -21,6 +23,8 @@ export interface IMockBeaconApiOpts {
 }
 
 export class MockBeaconApi implements IBeaconApi {
+  public state: SinonStubbedInstance<IBeaconStateApi>;
+
   private version: Bytes32;
   private fork: Fork;
   private head: BeaconBlock;
@@ -31,6 +35,7 @@ export class MockBeaconApi implements IBeaconApi {
     this.fork = (opts && opts.fork) || {previousVersion: Buffer.alloc(0), currentVersion: Buffer.alloc(0), epoch: 0};
     this.head = (opts && opts.head) || generateEmptyBlock();
     this.genesisTime = (opts && opts.genesisTime) || Math.floor(Date.now() / 1000);
+    this.state = sinon.createStubInstance(RestBeaconStateApi);
   }
 
   public async getValidator(): Promise<any> {
