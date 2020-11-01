@@ -11,6 +11,7 @@ import {
   getVoluntaryExits,
   publishBlock,
   submitVoluntaryExit,
+  getStateFork,
 } from "../../controllers/beacon";
 import {getAttesterSlashings} from "../../controllers/beacon/pool/getAttesterSlashings";
 import {getProposerSlashings} from "../../controllers/beacon/pool/getProposerSlashings";
@@ -37,6 +38,7 @@ export function registerBeaconRoutes(server: FastifyInstance): void {
         getStateFinalityCheckpoints.opts,
         getStateFinalityCheckpoints.handler
       );
+      fastify.get(getStateFork.url, getStateFork.opts, getStateFork.handler);
 
       //pool
       fastify.get(getPoolAttestations.url, getPoolAttestations.opts, getPoolAttestations.handler);
