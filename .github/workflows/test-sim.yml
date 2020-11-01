@@ -27,5 +27,9 @@ jobs:
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-      - name: Simulation tests
-        run: yarn test:e2e:sim
+      - name: Simulation single thread test
+        run: yarn test:sim:singleThread
+        working-directory: packages/lodestar
+      - name: Simulation multi thread test
+        run: yarn test:sim:multiThread
+        working-directory: packages/lodestar
