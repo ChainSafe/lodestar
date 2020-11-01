@@ -143,4 +143,8 @@ export class SlashingProtectionAttestationService {
   async exportAttestations(pubkey: BLSPubkey): Promise<SlashingProtectionAttestation[]> {
     return await this.attestationByTarget.getAll(pubkey);
   }
+
+  async listPubkeys(): Promise<BLSPubkey[]> {
+    return await this.attestationByTarget.listPubkeys();
+  }
 }

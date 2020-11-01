@@ -55,20 +55,23 @@ export enum Key {
   justifiedBlock = 5,
 }
 
+export const bucketLen = 1;
+export const uintLen = 8;
+
 /**
  * Prepend a bucket to a key
  */
 export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint): Buffer {
   let buf;
   if (typeof key === "string") {
-    buf = Buffer.alloc(key.length + 1);
-    buf.write(key, 1);
+    buf = Buffer.alloc(key.length + bucketLen);
+    buf.write(key, bucketLen);
   } else if (typeof key === "number" || typeof key === "bigint") {
-    buf = Buffer.alloc(9);
-    intToBytes(BigInt(key), 8, "be").copy(buf, 1);
+    buf = Buffer.alloc(uintLen + bucketLen);
+    intToBytes(BigInt(key), uintLen, "be").copy(buf, bucketLen);
   } else {
-    buf = Buffer.alloc(key.length + 1);
-    buf.set(key, 1);
+    buf = Buffer.alloc(key.length + bucketLen);
+    buf.set(key, bucketLen);
   }
   buf.writeUInt8(bucket, 0);
   return buf;
