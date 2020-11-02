@@ -154,6 +154,7 @@ export class BeaconSync implements IBeaconSync {
   private syncCompleted = async (): Promise<void> => {
     this.mode = SyncMode.SYNCED;
     this.stopSyncTimer();
+    this.gossip.handleSyncCompleted();
     await this.network.handleSyncCompleted();
   };
 

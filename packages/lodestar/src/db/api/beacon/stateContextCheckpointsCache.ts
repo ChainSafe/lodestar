@@ -75,7 +75,7 @@ export class CheckpointStateCache {
     const epochs = Object.keys(this.epochIndex)
       .map(Number)
       .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
-    const MAX_EPOCHS = 20;
+    const MAX_EPOCHS = 10;
     if (epochs.length > MAX_EPOCHS) {
       epochs.slice(0, epochs.length - MAX_EPOCHS).forEach((epoch) => this.deleteAllEpochItems(epoch));
     }
