@@ -1,10 +1,10 @@
-name: Tests
+name: Sim tests
 
 on: [pull_request, push]
 
 jobs:
-  tests-main:
-    name: Tests
+  tests-sim:
+    name: Sim tests
     runs-on: ubuntu-latest
     steps:
       # <common-build> - Uses YAML anchors in the future
@@ -27,11 +27,9 @@ jobs:
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-      - name: Lint
-        run: yarn lint
-      - name: Unit tests
-        run: yarn test:unit
-      - name: Upload coverage data
-        run: yarn coverage
-      - name: E2e tests
-        run: yarn test:e2e
+      - name: Simulation single thread test
+        run: yarn test:sim:singleThread
+        working-directory: packages/lodestar
+      - name: Simulation multi thread test
+        run: yarn test:sim:multiThread
+        working-directory: packages/lodestar
