@@ -68,10 +68,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   };
 
   private onAggregatedAttestation = async (aggregate: SignedAggregateAndProof): Promise<void> => {
-    await Promise.all([
-      this.db.aggregateAndProof.add(aggregate.message),
-      this.chain.receiveAttestation(aggregate.message.aggregate),
-    ]);
+    await this.db.aggregateAndProof.add(aggregate.message);
   };
 
   private onAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {
