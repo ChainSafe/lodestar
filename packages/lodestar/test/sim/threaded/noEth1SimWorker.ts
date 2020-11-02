@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-floating-promises */
 import {parentPort, workerData} from "worker_threads";
 
 import {initBLS} from "@chainsafe/bls";
@@ -18,6 +19,8 @@ import {getDevValidator} from "../../utils/node/validator";
     logger: logger.child({module: `Node ${nodeIndex}`}),
   });
 
+  await node.start();
+
   const validator = getDevValidator({
     node,
     startIndex,
@@ -25,7 +28,6 @@ import {getDevValidator} from "../../utils/node/validator";
     logger: logger.child({module: `Validator ${startIndex}-${startIndex + validatorsPerNode}`}),
   });
 
-  await node.start();
   await validator.start();
 
   node.chain.emitter.on(checkpointEvent, (checkpoint) => {

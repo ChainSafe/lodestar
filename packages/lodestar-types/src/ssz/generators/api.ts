@@ -1,5 +1,5 @@
-import {IBeaconSSZTypes} from "../interface";
 import {ContainerType} from "@chainsafe/ssz";
+import {IBeaconSSZTypes} from "../interface";
 
 export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
@@ -17,15 +17,6 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
       slotSignature: ssz.BLSSignature,
       attestationCommitteeIndex: ssz.CommitteeIndex,
       aggregatorPubkey: ssz.BLSPubkey,
-    },
-  });
-
-export const ForkResponse = (ssz: IBeaconSSZTypes): ContainerType =>
-  new ContainerType({
-    fields: {
-      fork: ssz.Fork,
-      chainId: ssz.Uint64,
-      genesisValidatorsRoot: ssz.Root,
     },
   });
 
@@ -111,5 +102,14 @@ export const ChainReorg = (ssz: IBeaconSSZTypes): ContainerType =>
       oldHeadState: ssz.Root,
       newHeadState: ssz.Root,
       epoch: ssz.Epoch,
+    },
+  });
+
+export const FinalityCheckpoints = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      previousJustified: ssz.Checkpoint,
+      currentJustified: ssz.Checkpoint,
+      finalized: ssz.Checkpoint,
     },
   });

@@ -100,13 +100,14 @@ export interface IBeaconSSZTypes {
   //api
   SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
-  ForkResponse: ContainerType<t.ForkResponse>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
   Genesis: ContainerType<t.Genesis>;
   ChainHead: ContainerType<t.ChainHead>;
   BlockEventPayload: ContainerType<t.BlockEventPayload>;
   FinalizedCheckpoint: ContainerType<t.FinalizedCheckpoint>;
   ChainReorg: ContainerType<t.ChainReorg>;
+  FinalityCheckpoints: ContainerType<t.FinalityCheckpoints>;
+  ValidatorBalance: ContainerType<t.ValidatorBalance>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -187,7 +188,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   //api
   "SignedBeaconHeaderResponse",
   "SubscribeToCommitteeSubnetPayload",
-  "ForkResponse",
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
