@@ -1,18 +1,20 @@
-import {AbortController} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Root} from "@chainsafe/lodestar-types";
+import {ILogger, IStoppableEventIterable} from "@chainsafe/lodestar-utils";
+import {AbortController} from "abort-controller";
+import {EventEmitter} from "events";
+import {pipeToEmitter} from "./impl/rest/events/util";
 import {ApiClientEventEmitter, IApiClient, IBeaconClock} from "./interface";
 import {IBeaconApi} from "./interface/beacon";
-import {IValidatorApi} from "./interface/validators";
-import {EventEmitter} from "events";
-import {INodeApi} from "./interface/node";
-import {ILogger, IStoppableEventIterable} from "@chainsafe/lodestar-utils";
 import {BeaconEvent, BeaconEventType, IEventsApi} from "./interface/events";
+import {INodeApi} from "./interface/node";
+import {IValidatorApi} from "./interface/validators";
 import {LocalClock} from "./LocalClock";
-import {pipeToEmitter} from "./impl/rest/events/util";
 
 export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiClientEventEmitter})
   implements IApiClient {
   public clock!: IBeaconClock;
+  public genesisValidatorsRoot!: Root;
 
   protected config: IBeaconConfig;
   protected logger: ILogger;
@@ -71,6 +73,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
       if (this.beaconNodeInterval) {
         clearInterval(this.beaconNodeInterval);
       }
+      this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
       this.startSlotCounting(Number(genesis.genesisTime));
       this.emit("beaconChainStarted");
     } else {

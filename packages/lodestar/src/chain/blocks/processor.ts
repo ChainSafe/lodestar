@@ -9,6 +9,7 @@ import {JobQueue} from "../../util/queue";
 
 import {processBlock} from "./process";
 import {validateBlock} from "./validate";
+import {IBeaconDb} from "../../db";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
@@ -16,6 +17,7 @@ type BlockProcessorModules = {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
+  db: IBeaconDb;
 };
 
 /**

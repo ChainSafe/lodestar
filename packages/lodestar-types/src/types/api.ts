@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
+import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
   CommitteeIndex,
+  Epoch,
   Gwei,
   Number64,
+  Root,
   Slot,
   Uint64,
   ValidatorIndex,
-  Root,
   Version,
-  Epoch,
 } from "./primitive";
-import {Fork, SignedBeaconBlockHeader, Validator} from "./misc";
 
 export interface SignedBeaconHeaderResponse {
   root: Root;
@@ -25,12 +25,6 @@ export interface SubscribeToCommitteeSubnetPayload {
   slotSignature: BLSSignature;
   attestationCommitteeIndex: CommitteeIndex;
   aggregatorPubkey: BLSPubkey;
-}
-
-export interface ForkResponse {
-  chainId: Uint64;
-  fork: Fork;
-  genesisValidatorsRoot: Root;
 }
 
 export interface AttesterDuty {
@@ -96,4 +90,15 @@ export interface ChainReorg {
   oldHeadState: Root;
   newHeadState: Root;
   epoch: Epoch;
+}
+
+export interface FinalityCheckpoints {
+  previousJustified: Checkpoint;
+  currentJustified: Checkpoint;
+  finalized: Checkpoint;
+}
+
+export interface ValidatorBalance {
+  index: ValidatorIndex;
+  balance: Gwei;
 }

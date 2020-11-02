@@ -2,7 +2,6 @@ import fs from "fs";
 import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
@@ -30,38 +29,31 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const logger = new WinstonLogger();
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
-  const validatorKeypairs = await validatorDirManager.decryptAllValidators({force});
+  const keypairs = await validatorDirManager.decryptAllValidators({force});
 
-  if (validatorKeypairs.length === 0) throw new YargsError("No validator keystores found");
-  logger.info(`Decrypted ${validatorKeypairs.length} validator keystores`);
+  if (keypairs.length === 0) throw new YargsError("No validator keystores found");
+  logger.info(`Decrypted ${keypairs.length} validator keystores`);
 
-  const validators: Validator[] = validatorKeypairs.map(
-    (keypair): Validator => {
-      const pubkey = keypair.publicKey.toHexString();
-      const loggerId = `Validator ${pubkey.slice(0, 10)}`;
-      const dbPath = validatorPaths.validatorDbDir(pubkey);
-      fs.mkdirSync(dbPath, {recursive: true});
+  const dbPath = validatorPaths.validatorsDbDir;
+  fs.mkdirSync(dbPath, {recursive: true});
 
-      const api = new ApiClientOverRest(config, server, logger);
-      const childLogger = logger.child({module: loggerId, level: logger.level}) as ILogger;
+  const api = new ApiClientOverRest(config, server, logger);
 
-      return new Validator({
-        config,
-        slashingProtection: new SlashingProtection({
-          config: config,
-          controller: new LevelDbController({name: dbPath}, {logger: childLogger}),
-        }),
-        api,
-        logger: childLogger,
-        keypairs: [keypair],
-        graffiti,
-      });
-    }
-  );
+  const validator = new Validator({
+    config,
+    slashingProtection: new SlashingProtection({
+      config: config,
+      controller: new LevelDbController({name: dbPath}, {logger}),
+    }),
+    api,
+    logger,
+    keypairs,
+    graffiti,
+  });
 
   onGracefulShutdown(async () => {
-    await Promise.all(validators.map((v) => v.stop()));
+    await validator.stop();
   }, logger.info.bind(logger));
 
-  await Promise.all(validators.map((validator) => validator.start()));
+  await validator.start();
 }

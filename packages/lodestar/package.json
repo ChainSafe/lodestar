@@ -37,9 +37,11 @@
     "lint:fix": "eslint --color --ext .ts src/ --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha --timeout 5000 'test/e2e/**/*.test.ts'",
-    "test:e2e:sim": "TS_NODE_PROJECT=tsconfig.test.json mocha --timeout 5000 'test/sim/**/*.test.ts'",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'"
+    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/e2e/**/*.test.ts'",
+    "test:sim": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/**/*.test.ts'",
+    "test:sim:singleThread": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/multiNodeMultiThread.test.ts'",
+    "test:sim:multiThread": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/singleNodeSingleThread.test.ts'"
   },
   "dependencies": {
     "@chainsafe/bls": "4.0.0",

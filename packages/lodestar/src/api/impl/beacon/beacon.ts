@@ -3,26 +3,18 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  BLSPubkey,
-  ForkResponse,
-  Genesis,
-  SignedBeaconBlock,
-  Uint64,
-  ValidatorResponse,
-} from "@chainsafe/lodestar-types";
-
+import {BLSPubkey, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
-import {IApiOptions} from "../../options";
 import {IBeaconDb} from "../../../db/api";
 import {IBeaconSync} from "../../../sync";
+import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
 import {BeaconBlockApi, IBeaconBlocksApi} from "./blocks";
+import {IBeaconApi} from "./interface";
 import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
-import {IBeaconApi} from "./interface";
-import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;
@@ -62,23 +54,6 @@ export class BeaconApi implements IBeaconApi {
     } else {
       return null;
     }
-  }
-
-  public async getFork(): Promise<ForkResponse> {
-    const state = await this.chain.getHeadState();
-    const networkId: Uint64 = this.chain.networkId;
-    const fork = state
-      ? state.fork
-      : {
-          previousVersion: Buffer.alloc(4),
-          currentVersion: Buffer.alloc(4),
-          epoch: 0,
-        };
-    return {
-      fork,
-      chainId: networkId,
-      genesisValidatorsRoot: state.genesisValidatorsRoot,
-    };
   }
 
   public async getGenesis(): Promise<Genesis | null> {
