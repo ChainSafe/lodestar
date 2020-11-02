@@ -11,7 +11,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
-import {BeaconDb, IBeaconDb} from "../db";
+import {IBeaconDb} from "../db";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics, restoreStateCaches} from "../chain";
@@ -120,7 +120,7 @@ export class BeaconNode {
     const controller = new AbortController();
     await initBLS();
     // start db if not already started
-    await (db as BeaconDb).start();
+    await db.start();
     await restoreStateCaches(config, db, anchorState);
 
     const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
@@ -229,7 +229,7 @@ export class BeaconNode {
 
       await (this.metrics as BeaconMetrics).stop();
       await this.chain.close();
-      await (this.db as BeaconDb).stop();
+      await this.db.stop();
       if (this.controller) this.controller.abort();
       this.status = BeaconNodeStatus.closed;
     }

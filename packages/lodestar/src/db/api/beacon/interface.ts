@@ -66,4 +66,7 @@ export interface IBeaconDb {
   eth1Data: Eth1DataRepository;
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
+
+  start(): Promise<void>;
+  stop(): Promise<void>;
 }
