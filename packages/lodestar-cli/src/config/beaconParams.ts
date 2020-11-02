@@ -6,7 +6,7 @@ import {writeFile, readFileIfExists} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
 import {IBeaconParamsUnparsed} from "./types";
-import {parseBeaconParamsArgs} from "@chainsafe/lodestar-cli/src/options";
+import {parseBeaconParamsArgs} from "../options";
 
 type IBeaconParamsCliArgs = {
   preset: string;

@@ -3,7 +3,7 @@ import {getAccountPaths} from "../../paths";
 import {IAccountValidatorArgs} from "./options";
 import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {add0xPrefix} from "@chainsafe/lodestar-cli/src/util/format";
+import {add0xPrefix} from "../../../../util/format";
 
 export type ReturnType = string[];
 
