@@ -99,13 +99,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
-    //head state should always exist
     const head = this.forkChoice.getHead();
-    const headStateRoot =
-      (await this.db.checkpointStateCache.getLatest({
-        root: head.blockRoot,
-        epoch: Infinity,
-      })) || (await this.regen.getState(head.stateRoot));
+    // head state should always exist in state cache
+    const headStateRoot = await this.db.stateCache.get(head.stateRoot);
     if (!headStateRoot) throw Error("headStateRoot does not exist");
     return headStateRoot;
   }
