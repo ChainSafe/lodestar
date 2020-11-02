@@ -1,8 +1,7 @@
 /**
  * @module network
  */
-import {EventEmitter} from "events";
-import PeerId from "peer-id";
+import {ENR} from "@chainsafe/discv5/lib";
 import {
   BeaconBlocksByRangeRequest,
   BeaconBlocksByRootRequest,
@@ -10,38 +9,27 @@ import {
   Metadata,
   Ping,
   RequestBody,
-  ResponseBody,
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
-import {Method, RequestId} from "../constants";
+import {EventEmitter} from "events";
+import LibP2p from "libp2p";
+import Multiaddr from "multiaddr";
+import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
 import {IGossip} from "./gossip/interface";
-import {RpcError} from "./error";
 import {MetadataController} from "./metadata";
-import {IResponseChunk} from "./encoders/interface";
-import Multiaddr from "multiaddr";
-import {ENR} from "@chainsafe/discv5/lib";
-import LibP2p from "libp2p";
 import {IPeerMetadataStore} from "./peers/interface";
 import {IRpcScoreTracker} from "./peers/score";
-
-export type ResponseCallbackFn = (responseIter: AsyncIterable<IResponseChunk>) => void;
-
-interface IRespEvents {
-  [responseEvent: string]: ResponseCallbackFn;
-}
+import {ReqRespRequest} from "./reqresp";
 
 export interface IReqEvents {
-  request: (peerId: PeerId, method: Method, id: RequestId, body: RequestBody) => void;
+  request: (request: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => void;
 }
 
 export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
-export type RespEventEmitter = StrictEventEmitter<EventEmitter, IRespEvents>;
 
 export interface IReqResp extends ReqEventEmitter {
-  sendResponseStream(id: RequestId, err: RpcError | null, chunkIter: AsyncIterable<ResponseBody>): void;
-  sendResponse(id: RequestId, err: RpcError | null, response?: ResponseBody): void;
   status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
   ping(peerId: PeerId, request: Ping): Promise<Ping | null>;

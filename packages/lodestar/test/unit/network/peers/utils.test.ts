@@ -1,7 +1,6 @@
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {getSyncProtocols, INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import PeerId from "peer-id";
-import {ReqResp} from "../../../../src/network/reqResp";
 import {expect} from "chai";
 import {
   findMissingSubnets,
@@ -14,6 +13,7 @@ import * as peersUtil from "../../../../src/sync/utils/peers";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
 import {silentLogger} from "../../../utils/logger";
 import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
+import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
 
 describe("network peer utils", function () {

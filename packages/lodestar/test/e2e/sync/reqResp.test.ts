@@ -1,28 +1,28 @@
-import {expect} from "chai";
-import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {encode} from "varint";
-
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
-import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
-import Libp2p from "libp2p";
-import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {INetworkOptions} from "../../../src/network/options";
-import {BeaconMetrics} from "../../../src/metrics";
-import {generateState} from "../../utils/state";
-import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
-import {generateEmptySignedBlock} from "../../utils/block";
-import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
-import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
-import {sleep} from "../../utils/sleep";
-import {createNode} from "../../utils/network";
-import {StubbedBeaconDb} from "../../utils/stub";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {getBlockSummary} from "../../utils/headBlockInfo";
+import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
+import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {expect} from "chai";
 import pipe from "it-pipe";
+import Libp2p from "libp2p";
+import PeerId from "peer-id";
+import sinon from "sinon";
+import {encode} from "varint";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
+import {BeaconMetrics} from "../../../src/metrics";
+import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
+import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
+import {INetworkOptions} from "../../../src/network/options";
+import {ReqRespRequest} from "../../../src/network/reqresp";
+import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
+import {generateEmptySignedBlock} from "../../utils/block";
+import {getBlockSummary} from "../../utils/headBlockInfo";
+import {MockBeaconChain} from "../../utils/mocks/chain/chain";
+import {createNode} from "../../utils/network";
+import {generateState} from "../../utils/state";
+import {StubbedBeaconDb} from "../../utils/stub";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -45,7 +45,7 @@ describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
   const logger = new WinstonLogger({level: LogLevel.debug});
-  logger.silent = true;
+  logger.silent = false;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork;
@@ -118,8 +118,7 @@ describe("[sync] rpc", function () {
   afterEach(async () => {
     await chain.stop();
     await Promise.all([rpcA.stop(), rpcB.stop()]);
-    //allow goodbye to propagate
-    await sleep(200);
+    console.error("stopped rpc");
     await Promise.all([netA.stop(), netB.stop()]);
   });
 
@@ -140,9 +139,9 @@ describe("[sync] rpc", function () {
     });
     await new Promise((resolve, reject) => {
       // if there is goodbye request from B
-      netA.reqResp.once("request", (a, b, c) => {
-        if (a.toB58String() === netB.peerId.toB58String() && b === Method.Goodbye) {
-          reject([a, b, c]);
+      netA.reqResp.once("request", (request: ReqRespRequest<RequestBody>, peer: PeerId) => {
+        if (peer.toB58String() === netB.peerId.toB58String() && request.method === Method.Goodbye) {
+          reject();
         }
       });
       setTimeout(resolve, 2000);
@@ -166,7 +165,7 @@ describe("[sync] rpc", function () {
       netB.reqResp.once("request", resolve);
     });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const goodbyeEvent = new Promise((resolve) => netB.reqResp.once("request", (_, method) => resolve(method)));
+    const goodbyeEvent = new Promise((resolve) => netB.reqResp.once("request", (req) => resolve(req.method)));
     const [goodbye] = await Promise.all([goodbyeEvent, rpcA.stop()]);
     expect(goodbye).to.equal(Method.Goodbye);
   });
@@ -213,7 +212,7 @@ describe("[sync] rpc", function () {
           // i should be 1
           const errBuf = val.slice();
           // message from the server side
-          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid Request");
+          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid request");
         }
         i++;
       }

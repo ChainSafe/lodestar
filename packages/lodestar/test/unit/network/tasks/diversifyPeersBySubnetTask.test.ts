@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {ReqResp} from "../../../../src/network/reqResp";
+import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {DiversifyPeersBySubnetTask} from "../../../../src/network/tasks/diversifyPeersBySubnetTask";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";

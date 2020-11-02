@@ -3229,20 +3229,20 @@ any-promise@^1.0.0:
   resolved "https://registry.yarnpkg.com/any-promise/-/any-promise-1.3.0.tgz#abc6afeedcea52e809cdc0376aed3ce39635d17f"
   integrity sha1-q8av7tzqUugJzcA3au0845Y10X8=
 
+any-signal@2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.1.1.tgz#6458f7ce08cfdd8df21953016ae03ca129b07e35"
+  integrity sha512-kjyMTtHQsB3yZAVDZlLVucPJnmnrXhamB/rm3Td3jse5Q+16FXXolP4elWU0yLFDyrxTkjjDXtIdjSPiEznf3w==
+  dependencies:
+    abort-controller "^3.0.0"
+    native-abort-controller "0.0.3"
+
 any-signal@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-1.1.0.tgz#8e43cd0ae03266261d5061595ecf8aaad1828872"
   integrity sha512-mtwqpy58ys+/dRdH5Z8VArUluVrfz9/5BXo8tvSZ9kcQr3k9yyOPnGrYCBJQfcC5IlMrr63kDBlf5GyQCFn+Fw==
   dependencies:
     abort-controller "^3.0.0"
-
-any-signal@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/any-signal/-/any-signal-2.0.0.tgz#fdf0e92f770b6bc7ad5f03673e8cb2f4b9886404"
-  integrity sha512-+X8EDF+4D+ZlZbgfW49Ma8Q0jnBQyfKUbehpur4C7v5q/EroaYQ5gwZvJquEyTCCPvO1jM6p0dtHanVggdT3OQ==
-  dependencies:
-    abort-controller "^3.0.0"
-    native-abort-controller "0.0.3"
 
 anymatch@^2.0.0:
   version "2.0.0"
@@ -7817,15 +7817,16 @@ libp2p-mdns@^0.15.0:
     multicast-dns "^7.2.0"
     peer-id "^0.14.0"
 
-libp2p-mplex@^0.10.0:
-  version "0.10.0"
-  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.0.tgz#c57c95fdd1ce5031d20a09e42be386883cb444e1"
-  integrity sha512-q+zpo12ldm8E+AlnR/LK/j++MM8IkDHi/P19VMPWP07irXe1Pmy/lw6IrSqtDOD8KQc86ipib9d1PI3ALdN8vA==
+libp2p-mplex@^0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.1.tgz#9f8f276230bd00805f0138591582d42a69343817"
+  integrity sha512-D7XslSL2MpoQdWFW9m62fZb6U1iq5x18WDIJmBIxM4PKBbhNVsicMAfRGvm/ZntLmxkl2KO8utIcVjYBFg9tsQ==
   dependencies:
     abort-controller "^3.0.0"
     abortable-iterator "^3.0.0"
     bl "^4.0.0"
     debug "^4.1.1"
+    err-code "^2.0.3"
     it-pipe "^1.0.1"
     it-pushable "^1.3.1"
     varint "^5.0.0"
@@ -7883,10 +7884,10 @@ libp2p-utils@^0.2.0:
     ip-address "^6.1.0"
     multiaddr "^8.0.0"
 
-libp2p@^0.29.0:
-  version "0.29.0"
-  resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.29.0.tgz#56d55630b834111b8d0c62724e139461672d5bfd"
-  integrity sha512-eALoJ0vpsonRwzLpdPY2/272RIl2MImIg2QToqLb+wBChcSQFB4U/r3LU8rZqEaDfRNupOBG/rx67gJTWC0h2Q==
+libp2p@^0.29.2:
+  version "0.29.2"
+  resolved "https://registry.yarnpkg.com/libp2p/-/libp2p-0.29.2.tgz#d7604688e2627582b10338a6ac6989572fd6d74d"
+  integrity sha512-figd1NEBHNMpRCztxH4ZJl4flu+lMiFPMbNTkkoDES6FSZ0+wI7C72z579jh63eN124rsxpFRZaPYmpbKXi9CQ==
   dependencies:
     abort-controller "^3.0.0"
     aggregate-error "^3.0.1"
@@ -7919,7 +7920,7 @@ libp2p@^0.29.0:
     p-any "^3.0.0"
     p-fifo "^1.0.0"
     p-settle "^4.0.1"
-    peer-id "^0.14.0"
+    peer-id "^0.14.2"
     protons "^2.0.0"
     retimer "^2.0.0"
     sanitize-filename "^1.6.3"
@@ -9604,7 +9605,7 @@ pbkdf2@^3.0.3, pbkdf2@^3.0.9:
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
 
-peer-id@^0.14.0, peer-id@^0.14.1:
+peer-id@^0.14.0, peer-id@^0.14.1, peer-id@^0.14.2:
   version "0.14.2"
   resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.14.2.tgz#3ddd752092a54f06b750b5e67d0db98fb4ee40bc"
   integrity sha512-8iZWaUT7jq8rVyyFZUHYUwFCvhoI5B1Q2MAJjUF9MTf4TsNRQPnod4Mycf2jrK/uXFBN5/9K1NhPoieFyz/PRw==

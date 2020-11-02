@@ -22,7 +22,7 @@ import {
 } from "../../../../src/sync/utils";
 import * as blockUtils from "../../../../src/sync/utils/blocks";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
-import {ReqResp} from "../../../../src/network/reqResp";
+import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
