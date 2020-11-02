@@ -8,7 +8,7 @@ import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
-import chainOpts from "../../../src/chain/options";
+import {defaultChainOptions} from "../../../src/chain/options";
 import {BeaconMetrics} from "../../../src/metrics";
 import {generateBlockSummary} from "../../utils/block";
 import {generateState} from "../../utils/state";
@@ -28,7 +28,7 @@ describe("BeaconChain", function () {
     state.validators = generateValidators(5, {activationEpoch: 0});
     dbStub.stateCache.get.resolves({state: state as TreeBacked<BeaconState>, epochCtx: new EpochContext(config)});
     dbStub.stateArchive.lastValue.resolves(state as any);
-    chain = new BeaconChain({opts: chainOpts, config, db: dbStub, logger, metrics, anchorState: state});
+    chain = new BeaconChain({opts: defaultChainOptions, config, db: dbStub, logger, metrics, anchorState: state});
   });
 
   afterEach(async () => {

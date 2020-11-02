@@ -2,11 +2,10 @@ import {initBLS} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {ICliCommand, YargsError, readPassphraseFile} from "../../../../util";
+import {getBeaconConfigFromArgs} from "../../../../config";
+import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
-import {initCmd} from "../../../init/handler";
-import {getMergedIBeaconConfig} from "../../../../config/params";
 
 interface IValidatorCreateArgs {
   name: string;
@@ -16,7 +15,9 @@ interface IValidatorCreateArgs {
   count: number;
 }
 
-export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs> = {
+export type ReturnType = string[];
+
+export const create: ICliCommand<IValidatorCreateArgs, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
   command: "create",
 
   describe:
@@ -69,15 +70,16 @@ and pre-computed deposit RPL data",
     },
   },
 
-  handler: async (options) => {
-    await initBLS(); // Necessary to compute validator pubkey from privKey
-    await initCmd(options);
+  handler: async (args) => {
+    // Necessary to compute validator pubkey from privKey
+    await initBLS();
 
-    const {name, passphraseFile, storeWithdrawalKeystore, count} = options;
-    const accountPaths = getAccountPaths(options);
-    const config = await getMergedIBeaconConfig(options.preset, options.paramsFile, options.params);
+    const config = getBeaconConfigFromArgs(args);
+
+    const {name, passphraseFile, storeWithdrawalKeystore, count} = args;
+    const accountPaths = getAccountPaths(args);
     const maxEffectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
-    const depositGwei = BigInt(options.depositGwei || 0) || maxEffectiveBalance;
+    const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
 
     if (depositGwei > maxEffectiveBalance)
       throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);
@@ -89,6 +91,7 @@ and pre-computed deposit RPL data",
 
     const walletPassword = readPassphraseFile(passphraseFile);
 
+    const pubkeys: string[] = [];
     for (let i = 0; i < count; i++) {
       const passwords = wallet.randomPasswords();
       const keystores = await wallet.nextValidator(walletPassword, passwords);
@@ -97,8 +100,13 @@ and pre-computed deposit RPL data",
       // Persist the nextaccount index after successfully creating the validator directory
       walletManager.writeWallet(wallet);
 
+      const pubkey = add0xPrefix(keystores.signing.pubkey);
       // eslint-disable-next-line no-console
-      console.log(`${i}/${count}\t${keystores.signing.pubkey}`);
+      console.log(`${i}/${count}\t${pubkey}`);
+      pubkeys.push(pubkey);
     }
+
+    // Return values for testing
+    return pubkeys;
   },
 };

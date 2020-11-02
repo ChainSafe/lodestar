@@ -1,11 +1,9 @@
-import path from "path";
 import {IGlobalArgs} from "../../options";
 import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 import {joinIfRelative} from "../../util";
 
-export type IValidatorPaths = IGlobalPaths & {
+export type IValidatorPaths = {
   validatorsDbDir: string;
-  validatorDbDir: (pubkey: string) => string;
 };
 
 /**
@@ -14,22 +12,21 @@ export type IValidatorPaths = IGlobalPaths & {
  * ```bash
  * $validatorRootDir
  * └── validator-db
- *     └── 0x8e41b969493454318c27ec6fac90645769331c07ebc8db5037...
- *         └── (db files)
+ *     └── (db files)
  * ```
  */
-export function getValidatorPaths(options: Partial<IValidatorPaths> & Pick<IGlobalArgs, "rootDir">): IValidatorPaths {
-  options = {
-    ...options,
-    ...getGlobalPaths(options),
-  };
-  const rootDir = options.rootDir;
-  const validatorsDbDir = joinIfRelative(rootDir, options.validatorsDbDir || "validator-db");
+export function getValidatorPaths(
+  args: Partial<IValidatorPaths> & Pick<IGlobalArgs, "rootDir">
+): IValidatorPaths & IGlobalPaths {
+  // Compute global paths first
+  const globalPaths = getGlobalPaths(args);
+
+  const rootDir = globalPaths.rootDir;
+  const validatorsDbDir = joinIfRelative(rootDir, args.validatorsDbDir || "validator-db");
   return {
-    ...options,
+    ...globalPaths,
     validatorsDbDir,
-    validatorDbDir: (pubkey: string) => path.join(validatorsDbDir, pubkey),
-  } as IValidatorPaths;
+  };
 }
 
 /**

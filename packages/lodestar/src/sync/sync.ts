@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
-import defaultOptions, {ISyncOptions} from "./options";
+import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -11,10 +11,10 @@ import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {ChainEvent, IBeaconChain} from "../chain";
-import {NaiveRegularSync} from "./regular/naive";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../chain/errors";
+import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -50,7 +50,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
-    this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
+    this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
@@ -154,6 +154,7 @@ export class BeaconSync implements IBeaconSync {
   private syncCompleted = async (): Promise<void> => {
     this.mode = SyncMode.SYNCED;
     this.stopSyncTimer();
+    this.gossip.handleSyncCompleted();
     await this.network.handleSyncCompleted();
   };
 
@@ -182,7 +183,7 @@ export class BeaconSync implements IBeaconSync {
 
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...");
-    const minPeers = this.opts.minPeers ?? defaultOptions.minPeers;
+    const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     while (this.mode !== SyncMode.STOPPED && this.getSyncPeers().length < minPeers) {
       this.logger.warn(`Current peerCount=${this.getSyncPeers().length}, required = ${minPeers}`);
       await sleep(3000);

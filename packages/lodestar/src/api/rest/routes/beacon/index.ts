@@ -11,6 +11,7 @@ import {
   getVoluntaryExits,
   publishBlock,
   submitVoluntaryExit,
+  getStateFork,
 } from "../../controllers/beacon";
 import {getAttesterSlashings} from "../../controllers/beacon/pool/getAttesterSlashings";
 import {getProposerSlashings} from "../../controllers/beacon/pool/getProposerSlashings";
@@ -18,12 +19,9 @@ import {submitAttesterSlashing} from "../../controllers/beacon/pool/submitAttest
 import {submitPoolAttestation} from "../../controllers/beacon/pool/submitPoolAttestation";
 import {submitProposerSlashing} from "../../controllers/beacon/pool/submitProposerSlashing";
 import {LodestarApiPlugin} from "../../interface";
-import {registerForkEndpoint} from "./fork";
 import {registerGetValidatorEndpoint} from "./validator";
-
 //old
 export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
-  registerForkEndpoint(fastify, opts);
   registerGetValidatorEndpoint(fastify, opts);
   done();
 };
@@ -40,6 +38,7 @@ export function registerBeaconRoutes(server: FastifyInstance): void {
         getStateFinalityCheckpoints.opts,
         getStateFinalityCheckpoints.handler
       );
+      fastify.get(getStateFork.url, getStateFork.opts, getStateFork.handler);
 
       //pool
       fastify.get(getPoolAttestations.url, getPoolAttestations.opts, getPoolAttestations.handler);

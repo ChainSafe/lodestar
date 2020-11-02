@@ -1,40 +1,36 @@
-import sinon from "sinon";
-import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {AttestationService} from "../../../src/services/attestation";
-import {toBufferBE} from "bigint-buffer";
+import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {AttesterDuty} from "@chainsafe/lodestar-types";
-import {generateFork} from "../../utils/fork";
+import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {
   generateAttestation,
   generateAttestationData,
   generateEmptyAttestation,
 } from "@chainsafe/lodestar/test/utils/attestation";
-import {silentLogger} from "../../utils/logger";
-import {SinonStubbedBeaconApi} from "../../utils/apiStub";
-import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
+import {toBufferBE} from "bigint-buffer";
+import {expect} from "chai";
+import sinon from "sinon";
+import {InvalidAttestationError, InvalidAttestationErrorCode, SlashingProtection} from "../../../src";
 import {BeaconEventType} from "../../../src/api/interface/events";
 import {LocalClock} from "../../../src/api/LocalClock";
-import {InvalidAttestationError, InvalidAttestationErrorCode, SlashingProtection} from "../../../src";
+import {AttestationService} from "../../../src/services/attestation";
+import {SinonStubbedApi} from "../../utils/apiStub";
+import {generateFork} from "../../utils/fork";
+import {silentLogger} from "../../utils/logger";
 
 const clock = sinon.useFakeTimers({now: Date.now(), shouldAdvanceTime: true, toFake: ["setTimeout"]});
 
 describe("validator attestation service", function () {
   const sandbox = sinon.createSandbox();
 
-  let rpcClientStub: SinonStubbedBeaconApi;
+  let rpcClientStub: SinonStubbedApi;
   let slashingProtectionStub: sinon.SinonStubbedInstance<SlashingProtection>;
   const logger = silentLogger;
 
   beforeEach(() => {
-    rpcClientStub = new SinonStubbedBeaconApi(sandbox);
+    rpcClientStub = new SinonStubbedApi(sandbox);
     rpcClientStub.clock = sandbox.createStubInstance(LocalClock);
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.events.getEventStream.returns(
       new LodestarEventIterator(() => {
         return;
@@ -73,7 +69,7 @@ describe("validator attestation service", function () {
     await service.onClockEpoch({epoch: 1});
     expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
       .be.true;
-    expect(rpcClientStub.beacon.getFork.calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.state.getFork.calledOnce).to.be.true;
   });
 
   it("on  new slot - without duty", async function () {
@@ -96,11 +92,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();
@@ -125,11 +117,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.state.getFork.resolves(generateFork());
 
     // Simulate double vote detection
     const attestation1 = generateAttestation({data: generateAttestationData(0, 1)});
@@ -160,11 +148,7 @@ describe("validator attestation service", function () {
       validatorPubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(10, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
-    rpcClientStub.beacon.getFork.resolves({
-      fork: generateFork(),
-      chainId: BigInt(2),
-      genesisValidatorsRoot: Buffer.alloc(32, 0),
-    });
+    rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
     rpcClientStub.validator.publishAttestation.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();

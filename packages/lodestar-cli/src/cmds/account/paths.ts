@@ -2,11 +2,11 @@ import {IGlobalArgs} from "../../options";
 import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 import {joinIfRelative} from "../../util";
 
-export type IAccountPaths = IGlobalPaths & {
+export interface IAccountPaths {
   keystoresDir: string;
   secretsDir: string;
   walletsDir: string;
-};
+}
 
 /**
  * Defines the path structure of the account files
@@ -32,21 +32,22 @@ export type IAccountPaths = IGlobalPaths & {
  * ```
  */
 // Using Pick<IGlobalArgs, "rootDir"> make changes in IGlobalArgs throw a type error here
-export function getAccountPaths(options: Partial<IAccountPaths> & Pick<IGlobalArgs, "rootDir">): IAccountPaths {
-  options = {
-    ...options,
-    ...getGlobalPaths(options),
-  };
-  const rootDir = options.rootDir;
-  const keystoresDir = joinIfRelative(rootDir, options.keystoresDir || "keystores");
-  const secretsDir = joinIfRelative(rootDir, options.secretsDir || "secrets");
-  const walletsDir = joinIfRelative(rootDir, options.walletsDir || "wallets");
+export function getAccountPaths(
+  args: Partial<IAccountPaths> & Pick<IGlobalArgs, "rootDir">
+): IAccountPaths & IGlobalPaths {
+  // Compute global paths first
+  const globalPaths = getGlobalPaths(args);
+
+  const rootDir = globalPaths.rootDir;
+  const keystoresDir = joinIfRelative(rootDir, args.keystoresDir || "keystores");
+  const secretsDir = joinIfRelative(rootDir, args.secretsDir || "secrets");
+  const walletsDir = joinIfRelative(rootDir, args.walletsDir || "wallets");
   return {
-    ...options,
+    ...globalPaths,
     keystoresDir,
     secretsDir,
     walletsDir,
-  } as IAccountPaths;
+  };
 }
 
 /**

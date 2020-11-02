@@ -109,15 +109,23 @@ export class AttestationService {
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch, this.publicKeys);
     } catch (e) {
-      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e);
+      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e.message);
       return;
     }
-    const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+    const fork = await this.provider.beacon.state.getFork("head");
+    if (!fork) {
+      return;
+    }
     for (const duty of attesterDuties) {
       const attesterIndex = this.publicKeys.findIndex((pubkey) => {
         return this.config.types.BLSPubkey.equals(pubkey, duty.validatorPubkey);
       });
-      const slotSignature = this.getSlotSignature(attesterIndex, duty.attestationSlot, fork, genesisValidatorsRoot);
+      const slotSignature = this.getSlotSignature(
+        attesterIndex,
+        duty.attestationSlot,
+        fork,
+        this.provider.genesisValidatorsRoot
+      );
       const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
       this.logger.debug("new attester duty", {
         slot: duty.attestationSlot,
@@ -161,15 +169,18 @@ export class AttestationService {
     const abortSignal = this.controller!.signal;
     await this.waitForAttestationBlock(duty.attestationSlot, abortSignal);
     let attestation: Attestation | undefined;
-    let fork: Fork, genesisValidatorsRoot: Root;
+    let fork: Fork | null;
     try {
-      ({fork, genesisValidatorsRoot} = await this.provider.beacon.getFork());
+      fork = await this.provider.beacon.state.getFork("head");
+      if (!fork) {
+        return;
+      }
       attestation = await this.createAttestation(
         duty.attesterIndex,
         duty.attestationSlot,
         duty.committeeIndex,
         fork,
-        genesisValidatorsRoot
+        this.provider.genesisValidatorsRoot
       );
     } catch (e) {
       this.logger.error("Failed to produce attestation", {
@@ -192,7 +203,16 @@ export class AttestationService {
 
         try {
           if (attestation) {
-            await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+            if (!fork) {
+              throw new Error("Missing fork info");
+            }
+            await this.aggregateAttestations(
+              duty.attesterIndex,
+              duty,
+              attestation,
+              fork,
+              this.provider.genesisValidatorsRoot
+            );
           }
         } catch (e) {
           this.logger.error("Failed to aggregate attestations", e);

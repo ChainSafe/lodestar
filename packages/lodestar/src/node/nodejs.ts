@@ -22,6 +22,8 @@ import {IBeaconNodeOptions} from "./options";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 
+export * from "./options";
+
 export interface IService {
   start(): Promise<void>;
 

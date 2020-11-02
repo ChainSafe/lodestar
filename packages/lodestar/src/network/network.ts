@@ -9,7 +9,7 @@ import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconMetrics} from "../metrics";
-import {ReqResp} from "./reqResp";
+import {ReqResp} from "./reqresp/reqResp";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter, PeerSearchOptions} from "./interface";
 import {Gossip} from "./gossip/gossip";
@@ -88,6 +88,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     const enr = this.getEnr();
     await this.metadata.start(enr!);
     await this.gossip.start();
+    await this.diversifyPeersTask.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
     this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
@@ -103,7 +104,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async handleSyncCompleted(): Promise<void> {
-    await Promise.all([this.diversifyPeersTask.start(), this.checkPeerAliveTask.start()]);
+    await Promise.all([this.checkPeerAliveTask.start(), this.diversifyPeersTask.handleSyncCompleted()]);
   }
 
   public getEnr(): ENR | undefined {

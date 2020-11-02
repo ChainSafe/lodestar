@@ -1,10 +1,23 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
+// Lodestar specifc state context
 export interface ITreeStateContext {
   state: TreeBacked<BeaconState>;
-  epochCtx: EpochContext;
+  epochCtx: LodestarEpochContext;
+}
+
+// Lodestar specific epoch context
+export class LodestarEpochContext extends EpochContext {
+  public epochBalances?: Gwei[];
+
+  // need to be return EpochContext in order to override
+  public copy(): EpochContext {
+    const ctx = new LodestarEpochContext(undefined, this);
+    ctx.epochBalances = this.epochBalances;
+    return ctx;
+  }
 }
 
 /**
@@ -50,13 +63,15 @@ export class StateContextCache {
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
-  public prune(): void {
+  public prune(headStateRoot: ByteVector): void {
     const MAX_STATES = 96;
     const keys = Object.keys(this.cache);
     if (keys.length > MAX_STATES) {
       // object keys are stored in insertion order, delete keys starting from the front
       keys.slice(0, keys.length - MAX_STATES).forEach((key) => {
-        delete this.cache[key];
+        if (key !== toHexString(headStateRoot)) {
+          delete this.cache[key];
+        }
       });
     }
   }
@@ -72,7 +87,7 @@ export class StateContextCache {
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
+      epochCtx: item.epochCtx.copy() as LodestarEpochContext,
     };
   }
 }

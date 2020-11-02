@@ -21,8 +21,8 @@ import {
   processSyncBlocks,
 } from "../../../../src/sync/utils";
 import * as blockUtils from "../../../../src/sync/utils/blocks";
-import {BeaconChain, IBeaconChain, ChainEventEmitter} from "../../../../src/chain";
-import {ReqResp} from "../../../../src/network/reqResp";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
+import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {ZERO_HASH, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
@@ -153,12 +153,7 @@ describe("sync utils", function () {
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
       let result = pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(
-          logger,
-          sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp),
-          getPeersStub
-        ),
+        fetchBlockChunks(logger, sinon.createStubInstance(ReqResp), getPeersStub),
         all
       );
       await timer.tickAsync(30000);
@@ -172,12 +167,7 @@ describe("sync utils", function () {
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
       const result = await pipe(
         [{start: 0, end: 10}],
-        fetchBlockChunks(
-          logger,
-          sinon.createStubInstance(BeaconChain),
-          sinon.createStubInstance(ReqResp),
-          getPeersStub
-        ),
+        fetchBlockChunks(logger, sinon.createStubInstance(ReqResp), getPeersStub),
         all
       );
       expect(result.length).to.be.equal(1);

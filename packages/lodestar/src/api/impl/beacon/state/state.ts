@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {BeaconState, Fork} from "@chainsafe/lodestar-types";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconDb} from "../../../../db/api";
@@ -21,5 +21,9 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
     return resolveStateId(this.config, this.db, this.forkChoice, stateId);
+  }
+
+  public async getFork(stateId: StateId): Promise<Fork | null> {
+    return (await this.getState(stateId))?.fork ?? null;
   }
 }

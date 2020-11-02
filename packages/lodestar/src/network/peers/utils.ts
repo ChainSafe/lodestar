@@ -5,6 +5,7 @@ import {INetwork} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getSyncProtocols} from "../util";
 import {notNullish} from "../../util/notNullish";
+import {getSyncPeers} from "../../sync/utils/peers";
 
 export function getPeersWithSubnet(peers: PeerId[], peerMetadata: IPeerMetadataStore, subnetStr: string): PeerId[] {
   if (!new RegExp("^\\d+$").test(subnetStr)) {
@@ -65,23 +66,47 @@ export function findMissingSubnets(network: INetwork): number[] {
 }
 
 /**
+ * Disconnect useless peers when node is syncing:
+ * + Disconnect all peers that do not support sync protocols
+ * + Disconnect half of bad score sync peers, gradually we'll only have good score sync peers.
+ */
+export function syncPeersToDisconnect(network: INetwork): PeerId[] {
+  const allPeers = network.getPeers({connected: true}).map((peer) => peer.id);
+  const syncPeers = network
+    .getPeers({
+      connected: true,
+      supportsProtocols: getSyncProtocols(),
+    })
+    .map((peer) => peer.id);
+  const nonSyncPeers = allPeers.filter((peer) => !syncPeers.includes(peer));
+  const goodScoreSyncPeers = getSyncPeers(network, undefined, network.getMaxPeer());
+  const badScoreSyncPeers = syncPeers.filter((peer) => !goodScoreSyncPeers.includes(peer));
+  const worstSyncPeers = badScoreSyncPeers
+    .sort((p1, p2) => {
+      // sort asc
+      return network.peerRpcScores.getScore(p1) - network.peerRpcScores.getScore(p2);
+    })
+    .slice(0, Math.ceil(badScoreSyncPeers.length / 2));
+  return [...nonSyncPeers, ...worstSyncPeers];
+}
+
+/**
+ * This is supposed to be called when the node is synced.
  * If we're too close to maxPeer, we may want to disconnect some peers
  * before connecting to new peers with missing subnets.
  * @param network
  * @param newPeer number of peers with new subnets to connect to
  * @param maxPeer max peer provided as option
+ * @param isSynced if the node is fully synced or not
  * @param reps our reputation store
  * @param retainRatio: 0 to 1, the ratio to consider disconnecting peers, 90% by default.
  */
-export function selectPeersToDisconnect(
+export function gossipPeersToDisconnect(
   network: INetwork,
   newPeer: number,
   maxPeer: number,
   retainRatio = 0.9
 ): PeerId[] {
-  // TODO: prune useless peers
-  // peer that timeouts, that doesn't support required protocols (we still keep those as
-  // they might be useful to gossip) or that have bad gossip score later on
   const peers = network.getPeers({connected: true}).map((peer) => peer.id);
   // only disconnect peers if we have >= 90% connected peers
   if (peers.length < maxPeer * retainRatio) return [];

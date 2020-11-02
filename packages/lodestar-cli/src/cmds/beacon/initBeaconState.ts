@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import {AbortSignal} from "abort-controller";
 
 import {TreeBacked} from "@chainsafe/ssz";
@@ -8,36 +7,37 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "@chainsafe/lodestar/lib/db";
 import {Eth1Provider} from "@chainsafe/lodestar/lib/eth1";
 import {initStateFromAnchorState, initStateFromDb, initStateFromEth1} from "@chainsafe/lodestar/lib/chain";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node";
 
+import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 
 /**
  * Initialize a beacon state, picking the strategy based on the `IBeaconArgs`
  *
  * State is initialized in one of three ways:
- * 1. restore from a file
+ * 1. restore from a file (possibly downloaded via URL)
  * 2. restore from db
  * 3. create from eth1
  */
 export async function initBeaconState(
-  options: IBeaconArgs,
+  options: IBeaconNodeOptions,
+  args: IBeaconArgs,
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger,
   signal: AbortSignal
 ): Promise<TreeBacked<BeaconState>> {
-  const shouldInitFromFile = Boolean(
-    options.weakSubjectivityStateFile || (!options.forceGenesis && options.genesisStateFile)
-  );
+  const shouldInitFromFile = Boolean(args.weakSubjectivityStateFile || (!args.forceGenesis && args.genesisStateFile));
   const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
   let anchorState;
   if (shouldInitFromFile) {
-    const anchorStateFile = (options.weakSubjectivityStateFile || options.genesisStateFile) as string;
+    const anchorStateFile = (args.weakSubjectivityStateFile || args.genesisStateFile) as string;
     anchorState = await initStateFromAnchorState(
       config,
       db,
       logger,
-      config.types.BeaconState.tree.deserialize(await fs.promises.readFile(anchorStateFile))
+      config.types.BeaconState.tree.deserialize(await downloadOrLoadFile(anchorStateFile))
     );
   } else if (shouldInitFromDb) {
     anchorState = await initStateFromDb(config, db, logger);

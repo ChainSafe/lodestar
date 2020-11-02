@@ -16,7 +16,6 @@ import {
   computeEpochAtSlot,
   ZERO_HASH,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IEpochProcess} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas, HEX_ZERO_HASH, IVoteTracker, ProtoArray} from "../protoArray";
@@ -248,10 +247,10 @@ export class ForkChoice implements IForkChoice {
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    *
-   * `epochProcess` is passed in so that justified balances can be updated synchronously.
+   * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  public onBlock(block: BeaconBlock, state: BeaconState, epochProcess?: IEpochProcess): void {
+  public onBlock(block: BeaconBlock, state: BeaconState, justifiedBalances?: Gwei[]): void {
     // Parent block must be known
     if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
       throw new ForkChoiceError({
@@ -310,15 +309,14 @@ export class ForkChoice implements IForkChoice {
 
     // Update justified checkpoint.
     if (state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
-      if (!epochProcess) {
+      if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
-          error: new Error("No epoch process supplied"),
+          error: new Error("No validator balances supplied"),
         });
       }
       if (state.currentJustifiedCheckpoint.epoch > this.fcStore.bestJustifiedCheckpoint.epoch) {
-        const balances = epochProcess.statuses.map((s) => (s.active ? s.validator.effectiveBalance : BigInt(0)));
-        this.updateBestJustified(state.currentJustifiedCheckpoint, balances);
+        this.updateBestJustified(state.currentJustifiedCheckpoint, justifiedBalances);
       }
       if (this.shouldUpdateJustifiedCheckpoint(state)) {
         // wait to update until after finalized checkpoint is set
@@ -345,14 +343,13 @@ export class ForkChoice implements IForkChoice {
 
     // This needs to be performed after finalized checkpoint has been updated
     if (shouldUpdateJustified) {
-      if (!epochProcess) {
+      if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
-          error: new Error("No epoch process supplied"),
+          error: new Error("No validator balances supplied"),
         });
       }
-      const balances = epochProcess.statuses.map((s) => (s.active ? s.validator.effectiveBalance : BigInt(0)));
-      this.updateJustified(state.currentJustifiedCheckpoint, balances);
+      this.updateJustified(state.currentJustifiedCheckpoint, justifiedBalances);
     }
 
     const targetSlot = computeStartSlotAtEpoch(this.config, computeEpochAtSlot(this.config, block.slot));
@@ -595,6 +592,11 @@ export class ForkChoice implements IForkChoice {
         store: justifiedSlot,
         state: state.slot,
       });
+    }
+
+    // at regular sync time we don't want to wait for clock time next epoch to update bestJustifiedCheckpoint
+    if (computeEpochAtSlot(this.config, state.slot) < computeEpochAtSlot(this.config, this.fcStore.currentSlot)) {
+      return true;
     }
 
     // We know that the slot for `new_justified_checkpoint.root` is not greater than
