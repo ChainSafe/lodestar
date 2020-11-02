@@ -11,7 +11,10 @@ import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {ForkChoiceStore} from "./store";
 
-export class EventedForkChoice extends ForkChoice {
+/**
+ * Fork Choice extended with a ChainEventEmitter
+ */
+export class LodestarForkChoice extends ForkChoice {
   constructor({
     config,
     emitter,

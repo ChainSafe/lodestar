@@ -37,7 +37,7 @@ import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
-import {EventedForkChoice} from "./forkChoice/forkChoice";
+import {LodestarForkChoice} from "./forkChoice";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
@@ -90,7 +90,7 @@ export class BeaconChain implements IBeaconChain {
       genesisTime: this.genesisTime,
       signal: this.abortController.signal,
     });
-    this.forkChoice = new EventedForkChoice({
+    this.forkChoice = new LodestarForkChoice({
       config,
       emitter: this.internalEmitter,
       currentSlot: this.clock.currentSlot,
