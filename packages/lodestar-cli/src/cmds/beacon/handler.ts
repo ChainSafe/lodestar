@@ -37,6 +37,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   overwriteEnrWithCliArgs(enr, enrArgs, options);
   const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
   beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
+  if (options.network.discv5) options.network.discv5.enr = enr;
 
   const abortController = new AbortController();
 
