@@ -205,6 +205,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   public getHead(): IBlockSummary {
+    // balances is not changed but votes are changed
+    const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
+    this.protoArray.applyScoreChanges(
+      deltas,
+      this.fcStore.justifiedCheckpoint.epoch,
+      this.fcStore.finalizedCheckpoint.epoch
+    );
     const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
     const headIndex = this.protoArray.indices.get(headRoot);
     if (headIndex === undefined) {
