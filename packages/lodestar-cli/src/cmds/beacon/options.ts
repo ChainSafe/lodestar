@@ -1,29 +1,28 @@
 import {Options} from "yargs";
-import {beaconNodeOptions, paramsOptions, IBeaconNodeOptions} from "../../options";
+import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
-import {IENRArgs, enrOptions} from "./enrOptions";
 import {ICliCommandOptions} from "../../util";
 
 interface IBeaconExtraArgs {
-  genesisStateFile?: string;
   forceGenesis?: boolean;
+  genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
 }
 
 const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
-  genesisStateFile: {
-    description: "Genesis state file path in ssz-encoded format",
-    type: "string",
-    normalize: true,
-  },
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
   },
-  weakSubjectivityStateFile: {
-    description: "Weak subjectivity state file path in ssz-encoded format",
+
+  genesisStateFile: {
+    description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
-    normalize: true,
+  },
+
+  weakSubjectivityStateFile: {
+    description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
+    type: "string",
   },
 };
 
@@ -84,7 +83,7 @@ const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconNodeOptions & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
+export type IBeaconArgs = IBeaconNodeArgs & IBeaconPaths & IENRArgs & IBeaconExtraArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconPathsOptions,

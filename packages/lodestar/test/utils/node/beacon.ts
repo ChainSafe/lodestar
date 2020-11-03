@@ -1,6 +1,6 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import {createEnr} from "@chainsafe/lodestar-cli/src/network";
+import {createEnr} from "@chainsafe/lodestar-cli/src/config";
 import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
@@ -59,6 +59,8 @@ export async function getDevBeaconNode({
             bootEnrs: [],
           },
           localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+          minPeers: 25,
+          maxPeers: 25,
         },
         null,
         true

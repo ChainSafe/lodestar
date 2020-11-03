@@ -5,6 +5,7 @@ import {
   BeaconState,
   Epoch,
   FinalityCheckpoints,
+  Fork,
   Root,
   ValidatorBalance,
   ValidatorIndex,
@@ -97,5 +98,9 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
     return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
+  }
+
+  public async getFork(stateId: StateId): Promise<Fork | null> {
+    return (await this.getState(stateId))?.fork ?? null;
   }
 }

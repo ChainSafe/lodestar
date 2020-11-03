@@ -1,0 +1,26 @@
+import {ApiController} from "../../types";
+import {SignedBeaconBlock} from "../../../../../../../lodestar-types/lib/types/block";
+import {ValidationError} from "../../../../impl/errors/validation";
+
+export const publishBlock: ApiController = {
+  url: "/blocks",
+
+  handler: async function (req, resp) {
+    let block: SignedBeaconBlock;
+    try {
+      block = this.config.types.SignedBeaconBlock.fromJson(req.body, {case: "snake"});
+    } catch (e) {
+      throw new ValidationError("Failed to deserialize block");
+    }
+    await this.api.validator.publishBlock(block);
+    resp.code(200).type("application/json").send();
+  },
+
+  opts: {
+    schema: {
+      body: {
+        type: "object",
+      },
+    },
+  },
+};

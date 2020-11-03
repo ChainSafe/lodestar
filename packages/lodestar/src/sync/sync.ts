@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {IBeaconSync, ISyncModules} from "./interface";
-import defaultOptions, {ISyncOptions} from "./options";
-import {getSyncProtocols, INetwork} from "../network";
+import {defaultSyncOptions, ISyncOptions} from "./options";
+import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
@@ -10,10 +10,11 @@ import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
 import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
-import {IBeaconChain} from "../chain";
-import {NaiveRegularSync} from "./regular/naive";
+import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {List} from "@chainsafe/ssz";
+import {List, toHexString} from "@chainsafe/ssz";
+import {BlockError, BlockErrorCode} from "../chain/errors";
+import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -36,10 +37,11 @@ export class BeaconSync implements IBeaconSync {
   private reqResp: IReqRespHandler;
   private gossip: IGossipHandler;
   private attestationCollector: AttestationCollector;
-  private startingBlock: Slot = 0;
 
   private statusSyncTimer?: NodeJS.Timeout;
   private peerCountTimer?: NodeJS.Timeout;
+  // avoid finding same root at the same time
+  private processingRoots: Set<string>;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -48,19 +50,19 @@ export class BeaconSync implements IBeaconSync {
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.initialSync = modules.initialSync || new FastSync(opts, modules);
-    this.regularSync = modules.regularSync || new NaiveRegularSync(opts, modules);
+    this.regularSync = modules.regularSync || new ORARegularSync(opts, modules);
     this.reqResp = modules.reqRespHandler || new BeaconReqRespHandler(modules);
     this.gossip =
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
+    this.processingRoots = new Set();
   }
 
   public async start(): Promise<void> {
     this.mode = SyncMode.WAITING_PEERS as SyncMode;
     await this.reqResp.start();
     await this.attestationCollector.start();
-    this.chain.emitter.on("unknownBlockRoot", this.onUnknownBlockRoot);
     // so we don't wait indefinitely
     await this.waitForPeers();
     if (this.mode === SyncMode.STOPPED) {
@@ -69,11 +71,6 @@ export class BeaconSync implements IBeaconSync {
     this.peerCountTimer = setInterval(this.logPeerCount, 3 * this.config.params.SECONDS_PER_SLOT * 1000);
     await this.startInitialSync();
     await this.startRegularSync();
-    if (this.peerCountTimer) {
-      clearInterval(this.peerCountTimer);
-    }
-    this.mode = SyncMode.SYNCED;
-    this.startingBlock = this.chain.forkChoice.getHead().slot;
   }
 
   public async stop(): Promise<void> {
@@ -84,7 +81,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.emitter.removeListener("unknownBlockRoot", this.onUnknownBlockRoot);
+    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.regularSync.removeListener("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
@@ -149,28 +146,34 @@ export class BeaconSync implements IBeaconSync {
     await this.initialSync.stop();
     this.startSyncTimer(3 * this.config.params.SECONDS_PER_SLOT * 1000);
     this.regularSync.on("syncCompleted", this.syncCompleted);
+    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     await this.gossip.start();
     await this.regularSync.start();
   }
 
   private syncCompleted = async (): Promise<void> => {
+    this.mode = SyncMode.SYNCED;
     this.stopSyncTimer();
+    this.gossip.handleSyncCompleted();
     await this.network.handleSyncCompleted();
   };
 
   private startSyncTimer(interval: number): void {
     this.stopSyncTimer();
-    this.statusSyncTimer = setInterval(() => {
-      syncPeersStatus(this.network, createStatus(this.chain)).catch((e) => {
+    this.statusSyncTimer = setInterval(async () => {
+      try {
+        await syncPeersStatus(this.network, await createStatus(this.chain));
+      } catch (e) {
         this.logger.error("Error on syncPeersStatus", e);
-      });
+      }
     }, interval);
   }
 
   private logPeerCount = (): void => {
     this.logger.info("Peer status", {
       activePeers: this.network.getPeers({connected: true}).length,
-      syncPeers: this.getPeers().length,
+      syncPeers: this.getSyncPeers().length,
+      unknownRootPeers: this.getUnknownRootPeers().length,
     });
   };
 
@@ -180,34 +183,70 @@ export class BeaconSync implements IBeaconSync {
 
   private async waitForPeers(): Promise<void> {
     this.logger.info("Waiting for peers...");
-    const minPeers = this.opts.minPeers ?? defaultOptions.minPeers;
-    while (this.mode !== SyncMode.STOPPED && this.getPeers().length < minPeers) {
-      this.logger.warn(`Current peerCount=${this.getPeers().length}, required = ${minPeers}`);
+    const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
+    while (this.mode !== SyncMode.STOPPED && this.getSyncPeers().length < minPeers) {
+      this.logger.warn(`Current peerCount=${this.getSyncPeers().length}, required = ${minPeers}`);
       await sleep(3000);
     }
   }
 
-  private getPeers(): PeerId[] {
+  private getSyncPeers(): PeerId[] {
+    return this.getPeers(getSyncProtocols());
+  }
+
+  private getUnknownRootPeers(): PeerId[] {
+    return this.getPeers(getUnknownRootProtocols());
+  }
+
+  private getPeers(protocols: string[]): PeerId[] {
     return this.network
-      .getPeers({connected: true, supportsProtocols: getSyncProtocols()})
+      .getPeers({connected: true, supportsProtocols: protocols})
       .filter((peer) => {
         return !!this.network.peerMetadata.getStatus(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
       })
       .map((peer) => peer.id);
   }
 
-  private onUnknownBlockRoot = async (root: Root): Promise<void> => {
-    const peerBalancer = new RoundRobinArray(this.getPeers());
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+  private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
+    if (err.type.code !== BlockErrorCode.ERR_PARENT_UNKNOWN) return;
+    const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
+    const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
+    const missingRootHex = toHexString(unknownAncestorRoot);
+    if (this.processingRoots.has(missingRootHex)) {
+      return;
+    } else {
+      this.processingRoots.add(missingRootHex);
+      this.logger.verbose("Finding block for unknown ancestor root", missingRootHex);
+    }
+    const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
+    let retry = 0;
+    const maxRetry = this.getUnknownRootPeers().length;
+    let found = false;
+    while (retry < maxRetry) {
       const peer = peerBalancer.next();
       if (!peer) {
-        return;
+        break;
       }
-      const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
-      if (blocks && blocks[0]) {
-        return await this.chain.receiveBlock(blocks[0]);
+      try {
+        const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
+        if (blocks && blocks[0]) {
+          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, root: missingRootHex});
+          found = true;
+          await this.chain.receiveBlock(blocks[0]);
+          break;
+        }
+      } catch (e) {
+        this.logger.verbose("Failed to get unknown ancestor root from peer", {
+          blockRoot: missingRootHex,
+          peer: peer.toB58String(),
+          error: e.message,
+          maxRetry,
+          retry,
+        });
       }
-    }
+      retry++;
+    } // end while
+    this.processingRoots.delete(missingRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", missingRootHex);
   };
 }

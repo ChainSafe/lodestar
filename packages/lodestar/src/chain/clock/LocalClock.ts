@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 
 import {IBeaconClock} from "./interface";
 
@@ -60,15 +60,15 @@ export class LocalClock implements IBeaconClock {
         }
       };
       const onDone = (): void => {
-        this.emitter.removeListener("clock:slot", onSlot);
+        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
       const onAbort = (): void => {
-        this.emitter.removeListener("clock:slot", onSlot);
+        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
         reject(new ErrorAborted());
       };
-      this.emitter.on("clock:slot", onSlot);
+      this.emitter.on(ChainEvent.clockSlot, onSlot);
       this.signal.addEventListener("abort", onAbort, {once: true});
     });
   }
@@ -79,11 +79,11 @@ export class LocalClock implements IBeaconClock {
     while (this._currentSlot < clockSlot) {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
-      this.emitter.emit("clock:slot", this._currentSlot);
+      this.emitter.emit(ChainEvent.clockSlot, this._currentSlot);
       const previousEpoch = computeEpochAtSlot(this.config, previousSlot);
       const currentEpoch = computeEpochAtSlot(this.config, this._currentSlot);
       if (previousEpoch < currentEpoch) {
-        this.emitter.emit("clock:epoch", currentEpoch);
+        this.emitter.emit(ChainEvent.clockEpoch, currentEpoch);
       }
     }
     //recursively invoke onNextSlot

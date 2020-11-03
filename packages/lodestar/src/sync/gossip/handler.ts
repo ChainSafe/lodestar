@@ -9,7 +9,7 @@ import {
   SignedVoluntaryExit,
   ForkDigest,
 } from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../chain";
+import {ChainEvent, IBeaconChain} from "../../chain";
 import {IBeaconDb} from "../../db";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -29,17 +29,22 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async start(): Promise<void> {
-    this.currentForkDigest = this.chain.currentForkDigest;
-    this.subscribe(this.currentForkDigest);
-    this.chain.emitter.on("forkDigest", this.handleForkDigest);
+    this.currentForkDigest = await this.chain.getForkDigest();
+    this.subscribeBlockAndAttestation(this.currentForkDigest);
+    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.removeListener("forkDigest", this.handleForkDigest);
+    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
-  private handleForkDigest = async (forkDigest: ForkDigest): Promise<void> => {
+  public handleSyncCompleted(): void {
+    this.subscribeValidatorTopics(this.currentForkDigest);
+  }
+
+  private handleForkVersion = async (): Promise<void> => {
+    const forkDigest = await this.chain.getForkDigest();
     this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
     this.unsubscribe(this.currentForkDigest);
     this.currentForkDigest = forkDigest;
@@ -47,8 +52,16 @@ export class BeaconGossipHandler implements IGossipHandler {
   };
 
   private subscribe = (forkDigest: ForkDigest): void => {
+    this.subscribeBlockAndAttestation(forkDigest);
+    this.subscribeValidatorTopics(forkDigest);
+  };
+
+  private subscribeBlockAndAttestation = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToBlock(forkDigest, this.onBlock);
     this.network.gossip.subscribeToAggregateAndProof(forkDigest, this.onAggregatedAttestation);
+  };
+
+  private subscribeValidatorTopics = (forkDigest: ForkDigest): void => {
     this.network.gossip.subscribeToAttesterSlashing(forkDigest, this.onAttesterSlashing);
     this.network.gossip.subscribeToProposerSlashing(forkDigest, this.onProposerSlashing);
     this.network.gossip.subscribeToVoluntaryExit(forkDigest, this.onVoluntaryExit);
@@ -67,10 +80,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   };
 
   private onAggregatedAttestation = async (aggregate: SignedAggregateAndProof): Promise<void> => {
-    await Promise.all([
-      this.db.aggregateAndProof.add(aggregate.message),
-      this.chain.receiveAttestation(aggregate.message.aggregate),
-    ]);
+    await this.db.aggregateAndProof.add(aggregate.message);
   };
 
   private onAttesterSlashing = async (attesterSlashing: AttesterSlashing): Promise<void> => {

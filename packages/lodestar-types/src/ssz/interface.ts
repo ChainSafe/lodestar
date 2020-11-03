@@ -86,6 +86,10 @@ export interface IBeaconSSZTypes {
   SyncingStatus: ContainerType<t.SyncingStatus>;
   AttesterDuty: ContainerType<t.AttesterDuty>;
   ProposerDuty: ContainerType<t.ProposerDuty>;
+  // Validator slashing protection
+  SlashingProtectionBlock: ContainerType<t.SlashingProtectionBlock>;
+  SlashingProtectionAttestation: ContainerType<t.SlashingProtectionAttestation>;
+  SlashingProtectionAttestationLowerBound: ContainerType<t.SlashingProtectionAttestationLowerBound>;
   // wire
   Status: ContainerType<t.Status>;
   Goodbye: BigIntUintType;
@@ -97,7 +101,7 @@ export interface IBeaconSSZTypes {
   //api
   SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
-  ForkResponse: ContainerType<t.ForkResponse>;
+  ValidatorResponse: ContainerType<t.ValidatorResponse>;
   Genesis: ContainerType<t.Genesis>;
   ChainHead: ContainerType<t.ChainHead>;
   BlockEventPayload: ContainerType<t.BlockEventPayload>;
@@ -171,6 +175,10 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "AggregateAndProof",
   "SignedAggregateAndProof",
   "CommitteeAssignment",
+  // Validator slashing protection
+  "SlashingProtectionBlock",
+  "SlashingProtectionAttestation",
+  "SlashingProtectionAttestationLowerBound",
   // wire
   "Status",
   "Goodbye",
@@ -182,7 +190,6 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   //api
   "SignedBeaconHeaderResponse",
   "SubscribeToCommitteeSubnetPayload",
-  "ForkResponse",
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",

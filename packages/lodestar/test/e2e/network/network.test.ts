@@ -1,29 +1,31 @@
-import {expect} from "chai";
+import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {Attestation, RequestBody, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {expect} from "chai";
+import Libp2p from "libp2p";
+import PeerId from "peer-id";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {IBeaconChain} from "../../../src/chain";
+import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, Libp2pNetwork} from "../../../src/network";
+import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
+import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
+import {GossipMessageValidator} from "../../../src/network/gossip/validator";
+import {INetworkOptions} from "../../../src/network/options";
+import {ReqRespRequest, sendResponse} from "../../../src/network/reqresp";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {INetworkOptions} from "../../../src/network/options";
-import {BeaconMetrics} from "../../../src/metrics";
-import Libp2p from "libp2p";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {GossipMessageValidator} from "../../../src/network/gossip/validator";
-import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
-import {generateState} from "../../utils/state";
+import {silentLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
-import {IBeaconChain} from "../../../src/chain";
-import PeerId from "peer-id";
-import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {createNode} from "../../utils/network";
-import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
-import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
+import {generateState} from "../../utils/state";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 const opts: INetworkOptions = {
   maxPeers: 1,
+  minPeers: 1,
   bootMultiaddrs: [],
   rpcTimeout: 5000,
   connectTimeout: 5000,
@@ -127,7 +129,7 @@ describe("[network] network", function () {
       new Promise((resolve) => netB.on("peer:connect", resolve)),
     ]);
     const spy = sinon.spy();
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve) => {
       netA.gossip.subscribeToBlock(forkDigest, () => {
         spy();
@@ -156,9 +158,20 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
-    netB.reqResp.once("request", (peerId, method, requestId) => {
-      netB.reqResp.sendResponse(requestId, null, netB.metadata.seqNumber);
-    });
+    netB.reqResp.once(
+      "request",
+      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
+        await sendResponse(
+          {config, logger: silentLogger},
+          req.id,
+          req.method,
+          req.encoding,
+          sink,
+          null,
+          netB.metadata.seqNumber
+        );
+      }
+    );
     const seqNumber = await netA.reqResp.ping(netB.peerId, netA.metadata.seqNumber);
     expect(seqNumber!.toString()).to.equal(netB.metadata.seqNumber.toString());
   });
@@ -170,9 +183,12 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
-    netB.reqResp.once("request", (peerId, method, requestId) => {
-      netB.reqResp.sendResponse(requestId, null, netB.metadata);
-    });
+    netB.reqResp.once(
+      "request",
+      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
+        await sendResponse({config, logger: silentLogger}, req.id, req.method, req.encoding, sink, null, netB.metadata);
+      }
+    );
     const metadata = await netA.reqResp.metadata(netB.peerId);
     expect(metadata).to.deep.equal(netB.metadata.metadata);
   });
@@ -183,7 +199,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToBlock(forkDigest, (signedBlock: SignedBeaconBlock): void => {
@@ -195,7 +211,7 @@ describe("[network] network", function () {
     validator.isValidIncomingBlock.resolves(ExtendedValidatorResult.accept);
     const block = generateEmptySignedBlock();
     block.message.slot = 2020;
-    netB.gossip.publishBlock(block);
+    void netB.gossip.publishBlock(block).catch((e) => console.error(e));
     const receivedBlock = await received;
     expect(receivedBlock).to.be.deep.equal(block);
   });
@@ -206,7 +222,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);
       netA.gossip.subscribeToAggregateAndProof(forkDigest, resolve);
@@ -224,7 +240,7 @@ describe("[network] network", function () {
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
-    const forkDigest = chain.currentForkDigest;
+    const forkDigest = await chain.getForkDigest();
     let callback: (attestation: {attestation: Attestation; subnet: number}) => void;
     const received = new Promise((resolve, reject) => {
       setTimeout(reject, 4000);

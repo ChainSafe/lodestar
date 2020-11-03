@@ -22,10 +22,12 @@ import {
 import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
+import {PendingBlockRepository} from "./repositories/pendingBlock";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
+  public pendingBlock: PendingBlockRepository;
   public stateCache: StateContextCache;
   public checkpointStateCache: CheckpointStateCache;
   public seenAttestationCache: SeenAttestationCache;
@@ -46,6 +48,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     super(opts);
     this.badBlock = new BadBlockRepository(this.config, this.db);
     this.block = new BlockRepository(this.config, this.db);
+    this.pendingBlock = new PendingBlockRepository(this.config, this.db);
     this.stateCache = new StateContextCache();
     this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.seenAttestationCache = new SeenAttestationCache(5000);

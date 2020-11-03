@@ -24,6 +24,7 @@ import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
+import {BlockPool} from "../../../../src/chain/blocks";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -40,6 +41,7 @@ export class MockBeaconChain implements IBeaconChain {
   public clock!: IBeaconClock;
   public regen: IStateRegenerator;
   public emitter: ChainEventEmitter;
+  public pendingBlocks: BlockPool;
 
   private state: TreeBacked<BeaconState> | null;
   private config: IBeaconConfig;
@@ -57,6 +59,9 @@ export class MockBeaconChain implements IBeaconChain {
       genesisTime: state!.genesisTime,
       emitter: this.emitter,
       signal: this.abortController.signal,
+    });
+    this.pendingBlocks = new BlockPool({
+      config: this.config,
     });
     this.regen = new StateRegenerator({
       config: this.config,
@@ -116,7 +121,7 @@ export class MockBeaconChain implements IBeaconChain {
     return this.state!.finalizedCheckpoint;
   }
 
-  public get currentForkDigest(): ForkDigest {
+  public async getForkDigest(): Promise<ForkDigest> {
     return computeForkDigest(this.config, this.state!.fork.currentVersion, this.state!.genesisValidatorsRoot);
   }
 

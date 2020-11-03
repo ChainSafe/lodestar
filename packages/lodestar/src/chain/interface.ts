@@ -19,6 +19,7 @@ import {IBeaconClock} from "./clock/interface";
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
+import {BlockPool} from "./blocks";
 
 export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
@@ -43,9 +44,9 @@ export interface IBeaconChain {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   clock: IBeaconClock;
+  pendingBlocks: BlockPool;
   chainId: Uint16;
   networkId: Uint64;
-  currentForkDigest: ForkDigest;
   /**
    * Start beacon chain processing
    */
@@ -57,7 +58,11 @@ export interface IBeaconChain {
   stop(): Promise<void>;
 
   /**
-   * Return ENRForkID.
+   * Get ForkDigest from the head state
+   */
+  getForkDigest(): Promise<ForkDigest>;
+  /**
+   * Get ENRForkID from the head state
    */
   getENRForkID(): Promise<ENRForkID>;
   getGenesisTime(): Number64;

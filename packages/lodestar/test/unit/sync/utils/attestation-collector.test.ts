@@ -11,6 +11,7 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateState} from "../../../utils/state";
 import {silentLogger} from "../../../utils/logger";
+import { sleep } from "@chainsafe/lodestar-utils";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
@@ -34,6 +35,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => Promise.resolve(generateState()),
+        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
         emitter,
       },
       // @ts-ignore
@@ -76,6 +78,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => Promise.resolve(generateState()),
+        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
         emitter,
       },
       // @ts-ignore

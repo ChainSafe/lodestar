@@ -1,28 +1,38 @@
-import {IBeaconNodeOptions as _IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node/options";
-import {apiOptions} from "./api";
-import {eth1Options} from "./eth1";
-import {loggerOptions} from "./logger";
-import {metricsOptions} from "./metrics";
-import {networkOptions} from "./network";
-import {syncOptions} from "./sync";
+import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {RecursivePartial, removeUndefinedRecursive} from "../../util";
+import * as api from "./api";
+import * as eth1 from "./eth1";
+import * as logger from "./logger";
+import * as metrics from "./metrics";
+import * as network from "./network";
+import * as sync from "./sync";
 
-type RecursivePartial<T> = {
-  [P in keyof T]?: T[P] extends (infer U)[]
-    ? RecursivePartial<U>[]
-    : T[P] extends object
-    ? RecursivePartial<T[P]>
-    : T[P];
-};
+export type IBeaconNodeArgs = api.IApiArgs &
+  eth1.IEth1Args &
+  logger.ILoggerArgs &
+  metrics.IMetricsArgs &
+  network.INetworkArgs &
+  sync.ISyncArgs;
 
-// Re-export for convenience
-export type IBeaconNodeOptions = _IBeaconNodeOptions;
-export type IBeaconNodeOptionsPartial = RecursivePartial<_IBeaconNodeOptions>;
+export function parseBeaconNodeArgs(args: IBeaconNodeArgs): RecursivePartial<IBeaconNodeOptions> {
+  // Remove undefined values to allow deepmerge to inject default values downstream
+  return removeUndefinedRecursive({
+    api: api.parseArgs(args),
+    // chain: {},
+    // db: {},
+    eth1: eth1.parseArgs(args),
+    logger: logger.parseArgs(args),
+    metrics: metrics.parseArgs(args),
+    network: network.parseArgs(args),
+    sync: sync.parseArgs(args),
+  });
+}
 
 export const beaconNodeOptions = {
-  ...apiOptions,
-  ...eth1Options,
-  ...loggerOptions,
-  ...metricsOptions,
-  ...networkOptions,
-  ...syncOptions,
+  ...api.options,
+  ...eth1.options,
+  ...logger.options,
+  ...metrics.options,
+  ...network.options,
+  ...sync.options,
 };

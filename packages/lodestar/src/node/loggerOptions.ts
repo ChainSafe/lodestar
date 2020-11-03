@@ -16,7 +16,7 @@ export interface IValidatorLoggerOptions {
   validator: ILoggerOptions;
 }
 
-const config: IBeaconLoggerOptions = {
+export const defaultLoggerOptions: IBeaconLoggerOptions = {
   chain: {
     level: LogLevel[defaultLogLevel],
     module: "chain",
@@ -54,5 +54,3 @@ const config: IBeaconLoggerOptions = {
     module: "chores",
   },
 };
-
-export default config;

@@ -39,6 +39,10 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
     await this.db.close();
   }
 
+  public async clear(): Promise<void> {
+    await this.db.clear();
+  }
+
   public async get(key: Buffer): Promise<Buffer | null> {
     try {
       return await this.db.get(key);

@@ -4,7 +4,6 @@
 import {
   AggregateAndProof,
   Attestation,
-  AttestationData,
   AttesterDuty,
   BeaconState,
   BLSPubkey,
@@ -20,7 +19,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {IValidatorDB} from "..";
 import {toHexString} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {
@@ -28,13 +26,13 @@ import {
   computeSigningRoot,
   DomainType,
   getDomain,
-  isSlashableAttestationData,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
+import {ISlashingProtection} from "../slashingProtection";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -43,7 +41,7 @@ export class AttestationService {
   private readonly privateKeys: PrivateKey[] = [];
   // order is important
   private readonly publicKeys: BLSPubkey[] = [];
-  private readonly db: IValidatorDB;
+  private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
   private nextAttesterDuties: Map<Slot, Map<number, IAttesterDuty>> = new Map();
@@ -53,7 +51,7 @@ export class AttestationService {
     config: IBeaconConfig,
     keypairs: Keypair[],
     rpcClient: IApiClient,
-    db: IValidatorDB,
+    slashingProtection: ISlashingProtection,
     logger: ILogger
   ) {
     this.config = config;
@@ -62,7 +60,7 @@ export class AttestationService {
       this.privateKeys.push(keypair.privateKey);
       this.publicKeys.push(keypair.publicKey.toBytesCompressed());
     });
-    this.db = db;
+    this.slashingProtection = slashingProtection;
     this.logger = logger;
   }
 
@@ -111,15 +109,23 @@ export class AttestationService {
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(epoch, this.publicKeys);
     } catch (e) {
-      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e);
+      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e.message);
       return;
     }
-    const {fork, genesisValidatorsRoot} = await this.provider.beacon.getFork();
+    const fork = await this.provider.beacon.state.getFork("head");
+    if (!fork) {
+      return;
+    }
     for (const duty of attesterDuties) {
       const attesterIndex = this.publicKeys.findIndex((pubkey) => {
         return this.config.types.BLSPubkey.equals(pubkey, duty.validatorPubkey);
       });
-      const slotSignature = this.getSlotSignature(attesterIndex, duty.attestationSlot, fork, genesisValidatorsRoot);
+      const slotSignature = this.getSlotSignature(
+        attesterIndex,
+        duty.attestationSlot,
+        fork,
+        this.provider.genesisValidatorsRoot
+      );
       const isAggregator = isValidatorAggregator(slotSignature, duty.aggregatorModulo);
       this.logger.debug("new attester duty", {
         slot: duty.attestationSlot,
@@ -163,15 +169,18 @@ export class AttestationService {
     const abortSignal = this.controller!.signal;
     await this.waitForAttestationBlock(duty.attestationSlot, abortSignal);
     let attestation: Attestation | undefined;
-    let fork: Fork, genesisValidatorsRoot: Root;
+    let fork: Fork | null;
     try {
-      ({fork, genesisValidatorsRoot} = await this.provider.beacon.getFork());
+      fork = await this.provider.beacon.state.getFork("head");
+      if (!fork) {
+        return;
+      }
       attestation = await this.createAttestation(
         duty.attesterIndex,
         duty.attestationSlot,
         duty.committeeIndex,
         fork,
-        genesisValidatorsRoot
+        this.provider.genesisValidatorsRoot
       );
     } catch (e) {
       this.logger.error("Failed to produce attestation", {
@@ -194,7 +203,16 @@ export class AttestationService {
 
         try {
           if (attestation) {
-            await this.aggregateAttestations(duty.attesterIndex, duty, attestation, fork, genesisValidatorsRoot);
+            if (!fork) {
+              throw new Error("Missing fork info");
+            }
+            await this.aggregateAttestations(
+              duty.attesterIndex,
+              duty,
+              attestation,
+              fork,
+              this.provider.genesisValidatorsRoot
+            );
           }
         } catch (e) {
           this.logger.error("Failed to aggregate attestations", e);
@@ -332,13 +350,7 @@ export class AttestationService {
       e.message = `Failed to obtain attestation at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
       throw e;
     }
-    if (await this.isConflictingAttestation(attesterIndex, attestation.data)) {
-      throw Error(
-        "Avoided signing conflicting attestation! " +
-          `Source epoch: ${attestation.data.source.epoch}, ` +
-          `Target epoch: ${attestation.data.target.epoch}`
-      );
-    }
+
     const domain = getDomain(
       this.config,
       {fork, genesisValidatorsRoot} as BeaconState,
@@ -346,41 +358,18 @@ export class AttestationService {
       attestation.data.target.epoch
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestation.data, domain);
+
+    await this.slashingProtection.checkAndInsertAttestation(this.publicKeys[attesterIndex], {
+      sourceEpoch: attestation.data.target.epoch,
+      targetEpoch: attestation.data.target.epoch,
+      signingRoot,
+    });
+
     attestation.signature = this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed();
-    await this.storeAttestation(attesterIndex, attestation);
     this.logger.info(
       `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
         `and committee ${committeeIndex} at slot ${slot}`
     );
     return attestation;
-  }
-
-  private async isConflictingAttestation(attesterIndex: number, other: AttestationData): Promise<boolean> {
-    const potentialAttestationConflicts = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gte: other.target.epoch,
-    });
-    return potentialAttestationConflicts.some((attestation) => {
-      const result = isSlashableAttestationData(this.config, attestation.data, other);
-      if (result) {
-        this.logger.info("conflict", {
-          validator: toHexString(this.publicKeys[attesterIndex]),
-          attesterIndex,
-          targetEpoch: other.target.epoch,
-          conflictx: JSON.stringify(potentialAttestationConflicts),
-        });
-      }
-      return result;
-    });
-  }
-
-  private async storeAttestation(attesterIndex: number, attestation: Attestation): Promise<void> {
-    await this.db.setAttestation(this.publicKeys[attesterIndex], attestation);
-
-    // cleanup
-    const unusedAttestations = await this.db.getAttestations(this.publicKeys[attesterIndex], {
-      gte: 0,
-      lt: attestation.data.target.epoch,
-    });
-    await this.db.deleteAttestations(this.publicKeys[attesterIndex], unusedAttestations);
   }
 }

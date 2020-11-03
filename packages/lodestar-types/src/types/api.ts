@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {Checkpoint, Fork, SignedBeaconBlockHeader} from "./misc";
+import {Checkpoint, SignedBeaconBlockHeader} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
@@ -26,12 +26,6 @@ export interface SubscribeToCommitteeSubnetPayload {
   slotSignature: BLSSignature;
   attestationCommitteeIndex: CommitteeIndex;
   aggregatorPubkey: BLSPubkey;
-}
-
-export interface ForkResponse {
-  chainId: Uint64;
-  fork: Fork;
-  genesisValidatorsRoot: Root;
 }
 
 export interface AttesterDuty {

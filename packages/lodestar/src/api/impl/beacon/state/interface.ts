@@ -9,6 +9,7 @@ import {
   ValidatorBalance,
   ValidatorIndex,
   BeaconCommitteeResponse,
+  Fork,
 } from "@chainsafe/lodestar-types";
 import {ValidatorResponse} from "../../../types/validator";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,6 +22,7 @@ export interface IBeaconStateApi {
   getStateValidator(stateId: StateId, validatorId: BLSPubkey | ValidatorIndex): Promise<ValidatorResponse | null>;
   getStateValidatorBalances(stateId: StateId, indices?: (BLSPubkey | ValidatorIndex)[]): Promise<ValidatorBalance[]>;
   getStateCommittes(stateId: StateId, epoch: Epoch, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]>;
+  getFork(stateId: StateId): Promise<Fork | null>;
 }
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";

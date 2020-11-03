@@ -1,7 +1,7 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ITreeStateContext} from "./stateContextCache";
+import {LodestarEpochContext, ITreeStateContext} from "./stateContextCache";
 
 /**
  * In memory cache of BeaconState and connected EpochContext
@@ -75,7 +75,7 @@ export class CheckpointStateCache {
     const epochs = Object.keys(this.epochIndex)
       .map(Number)
       .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
-    const MAX_EPOCHS = 20;
+    const MAX_EPOCHS = 10;
     if (epochs.length > MAX_EPOCHS) {
       epochs.slice(0, epochs.length - MAX_EPOCHS).forEach((epoch) => this.deleteAllEpochItems(epoch));
     }
@@ -106,7 +106,7 @@ export class CheckpointStateCache {
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
+      epochCtx: item.epochCtx.copy() as LodestarEpochContext,
     };
   }
 }

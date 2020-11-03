@@ -1,6 +1,7 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
 
-import {prepareEpochProcessState, EpochContext} from "../util";
+import {prepareEpochProcessState} from "../util";
+import {StateTransitionEpochContext} from "../util/epochContext";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";
@@ -16,7 +17,7 @@ export {
   processFinalUpdates,
 };
 
-export function processEpoch(epochCtx: EpochContext, state: BeaconState): void {
+export function processEpoch(epochCtx: StateTransitionEpochContext, state: BeaconState): void {
   const process = prepareEpochProcessState(epochCtx, state);
   epochCtx.epochProcess = process;
   processJustificationAndFinalization(epochCtx, process, state);

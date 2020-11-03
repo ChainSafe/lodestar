@@ -2,13 +2,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBlockJob} from "../interface";
-import {ChainEventEmitter} from "../emitter";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
 
 import {processBlock} from "./process";
 import {validateBlock} from "./validate";
+import {IBeaconDb} from "../../db";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
@@ -16,6 +17,7 @@ type BlockProcessorModules = {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
+  db: IBeaconDb;
 };
 
 /**
@@ -62,6 +64,6 @@ export async function processBlockJob(modules: BlockProcessorModules, job: IBloc
     await processBlock({...modules, job});
   } catch (e) {
     // above functions only throw BlockError
-    modules.emitter.emit("error:block", e);
+    modules.emitter.emit(ChainEvent.errorBlock, e);
   }
 }

@@ -1,0 +1,35 @@
+name: Sim tests
+
+on: [pull_request, push]
+
+jobs:
+  tests-sim:
+    name: Sim tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional
+      - name: Build
+        run: node_modules/.bin/lerna run build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+      - name: Simulation single thread test
+        run: yarn test:sim:singleThread
+        working-directory: packages/lodestar
+      - name: Simulation multi thread test
+        run: yarn test:sim:multiThread
+        working-directory: packages/lodestar

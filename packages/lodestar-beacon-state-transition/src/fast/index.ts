@@ -1,17 +1,20 @@
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 import {verifyBlockSignature} from "./util";
-import {EpochContext, IStateContext} from "./util";
+import {IStateContext} from "./util";
+import {StateTransitionEpochContext} from "./util/epochContext";
+import {EpochContext} from "./util/epochContext";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
 
 export {IStateContext, EpochContext};
 
 export function fastStateTransition(
-  {state, epochCtx}: IStateContext,
+  {state, epochCtx: eiEpochCtx}: IStateContext,
   signedBlock: SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
+  const epochCtx = new StateTransitionEpochContext(undefined, eiEpochCtx);
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;
 
@@ -34,8 +37,18 @@ export function fastStateTransition(
       throw new Error("Invalid state root");
     }
   }
+  return toIStateContext(epochCtx, postState);
+}
+
+/**
+ * Trim epochProcess in epochCtx, and insert the standard/exchange interface epochProcess to the final IStateContext
+ */
+export function toIStateContext(epochCtx: StateTransitionEpochContext, state: BeaconState): IStateContext {
+  const epochProcess = epochCtx.epochProcess;
+  epochCtx.epochProcess = undefined;
   return {
-    state: postState,
-    epochCtx: epochCtx,
+    state: state,
+    epochCtx: new EpochContext(undefined, epochCtx),
+    epochProcess,
   };
 }
