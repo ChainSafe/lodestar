@@ -15,6 +15,7 @@ import {getBeaconPaths} from "./paths";
 import {onGracefulShutdown} from "../../util/process";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initBeaconState} from "./initBeaconState";
+import {getGenesisFileUrl} from "../../testnets";
 
 /**
  * Run a beacon node
@@ -57,6 +58,10 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const dbClose = (): Promise<void> => db.stop();
   abortController.signal.addEventListener("abort", dbClose, {once: true});
   await db.start();
+
+  if (args.testnet && !args.genesisStateFile) {
+    args.genesisStateFile = getGenesisFileUrl(args.testnet) ?? undefined;
+  }
 
   // BeaconNode setup
   const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
