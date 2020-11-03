@@ -19,8 +19,6 @@ import {getDevValidator} from "../../utils/node/validator";
     logger: logger.child({module: `Node ${nodeIndex}`}),
   });
 
-  await node.start();
-
   const validator = getDevValidator({
     node,
     startIndex,
@@ -32,7 +30,7 @@ import {getDevValidator} from "../../utils/node/validator";
 
   node.chain.emitter.on(checkpointEvent, (checkpoint) => {
     validator.stop().then(() =>
-      node.stop().then(() => {
+      node.close().then(() => {
         parentPort!.postMessage({
           event: checkpointEvent,
           checkpoint: node.config.types.Checkpoint.toJson(checkpoint as Checkpoint),

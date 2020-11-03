@@ -23,7 +23,6 @@ describe("syncing", function () {
       validatorCount,
     });
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
-    await bn.start();
     const validators = getDevValidators(bn, 8);
     validators.forEach((v) => v.start());
     try {
@@ -36,7 +35,6 @@ describe("syncing", function () {
       validatorCount,
       genesisTime: (await bn.chain.getHeadState()).genesisTime,
     });
-    await bn2.start();
     const head = await bn.chain.getHeadBlock()!;
     const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
       config.types.SignedBeaconBlock.equals(block, head!)
@@ -47,8 +45,8 @@ describe("syncing", function () {
     } catch (e) {
       assert.fail("Failed to sync to other node in time");
     }
-    await bn2.stop();
+    await bn2.close();
     await Promise.all(validators.map((v) => v.stop()));
-    await bn.stop();
+    await bn.close();
   });
 });

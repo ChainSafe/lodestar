@@ -8,8 +8,6 @@ import {
   Root,
   SignedBeaconBlock,
   Slot,
-  Uint16,
-  Uint64,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
@@ -20,6 +18,7 @@ import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
+import {AttestationPool} from "./attestation";
 
 export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
@@ -41,21 +40,16 @@ export interface IAttestationJob {
  */
 export interface IBeaconChain {
   emitter: ChainEventEmitter;
+  clock: IBeaconClock;
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
-  clock: IBeaconClock;
   pendingBlocks: BlockPool;
-  chainId: Uint16;
-  networkId: Uint64;
-  /**
-   * Start beacon chain processing
-   */
-  start(): Promise<void>;
+  pendingAttestations: AttestationPool;
 
   /**
    * Stop beacon chain processing
    */
-  stop(): Promise<void>;
+  close(): Promise<void>;
 
   /**
    * Get ForkDigest from the head state
@@ -96,14 +90,4 @@ export interface IBeaconChain {
    * Pre-process and run the per slot state transition function
    */
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
-
-  /**
-   * Initialize the chain with a genesis state
-   */
-  initializeBeaconChain(genesisState: TreeBacked<BeaconState>): Promise<void>;
-
-  /**
-   * Initialize the chain with a weak subjectivity state
-   */
-  initializeWeakSubjectivityState(weakSubjectivityState: TreeBacked<BeaconState>): Promise<void>;
 }
