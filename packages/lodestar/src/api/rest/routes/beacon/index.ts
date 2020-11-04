@@ -18,13 +18,6 @@ import {getProposerSlashings} from "../../controllers/beacon/pool/getProposerSla
 import {submitAttesterSlashing} from "../../controllers/beacon/pool/submitAttesterSlashing";
 import {submitPoolAttestation} from "../../controllers/beacon/pool/submitPoolAttestation";
 import {submitProposerSlashing} from "../../controllers/beacon/pool/submitProposerSlashing";
-import {LodestarApiPlugin} from "../../interface";
-import {registerGetValidatorEndpoint} from "./validator";
-//old
-export const beacon: LodestarApiPlugin = (fastify, opts, done: Function): void => {
-  registerGetValidatorEndpoint(fastify, opts);
-  done();
-};
 
 //new
 export function registerBeaconRoutes(server: FastifyInstance): void {

@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BLSPubkey, Genesis, SignedBeaconBlock, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {Genesis, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db/api";
@@ -15,7 +15,6 @@ import {IBeaconApi} from "./interface";
 import {BeaconPoolApi, IBeaconPoolApi} from "./pool";
 import {IBeaconStateApi} from "./state/interface";
 import {BeaconStateApi} from "./state/state";
-import {ValidatorStatus} from "../../types/validator";
 
 export class BeaconApi implements IBeaconApi {
   public namespace: ApiNamespace;
@@ -40,21 +39,6 @@ export class BeaconApi implements IBeaconApi {
     this.state = new BeaconStateApi(opts, modules);
     this.blocks = new BeaconBlockApi(opts, modules);
     this.pool = new BeaconPoolApi(opts, modules);
-  }
-
-  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
-    const {epochCtx, state} = await this.chain.getHeadStateContext();
-    const index = epochCtx.pubkey2index.get(pubkey);
-    if (index) {
-      return {
-        validator: state.validators[index],
-        status: ValidatorStatus.ACTIVE,
-        pubkey: pubkey,
-        index,
-      };
-    } else {
-      return null;
-    }
   }
 
   public async getGenesis(): Promise<Genesis | null> {

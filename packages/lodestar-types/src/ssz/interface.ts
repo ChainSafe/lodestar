@@ -13,7 +13,6 @@ import {
 } from "@chainsafe/ssz";
 
 import * as t from "../types";
-import {BeaconCommitteeResponse} from "../types/api";
 
 export interface IBeaconSSZTypes {
   // primitive
@@ -101,7 +100,6 @@ export interface IBeaconSSZTypes {
   //api
   SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
-  ValidatorResponse: ContainerType<t.ValidatorResponse>;
   Genesis: ContainerType<t.Genesis>;
   ChainHead: ContainerType<t.ChainHead>;
   BlockEventPayload: ContainerType<t.BlockEventPayload>;

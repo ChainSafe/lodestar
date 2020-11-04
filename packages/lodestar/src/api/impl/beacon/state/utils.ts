@@ -1,14 +1,13 @@
 // this will need async once we wan't to resolve archive slot
+import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Validator, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
+import {Epoch, Validator, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
+import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
 import {ValidatorResponse, ValidatorStatus} from "../../../types/validator";
 import {ApiStateContext, StateId} from "./interface";
-import {IBeaconChain} from "../../../../chain";
-import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {shuffleList} from "../../../../../../lodestar-beacon-state-transition/src/util/shuffle";
 
 export async function resolveStateId(
   config: IBeaconConfig,
@@ -93,4 +92,20 @@ export function getEpochBeaconCommittees(
     committees = shuffling.committees;
   }
   return committees;
+}
+
+export function validatorPubkeyToIndex(
+  config: IBeaconConfig,
+  stateCtx: ApiStateContext,
+  pubkey: BLSPubkey
+): ValidatorIndex | null {
+  if (stateCtx.epochCtx) {
+    return stateCtx.epochCtx.pubkey2index.get(pubkey) ?? null;
+  }
+  for (const [index, validator] of Array.from(stateCtx.state.validators).entries()) {
+    if (config.types.BLSPubkey.equals(validator.pubkey, pubkey)) {
+      return index;
+    }
+  }
+  return null;
 }

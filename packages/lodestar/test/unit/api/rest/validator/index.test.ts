@@ -1,24 +1,22 @@
-import {expect} from "chai";
-import supertest from "supertest";
-import sinon, {SinonStubbedInstance} from "sinon";
-
-import {toHexString} from "@chainsafe/ssz";
-import {Attestation} from "@chainsafe/lodestar-types";
 import {Keypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-
+import {toHexString} from "@chainsafe/ssz";
+import {expect} from "chai";
+import sinon from "sinon";
+import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
+import {ApiError} from "../../../../../src/api/impl/errors/api";
 import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
-import {generateEmptyBlock} from "../../../../utils/block";
 import {
   generateAttestation,
   generateAttestationData,
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
 } from "../../../../utils/attestation";
+import {generateEmptyBlock} from "../../../../utils/block";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {ApiError} from "../../../../../src/api/impl/errors/api";
 
 describe("Test validator rest API", function () {
   let restApi: RestApi, api: StubbedApi;

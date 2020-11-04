@@ -10,15 +10,17 @@ import {
   ValidatorBalance,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {List, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
+import {notNullish} from "../../../../util/notNullish";
 import {IApiOptions} from "../../../options";
 import {ValidatorResponse} from "../../../types/validator";
+import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {MissingState} from "./errors";
 import {IBeaconStateApi, ICommittesFilters, IValidatorFilters, StateId} from "./interface";
-import {getEpochBeaconCommittees, resolveStateId} from "./utils";
+import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse, validatorPubkeyToIndex} from "./utils";
 
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
@@ -51,21 +53,71 @@ export class BeaconStateApi implements IBeaconStateApi {
       finalized: state.finalizedCheckpoint,
     };
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    throw new Error("Method not implemented.");
+    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    if (!state) {
+      throw new StateNotFound();
+    }
+    //TODO: implement filters
+    return readOnlyMap(state.state.validators, (v, index) => toValidatorResponse(index, v));
   }
 
   public async getStateValidator(
     stateId: StateId,
     validatorId: ValidatorIndex | Root
   ): Promise<ValidatorResponse | null> {
-    throw new Error("Method not implemented.");
+    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    if (!state) {
+      throw new StateNotFound();
+    }
+    let validatorIndex: ValidatorIndex | undefined;
+    if (typeof validatorId === "number") {
+      if (state.state.validators.length > validatorId) {
+        validatorIndex = validatorId;
+      }
+    } else {
+      validatorIndex = validatorPubkeyToIndex(this.config, state, validatorId) ?? undefined;
+    }
+    if (!validatorIndex) {
+      throw new ApiError(404, "Validator not found");
+    }
+    return toValidatorResponse(validatorIndex, state.state.validators[validatorIndex]);
   }
   public async getStateValidatorBalances(
     stateId: StateId,
     indices?: (ValidatorIndex | Root)[]
   ): Promise<ValidatorBalance[]> {
-    throw new Error("Method not implemented.");
+    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    if (!state) {
+      throw new StateNotFound();
+    }
+    if (indices) {
+      return indices
+        .map((id) => {
+          if (typeof id === "number") {
+            if (state.state.validators.length <= id) {
+              return null;
+            }
+            return {
+              index: id,
+              balance: state.state.balances[id],
+            };
+          } else {
+            const index = validatorPubkeyToIndex(this.config, state, id);
+            return index && index <= state.state.validators.length
+              ? {index, balance: state.state.balances[index]}
+              : null;
+          }
+        })
+        .filter(notNullish);
+    }
+    return readOnlyMap(state.state.validators, (v, index) => {
+      return {
+        index,
+        balance: state.state.balances[index],
+      };
+    });
   }
   public async getStateCommittes(
     stateId: StateId,
