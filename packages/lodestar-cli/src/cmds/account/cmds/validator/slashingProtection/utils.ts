@@ -2,9 +2,13 @@ import {Root} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {getValidatorPaths} from "../../../../validator/paths";
 import {getBeaconConfigFromArgs} from "../../../../../config";
+import {IGlobalArgs} from "../../../../../options";
 
-export function getSlashingProtection(args): SlashingProtection {
+export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
+  const validatorPaths = getValidatorPaths(args);
+  const dbPath = validatorPaths.validatorsDbDir;
   const config = getBeaconConfigFromArgs(args);
   const logger = new WinstonLogger();
   return new SlashingProtection({
