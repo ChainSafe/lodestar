@@ -22,21 +22,21 @@ describe("BlockRangeFetcher", function () {
   let metadataStub: SinonStubbedInstance<IPeerMetadataStore>;
   let getBlockRangeStub: SinonStub;
   let getCurrentSlotStub: SinonStub;
-  let clock: SinonFakeTimers;
   const getPeers = async (): Promise<PeerId[]> => {
     return [await PeerId.create()];
   };
   const logger = new WinstonLogger();
+  const sandbox = sinon.createSandbox();
 
   beforeEach(() => {
-    clock = sinon.useFakeTimers();
-    getBlockRangeStub = sinon.stub(blockUtils, "getBlockRange");
-    getCurrentSlotStub = sinon.stub(slotUtils, "getCurrentSlot");
-    chainStub = sinon.createStubInstance(BeaconChain);
-    clockStub = sinon.createStubInstance(LocalClock);
+    sandbox.useFakeTimers();
+    getBlockRangeStub = sandbox.stub(blockUtils, "getBlockRange");
+    getCurrentSlotStub = sandbox.stub(slotUtils, "getCurrentSlot");
+    chainStub = sandbox.createStubInstance(BeaconChain);
+    clockStub = sandbox.createStubInstance(LocalClock);
     chainStub.clock = clockStub;
-    networkStub = sinon.createStubInstance(Libp2pNetwork);
-    metadataStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
+    networkStub = sandbox.createStubInstance(Libp2pNetwork);
+    metadataStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
     networkStub.peerMetadata = metadataStub;
     fetcher = new BlockRangeFetcher(
       {},
@@ -51,8 +51,7 @@ describe("BlockRangeFetcher", function () {
   });
 
   afterEach(() => {
-    sinon.restore();
-    clock.restore();
+    sandbox.restore();
   });
 
   it("should fetch next range initially", async () => {
@@ -164,7 +163,7 @@ describe("BlockRangeFetcher", function () {
     const triggerTimeout = async (): Promise<void> => {
       await getPeers();
       // want to run this after the getPeers() call inside getNextBlockRange()
-      clock.tick(3 * 60 * 1000);
+      sandbox.clock.tick(3 * 60 * 1000);
     };
     await Promise.all([fetcher.getNextBlockRange(), triggerTimeout()]);
     expect(getBlockRangeStub.calledTwice).to.be.true;
