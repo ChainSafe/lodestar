@@ -1,16 +1,17 @@
 import fs from "fs";
 import {ICliCommand} from "../../../../../util";
-import {IAccountValidatorArgs} from "../options";
 import {IGlobalArgs} from "../../../../../options";
+import {IAccountValidatorArgs} from "../options";
+import {ISlashingProtectionArgs} from "./options";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils";
 
 /* eslint-disable no-console */
 
-interface ISlashingProtectionArgs {
+interface IImportArgs {
   file: string;
 }
 
-export const importCmd: ICliCommand<ISlashingProtectionArgs, IAccountValidatorArgs & IGlobalArgs> = {
+export const importCmd: ICliCommand<IImportArgs, ISlashingProtectionArgs & IAccountValidatorArgs & IGlobalArgs> = {
   command: "import",
 
   describe: "Import an interchange file.",
@@ -32,7 +33,7 @@ export const importCmd: ICliCommand<ISlashingProtectionArgs, IAccountValidatorAr
   },
 
   handler: async (args) => {
-    const genesisValidatorsRoot = getGenesisValidatorsRoot(args);
+    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
     const slashingProtection = getSlashingProtection(args);
 
     const importFile = await fs.promises.readFile(args.file, "utf8");

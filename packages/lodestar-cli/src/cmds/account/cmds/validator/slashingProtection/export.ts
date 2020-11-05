@@ -1,17 +1,18 @@
 import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator/lib/slashingProtection/interchange";
 import {Json} from "@chainsafe/ssz";
 import {ICliCommand, writeFile} from "../../../../../util";
-import {IAccountValidatorArgs} from "../options";
 import {IGlobalArgs} from "../../../../../options";
+import {IAccountValidatorArgs} from "../options";
+import {ISlashingProtectionArgs} from "./options";
 import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils";
 
 /* eslint-disable no-console */
 
-interface ISlashingProtectionArgs {
+interface IExportArgs {
   file: string;
 }
 
-export const exportCmd: ICliCommand<ISlashingProtectionArgs, IAccountValidatorArgs & IGlobalArgs> = {
+export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & IAccountValidatorArgs & IGlobalArgs> = {
   command: "export",
 
   describe: "Export an interchange file.",
@@ -33,7 +34,7 @@ export const exportCmd: ICliCommand<ISlashingProtectionArgs, IAccountValidatorAr
   },
 
   handler: async (args) => {
-    const genesisValidatorsRoot = getGenesisValidatorsRoot(args);
+    const genesisValidatorsRoot = await getGenesisValidatorsRoot(args);
     const slashingProtection = getSlashingProtection(args);
 
     // TODO: Allow format version and pubkeys to be customized with CLI args
