@@ -1,12 +1,14 @@
 import {Root} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ZERO_HASH} from "@chainsafe/lodestar/lib/constants";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
-import {getValidatorPaths} from "../../../../validator/paths";
-import {IValidatorCliArgs} from "../../../../validator/options";
-import {getBeaconConfigFromArgs} from "../../../../../config";
+import {YargsError} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
+import {getValidatorPaths} from "../../../../validator/paths";
+import {getBeaconConfigFromArgs} from "../../../../../config";
+import {ISlashingProtectionArgs} from "./options";
 
 export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
   const validatorPaths = getValidatorPaths(args);
@@ -19,18 +21,22 @@ export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
   });
 }
 
-export async function getGenesisValidatorsRoot(args: IGlobalArgs & Pick<IValidatorCliArgs, "server">): Promise<Root> {
+export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
   const server = args.server;
 
-  // state.genesisValidatorsRoot
   const config = getBeaconConfigFromArgs(args);
   const logger = new WinstonLogger({level: LogLevel.error});
 
   const api = new ApiClientOverRest(config, server, logger);
   const genesis = await api.beacon.getGenesis();
-  if (!genesis) {
-    throw Error(`Beacon node has not genesis ${server}`);
-  }
 
-  return genesis.genesisValidatorsRoot;
+  if (genesis) {
+    return genesis.genesisValidatorsRoot;
+  } else {
+    if (args.force) {
+      return ZERO_HASH;
+    } else {
+      throw new YargsError(`Can't get genesisValidatorsRoot from Beacon node at ${server}`);
+    }
+  }
 }
