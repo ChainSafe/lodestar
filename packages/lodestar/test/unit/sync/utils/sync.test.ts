@@ -12,6 +12,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {
   checkBestPeer,
+  checkLinearChainSegment,
   fetchBlockChunks,
   getBestHead,
   getBestPeer,
@@ -371,6 +372,38 @@ describe("sync utils", function () {
       expect(networkStub.getPeers.calledOnce).to.be.true;
       expect(peerScoreStub.getScore.calledOnce).to.be.true;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
+    });
+  });
+
+  describe("checkLinearChainSegment", function () {
+    it("should throw error if not enough block", () => {
+      expect(() => checkLinearChainSegment(config, ZERO_HASH, null)).to.throw("Not enough blocks to validate");
+      expect(() => checkLinearChainSegment(config, ZERO_HASH, [])).to.throw("Not enough blocks to validate");
+      expect(() => checkLinearChainSegment(config, ZERO_HASH, [generateEmptySignedBlock()])).to.throw("Not enough blocks to validate");
+    });
+
+    it("should throw error if first block not link to ancestor root", () => {
+      const block = generateEmptySignedBlock();
+      expect(() => checkLinearChainSegment(config, ZERO_HASH, [block, block])).to.throw("Block 0 does not link to parent 0xeade62f0457b2fdf48e7d3fc4b60736688286be7c7a3ac4c9a16a5e0600bd9e4");
+    });
+
+    it("should throw error if second block not link to first block", () => {
+      const firstBlock = generateEmptySignedBlock();
+      const ancestorRoot = firstBlock.message.parentRoot;
+      const secondBlock = generateEmptySignedBlock();
+      secondBlock.message.slot = 1;
+      // secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+      expect(() => checkLinearChainSegment(config, ancestorRoot, [firstBlock, secondBlock])).to.throw("Block 1 does not link to parent 0xeade62f0457b2fdf48e7d3fc4b60736688286be7c7a3ac4c9a16a5e0600bd9e4");
+    });
+
+    it("should form linear chain segment", () => {
+      const firstBlock = generateEmptySignedBlock();
+      const ancestorRoot = firstBlock.message.parentRoot;
+      const secondBlock = generateEmptySignedBlock();
+      secondBlock.message.slot = 1;
+      secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+      checkLinearChainSegment(config, ancestorRoot, [firstBlock, secondBlock]);
+      // no error thrown means success
     });
   });
 });

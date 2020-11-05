@@ -275,3 +275,23 @@ export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: IN
     DEFAULT_RPC_SCORE - 1
   ).includes(peer);
 }
+
+/**
+ * Some clients may send orphaned/non-canonical blocks.
+ * Check each block should link to a previous parent block and be a parent of next block.
+ * Throw errors if they're not so that it'll fetch again
+ */
+export function checkLinearChainSegment(
+  config: IBeaconConfig,
+  ancestorRoot: Root,
+  blocks: SignedBeaconBlock[] | null
+): void {
+  if (!blocks || blocks.length <= 1) throw "Not enough blocks to validate";
+  let parentRoot = ancestorRoot;
+  blocks.forEach((block) => {
+    if (!config.types.Root.equals(block.message.parentRoot, parentRoot)) {
+      throw `Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`;
+    }
+    parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
+  });
+}

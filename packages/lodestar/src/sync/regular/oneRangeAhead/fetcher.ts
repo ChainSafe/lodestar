@@ -11,6 +11,7 @@ import {getBlockRange} from "../../utils/blocks";
 import {ISlotRange, ISyncCheckpoint} from "../../interface";
 import {ZERO_HASH} from "../../../constants";
 import {IBlockRangeFetcher} from "./interface";
+import {checkLinearChainSegment} from "../../utils/sync";
 
 export class BlockRangeFetcher implements IBlockRangeFetcher {
   protected readonly config: IBeaconConfig;
@@ -35,8 +36,8 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.lastFetchCheckpoint = {blockRoot: ZERO_HASH, slot: 0};
   }
 
-  public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
-    this.lastFetchCheckpoint = lastProcessedBlock;
+  public setLastProcessedBlock(lastFetchCheckpoint: ISyncCheckpoint): void {
+    this.lastFetchCheckpoint = lastFetchCheckpoint;
   }
 
   /**
@@ -63,14 +64,19 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
           }),
         ])) as SignedBeaconBlock[] | null;
         if (timer) clearTimeout(timer);
+        // empty result should go through and we'll handle it in next round
+        if (result && result.length > 0) {
+          checkLinearChainSegment(this.config, this.lastFetchCheckpoint.blockRoot, result);
+        }
       } catch (e) {
-        this.logger.debug("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
+        this.logger.verbose("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
         // sync is stopped for whatever reasons
         if (e instanceof ErrorAborted) return [];
         result = null;
       }
     }
-    // success
+    // success, ignore last block (there should be >= 2 blocks) since we can't validate parent-child
+    result.splice(result.length - 1, 1);
     const lastBlock = result[result.length - 1].message;
     this.lastFetchCheckpoint = {blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
     return result!;
@@ -84,7 +90,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   }
 
   private async handleEmptyRange(peers: PeerId[] = []): Promise<void> {
-    if (!this.getPeers.length) {
+    if (!peers.length) {
       return;
     }
     const range = {start: this.rangeStart, end: this.rangeEnd};
@@ -112,6 +118,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   private getNewTarget(): Slot {
     const currentSlot = this.chain.clock.currentSlot;
     // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
-    return Math.min(this.rangeEnd + this.opts.blockPerChunk, currentSlot + 1);
+    // since we want to check linear chain, use this.opts.blockPerChunk + 1
+    return Math.min(this.rangeEnd + this.opts.blockPerChunk + 1, currentSlot + 1);
   }
 }
