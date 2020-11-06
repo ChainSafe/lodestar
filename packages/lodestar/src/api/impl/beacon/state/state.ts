@@ -3,7 +3,6 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
   BeaconCommitteeResponse,
   BeaconState,
-  Epoch,
   FinalityCheckpoints,
   Fork,
   Root,
@@ -15,13 +14,13 @@ import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
 import {notNullish} from "../../../../util/notNullish";
 import {IApiOptions} from "../../../options";
-import {ValidatorResponse} from "../../../types/validator";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {MissingState} from "./errors";
 import {IBeaconStateApi, ICommittesFilters, IValidatorFilters, StateId} from "./interface";
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse, validatorPubkeyToIndex} from "./utils";
-
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {ValidatorResponse} from "@chainsafe/lodestar-types";
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
@@ -119,16 +118,17 @@ export class BeaconStateApi implements IBeaconStateApi {
       };
     });
   }
-  public async getStateCommittes(
-    stateId: StateId,
-    epoch: Epoch,
-    filters?: ICommittesFilters
-  ): Promise<BeaconCommitteeResponse[]> {
+  public async getStateCommittes(stateId: StateId, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]> {
     const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
     if (!stateContext) {
       throw new MissingState();
     }
-    const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(this.config, this.chain, stateContext, epoch);
+    const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(
+      this.config,
+      this.chain,
+      stateContext,
+      filters?.epoch ?? computeEpochAtSlot(this.config, stateContext.state.slot)
+    );
     return committes.flatMap((slotCommittees, committeeIndex) => {
       if (filters?.index && filters.index !== committeeIndex) {
         return [];

@@ -55,7 +55,7 @@ describe("beacon state api utils", function () {
 
     it("resolve finalized state id - missing state", async function () {
       forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: null!, epochCtx: null!});
+      dbStub.stateCache.get.resolves(null);
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
       expect(state).to.be.null;
       expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
@@ -73,7 +73,7 @@ describe("beacon state api utils", function () {
 
     it("resolve justified state id - missing state", async function () {
       forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: null!, epochCtx: null!});
+      dbStub.stateCache.get.resolves(null);
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
       expect(state).to.be.null;
       expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;

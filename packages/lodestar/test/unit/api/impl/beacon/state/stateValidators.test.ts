@@ -1,17 +1,16 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {Gwei, ValidatorStatus} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
-import {ValidatorStatus} from "../../../../../../src/api/types/validator";
 import {BeaconChain} from "../../../../../../src/chain/chain";
 import {IBeaconChain} from "../../../../../../src/chain/interface";
 import {generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub/beaconDb";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
-import {List} from "@chainsafe/ssz";
-import {Gwei} from "@chainsafe/lodestar-types";
 
 use(chaiAsPromised);
 

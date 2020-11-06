@@ -90,6 +90,7 @@ describe("@chainsafe/lodestar-types", () => {
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
   it("Every runtime type variable should have a corresponding interface", () => {
     Object.keys(vars).map((name) => {
+      
       assert(
         // @ts-ignore
         !!interfaces[name] || !!types[name],

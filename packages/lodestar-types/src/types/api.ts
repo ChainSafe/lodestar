@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/interface-name-prefix */
-import {Checkpoint, SignedBeaconBlockHeader} from "./misc";
+import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
@@ -100,4 +100,27 @@ export interface BeaconCommitteeResponse {
   index: CommitteeIndex;
   slot: Slot;
   validators: List<ValidatorIndex>;
+}
+
+export enum ValidatorStatus {
+  WAITING_FOR_ELIGIBILITY = "waiting_for_eligibility",
+  WAITING_FOR_FINALITY = "waiting_for_finality",
+  WAITING_IN_QUEUE = "waiting_in_queue",
+  STANDBY_FOR_ACTIVE = "standby_for_active",
+  ACTIVE = "active",
+  ACTIVE_AWAITING_VOLUNTARY_EXIT = "active_awaiting_voluntary_exit",
+  ACTIVE_AWAITING_SLASHED_EXIT = "active_awaiting_slashed_exit",
+  EXITED_VOLUNTARILY = "exited_voluntarily",
+  EXITED_SLASHED = "exited_slashed",
+  WITHDRAWABLE_VOLUNTARILY = "withdrawable_voluntarily",
+  WITHDRAWABLE_SLASHED = "withdrawable_slashed",
+  WITHDRAWN_VOLUNTARILY = "withdrawn_voluntarily",
+  WITHDRAWN_SLASHED = "withdrawn_slashed",
+}
+
+export interface ValidatorResponse {
+  index: ValidatorIndex;
+  pubkey: BLSPubkey;
+  status: ValidatorStatus;
+  validator: Validator;
 }

@@ -11,8 +11,8 @@ import {
   BeaconCommitteeResponse,
   Fork,
 } from "@chainsafe/lodestar-types";
-import {ValidatorResponse} from "../../../types/validator";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
   getStateRoot(stateId: StateId): Promise<Root | null>;
@@ -21,7 +21,7 @@ export interface IBeaconStateApi {
   getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]>;
   getStateValidator(stateId: StateId, validatorId: BLSPubkey | ValidatorIndex): Promise<ValidatorResponse | null>;
   getStateValidatorBalances(stateId: StateId, indices?: (BLSPubkey | ValidatorIndex)[]): Promise<ValidatorBalance[]>;
-  getStateCommittes(stateId: StateId, epoch: Epoch, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]>;
+  getStateCommittes(stateId: StateId, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]>;
   getFork(stateId: StateId): Promise<Fork | null>;
 }
 
@@ -34,6 +34,7 @@ export interface IValidatorFilters {
   statuses?: ValidatorStatus[];
 }
 export interface ICommittesFilters {
+  epoch?: Epoch;
   index?: CommitteeIndex;
   slot?: Slot;
 }

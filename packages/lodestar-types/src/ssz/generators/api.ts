@@ -1,5 +1,7 @@
 import {ContainerType} from "@chainsafe/ssz";
 import {IBeaconSSZTypes} from "../interface";
+import {StringType} from "../utils";
+import {ValidatorStatus} from "../..";
 
 export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
@@ -110,5 +112,23 @@ export const BeaconCommitteeResponse = (ssz: IBeaconSSZTypes): ContainerType =>
       index: ssz.CommitteeIndex,
       slot: ssz.Slot,
       validators: ssz.CommitteeIndices,
+    },
+  });
+
+export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      index: ssz.ValidatorIndex,
+      pubkey: ssz.BLSPubkey,
+      status: new StringType<ValidatorStatus>(),
+      validator: ssz.Validator,
+    },
+  });
+
+export const ValidatorBalance = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      index: ssz.ValidatorIndex,
+      balance: ssz.Gwei,
     },
   });
