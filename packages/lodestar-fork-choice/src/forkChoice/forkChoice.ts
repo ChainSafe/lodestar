@@ -79,6 +79,11 @@ export class ForkChoice implements IForkChoice {
   queuedAttestations: Set<IQueuedAttestation>;
 
   /**
+   * Avoid having to compute detas all the times.
+   */
+  synced: boolean;
+
+  /**
    * Instantiates a Fork Choice from some existing components
    *
    * This is useful if the existing components have been loaded from disk after a process restart.
@@ -101,6 +106,7 @@ export class ForkChoice implements IForkChoice {
     this.justifiedBalances = [];
     this.bestJustifiedBalances = [];
     this.queuedAttestations = queuedAttestations;
+    this.synced = false;
   }
 
   /**
@@ -201,17 +207,21 @@ export class ForkChoice implements IForkChoice {
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
   public getHeadRoot(): Uint8Array {
-    return fromHexString(this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root)));
+    const head = this.getHead();
+    return head.blockRoot;
   }
 
   public getHead(): IBlockSummary {
     // balances is not changed but votes are changed
-    const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
-    this.protoArray.applyScoreChanges(
-      deltas,
-      this.fcStore.justifiedCheckpoint.epoch,
-      this.fcStore.finalizedCheckpoint.epoch
-    );
+    if (!this.synced) {
+      const deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
+      this.protoArray.applyScoreChanges(
+        deltas,
+        this.fcStore.justifiedCheckpoint.epoch,
+        this.fcStore.finalizedCheckpoint.epoch
+      );
+      this.synced = true;
+    }
     const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
     const headIndex = this.protoArray.indices.get(headRoot);
     if (headIndex === undefined) {
@@ -759,6 +769,7 @@ export class ForkChoice implements IForkChoice {
    * Add a validator's latest message to the tracked votes
    */
   private addLatestMessage(validatorIndex: ValidatorIndex, message: ILatestMessage): void {
+    this.synced = false;
     const nextRoot = toHexString(message.root);
     const vote = this.votes[validatorIndex];
     if (!vote) {

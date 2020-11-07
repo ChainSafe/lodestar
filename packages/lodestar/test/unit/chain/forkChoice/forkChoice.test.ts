@@ -18,7 +18,7 @@ describe("LodestarForkChoice", function () {
   let forkChoice: LodestarForkChoice;
   const anchorState = generateState();
   // Jan 01 2020
-  anchorState.genesisTime = 1577836800;
+  anchorState.genesisTime = 157783680;
 
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
@@ -26,21 +26,21 @@ describe("LodestarForkChoice", function () {
     forkChoice = new LodestarForkChoice({config, emitter, currentSlot, anchorState});
   });
 
-  describe("forkchoice", function () {
+  describe("getHead", function () {
     /**
-     * slot 32(checkpoint) - orphaned (33)
+     * slot 32(checkpoint) - orphaned (34)
      *                     \
-     *                       parent (34) - child (35)
+     *                       parent (33) - child (35)
      */
-    it.skip("getHead - should not consider orphaned block as head", () => {
+    it("should not consider orphaned block as head", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
       const targetState = runStateTransition(anchorState, targetBlock);
       targetBlock.message.stateRoot = config.types.BeaconState.hashTreeRoot(targetState);
-      const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
-      const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
+      const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 33);
+      const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
       const parentBlockHex = config.types.BeaconBlock.hashTreeRoot(parentBlock.message);
       const orphanedBlockHex = config.types.BeaconBlock.hashTreeRoot(orphanedBlock.message);
@@ -75,95 +75,6 @@ describe("LodestarForkChoice", function () {
       // with votes, head becomes the child block
       expect(head.slot).to.be.equal(childBlock.message.slot);
     });
-
-    /**
-     * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)
-     */
-    it("prune - should prune old blocks", () => {
-      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
-      const finalizedRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
-      const block08 = generateSignedBlock({message: {slot: 8}});
-      block08.message.parentRoot = finalizedRoot;
-      const state08 = runStateTransition(anchorState, block08);
-      block08.message.stateRoot = config.types.BeaconState.hashTreeRoot(state08);
-
-      const {block: block12, state: state12} = makeChild({block: block08, state: state08}, 12);
-      const {block: block16, state: state16} = makeChild({block: block12, state: state12}, 16);
-      state16.currentJustifiedCheckpoint = {root: config.types.BeaconBlock.hashTreeRoot(block08.message), epoch: 1};
-      const {block: block20, state: state20} = makeChild({block: block16, state: state16}, 20);
-      const {block: block24, state: state24} = makeChild({block: block20, state: state20}, 24);
-      state24.finalizedCheckpoint = {root: config.types.BeaconBlock.hashTreeRoot(block08.message), epoch: 1};
-      state24.currentJustifiedCheckpoint = {root: config.types.BeaconBlock.hashTreeRoot(block16.message), epoch: 2};
-      const {block: block28, state: state28} = makeChild({block: block24, state: state24}, 28);
-      const {block: block32, state: state32} = makeChild({block: block28, state: state28}, 32);
-      state32.finalizedCheckpoint = {root: config.types.BeaconBlock.hashTreeRoot(block16.message), epoch: 2};
-      state32.currentJustifiedCheckpoint = {root: config.types.BeaconBlock.hashTreeRoot(block24.message), epoch: 3};
-      forkChoice.updateTime(128);
-      // 3 validators involved
-      const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
-      forkChoice.onBlock(block08.message, state08, justifiedBalances);
-      forkChoice.onBlock(block12.message, state12, justifiedBalances);
-      forkChoice.onBlock(block16.message, state16, justifiedBalances);
-      forkChoice.onBlock(block20.message, state20, justifiedBalances);
-      forkChoice.onBlock(block24.message, state24, justifiedBalances);
-      forkChoice.onBlock(block28.message, state28, justifiedBalances);
-      expect(
-        forkChoice.iterateBlockSummaries(config.types.BeaconBlock.hashTreeRoot(block16.message)).length
-      ).to.be.equal(4);
-      expect(
-        forkChoice.iterateBlockSummaries(config.types.BeaconBlock.hashTreeRoot(block24.message)).length
-      ).to.be.equal(6);
-      expect(forkChoice.getBlock(config.types.BeaconBlock.hashTreeRoot(block08.message))).to.be.not.null;
-      expect(forkChoice.getBlock(config.types.BeaconBlock.hashTreeRoot(block12.message))).to.be.not.null;
-      expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block08.message))).to.be.true;
-      expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block12.message))).to.be.true;
-      forkChoice.onBlock(block32.message, state32, justifiedBalances);
-      forkChoice.prune();
-      expect(
-        forkChoice.iterateBlockSummaries(config.types.BeaconBlock.hashTreeRoot(block16.message)).length
-      ).to.be.equal(1);
-      expect(
-        forkChoice.iterateBlockSummaries(config.types.BeaconBlock.hashTreeRoot(block24.message)).length
-      ).to.be.equal(3);
-      expect(forkChoice.getBlock(config.types.BeaconBlock.hashTreeRoot(block08.message))).to.be.null;
-      expect(forkChoice.getBlock(config.types.BeaconBlock.hashTreeRoot(block12.message))).to.be.null;
-      expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block08.message))).to.be.false;
-      expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block12.message))).to.be.false;
-    });
-  });
-
-  /**
-   * slot 32(checkpoint) - orphaned (33)
-   *                     \
-   *                       parent (34) - child (35)
-   */
-  it("iterateNonAncestors - should get non ancestor nodes", () => {
-    const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
-    const finalizedRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
-    const targetBlock = generateSignedBlock({message: {slot: 32}});
-    targetBlock.message.parentRoot = finalizedRoot;
-    const targetState = runStateTransition(anchorState, targetBlock);
-    targetBlock.message.stateRoot = config.types.BeaconState.hashTreeRoot(targetState);
-    const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
-    const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
-    const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
-    forkChoice.updateTime(35);
-    // 3 validators involved
-    const justifiedBalances = [BigInt(1), BigInt(2), BigInt(3)];
-    forkChoice.onBlock(targetBlock.message, targetState, justifiedBalances);
-    forkChoice.onBlock(orphanedBlock.message, orphanedState);
-    forkChoice.onBlock(parentBlock.message, parentState);
-    forkChoice.onBlock(childBlock.message, childState);
-    const childBlockRoot = config.types.BeaconBlock.hashTreeRoot(childBlock.message);
-    // the old way to get non canonical blocks
-    const nonCanonicalSummaries = forkChoice
-      .forwardIterateBlockSummaries()
-      .filter(
-        (summary) =>
-          summary.slot < childBlock.message.slot && !forkChoice.isDescendant(summary.blockRoot, childBlockRoot)
-      );
-    // compare to iterateNonAncestors api
-    expect(forkChoice.iterateNonAncestors(childBlockRoot)).to.be.deep.equal(nonCanonicalSummaries);
   });
 });
 
