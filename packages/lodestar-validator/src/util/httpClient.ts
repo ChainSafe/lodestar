@@ -18,6 +18,7 @@ export class HttpClient {
   public constructor(opt: Partial<IHttpClientOptions>, {logger}: {logger: ILogger}) {
     this.client = Axios.create({
       baseURL: opt.urlPrefix || "",
+      timeout: 4000,
     });
     this.logger = logger;
   }

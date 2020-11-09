@@ -23,7 +23,7 @@ export class RestBeaconApi implements IBeaconApi {
   }
 
   public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
-    return this.config.types.ValidatorResponse.fromJson(await this.client.get(`/validators/${toHexString(pubkey)}`));
+    return this.config.types.ValidatorResponse.fromJson(await this.clientV2.get(`/validators/${toHexString(pubkey)}`));
   }
 
   public async getGenesis(): Promise<Genesis | null> {
