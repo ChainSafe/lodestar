@@ -15,6 +15,7 @@ import {
   serializeInterchange,
 } from "./interchange";
 import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround";
+import {uniqueVectorArr} from "@chainsafe/lodestar-validator/src/slashingProtection/utils";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
@@ -42,15 +43,15 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     );
   }
 
-  public async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
+  async checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void> {
     await this.blockService.checkAndInsertBlockProposal(pubKey, block);
   }
 
-  public async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
+  async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
     await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
   }
 
-  public async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {
+  async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {
     const {data} = parseInterchange(this.config, interchange, genesisValidatorsRoot);
     for (const validator of data) {
       await this.blockService.importBlocks(validator.pubkey, validator.signedBlocks);
@@ -58,7 +59,7 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     }
   }
 
-  public async exportInterchange(
+  async exportInterchange(
     genesisValidatorsRoot: Root,
     pubkeys: BLSPubkey[],
     formatVersion: InterchangeFormatVersion
@@ -72,5 +73,11 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
       });
     }
     return serializeInterchange(this.config, {data: validatorData, genesisValidatorsRoot}, formatVersion);
+  }
+
+  async listPubkeys(): Promise<BLSPubkey[]> {
+    const pubkeysAtt = await this.attestationService.listPubkeys();
+    const pubkeysBlk = await this.blockService.listPubkeys();
+    return uniqueVectorArr([...pubkeysAtt, ...pubkeysBlk]);
   }
 }

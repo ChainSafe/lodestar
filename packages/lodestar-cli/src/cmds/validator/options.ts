@@ -23,7 +23,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   server: {
     description: "Address to connect to BeaconNode",
     default: "http://127.0.0.1:9596",
-    alias: ["server"],
     type: "string",
   },
 
