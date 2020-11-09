@@ -13,6 +13,11 @@ import {ZERO_HASH} from "../../../constants";
 import {IBlockRangeFetcher} from "./interface";
 import {checkLinearChainSegment} from "../../utils/sync";
 
+/**
+ * Get next range by issuing beacon_blocks_by_range requests.
+ * Returned result may miss some blocks or contain blocks of a different forkchoice branch.
+ * This is ok, we handle that by beacon_blocks_by_root in sync service.
+ */
 export class BlockRangeFetcher implements IBlockRangeFetcher {
   protected readonly config: IBeaconConfig;
   private readonly network: INetwork;
@@ -24,9 +29,13 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   // for each next() call
   private rangeStart: Slot = 0;
   private rangeEnd: Slot = 0;
-  private getPeers: () => Promise<PeerId[]>;
+  private getPeers: (exludedPeers?: string[]) => Promise<PeerId[]>;
 
-  constructor(options: Partial<IRegularSyncOptions>, modules: IRegularSyncModules, getPeers: () => Promise<PeerId[]>) {
+  constructor(
+    options: Partial<IRegularSyncOptions>,
+    modules: IRegularSyncModules,
+    getPeers: (exludedPeers?: string[]) => Promise<PeerId[]>
+  ) {
     this.config = modules.config;
     this.network = modules.network;
     this.chain = modules.chain;
@@ -46,17 +55,25 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   public async getNextBlockRange(): Promise<SignedBeaconBlock[]> {
     this.updateNextRange();
     let result: SignedBeaconBlock[] | null = null;
-    while (!result || !result!.length) {
+    let peer: PeerId;
+    // expect at least 2 blocks since we check linear chain
+    while (!result || result!.length <= 1) {
       let slotRange: ISlotRange | null = null;
       try {
-        const peers = await this.getPeers();
-        if (result && !result.length) await this.handleEmptyRange(peers);
+        if (result && result!.length <= 1) {
+          await this.handleEmptyRange(peer!, result);
+          // some weird peers keep returning 1 sinlge block although it's head is up to date
+          // no evidence to penalty it so just ignore it the next round
+          peer = (await this.getPeers([peer!.toB58String()!]))[0];
+        } else {
+          peer = (await this.getPeers())[0];
+        }
         slotRange = {start: this.rangeStart, end: this.rangeEnd};
         // result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
         // Work around of https://github.com/ChainSafe/lodestar/issues/1690
         let timer: NodeJS.Timeout | null = null;
         result = (await Promise.race([
-          getBlockRange(this.logger, this.network.reqResp, peers, slotRange),
+          getBlockRange(this.logger, this.network.reqResp, [peer], slotRange),
           new Promise((_, reject) => {
             timer = setTimeout(() => {
               reject(new Error("beacon_blocks_by_range timeout"));
@@ -64,9 +81,9 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
           }),
         ])) as SignedBeaconBlock[] | null;
         if (timer) clearTimeout(timer);
-        // empty result should go through and we'll handle it in next round
-        if (result && result.length > 0) {
-          checkLinearChainSegment(this.config, this.lastFetchCheckpoint.blockRoot, result);
+        // 0-1 block result should go through and we'll handle it in next round
+        if (result && result.length > 1) {
+          checkLinearChainSegment(this.config, result);
         }
       } catch (e) {
         this.logger.verbose("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});
@@ -89,13 +106,17 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.rangeEnd = this.getNewTarget();
   }
 
-  private async handleEmptyRange(peers: PeerId[] = []): Promise<void> {
-    if (!peers.length) {
-      return;
-    }
+  /**
+   * Since we query 1 additional block to check linear chain, a return of 0 or 1 block
+   * should go to this handler.
+   */
+  private async handleEmptyRange(peer: PeerId, blocks: SignedBeaconBlock[] = []): Promise<void> {
     const range = {start: this.rangeStart, end: this.rangeEnd};
-    const peerHeadSlot = Math.max(...peers.map((peer) => this.network.peerMetadata.getStatus(peer)?.headSlot ?? 0));
-    this.logger.verbose("Regular Sync: Not found any blocks for range", {range});
+    const peerHeadSlot = this.network.peerMetadata.getStatus(peer)?.headSlot ?? 0;
+    this.logger.verbose("Regular Sync: Not found enough blocks for range", {
+      range,
+      numBlocks: blocks.length,
+    });
     if (range.end <= peerHeadSlot) {
       // range contains skipped slots, query for next range
       this.logger.verbose("Regular Sync: queried range is behind peer head, fetch next range", {
@@ -118,7 +139,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   private getNewTarget(): Slot {
     const currentSlot = this.chain.clock.currentSlot;
     // due to exclusive endSlot in chunkify, we want `currentSlot + 1`
-    // since we want to check linear chain, use this.opts.blockPerChunk + 1
+    // since we want to check linear chain, query 1 additional slot
     return Math.min(this.rangeEnd + this.opts.blockPerChunk + 1, currentSlot + 1);
   }
 }

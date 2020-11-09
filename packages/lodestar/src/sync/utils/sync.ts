@@ -283,14 +283,14 @@ export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: IN
  */
 export function checkLinearChainSegment(
   config: IBeaconConfig,
-  ancestorRoot: Root,
-  blocks: SignedBeaconBlock[] | null
+  blocks: SignedBeaconBlock[] | null,
+  ancestorRoot: Root | null = null
 ): void {
-  if (!blocks || blocks.length <= 1) throw "Not enough blocks to validate";
+  if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
   let parentRoot = ancestorRoot;
   blocks.forEach((block) => {
-    if (!config.types.Root.equals(block.message.parentRoot, parentRoot)) {
-      throw `Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`;
+    if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
+      throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
     }
     parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
   });
