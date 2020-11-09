@@ -53,8 +53,13 @@ describe("block archiver task", function () {
     );
     await archiverTask.run();
     expect(
-      dbStub.blockArchive.batchPut.calledWith(canonicalBlocks.map((b) => ({key: b.slot, value: generateEmptySignedBlock()})))
+      dbStub.blockArchive.batchPut.calledWith(
+        canonicalBlocks.map((b) => ({key: b.slot, value: generateEmptySignedBlock()}))
+      )
     ).to.be.true;
-    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH, ZERO_HASH, ZERO_HASH, ZERO_HASH, ZERO_HASH])).to.be.true;
+    // delete canonical blocks
+    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH, ZERO_HASH, ZERO_HASH, ZERO_HASH])).to.be.true;
+    // delete non canonical blocks
+    expect(dbStub.block.batchDelete.calledWith([ZERO_HASH])).to.be.true;
   });
 });
