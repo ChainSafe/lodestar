@@ -15,7 +15,7 @@ import {
   serializeInterchange,
 } from "./interchange";
 import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround";
-import {uniqueVectorArr} from "@chainsafe/lodestar-validator/src/slashingProtection/utils";
+import {uniqueVectorArr} from "../slashingProtection/utils";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
