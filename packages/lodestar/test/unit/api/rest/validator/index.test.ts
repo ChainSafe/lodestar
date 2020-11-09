@@ -1,24 +1,22 @@
-import {expect} from "chai";
-import supertest from "supertest";
-import sinon, {SinonStubbedInstance} from "sinon";
-
-import {toHexString} from "@chainsafe/ssz";
-import {Attestation} from "@chainsafe/lodestar-types";
-import {Keypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {Attestation} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-
+import {toHexString} from "@chainsafe/ssz";
+import {expect} from "chai";
+import sinon from "sinon";
+import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
-import {generateEmptyBlock} from "../../../../utils/block";
+import {ApiError} from "../../../../../src/api/impl/errors/api";
 import {
   generateAttestation,
   generateAttestationData,
   generateEmptyAttestation,
   generateEmptySignedAggregateAndProof,
 } from "../../../../utils/attestation";
+import {generateEmptyBlock} from "../../../../utils/block";
 import {StubbedApi} from "../../../../utils/stub/api";
-import {ApiError} from "../../../../../src/api/impl/errors/api";
+
+export const VALIDATOR_PREFIX = "/eth/v1/validator";
 
 describe("Test validator rest API", function () {
   let restApi: RestApi, api: StubbedApi;
@@ -62,18 +60,6 @@ describe("Test validator rest API", function () {
     expect(api.validator.getProposerDuties.withArgs(2).calledOnce).to.be.true;
   });
 
-  it("should return attester duties", async function () {
-    const publicKey1 = Keypair.generate().publicKey.toBytesCompressed();
-    api.validator.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
-    const response = await supertest(restApi.server.server)
-      .get("/validator/duties/2/attester")
-      .query({validator_pubkeys: [toHexString(publicKey1)]})
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.length).to.be.equal(1);
-    expect(api.validator.getAttesterDuties.withArgs(2, sinon.match.any).calledOnce).to.be.true;
-  });
-
   it("should publish aggregate and proof", async function () {
     const signedAggregateAndProof = generateEmptySignedAggregateAndProof();
     await supertest(restApi.server.server)
@@ -96,7 +82,9 @@ describe("Test validator rest API", function () {
     const response = await supertest(restApi.server.server)
       .get("/validator/block")
       .query({
+        // eslint-disable-next-line @typescript-eslint/camelcase
         randao_reveal: toHexString(Buffer.alloc(32)),
+        // eslint-disable-next-line @typescript-eslint/camelcase
         proposer_pubkey: toHexString(Buffer.alloc(48)),
         slot: 2,
       })
@@ -123,7 +111,9 @@ describe("Test validator rest API", function () {
     await supertest(restApi.server.server)
       .get("/validator/attestation")
       .query({
+        // eslint-disable-next-line @typescript-eslint/camelcase
         validator_pubkey: toHexString(Buffer.alloc(48)),
+        // eslint-disable-next-line @typescript-eslint/camelcase
         attestation_committee_index: 3,
         slot: 2,
       })
