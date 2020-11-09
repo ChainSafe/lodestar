@@ -20,6 +20,7 @@ import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GENESIS_EPOCH, Method, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
+import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork} from "../../network";
 import {RpcError} from "../../network/error";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
@@ -97,11 +98,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       case Method.Ping:
         return await this.onPing(request as ReqRespRequest<Ping>, peerId, sink);
       case Method.Metadata:
-        return await this.onMetadata(request as ReqRespRequest<null>, peerId, sink);
+        return await this.onMetadata(request as ReqRespRequest<null>, sink);
       case Method.BeaconBlocksByRange:
-        return await this.onBeaconBlocksByRange(request as ReqRespRequest<BeaconBlocksByRangeRequest>, peerId, sink);
+        return await this.onBeaconBlocksByRange(request as ReqRespRequest<BeaconBlocksByRangeRequest>, sink);
       case Method.BeaconBlocksByRoot:
-        return await this.onBeaconBlocksByRoot(request as ReqRespRequest<BeaconBlocksByRootRequest>, peerId, sink);
+        return await this.onBeaconBlocksByRoot(request as ReqRespRequest<BeaconBlocksByRootRequest>, sink);
       default:
         this.logger.error("Invalid request - unsupported method", {
           id: request.id,
@@ -116,7 +117,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       try {
         await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
       } catch {
-        //ignore error
+        // ignore error
         return;
       }
     }
@@ -247,7 +248,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     });
   }
 
-  public async onMetadata(request: ReqRespRequest<null>, peerId: PeerId, sink: Sink<unknown, unknown>): Promise<void> {
+  public async onMetadata(request: ReqRespRequest<null>, sink: Sink<unknown, unknown>): Promise<void> {
     await sendResponse(
       {config: this.config, logger: this.logger},
       request.id,
@@ -261,7 +262,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async onBeaconBlocksByRange(
     request: ReqRespRequest<BeaconBlocksByRangeRequest>,
-    peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
     if (request.body.step < 1 || request.body.startSlot < GENESIS_SLOT || request.body.count < 1) {
@@ -280,10 +280,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       );
       return;
     }
-    if (request.body.count > 1000) {
-      this.logger.warn(`Request id ${request.id} asked for ${request.body.count} blocks, just return 1000 maximum`);
-      request.body.count = 1000;
-    }
     try {
       if (request.body.count > MAX_REQUEST_BLOCKS) {
         this.logger.warn(
@@ -296,8 +292,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         gte: request.body.startSlot,
         lt: request.body.startSlot + request.body.count * request.body.step,
         step: request.body.step,
-      });
-      const responseStream = this.injectRecentBlocks(this.config, archiveBlocksStream, this.chain, request.body);
+      } as IBlockFilterOptions);
+      const responseStream = this.injectRecentBlocks(archiveBlocksStream, this.chain, request.body);
       await sendResponseStream(
         {config: this.config, logger: this.logger},
         request.id,
@@ -322,7 +318,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async onBeaconBlocksByRoot(
     request: ReqRespRequest<BeaconBlocksByRootRequest>,
-    peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
     try {
@@ -373,7 +368,6 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   };
 
   private injectRecentBlocks = async function* (
-    config: IBeaconConfig,
     archiveStream: AsyncIterable<SignedBeaconBlock>,
     chain: IBeaconChain,
     request: BeaconBlocksByRangeRequest
@@ -390,6 +384,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       slots.push(slot);
       slot += request.step;
     }
+
     const blocks = (await chain.getUnfinalizedBlocksAtSlots(slots)) || [];
     for (const block of blocks) {
       if (block) {

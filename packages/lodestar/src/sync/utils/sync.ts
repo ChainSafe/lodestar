@@ -226,10 +226,7 @@ export async function createStatus(chain: IBeaconChain): Promise<Status> {
 export async function syncPeersStatus(network: INetwork, status: Status): Promise<void> {
   await Promise.all(
     network.getPeers({connected: true, supportsProtocols: getStatusProtocols()}).map(async (peer) => {
-      try {
-        network.peerMetadata.setStatus(peer.id, await network.reqResp.status(peer.id, status));
-        // eslint-disable-next-line no-empty
-      } catch {}
+      network.peerMetadata.setStatus(peer.id, await network.reqResp.status(peer.id, status));
     })
   );
 }
