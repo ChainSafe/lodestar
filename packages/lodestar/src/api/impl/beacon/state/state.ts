@@ -40,6 +40,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     }
     return this.config.types.BeaconState.hashTreeRoot(state);
   }
+
   public async getStateFinalityCheckpoints(stateId: StateId): Promise<FinalityCheckpoints | null> {
     const state = await this.getState(stateId);
     if (!state) {
@@ -51,6 +52,7 @@ export class BeaconStateApi implements IBeaconStateApi {
       finalized: state.finalizedCheckpoint,
     };
   }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
     const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
@@ -86,6 +88,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     }
     return toValidatorResponse(validatorIndex, state.state.validators[validatorIndex]);
   }
+
   public async getStateValidatorBalances(
     stateId: StateId,
     indices?: (ValidatorIndex | Root)[]
@@ -122,6 +125,7 @@ export class BeaconStateApi implements IBeaconStateApi {
       };
     });
   }
+
   public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
     const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
     if (!stateContext) {
