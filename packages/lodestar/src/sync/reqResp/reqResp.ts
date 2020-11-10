@@ -98,11 +98,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       case Method.Ping:
         return await this.onPing(request as ReqRespRequest<Ping>, peerId, sink);
       case Method.Metadata:
-        return await this.onMetadata(request as ReqRespRequest<null>, sink);
+        return await this.onMetadata(request as ReqRespRequest<null>, peerId, sink);
       case Method.BeaconBlocksByRange:
-        return await this.onBeaconBlocksByRange(request as ReqRespRequest<BeaconBlocksByRangeRequest>, sink);
+        return await this.onBeaconBlocksByRange(request as ReqRespRequest<BeaconBlocksByRangeRequest>, peerId, sink);
       case Method.BeaconBlocksByRoot:
-        return await this.onBeaconBlocksByRoot(request as ReqRespRequest<BeaconBlocksByRootRequest>, sink);
+        return await this.onBeaconBlocksByRoot(request as ReqRespRequest<BeaconBlocksByRootRequest>, peerId, sink);
       default:
         this.logger.error("Invalid request - unsupported method", {
           id: request.id,
@@ -248,7 +248,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     });
   }
 
-  public async onMetadata(request: ReqRespRequest<null>, sink: Sink<unknown, unknown>): Promise<void> {
+  public async onMetadata(request: ReqRespRequest<null>, peerId: PeerId, sink: Sink<unknown, unknown>): Promise<void> {
     await sendResponse(
       {config: this.config, logger: this.logger},
       request.id,
@@ -262,6 +262,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async onBeaconBlocksByRange(
     request: ReqRespRequest<BeaconBlocksByRangeRequest>,
+    peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
     if (request.body.step < 1 || request.body.startSlot < GENESIS_SLOT || request.body.count < 1) {
@@ -318,6 +319,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async onBeaconBlocksByRoot(
     request: ReqRespRequest<BeaconBlocksByRootRequest>,
+    peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
     try {
