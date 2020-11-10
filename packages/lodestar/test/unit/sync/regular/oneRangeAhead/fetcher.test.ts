@@ -63,7 +63,7 @@ describe("BlockRangeFetcher", function () {
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.resolves([firstBlock, secondBlock]);
     await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be
+    expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be
       .true;
   });
 
@@ -83,11 +83,11 @@ describe("BlockRangeFetcher", function () {
     getBlockRangeStub.onFirstCall().resolves([firstBlock, secondBlock]);
     getBlockRangeStub.onSecondCall().resolves([secondBlock, thirdBlock]);
     let result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be
+    expect(getBlockRangeStub.calledOnceWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be
       .true;
     expect(result).to.be.deep.equal([firstBlock]);
     result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.lastCall.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1011, end: 1076})).to
+    expect(getBlockRangeStub.lastCall.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1010, end: 1075})).to
       .be.true;
     expect(result).to.be.deep.equal([secondBlock]);
   });
@@ -103,7 +103,7 @@ describe("BlockRangeFetcher", function () {
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
     const result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
     expect(getBlockRangeStub.calledTwice).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
@@ -120,7 +120,7 @@ describe("BlockRangeFetcher", function () {
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
     getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
     const result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
     expect(getBlockRangeStub.calledTwice).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
@@ -153,10 +153,10 @@ describe("BlockRangeFetcher", function () {
     expect(getPeers.calledWithExactly([secondPeerId.toB58String()])).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
     // same start, expand end
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1131})).to.be.true;
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1196})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1130})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1195})).to.be.true;
     expect(getBlockRangeStub.calledThrice).to.be.true;
   });
 
@@ -198,7 +198,7 @@ describe("BlockRangeFetcher", function () {
     // 2nd block is not validated so it's not returned
     expect(result).to.be.deep.equal([firstBlock]);
     expect(getBlockRangeStub.calledTwice).to.be.true;
-    expect(getBlockRangeStub.alwaysCalledWith(logger, sinon.match.any, sinon.match.any, {start: 1001, end: 1066})).to.be
+    expect(getBlockRangeStub.alwaysCalledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be
       .true;
   });
 });

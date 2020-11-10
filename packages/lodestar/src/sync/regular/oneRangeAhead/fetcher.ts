@@ -101,7 +101,8 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
 
   // always set range based on last fetch block bc sometimes the previous fetch may not return all blocks
   private updateNextRange(): void {
-    this.rangeStart = this.lastFetchCheckpoint.slot + 1;
+    // this.lastFetchCheckpoint.slot + 1 maybe an orphaned block and peers will return empty range
+    this.rangeStart = this.lastFetchCheckpoint.slot;
     this.rangeEnd = this.rangeStart;
     this.rangeEnd = this.getNewTarget();
   }

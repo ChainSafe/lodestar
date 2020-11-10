@@ -117,9 +117,13 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   /**
    * Make sure the best peer is not disconnected and it's better than us.
+   * @param excludedPeers don't want to return peers in this list
    */
   private getSyncPeers = async (excludedPeers: string[] = []): Promise<PeerId[]> => {
-    if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)) {
+    if (
+      excludedPeers.includes(this.bestPeer?.toB58String() ?? "") ||
+      !checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)
+    ) {
       this.logger.info("Regular Sync: wait for best peer");
       this.bestPeer = await this.waitForBestPeer(this.controller.signal, excludedPeers);
       if (this.controller.signal.aborted) return [];
