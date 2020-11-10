@@ -2,14 +2,7 @@
 import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  Epoch,
-  Validator,
-  ValidatorIndex,
-  BLSPubkey,
-  ValidatorStatus,
-  ValidatorResponse,
-} from "@chainsafe/lodestar-types";
+import {Epoch, Validator, ValidatorIndex, ValidatorStatus, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
@@ -98,20 +91,4 @@ export function getEpochBeaconCommittees(
     committees = shuffling.committees;
   }
   return committees;
-}
-
-export function validatorPubkeyToIndex(
-  config: IBeaconConfig,
-  stateCtx: ApiStateContext,
-  pubkey: BLSPubkey
-): ValidatorIndex | null {
-  if (stateCtx.epochCtx) {
-    return stateCtx.epochCtx.pubkey2index.get(pubkey) ?? null;
-  }
-  for (const [index, validator] of Array.from(stateCtx.state.validators).entries()) {
-    if (config.types.BLSPubkey.equals(validator.pubkey, pubkey)) {
-      return index;
-    }
-  }
-  return null;
 }

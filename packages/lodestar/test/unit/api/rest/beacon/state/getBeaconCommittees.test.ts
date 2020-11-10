@@ -38,7 +38,7 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   });
 
   it("should succeed without filters", async function () {
-    api.beacon.state.getStateCommittes.withArgs("head").resolves([
+    api.beacon.state.getStateCommittees.withArgs("head").resolves([
       {
         index: 0,
         slot: 1,
@@ -54,7 +54,7 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   });
 
   it("should succeed with filters", async function () {
-    api.beacon.state.getStateCommittes.withArgs("head", {slot: 1, epoch: 0, index: 10}).resolves([
+    api.beacon.state.getStateCommittees.withArgs("head", {slot: 1, epoch: 0, index: 10}).resolves([
       {
         index: 0,
         slot: 1,
@@ -99,10 +99,10 @@ describe("rest - beacon - getStateBeaconCommittees", function () {
   });
 
   it("should not found state", async function () {
-    api.beacon.state.getStateCommittes.withArgs("4").throws(new StateNotFound());
+    api.beacon.state.getStateCommittees.withArgs("4").throws(new StateNotFound());
     await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getStateBeaconCommittees.url.replace(":stateId", "4")))
       .expect(404);
-    expect(api.beacon.state.getStateCommittes.calledOnce).to.be.true;
+    expect(api.beacon.state.getStateCommittees.calledOnce).to.be.true;
   });
 });

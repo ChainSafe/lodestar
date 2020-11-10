@@ -17,7 +17,7 @@ export const getStateBeaconCommittees: ApiController<Query, Params> = {
   url: "/states/:stateId/committees",
 
   handler: async function (req, resp) {
-    const committees = await this.api.beacon.state.getStateCommittes(req.params.stateId, {...req.query});
+    const committees = await this.api.beacon.state.getStateCommittees(req.params.stateId, {...req.query});
     return resp.status(200).send({
       data: committees.map((c) => this.config.types.BeaconCommitteeResponse.toJson(c, {case: "snake"})),
     });

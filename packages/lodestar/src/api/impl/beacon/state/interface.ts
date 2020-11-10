@@ -21,7 +21,7 @@ export interface IBeaconStateApi {
   getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]>;
   getStateValidator(stateId: StateId, validatorId: BLSPubkey | ValidatorIndex): Promise<ValidatorResponse | null>;
   getStateValidatorBalances(stateId: StateId, indices?: (BLSPubkey | ValidatorIndex)[]): Promise<ValidatorBalance[]>;
-  getStateCommittes(stateId: StateId, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]>;
+  getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]>;
   getFork(stateId: StateId): Promise<Fork | null>;
 }
 
@@ -33,7 +33,7 @@ export interface IValidatorFilters {
   indices?: (BLSPubkey | ValidatorIndex)[];
   statuses?: ValidatorStatus[];
 }
-export interface ICommittesFilters {
+export interface ICommitteesFilters {
   epoch?: Epoch;
   index?: CommitteeIndex;
   slot?: Slot;

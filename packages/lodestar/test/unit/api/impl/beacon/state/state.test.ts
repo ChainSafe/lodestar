@@ -48,12 +48,12 @@ describe("beacon api impl - states", function () {
   describe("getStateCommittes", function () {
     it("no state context", async function () {
       resolveStateIdStub.resolves(null);
-      await expect(api.getStateCommittes("blem")).to.be.eventually.rejectedWith("Couldn't find beacon state");
+      await expect(api.getStateCommittees("blem")).to.be.eventually.rejectedWith("State not found");
     });
     it("no filters", async function () {
       resolveStateIdStub.resolves({state: generateState()});
       getEpochBeaconCommitteesStub.returns([[[1, 4, 5]], [[2, 3, 6]]]);
-      const committees = await api.getStateCommittes("blem");
+      const committees = await api.getStateCommittees("blem");
       expect(committees).to.have.length(2);
     });
     it("slot and committee filter", async function () {
@@ -65,7 +65,7 @@ describe("beacon api impl - states", function () {
           [8, 9, 10],
         ],
       ]);
-      const committees = await api.getStateCommittes("blem", {slot: 1, index: 1});
+      const committees = await api.getStateCommittees("blem", {slot: 1, index: 1});
       expect(committees).to.have.length(1);
       expect(committees[0].index).to.be.equal(1);
       expect(committees[0].slot).to.be.equal(1);

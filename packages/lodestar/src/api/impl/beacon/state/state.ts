@@ -16,9 +16,8 @@ import {notNullish} from "../../../../util/notNullish";
 import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
-import {MissingState} from "./errors";
-import {IBeaconStateApi, ICommittesFilters, IValidatorFilters, StateId} from "./interface";
-import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse, validatorPubkeyToIndex} from "./utils";
+import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
+import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 export class BeaconStateApi implements IBeaconStateApi {
@@ -76,7 +75,11 @@ export class BeaconStateApi implements IBeaconStateApi {
         validatorIndex = validatorId;
       }
     } else {
-      validatorIndex = validatorPubkeyToIndex(this.config, state, validatorId) ?? undefined;
+      validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
+      //validator added later than given stateId
+      if (validatorIndex && validatorIndex >= state.state.validators.length) {
+        validatorIndex = undefined;
+      }
     }
     if (!validatorIndex) {
       throw new ApiError(404, "Validator not found");
@@ -92,6 +95,7 @@ export class BeaconStateApi implements IBeaconStateApi {
       throw new StateNotFound();
     }
     if (indices) {
+      const epochCtx = await this.chain.getHeadEpochContext();
       return indices
         .map((id) => {
           if (typeof id === "number") {
@@ -103,7 +107,7 @@ export class BeaconStateApi implements IBeaconStateApi {
               balance: state.state.balances[id],
             };
           } else {
-            const index = validatorPubkeyToIndex(this.config, state, id);
+            const index = epochCtx.pubkey2index.get(id) ?? undefined;
             return index && index <= state.state.validators.length
               ? {index, balance: state.state.balances[index]}
               : null;
@@ -118,10 +122,10 @@ export class BeaconStateApi implements IBeaconStateApi {
       };
     });
   }
-  public async getStateCommittes(stateId: StateId, filters?: ICommittesFilters): Promise<BeaconCommitteeResponse[]> {
+  public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
     const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
     if (!stateContext) {
-      throw new MissingState();
+      throw new StateNotFound();
     }
     const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(
       this.config,
