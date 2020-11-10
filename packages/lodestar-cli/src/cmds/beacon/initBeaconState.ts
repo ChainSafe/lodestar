@@ -30,11 +30,13 @@ export async function initBeaconState(
   logger: ILogger,
   signal: AbortSignal
 ): Promise<TreeBacked<BeaconState>> {
-  if (args.testnet && !args.genesisStateFile) {
+  const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
+
+  if (args.testnet && !args.genesisStateFile && !shouldInitFromDb) {
     args.genesisStateFile = getGenesisFileUrl(args.testnet) ?? undefined;
   }
+
   const shouldInitFromFile = Boolean(args.weakSubjectivityStateFile || (!args.forceGenesis && args.genesisStateFile));
-  const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
   let anchorState;
 
   if (shouldInitFromFile) {
