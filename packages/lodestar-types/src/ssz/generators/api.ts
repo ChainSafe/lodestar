@@ -37,7 +37,8 @@ export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
-      proposerPubkey: ssz.BLSPubkey,
+      validatorIndex: ssz.ValidatorIndex,
+      pubkey: ssz.BLSPubkey,
     },
   });
 
