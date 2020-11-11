@@ -27,6 +27,7 @@ import {
   SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -51,6 +52,7 @@ import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
+import {ApiError} from "../errors/api";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -165,25 +167,19 @@ export class ValidatorApi implements IValidatorApi {
     return duties;
   }
 
-  public async getAttesterDuties(epoch: number, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
+  public async getAttesterDuties(epoch: number, validatorIndices: ValidatorIndex[]): Promise<AttesterDuty[]> {
     await checkSyncStatus(this.config, this.sync);
-    if (!validatorPubKeys || validatorPubKeys.length === 0) throw new Error("No validator to get attester duties");
-    assert.lte(epoch, this.chain.clock.currentEpoch + 1, "Cannot get duties for epoch more than one ahead");
+    if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
+    if (epoch > this.chain.clock.currentEpoch + 1)
+      throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
     const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
-    const validatorIndexes = validatorPubKeys.map((key) => {
-      const validatorIndex = epochCtx.pubkey2index.get(key);
-      if (validatorIndex === undefined || !Number.isInteger(validatorIndex)) {
-        throw Error(`Validator pubKey ${toHexString(key)} not in epochCtx`);
-      }
-      return validatorIndex;
-    });
-    return validatorIndexes
+    return validatorIndices
       .map((validatorIndex) => {
         const validator = state.validators[validatorIndex];
         if (!validator) {
-          throw Error(`Validator index ${validatorIndex} not in state`);
+          throw new ApiError(400, `Validator index ${validatorIndex} not in state`);
         }
-        return assembleAttesterDuty(this.config, {publicKey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
+        return assembleAttesterDuty(this.config, {pubkey: validator.pubkey, index: validatorIndex}, epochCtx, epoch);
       })
       .filter(notNullish) as AttesterDuty[];
   }

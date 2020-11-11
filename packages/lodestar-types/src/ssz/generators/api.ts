@@ -23,10 +23,13 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
 export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
-      validatorPubkey: ssz.BLSPubkey,
-      aggregatorModulo: ssz.Number64,
+      pubkey: ssz.BLSPubkey,
+      validatorIndex: ssz.ValidatorIndex,
       committeeIndex: ssz.CommitteeIndex,
-      attestationSlot: ssz.Slot,
+      committeeLength: ssz.Number64,
+      committeesAtSlot: ssz.Number64,
+      validatorCommitteeIndex: ssz.Number64,
+      slot: ssz.Slot,
     },
   });
 
