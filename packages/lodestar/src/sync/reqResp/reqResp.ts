@@ -14,7 +14,7 @@ import {
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
-import {ILogger, toJson} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
@@ -219,12 +219,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     sink: Sink<unknown, unknown>
   ): Promise<void> {
     this.logger.info(
-      `Received goodbye request from ${peerId.toB58String()}, reason=${JSON.stringify({
-        id: toJson(request.id),
-        method: toJson(request.method),
-        body: this.config.types.Uint64.toJson(request.body),
-        encoding: toJson(request.encoding),
-      })}`
+      `Received goodbye request from ${peerId.toB58String()}, reason=${this.config.types.Uint64.toJson(request.body)}`
     );
     await sendResponse(
       {config: this.config, logger: this.logger},
