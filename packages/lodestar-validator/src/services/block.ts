@@ -106,9 +106,9 @@ export default class BlockProposingService {
       return;
     }
     proposerDuties.forEach((duty) => {
-      if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.proposerPubkey) !== -1) {
-        this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.proposerPubkey)});
-        this.nextProposals.set(duty.slot, duty.proposerPubkey);
+      if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.pubkey) !== -1) {
+        this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
+        this.nextProposals.set(duty.slot, duty.pubkey);
       }
     });
   };

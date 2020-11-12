@@ -45,7 +45,8 @@ export interface AttesterDuty {
 
 export interface ProposerDuty {
   slot: Slot;
-  proposerPubkey: BLSPubkey;
+  validatorIndex: ValidatorIndex;
+  pubkey: BLSPubkey;
 }
 
 export interface SyncingStatus {
