@@ -79,24 +79,14 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(
-    slot: Slot,
-    validatorPubkey: BLSPubkey,
-    randaoReveal: Bytes96,
-    graffiti = ""
-  ): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
-    const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
-    if (validatorIndex === undefined) {
-      throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
-    }
     return await assembleBlock(
       this.config,
       this.chain,
       this.db,
       this.eth1,
       slot,
-      validatorIndex,
       randaoReveal,
       toGraffitiBuffer(graffiti)
     );

@@ -19,7 +19,6 @@ export async function assembleBlock(
   db: IBeaconDb,
   eth1: IEth1ForBlockProduction,
   slot: Slot,
-  proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
@@ -27,7 +26,7 @@ export async function assembleBlock(
   const stateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot);
   const block: BeaconBlock = {
     slot,
-    proposerIndex,
+    proposerIndex: stateContext.epochCtx.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
     body: await assembleBody(config, db, eth1, stateContext.state, randaoReveal, graffiti),
