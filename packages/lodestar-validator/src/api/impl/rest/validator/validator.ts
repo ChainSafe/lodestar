@@ -14,7 +14,6 @@ import {
   Epoch,
   ProposerDuty,
   SignedAggregateAndProof,
-  SignedBeaconBlock,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
