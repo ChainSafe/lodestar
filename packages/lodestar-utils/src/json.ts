@@ -2,6 +2,9 @@ import {Json, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "./errors";
 
 export function toJson(arg: unknown): Json {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const copyArg: any = {};
+
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -13,7 +16,8 @@ export function toJson(arg: unknown): Json {
       if (arg instanceof Uint8Array) return toHexString(arg);
       if (arg instanceof LodestarError) return toJson(arg.toObject());
       if (arg instanceof Error) return toJson(errorToObject(arg));
-      return arg as Json;
+      Object.entries(arg).forEach(([k, v]) => (copyArg[k] = toJson(v)));
+      return copyArg as Json;
 
     // Already valid JSON
     case "number":
