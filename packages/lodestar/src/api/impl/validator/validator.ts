@@ -2,7 +2,7 @@
  * @module api/rpc
  */
 
-import {Signature, verify} from "@chainsafe/bls";
+import bls, {Signature} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -261,7 +261,11 @@ export class ValidatorApi implements IValidatorApi {
     const state = await this.chain.getHeadState();
     const domain = getDomain(this.config, state, DomainType.SELECTION_PROOF, computeEpochAtSlot(this.config, slot));
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    const valid = verify(aggregatorPubkey.valueOf() as Uint8Array, signingRoot, slotSignature.valueOf() as Uint8Array);
+    const valid = bls.verify(
+      aggregatorPubkey.valueOf() as Uint8Array,
+      signingRoot,
+      slotSignature.valueOf() as Uint8Array
+    );
     if (!valid) {
       throw new Error("Invalid slot signature");
     }

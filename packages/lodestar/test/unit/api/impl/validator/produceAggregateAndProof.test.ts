@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IValidatorApi, ValidatorApi} from "../../../../../src/api/impl/validator";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {PrivateKey, verifyAggregate} from "@chainsafe/bls";
+import bls, {PrivateKey} from "@chainsafe/bls";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {computeDomain, computeSigningRoot, DomainType, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
@@ -61,7 +61,7 @@ describe("produce aggregate and proof api implementation", function () {
     expect(result.aggregate.aggregationBits[1]).to.be.true;
     expect(result.aggregate.aggregationBits[2]).to.be.true;
     expect(
-      verifyAggregate(
+      bls.verifyAggregate(
         [
           PrivateKey.fromInt(1).toPublicKey().toBytesCompressed(),
           PrivateKey.fromInt(2).toPublicKey().toBytesCompressed(),

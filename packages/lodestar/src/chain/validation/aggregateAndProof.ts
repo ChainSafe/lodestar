@@ -4,7 +4,6 @@ import {IBeaconDb} from "../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
@@ -115,7 +114,7 @@ export async function validateAggregateAttestation(
       state,
       attestation.data.slot,
       aggregator,
-      Signature.fromCompressedBytes(aggregateAndProof.message.selectionProof.valueOf() as Uint8Array)
+      aggregateAndProof.message.selectionProof
     )
   ) {
     throw new AttestationError({

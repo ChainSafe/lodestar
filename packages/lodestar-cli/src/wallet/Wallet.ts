@@ -1,5 +1,5 @@
 import {mapValues, values} from "lodash";
-import {generatePublicKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {Keystore, IKeystore} from "@chainsafe/bls-keystore";
 import {
   deriveEth2ValidatorKeys,
@@ -43,7 +43,7 @@ export class Wallet extends Keystore {
    */
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = deriveKeyFromMnemonic(mnemonic);
-    const publicKey = generatePublicKey(seed);
+    const publicKey = bls.generatePublicKey(seed);
 
     const wallet = new Wallet(await this.create(password, seed, publicKey, ""));
     wallet.name = name;
@@ -97,7 +97,7 @@ export class Wallet extends Keystore {
 
     const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
-      const publicKey = generatePublicKey(privKey);
+      const publicKey = bls.generatePublicKey(privKey);
       const keystore = await Keystore.create(passwords[type], privKey, publicKey, paths[type]);
       return keystore;
     });

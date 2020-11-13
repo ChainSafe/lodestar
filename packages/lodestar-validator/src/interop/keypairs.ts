@@ -1,5 +1,5 @@
 import {hash} from "@chainsafe/ssz";
-import {generatePublicKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {toBufferBE} from "bigint-buffer";
 
@@ -18,7 +18,7 @@ export function interopKeypairs(validatorCount: number): IKeypair[] {
 
 export function interopKeypair(index: number): IKeypair {
   const privkey = toBufferBE(bytesToBigInt(hash(intToBytes(index, 32))) % CURVE_ORDER, 32);
-  const pubkey = generatePublicKey(privkey);
+  const pubkey = bls.generatePublicKey(privkey);
   return {
     privkey,
     pubkey,
