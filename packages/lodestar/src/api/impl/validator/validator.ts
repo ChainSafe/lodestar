@@ -152,7 +152,7 @@ export class ValidatorApi implements IValidatorApi {
 
     for (let slot = startSlot; slot < startSlot + this.config.params.SLOTS_PER_EPOCH; slot++) {
       const blockProposerIndex = epochCtx.getBeaconProposer(slot);
-      duties.push({slot, proposerPubkey: state.validators[blockProposerIndex].pubkey});
+      duties.push({slot, validatorIndex: blockProposerIndex, pubkey: state.validators[blockProposerIndex].pubkey});
     }
     return duties;
   }

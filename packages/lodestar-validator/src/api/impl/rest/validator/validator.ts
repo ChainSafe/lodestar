@@ -36,9 +36,9 @@ export class RestValidatorApi implements IValidatorApi {
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const url = `/duties/${epoch.toString()}/proposer`;
-    const responseData = await this.client.get<Json[]>(url);
-    return responseData.map((value) => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
+    const url = `/duties/proposer/${epoch.toString()}`;
+    const responseData = await this.clientV2.get<{data: Json[]}>(url);
+    return responseData.data.map((value) => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
   }
 
   public async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<AttesterDuty[]> {

@@ -31,6 +31,7 @@ export const attesterDutiesController: ApiController<DefaultQuery, Params, Body>
         properties: {
           epoch: {
             type: "number",
+            minimum: 0,
           },
         },
       },

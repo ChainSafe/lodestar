@@ -88,4 +88,8 @@ export class SlashingProtectionBlockService {
   async exportBlocks(pubkey: BLSPubkey): Promise<SlashingProtectionBlock[]> {
     return this.blockBySlot.getAll(pubkey);
   }
+
+  async listPubkeys(): Promise<BLSPubkey[]> {
+    return await this.blockBySlot.listPubkeys();
+  }
 }

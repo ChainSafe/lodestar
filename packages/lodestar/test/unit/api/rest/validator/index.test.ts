@@ -45,21 +45,6 @@ describe("Test validator rest API", function () {
     sandbox.restore();
   });
 
-  it("should return 503", async function () {
-    api.validator.getProposerDuties.throws(new ApiError(503, "Node is syncing"));
-    await supertest(restApi.server.server).get("/validator/duties/2/proposer").expect(503);
-  });
-
-  it("should return proposer duties", async function () {
-    api.validator.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
-    const response = await supertest(restApi.server.server)
-      .get("/validator/duties/2/proposer")
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[0].proposer_pubkey).to.be.equal(toHexString(Buffer.alloc(48)));
-    expect(api.validator.getProposerDuties.withArgs(2).calledOnce).to.be.true;
-  });
-
   it("should publish aggregate and proof", async function () {
     const signedAggregateAndProof = generateEmptySignedAggregateAndProof();
     await supertest(restApi.server.server)

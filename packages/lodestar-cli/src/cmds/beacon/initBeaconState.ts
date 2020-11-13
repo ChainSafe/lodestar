@@ -11,6 +11,8 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node";
 
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
+import {IGlobalArgs} from "../../options/globalOptions";
+import {getGenesisFileUrl} from "../../testnets";
 
 /**
  * Initialize a beacon state, picking the strategy based on the `IBeaconArgs`
@@ -22,7 +24,7 @@ import {IBeaconArgs} from "./options";
  */
 export async function initBeaconState(
   options: IBeaconNodeOptions,
-  args: IBeaconArgs,
+  args: IBeaconArgs & IGlobalArgs,
   config: IBeaconConfig,
   db: IBeaconDb,
   logger: ILogger,
@@ -31,6 +33,11 @@ export async function initBeaconState(
   const shouldInitFromFile = Boolean(args.weakSubjectivityStateFile || (!args.forceGenesis && args.genesisStateFile));
   const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
   let anchorState;
+
+  if (args.testnet && !args.genesisStateFile) {
+    args.genesisStateFile = getGenesisFileUrl(args.testnet) ?? undefined;
+  }
+
   if (shouldInitFromFile) {
     const anchorStateFile = (args.weakSubjectivityStateFile || args.genesisStateFile) as string;
     anchorState = await initStateFromAnchorState(

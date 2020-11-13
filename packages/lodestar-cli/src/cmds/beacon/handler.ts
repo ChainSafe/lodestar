@@ -28,15 +28,15 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
-  const options = beaconNodeOptions.getWithDefaults();
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
   const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
   const enrArgs = parseEnrArgs(args);
-  overwriteEnrWithCliArgs(enr, enrArgs, options);
+  overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
   const enrUpdate = !enrArgs.ip && !enrArgs.ip6;
   beaconNodeOptions.set({network: {discv5: {enr, enrUpdate}}});
+  const options = beaconNodeOptions.getWithDefaults();
 
   const abortController = new AbortController();
 

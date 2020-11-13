@@ -1,7 +1,6 @@
 import {FastifyInstance} from "fastify";
-import {attesterDutiesController} from "../../controllers/validator/duties/attesterDuties";
+import {attesterDutiesController, proposerDutiesController} from "../../controllers/validator";
 import {LodestarApiPlugin} from "../../interface";
-import {registerProposerDutiesEndpoint} from "./duties/proposer";
 import {registerGetWireAttestationEndpoint} from "./getWireAttestations";
 import {registerAggregateAndProofProductionEndpoint} from "./produceAggregatedAttestation";
 import {registerAttestationProductionEndpoint} from "./produceAttestation";
@@ -12,7 +11,6 @@ import {produceBlockController} from "../../controllers/validator";
 
 //old
 export const validator: LodestarApiPlugin = (fastify, opts, callback): void => {
-  registerProposerDutiesEndpoint(fastify, opts);
   registerPublishAggregateAndProofEndpoint(fastify, opts);
   registerAttestationProductionEndpoint(fastify, opts);
   registerAttestationPublishEndpoint(fastify, opts);
@@ -28,6 +26,7 @@ export function registerValidatorRoutes(server: FastifyInstance): void {
     async function (fastify) {
       fastify.post(attesterDutiesController.url, attesterDutiesController.opts, attesterDutiesController.handler);
       fastify.get(produceBlockController.url, produceBlockController.opts, produceBlockController.handler);
+      fastify.get(proposerDutiesController.url, proposerDutiesController.opts, proposerDutiesController.handler);
     },
     {prefix: "/v1/validator"}
   );

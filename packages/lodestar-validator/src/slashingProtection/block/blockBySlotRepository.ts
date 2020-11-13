@@ -1,7 +1,8 @@
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
-import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
+import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
+import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
@@ -41,7 +42,19 @@ export class BlockBySlotRepository {
     );
   }
 
+  async listPubkeys(): Promise<BLSPubkey[]> {
+    const keys = await this.db.keys();
+    return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
+  }
+
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), 8, "be")]));
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")]));
+  }
+
+  private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {
+    return {
+      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
+      slot: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+    };
   }
 }

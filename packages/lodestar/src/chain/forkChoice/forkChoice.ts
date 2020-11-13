@@ -27,8 +27,8 @@ export class LodestarForkChoice extends ForkChoice {
     anchorState: BeaconState;
   }) {
     const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, anchorState);
-    const justifiedCheckpoint = {...checkpoint};
-    const finalizedCheckpoint = {
+    const finalizedCheckpoint = {...checkpoint};
+    const justifiedCheckpoint = {
       ...checkpoint,
       // If not genesis epoch, justified checkpoint epoch must be set to finalized checkpoint epoch + 1
       // So that we don't allow the chain to initially justify with a block that isn't also finalizing the anchor state.
