@@ -16,4 +16,8 @@ export class StringType<T extends string = string> extends BasicType<T> {
   public toBytes(): number {
     throw new Error("unsupported ssz type for serialization");
   }
+
+  public defaultValue(): T {
+    return "something" as T;
+  }
 }
