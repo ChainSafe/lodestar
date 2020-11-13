@@ -48,8 +48,7 @@ describe("block proposing service", function () {
 
   it("should produce correct block - last signed is null", async function () {
     const slot = 2;
-    rpcClientStub.validator.produceBlock = sandbox.stub();
-    rpcClientStub.validator.publishBlock = sandbox.stub();
+    rpcClientStub.beacon.blocks.publishBlock = sandbox.stub();
     rpcClientStub.validator.produceBlock.resolves(generateEmptyBlock());
 
     slashingProtectionStub.checkAndInsertBlockProposal.resolves();
@@ -63,13 +62,13 @@ describe("block proposing service", function () {
     );
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
-    expect(rpcClientStub.validator.publishBlock.calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
   });
 
   it("should produce correct block - last signed in previous epoch", async function () {
     const slot = config.params.SLOTS_PER_EPOCH;
     rpcClientStub.validator.produceBlock = sandbox.stub();
-    rpcClientStub.validator.publishBlock = sandbox.stub();
+    rpcClientStub.beacon.blocks.publishBlock = sandbox.stub();
     rpcClientStub.validator.produceBlock.resolves(generateEmptyBlock());
 
     slashingProtectionStub.checkAndInsertBlockProposal.resolves();
@@ -83,6 +82,6 @@ describe("block proposing service", function () {
     );
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
-    expect(rpcClientStub.validator.publishBlock.calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
   });
 });

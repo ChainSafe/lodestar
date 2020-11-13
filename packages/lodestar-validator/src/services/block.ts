@@ -129,7 +129,6 @@ export default class BlockProposingService {
     try {
       block = await this.provider.validator.produceBlock(
         slot,
-        this.publicKeys[proposerIndex],
         this.privateKeys[proposerIndex].signMessage(randaoSigningRoot).toBytesCompressed(),
         this.graffiti || ""
       );
@@ -157,7 +156,7 @@ export default class BlockProposingService {
       signature: this.privateKeys[proposerIndex].signMessage(signingRoot).toBytesCompressed(),
     };
     try {
-      await this.provider.validator.publishBlock(signedBlock);
+      await this.provider.beacon.blocks.publishBlock(signedBlock);
       this.logger.info(
         `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
       );

@@ -83,7 +83,7 @@ describe("produce block", function () {
     const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
-      return await assembleBlock(config, chainStub, dbStub, eth1, slot, validatorIndex, randao);
+      return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
     expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
