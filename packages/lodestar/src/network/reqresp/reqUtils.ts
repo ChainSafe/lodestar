@@ -29,7 +29,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   signal?: AbortSignal
 ): Promise<T | null> {
   if (signal?.aborted) {
-    throw new ErrorAborted("sendRequest aborted");
+    throw new ErrorAborted("sendRequest");
   }
   const requestOnly = isRequestOnly(method);
   const requestSingleChunk = isRequestSingleChunk(method);
