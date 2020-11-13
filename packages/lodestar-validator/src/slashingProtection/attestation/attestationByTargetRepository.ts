@@ -1,7 +1,8 @@
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
-import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
+import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
+import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 
 export class AttestationByTargetRepository {
   protected type: Type<SlashingProtectionAttestation>;
@@ -36,7 +37,19 @@ export class AttestationByTargetRepository {
     );
   }
 
+  async listPubkeys(): Promise<BLSPubkey[]> {
+    const keys = await this.db.keys();
+    return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
+  }
+
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), 8, "be")]));
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
+  }
+
+  private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {
+    return {
+      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
+      targetEpoch: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+    };
   }
 }

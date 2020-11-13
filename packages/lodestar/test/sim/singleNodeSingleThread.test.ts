@@ -41,18 +41,17 @@ describe("Run single node single thread interop validators (no eth1) until check
         testCase.event,
         timeout - 10 * 1000
       );
-      await bn.start();
       const validators = getDevValidators(bn, testCase.validators, testCase.vc, true);
       await Promise.all(validators.map((v) => v.start()));
       try {
         await justificationEventListener;
       } catch (e) {
         await Promise.all(validators.map((v) => v.stop()));
-        await bn.stop();
+        await bn.close();
         expect(`failed to get event: ${testCase.event}`);
       }
       await Promise.all(validators.map((v) => v.stop()));
-      await bn.stop();
+      await bn.close();
     });
   }
 });

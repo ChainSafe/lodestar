@@ -9,15 +9,16 @@ import {
   CommitteeIndex,
   Epoch,
   ProposerDuty,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
-  SignedAggregateAndProof,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 
 export interface IValidatorApi {
   getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
 
-  getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]>;
+  getAttesterDuties(epoch: Epoch, validatorPubKeys: ValidatorIndex[]): Promise<AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,

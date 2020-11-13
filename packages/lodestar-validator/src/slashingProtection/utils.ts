@@ -1,6 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Root} from "@chainsafe/lodestar-types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString, Vector} from "@chainsafe/ssz";
+
+export const blsPubkeyLen = 48;
 
 export function getZeroRoot(config: IBeaconConfig): Root {
   return config.types.Root.defaultValue();
@@ -38,4 +40,14 @@ export function numToString(num: number): string {
 
 export function minEpoch(epochs: Epoch[]): Epoch | null {
   return epochs.length > 0 ? Math.min(...epochs) : null;
+}
+
+export function uniqueVectorArr(buffers: Vector<number>[]): Vector<number>[] {
+  const bufferStr = new Set<string>();
+  return buffers.filter((buffer) => {
+    const str = toHexString(buffer);
+    const seen = bufferStr.has(str);
+    bufferStr.add(str);
+    return !seen;
+  });
 }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/camelcase */
 
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   AggregateAndProof,
   Attestation,
@@ -12,39 +13,41 @@ import {
   CommitteeIndex,
   Epoch,
   ProposerDuty,
+  SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
-  SignedAggregateAndProof,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {IValidatorApi} from "../../../interface/validators";
-import {HttpClient, urlJoin} from "../../../../util";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Json, toHexString} from "@chainsafe/ssz";
+import {HttpClient, urlJoin} from "../../../../util";
+import {IValidatorApi} from "../../../interface/validators";
 
 export class RestValidatorApi implements IValidatorApi {
   private readonly client: HttpClient;
+  private readonly clientV2: HttpClient;
 
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
     this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "validator")}, {logger});
+    this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/validator")}, {logger});
     this.config = config;
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
-    const url = `/duties/${epoch.toString()}/proposer`;
-    const responseData = await this.client.get<Json[]>(url);
-    return responseData.map((value) => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
+    const url = `/duties/proposer/${epoch.toString()}`;
+    const responseData = await this.clientV2.get<{data: Json[]}>(url);
+    return responseData.data.map((value) => this.config.types.ProposerDuty.fromJson(value, {case: "snake"}));
   }
 
-  public async getAttesterDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<AttesterDuty[]> {
-    const url = `/duties/${epoch.toString()}/attester`;
-    const query = {
-      validator_pubkeys: validatorPubKeys.map(toHexString),
-    };
-    const responseData = await this.client.get<Json[]>(url, query);
-    return responseData.map((value) => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
+  public async getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<AttesterDuty[]> {
+    const url = `/duties/attester/${epoch.toString()}`;
+    const responseData = await this.clientV2.post<string[], {data: Json[]}>(
+      url,
+      indices.map((index) => this.config.types.ValidatorIndex.toJson(index) as string)
+    );
+    return responseData.data.map((value) => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
   }
 
   public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {

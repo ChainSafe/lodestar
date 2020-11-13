@@ -59,14 +59,11 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
         // wait for 1 slot
         await new Promise((r) => setTimeout(r, 1 * beaconParams.SECONDS_PER_SLOT * 1000));
 
-        await Promise.all(nodes.map((node) => node.stop()));
+        await Promise.all(nodes.map((node) => node.close()));
         logger.info("Stopped all nodes");
         // Wait a bit for nodes to shutdown
         await new Promise((r) => setTimeout(r, 3000));
       });
-
-      // Start all nodes at once
-      await Promise.all(nodes.map((node) => node.start()));
 
       // Connect all nodes with each other
       for (let i = 0; i < nodeCount; i++) {

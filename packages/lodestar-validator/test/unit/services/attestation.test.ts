@@ -37,6 +37,7 @@ describe("validator attestation service", function () {
       })
     );
     slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
+    rpcClientStub.beacon.getValidator.resolves(config.types.ValidatorResponse.defaultValue());
   });
 
   afterEach(() => {
@@ -52,23 +53,24 @@ describe("validator attestation service", function () {
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockEpoch({epoch: 1});
-    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
-      .be.true;
+    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [0]).calledOnce).to.be.true;
   });
 
   it("on new epoch - with duty", async function () {
     const keypair = new Keypair(PrivateKey.fromBytes(toBufferBE(BigInt(98), 32)));
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     const duty: AttesterDuty = {
-      attestationSlot: 1,
+      slot: 1,
       committeeIndex: 1,
-      aggregatorModulo: 0,
-      validatorPubkey: keypair.publicKey.toBytesCompressed(),
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: 0,
+      pubkey: keypair.publicKey.toBytesCompressed(),
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
     await service.onClockEpoch({epoch: 1});
-    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [keypair.publicKey.toBytesCompressed()]).calledOnce).to
-      .be.true;
+    expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [0]).calledOnce).to.be.true;
     expect(rpcClientStub.beacon.state.getFork.calledOnce).to.be.true;
   });
 
@@ -86,10 +88,13 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const duty: AttesterDuty = {
-      attestationSlot: 1,
+      slot: 1,
       committeeIndex: 1,
-      aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed(),
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: 0,
+      pubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
@@ -111,10 +116,13 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const duty: AttesterDuty = {
-      attestationSlot: 1,
+      slot: 1,
       committeeIndex: 1,
-      aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed(),
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: 0,
+      pubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
@@ -142,10 +150,13 @@ describe("validator attestation service", function () {
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
     const duty: AttesterDuty = {
-      attestationSlot: 10,
+      slot: 10,
       committeeIndex: 1,
-      aggregatorModulo: 1,
-      validatorPubkey: keypair.publicKey.toBytesCompressed(),
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: 0,
+      pubkey: keypair.publicKey.toBytesCompressed(),
     };
     service["nextAttesterDuties"].set(10, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());

@@ -10,13 +10,12 @@ import {
   Eth1Data,
   Number64,
   ProposerDuty,
-  ValidatorIndex,
-  Slot,
-  SignedBeaconBlock,
   SignedAggregateAndProof,
+  SignedBeaconBlock,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {IValidatorApi} from "../../../src/api/interface/validators";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
+import {IValidatorApi} from "../../../src/api/interface/validators";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
@@ -48,7 +47,7 @@ export class MockValidatorApi implements IValidatorApi {
     throw new Error("Method not implemented.");
   }
 
-  getAttesterDuties(epoch: number, validatorPubKey: BLSPubkey[]): Promise<AttesterDuty[]> {
+  getAttesterDuties(epoch: number, validatorPubKey: ValidatorIndex[]): Promise<AttesterDuty[]> {
     throw Error("not implemented");
   }
 

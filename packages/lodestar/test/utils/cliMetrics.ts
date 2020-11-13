@@ -98,9 +98,9 @@ export function printBeaconCliMetrics(node: BeaconNode): () => void {
 
       // Check attestester duties
       state.validators.forEach((validator, index) => {
-        const duties = assembleAttesterDuty(config, {publicKey: validator.pubkey, index}, epochCtx, currentEpoch);
+        const duties = assembleAttesterDuty(config, {pubkey: validator.pubkey, index}, epochCtx, currentEpoch);
         if (duties) {
-          const slotIndex = duties.attestationSlot % config.params.SLOTS_PER_EPOCH;
+          const slotIndex = duties.slot % config.params.SLOTS_PER_EPOCH;
           if (!epochDuties[slotIndex]) {
             epochDuties[slotIndex] = {proposer: -1, attesters: []};
           }

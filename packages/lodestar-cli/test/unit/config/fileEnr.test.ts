@@ -5,7 +5,7 @@ import {existsSync} from "fs";
 import rimraf from "rimraf";
 import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config";
 import {testFilesDir} from "../../utils";
-import {getBeaconPaths} from "@chainsafe/lodestar-cli/src/cmds/beacon/paths";
+import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 
 describe("fileENR", function () {
   const rootDir = testFilesDir;

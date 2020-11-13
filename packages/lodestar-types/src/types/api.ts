@@ -30,18 +30,24 @@ export interface SubscribeToCommitteeSubnetPayload {
 
 export interface AttesterDuty {
   // The validator's public key, uniquely identifying them
-  validatorPubkey: BLSPubkey;
-  // used to determine if validator is aggregator
-  aggregatorModulo: Number64;
-  // The slot at which the validator must attest
-  attestationSlot: Slot;
-
+  pubkey: BLSPubkey;
+  // Index of validator in validator registry
+  validatorIndex: ValidatorIndex;
   committeeIndex: CommitteeIndex;
+  // Number of validators in committee
+  committeeLength: Number64;
+  // Number of committees at the provided slot
+  committeesAtSlot: Number64;
+  // Index of validator in committee
+  validatorCommitteeIndex: Number64;
+  // The slot at which the validator must attest.
+  slot: Slot;
 }
 
 export interface ProposerDuty {
   slot: Slot;
-  proposerPubkey: BLSPubkey;
+  validatorIndex: ValidatorIndex;
+  pubkey: BLSPubkey;
 }
 
 export interface SyncingStatus {

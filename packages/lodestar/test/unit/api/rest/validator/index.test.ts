@@ -1,4 +1,3 @@
-import {Keypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {Attestation} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -7,8 +6,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {ApiError} from "../../../../../src/api/impl/errors/api";
-import {generateEmptyAttesterDuty} from "../../../../../src/chain/factory/duties";
 import {
   generateAttestation,
   generateAttestationData,
@@ -17,6 +14,8 @@ import {
 } from "../../../../utils/attestation";
 import {generateEmptyBlock} from "../../../../utils/block";
 import {StubbedApi} from "../../../../utils/stub/api";
+
+export const VALIDATOR_PREFIX = "/eth/v1/validator";
 
 describe("Test validator rest API", function () {
   let restApi: RestApi, api: StubbedApi;
@@ -45,33 +44,6 @@ describe("Test validator rest API", function () {
     sandbox.restore();
   });
 
-  it("should return 503", async function () {
-    api.validator.getProposerDuties.throws(new ApiError(503, "Node is syncing"));
-    await supertest(restApi.server.server).get("/validator/duties/2/proposer").expect(503);
-  });
-
-  it("should return proposer duties", async function () {
-    api.validator.getProposerDuties.resolves([{slot: 1, proposerPubkey: Buffer.alloc(48)}]);
-    const response = await supertest(restApi.server.server)
-      .get("/validator/duties/2/proposer")
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body[0].proposer_pubkey).to.be.equal(toHexString(Buffer.alloc(48)));
-    expect(api.validator.getProposerDuties.withArgs(2).calledOnce).to.be.true;
-  });
-
-  it("should return attester duties", async function () {
-    const publicKey1 = Keypair.generate().publicKey.toBytesCompressed();
-    api.validator.getAttesterDuties.resolves([generateEmptyAttesterDuty(Buffer.alloc(48, 1))]);
-    const response = await supertest(restApi.server.server)
-      .get("/validator/duties/2/attester")
-      .query({validator_pubkeys: [toHexString(publicKey1)]})
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.length).to.be.equal(1);
-    expect(api.validator.getAttesterDuties.withArgs(2, sinon.match.any).calledOnce).to.be.true;
-  });
-
   it("should publish aggregate and proof", async function () {
     const signedAggregateAndProof = generateEmptySignedAggregateAndProof();
     await supertest(restApi.server.server)
@@ -94,7 +66,9 @@ describe("Test validator rest API", function () {
     const response = await supertest(restApi.server.server)
       .get("/validator/block")
       .query({
+        // eslint-disable-next-line @typescript-eslint/camelcase
         randao_reveal: toHexString(Buffer.alloc(32)),
+        // eslint-disable-next-line @typescript-eslint/camelcase
         proposer_pubkey: toHexString(Buffer.alloc(48)),
         slot: 2,
       })
@@ -121,7 +95,9 @@ describe("Test validator rest API", function () {
     await supertest(restApi.server.server)
       .get("/validator/attestation")
       .query({
+        // eslint-disable-next-line @typescript-eslint/camelcase
         validator_pubkey: toHexString(Buffer.alloc(48)),
+        // eslint-disable-next-line @typescript-eslint/camelcase
         attestation_committee_index: 3,
         slot: 2,
       })
@@ -149,6 +125,7 @@ describe("Test validator rest API", function () {
     const response = await supertest(restApi.server.server)
       .get("/validator/wire_attestations")
       .query({
+        // eslint-disable-next-line @typescript-eslint/camelcase
         committee_index: 1,
         epoch: 0,
       })

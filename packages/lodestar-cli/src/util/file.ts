@@ -65,7 +65,7 @@ export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
  * Serialize either to json, yaml, or toml
  */
 export function writeFile(filepath: string, obj: Json): void {
-  mkdir(path.parse(filepath).dir);
+  mkdir(path.dirname(filepath));
   const fileFormat = path.extname(filepath).substr(1);
   fs.writeFileSync(filepath, stringify(obj, fileFormat as FileFormat), "utf-8");
 }
@@ -105,7 +105,7 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
   if (isUrl(urlOrPathSrc)) {
     await downloadFile(pathDest, urlOrPathSrc);
   } else {
-    mkdir(path.parse(pathDest).dir);
+    mkdir(path.dirname(pathDest));
     await fs.promises.copyFile(urlOrPathSrc, pathDest);
   }
 }
@@ -115,7 +115,7 @@ export async function downloadOrCopyFile(pathDest: string, urlOrPathSrc: string)
  */
 export async function downloadFile(pathDest: string, url: string): Promise<void> {
   if (!fs.existsSync(pathDest)) {
-    mkdir(path.parse(pathDest).dir);
+    mkdir(path.dirname(pathDest));
     await promisify(stream.pipeline)(got.stream(url), fs.createWriteStream(pathDest));
   }
 }
