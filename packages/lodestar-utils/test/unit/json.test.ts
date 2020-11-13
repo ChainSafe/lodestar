@@ -1,4 +1,4 @@
-import {Json} from "@chainsafe/ssz";
+import {fromHexString, Json} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {LodestarError, toJson, toString} from "../../src";
 
@@ -50,6 +50,17 @@ describe("Json helper", () => {
       // Objects
       {id: "object of basic types", arg: {a: 1, b: 2}, json: {a: 1, b: 2}},
       {id: "object of objects", arg: {a: {b: 1}}, json: {a: {b: 1}}},
+      {
+        id: "error metadata",
+        arg: {
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
+        },
+        json: {
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: "0x1111111111111111111111111111111111",
+        },
+      },
 
       // Errors
       () => {
@@ -90,6 +101,25 @@ describe("Json helper", () => {
           arg: error,
           json: {
             ...data,
+            stack: error.stack,
+          },
+        };
+      },
+      () => {
+        const json = {
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: "0x1111111111111111111111111111111111",
+        };
+        const data = {
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
+        };
+        const error = new LodestarError(data);
+        return {
+          id: "Lodestar error",
+          arg: error,
+          json: {
+            ...json,
             stack: error.stack,
           },
         };
@@ -135,6 +165,14 @@ describe("Json helper", () => {
       {id: "object of basic types", json: {a: 1, b: 2}, output: "a=1, b=2"},
       // eslint-disable-next-line quotes
       {id: "object of objects", json: {a: {b: 1}}, output: `a={"b":1}`},
+      {
+        id: "error metadata",
+        json: toJson({
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
+        }),
+        output: "code=ERR_PARENT_UNKNOWN, parentRoot=0x1111111111111111111111111111111111",
+      },
 
       // Circular references
       {id: "circular reference", json: circularReference, output: "myself=ERROR_CIRCULAR_REFERENCE"},

@@ -3,8 +3,7 @@ import {LodestarError} from "./errors";
 
 export function toJson(arg: unknown): Json {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const copyArg: any = {};
-
+  let copyArg: any;
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -14,9 +13,17 @@ export function toJson(arg: unknown): Json {
     case "object":
       if (arg === null) return "null";
       if (arg instanceof Uint8Array) return toHexString(arg);
-      if (arg instanceof LodestarError) return toJson(arg.toObject());
+      if (arg instanceof LodestarError) {
+        const copyArg = arg.toObject();
+        Object.entries(copyArg).forEach(([k, v]) => (copyArg[k] = toJson(v)));
+        return toJson(copyArg);
+      }
       if (arg instanceof Error) return toJson(errorToObject(arg));
-      Object.entries(arg).forEach(([k, v]) => (copyArg[k] = toJson(v)));
+      if (arg instanceof Array) return arg as Json;
+      copyArg = Object.assign({}, arg);
+      Object.entries(copyArg).forEach(([k, v]) => {
+        if (ArrayBuffer.isView(copyArg[k])) copyArg[k] = toJson(v);
+      });
       return copyArg as Json;
 
     // Already valid JSON
