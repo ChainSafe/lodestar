@@ -67,6 +67,7 @@ describe("produce block", function () {
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
+    sinon.stub(epochCtx, "getBeaconProposer").returns(20);
     regenStub.getBlockSlotState.resolves({state: state.clone(), epochCtx});
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
@@ -82,7 +83,7 @@ describe("produce block", function () {
 
     const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
     // @ts-ignore
-    blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, validatorPubkey, randao) => {
+    blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
