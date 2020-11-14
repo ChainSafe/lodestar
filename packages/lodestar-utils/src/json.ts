@@ -1,6 +1,13 @@
 import {Json, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "./errors";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function convertArrayBufferViews(copyArg: any): void {
+  Object.entries(copyArg).forEach(([k, v]) => {
+    if (ArrayBuffer.isView(copyArg[k])) copyArg[k] = toJson(v);
+  });
+}
+
 export function toJson(arg: unknown): Json {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let copyArg: any;
@@ -15,15 +22,13 @@ export function toJson(arg: unknown): Json {
       if (arg instanceof Uint8Array) return toHexString(arg);
       if (arg instanceof LodestarError) {
         const copyArg = arg.toObject();
-        Object.entries(copyArg).forEach(([k, v]) => (copyArg[k] = toJson(v)));
+        convertArrayBufferViews(copyArg);
         return toJson(copyArg);
       }
       if (arg instanceof Error) return toJson(errorToObject(arg));
       if (arg instanceof Array) return arg as Json;
       copyArg = Object.assign({}, arg);
-      Object.entries(copyArg).forEach(([k, v]) => {
-        if (ArrayBuffer.isView(copyArg[k])) copyArg[k] = toJson(v);
-      });
+      convertArrayBufferViews(copyArg);
       return copyArg as Json;
 
     // Already valid JSON
