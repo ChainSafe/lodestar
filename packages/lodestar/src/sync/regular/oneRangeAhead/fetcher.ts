@@ -81,9 +81,17 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
           }),
         ])) as SignedBeaconBlock[] | null;
         if (timer) clearTimeout(timer);
-        // 0-1 block result should go through and we'll handle it in next round
-        if (result && result.length > 1) {
-          checkLinearChainSegment(this.config, result);
+        if (result) {
+          // we queried from last fetched block
+          result = result.filter(
+            (signedBlock) =>
+              !this.config.types.Root.equals(
+                this.lastFetchCheckpoint.blockRoot,
+                this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message)
+              )
+          );
+          // 0-1 block result should go through and we'll handle it in next round
+          if (result.length > 1) checkLinearChainSegment(this.config, result);
         }
       } catch (e) {
         this.logger.verbose("Regular Sync: Failed to get block range ", {...(slotRange ?? {}), error: e.message});

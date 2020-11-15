@@ -160,6 +160,38 @@ describe("BlockRangeFetcher", function () {
     expect(getBlockRangeStub.calledThrice).to.be.true;
   });
 
+  it("should handle getBlockRange returning 2 blocks, one of which is last fetched block", async () => {
+    // some peers returns exactly 2 blocks, 1 is last fetched block and 1 more (orphaned)
+    // we trim the last block to avoid orphaned block
+    // expect handleEmptyRange scenario and switch peer in this case
+    const firstPeerId = await PeerId.create();
+    getPeers.onFirstCall().resolves([firstPeerId]);
+    getCurrentSlotStub.returns(2000);
+    const firstBlock = generateEmptySignedBlock();
+    firstBlock.message.slot = 1000;
+    fetcher.setLastProcessedBlock({blockRoot: config.types.BeaconBlock.hashTreeRoot(firstBlock.message), slot: 1000});
+    const secondBlock = generateEmptySignedBlock();
+    secondBlock.message.slot = 1001;
+    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
+    const thirdBlock = generateEmptySignedBlock();
+    thirdBlock.message.slot = 1002;
+    thirdBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(secondBlock.message);
+    getBlockRangeStub.onFirstCall().resolves([firstBlock, secondBlock]);
+    getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock, thirdBlock]);
+    metadataStub.getStatus.returns({headSlot: 3000} as Status);
+    const result = await fetcher.getNextBlockRange();
+    expect(getPeers.calledTwice).to.be.true;
+    // should switch peer
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
+    // first block is ignored since it's last fetched block
+    // third block is ignored since we trim it
+    expect(result).to.be.deep.equal([secondBlock]);
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
+    // same start, expand end
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1130})).to.be.true;
+    expect(getBlockRangeStub.calledTwice).to.be.true;
+  });
+
   it("should handle getBlockRange timeout", async () => {
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
