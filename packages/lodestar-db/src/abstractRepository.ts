@@ -74,6 +74,10 @@ export abstract class Repository<I extends Id, T> {
     await this.db.put(this.encodeKey(id), this.encodeValue(value));
   }
 
+  public async putBinary(id: I, value: Buffer): Promise<void> {
+    await this.db.put(this.encodeKey(id), value);
+  }
+
   public async delete(id: I): Promise<void> {
     await this.db.delete(this.encodeKey(id));
   }
