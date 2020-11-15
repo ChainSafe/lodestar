@@ -93,6 +93,9 @@ describe("BlockRangeFetcher", function () {
   });
 
   it("should handle getBlockRange error", async () => {
+    // should switch peer
+    const firstPeerId = await PeerId.create();
+    getPeers.onFirstCall().resolves([firstPeerId]);
     fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     getBlockRangeStub.onFirstCall().throws("");
@@ -107,9 +110,13 @@ describe("BlockRangeFetcher", function () {
     expect(getBlockRangeStub.calledTwice).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
   });
 
   it("should handle getBlockRange returning null", async () => {
+    // should switch peer
+    const firstPeerId = await PeerId.create();
+    getPeers.onFirstCall().resolves([firstPeerId]);
     fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     getBlockRangeStub.onFirstCall().resolves(null);
@@ -124,6 +131,7 @@ describe("BlockRangeFetcher", function () {
     expect(getBlockRangeStub.calledTwice).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
   });
 
   it("should handle getBlockRange returning no block or single block", async () => {
@@ -193,6 +201,9 @@ describe("BlockRangeFetcher", function () {
   });
 
   it("should handle getBlockRange timeout", async () => {
+    // should switch peer
+    const firstPeerId = await PeerId.create();
+    getPeers.onFirstCall().resolves([firstPeerId]);
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
     const secondBlock = generateEmptySignedBlock();
@@ -212,9 +223,13 @@ describe("BlockRangeFetcher", function () {
     };
     await Promise.all([fetcher.getNextBlockRange(), triggerTimeout()]);
     expect(getBlockRangeStub.calledTwice).to.be.true;
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
   });
 
   it("should handle non-linear chain segment", async () => {
+    // should switch peer or the sync will keep getting the same chain segment and be stale
+    const firstPeerId = await PeerId.create();
+    getPeers.onFirstCall().resolves([firstPeerId]);
     fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     // first call returns non-linear chain
@@ -229,6 +244,8 @@ describe("BlockRangeFetcher", function () {
     const result = await fetcher.getNextBlockRange();
     // 2nd block is not validated so it's not returned
     expect(result).to.be.deep.equal([firstBlock]);
+    // should switch peer
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
     expect(getBlockRangeStub.calledTwice).to.be.true;
     expect(getBlockRangeStub.alwaysCalledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be
       .true;

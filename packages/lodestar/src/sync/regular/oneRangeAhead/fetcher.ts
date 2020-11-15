@@ -55,15 +55,17 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   public async getNextBlockRange(): Promise<SignedBeaconBlock[]> {
     this.updateNextRange();
     let result: SignedBeaconBlock[] | null = null;
-    let peer: PeerId;
+    let peer: PeerId | null = null;
     // expect at least 2 blocks since we check linear chain
     while (!result || result!.length <= 1) {
       let slotRange: ISlotRange | null = null;
       try {
         if (result && result!.length <= 1) {
           await this.handleEmptyRange(peer!, result);
-          // some weird peers keep returning 1 sinlge block although it's head is up to date
-          // no evidence to penalty it so just ignore it the next round
+        }
+        if (peer) {
+          // peers may return incorrect empty range, or 1 block, or 2 blocks or unlinear chain segment
+          // if we try the same peer it'll just return same result so switching peer here
           peer = (await this.getPeers([peer!.toB58String()!]))[0];
         } else {
           peer = (await this.getPeers())[0];
