@@ -37,6 +37,17 @@ describe("winston logger", () => {
         },
       },
 
+      {
+        id: "regular log with big int metadata",
+        message: "big int",
+        context: {data: BigInt(1)},
+        output: {
+          human: "[]                 \u001b[33mwarn\u001b[39m: big int data=1",
+          // eslint-disable-next-line quotes
+          json: `{"module":"","context":{"data":"1"},"level":"warn","message":"big int"}`,
+        },
+      },
+
       () => {
         const error = new LodestarError({code: "SAMPLE_ERROR", data: {foo: "bar"}});
         error.stack = "$STACK";
@@ -57,7 +68,7 @@ describe("winston logger", () => {
     for (const testCase of testCases) {
       const {id, message, context, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
-        it(`${id} human output`, () => {
+        it(`${id} ${format} output`, () => {
           let allOutput = "";
           const callbackTransport = new CallbackTransport((data: any) => (allOutput += data));
           const logger = new WinstonLogger({format, hideTimestamp: true}, [callbackTransport]);
