@@ -163,8 +163,8 @@ describe("BlockRangeFetcher", function () {
     expect(result).to.be.deep.equal([firstBlock]);
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
     // same start, expand end
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1130})).to.be.true;
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1195})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1066})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1067})).to.be.true;
     expect(getBlockRangeStub.calledThrice).to.be.true;
   });
 
@@ -196,7 +196,7 @@ describe("BlockRangeFetcher", function () {
     expect(result).to.be.deep.equal([secondBlock]);
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
     // same start, expand end
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1130})).to.be.true;
+    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1066})).to.be.true;
     expect(getBlockRangeStub.calledTwice).to.be.true;
   });
 

@@ -134,9 +134,10 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
         ...range,
         peerHead: peerHeadSlot,
       });
-      // don't trust empty range as it's rarely happen, peer may return it incorrectly or not up to date
+      // don't trust empty range as it's rarely happen, peer may return it incorrectly most of the time
       // same range start, expand range end
-      this.rangeEnd = this.getNewTarget();
+      // slowly increase rangeEnd, using getNewTarget() may cause giant range very quickly
+      this.rangeEnd += 1;
     } else {
       this.logger.verbose("Regular Sync: Queried range passed peer head, sleep then try again", {
         range,
