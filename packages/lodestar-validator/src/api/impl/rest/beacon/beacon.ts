@@ -10,14 +10,11 @@ import {RestBeaconStateApi} from "./state";
 export class RestBeaconApi implements IBeaconApi {
   public readonly state: IBeaconStateApi;
   public readonly blocks: IBeaconBlocksApi;
-
-  private readonly client: HttpClient;
   private readonly clientV2: HttpClient;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/beacon")}, {logger});
     this.logger = logger;
     this.config = config;
