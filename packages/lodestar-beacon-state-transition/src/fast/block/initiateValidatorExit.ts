@@ -40,8 +40,9 @@ export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState
 export function initiateMultipleValidatorExits(
   epochCtx: EpochContext,
   state: BeaconState,
-  indexes: ValidatorIndex[]
+  indexes: ValidatorIndex[] = []
 ): void {
+  if (!indexes.length) return;
   const config = epochCtx.config;
   // compute exit queue epoch
   const validatorExitEpochs = readOnlyMap(state.validators, (v) => v.exitEpoch);
