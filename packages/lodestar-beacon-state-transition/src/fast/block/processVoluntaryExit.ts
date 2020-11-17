@@ -6,7 +6,27 @@ import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
+/**
+ * This is for the spec test only.
+ * Use verifyVoluntaryExit to process validator exits in batch.
+ */
 export function processVoluntaryExit(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  signedVoluntaryExit: SignedVoluntaryExit,
+  verifySignature = true
+): void {
+  verifyVoluntaryExit(epochCtx, state, signedVoluntaryExit, verifySignature);
+  // initiate exit
+  const voluntaryExit = signedVoluntaryExit.message;
+  initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);
+}
+
+/**
+ * The same to processVoluntaryExit without calling initiateValidatorExit.
+ * We'll do it in batch.
+ */
+export function verifyVoluntaryExit(
   epochCtx: EpochContext,
   state: BeaconState,
   signedVoluntaryExit: SignedVoluntaryExit,
@@ -48,6 +68,4 @@ export function processVoluntaryExit(
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
-  // initiate exit
-  initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);
 }

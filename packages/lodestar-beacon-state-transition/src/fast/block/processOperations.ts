@@ -1,4 +1,4 @@
-import {List, readOnlyForEach} from "@chainsafe/ssz";
+import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {
   Attestation,
   AttesterSlashing,
@@ -14,7 +14,8 @@ import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
-import {processVoluntaryExit} from "./processVoluntaryExit";
+import {verifyVoluntaryExit} from "./processVoluntaryExit";
+import {initiateMultipleValidatorExits} from "./initiateValidatorExit";
 
 type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
 type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation, verify: boolean) => void;
@@ -41,10 +42,12 @@ export function processOperations(
     [body.attesterSlashings, processAttesterSlashing],
     [body.attestations, processAttestation],
     [body.deposits, processDeposit],
-    [body.voluntaryExits, processVoluntaryExit],
+    [body.voluntaryExits, verifyVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]).forEach(([operations, processOp]) => {
     readOnlyForEach(operations, (op) => {
       processOp(epochCtx, state, op, verifySignatures);
     });
   });
+  const indexes = readOnlyMap(body.voluntaryExits, (voluntaryExit) => voluntaryExit.message.validatorIndex);
+  initiateMultipleValidatorExits(epochCtx, state, indexes);
 }
