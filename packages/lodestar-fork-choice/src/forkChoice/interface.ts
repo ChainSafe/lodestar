@@ -111,6 +111,10 @@ export interface IForkChoice {
    * Iterates backwards through block summaries, starting from a block root
    */
   iterateBlockSummaries(blockRoot: Root): IBlockSummary[];
+  /**
+   * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
+   */
+  iterateNonAncestors(blockRoot: Root): IBlockSummary[];
   getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null;
   /**
    * Iterates forwards through block summaries, exact order is not guaranteed
