@@ -151,17 +151,16 @@ export class AttestationService {
         this.nextAttesterDuties.set(duty.slot, attesterDuties);
       }
       attesterDuties.set(attesterIndex, nextDuty);
-      if (isAggregator) {
-        try {
-          await this.provider.validator.subscribeCommitteeSubnet(
-            duty.slot,
-            slotSignature,
-            duty.committeeIndex,
-            this.publicKeys[attesterIndex]
-          );
-        } catch (e) {
-          this.logger.error("Failed to subscribe to committee subnet", e);
-        }
+      try {
+        await this.provider.validator.prepareBeaconCommitteeSubnet(
+          nextDuty.validatorIndex,
+          nextDuty.committeeIndex,
+          nextDuty.committeesAtSlot,
+          nextDuty.slot,
+          isAggregator
+        );
+      } catch (e) {
+        this.logger.error("Failed to subscribe to committee subnet", e);
       }
     }
   }
@@ -226,7 +225,7 @@ export class AttestationService {
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
     }
     try {
-      await this.provider.validator.publishAttestation(attestation);
+      await this.provider.beacon.po.(attestation);
       this.logger.info("Published new attestation", {
         slot: attestation.data.slot,
         committee: attestation.data.index,
