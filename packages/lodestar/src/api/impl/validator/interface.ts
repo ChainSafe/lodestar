@@ -2,7 +2,6 @@
  * @module api/rpc
  */
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData,
   AttesterDuty,
@@ -12,10 +11,11 @@ import {
   CommitteeIndex,
   Epoch,
   ProposerDuty,
-  SignedBeaconBlock,
-  ValidatorIndex,
-  Slot,
+  Root,
   SignedAggregateAndProof,
+  SignedBeaconBlock,
+  Slot,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 
 /**
@@ -38,11 +38,7 @@ export interface IValidatorApi {
     graffiti: string
   ): Promise<BeaconBlock>;
 
-  /**
-   * Requests that the BeaconNode produce an IndexedAttestation,
-   * with a blank signature field, which the ValidatorClient will then sign.
-   */
-  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation>;
+  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
 
   /**
    * Instructs the BeaconNode to publish a newly signed beacon block
@@ -50,22 +46,15 @@ export interface IValidatorApi {
    */
   publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
 
-  /**
-   * Instructs the BeaconNode to publish a newly signed IndexedAttestation object,
-   * to be incorporated into the beacon chain.
-   */
-  publishAttestation(attestation: Attestation): Promise<void>;
+  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation>;
 
-  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
+  publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void>;
 
-  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
-
-  getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
-
-  subscribeCommitteeSubnet(
-    slot: Slot,
-    slotSignature: BLSSignature,
+  prepareBeaconCommitteeSubnet(
+    validatorIndex: ValidatorIndex,
     committeeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey
+    committeesAtSlot: number,
+    slot: Slot,
+    isAggregator: true
   ): Promise<void>;
 }

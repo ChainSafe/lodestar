@@ -1,4 +1,4 @@
-import {Attestation, CommitteeIndex, Epoch} from "@chainsafe/lodestar-types";
+import {Attestation, CommitteeIndex, Epoch, Slot, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IDatabaseController, Bucket, Repository} from "@chainsafe/lodestar-db";
@@ -22,6 +22,17 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
         computeEpochAtSlot(this.config, attestation.data.slot) === epoch &&
         //filter out aggregated attestations
         Array.from(attestation.aggregationBits).filter((bit) => !!bit).length === 1
+      );
+    });
+  }
+
+  public async getAttestationsByDataRoot(slot: Slot, attestationDataRoot: Root): Promise<Attestation[]> {
+    const attestations = await this.values();
+    //TODO: add secondary index slot => root => AttestationData
+    return attestations.filter((attestation) => {
+      return this.config.types.Root.equals(
+        attestationDataRoot,
+        this.config.types.AttestationData.hashTreeRoot(attestation.data)
       );
     });
   }

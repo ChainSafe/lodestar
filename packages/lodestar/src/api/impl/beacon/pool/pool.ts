@@ -1,6 +1,10 @@
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {SignedVoluntaryExit} from "../../../../../../lodestar-types/lib/types/operations";
+import {IAttestationJob, IBeaconChain} from "../../../../chain";
+import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
+import {validateGossipAttestation} from "../../../../chain/validation";
 import {IBeaconDb} from "../../../../db/api";
 import {INetwork} from "../../../../network";
 import {IBeaconSync} from "../../../../sync";
@@ -14,12 +18,17 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   private readonly db: IBeaconDb;
   private readonly sync: IBeaconSync;
   private readonly network: INetwork;
+  private readonly chain: IBeaconChain;
 
-  public constructor(opts: Partial<IApiOptions>, modules: Pick<IApiModules, "config" | "sync" | "network" | "db">) {
+  public constructor(
+    opts: Partial<IApiOptions>,
+    modules: Pick<IApiModules, "config" | "chain" | "sync" | "network" | "db">
+  ) {
     this.config = modules.config;
     this.db = modules.db;
     this.sync = modules.sync;
     this.network = modules.network;
+    this.chain = modules.chain;
   }
 
   public async getAttestations(filters: Partial<IAttestationFilters> = {}): Promise<Attestation[]> {
@@ -36,10 +45,21 @@ export class BeaconPoolApi implements IBeaconPoolApi {
 
   public async submitAttestation(attestation: Attestation): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    //it could discard attestations that would can be valid a bit later
-    // await validateGossipAttestation(
-    //   this.config, this.db, headStateContext.epochCtx, headStateContext.state, attestation
-    // );
+    const attestationJob = {
+      attestation,
+      validSignature: false,
+    } as IAttestationJob;
+    let attestationPreStateContext;
+    try {
+      attestationPreStateContext = await this.chain.regen.getCheckpointState(attestation.data.target);
+    } catch (e) {
+      throw new AttestationError({
+        code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+        job: attestationJob,
+      });
+    }
+    const subnet = computeSubnetForAttestation(this.config, attestationPreStateContext.epochCtx, attestation);
+    await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
     await Promise.all([
       this.network.gossip.publishCommiteeAttestation(attestation),
       this.db.attestation.add(attestation),
