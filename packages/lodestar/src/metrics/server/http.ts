@@ -28,7 +28,7 @@ export class HttpMetricsServer implements IMetricsServer {
       const listen = this.http.listen.bind(this.http);
       const port = this.opts.serverPort;
       return new Promise((resolve, reject) => {
-        listen(port).once("listening", resolve).once("error", reject);
+        listen(port, this.opts.listenAddr).once("listening", resolve).once("error", reject);
       });
     }
   }

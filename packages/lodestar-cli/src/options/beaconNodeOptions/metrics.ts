@@ -7,6 +7,7 @@ export interface IMetricsArgs {
   "metrics.pushGateway": boolean;
   "metrics.serverPort": number;
   "metrics.timeout": number;
+  "metrics.listenAddr": string;
 }
 
 export function parseArgs(args: IMetricsArgs): IBeaconNodeOptions["metrics"] {
@@ -16,6 +17,7 @@ export function parseArgs(args: IMetricsArgs): IBeaconNodeOptions["metrics"] {
     pushGateway: args["metrics.pushGateway"],
     serverPort: args["metrics.serverPort"],
     timeout: args["metrics.timeout"],
+    listenAddr: args["metrics.listenAddr"],
   };
 }
 
@@ -52,6 +54,13 @@ export const options: ICliCommandOptions<IMetricsArgs> = {
     type: "number",
     description: "How often metrics should be probed",
     defaultDescription: String(defaultOptions.metrics.timeout),
+    group: "metrics",
+  },
+
+  "metrics.listenAddr": {
+    type: "string",
+    description: "The address for the metrics http server to listen on",
+    defaultDescription: String(defaultOptions.metrics.listenAddr),
     group: "metrics",
   },
 };
