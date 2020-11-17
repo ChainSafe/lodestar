@@ -158,7 +158,7 @@ describe("BlockRangeFetcher", function () {
     expect(getPeers.calledThrice).to.be.true;
     // should switch peer
     expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
-    expect(getPeers.calledWithExactly([secondPeerId.toB58String()])).to.be.true;
+    expect(getPeers.calledWithExactly([firstPeerId.toB58String(), secondPeerId.toB58String()])).to.be.true;
     // second block is ignored since we can't validate if it's orphaned block or not
     expect(result).to.be.deep.equal([firstBlock]);
     expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
