@@ -265,6 +265,13 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStor
  * Check if a peer is good to be a best peer.
  */
 export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: INetwork): boolean {
+  return getBestPeerCandidates(forkChoice, network).includes(peer);
+}
+
+/**
+ * Return candidate for gest peer.
+ */
+export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork): PeerId[] {
   return getSyncPeers(
     network,
     (peer) => {
@@ -273,7 +280,7 @@ export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: IN
     },
     10,
     DEFAULT_RPC_SCORE - 1
-  ).includes(peer);
+  );
 }
 
 /**

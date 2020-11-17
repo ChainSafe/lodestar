@@ -9,8 +9,7 @@ import {IRegularSync, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {GossipEvent} from "../../../network/gossip/constants";
-import {checkBestPeer, getBestPeer} from "../../utils";
-import {getSyncPeers} from "../../utils/peers";
+import {checkBestPeer, getBestPeer, getBestPeerCandidates} from "../../utils";
 import {BlockRangeFetcher} from "./fetcher";
 import {BlockRangeProcessor} from "./processor";
 import {ISyncCheckpoint} from "../../interface";
@@ -137,11 +136,11 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     let bestPeer: PeerId | undefined;
 
     while (!bestPeer) {
-      const peers = getSyncPeers(this.network, undefined, this.network.getMaxPeer()).filter(
+      const peers = getBestPeerCandidates(this.chain.forkChoice, this.network).filter(
         (peer) => !excludedPeers.includes(peer.toB58String())
       );
-      bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
-      if (checkBestPeer(bestPeer, this.chain.forkChoice, this.network)) {
+      if (peers && peers.length > 0) {
+        bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
         const peerHeadSlot = this.network.peerMetadata.getStatus(bestPeer)!.headSlot;
         this.logger.info(`Regular Sync: Found best peer ${bestPeer.toB58String()}`, {
           peerHeadSlot,
