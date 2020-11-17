@@ -1,6 +1,7 @@
 import {
   BigIntUintType,
   BitListType,
+  BitVectorType,
   BooleanType,
   ByteVectorType,
   ContainerType,
@@ -9,9 +10,7 @@ import {
   NumberUintType,
   Vector,
   VectorType,
-  BitVectorType,
 } from "@chainsafe/ssz";
-
 import * as t from "../types";
 
 export interface IBeaconSSZTypes {
@@ -100,7 +99,6 @@ export interface IBeaconSSZTypes {
   //api
   SignedBeaconHeaderResponse: ContainerType<t.SignedBeaconHeaderResponse>;
   SubscribeToCommitteeSubnetPayload: ContainerType<t.SubscribeToCommitteeSubnetPayload>;
-  ValidatorResponse: ContainerType<t.ValidatorResponse>;
   Genesis: ContainerType<t.Genesis>;
   ChainHead: ContainerType<t.ChainHead>;
   BlockEventPayload: ContainerType<t.BlockEventPayload>;
@@ -108,6 +106,8 @@ export interface IBeaconSSZTypes {
   ChainReorg: ContainerType<t.ChainReorg>;
   FinalityCheckpoints: ContainerType<t.FinalityCheckpoints>;
   ValidatorBalance: ContainerType<t.ValidatorBalance>;
+  ValidatorResponse: ContainerType<t.ValidatorResponse>;
+  BeaconCommitteeResponse: ContainerType<t.BeaconCommitteeResponse>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -191,10 +191,12 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "SyncingStatus",
   "AttesterDuty",
   "ProposerDuty",
-  "ValidatorResponse",
   "Genesis",
   "ChainHead",
   "BlockEventPayload",
   "FinalizedCheckpoint",
   "ChainReorg",
+  "ValidatorBalance",
+  "ValidatorResponse",
+  "BeaconCommitteeResponse",
 ];

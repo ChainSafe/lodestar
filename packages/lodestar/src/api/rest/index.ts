@@ -66,9 +66,6 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   });
 
   //old api, remove once migrated
-  if (enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
-    server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
-  }
   if (enabledApiNamespaces.includes(ApiNamespace.VALIDATOR)) {
     //TODO: enable when syncing status api working
     // applySyncingMiddleware(server, "/validator/*", modules);

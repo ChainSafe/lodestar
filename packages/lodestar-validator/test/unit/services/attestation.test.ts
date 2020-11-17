@@ -37,7 +37,7 @@ describe("validator attestation service", function () {
       })
     );
     slashingProtectionStub = sandbox.createStubInstance(SlashingProtection);
-    rpcClientStub.beacon.getValidator.resolves(config.types.ValidatorResponse.defaultValue());
+    rpcClientStub.beacon.state.getStateValidator.resolves(config.types.ValidatorResponse.defaultValue());
   });
 
   afterEach(() => {
