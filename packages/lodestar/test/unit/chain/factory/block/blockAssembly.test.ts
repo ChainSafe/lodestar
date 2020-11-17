@@ -45,9 +45,11 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
     forkChoiceStub.getHead.returns(generateBlockSummary());
+    const epochCtx = new EpochContext(config);
+    sinon.stub(epochCtx).getBeaconProposer.returns(2);
     regenStub.getBlockSlotState.resolves({
       state: generateState({slot: 1}),
-      epochCtx: new EpochContext(config),
+      epochCtx: epochCtx,
     });
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
@@ -58,9 +60,10 @@ describe("block assembly", function () {
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
 
     try {
-      const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, 1, Buffer.alloc(96, 0));
+      const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, Buffer.alloc(96, 0));
       expect(result).to.not.be.null;
       expect(result.slot).to.equal(1);
+      expect(result.proposerIndex).to.equal(2);
       expect(result.stateRoot).to.not.be.null;
       expect(result.parentRoot).to.not.be.null;
       expect(regenStub.getBlockSlotState.calledTwice).to.be.true;

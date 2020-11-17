@@ -1,6 +1,8 @@
 import {EventEmitter} from "events";
 import sinon, {SinonSandbox, SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import {IBeaconBlocksApi} from "../../lib/api/interface/beacon";
 import {ApiClientEventEmitter, IApiClient, RestValidatorApi} from "../../src/api";
+import {RestBeaconBlocksApi} from "../../src/api/impl/rest/beacon/blocks";
 import {RestBeaconStateApi} from "../../src/api/impl/rest/beacon/state";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
 import {RestNodeApi} from "../../src/api/impl/rest/node/node";
@@ -14,11 +16,13 @@ class SinonStubbedBeaconApi implements IBeaconApi {
   public getValidator: SinonStubbedMember<IBeaconApi["getValidator"]>;
   public getGenesis: SinonStubbedMember<IBeaconApi["getGenesis"]>;
   public state: SinonStubbedInstance<IBeaconStateApi>;
+  public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
     this.getValidator = sandbox.stub();
     this.getGenesis = sandbox.stub();
     this.state = sandbox.createStubInstance(RestBeaconStateApi);
+    this.blocks = sandbox.createStubInstance(RestBeaconBlocksApi);
   }
 }
 

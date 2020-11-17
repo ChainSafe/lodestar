@@ -14,7 +14,6 @@ import {
   Epoch,
   ProposerDuty,
   SignedAggregateAndProof,
-  SignedBeaconBlock,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
@@ -66,21 +65,14 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.map((value) => this.config.types.Attestation.fromJson(value, {case: "snake"}));
   }
 
-  public async produceBlock(
-    slot: Slot,
-    proposerPubkey: BLSPubkey,
-    randaoReveal: Bytes96,
-    graffiti: string
-  ): Promise<BeaconBlock> {
-    const url = "/block";
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti: string): Promise<BeaconBlock> {
+    const url = `/blocks/${slot}`;
     const query = {
-      slot: slot,
-      proposer_pubkey: toHexString(proposerPubkey),
       randao_reveal: toHexString(randaoReveal),
       graffiti: graffiti,
     };
-    const responseData = await this.client.get<Json>(url, query);
-    return this.config.types.BeaconBlock.fromJson(responseData, {case: "snake"});
+    const responseData = await this.clientV2.get<{data: Json}>(url, query);
+    return this.config.types.BeaconBlock.fromJson(responseData.data, {case: "snake"});
   }
 
   public async produceAttestation(
@@ -107,10 +99,6 @@ export class RestValidatorApi implements IValidatorApi {
       attestation_data: toHexString(this.config.types.AttestationData.serialize(attestationData)),
     };
     return this.config.types.AggregateAndProof.fromJson(await this.client.get<Json>(url, query), {case: "snake"});
-  }
-
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    return this.client.post("/block", this.config.types.SignedBeaconBlock.toJson(signedBlock, {case: "snake"}));
   }
 
   public async publishAttestation(attestation: Attestation): Promise<void> {

@@ -5,16 +5,13 @@ import {
   produceAttestationData,
   proposerDutiesController,
   publishAggregateAndProof,
+  produceBlockController,
 } from "../../controllers/validator";
 import {prepareCommitteeSubnet} from "../../controllers/validator/prepareCommitteeSubnet";
 import {LodestarApiPlugin} from "../../interface";
-import {registerBlockProductionEndpoint} from "./produceBlock";
-import {registerBlockPublishEndpoint} from "./publishBlock";
 
 //old
 export const validator: LodestarApiPlugin = (fastify, opts, callback): void => {
-  registerBlockProductionEndpoint(fastify, opts);
-  registerBlockPublishEndpoint(fastify, opts);
   callback();
 };
 
@@ -23,6 +20,7 @@ export function registerValidatorRoutes(server: FastifyInstance): void {
   server.register(
     async function (fastify) {
       fastify.post(attesterDutiesController.url, attesterDutiesController.opts, attesterDutiesController.handler);
+      fastify.get(produceBlockController.url, produceBlockController.opts, produceBlockController.handler);
       fastify.get(proposerDutiesController.url, proposerDutiesController.opts, proposerDutiesController.handler);
       fastify.get(produceAttestationData.url, produceAttestationData.opts, produceAttestationData.handler);
       fastify.post(prepareCommitteeSubnet.url, prepareCommitteeSubnet.opts, prepareCommitteeSubnet.handler);
