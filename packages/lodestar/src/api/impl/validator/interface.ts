@@ -55,6 +55,6 @@ export interface IValidatorApi {
     committeeIndex: CommitteeIndex,
     committeesAtSlot: number,
     slot: Slot,
-    isAggregator: true
+    isAggregator: boolean
   ): Promise<void>;
 }
