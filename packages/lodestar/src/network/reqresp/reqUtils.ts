@@ -14,7 +14,7 @@ import {
   randomRequestId,
 } from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
 import {eth2RequestEncode} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
@@ -29,7 +29,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   signal?: AbortSignal
 ): Promise<T | null> {
   if (signal?.aborted) {
-    throw new Error("aborted");
+    throw new ErrorAborted("sendRequest");
   }
   const requestOnly = isRequestOnly(method);
   const requestSingleChunk = isRequestSingleChunk(method);

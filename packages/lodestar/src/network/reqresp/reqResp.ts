@@ -23,7 +23,6 @@ import {IValidatedRequestBody} from "../encoders/interface";
 import {eth2RequestDecode} from "../encoders/request";
 import {RpcError, updateRpcScore} from "../error";
 import {IReqResp} from "../interface";
-import {INetworkOptions} from "../options";
 import {IPeerMetadataStore} from "../peers/interface";
 import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
 import {createRpcProtocol, randomRequestId} from "../util";
@@ -39,10 +38,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
 
-  public constructor(
-    opts: INetworkOptions,
-    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules
-  ) {
+  public constructor({config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules) {
     super();
     this.config = config;
     this.libp2p = libp2p;
