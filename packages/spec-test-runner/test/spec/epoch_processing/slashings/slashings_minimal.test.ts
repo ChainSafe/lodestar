@@ -5,10 +5,10 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {processSlashings} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<StateTestCase, BeaconState>(
+describeDirectorySpecTest<IStateTestCase, BeaconState>(
   "epoch slashings minimal",
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {

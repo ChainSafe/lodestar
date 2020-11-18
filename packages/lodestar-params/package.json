@@ -26,7 +26,7 @@
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "check-types": "tsc --noEmit",
     "lint": "eslint --color --ext .ts src/",
-    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
     "test": "yarn run check-types"
   },

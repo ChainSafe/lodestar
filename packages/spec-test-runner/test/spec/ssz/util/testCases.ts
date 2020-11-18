@@ -21,7 +21,6 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
       `SSZ - ${type} ${caseName} minimal`,
       join(__dirname, `${TEST_CASE_LOCATION}/tests/minimal/phase0/ssz_static/${type}/${caseName}`),
       (testcase) => {
-        const tree = testcase.serialized;
         //debugger;
         const serialized = Type.serialize(testcase.serialized);
         const root = Type.hashTreeRoot(testcase.serialized);
@@ -51,14 +50,12 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
             console.log("serialize actual  ", Buffer.from(actual.serialized).toString("hex"));
             console.log("hashTreeRoot expected", expected.root.toString("hex"));
             console.log("hashTreeRoot actual  ", Buffer.from(actual.root).toString("hex"));
-            const structural = Type.deserialize(testCase.serialized_raw);
-            const tree = testCase.serialized;
             /*
             const bbroot = Type.fields[2][1]
             console.log("s bbroot hash", bbroot.hashTreeRoot(structural.beaconBlockRoot))
             console.log("t bbroot hash", bbroot.hashTreeRoot(tree.beaconBlockRoot))
                */
-            debugger;
+            // debugger;
           }
           const structural = Type.deserialize(testCase.serialized_raw);
           // @ts-ignore

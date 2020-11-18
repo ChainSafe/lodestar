@@ -25,8 +25,8 @@
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --out typedocs src",
     "check-types": "tsc --noEmit",
-    "lint": "eslint --color --ext .ts src/",
-    "lint:fix": "eslint --color --ext .ts src/ --fix",
+    "lint": "eslint --color --ext .ts src/ test/",
+    "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
     "pretest": "yarn run check-types",
     "test:e2e": "mocha 'test/e2e/**/*.test.ts'"

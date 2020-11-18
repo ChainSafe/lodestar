@@ -1,4 +1,4 @@
-import {Attestation, BeaconState, number64} from "@chainsafe/lodestar-types";
+import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
 import {IBaseSpecTest} from "../../type";
 
 export interface IProcessAttestationTestCase extends IBaseSpecTest {
