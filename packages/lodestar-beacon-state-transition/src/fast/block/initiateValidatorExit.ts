@@ -42,7 +42,7 @@ export function initiateMultipleValidatorExits(
   state: BeaconState,
   indexes: ValidatorIndex[] = []
 ): void {
-  if (!indexes.length) return;
+  if (!indexes || indexes.length === 0) return;
   const config = epochCtx.config;
   // compute exit queue epoch
   const validatorExitEpochs = readOnlyMap(state.validators, (v) => v.exitEpoch);
@@ -51,10 +51,10 @@ export function initiateMultipleValidatorExits(
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const activationExitEpoch = computeActivationExitEpoch(config, currentEpoch);
   for (const index of indexes) {
-    // return if validator already initiated exit
+    // continue if validator already initiated exit
     const validator = state.validators[index];
     if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
-      return;
+      continue;
     }
     let exitQueueEpoch = Math.max(...exitEpochs, activationExitEpoch);
     const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).length;
