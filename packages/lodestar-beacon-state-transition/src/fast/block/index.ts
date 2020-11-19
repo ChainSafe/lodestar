@@ -9,7 +9,7 @@ import {processAttestation} from "./processAttestation";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
-import {processVoluntaryExit} from "./processVoluntaryExit";
+import {processVoluntaryExits} from "./processVoluntaryExit";
 
 export {
   processBlockHeader,
@@ -20,7 +20,7 @@ export {
   processAttesterSlashing,
   processDeposit,
   processProposerSlashing,
-  processVoluntaryExit,
+  processVoluntaryExits,
 };
 
 export function processBlock(

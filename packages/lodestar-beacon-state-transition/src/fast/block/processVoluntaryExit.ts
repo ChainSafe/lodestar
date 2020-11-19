@@ -1,14 +1,14 @@
 import {Signature} from "@chainsafe/bls";
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {BeaconState, SignedVoluntaryExit, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {List, readOnlyForEach} from "@chainsafe/ssz";
 
 import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
 import {EpochContext} from "../util";
-import {initiateValidatorExit} from "./initiateValidatorExit";
+import {initiateMultipleValidatorExits, initiateValidatorExit} from "./initiateValidatorExit";
 
 /**
- * This is for the spec test only.
- * Use verifyVoluntaryExit to process validator exits in batch.
+ * Process a single voluntary exit, for backward reference only.
  */
 export function processVoluntaryExit(
   epochCtx: EpochContext,
@@ -23,10 +23,26 @@ export function processVoluntaryExit(
 }
 
 /**
- * The same to processVoluntaryExit without calling initiateValidatorExit.
- * We'll do it in batch.
+ * Process voluntary exits in batch
  */
-export function verifyVoluntaryExit(
+export function processVoluntaryExits(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  signedVoluntaryExits: List<SignedVoluntaryExit>,
+  verifySignature = true
+): void {
+  const indexes = new Set<ValidatorIndex>();
+  readOnlyForEach(signedVoluntaryExits, (signedVoluntaryExit) => {
+    verifyVoluntaryExit(epochCtx, state, signedVoluntaryExit, verifySignature);
+    indexes.add(signedVoluntaryExit.message.validatorIndex);
+  });
+  initiateMultipleValidatorExits(epochCtx, state, Array.from(indexes));
+}
+
+/**
+ * The same to processVoluntaryExit without calling initiateValidatorExit.
+ */
+function verifyVoluntaryExit(
   epochCtx: EpochContext,
   state: BeaconState,
   signedVoluntaryExit: SignedVoluntaryExit,

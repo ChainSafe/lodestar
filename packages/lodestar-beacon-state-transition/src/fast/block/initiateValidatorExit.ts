@@ -1,12 +1,12 @@
-import {readOnlyMap} from "@chainsafe/ssz";
-import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
+import {BeaconState, Validator, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
 import {EpochContext} from "../util";
 
 /**
- * Old implementation following the spec, mainly for the spec test.
+ * Initiate a single validator exit.
  */
 export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState, index: ValidatorIndex): void {
   const config = epochCtx.config;
@@ -45,8 +45,14 @@ export function initiateMultipleValidatorExits(
   if (!indexes || indexes.length === 0) return;
   const config = epochCtx.config;
   // compute exit queue epoch
-  const validatorExitEpochs = readOnlyMap(state.validators, (v) => v.exitEpoch);
-  const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
+  const validatorExitEpochs = [];
+  const exitEpochs = [];
+  readOnlyForEach(state.validators, (v: Validator) => {
+    validatorExitEpochs.push(v.exitEpoch);
+    if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
+      exitEpochs.push(v.exitEpoch);
+    }
+  });
   const churnLimit = getChurnLimit(config, epochCtx.currentShuffling.activeIndices.length);
   const currentEpoch = epochCtx.currentShuffling.epoch;
   const activationExitEpoch = computeActivationExitEpoch(config, currentEpoch);
