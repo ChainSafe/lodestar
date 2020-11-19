@@ -3,17 +3,11 @@ import {
   attesterDutiesController,
   produceAggregatedAttestation,
   produceAttestationData,
+  produceBlockController,
   proposerDutiesController,
   publishAggregateAndProof,
-  produceBlockController,
 } from "../../controllers/validator";
 import {prepareCommitteeSubnet} from "../../controllers/validator/prepareCommitteeSubnet";
-import {LodestarApiPlugin} from "../../interface";
-
-//old
-export const validator: LodestarApiPlugin = (fastify, opts, callback): void => {
-  callback();
-};
 
 //new
 export function registerValidatorRoutes(server: FastifyInstance): void {

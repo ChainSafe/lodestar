@@ -1,8 +1,9 @@
-import {BLSPubkey, Fork, Genesis, ValidatorResponse, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Fork, Genesis, ValidatorResponse, SignedBeaconBlock, Attestation} from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
   state: IBeaconStateApi;
   blocks: IBeaconBlocksApi;
+  pool: IBeaconPoolApi;
 
   /**
    * Requests the BeaconNode to provide validator details for given public key.
@@ -18,4 +19,8 @@ export interface IBeaconStateApi {
 
 export interface IBeaconBlocksApi {
   publishBlock(block: SignedBeaconBlock): Promise<void>;
+}
+
+export interface IBeaconPoolApi {
+  submitAttestation(attestation: Attestation): Promise<void>;
 }

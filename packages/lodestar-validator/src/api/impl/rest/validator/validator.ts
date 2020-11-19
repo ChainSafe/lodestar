@@ -6,8 +6,6 @@ import {
   AttestationData,
   AttesterDuty,
   BeaconBlock,
-  BLSPubkey,
-  Bytes96,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
@@ -22,13 +20,11 @@ import {HttpClient, urlJoin} from "../../../../util";
 import {IValidatorApi} from "../../../interface/validators";
 
 export class RestValidatorApi implements IValidatorApi {
-  private readonly client: HttpClient;
   private readonly clientV2: HttpClient;
 
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "validator")}, {logger});
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/validator")}, {logger});
     this.config = config;
   }
@@ -48,23 +44,13 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.data.map((value) => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
   }
 
-  public async produceBlock(
-    slot: Slot,
-    proposerPubkey: BLSPubkey,
-    randaoReveal: Bytes96,
-    graffiti: string
-  ): Promise<BeaconBlock> {
-    const url = "/block";
+  public async produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<BeaconBlock> {
     const query = {
       randao_reveal: toHexString(randaoReveal),
       graffiti: graffiti,
     };
-    const responseData = await this.clientV2.get<{data: Json}>(url, query);
+    const responseData = await this.clientV2.get<{data: Json}>(`/blocks/${slot}`, query);
     return this.config.types.BeaconBlock.fromJson(responseData.data, {case: "snake"});
-  }
-
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    return this.client.post("/block", this.config.types.SignedBeaconBlock.toJson(signedBlock, {case: "snake"}));
   }
 
   public async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData> {

@@ -1,41 +1,41 @@
 /**
  * @module validator/attestation
  */
-import {
-  AggregateAndProof,
-  Attestation,
-  AttesterDuty,
-  BeaconState,
-  BLSPubkey,
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  Fork,
-  Root,
-  SignedAggregateAndProof,
-  Slot,
-  ValidatorResponse,
-  ValidatorIndex,
-} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {AbortController, AbortSignal} from "abort-controller";
-import {IApiClient} from "../api";
 import {Keypair, PrivateKey} from "@chainsafe/bls";
-import {toHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
   DomainType,
   getDomain,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {
+  AggregateAndProof,
+  Attestation,
+  AttestationData,
+  AttesterDuty,
+  BeaconState,
+  BLSPubkey,
+  BLSSignature,
+  Epoch,
+  Fork,
+  Root,
+  SignedAggregateAndProof,
+  Slot,
+  ValidatorIndex,
+  ValidatorResponse,
+} from "@chainsafe/lodestar-types";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
+import {AbortController, AbortSignal} from "abort-controller";
+import {IApiClient} from "../api";
+import {ClockEventType} from "../api/interface/clock";
+import {BeaconEventType} from "../api/interface/events";
+import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
-import {BeaconEventType} from "../api/interface/events";
-import {ClockEventType} from "../api/interface/clock";
-import {ISlashingProtection} from "../slashingProtection";
-import {getAggregatorModulo} from "./utils";
+import {getAggregationBits, getAggregatorModulo} from "./utils";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
@@ -180,13 +180,7 @@ export class AttestationService {
       if (!fork) {
         return;
       }
-      attestation = await this.createAttestation(
-        duty.attesterIndex,
-        duty.slot,
-        duty.committeeIndex,
-        fork,
-        this.provider.genesisValidatorsRoot
-      );
+      attestation = await this.createAttestation(duty, fork, this.provider.genesisValidatorsRoot);
     } catch (e) {
       this.logger.error("Failed to produce attestation", {
         slot: duty.slot,
@@ -211,13 +205,7 @@ export class AttestationService {
             if (!fork) {
               throw new Error("Missing fork info");
             }
-            await this.aggregateAttestations(
-              duty.attesterIndex,
-              duty,
-              attestation,
-              fork,
-              this.provider.genesisValidatorsRoot
-            );
+            await this.aggregateAttestations(duty, attestation, fork, this.provider.genesisValidatorsRoot);
           }
         } catch (e) {
           this.logger.error("Failed to aggregate attestations", e);
@@ -225,7 +213,7 @@ export class AttestationService {
       }, (this.config.params.SECONDS_PER_SLOT / 3) * 1000);
     }
     try {
-      await this.provider.beacon.po.(attestation);
+      await this.provider.beacon.pool.submitAttestation(attestation);
       this.logger.info("Published new attestation", {
         slot: attestation.data.slot,
         committee: attestation.data.index,
@@ -269,27 +257,39 @@ export class AttestationService {
   }
 
   private aggregateAttestations = async (
-    attesterIndex: number,
     duty: IAttesterDuty,
     attestation: Attestation,
     fork: Fork,
     genesisValidatorsRoot: Root
   ): Promise<void> => {
     this.logger.info(`Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.slot}`);
-    let aggregateAndProof: AggregateAndProof;
+    let aggregate: Attestation;
     try {
-      aggregateAndProof = await this.provider.validator.produceAggregateAndProof(attestation.data, duty.pubkey);
+      aggregate = await this.provider.validator.getAggregatedAttestation(
+        this.config.types.AttestationData.hashTreeRoot(attestation.data),
+        duty.slot
+      );
     } catch (e) {
       this.logger.error("Failed to produce aggregate and proof", e);
       return;
     }
-    aggregateAndProof.selectionProof = this.getSlotSignature(attesterIndex, duty.slot, fork, genesisValidatorsRoot);
+    const aggregateAndProof: AggregateAndProof = {
+      aggregate,
+      aggregatorIndex: duty.validatorIndex,
+      selectionProof: Buffer.alloc(96, 0),
+    };
+    aggregateAndProof.selectionProof = this.getSlotSignature(
+      duty.attesterIndex,
+      duty.slot,
+      fork,
+      genesisValidatorsRoot
+    );
     const signedAggregateAndProof: SignedAggregateAndProof = {
       message: aggregateAndProof,
-      signature: this.getAggregateAndProofSignature(attesterIndex, fork, genesisValidatorsRoot, aggregateAndProof),
+      signature: this.getAggregateAndProofSignature(duty.attesterIndex, fork, genesisValidatorsRoot, aggregateAndProof),
     };
     try {
-      await this.provider.validator.publishAggregateAndProof(signedAggregateAndProof);
+      await this.provider.validator.publishAggregateAndProofs([signedAggregateAndProof]);
       this.logger.info(
         `Published signed aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.slot}`
       );
@@ -329,22 +329,13 @@ export class AttestationService {
     return this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed();
   }
 
-  private async createAttestation(
-    attesterIndex: number,
-    slot: Slot,
-    committeeIndex: CommitteeIndex,
-    fork: Fork,
-    genesisValidatorsRoot: Root
-  ): Promise<Attestation> {
-    let attestation;
+  private async createAttestation(duty: IAttesterDuty, fork: Fork, genesisValidatorsRoot: Root): Promise<Attestation> {
+    const {committeeIndex, slot, attesterIndex} = duty;
+    let attestationData: AttestationData;
     try {
-      attestation = await this.provider.validator.produceAttestation(
-        this.publicKeys[attesterIndex],
-        committeeIndex,
-        slot
-      );
+      attestationData = await this.provider.validator.produceAttestationData(committeeIndex, slot);
     } catch (e) {
-      e.message = `Failed to obtain attestation at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
+      e.message = `Failed to obtain attestation data at slot ${slot} and committee ${committeeIndex}: ${e.message}`;
       throw e;
     }
 
@@ -352,17 +343,21 @@ export class AttestationService {
       this.config,
       {fork, genesisValidatorsRoot} as BeaconState,
       DomainType.BEACON_ATTESTER,
-      attestation.data.target.epoch
+      attestationData.target.epoch
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestation.data, domain);
+    const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestationData, domain);
 
     await this.slashingProtection.checkAndInsertAttestation(this.publicKeys[attesterIndex], {
-      sourceEpoch: attestation.data.target.epoch,
-      targetEpoch: attestation.data.target.epoch,
+      sourceEpoch: attestationData.target.epoch,
+      targetEpoch: attestationData.target.epoch,
       signingRoot,
     });
 
-    attestation.signature = this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed();
+    const attestation: Attestation = {
+      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      data: attestationData,
+      signature: this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed(),
+    };
     this.logger.info(
       `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
         `and committee ${committeeIndex} at slot ${slot}`

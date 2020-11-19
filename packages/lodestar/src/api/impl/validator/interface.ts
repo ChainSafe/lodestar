@@ -35,12 +35,6 @@ export interface IValidatorApi {
 
   produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
 
-  /**
-   * Instructs the BeaconNode to publish a newly signed beacon block
-   * to the beacon network, to be included in the beacon chain.
-   */
-  publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
-
   getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation>;
 
   publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void>;

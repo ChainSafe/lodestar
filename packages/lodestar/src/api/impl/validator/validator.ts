@@ -10,24 +10,21 @@ import {
   AttestationData,
   AttesterDuty,
   BeaconBlock,
-  BLSPubkey,
   Bytes96,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
   Root,
   SignedAggregateAndProof,
-  SignedBeaconBlock,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
-import {IAttestationJob, IBeaconChain, IBlockJob} from "../../../chain";
+import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
-import {validateGossipAggregateAndProof, validateGossipBlock} from "../../../chain/validation";
+import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
@@ -76,17 +73,6 @@ export class ValidatorApi implements IValidatorApi {
       randaoReveal,
       toGraffitiBuffer(graffiti)
     );
-  }
-
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
-    const blockJob = {
-      signedBlock: signedBlock,
-      trusted: false,
-      reprocess: false,
-    } as IBlockJob;
-    await validateGossipBlock(this.config, this.chain, this.db, blockJob);
-    await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }
 
   public async produceAttestationData(validatorIndex: number, slot: number): Promise<AttestationData> {

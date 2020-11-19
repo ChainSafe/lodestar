@@ -69,11 +69,6 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   if (enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
     server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
   }
-  if (enabledApiNamespaces.includes(ApiNamespace.VALIDATOR)) {
-    //TODO: enable when syncing status api working
-    // applySyncingMiddleware(server, "/validator/*", modules);
-    server.register(routes.validator, {prefix: "/validator", api, config: modules.config});
-  }
 
   return server;
 }
