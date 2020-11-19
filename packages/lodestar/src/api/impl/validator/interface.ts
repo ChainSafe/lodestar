@@ -31,12 +31,7 @@ export interface IValidatorApi {
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(
-    slot: Slot,
-    proposerPubkey: BLSPubkey,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<BeaconBlock>;
 
   /**
    * Requests that the BeaconNode produce an IndexedAttestation,

@@ -3,23 +3,23 @@ import {BeaconBlock, BeaconState, Genesis} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
-import {IBeaconApi, IBeaconStateApi} from "../../../interface/beacon";
+import {IBeaconApi, IBeaconBlocksApi, IBeaconStateApi} from "../../../interface/beacon";
+import {RestBeaconBlocksApi} from "./blocks";
 import {RestBeaconStateApi} from "./state";
 
 export class RestBeaconApi implements IBeaconApi {
   public readonly state: IBeaconStateApi;
-
-  private readonly client: HttpClient;
+  public readonly blocks: IBeaconBlocksApi;
   private readonly clientV2: HttpClient;
   private readonly logger: ILogger;
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "lodestar")}, {logger});
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/beacon")}, {logger});
     this.logger = logger;
     this.config = config;
     this.state = new RestBeaconStateApi(this.config, this.clientV2, this.logger);
+    this.blocks = new RestBeaconBlocksApi(this.config, this.clientV2, this.logger);
   }
 
   public async getGenesis(): Promise<Genesis | null> {

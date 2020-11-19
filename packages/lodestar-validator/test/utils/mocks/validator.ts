@@ -63,7 +63,7 @@ export class MockValidatorApi implements IValidatorApi {
     throw Error("not implemented");
   }
 
-  produceBlock(slot: number, proposerPubkey: Buffer, randaoReveal: Buffer, graffiti?: string): Promise<BeaconBlock> {
+  produceBlock(slot: number, randaoReveal: Buffer, graffiti?: string): Promise<BeaconBlock> {
     throw Error("not implemented");
   }
 
@@ -72,10 +72,6 @@ export class MockValidatorApi implements IValidatorApi {
   }
 
   publishAttestation(attestation: Attestation): Promise<void> {
-    throw Error("not implemented");
-  }
-
-  publishBlock(beaconBlock: SignedBeaconBlock): Promise<void> {
     throw Error("not implemented");
   }
 

@@ -53,40 +53,6 @@ describe("Test validator rest API", function () {
     expect(api.validator.publishAggregateAndProof.calledOnce).to.be.true;
   });
 
-  it("should throw error on invalid request for block production", async function () {
-    await supertest(restApi.server.server)
-      .get("/validator/block")
-      .expect(400)
-      .expect("Content-Type", "application/json; charset=utf-8");
-  });
-
-  it("should return new block", async function () {
-    const block = generateEmptyBlock();
-    api.validator.produceBlock.resolves(block);
-    const response = await supertest(restApi.server.server)
-      .get("/validator/block")
-      .query({
-        // eslint-disable-next-line @typescript-eslint/camelcase
-        randao_reveal: toHexString(Buffer.alloc(32)),
-        // eslint-disable-next-line @typescript-eslint/camelcase
-        proposer_pubkey: toHexString(Buffer.alloc(48)),
-        slot: 2,
-      })
-      .expect(200)
-      .expect("Content-Type", "application/json; charset=utf-8");
-    expect(response.body.parent_root).to.not.be.null;
-  });
-
-  it("should publish block", async function () {
-    const block = {message: generateEmptyBlock(), signature: Buffer.alloc(96)};
-    await supertest(restApi.server.server)
-      .post("/validator/block")
-      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as object)
-      .expect(200)
-      .expect("Content-Type", "application/json");
-    expect(api.validator.publishBlock.calledOnce).to.be.true;
-  });
-
   it("should produce attestation", async function () {
     const attestation: Attestation = generateAttestation({
       data: generateAttestationData(0, 1),

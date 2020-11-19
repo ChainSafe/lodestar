@@ -2,16 +2,14 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconBlock, Bytes96, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {fastStateTransition, IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
-import {IBeaconDb} from "../../../db/api";
-import {assembleBody} from "./body";
-import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconChain} from "../../interface";
+import {BeaconBlock, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
-import {IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconDb} from "../../../db/api";
 import {IEth1ForBlockProduction} from "../../../eth1";
+import {IBeaconChain} from "../../interface";
+import {assembleBody} from "./body";
 
 export async function assembleBlock(
   config: IBeaconConfig,
@@ -19,7 +17,6 @@ export async function assembleBlock(
   db: IBeaconDb,
   eth1: IEth1ForBlockProduction,
   slot: Slot,
-  proposerIndex: ValidatorIndex,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH
 ): Promise<BeaconBlock> {
@@ -27,7 +24,7 @@ export async function assembleBlock(
   const stateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot);
   const block: BeaconBlock = {
     slot,
-    proposerIndex,
+    proposerIndex: stateContext.epochCtx.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
     body: await assembleBody(config, db, eth1, stateContext.state, randaoReveal, graffiti),
