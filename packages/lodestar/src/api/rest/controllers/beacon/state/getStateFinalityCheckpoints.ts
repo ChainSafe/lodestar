@@ -3,8 +3,13 @@
 import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
+import {StateId} from "../../../../impl/beacon/state";
 
-export const getStateFinalityCheckpoints: ApiController<DefaultQuery, {stateId: string}> = {
+type Params = {
+  stateId: StateId;
+};
+
+export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/finality_checkpoints",
 
   handler: async function (req, resp) {

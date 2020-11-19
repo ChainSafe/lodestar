@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {IBeaconSync} from "../../../../../../lib/sync/interface";
+import {IBeaconSync} from "../../../../../../src/sync/interface";
 import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {Gossip} from "../../../../../../src/network/gossip/gossip";

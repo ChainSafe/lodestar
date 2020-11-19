@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconBlock, BeaconState, BLSPubkey, Genesis, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconState, Genesis} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Json, toHexString} from "@chainsafe/ssz";
+import {Json} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
 import {IBeaconApi, IBeaconBlocksApi, IBeaconStateApi} from "../../../interface/beacon";
 import {RestBeaconBlocksApi} from "./blocks";
@@ -20,10 +20,6 @@ export class RestBeaconApi implements IBeaconApi {
     this.config = config;
     this.state = new RestBeaconStateApi(this.config, this.clientV2, this.logger);
     this.blocks = new RestBeaconBlocksApi(this.config, this.clientV2, this.logger);
-  }
-
-  public async getValidator(pubkey: BLSPubkey): Promise<ValidatorResponse | null> {
-    return this.config.types.ValidatorResponse.fromJson(await this.clientV2.get(`/validators/${toHexString(pubkey)}`));
   }
 
   public async getGenesis(): Promise<Genesis | null> {

@@ -1,8 +1,13 @@
 import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
+import {StateId} from "../../../../impl/beacon/state";
 
-export const getStateFork: ApiController<DefaultQuery, {stateId: string}> = {
+type Params = {
+  stateId: StateId;
+};
+
+export const getStateFork: ApiController<DefaultQuery, Params> = {
   url: "/states/:stateId/fork",
 
   handler: async function (req, resp) {

@@ -1,46 +1,46 @@
-import {BaseCase} from "@chainsafe/lodestar-spec-test-util";
+import {IBaseCase} from "@chainsafe/lodestar-spec-test-util";
 
-export interface BeaconStateComparisonCase extends BaseCase {
+export interface IBeaconStateComparisonCase extends IBaseCase {
   pre: any;
   post: any;
 }
 
-export interface OperationsCase extends BeaconStateComparisonCase {
+export interface IOperationsCase extends IBeaconStateComparisonCase {
   bls_setting?: bigint;
 }
 
-export interface AttestationCase extends OperationsCase {
+export interface IAttestationCase extends IOperationsCase {
   attestation: any;
 }
 
-export interface AttesterSlashingCase extends OperationsCase {
+export interface IAttesterSlashingCase extends IOperationsCase {
   attesterSlashing: any;
 }
 
-export interface BlockHeaderCase extends OperationsCase {
+export interface IBlockHeaderCase extends IOperationsCase {
   block: any;
 }
 
-export interface DepositCase extends OperationsCase {
+export interface IDepositCase extends IOperationsCase {
   deposit: any;
 }
 
-export interface ProposerSlashingCase extends OperationsCase {
+export interface IProposerSlashingCase extends IOperationsCase {
   proposerSlashing: any;
 }
 
-export interface TransferCase extends OperationsCase {
+export interface ITransferCase extends IOperationsCase {
   transfer: any;
 }
 
-export interface VoluntaryExitCase extends OperationsCase {
+export interface IVoluntaryExitCase extends IOperationsCase {
   voluntaryExit: any;
 }
 
-export interface BlockSanityCase extends OperationsCase {
+export interface IBlockSanityCase extends IOperationsCase {
   blocks: any[];
 }
 
-export interface SlotSanityCase extends OperationsCase {
+export interface ISlotSanityCase extends IOperationsCase {
   slots: bigint;
 }

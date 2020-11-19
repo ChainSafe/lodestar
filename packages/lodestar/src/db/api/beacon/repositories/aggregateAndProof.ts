@@ -62,7 +62,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
     const aggregates: AggregateAndProof[] = await this.values();
     await this.batchRemove(
       aggregates.filter((a) => {
-        return finalizedEpochStartSlot <= a.aggregate.data.slot;
+        return a.aggregate.data.slot < finalizedEpochStartSlot;
       })
     );
   }

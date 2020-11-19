@@ -6,7 +6,6 @@ import {expect} from "chai";
 import sinon from "sinon";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {ApiError} from "../../../../../src/api/impl/errors/api";
 import {
   generateAttestation,
   generateAttestationData,

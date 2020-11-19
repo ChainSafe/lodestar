@@ -7,10 +7,10 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlashings} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
 import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<StateTestCase, BeaconState>(
+describeDirectorySpecTest<IStateTestCase, BeaconState>(
   "epoch slashings mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {

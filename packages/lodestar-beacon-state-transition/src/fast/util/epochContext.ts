@@ -27,7 +27,7 @@ import {
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {IEpochProcess} from "./epochProcess";
 
-class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
+export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
     return super.get((toHexString(key) as unknown) as ByteVector);
   }

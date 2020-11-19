@@ -1,6 +1,6 @@
-import {BaseCase} from "@chainsafe/lodestar-spec-test-util";
+import {IBaseCase} from "@chainsafe/lodestar-spec-test-util";
 
-export interface ShufflingCase extends BaseCase {
+export interface IShufflingCase extends IBaseCase {
   seed: string;
   count: bigint;
   shuffled: bigint[];
