@@ -6,7 +6,7 @@ import {computeActivationExitEpoch, getChurnLimit} from "../../util";
 import {EpochContext} from "../util";
 
 /**
- * Initiate a single validator exit.
+ * Initiate a single validator exit, similar to the spec, for backward reference only.
  */
 export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState, index: ValidatorIndex): void {
   const config = epochCtx.config;
