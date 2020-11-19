@@ -219,7 +219,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
-    this.logger.info(`Received goodbye request from ${peerId.toB58String()}, reason=${request}`);
+    this.logger.info("Received goodbye request", {peer: peerId.toB58String(), reason: request.body});
     await sendResponse(
       {config: this.config, logger: this.logger},
       request.id,
