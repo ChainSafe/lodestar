@@ -4,17 +4,13 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 import {HttpClient} from "../../../../util/httpClient";
 import {IBeaconStateApi} from "../../../interface/beacon";
+import {RestApi} from "./abstract";
 
-export class RestBeaconStateApi implements IBeaconStateApi {
-  private readonly client: HttpClient;
-  private readonly logger: ILogger;
-  private readonly config: IBeaconConfig;
-
+export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
   public constructor(config: IBeaconConfig, client: HttpClient, logger: ILogger) {
-    this.client = client;
-    this.logger = logger;
-    this.config = config;
+    super(config, client, logger);
   }
+
   public async getStateValidator(
     stateId: "head",
     validatorId: ValidatorIndex | BLSPubkey
