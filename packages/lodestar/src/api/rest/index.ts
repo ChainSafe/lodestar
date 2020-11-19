@@ -1,14 +1,12 @@
 import fastify, {FastifyInstance} from "fastify";
-import {FastifySSEPlugin} from "fastify-sse-v2";
 import fastifyCors from "fastify-cors";
-import * as querystring from "querystring";
+import {FastifySSEPlugin} from "fastify-sse-v2";
 import {IncomingMessage, Server, ServerResponse} from "http";
-import {ApiNamespace} from "../impl";
-import {defaultApiRestOptions, IRestApiOptions} from "./options";
-import * as routes from "./routes";
-import {registerRoutes} from "./routes";
+import * as querystring from "querystring";
 import {IRestApiModules} from "./interface";
 import {FastifyLogger} from "./logger/fastify";
+import {defaultApiRestOptions, IRestApiOptions} from "./options";
+import {registerRoutes} from "./routes";
 import {errorHandler} from "./routes/error";
 
 export class RestApi {
@@ -64,11 +62,6 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   server.register(async function (instance) {
     registerRoutes(instance, enabledApiNamespaces);
   });
-
-  //old api, remove once migrated
-  if (enabledApiNamespaces.includes(ApiNamespace.BEACON)) {
-    server.register(routes.beacon, {prefix: "/lodestar", api, config: modules.config});
-  }
 
   return server;
 }

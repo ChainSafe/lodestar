@@ -371,7 +371,7 @@ export class AttestationService {
       //fetch validator details if missing
       if (!this.validators[index]) {
         try {
-          this.validators[index] = await this.provider.beacon.getValidator(pubkey);
+          this.validators[index] = await this.provider.beacon.state.getStateValidator("head", pubkey);
         } catch (e) {
           this.logger.error("Failed to get validator details", e);
           this.validators[index] = null;

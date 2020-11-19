@@ -475,6 +475,43 @@ export class ProtoArray {
     return result;
   }
 
+  /**
+   * The opposite of iterateNodes.
+   * iterateNodes is to find ancestor nodes of a blockRoot.
+   * this is to find non-ancestor nodes of a blockRoot.
+   */
+  iterateNonAncestorNodes(blockRoot: HexRoot): IProtoNode[] {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return [];
+    }
+
+    let node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+    const result: IProtoNode[] = [];
+    let nodeIndex = startIndex;
+    while (node.parent !== undefined) {
+      const parentIndex = node.parent;
+      node = this.nodes[parentIndex];
+      if (node === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          index: parentIndex,
+        });
+      }
+      // nodes between nodeIndex and parentIndex means non-ancestor nodes
+      result.push(...this.getNodesBetween(nodeIndex, parentIndex));
+      nodeIndex = parentIndex;
+    }
+    result.push(...this.getNodesBetween(nodeIndex, 0));
+    return result;
+  }
+
   nodesAtSlot(slot: Slot): IProtoNode[] {
     const result: IProtoNode[] = [];
     for (const node of this.nodes) {
@@ -496,6 +533,21 @@ export class ProtoArray {
     }
 
     return node;
+  }
+
+  getNodesBetween(upperIndex: number, lowerIndex: number): IProtoNode[] {
+    const result = [];
+    for (let index = upperIndex - 1; index > lowerIndex; index--) {
+      const node = this.nodes[index];
+      if (node === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          index,
+        });
+      }
+      result.push(node);
+    }
+    return result;
   }
 
   getNode(blockRoot: HexRoot): IProtoNode | undefined {

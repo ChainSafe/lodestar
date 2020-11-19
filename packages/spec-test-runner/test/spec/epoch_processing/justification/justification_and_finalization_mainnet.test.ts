@@ -5,10 +5,10 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {processJustificationAndFinalization} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {StateTestCase} from "../../../utils/specTestTypes/stateTestCase";
+import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<StateTestCase, BeaconState>(
+describeDirectorySpecTest<IStateTestCase, BeaconState>(
   "epoch justification and finalization mainnet",
   join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/justification_and_finalization/pyspec_tests"),
   (testcase) => {

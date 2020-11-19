@@ -1,6 +1,6 @@
 import {Uint64} from "@chainsafe/lodestar-types";
 
-export interface ShufflingTestCase {
+export interface IShufflingTestCase {
   mapping: {
     seed: string;
     count: Uint64;

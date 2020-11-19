@@ -2,7 +2,7 @@ import path from "path";
 import bls, {initBLS} from "@chainsafe/bls";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 
-interface AggregateSigsVerifyTestCase {
+interface IAggregateSigsVerifyTestCase {
   data: {
     input: {
       pubkeys: string[];
@@ -21,7 +21,7 @@ before(async function f() {
   }
 });
 
-describeDirectorySpecTest<AggregateSigsVerifyTestCase, boolean>(
+describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
   "BLS - aggregate sigs verify",
   path.join(
     __dirname,

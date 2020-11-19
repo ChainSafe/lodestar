@@ -60,7 +60,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p = libp2p;
     this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
     this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
-    this.reqResp = new ReqResp(opts, {
+    this.reqResp = new ReqResp({
       config,
       libp2p,
       peerMetadata: this.peerMetadata,

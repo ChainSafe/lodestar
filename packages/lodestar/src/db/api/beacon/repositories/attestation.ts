@@ -47,7 +47,7 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
     const attestations: Attestation[] = await this.values();
     await this.batchRemove(
       attestations.filter((a) => {
-        return finalizedEpochStartSlot <= a.data.slot;
+        return a.data.slot < finalizedEpochStartSlot;
       })
     );
   }

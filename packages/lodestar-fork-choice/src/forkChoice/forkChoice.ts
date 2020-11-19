@@ -528,6 +528,13 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
   }
 
+  /**
+   * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
+   */
+  public iterateNonAncestors(blockRoot: Root): IBlockSummary[] {
+    return this.protoArray.iterateNonAncestorNodes(toHexString(blockRoot)).map(toBlockSummary);
+  }
+
   public getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null {
     const head = this.getHeadRoot();
     return this.iterateBlockSummaries(head).find((summary) => summary.slot === slot) || null;

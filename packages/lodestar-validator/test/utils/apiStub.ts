@@ -14,14 +14,12 @@ import {LocalClock} from "../../src/api/LocalClock";
 import {RestBeaconPoolApi} from "../../src/api/impl/rest/beacon/pool";
 
 class SinonStubbedBeaconApi implements IBeaconApi {
-  public getValidator: SinonStubbedMember<IBeaconApi["getValidator"]>;
   public getGenesis: SinonStubbedMember<IBeaconApi["getGenesis"]>;
   public state: SinonStubbedInstance<IBeaconStateApi>;
   public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
   public pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
-    this.getValidator = sandbox.stub();
     this.getGenesis = sandbox.stub();
     this.state = sandbox.createStubInstance(RestBeaconStateApi);
     this.blocks = sandbox.createStubInstance(RestBeaconBlocksApi);

@@ -13,6 +13,7 @@ import {
   ValidatorIndex,
   Version,
 } from "./primitive";
+import {List} from "@chainsafe/ssz";
 
 export interface SignedBeaconHeaderResponse {
   root: Root;
@@ -54,14 +55,6 @@ export interface SyncingStatus {
   headSlot: Uint64;
   // How many slots node needs to process to reach head. 0 if synced.
   syncDistance: Uint64;
-}
-
-export interface ValidatorResponse {
-  index: ValidatorIndex;
-  // BLS public key
-  pubkey: BLSPubkey;
-  balance: Gwei;
-  validator: Validator;
 }
 
 export interface Genesis {
@@ -107,4 +100,33 @@ export interface FinalityCheckpoints {
 export interface ValidatorBalance {
   index: ValidatorIndex;
   balance: Gwei;
+}
+
+export interface BeaconCommitteeResponse {
+  index: CommitteeIndex;
+  slot: Slot;
+  validators: List<ValidatorIndex>;
+}
+
+export enum ValidatorStatus {
+  WAITING_FOR_ELIGIBILITY = "waiting_for_eligibility",
+  WAITING_FOR_FINALITY = "waiting_for_finality",
+  WAITING_IN_QUEUE = "waiting_in_queue",
+  STANDBY_FOR_ACTIVE = "standby_for_active",
+  ACTIVE = "active",
+  ACTIVE_AWAITING_VOLUNTARY_EXIT = "active_awaiting_voluntary_exit",
+  ACTIVE_AWAITING_SLASHED_EXIT = "active_awaiting_slashed_exit",
+  EXITED_VOLUNTARILY = "exited_voluntarily",
+  EXITED_SLASHED = "exited_slashed",
+  WITHDRAWABLE_VOLUNTARILY = "withdrawable_voluntarily",
+  WITHDRAWABLE_SLASHED = "withdrawable_slashed",
+  WITHDRAWN_VOLUNTARILY = "withdrawn_voluntarily",
+  WITHDRAWN_SLASHED = "withdrawn_slashed",
+}
+
+export interface ValidatorResponse {
+  index: ValidatorIndex;
+  pubkey: BLSPubkey;
+  status: ValidatorStatus;
+  validator: Validator;
 }
