@@ -3,7 +3,7 @@ import deepmerge from "deepmerge";
 import all from "it-all";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
-import sinon, {SinonFakeTimers, SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -33,7 +33,7 @@ import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import {silentLogger} from "../../../utils/logger";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "../../../../src/network/peers";
 
-describe.skip("sync utils", function () {
+describe("sync utils", function () {
   const logger = silentLogger;
   const sandbox = sinon.createSandbox();
 
@@ -141,6 +141,7 @@ describe.skip("sync utils", function () {
     let getPeersStub: SinonStub, getBlockRangeStub: SinonStub;
 
     beforeEach(function () {
+      sandbox.useFakeTimers();
       getPeersStub = sinon.stub();
       getBlockRangeStub = sandbox.stub(blockUtils, "getBlockRange");
     });

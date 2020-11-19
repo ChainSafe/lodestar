@@ -67,11 +67,9 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
         if (peer) {
           // peers may return incorrect empty range, or 1 block, or 2 blocks or unlinear chain segment
           // if we try the same peer it'll just return same result so switching peer here
-          badPeers.add(peer!.toB58String()!);
-          peer = (await this.getPeers(Array.from(badPeers)))[0];
-        } else {
-          peer = (await this.getPeers())[0];
+          badPeers.add(peer.toB58String());
         }
+        peer = (await this.getPeers(Array.from(badPeers)))[0];
         slotRange = {start: this.rangeStart, end: this.rangeEnd};
         // result = await getBlockRange(this.logger, this.network.reqResp, peers, slotRange);
         // Work around of https://github.com/ChainSafe/lodestar/issues/1690

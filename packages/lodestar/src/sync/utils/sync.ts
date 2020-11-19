@@ -14,7 +14,6 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
 import {getSyncPeers} from "./peers";
-import {DEFAULT_RPC_SCORE} from "../../network/peers";
 
 export function getHighestCommonSlot(peerStatuses: (Status | null)[]): Slot {
   const slotStatuses = peerStatuses.reduce<Map<Slot, number>>((current, status) => {
@@ -278,8 +277,7 @@ export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork
       const status = network.peerMetadata.getStatus(peer);
       return !!status && status.headSlot > forkChoice.getHead().slot;
     },
-    10,
-    DEFAULT_RPC_SCORE - 1
+    10
   );
 }
 
