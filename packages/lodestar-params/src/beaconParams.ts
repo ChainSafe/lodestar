@@ -1,5 +1,6 @@
 import {IBeaconParams} from "./interface";
 import {ContainerType, BigIntUintType, NumberUintType, ByteVectorType} from "@chainsafe/ssz";
+import {Phase1Params} from "./phase1";
 
 const Number64 = new NumberUintType({byteLength: 8});
 const BigInt64 = new BigIntUintType({byteLength: 8});
@@ -10,6 +11,8 @@ const ByteVector20 = new ByteVectorType({length: 20});
 
 export const BeaconParams = new ContainerType<IBeaconParams>({
   fields: {
+    phase1: Phase1Params,
+
     // Misc
     MAX_COMMITTEES_PER_SLOT: Number64,
     TARGET_COMMITTEE_SIZE: Number64,

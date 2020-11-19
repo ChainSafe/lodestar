@@ -3,4 +3,4 @@
  */
 export * from "./interface";
 export * from "./beaconParams";
-export {createIBeaconParams} from "./utils";
+export {createParams as createIBeaconParams} from "./utils";
