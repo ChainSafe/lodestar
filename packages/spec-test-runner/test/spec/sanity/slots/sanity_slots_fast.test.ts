@@ -5,10 +5,10 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
-import {ProcessSlotsTestCase} from "./type";
+import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
-describeDirectorySpecTest<ProcessSlotsTestCase, BeaconState>(
+describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
   "slot sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {

@@ -27,7 +27,9 @@
     "test:spec": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/bls/**/*.test.ts' && yarn test:ssz",
     "test:spec-fast": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*fast.test.ts'",
     "test:spec-main": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*mainnet.test.ts' && yarn test:ssz-main",
-    "test:spec-min": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min"
+    "test:spec-min": "mocha --exclude 'test/spec/ssz/**/*' 'test/spec/**/*minimal.test.ts' 'test/spec/bls/*.test.ts' && yarn test:ssz-min",
+    "lint": "eslint --color --ext .ts test/",
+    "lint:fix": "yarn run lint --fix"
   },
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",

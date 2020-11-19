@@ -10,13 +10,13 @@ import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar/lib/chain/genes
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 interface IGenesisInitSpecTest {
+  [k: string]: Deposit | unknown | null | undefined;
   eth1_block_hash: Root;
   eth1_timestamp: Uint64;
   meta: {
     depositsCount: Uint64;
   };
   state: BeaconState;
-  [k: string]: Deposit | unknown | null | undefined;
 }
 
 describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
