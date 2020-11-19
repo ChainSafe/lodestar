@@ -75,15 +75,12 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async produceAttestationData(validatorIndex: number, slot: number): Promise<AttestationData> {
+  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<AttestationData> {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      if (validatorIndex >= state.validators.length) {
-        throw Error(`Validator ${validatorIndex} not in epochCtx`);
-      }
-      return await assembleAttestationData(epochCtx.config, state, headRoot, slot, validatorIndex);
+      return await assembleAttestationData(epochCtx.config, state, headRoot, slot, committeeIndex);
     } catch (e) {
       this.logger.warn(`Failed to produce attestation data because: ${e.message}`);
       throw e;
@@ -185,7 +182,7 @@ export class ValidatorApi implements IValidatorApi {
     committeeIndex: CommitteeIndex,
     committeesAtSlot: number,
     slot: Slot,
-    isAggregator: true
+    isAggregator: boolean
   ): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     if (isAggregator) {
