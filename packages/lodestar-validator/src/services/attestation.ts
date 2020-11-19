@@ -26,7 +26,7 @@ import {
   ValidatorResponse,
 } from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, List} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
 import {ClockEventType} from "../api/interface/clock";

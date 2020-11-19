@@ -39,11 +39,25 @@ export class MockValidatorApi implements IValidatorApi {
     this.chainId = (opts && opts.chainId) || 0;
     this.validatorIndex = (opts && opts.validatorIndex) || 1;
   }
-
-  public async produceAggregateAndProof(
-    attestationData: AttestationData,
-    aggregator: BLSPubkey
-  ): Promise<AggregateAndProof> {
+  produceAttestationData(index: number, slot: number): Promise<AttestationData> {
+    throw new Error("Method not implemented.");
+  }
+  getAggregatedAttestation(
+    attestationDataRoot: import("@chainsafe/ssz").Vector<number>,
+    slot: number
+  ): Promise<Attestation> {
+    throw new Error("Method not implemented.");
+  }
+  publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+  prepareBeaconCommitteeSubnet(
+    validatorIndex: number,
+    committeeIndex: number,
+    committeesAtSlot: number,
+    slot: number,
+    isAggregator: boolean
+  ): Promise<void> {
     throw new Error("Method not implemented.");
   }
 
@@ -55,32 +69,7 @@ export class MockValidatorApi implements IValidatorApi {
     throw Error("not implemented");
   }
 
-  getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
-    throw Error("not implemented");
-  }
-
-  produceAttestation(validatorPubKey: Buffer, index: number, slot: number): Promise<Attestation> {
-    throw Error("not implemented");
-  }
-
   produceBlock(slot: number, randaoReveal: Buffer, graffiti?: string): Promise<BeaconBlock> {
-    throw Error("not implemented");
-  }
-
-  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
-    throw Error("not implemented");
-  }
-
-  publishAttestation(attestation: Attestation): Promise<void> {
-    throw Error("not implemented");
-  }
-
-  subscribeCommitteeSubnet(
-    slot: number,
-    slotSignature: Buffer,
-    committeeIndex: number,
-    aggregatorPubkey: Buffer
-  ): Promise<void> {
     throw Error("not implemented");
   }
 }

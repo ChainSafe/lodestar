@@ -12,7 +12,7 @@ export const publishBlock: ApiController = {
     } catch (e) {
       throw new ValidationError("Failed to deserialize block");
     }
-    await this.api.validator.publishBlock(block);
+    await this.api.beacon.blocks.publishBlock(block);
     resp.code(200).type("application/json").send();
   },
 

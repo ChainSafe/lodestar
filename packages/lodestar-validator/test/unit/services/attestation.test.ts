@@ -89,7 +89,7 @@ describe("validator attestation service", function () {
     await service.start();
     const duty: AttesterDuty = {
       slot: 1,
-      committeeIndex: 1,
+      committeeIndex: 2,
       committeeLength: 120,
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
@@ -98,14 +98,14 @@ describe("validator attestation service", function () {
     };
     service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
-    rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
-    rpcClientStub.validator.publishAttestation.resolves();
+    rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
+    rpcClientStub.beacon.pool.submitAttestation.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 1});
     clock.tick(4000);
     await Promise.resolve(promise);
-    expect(rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, 1, 1).calledOnce).to.be.true;
-    expect(rpcClientStub.validator.publishAttestation.calledOnce).to.be.true;
+    expect(rpcClientStub.validator.produceAttestationData.withArgs(2, 1).calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.pool.submitAttestation.calledOnce).to.be.true;
     expect(slashingProtectionStub.checkAndInsertAttestation.calledOnce).to.be.true;
   });
 
@@ -117,7 +117,7 @@ describe("validator attestation service", function () {
     await service.start();
     const duty: AttesterDuty = {
       slot: 1,
-      committeeIndex: 1,
+      committeeIndex: 3,
       committeeLength: 120,
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
@@ -129,8 +129,8 @@ describe("validator attestation service", function () {
 
     // Simulate double vote detection
     const attestation1 = generateAttestation({data: generateAttestationData(0, 1)});
-    rpcClientStub.validator.produceAttestation.resolves(attestation1);
-    rpcClientStub.validator.publishAttestation.resolves();
+    rpcClientStub.validator.produceAttestationData.resolves(attestation1.data);
+    rpcClientStub.beacon.pool.submitAttestation.resolves();
     slashingProtectionStub.checkAndInsertAttestation.rejects(
       new InvalidAttestationError({code: InvalidAttestationErrorCode.DOUBLE_VOTE} as any)
     );
@@ -138,9 +138,8 @@ describe("validator attestation service", function () {
     const promise = service.onClockSlot({slot: 1});
     clock.tick(4000);
     await Promise.resolve(promise);
-    expect(rpcClientStub.validator.produceAttestation.withArgs(keypair.publicKey.toBytesCompressed(), 1, 1).calledOnce)
-      .to.be.true;
-    expect(rpcClientStub.validator.publishAttestation.notCalled).to.be.true;
+    expect(rpcClientStub.validator.produceAttestationData.withArgs(3, 1).calledOnce).to.be.true;
+    expect(rpcClientStub.beacon.pool.submitAttestation.notCalled).to.be.true;
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
@@ -160,14 +159,14 @@ describe("validator attestation service", function () {
     };
     service["nextAttesterDuties"].set(10, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
-    rpcClientStub.validator.produceAttestation.resolves(generateEmptyAttestation());
-    rpcClientStub.validator.publishAttestation.resolves();
+    rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
+    rpcClientStub.beacon.pool.submitAttestation.resolves();
     slashingProtectionStub.checkAndInsertAttestation.resolves();
     const promise = service.onClockSlot({slot: 10});
     rpcClientStub.emit(BeaconEventType.BLOCK, {block: new Uint8Array(32), slot: 10});
     // don't need to wait for 1/3 slot time which is 4000
     clock.tick(1001);
     await promise;
-    expect(rpcClientStub.validator.produceAttestation.withArgs(sinon.match.any, 1, 10).calledOnce).to.be.true;
+    expect(rpcClientStub.validator.produceAttestationData.withArgs(1, 10).calledOnce).to.be.true;
   });
 });
