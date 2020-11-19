@@ -1,22 +1,11 @@
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {
-  BeaconBlock,
-  BeaconState,
-  Bytes32,
-  Fork,
-  Genesis,
-  Number64,
-  Root,
-  SyncingStatus,
-  Uint64,
-} from "@chainsafe/lodestar-types";
+import {BeaconBlock, Bytes32, Fork, Genesis, Number64} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconBlocksApi} from "../../../lib/api/interface/beacon";
 import {RestBeaconBlocksApi} from "../../../src/api/impl/rest/beacon/blocks";
 import {RestBeaconPoolApi} from "../../../src/api/impl/rest/beacon/pool";
 import {RestBeaconStateApi} from "../../../src/api/impl/rest/beacon/state";
-import {IBeaconApi, IBeaconStateApi, IBeaconPoolApi} from "../../../src/api/interface/beacon";
+import {IBeaconApi, IBeaconPoolApi, IBeaconStateApi} from "../../../src/api/interface/beacon";
 
 export interface IMockBeaconApiOpts {
   version?: Bytes32;
