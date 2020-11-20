@@ -8,6 +8,7 @@ export interface IMetricsOptions {
   pushGateway: boolean;
   serverPort?: number;
   gatewayUrl?: string;
+  listenAddr?: string;
 }
 
 export const defaultMetricsOptions: IMetricsOptions = {
