@@ -1,14 +1,13 @@
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData,
   AttesterDuty,
   BeaconBlock,
   BLSPubkey,
-  BLSSignature,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
+  Root,
   SignedAggregateAndProof,
   Slot,
   ValidatorIndex,
@@ -26,28 +25,17 @@ export interface IValidatorApi {
    */
   produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<BeaconBlock>;
 
-  /**
-   * Requests that the BeaconNode produce an Attestation,
-   * with a blank signature field, which the ValidatorClient will then sign.
-   */
-  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation>;
+  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
 
-  /**
-   * Instructs the BeaconNode to publish a newly signed Attestation object,
-   * to be incorporated into the beacon chain.
-   */
-  publishAttestation(attestation: Attestation): Promise<void>;
+  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation>;
 
-  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
+  publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void>;
 
-  getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
-
-  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
-
-  subscribeCommitteeSubnet(
-    slot: Slot,
-    slotSignature: BLSSignature,
+  prepareBeaconCommitteeSubnet(
+    validatorIndex: ValidatorIndex,
     committeeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey
+    committeesAtSlot: number,
+    slot: Slot,
+    isAggregator: boolean
   ): Promise<void>;
 }

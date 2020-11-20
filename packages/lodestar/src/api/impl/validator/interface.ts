@@ -2,20 +2,18 @@
  * @module api/rpc
  */
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData,
   AttesterDuty,
   BeaconBlock,
-  BLSPubkey,
   BLSSignature,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
-  SignedBeaconBlock,
-  ValidatorIndex,
-  Slot,
+  Root,
   SignedAggregateAndProof,
+  Slot,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 
 /**
@@ -33,34 +31,17 @@ export interface IValidatorApi {
    */
   produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<BeaconBlock>;
 
-  /**
-   * Requests that the BeaconNode produce an IndexedAttestation,
-   * with a blank signature field, which the ValidatorClient will then sign.
-   */
-  produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation>;
+  produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
 
-  /**
-   * Instructs the BeaconNode to publish a newly signed beacon block
-   * to the beacon network, to be included in the beacon chain.
-   */
-  publishBlock(signedBlock: SignedBeaconBlock): Promise<void>;
+  getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation>;
 
-  /**
-   * Instructs the BeaconNode to publish a newly signed IndexedAttestation object,
-   * to be incorporated into the beacon chain.
-   */
-  publishAttestation(attestation: Attestation): Promise<void>;
+  publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void>;
 
-  publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void>;
-
-  produceAggregateAndProof(attestationData: AttestationData, aggregator: BLSPubkey): Promise<AggregateAndProof>;
-
-  getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]>;
-
-  subscribeCommitteeSubnet(
-    slot: Slot,
-    slotSignature: BLSSignature,
+  prepareBeaconCommitteeSubnet(
+    validatorIndex: ValidatorIndex,
     committeeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey
+    committeesAtSlot: number,
+    slot: Slot,
+    isAggregator: boolean
   ): Promise<void>;
 }

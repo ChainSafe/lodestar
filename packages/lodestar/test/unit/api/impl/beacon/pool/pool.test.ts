@@ -6,13 +6,18 @@ import {Libp2pNetwork} from "../../../../../../src/network/network";
 import {BeaconSync} from "../../../../../../src/sync/sync";
 import {generateAttestation, generateAttestationData} from "../../../../../utils/attestation";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {SinonStubbedInstance} from "sinon";
+import {IBeaconChain} from "../../../../../../src/chain";
+import {BeaconChain} from "../../../../../../src/chain/chain";
 
 describe("beacon pool api impl", function () {
   let poolApi: BeaconPoolApi;
   let dbStub: StubbedBeaconDb;
+  let chainStub: SinonStubbedInstance<IBeaconChain>;
 
   beforeEach(function () {
     dbStub = new StubbedBeaconDb(sinon, config);
+    chainStub = sinon.createStubInstance(BeaconChain);
     poolApi = new BeaconPoolApi(
       {},
       {
@@ -20,6 +25,7 @@ describe("beacon pool api impl", function () {
         db: dbStub,
         sync: sinon.createStubInstance(BeaconSync),
         network: sinon.createStubInstance(Libp2pNetwork),
+        chain: chainStub,
       }
     );
   });

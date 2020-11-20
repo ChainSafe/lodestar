@@ -1,24 +1,13 @@
 import {FastifyInstance} from "fastify";
-import {attesterDutiesController, proposerDutiesController} from "../../controllers/validator";
-import {LodestarApiPlugin} from "../../interface";
-import {registerGetWireAttestationEndpoint} from "./getWireAttestations";
-import {registerAggregateAndProofProductionEndpoint} from "./produceAggregatedAttestation";
-import {registerAttestationProductionEndpoint} from "./produceAttestation";
-import {registerPublishAggregateAndProofEndpoint} from "./publishAggregateAndProof";
-import {registerAttestationPublishEndpoint} from "./publishAttestation";
-import {registerSubscribeToCommitteeSubnet} from "./subscribeToCommitteeSubnet";
-import {produceBlockController} from "../../controllers/validator";
-
-//old
-export const validator: LodestarApiPlugin = (fastify, opts, callback): void => {
-  registerPublishAggregateAndProofEndpoint(fastify, opts);
-  registerAttestationProductionEndpoint(fastify, opts);
-  registerAttestationPublishEndpoint(fastify, opts);
-  registerSubscribeToCommitteeSubnet(fastify, opts);
-  registerGetWireAttestationEndpoint(fastify, opts);
-  registerAggregateAndProofProductionEndpoint(fastify, opts);
-  callback();
-};
+import {
+  attesterDutiesController,
+  produceAggregatedAttestation,
+  produceAttestationData,
+  produceBlockController,
+  proposerDutiesController,
+  publishAggregateAndProof,
+} from "../../controllers/validator";
+import {prepareCommitteeSubnet} from "../../controllers/validator/prepareCommitteeSubnet";
 
 //new
 export function registerValidatorRoutes(server: FastifyInstance): void {
@@ -27,6 +16,14 @@ export function registerValidatorRoutes(server: FastifyInstance): void {
       fastify.post(attesterDutiesController.url, attesterDutiesController.opts, attesterDutiesController.handler);
       fastify.get(produceBlockController.url, produceBlockController.opts, produceBlockController.handler);
       fastify.get(proposerDutiesController.url, proposerDutiesController.opts, proposerDutiesController.handler);
+      fastify.get(produceAttestationData.url, produceAttestationData.opts, produceAttestationData.handler);
+      fastify.post(prepareCommitteeSubnet.url, prepareCommitteeSubnet.opts, prepareCommitteeSubnet.handler);
+      fastify.get(
+        produceAggregatedAttestation.url,
+        produceAggregatedAttestation.opts,
+        produceAggregatedAttestation.handler
+      );
+      fastify.post(publishAggregateAndProof.url, publishAggregateAndProof.opts, publishAggregateAndProof.handler);
     },
     {prefix: "/v1/validator"}
   );

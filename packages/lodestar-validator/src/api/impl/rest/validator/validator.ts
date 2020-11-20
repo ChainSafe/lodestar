@@ -2,17 +2,14 @@
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData,
   AttesterDuty,
   BeaconBlock,
-  BLSPubkey,
-  BLSSignature,
-  Bytes96,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
+  Root,
   SignedAggregateAndProof,
   Slot,
   ValidatorIndex,
@@ -23,13 +20,11 @@ import {HttpClient, urlJoin} from "../../../../util";
 import {IValidatorApi} from "../../../interface/validators";
 
 export class RestValidatorApi implements IValidatorApi {
-  private readonly client: HttpClient;
   private readonly clientV2: HttpClient;
 
   private readonly config: IBeaconConfig;
 
   public constructor(config: IBeaconConfig, restUrl: string, logger: ILogger) {
-    this.client = new HttpClient({urlPrefix: urlJoin(restUrl, "validator")}, {logger});
     this.clientV2 = new HttpClient({urlPrefix: urlJoin(restUrl, "/eth/v1/validator")}, {logger});
     this.config = config;
   }
@@ -49,79 +44,50 @@ export class RestValidatorApi implements IValidatorApi {
     return responseData.data.map((value) => this.config.types.AttesterDuty.fromJson(value, {case: "snake"}));
   }
 
-  public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
-    return this.client.post("/aggregate_and_proof", [
-      this.config.types.SignedAggregateAndProof.toJson(signedAggregateAndProof, {case: "snake"}),
-    ]);
-  }
-
-  public async getWireAttestations(epoch: Epoch, committeeIndex: CommitteeIndex): Promise<Attestation[]> {
-    const url = "/wire_attestations";
-    const query = {
-      epoch: epoch,
-      committee_index: committeeIndex,
-    };
-    const responseData = await this.client.get<Json[]>(url, query);
-    return responseData.map((value) => this.config.types.Attestation.fromJson(value, {case: "snake"}));
-  }
-
-  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti: string): Promise<BeaconBlock> {
-    const url = `/blocks/${slot}`;
+  public async produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<BeaconBlock> {
     const query = {
       randao_reveal: toHexString(randaoReveal),
       graffiti: graffiti,
     };
-    const responseData = await this.clientV2.get<{data: Json}>(url, query);
+    const responseData = await this.clientV2.get<{data: Json}>(`/blocks/${slot}`, query);
     return this.config.types.BeaconBlock.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async produceAttestation(
-    validatorPubKey: BLSPubkey,
-    committeeIndex: CommitteeIndex,
-    slot: Slot
-  ): Promise<Attestation> {
-    const url = "/attestation";
-    const query = {
-      slot: slot,
-      attestation_committee_index: committeeIndex,
-      validator_pubkey: toHexString(validatorPubKey),
-    };
-    return this.config.types.Attestation.fromJson(await this.client.get<Json>(url, query), {case: "snake"});
+  public async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData> {
+    const responseData = await this.clientV2.get<{data: Json[]}>("/attestation_data", {committee_index: index, slot});
+    return this.config.types.AttestationData.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async produceAggregateAndProof(
-    attestationData: AttestationData,
-    aggregator: BLSPubkey
-  ): Promise<AggregateAndProof> {
-    const url = "/aggregate_and_proof";
-    const query = {
-      aggregator_pubkey: toHexString(aggregator),
-      attestation_data: toHexString(this.config.types.AttestationData.serialize(attestationData)),
-    };
-    return this.config.types.AggregateAndProof.fromJson(await this.client.get<Json>(url, query), {case: "snake"});
+  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation> {
+    const responseData = await this.clientV2.get<{data: Json[]}>("/aggregate_attestation", {
+      attestation_data_root: this.config.types.Root.toJson(attestationDataRoot) as string,
+      slot,
+    });
+    return this.config.types.Attestation.fromJson(responseData.data, {case: "snake"});
   }
 
-  public async publishAttestation(attestation: Attestation): Promise<void> {
-    return this.client.post("/attestation", [this.config.types.Attestation.toJson(attestation, {case: "snake"})]);
-  }
-
-  public async subscribeCommitteeSubnet(
-    slot: Slot,
-    slotSignature: BLSSignature,
-    attestationCommitteeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey
-  ): Promise<void> {
-    return this.client.post(
-      "/beacon_committee_subscription",
-      this.config.types.SubscribeToCommitteeSubnetPayload.toJson(
-        {
-          slot,
-          slotSignature,
-          attestationCommitteeIndex,
-          aggregatorPubkey,
-        },
-        {case: "snake"}
-      )
+  public async publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
+    return await this.clientV2.post<Json[], void>(
+      "/aggregate_and_proofs",
+      signedAggregateAndProofs.map((a) => this.config.types.SignedAggregateAndProof.toJson(a, {case: "snake"}))
     );
+  }
+
+  public async prepareBeaconCommitteeSubnet(
+    validatorIndex: ValidatorIndex,
+    committeeIndex: CommitteeIndex,
+    committeesAtSlot: number,
+    slot: Slot,
+    isAggregator: boolean
+  ): Promise<void> {
+    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", [
+      {
+        validator_index: validatorIndex,
+        committee_index: committeeIndex,
+        committees_at_slot: committeesAtSlot,
+        slot,
+        is_aggregator: isAggregator,
+      },
+    ]);
   }
 }

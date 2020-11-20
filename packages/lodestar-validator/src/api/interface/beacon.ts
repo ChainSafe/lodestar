@@ -2,14 +2,16 @@ import {
   BLSPubkey,
   Fork,
   Genesis,
-  ValidatorIndex,
   ValidatorResponse,
+  ValidatorIndex,
   SignedBeaconBlock,
+  Attestation,
 } from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
   state: IBeaconStateApi;
   blocks: IBeaconBlocksApi;
+  pool: IBeaconPoolApi;
 
   getGenesis(): Promise<Genesis | null>;
 }
@@ -21,4 +23,8 @@ export interface IBeaconStateApi {
 
 export interface IBeaconBlocksApi {
   publishBlock(block: SignedBeaconBlock): Promise<void>;
+}
+
+export interface IBeaconPoolApi {
+  submitAttestation(attestation: Attestation): Promise<void>;
 }
