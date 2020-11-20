@@ -12,8 +12,11 @@ import {
   VectorType,
 } from "@chainsafe/ssz";
 import * as t from "../types";
+import {IPhase1SSZTypes} from "../types/phase1/interface";
 
 export interface IBeaconSSZTypes {
+  phase1: IPhase1SSZTypes;
+
   // primitive
   Boolean: BooleanType;
   Bytes4: ByteVectorType;
