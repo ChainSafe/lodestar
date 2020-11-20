@@ -56,12 +56,26 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
+  public async getBinary(id: I): Promise<Buffer | null> {
+    try {
+      const value = await this.db.get(this.encodeKey(id));
+      if (!value) return null;
+      return value;
+    } catch (e) {
+      return null;
+    }
+  }
+
   public async has(id: I): Promise<boolean> {
     return (await this.get(id)) !== null;
   }
 
   public async put(id: I, value: T): Promise<void> {
     await this.db.put(this.encodeKey(id), this.encodeValue(value));
+  }
+
+  public async putBinary(id: I, value: Buffer): Promise<void> {
+    await this.db.put(this.encodeKey(id), value);
   }
 
   public async delete(id: I): Promise<void> {
@@ -86,6 +100,16 @@ export abstract class Repository<I extends Id, T> {
       Array.from({length: items.length}, (_, i) => ({
         key: this.encodeKey(items[i].key),
         value: this.encodeValue(items[i].value),
+      }))
+    );
+  }
+
+  // Similar to batchPut but we support value as Buffer
+  public async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
+    await this.db.batchPut(
+      Array.from({length: items.length}, (_, i) => ({
+        key: this.encodeKey(items[i].key),
+        value: items[i].value,
       }))
     );
   }
