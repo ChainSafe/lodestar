@@ -13,6 +13,7 @@ import * as wire from "./wire";
 import * as api from "./api";
 
 import {IBeaconSSZTypes, typeNames} from "../interface";
+import { createPhase1SSTTypes } from "./phase1";
 
 const allGenerators = {
   ...misc,
@@ -57,5 +58,6 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
     types[type] = wire[type](types, params);
   }
    */
+  types.phase1 = createPhase1SSTTypes(params, types);
   return types;
 }

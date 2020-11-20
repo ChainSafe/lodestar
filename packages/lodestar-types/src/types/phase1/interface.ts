@@ -12,4 +12,12 @@ export interface IPhase1SSZTypes {
   PendingAttestation: ContainerType<types.PendingAttestation>;
   IndexedAttestation: ContainerType<types.IndexedAttestation>;
   AttesterSlashing: ContainerType<types.AttesterSlashing>;
+
+  //
+  ShardBlock: ContainerType<types.ShardBlock>;
+  SignedShardBlock: ContainerType<types.SignedShardBlock>;
+  ShardBlockHeader: ContainerType<types.ShardBlockHeader>;
+  ShardState: ContainerType<types.ShardState>;
+  ShardTransition: ContainerType<types.ShardTransition>;
+  CompactCommittee: ContainerType<types.CompactCommittee>;
 }
