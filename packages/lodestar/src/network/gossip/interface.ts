@@ -17,7 +17,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {ILogger} from "@chainsafe/lodestar-utils/lib/logger";
 import {IService} from "../../node";
-import {Message} from "libp2p-gossipsub/src/message";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
 
@@ -103,6 +103,14 @@ export type GossipObject =
 
 export type GossipMessageValidatorFn = (message: GossipObject, subnet?: number) => Promise<ExtendedValidatorResult>;
 
-export interface ILodestarGossipMessage extends Message {
-  messageId: string;
+/**
+ * Overridden `InMessage`
+ *
+ * Since computing a msgId requires uncompressing the data, we cache the msgId
+ */
+export interface ILodestarGossipMessage extends InMessage {
+  /**
+   * Cached message id
+   */
+  msgId?: Uint8Array;
 }

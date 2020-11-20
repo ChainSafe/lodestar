@@ -2,14 +2,13 @@
  * @module network/gossip
  */
 
+import {toHexString} from "@chainsafe/ssz";
 import {ForkDigest} from "@chainsafe/lodestar-types";
-import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
 import {assert} from "@chainsafe/lodestar-utils";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
+
+import {AttestationSubnetRegExp, GossipEvent, GossipTopicRegExp} from "./constants";
 import {IGossipEvents} from "./interface";
-import {hash, toHexString} from "@chainsafe/ssz";
 import {GossipEncoding} from "./encoding";
-import {ZERO_HASH} from "../../constants";
 
 export function getGossipTopic(
   event: GossipEvent,
@@ -59,6 +58,6 @@ export function getSubnetFromAttestationSubnetTopic(topic: string): number {
   return parseInt(subnetStr);
 }
 
-export function getMessageId(message: InMessage): string {
-  return Buffer.from(hash(message.data || ZERO_HASH)).toString("base64");
+export function msgIdToString(msgId: Uint8Array): string {
+  return Buffer.from(msgId).toString("base64");
 }

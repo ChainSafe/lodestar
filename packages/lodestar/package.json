@@ -75,7 +75,7 @@
     "it-pushable": "^1.4.0",
     "libp2p": "^0.29.2",
     "libp2p-bootstrap": "^0.12.0",
-    "libp2p-gossipsub": "^0.6.3",
+    "libp2p-gossipsub": "^0.7.0",
     "libp2p-interfaces": "^0.5.2",
     "libp2p-mdns": "^0.15.0",
     "libp2p-mplex": "^0.10.1",
