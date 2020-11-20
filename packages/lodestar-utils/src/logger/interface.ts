@@ -2,7 +2,6 @@
  * @module logger
  */
 
-import {Json} from "@chainsafe/ssz";
 import {Writable} from "stream";
 
 export enum LogLevel {
@@ -37,7 +36,16 @@ export interface ILoggerOptions {
   hideTimestamp?: boolean;
 }
 
-export type Context = Json;
+export type Context =
+  | string
+  | number
+  | boolean
+  | bigint
+  | null
+  | {
+      [property: string]: Context;
+    }
+  | Context[];
 
 export interface ILogger {
   level: LogLevel;
