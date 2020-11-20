@@ -7748,20 +7748,21 @@ libp2p-crypto@^0.18.0:
     uint8arrays "^1.1.0"
     ursa-optional "^0.10.1"
 
-libp2p-gossipsub@^0.6.3:
-  version "0.6.3"
-  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.6.3.tgz#190a33edfba6f349267d5a3d0d0a8c6147ebebed"
-  integrity sha512-eaRGtMYns29zPYDjbyvtdIJRGfmnsdwmx5QxqPUcHbmUnwDX1FfeKxT1hY8EuDhhGSsinoZO9w3d6TXUrr1jbQ==
+libp2p-gossipsub@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.7.0.tgz#92964135163b5f29df6bf24b18fd76df37b5002e"
+  integrity sha512-uHohd/1SMBg36BNZSMYIwoAsOKFqt8FJh9dq7izHd4PKMyKDlRMdc1LYdqdMMj+MBcDctulMw4zGeGE8WTK62A==
   dependencies:
     "@types/debug" "^4.1.5"
     debug "^4.1.1"
     denque "^1.4.1"
     err-code "^2.0.0"
     it-pipe "^1.0.1"
-    libp2p-interfaces "^0.5.2"
+    libp2p-interfaces "^0.7.2"
     peer-id "^0.14.0"
     protons "^2.0.0"
     time-cache "^0.3.0"
+    uint8arrays "^1.1.0"
 
 libp2p-interfaces@^0.5.1, libp2p-interfaces@^0.5.2:
   version "0.5.2"
@@ -7787,6 +7788,40 @@ libp2p-interfaces@^0.5.1, libp2p-interfaces@^0.5.2:
     libp2p-tcp "^0.15.0"
     multiaddr "^8.0.0"
     multibase "^3.0.0"
+    p-defer "^3.0.0"
+    p-limit "^2.3.0"
+    p-wait-for "^3.1.0"
+    peer-id "^0.14.0"
+    protons "^2.0.0"
+    sinon "^9.0.2"
+    streaming-iterables "^5.0.2"
+    uint8arrays "^1.1.0"
+
+libp2p-interfaces@^0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-0.7.2.tgz#77281294b6bba72d0e9bf6c0e0b3471e37330cc3"
+  integrity sha512-uI4vPiwdi9pKScLoAvwMqXiEjUtUACavtqZEvdm36T1PcmzsfDbGDKGCkGoDENQ/kztsggfb/9PoEAiNw3CQxQ==
+  dependencies:
+    abort-controller "^3.0.0"
+    abortable-iterator "^3.0.0"
+    chai "^4.2.0"
+    chai-checkmark "^1.0.1"
+    class-is "^1.1.0"
+    debug "^4.1.1"
+    delay "^4.3.0"
+    detect-node "^2.0.4"
+    dirty-chai "^2.0.1"
+    err-code "^2.0.0"
+    it-goodbye "^2.0.1"
+    it-length-prefixed "^3.1.0"
+    it-pair "^1.0.0"
+    it-pipe "^1.1.0"
+    it-pushable "^1.4.0"
+    libp2p-crypto "^0.18.0"
+    libp2p-tcp "^0.15.0"
+    multiaddr "^8.0.0"
+    multibase "^3.0.0"
+    multihashes "^3.0.1"
     p-defer "^3.0.0"
     p-limit "^2.3.0"
     p-wait-for "^3.1.0"
