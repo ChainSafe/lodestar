@@ -4,4 +4,6 @@
  */
 
 export * from "./primitive";
+export * from "./shard";
+export * from "./custody";
 export * from "./beacon";
