@@ -89,7 +89,8 @@ export class TasksService implements IService {
         this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
       ]);
       // tasks rely on extended fork choice
-      this.chain.forkChoice.prune();
+      this.chain.forkChoice.prune(finalized.root);
+      this.logger.info("Finish processing finalized checkpoint for epoch #", finalized.epoch);
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint of epoch #" + finalized.epoch, e);
     }

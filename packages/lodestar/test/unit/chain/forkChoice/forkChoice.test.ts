@@ -118,7 +118,7 @@ describe("LodestarForkChoice", function () {
       expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block08.message))).to.be.true;
       expect(forkChoice.hasBlock(config.types.BeaconBlock.hashTreeRoot(block12.message))).to.be.true;
       forkChoice.onBlock(block32.message, state32, justifiedBalances);
-      forkChoice.prune();
+      forkChoice.prune(config.types.BeaconBlock.hashTreeRoot(block16.message));
       expect(
         forkChoice.iterateBlockSummaries(config.types.BeaconBlock.hashTreeRoot(block16.message)).length
       ).to.be.equal(1);

@@ -29,7 +29,8 @@ describe("block archiver task", function () {
    *       C
    */
   it("should archive finalized blocks on same chain", async function () {
-    dbStub.block.get.resolves(generateEmptySignedBlock());
+    const blockBuffer = Buffer.from(config.types.SignedBeaconBlock.serialize(generateEmptySignedBlock()));
+    dbStub.block.getBinary.resolves(blockBuffer);
     const canonicalBlocks = [
       generateBlockSummary({slot: 5}),
       generateBlockSummary({slot: 4}),
@@ -37,8 +38,7 @@ describe("block archiver task", function () {
       generateBlockSummary({slot: 1}),
     ];
     forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
-    forkChoiceStub.forwardIterateBlockSummaries.returns([generateBlockSummary({slot: 3})]);
-    forkChoiceStub.isDescendant.returns(false);
+    forkChoiceStub.iterateNonAncestors.returns([generateBlockSummary({slot: 3})]);
     const archiverTask = new ArchiveBlocksTask(
       config,
       {
@@ -53,8 +53,12 @@ describe("block archiver task", function () {
     );
     await archiverTask.run();
     expect(
-      dbStub.blockArchive.batchPut.calledWith(
-        canonicalBlocks.map((b) => ({key: b.slot, value: generateEmptySignedBlock()}))
+      dbStub.blockArchive.batchPutBinary.calledWith(
+        canonicalBlocks.map((summary) => ({
+          key: summary.slot,
+          value: blockBuffer,
+          summary,
+        }))
       )
     ).to.be.true;
     // delete canonical blocks

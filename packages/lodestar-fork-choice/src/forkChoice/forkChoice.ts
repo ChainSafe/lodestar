@@ -530,8 +530,8 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.isDescendant(toHexString(ancestorRoot), toHexString(descendantRoot));
   }
 
-  public prune(): IBlockSummary[] {
-    return this.protoArray.maybePrune(toHexString(this.fcStore.finalizedCheckpoint.root)).map(toBlockSummary);
+  public prune(finalizedRoot: Root): IBlockSummary[] {
+    return this.protoArray.maybePrune(toHexString(finalizedRoot)).map(toBlockSummary);
   }
 
   public setPruneThreshold(threshold: number): void {
