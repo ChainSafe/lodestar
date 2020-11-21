@@ -1085,6 +1085,26 @@
     rlp "^2.2.6"
     strict-event-emitter-types "^2.0.0"
 
+"@chainsafe/discv5@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.5.0.tgz#c97a88a7b09fa5e9102ef94f91cb13fa171834ad"
+  integrity sha512-YCy2l5fwPM+r7ABax6HSFwVSr9eXt2VpUYa/PM1FncIFV/cBxuvFzzPwqhlTGLgWZ9dw2Ol/2g6sBT/lMkSTdA==
+  dependencies:
+    "@types/err-code" "^2.0.0"
+    base64url "^3.0.1"
+    bcrypto "^4.2.8"
+    bigint-buffer "^1.1.5"
+    debug "^4.1.1"
+    dgram "^1.0.1"
+    err-code "^2.0.3"
+    ip6addr "^0.2.3"
+    is-ip "^3.1.0"
+    libp2p-crypto "^0.18.0"
+    multiaddr "^8.0.0"
+    peer-id "^0.14.1"
+    rlp "^2.2.6"
+    strict-event-emitter-types "^2.0.0"
+
 "@chainsafe/eth2-bls-wasm@^0.5.0":
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/eth2-bls-wasm/-/eth2-bls-wasm-0.5.0.tgz#45d0cb8807b569537d1e0099922a9617e0410b3a"
@@ -2551,6 +2571,11 @@
   version "4.1.5"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.5.tgz#b14efa8852b7768d898906613c23f688713e02cd"
   integrity sha512-Q1y515GcOdTHgagaVFhHnIFQ38ygs/kmxdNpvpou+raI9UO3YZcHDngBSYKQklcKlvA7iuQlmIKbzvmxcOE9CQ==
+
+"@types/err-code@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/err-code/-/err-code-2.0.0.tgz#42550e9e7a487e6c64342799e803f33d4d0f985c"
+  integrity sha512-JDCwFVL1a8EE7gU7C9ugjEixhY2cqmeZwxf7QXYf2waEkTN4n033UYxlKib/xq+oNqLWimY46/3Pcs6xTXL65Q==
 
 "@types/es6-promisify@6.0.0":
   version "6.0.0"
@@ -7889,9 +7914,9 @@ libp2p-tcp@^0.15.0, libp2p-tcp@^0.15.1:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#ad21ab3ed5c3914aab64fa8adaa6db34f6555d64"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#6df33647430d0bb296c6f2b4ab4228d661b381cc"
   dependencies:
-    "@chainsafe/discv5" "^0.4.2"
+    "@chainsafe/discv5" "^0.5.0"
     "@types/node" "^13.7.0"
     libp2p-crypto "^0.18.0"
     multiaddr "^8.0.0"
