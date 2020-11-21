@@ -75,19 +75,24 @@ export class TasksService implements IService {
   };
 
   private onFinalizedCheckpoint = async (finalized: Checkpoint): Promise<void> => {
-    await new ArchiveBlocksTask(
-      this.config,
-      {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
-      finalized
-    ).run();
-    await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
-    await Promise.all([
-      this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
-      this.db.attestation.pruneFinalized(finalized.epoch),
-      this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
-    ]);
-    // tasks rely on extended fork choice
-    this.chain.forkChoice.prune();
+    try {
+      await new ArchiveBlocksTask(
+        this.config,
+        {db: this.db, forkChoice: this.chain.forkChoice, logger: this.logger},
+        finalized
+      ).run();
+      // should be after ArchiveBlocksTask to handle restart cleanly
+      await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
+      await Promise.all([
+        this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
+        this.db.attestation.pruneFinalized(finalized.epoch),
+        this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
+      ]);
+      // tasks rely on extended fork choice
+      this.chain.forkChoice.prune();
+    } catch (e) {
+      this.logger.error("Error processing finalized checkpoint of epoch #" + finalized.epoch, e);
+    }
   };
 
   private onCheckpoint = async (): Promise<void> => {
