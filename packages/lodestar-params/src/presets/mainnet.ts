@@ -1,4 +1,4 @@
-import {mainnetYaml} from "./mainnet.yaml";
+import {mainnetYaml} from "./mainnetYaml";
 import {createIBeaconParams, mapValuesNumToString} from "../utils";
 import {IBeaconParams} from "../interface";
 

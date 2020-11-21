@@ -1,4 +1,4 @@
-import {minimalYaml} from "./minimal.yaml";
+import {minimalYaml} from "./minimalYaml";
 import {createIBeaconParams, mapValuesNumToString} from "../utils";
 import {IBeaconParams} from "../interface";
 
