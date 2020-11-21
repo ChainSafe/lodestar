@@ -1,13 +1,13 @@
 import {expect} from "chai";
-import fetch from "node-fetch";
+import axios from "axios";
 import {loadConfigYaml} from "../src/utils";
 import * as mainnet from "../src/presets/mainnet";
 import * as minimal from "../src/presets/minimal";
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Record<string, unknown>> {
   const fileUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/configs/${preset}/phase0.yaml`;
-  const configRaw = await fetch(fileUrl).then((res) => res.text());
-  return loadConfigYaml(configRaw);
+  const res = await axios({url: fileUrl, timeout: 30 * 1000});
+  return loadConfigYaml(res.data);
 }
 
 describe("Ensure config is synced", function () {
