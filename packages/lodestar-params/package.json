@@ -47,7 +47,6 @@
   },
   "devDependencies": {
     "@types/node-fetch": "^2.5.7",
-    "babel-plugin-inline-import": "^3.0.0",
     "node-fetch": "^2.6.1"
   }
 }
