@@ -21,11 +21,12 @@
   "scripts": {
     "benchmark": "ts-node test/benchmarks",
     "build": "yarn run build:lib && yarn run build:types",
+    "build:tsc": "tsc --project tsconfig.build.json",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
-    "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
+    "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",

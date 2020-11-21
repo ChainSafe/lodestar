@@ -11,6 +11,7 @@
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
+    "build:tsc": "lerna run build:tsc",
     "build:docs": "lerna run clean && lerna run build && lerna run build:typedocs && lerna run build:refdocs && ./scripts/prepare-docs.sh",
     "build:lib:watch": "lerna run build:lib:watch --parallel",
     "build:types:watch": "lerna run build:types:watch --parallel",

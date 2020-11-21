@@ -18,8 +18,9 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
+    "build:tsc": "tsc --project tsconfig.build.json",
     "build:release": "yarn clean && yarn build && yarn build:typedocs",
-    "build:types": "tsc --incremental --declaration --project tsconfig.build.json --emitDeclarationOnly",
+    "build:types": "tsc --project tsconfig.build.json --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",

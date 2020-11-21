@@ -7,8 +7,9 @@
     "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
     // Export declaration files '.d.ts' to /lib
     "declaration": true,
-    "declarationMap": true,                /* Generates a sourcemap for each corresponding '.d.ts' file. */
-    // "sourceMap": true,                     /* Generates corresponding '.map' file. */
+    "declarationMap": true /* Generates a sourcemap for each corresponding '.d.ts' file. */,
+    "sourceMap": true /* Generates corresponding '.map' file. */,
+    "incremental": true,
 
     /* Strict Type-Checking Options */
     "strict": true /* Enable all strict type-checking options. */,

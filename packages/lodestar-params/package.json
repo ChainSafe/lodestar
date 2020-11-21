@@ -18,10 +18,11 @@
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
     "build": "yarn build:lib && yarn build:types",
+    "build:tsc": "tsc",
     "build:release": "yarn clean && yarn build",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
-    "build:types": "tsc --incremental --declaration --outDir lib --emitDeclarationOnly",
+    "build:types": "tsc --emitDeclarationOnly",
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "check-types": "tsc --noEmit",

@@ -2,10 +2,8 @@
   "extends": "../../tsconfig",
   "include": ["test"],
   "compilerOptions": {
-    "typeRoots": [
-      "../../node_modules/@types",
-      "../../node_modules/@polkadot/ts"
-    ],
-    "strict": false
+    "typeRoots": ["../../node_modules/@types", "../../node_modules/@polkadot/ts"],
+    "strict": false,
+    "outDir": "lib"
   }
 }
