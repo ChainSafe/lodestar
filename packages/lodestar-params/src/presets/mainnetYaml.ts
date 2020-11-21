@@ -3,6 +3,8 @@
 // Some of these constants may still change before the launch of Phase 0.
 
 export const mainnetYaml = {
+  CONFIG_NAME: "mainnet",
+
   // Misc
   // ---------------------------------------------------------------
   // 2**6 (= 64)
@@ -20,7 +22,7 @@ export const mainnetYaml = {
   // `2**14` (= 16,384)
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 16384,
   // Jan 3, 2020
-  MIN_GENESIS_TIME: 1578009600,
+  MIN_GENESIS_TIME: 1606824000,
   // 4
   HYSTERESIS_QUOTIENT: 4,
   // 1 (minus 0.25)
@@ -28,7 +30,7 @@ export const mainnetYaml = {
   // 5 (plus 1.25)
   HYSTERESIS_UPWARD_MULTIPLIER: 5,
   // 3
-  PROPORTIONAL_SLASHING_MULTIPLIER: 3,
+  PROPORTIONAL_SLASHING_MULTIPLIER: 1,
 
   // Fork Choice
   // ---------------------------------------------------------------
@@ -37,8 +39,8 @@ export const mainnetYaml = {
 
   // Validator
   // ---------------------------------------------------------------
-  // 2**10 (= 1,024)
-  ETH1_FOLLOW_DISTANCE: 1024,
+  // 2**11 (= 2,048)
+  ETH1_FOLLOW_DISTANCE: 2048,
   // 2**4 (= 16)
   TARGET_AGGREGATORS_PER_COMMITTEE: 16,
   // 2**0 (= 1)
@@ -54,7 +56,7 @@ export const mainnetYaml = {
   DEPOSIT_CHAIN_ID: 1,
   DEPOSIT_NETWORK_ID: 1,
   // **TBD**
-  DEPOSIT_CONTRACT_ADDRESS: "0x1234567890123456789012345678901234567890",
+  DEPOSIT_CONTRACT_ADDRESS: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
 
   // Gwei values
   // ---------------------------------------------------------------
@@ -75,8 +77,8 @@ export const mainnetYaml = {
 
   // Time parameters
   // ---------------------------------------------------------------
-  // 172800 seconds (2 days)
-  GENESIS_DELAY: 172800,
+  // 604800 seconds (7 days)
+  GENESIS_DELAY: 604800,
   // 12 seconds
   SECONDS_PER_SLOT: 12,
   // 2**0 (= 1) slots 12 seconds
@@ -87,16 +89,14 @@ export const mainnetYaml = {
   MIN_SEED_LOOKAHEAD: 1,
   // 2**2 (= 4) epochs 25.6 minutes
   MAX_SEED_LOOKAHEAD: 4,
-  // 2**5 (= 32) epochs ~3.4 hours
-  EPOCHS_PER_ETH1_VOTING_PERIOD: 32,
+  // 2**6 (= 64) epochs ~6.8 hours
+  EPOCHS_PER_ETH1_VOTING_PERIOD: 64,
   // 2**13 (= 8,192) slots ~13 hours
   SLOTS_PER_HISTORICAL_ROOT: 8192,
   // 2**8 (= 256) epochs ~27 hours
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
   // 2**8 (= 256) epochs ~27 hours
   SHARD_COMMITTEE_PERIOD: 256,
-  // 2**6 (= 64) epochs ~7 hours
-  MAX_EPOCHS_PER_CROSSLINK: 64,
   // 2**2 (= 4) epochs 25.6 minutes
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: 4,
 
@@ -119,10 +119,10 @@ export const mainnetYaml = {
   WHISTLEBLOWER_REWARD_QUOTIENT: 512,
   // 2**3 (= 8)
   PROPOSER_REWARD_QUOTIENT: 8,
-  // 2**24 (= 16,777,216)
-  INACTIVITY_PENALTY_QUOTIENT: 16777216,
-  // 2**5 (= 32)
-  MIN_SLASHING_PENALTY_QUOTIENT: 32,
+  // 2**26 (= 67,108,864)
+  INACTIVITY_PENALTY_QUOTIENT: 67108864,
+  // 2**7 (= 128) (lower safety margin at Phase 0 genesis)
+  MIN_SLASHING_PENALTY_QUOTIENT: 128,
 
   // Max operations per block
   // ---------------------------------------------------------------

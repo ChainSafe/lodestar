@@ -1,6 +1,8 @@
 // Minimal preset
 
 export const minimalYaml = {
+  CONFIG_NAME: "minimal",
+
   // Misc
   // ---------------------------------------------------------------
 
@@ -26,8 +28,6 @@ export const minimalYaml = {
   HYSTERESIS_DOWNWARD_MULTIPLIER: 1,
   // 5 (plus 1.25)
   HYSTERESIS_UPWARD_MULTIPLIER: 5,
-  // 3
-  PROPORTIONAL_SLASHING_MULTIPLIER: 3,
 
   // Fork Choice
   // ---------------------------------------------------------------
@@ -94,8 +94,6 @@ export const minimalYaml = {
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
   // [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
   SHARD_COMMITTEE_PERIOD: 64,
-  // [customized] fast catchup crosslinks
-  MAX_EPOCHS_PER_CROSSLINK: 4,
   // 2**2 (= 4) epochs
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: 4,
 
@@ -118,10 +116,12 @@ export const minimalYaml = {
   WHISTLEBLOWER_REWARD_QUOTIENT: 512,
   // 2**3 (= 8)
   PROPOSER_REWARD_QUOTIENT: 8,
-  // 2**24 (= 16,777,216)
-  INACTIVITY_PENALTY_QUOTIENT: 16777216,
-  // 2**5 (= 32)
-  MIN_SLASHING_PENALTY_QUOTIENT: 32,
+  // [customized] 2**25 (= 33,554,432)
+  INACTIVITY_PENALTY_QUOTIENT: 33554432,
+  // [customized] 2**6 (= 64)
+  MIN_SLASHING_PENALTY_QUOTIENT: 64,
+  // [customized] 2 (lower safety margin than Phase 0 genesis but different than mainnet config for testing)
+  PROPORTIONAL_SLASHING_MULTIPLIER: 2,
 
   // Max operations per block
   // ---------------------------------------------------------------
