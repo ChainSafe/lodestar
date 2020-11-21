@@ -14,12 +14,10 @@ export function createIBeaconParams(input: Record<string, unknown>): Partial<IBe
 }
 
 export function loadConfigYaml(configYaml: string): Record<string, unknown> {
-  return load(configYaml, {
-    schema: schemaParseAllNumsAsStrings,
-  });
+  return load(configYaml, {schema});
 }
 
-export const schemaParseAllNumsAsStrings = new Schema({
+export const schema = new Schema({
   include: [FAILSAFE_SCHEMA],
   implicit: [
     new Type("tag:yaml.org,2002:str", {
