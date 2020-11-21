@@ -28,6 +28,8 @@ export const enum ExtendedValidatorResult {
   ignore = "ignore",
 }
 
+export const GOSSIP_MSGID_LENGTH = 20;
+
 /**
  * 4-byte domain for gossip message-id isolation of *invalid* snappy messages
  */
