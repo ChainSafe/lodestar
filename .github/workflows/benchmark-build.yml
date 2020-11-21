@@ -1,0 +1,51 @@
+name: Benchmark build
+
+on: [pull_request, push]
+
+jobs:
+  benchmark-build:
+    name: Benchmark build
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12.14.1"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
+      - name: Install
+        run: yarn install --frozen-lockfile --ignore-optional --ignore-scripts
+      # 1
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 1 Build babel + tsc
+        run: node_modules/.bin/lerna run build
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 1 Build tsc only
+        run: node_modules/.bin/lerna run build:tsc
+      # 2
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 2 Build tsc only
+        run: node_modules/.bin/lerna run build:tsc
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 2 Build babel + tsc
+        run: node_modules/.bin/lerna run build
+      # 3
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 3 Build babel + tsc
+        run: node_modules/.bin/lerna run build
+      - name: Clean
+        run: node_modules/.bin/lerna run clean
+      - name: 3 Build tsc only
+        run: node_modules/.bin/lerna run build:tsc
