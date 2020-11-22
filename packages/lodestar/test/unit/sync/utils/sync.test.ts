@@ -185,7 +185,7 @@ describe("sync utils", function () {
       chainStub.forkChoice = forkChoiceStub;
     });
 
-    it("should work", async function () {
+    it("should not import last fetched block", async function () {
       const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
       const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
       const block1 = generateEmptySignedBlock();
@@ -194,8 +194,12 @@ describe("sync utils", function () {
       const block2 = generateEmptySignedBlock();
       block2.message.slot = 3;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
+      // last fetched block maybe an orphaned block
+      const block3 = generateEmptySignedBlock();
+      block3.message.slot = 4;
+      block3.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block2.message);
       const lastProcesssedSlot = await pipe(
-        [[block2], [block1]],
+        [[block3], [block2], [block1]],
         processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot})
       );
       expect(chainStub.receiveBlock.calledTwice).to.be.true;

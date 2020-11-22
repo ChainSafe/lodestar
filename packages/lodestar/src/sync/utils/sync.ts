@@ -182,7 +182,9 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    while (blockBuffer.length > 0) {
+    // last block may be an orphaned block and some weird peers still return it
+    // we don't want to import it
+    while (blockBuffer.length > 1) {
       const signedBlock = blockBuffer.shift()!;
       const block = signedBlock.message;
       if (
