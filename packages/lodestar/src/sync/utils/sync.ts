@@ -105,7 +105,17 @@ export function fetchBlockChunks(
           return;
         }
         try {
-          yield await getBlockRange(logger, reqResp, peers, slotRange);
+          // a work around of timeout issue that cause our sync stall
+          let timer: NodeJS.Timeout | null = null;
+          yield (await Promise.race([
+            getBlockRange(logger, reqResp, peers, slotRange),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => {
+                reject(new Error("beacon_blocks_by_range timeout"));
+              }, 3 * 60 * 1000); // 3 minutes
+            }),
+          ])) as SignedBeaconBlock[] | null;
+          if (timer) clearTimeout(timer);
         } catch (e) {
           logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
           yield null;
