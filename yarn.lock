@@ -1067,24 +1067,6 @@
     "@chainsafe/eth2-bls-wasm" "^0.5.0"
     assert "^1.4.1"
 
-"@chainsafe/discv5@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.4.2.tgz#e8b7737925ba1a0d80c2d946d821edf501a53d20"
-  integrity sha512-qQN3PPWD1zikEPSVNx7lGiM7gGsveYYxT04KyIWEPOOYr/8b/tvHC6d+jbKPjsccYPbrudYRqdl3u30tZKrryA==
-  dependencies:
-    base64url "^3.0.1"
-    bcrypto "^4.2.8"
-    bigint-buffer "^1.1.5"
-    debug "^4.1.1"
-    dgram "^1.0.1"
-    ip6addr "^0.2.3"
-    is-ip "^3.1.0"
-    libp2p-crypto "^0.18.0"
-    multiaddr "^8.0.0"
-    peer-id "^0.14.1"
-    rlp "^2.2.6"
-    strict-event-emitter-types "^2.0.0"
-
 "@chainsafe/discv5@^0.5.0":
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.5.0.tgz#c97a88a7b09fa5e9102ef94f91cb13fa171834ad"
