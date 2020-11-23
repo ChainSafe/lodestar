@@ -5,5 +5,6 @@
 
 export * from "./primitive";
 export * from "./shard";
+export * from "./misc";
 export * from "./custody";
 export * from "./beacon";
