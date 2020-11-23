@@ -2,9 +2,7 @@ import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
 import {Libp2p} from "libp2p-gossipsub/src/interfaces";
-import {compress, uncompress} from "snappyjs";
-
-import {hash, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkDigest} from "@chainsafe/lodestar-types";
@@ -17,14 +15,9 @@ import {
   getGossipTopic,
   msgIdToString,
 } from "./utils";
-import {
-  ExtendedValidatorResult,
-  GossipEvent,
-  MESSAGE_DOMAIN_INVALID_SNAPPY,
-  MESSAGE_DOMAIN_VALID_SNAPPY,
-} from "./constants";
+import {ExtendedValidatorResult, GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE, ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {getTopicEncoding, GossipEncoding} from "./encoding";
+import {computeMsgId, decodeMessageData, encodeMessageData, GossipEncoding} from "./encoding";
 import {GossipValidationError} from "./errors";
 
 type ValidatorFn = (topic: string, msg: InMessage) => Promise<void>;
@@ -155,10 +148,7 @@ export class LodestarGossipsub extends Gossipsub {
    * Override default `_buildMessage` to snappy-compress the data
    */
   public _buildMessage(msg: InMessage): Promise<InMessage> {
-    const encoding = getTopicEncoding(msg.topicIDs[0]);
-    if (encoding === GossipEncoding.SSZ_SNAPPY) {
-      msg.data = compress(msg.data!);
-    }
+    msg.data = encodeMessageData(msg.topicIDs[0], msg.data!);
     return super._buildMessage(msg);
   }
 
@@ -167,23 +157,9 @@ export class LodestarGossipsub extends Gossipsub {
    */
   public getMsgId(msg: ILodestarGossipMessage): Uint8Array {
     if (!msg.msgId) {
-      msg.msgId = this.computeMsgId(msg);
+      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data!);
     }
     return msg.msgId;
-  }
-
-  private computeMsgId(msg: InMessage): Uint8Array {
-    const encoding = getTopicEncoding(msg.topicIDs[0]);
-    const data = msg.data!;
-    if (encoding === GossipEncoding.SSZ_SNAPPY) {
-      try {
-        const uncompressed = uncompress(data);
-        return hash(Buffer.concat([MESSAGE_DOMAIN_VALID_SNAPPY, uncompressed])).slice(0, 20);
-      } catch (e) {
-        return hash(Buffer.concat([MESSAGE_DOMAIN_INVALID_SNAPPY, data])).slice(0, 20);
-      }
-    }
-    return hash(data).slice(0, 20);
   }
 
   private genericIsValid(message: InMessage): boolean | undefined {
@@ -220,14 +196,13 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   private deserializeGossipMessage(topic: string, msg: InMessage): {object: GossipObject; subnet?: number} {
-    let data = msg.data!;
-    if (getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
-      data = uncompress(data);
-    }
+    const data = decodeMessageData(topic, msg.data!);
+
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
       return {object: this.config.types.Attestation.deserialize(data), subnet};
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
     const gossipEvent = topicToGossipEvent(topic);
