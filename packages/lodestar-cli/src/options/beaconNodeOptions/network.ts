@@ -13,9 +13,8 @@ export interface INetworkArgs {
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
   return {
+    // @ts-ignore
     discv5: {
-      // ### TODO: declare discv5.enable in its types
-      // @ts-ignore
       enabled: args["network.discv5.enabled"],
       bindAddr: args["network.discv5.bindAddr"],
       bootEnrs: args["network.discv5.bootEnrs"],

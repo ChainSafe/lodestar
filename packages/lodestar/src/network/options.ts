@@ -17,6 +17,7 @@ export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
   enr: new ENR(),
   bootEnrs: [],
   enrUpdate: true,
+  enabled: true,
 };
 
 export const defaultNetworkOptions: INetworkOptions = {
