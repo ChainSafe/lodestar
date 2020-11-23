@@ -167,10 +167,10 @@ describe("Json helper", () => {
       {id: "object of objects", json: {a: {b: 1}}, output: `a={"b":1}`},
       {
         id: "error metadata",
-        json: toJson({
+        json: {
           code: "ERR_PARENT_UNKNOWN",
-          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
-        }),
+          parentRoot: "0x1111111111111111111111111111111111",
+        },
         output: "code=ERR_PARENT_UNKNOWN, parentRoot=0x1111111111111111111111111111111111",
       },
 

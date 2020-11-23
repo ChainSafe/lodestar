@@ -1,16 +1,15 @@
 import {Json, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "./errors";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function convertArrayBufferViews(copyArg: any): void {
-  Object.entries(copyArg).forEach(([k, v]) => {
-    if (ArrayBuffer.isView(copyArg[k])) copyArg[k] = toJson(v);
+function convertArrayBufferViews(arg: {[key: string]: Json}): Json {
+  const argClone = {...arg};
+  Object.entries(argClone).forEach(([k, v]) => {
+    if (ArrayBuffer.isView(argClone[k])) argClone[k] = toJson(v);
   });
+  return argClone;
 }
 
 export function toJson(arg: unknown): Json {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let copyArg: any;
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -21,15 +20,11 @@ export function toJson(arg: unknown): Json {
       if (arg === null) return "null";
       if (arg instanceof Uint8Array) return toHexString(arg);
       if (arg instanceof LodestarError) {
-        const copyArg = arg.toObject();
-        convertArrayBufferViews(copyArg);
-        return toJson(copyArg);
+        return toJson(convertArrayBufferViews(arg.toObject()));
       }
       if (arg instanceof Error) return toJson(errorToObject(arg));
       if (arg instanceof Array) return arg as Json;
-      copyArg = Object.assign({}, arg);
-      convertArrayBufferViews(copyArg);
-      return copyArg as Json;
+      return convertArrayBufferViews(Object.assign({}, arg));
 
     // Already valid JSON
     case "number":
