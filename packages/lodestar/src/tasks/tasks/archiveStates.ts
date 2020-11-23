@@ -34,16 +34,16 @@ export class ArchiveStatesTask implements ITask {
 
   public async run(): Promise<void> {
     this.logger.info(`Started archiving states (finalized epoch #${this.finalized.epoch})...`);
-    this.logger.profile("Archive States");
+    this.logger.profile("Archive States epoch #" + this.finalized.epoch);
     // store the state of finalized checkpoint
     const stateCache = await this.db.checkpointStateCache.get(this.finalized);
     if (!stateCache) {
-      throw Error("No state in cache for finalized checkpoint state");
+      throw Error("No state in cache for finalized checkpoint state epoch #" + this.finalized.epoch);
     }
     const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
     this.logger.info(`Archiving of finalized states completed (finalized epoch #${this.finalized.epoch})`);
-    this.logger.profile("Archive States");
+    this.logger.profile("Archive States epoch #" + this.finalized.epoch);
   }
 }
