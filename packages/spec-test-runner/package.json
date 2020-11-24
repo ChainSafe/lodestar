@@ -20,6 +20,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
     "test:ssz": "mocha 'test/spec/ssz/**/*.test.ts'",
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
     "test:ssz-main": "mocha 'test/spec/ssz/**/*mainnet.test.ts'",
@@ -43,7 +44,9 @@
     "@chainsafe/lodestar-utils": "^0.11.0",
     "@chainsafe/lodestar-validator": "^0.11.0",
     "@chainsafe/ssz": "^0.6.13",
-    "@types/yargs": "^13.0.2"
+    "@types/tar": "^4.0.4",
+    "@types/yargs": "^13.0.2",
+    "tar": "^6.0.5"
   },
   "keywords": [
     "Ethereum",
