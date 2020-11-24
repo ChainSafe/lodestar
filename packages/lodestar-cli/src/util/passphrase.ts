@@ -4,7 +4,7 @@ import {writeFile600Perm} from "./fs";
 import {getValidatorPassphrasePath} from "../validatorDir/paths";
 
 /**
- * Utility to read file as UTF8 and strip any trailing new lines
+ * Utility to read file as UTF8 and strip any trailing new lines.
  * All passphrase files must be read with this function
  */
 export function readPassphraseFile(passphraseFile: string): string {

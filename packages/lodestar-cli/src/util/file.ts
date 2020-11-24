@@ -32,6 +32,9 @@ export enum FileFormat {
   toml = "toml",
 }
 
+/**
+ * Parse file contents as Json.
+ */
 export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
   switch (fileFormat) {
     case FileFormat.json:
@@ -43,6 +46,10 @@ export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
       throw new Error("Invalid filetype");
   }
 }
+
+/**
+ * Stringify file contents.
+ */
 export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
   let contents: string;
   switch (fileFormat) {
@@ -133,6 +140,9 @@ export async function downloadOrLoadFile(pathOrUrl: string): Promise<Uint8Array>
   }
 }
 
+/**
+ * Returns boolean for whether the string is a URL.
+ */
 function isUrl(pathOrUrl: string): boolean {
   return pathOrUrl.startsWith("http");
 }
