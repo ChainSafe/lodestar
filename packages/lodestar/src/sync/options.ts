@@ -9,7 +9,7 @@ export interface ISyncOptions {
 }
 
 export const defaultSyncOptions: Required<ISyncOptions> = {
-  minPeers: 4,
+  minPeers: 3,
   //2 epochs
   maxSlotImport: 64,
   blockPerChunk: 64,

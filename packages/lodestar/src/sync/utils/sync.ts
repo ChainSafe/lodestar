@@ -16,6 +16,9 @@ import {IPeerMetadataStore} from "../../network/peers/interface";
 import {getSyncPeers} from "./peers";
 import {DEFAULT_RPC_SCORE} from "../../network/peers";
 
+// timeout for getBlockRange is 3 minutes
+const GET_BLOCK_RANGE_TIMEOUT = 3 * 60 * 1000;
+
 export function getHighestCommonSlot(peerStatuses: (Status | null)[]): Slot {
   const slotStatuses = peerStatuses.reduce<Map<Slot, number>>((current, status) => {
     if (status && current.has(status.headSlot)) {
@@ -112,7 +115,7 @@ export function fetchBlockChunks(
             new Promise((_, reject) => {
               timer = setTimeout(() => {
                 reject(new Error("beacon_blocks_by_range timeout"));
-              }, 3 * 60 * 1000); // 3 minutes
+              }, GET_BLOCK_RANGE_TIMEOUT);
             }),
           ])) as SignedBeaconBlock[] | null;
           if (timer) clearTimeout(timer);
