@@ -1092,11 +1092,6 @@
   dependencies:
     buffer "^5.4.3"
 
-"@chainsafe/eth2-spec-tests@0.12.3":
-  version "0.12.3"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eth2-spec-tests/-/eth2-spec-tests-0.12.3.tgz#c2b4157a74505423612e4ab48ee0ee8745655dff"
-  integrity sha512-1MPLUSuW5RoSobf2p6/h5d3nDPYChkFcC7217f5cYO0Y8aUnPN4we3OYSHzyRTTUzB5DWXDjLe0RczCeBZX7Sg==
-
 "@chainsafe/persistent-merkle-tree@^0.2.1":
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.2.1.tgz#38eb5fd5772fd256e94639d0621fa606addebab1"

@@ -67,8 +67,5 @@
     "typescript": "^3.8.3",
     "webpack": "^4.42.0"
   },
-  "optionalDependencies": {
-    "@chainsafe/eth2-spec-tests": "0.12.3"
-  },
   "dependencies": {}
 }
