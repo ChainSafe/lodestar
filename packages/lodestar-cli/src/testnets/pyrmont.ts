@@ -11,7 +11,7 @@ export const beaconParams: IBeaconParamsUnparsed = {
 
   MIN_GENESIS_TIME: 1605700800, // Wednesday, November 18, 2020 12:00:00 PM UTC
   GENESIS_DELAY: 432000,
-  GENESIS_FORK_VERSION: 0x00002009,
+  GENESIS_FORK_VERSION: "0x00002009",
 };
 
 export const depositContractDeployBlock = 3743587;
