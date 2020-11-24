@@ -192,17 +192,23 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    // last block may be an orphaned block and some weird peers still return it
-    // we don't want to import it
+    // can't check linear chain for last block
+    // so we don't want to import it
     while (blockBuffer.length > 1) {
       const signedBlock = blockBuffer.shift()!;
+      const nextBlock = blockBuffer[0];
       const block = signedBlock.message;
+      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+      // only import blocks that's part of a linear chain
       if (
         !isInitialSync ||
-        (isInitialSync && block.slot > headSlot! && config.types.Root.equals(headRoot!, block.parentRoot))
+        (isInitialSync &&
+          block.slot > headSlot! &&
+          config.types.Root.equals(headRoot!, block.parentRoot) &&
+          config.types.Root.equals(blockRoot, nextBlock.message.parentRoot))
       ) {
         await chain.receiveBlock(signedBlock, trusted);
-        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+        headRoot = blockRoot;
         headSlot = block.slot;
         if (block.slot > lastProcessedSlot!) {
           lastProcessedSlot = block.slot;
