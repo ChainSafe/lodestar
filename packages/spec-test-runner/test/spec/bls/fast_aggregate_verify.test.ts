@@ -2,6 +2,8 @@ import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 import bls, {initBLS} from "@chainsafe/bls";
 
+import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+
 interface IAggregateSigsVerifyTestCase {
   data: {
     input: {
@@ -23,10 +25,7 @@ before(async function f() {
 
 describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
   "BLS - aggregate sigs verify",
-  path.join(
-    __dirname,
-    "../../../../../node_modules/@chainsafe/eth2-spec-tests/tests/general/phase0/bls/fast_aggregate_verify/small"
-  ),
+  path.join(SPEC_TEST_LOCATION, "tests/general/phase0/bls/fast_aggregate_verify/small"),
   (testCase) => {
     return bls.verifyAggregate(
       testCase.data.input.pubkeys.map((key) => Buffer.from(key.replace("0x", ""), "hex")),
