@@ -19,7 +19,7 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
-    "build": "yarn run build:lib && yarn run build:types",
+    "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
