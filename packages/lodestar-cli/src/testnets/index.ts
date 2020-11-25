@@ -6,9 +6,10 @@ import * as altona from "./altona";
 import * as medalla from "./medalla";
 import * as spadina from "./spadina";
 import * as zinken from "./zinken";
+import * as pyrmont from "./pyrmont";
 
-export type TestnetName = "altona" | "medalla" | "spadina" | "zinken";
-export const testnetNames: TestnetName[] = ["altona", "medalla", "spadina", "zinken"];
+export type TestnetName = "altona" | "medalla" | "spadina" | "zinken" | "pyrmont";
+export const testnetNames: TestnetName[] = ["altona", "medalla", "spadina", "zinken", "pyrmont"];
 
 function getTestnetData(
   testnet: TestnetName
@@ -28,6 +29,8 @@ function getTestnetData(
       return spadina;
     case "zinken":
       return zinken;
+    case "pyrmont":
+      return pyrmont;
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
