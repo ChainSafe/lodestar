@@ -2,12 +2,15 @@ import {ByteVectorType, ContainerType, ListType, VectorType} from "@chainsafe/ss
 import * as t from "../../../types/phase1/types";
 import {Phase1Generator} from "./interface";
 
-export const CustodyChunkChallenge: Phase1Generator<ContainerType<t.CustodyChunkChallenge>> = (params, types) => {
+export const CustodyChunkChallenge: Phase1Generator<
+  ContainerType<t.CustodyChunkChallenge>,
+  "ShardTransition" | "Attestation"
+> = (params, types, phase1Types) => {
   return new ContainerType({
     fields: {
       responderIndex: types.ValidatorIndex,
-      shardTransition: types.phase1.ShardTransition,
-      attestation: types.phase1.Attestation,
+      shardTransition: phase1Types.ShardTransition,
+      attestation: phase1Types.Attestation,
       dataIndex: types.Uint64,
       chunkIndex: types.Uint64,
     },
@@ -46,15 +49,19 @@ export const CustodyChunkResponse: Phase1Generator<ContainerType<t.CustodyChunkR
   });
 };
 
-export const CustodySlashing: Phase1Generator<ContainerType<t.CustodySlashing>> = (params, types) => {
+export const CustodySlashing: Phase1Generator<ContainerType<t.CustodySlashing>, "ShardTransition" | "Attestation"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
       dataIndex: types.Uint64,
       malefactorIndex: types.ValidatorIndex,
       malefactorSecret: types.BLSSignature,
       whistleblowerIndex: types.ValidatorIndex,
-      shardTransition: types.phase1.ShardTransition,
-      attestation: types.phase1.Attestation,
+      shardTransition: phase1Types.ShardTransition,
+      attestation: phase1Types.Attestation,
       data: new ListType({
         elementType: types.Uint8,
         limit: params.phase1.MAX_SHARD_BLOCK_SIZE,
@@ -63,10 +70,14 @@ export const CustodySlashing: Phase1Generator<ContainerType<t.CustodySlashing>> 
   });
 };
 
-export const SignedCustodySlashing: Phase1Generator<ContainerType<t.SignedCustodySlashing>> = (params, types) => {
+export const SignedCustodySlashing: Phase1Generator<ContainerType<t.SignedCustodySlashing>, "CustodySlashing"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
-      message: types.phase1.CustodySlashing,
+      message: phase1Types.CustodySlashing,
       signature: types.BLSSignature,
     },
   });

@@ -2,13 +2,13 @@ import {ContainerType, ListType} from "@chainsafe/ssz";
 import * as t from "../../../types/phase1/types";
 import {Phase1Generator} from "./interface";
 
-export const ShardBlock: Phase1Generator<ContainerType<t.ShardBlock>> = (params, types) => {
+export const ShardBlock: Phase1Generator<ContainerType<t.ShardBlock>, "Shard"> = (params, types, phase1Types) => {
   return new ContainerType({
     fields: {
       shardParentRoot: types.Root,
       beaconParentRoot: types.Root,
       slot: types.Slot,
-      shard: types.phase1.Shard,
+      shard: phase1Types.Shard,
       proposerIndex: types.ValidatorIndex,
       body: new ListType({
         elementType: types.Uint8,
@@ -18,22 +18,30 @@ export const ShardBlock: Phase1Generator<ContainerType<t.ShardBlock>> = (params,
   });
 };
 
-export const SignedShardBlock: Phase1Generator<ContainerType<t.SignedShardBlock>> = (params, types) => {
+export const SignedShardBlock: Phase1Generator<ContainerType<t.SignedShardBlock>, "ShardBlock"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
-      message: types.phase1.ShardBlock,
+      message: phase1Types.ShardBlock,
       signature: types.BLSSignature,
     },
   });
 };
 
-export const ShardBlockHeader: Phase1Generator<ContainerType<t.ShardBlockHeader>> = (params, types) => {
+export const ShardBlockHeader: Phase1Generator<ContainerType<t.ShardBlockHeader>, "Shard"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
       shardParentRoot: types.Root,
       beaconParentRoot: types.Root,
       slot: types.Slot,
-      shard: types.phase1.Shard,
+      shard: phase1Types.Shard,
       proposerIndex: types.ValidatorIndex,
       bodyRoot: types.Root,
     },
@@ -50,7 +58,11 @@ export const ShardState: Phase1Generator<ContainerType<t.ShardState>> = (params,
   });
 };
 
-export const ShardTransition: Phase1Generator<ContainerType<t.ShardTransition>> = (params, types) => {
+export const ShardTransition: Phase1Generator<ContainerType<t.ShardTransition>, "ShardState"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
       startSlot: types.Slot,
@@ -63,7 +75,7 @@ export const ShardTransition: Phase1Generator<ContainerType<t.ShardTransition>> 
         limit: params.phase1.MAX_SHARD_BLOCKS_PER_ATTESTATION,
       }),
       shardStates: new ListType({
-        elementType: types.phase1.ShardState,
+        elementType: phase1Types.ShardState,
         limit: params.phase1.MAX_SHARD_BLOCKS_PER_ATTESTATION,
       }),
       proposerSignatureAggregate: types.BLSSignature,

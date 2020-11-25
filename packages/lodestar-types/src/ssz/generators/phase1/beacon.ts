@@ -2,42 +2,52 @@ import {BitVectorType, ContainerType, ListType, VectorType} from "@chainsafe/ssz
 import * as t from "../../../types/phase1/types";
 import {Phase1Generator} from "./interface";
 
-export const BeaconBlockBody: Phase1Generator<ContainerType<t.BeaconBlockBody>> = (params, types) => {
+export const BeaconBlockBody: Phase1Generator<
+  ContainerType<t.BeaconBlockBody>,
+  | "Attestation"
+  | "AttesterSlashing"
+  | "CustodyChunkChallenge"
+  | "CustodyChunkResponse"
+  | "CustodyKeyReveal"
+  | "EarlyDerivedSecretReveal"
+  | "SignedCustodySlashing"
+  | "ShardTransition"
+> = (params, types, phase1Types) => {
   return new ContainerType({
     fields: {
       ...types.BeaconBlockBody.fields,
       //override old types
       attestations: new ListType({
-        elementType: types.phase1.Attestation,
+        elementType: phase1Types.Attestation,
         limit: params.MAX_ATTESTATIONS,
       }),
       attesterSlashings: new ListType({
-        elementType: types.phase1.AttesterSlashing,
+        elementType: phase1Types.AttesterSlashing,
         limit: params.MAX_ATTESTER_SLASHINGS,
       }),
       //new properties
       chunkChallenges: new ListType({
-        elementType: types.phase1.CustodyChunkChallenge,
+        elementType: phase1Types.CustodyChunkChallenge,
         limit: params.phase1.MAX_CUSTODY_CHUNK_CHALLENGES,
       }),
       chunkChallengeResponses: new ListType({
-        elementType: types.phase1.CustodyChunkResponse,
+        elementType: phase1Types.CustodyChunkResponse,
         limit: params.phase1.MAX_CUSTODY_CHUNK_CHALLENGE_RESPONSES,
       }),
       custodyKeyReveals: new ListType({
-        elementType: types.phase1.CustodyKeyReveal,
+        elementType: phase1Types.CustodyKeyReveal,
         limit: params.phase1.MAX_CUSTODY_KEY_REVEALS,
       }),
       earlyDerivedSecretReveals: new ListType({
-        elementType: types.phase1.EarlyDerivedSecretReveal,
+        elementType: phase1Types.EarlyDerivedSecretReveal,
         limit: params.phase1.MAX_EARLY_DERIVED_SECRET_REVEALS,
       }),
       custodySlashing: new ListType({
-        elementType: types.phase1.SignedCustodySlashing,
+        elementType: phase1Types.SignedCustodySlashing,
         limit: params.phase1.MAX_CUSTODY_SLASHINGS,
       }),
       shardTransitions: new VectorType({
-        elementType: types.phase1.ShardTransition,
+        elementType: phase1Types.ShardTransition,
         length: params.phase1.MAX_SHARDS,
       }),
       lightClientBits: new BitVectorType({length: params.phase1.LIGHT_CLIENT_COMMITTEE_SIZE}),
@@ -46,49 +56,66 @@ export const BeaconBlockBody: Phase1Generator<ContainerType<t.BeaconBlockBody>> 
   });
 };
 
-export const BeaconBlock: Phase1Generator<ContainerType<t.BeaconBlock>> = (params, types) => {
+export const BeaconBlock: Phase1Generator<ContainerType<t.BeaconBlock>, "BeaconBlockBody"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
       ...types.BeaconBlock.fields,
-      body: types.phase1.BeaconBlockBody,
+      body: phase1Types.BeaconBlockBody,
     },
   });
 };
 
-export const SignedBeaconBlock: Phase1Generator<ContainerType<t.SignedBeaconBlock>> = (params, types) => {
+export const SignedBeaconBlock: Phase1Generator<ContainerType<t.SignedBeaconBlock>, "BeaconBlock"> = (
+  params,
+  types,
+  phase1Types
+) => {
   return new ContainerType({
     fields: {
       ...types.SignedBeaconBlock.fields,
-      message: types.phase1.BeaconBlock,
+      message: phase1Types.BeaconBlock,
     },
   });
 };
 
-export const BeaconState: Phase1Generator<ContainerType<t.BeaconState>> = (params, types) => {
+export const BeaconState: Phase1Generator<
+  ContainerType<t.BeaconState>,
+  | "Validator"
+  | "PendingAttestation"
+  | "Shard"
+  | "ShardState"
+  | "OnlineEpochs"
+  | "CompactCommittee"
+  | "CustodyChunkChallengeRecord"
+> = (params, types, phase1Types) => {
   return new ContainerType({
     fields: {
       ...types.BeaconState.fields,
-      validator: types.phase1.Validator,
+      validator: phase1Types.Validator,
       previousEpochAttestations: new ListType({
-        elementType: types.phase1.PendingAttestation,
+        elementType: phase1Types.PendingAttestation,
         limit: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
       }),
       currentEpochAttestations: new ListType({
-        elementType: types.phase1.PendingAttestation,
+        elementType: phase1Types.PendingAttestation,
         limit: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
       }),
       //phase1
-      currentEpochStartShard: types.phase1.Shard,
+      currentEpochStartShard: phase1Types.Shard,
       shardStates: new ListType({
-        elementType: types.phase1.ShardState,
+        elementType: phase1Types.ShardState,
         limit: params.phase1.MAX_SHARDS,
       }),
       onlineCountdown: new ListType({
-        elementType: types.phase1.OnlineEpochs,
+        elementType: phase1Types.OnlineEpochs,
         limit: params.VALIDATOR_REGISTRY_LIMIT,
       }),
-      currentLightCommittee: types.phase1.CompactCommittee,
-      nextLightCommittee: types.phase1.CompactCommittee,
+      currentLightCommittee: phase1Types.CompactCommittee,
+      nextLightCommittee: phase1Types.CompactCommittee,
       exposedDerivedSecrets: new VectorType({
         elementType: new ListType({
           elementType: types.ValidatorIndex,
@@ -97,7 +124,7 @@ export const BeaconState: Phase1Generator<ContainerType<t.BeaconState>> = (param
         length: params.phase1.EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS,
       }),
       custodyChunkChallengeRecords: new ListType({
-        elementType: types.phase1.CustodyChunkChallengeRecord,
+        elementType: phase1Types.CustodyChunkChallengeRecord,
         limit: params.phase1.MAX_CUSTODY_CHUNK_CHALLENGE_RECORDS,
       }),
       custodyChunkChallengeIndex: types.Uint64,

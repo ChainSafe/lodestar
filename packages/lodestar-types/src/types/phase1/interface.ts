@@ -12,7 +12,7 @@ export interface IPhase1SSZTypes {
   PendingAttestation: ContainerType<types.PendingAttestation>;
   IndexedAttestation: ContainerType<types.IndexedAttestation>;
   AttesterSlashing: ContainerType<types.AttesterSlashing>;
-  Validator: ContainerType<types.AttesterSlashing>;
+  Validator: ContainerType<types.Validator>;
 
   //shard
   ShardBlock: ContainerType<types.ShardBlock>;
