@@ -8,8 +8,10 @@ import phase1MinimalYaml from "../phase1/presets/minimal.yaml";
 import {createParams, schema} from "../utils";
 import {IBeaconParams} from "../interface";
 import {IPhase1Params} from "../phase1";
+import {BeaconParams} from "..";
+import {Phase1Params} from "../phase1";
 
 export const params: IBeaconParams = {
-  ...createParams<IBeaconParams>(load(minimalYaml, {schema})),
-  phase1: createParams<IPhase1Params>(load(phase1MinimalYaml, {schema})) as IPhase1Params,
+  ...createParams<IBeaconParams>(load(minimalYaml, {schema}), BeaconParams),
+  phase1: createParams<IPhase1Params>(load(phase1MinimalYaml, {schema}), Phase1Params),
 };

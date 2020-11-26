@@ -7,9 +7,10 @@ import mainnetYaml from "./mainnet.yaml";
 import phase1MainnetYaml from "../phase1/presets/mainnet.yaml";
 import {createParams, schema} from "../utils";
 import {IBeaconParams} from "../interface";
-import {IPhase1Params} from "../phase1";
+import {IPhase1Params, Phase1Params} from "../phase1";
+import {BeaconParams} from "..";
 
 export const params: IBeaconParams = {
-  ...createParams<IBeaconParams>(load(mainnetYaml, {schema})),
-  phase1: createParams<IPhase1Params>(load(phase1MainnetYaml, {schema})) as IPhase1Params,
+  ...createParams<IBeaconParams>(load(mainnetYaml, {schema}), BeaconParams),
+  phase1: createParams<IPhase1Params>(load(phase1MainnetYaml, {schema}), Phase1Params),
 };

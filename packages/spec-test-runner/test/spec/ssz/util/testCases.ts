@@ -1,11 +1,10 @@
+import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
 import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
-import {join} from "path";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
-import {expect} from "chai";
-
-import {IBaseSSZStaticTestCase} from "../type";
 import {CompositeType} from "@chainsafe/ssz";
+import {expect} from "chai";
+import {join} from "path";
+import {IBaseSSZStaticTestCase} from "../type";
 
 export const TEST_CASE_LOCATION = "../../../../../../node_modules/@chainsafe/eth2-spec-tests";
 
@@ -14,7 +13,7 @@ interface IResult {
   serialized: Uint8Array;
 }
 
-export function testStatic(type: keyof IBeaconSSZTypes): void {
+export function testStatic(type: Exclude<keyof IBeaconSSZTypes, "phase1">): void {
   const Type = safeType(config.types[type]) as CompositeType<any>;
   ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
