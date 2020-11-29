@@ -1,7 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {IKeypair, IPrivateKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -41,7 +41,7 @@ export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   // order is important
-  private readonly privateKeys: PrivateKey[] = [];
+  private readonly privateKeys: IPrivateKey[] = [];
   // order is important
   private readonly publicKeys: BLSPubkey[] = [];
   // order is important
@@ -54,7 +54,7 @@ export class AttestationService {
 
   public constructor(
     config: IBeaconConfig,
-    keypairs: Keypair[],
+    keypairs: IKeypair[],
     rpcClient: IApiClient,
     slashingProtection: ISlashingProtection,
     logger: ILogger
@@ -63,7 +63,7 @@ export class AttestationService {
     this.provider = rpcClient;
     keypairs.forEach((keypair) => {
       this.privateKeys.push(keypair.privateKey);
-      this.publicKeys.push(keypair.publicKey.toBytesCompressed());
+      this.publicKeys.push(keypair.publicKey.toBytes());
       this.validators.push(null);
     });
     this.slashingProtection = slashingProtection;
@@ -315,7 +315,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, aggregate.data.slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
-    return this.privateKeys[aggregatorIndex].signMessage(signingRoot).toBytesCompressed();
+    return this.privateKeys[aggregatorIndex].sign(signingRoot).toBytes();
   }
 
   private getSlotSignature(attesterIndex: number, slot: Slot, fork: Fork, genesisValidatorsRoot: Root): BLSSignature {
@@ -326,7 +326,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    return this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed();
+    return this.privateKeys[attesterIndex].sign(signingRoot).toBytes();
   }
 
   private async createAttestation(duty: IAttesterDuty, fork: Fork, genesisValidatorsRoot: Root): Promise<Attestation> {
@@ -356,7 +356,7 @@ export class AttestationService {
     const attestation: Attestation = {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
-      signature: this.privateKeys[attesterIndex].signMessage(signingRoot).toBytesCompressed(),
+      signature: this.privateKeys[attesterIndex].sign(signingRoot).toBytes(),
     };
     this.logger.info(
       `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +

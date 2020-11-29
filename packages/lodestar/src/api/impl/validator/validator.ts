@@ -2,7 +2,7 @@
  * @module api/rpc
  */
 
-import {Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -129,9 +129,10 @@ export class ValidatorApi implements IValidatorApi {
 
     const aggregate = attestations.reduce((current, attestation) => {
       try {
-        current.signature = Signature.fromCompressedBytes(current.signature.valueOf() as Uint8Array)
-          .add(Signature.fromCompressedBytes(attestation.signature.valueOf() as Uint8Array))
-          .toBytesCompressed();
+        current.signature = bls.aggregateSignatures([
+          current.signature.valueOf() as Uint8Array,
+          attestation.signature.valueOf() as Uint8Array,
+        ]);
         let index = 0;
         for (const bit of attestation.aggregationBits) {
           if (bit) {

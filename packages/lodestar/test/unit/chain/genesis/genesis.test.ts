@@ -1,12 +1,12 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
+import bls, {IKeypair} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {ErrorAborted, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
+import {interopKeypair} from "@chainsafe/lodestar-validator";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
@@ -21,26 +21,19 @@ describe("genesis builder", function () {
     MIN_GENESIS_DELAY: 3600,
   });
 
-  before(async function f() {
-    try {
-      await initBLS();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log(e);
-    }
-  });
-
   function generateGenesisBuilderMockData(): {
     events: DepositEvent[];
-    keypairs: Keypair[];
+    keypairs: IKeypair[];
     blocks: Eth1Block[];
   } {
     const events: DepositEvent[] = [];
-    const keypairs: Keypair[] = [];
+    const keypairs: IKeypair[] = [];
     const blocks: Eth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
-      const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
+      const privateKey = bls.PrivateKey.fromBytes(interopKeypair(i).privkey);
+      const publicKey = privateKey.toPublicKey();
+      const keypair = {privateKey, publicKey};
       const event: DepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
       keypairs.push(keypair);
       events.push(event);
@@ -115,14 +108,14 @@ describe("genesis builder", function () {
   });
 });
 
-function generateDeposit(index: ValidatorIndex, keypair: Keypair): DepositData {
+function generateDeposit(index: ValidatorIndex, keypair: IKeypair): DepositData {
   const domain = computeDomain(config, DomainType.DEPOSIT);
   const depositMessage = {
-    pubkey: keypair.publicKey.toBytesCompressed(),
+    pubkey: keypair.publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
     amount: BigInt(32) * BigInt("1000000000000000000"),
   };
   const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
-  const signature = keypair.privateKey.signMessage(signingRoot);
-  return {...depositMessage, signature: signature.toBytesCompressed()};
+  const signature = keypair.privateKey.sign(signingRoot);
+  return {...depositMessage, signature: signature.toBytes()};
 }

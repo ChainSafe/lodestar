@@ -1,4 +1,4 @@
-import {Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
@@ -39,7 +39,7 @@ export function isValidIndexedAttestation(
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
   const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
   try {
-    return Signature.fromCompressedBytes(indexedAttestation.signature.valueOf() as Uint8Array).verifyAggregate(
+    return bls.Signature.fromBytes(indexedAttestation.signature.valueOf() as Uint8Array).verifyAggregate(
       pubkeys,
       signingRoot
     );

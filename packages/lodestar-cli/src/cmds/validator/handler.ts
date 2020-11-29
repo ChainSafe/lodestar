@@ -1,5 +1,5 @@
 import fs from "fs";
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
@@ -17,7 +17,7 @@ import {onGracefulShutdown} from "../../util/process";
  * Run a validator client
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
+  await init("blst-native");
 
   const server = args.server;
   const force = args.force;

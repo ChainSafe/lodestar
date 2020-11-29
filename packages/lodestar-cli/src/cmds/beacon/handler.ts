@@ -1,6 +1,6 @@
 import {AbortController} from "abort-controller";
 
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {consoleTransport, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
@@ -20,7 +20,7 @@ import {initBeaconState} from "./initBeaconState";
  * Run a beacon node
  */
 export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
+  await init("blst-native");
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
   await persistOptionsAndConfig(args, beaconNodeOptions, config);

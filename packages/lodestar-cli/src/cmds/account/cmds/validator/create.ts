@@ -1,4 +1,4 @@
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
@@ -72,7 +72,7 @@ and pre-computed deposit RPL data",
 
   handler: async (args) => {
     // Necessary to compute validator pubkey from privKey
-    await initBLS();
+    await init("blst-native");
 
     const config = getBeaconConfigFromArgs(args);
 

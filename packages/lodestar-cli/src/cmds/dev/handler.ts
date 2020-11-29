@@ -3,7 +3,7 @@ import path from "path";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -26,7 +26,7 @@ import {defaultRootDir} from "../../paths/global";
  * Run a beacon node with validator
  */
 export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
+  await init("blst-native");
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
 

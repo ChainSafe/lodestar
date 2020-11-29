@@ -1,6 +1,6 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
-import bls, {initBLS} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
@@ -13,10 +13,6 @@ interface ISignMessageTestCase {
     output: string;
   };
 }
-
-before(async function f() {
-  await initBLS();
-});
 
 describeDirectorySpecTest<ISignMessageTestCase, string>(
   "BLS - sign",

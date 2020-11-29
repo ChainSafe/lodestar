@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import {parentPort, workerData} from "worker_threads";
 
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
@@ -9,7 +9,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidator} from "../../utils/node/validator";
 
 (async function () {
-  await initBLS();
+  await init("herumi");
 
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent} = workerData.options;
 

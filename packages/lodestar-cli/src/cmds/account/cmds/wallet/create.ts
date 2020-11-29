@@ -6,7 +6,7 @@ import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 
 export const command = "create";
 
@@ -75,7 +75,7 @@ wallets are supported presently.",
   },
 
   handler: async (args) => {
-    await initBLS();
+    await init("blst-native");
 
     const {name, type, passphraseFile, mnemonicOutputPath} = args;
     const accountPaths = getAccountPaths(args);

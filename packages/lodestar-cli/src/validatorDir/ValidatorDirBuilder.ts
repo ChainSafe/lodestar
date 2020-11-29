@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PublicKey, PrivateKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ValidatorDir} from "./ValidatorDir";
@@ -73,8 +73,8 @@ export class ValidatorDirBuilder {
     }
     fs.mkdirSync(dir, {recursive: true});
 
-    const withdrawalPublicKey = PublicKey.fromHex(keystores.withdrawal.pubkey);
-    const votingPrivateKey = PrivateKey.fromBytes(await keystores.signing.decrypt(passwords.signing));
+    const withdrawalPublicKey = bls.PublicKey.fromHex(keystores.withdrawal.pubkey);
+    const votingPrivateKey = bls.PrivateKey.fromBytes(await keystores.signing.decrypt(passwords.signing));
 
     // Save `ETH1_DEPOSIT_DATA_FILE` to file.
     // This allows us to know the RLP data for the eth1 transaction without needing to know

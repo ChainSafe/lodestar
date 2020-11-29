@@ -1,6 +1,7 @@
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
+import bls from "@chainsafe/bls";
 /**
  * Generates a single fake validator, for tests purposes only.
  * @returns {Validator}
@@ -10,7 +11,7 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activationEpoch || opts.activationEpoch === 0 ? opts.activationEpoch : FAR_FUTURE_EPOCH;
   return {
-    pubkey: opts.pubkey || Buffer.alloc(48),
+    pubkey: opts.pubkey || bls.PrivateKey.fromKeygen().toPublicKey().toBytes(),
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
