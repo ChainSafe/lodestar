@@ -13,7 +13,7 @@ export interface IBeaconPaths {
 }
 
 /**
- * Defines the path structure of the account files
+ * Defines the path structure of the files relevant to the beacon node
  *
  * ```bash
  * $rootDir

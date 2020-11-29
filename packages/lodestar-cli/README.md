@@ -19,8 +19,15 @@ Command line tool for Lodestar
 
 We have an experimental new CLI called `lodestar` which currently provides a subset of the `lodestar` CLI functionality.
 
-`./bin/lodestar beacon init` - this will write a configuration and network identity to disk, by default `./.lodestar`
-`./bin/lodestar beacon run` - this will run a beacon node using a configuration from disk, by default `./.lodestar`
+
+`./bin/lodestar init` - Write a configuration and network identity to disk, by default `./.lodestar`
+`./bin/lodestar beacon` - Run a beacon node using a configuration from disk, by default `./.lodestar`
+`./bin/lodestar account` - Run various subcommands for creating/managing Eth2 accounts
+`./bin/lodestar validator` - Run one or more validator clients
+`./bin/lodestar dev` - Quickly bootstrap a beacon node and multiple validators. Use for development and
+testing
+
+For full documentation on cli commands and options, see the [Command Line Reference](https://chainsafe.github.io/lodestar/reference/cli/)
 
 ## License
 

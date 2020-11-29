@@ -36,6 +36,7 @@ export function getLodestarCli(): yargs.Argv {
     registerCommandToYargs(lodestar, cmd);
   }
 
+  // throw an error if we see an unrecognized cmd
   lodestar.recommendCommands().strict();
 
   return lodestar;
