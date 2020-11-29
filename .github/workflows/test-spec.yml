@@ -29,6 +29,9 @@ jobs:
         run: node_modules/.bin/lerna run build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
+      - name: Download spec tests
+        run: yarn download-test-cases
+        working-directory: packages/spec-test-runner
       - name: Spec min
         run: yarn test:spec-min
         working-directory: packages/spec-test-runner

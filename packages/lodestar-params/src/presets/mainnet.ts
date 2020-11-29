@@ -1,8 +1,7 @@
-import {load} from "js-yaml";
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-import mainnetYaml from "./mainnet.yaml";
-import {createIBeaconParams, schema} from "../utils";
+import {mainnetYaml} from "./mainnetYaml";
+import {createIBeaconParams, mapValuesNumToString} from "../utils";
 import {IBeaconParams} from "../interface";
 
-export const params = createIBeaconParams(load(mainnetYaml, {schema})) as IBeaconParams;
+export const commit = "v1.0.0";
+export const yaml = mapValuesNumToString(mainnetYaml);
+export const params = createIBeaconParams(yaml) as IBeaconParams;

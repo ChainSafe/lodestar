@@ -28,7 +28,7 @@
     "lint": "eslint --color --ext .ts src/",
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
-    "test": "yarn run check-types"
+    "test:e2e": "mocha 'test/**/*.test.ts'"
   },
   "repository": {
     "type": "git",
@@ -43,9 +43,8 @@
   "dependencies": {
     "@chainsafe/ssz": "^0.6.13",
     "@types/js-yaml": "^3.12.2",
+    "axios": "^0.21.0",
     "js-yaml": "^3.13.1"
   },
-  "devDependencies": {
-    "babel-plugin-inline-import": "^3.0.0"
-  }
+  "devDependencies": {}
 }
