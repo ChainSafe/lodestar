@@ -2,7 +2,10 @@
  * @module params
  */
 
+import {IPhase1Params} from "./phase1";
+
 export interface IBeaconParams {
+  phase1: IPhase1Params;
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;

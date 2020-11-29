@@ -93,6 +93,12 @@ module.exports = {
         "import/no-extraneous-dependencies": "off",
         "@typescript-eslint/no-explicit-any": "off"
       }
+    },
+    {
+      "files": ["**/lodestar-types/src/**/*.ts"],
+      "rules": {
+        "@typescript-eslint/interface-name-prefix": "off"
+      }
     }
   ]
 };
