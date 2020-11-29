@@ -50,16 +50,13 @@ describe("Json helper", () => {
       // Objects
       {id: "object of basic types", arg: {a: 1, b: 2}, json: {a: 1, b: 2}},
       {id: "object of objects", arg: {a: {b: 1}}, json: {a: {b: 1}}},
-      {
-        id: "error metadata",
-        arg: {
-          code: "ERR_PARENT_UNKNOWN",
-          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
-        },
-        json: {
-          code: "ERR_PARENT_UNKNOWN",
-          parentRoot: "0x1111111111111111111111111111111111",
-        },
+      () => {
+        const rootHex = "0x11111111111111111111111111111111";
+        return {
+          id: "Object with Uint8Array prop",
+          arg: {root: fromHexString(rootHex)},
+          json: {root: rootHex},
+        };
       },
 
       // Errors
@@ -106,20 +103,15 @@ describe("Json helper", () => {
         };
       },
       () => {
-        const json = {
-          code: "ERR_PARENT_UNKNOWN",
-          parentRoot: "0x1111111111111111111111111111111111",
-        };
-        const data = {
-          code: "ERR_PARENT_UNKNOWN",
-          parentRoot: fromHexString("0x1111111111111111111111111111111111"),
-        };
-        const error = new LodestarError(data);
+        const code = "ERR_PARENT_UNKNOWN";
+        const rootHex = "0x11111111111111111111111111111111";
+        const error = new LodestarError({code, root: fromHexString(rootHex)});
         return {
-          id: "Lodestar error",
+          id: "Lodestar error with Uint8Array",
           arg: error,
           json: {
-            ...json,
+            code,
+            root: rootHex,
             stack: error.stack,
           },
         };
