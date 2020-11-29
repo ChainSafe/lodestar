@@ -6,9 +6,9 @@ import {expect} from "chai";
 import {EpochContext} from "../../../src/fast";
 import {processSlots} from "../../../src/fast/slot";
 import {StateTransitionEpochContext} from "../../../src/fast/util/epochContext";
-import {loadPerformanceState} from "../util";
+import {generatePerformanceState} from "../util";
 
-describe.only("Process Slots Performance Test", function () {
+describe("Process Slots Performance Test", function () {
   this.timeout(0);
   const logger = new WinstonLogger();
   let state: BeaconState;
@@ -16,7 +16,7 @@ describe.only("Process Slots Performance Test", function () {
 
   before(async () => {
     await initBLS();
-    state = await loadPerformanceState();
+    state = await generatePerformanceState();
     epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
   });
