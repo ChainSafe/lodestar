@@ -24,7 +24,7 @@ before(async function f() {
 });
 
 describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
-  "BLS - aggregate sigs verify",
+  "bls/aggregate_verify/small",
   path.join(SPEC_TEST_LOCATION, "tests/general/phase0/bls/aggregate_verify/small"),
   (testCase) => {
     const pubkeys = testCase.data.input.pubkeys.map((pubkey) => {
@@ -41,7 +41,6 @@ describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
     },
     getExpected: (testCase) => testCase.data.output,
     // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) =>
-      name === "aggregate_verify_infinity_pubkey" || name === "fast_aggregate_verify_infinity_pubkey",
+    shouldSkip: (_, name) => name === "aggregate_verify_infinity_pubkey",
   }
 );
