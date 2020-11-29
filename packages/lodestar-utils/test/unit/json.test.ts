@@ -1,6 +1,6 @@
 import {fromHexString, Json} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {LodestarError, toJson, toString} from "../../src";
+import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src";
 
 describe("Json helper", () => {
   const circularReference = {};
@@ -118,7 +118,15 @@ describe("Json helper", () => {
       },
 
       // Circular references
-      {id: "circular reference", arg: circularReference, json: circularReference},
+      () => {
+        const circularReference: any = {};
+        circularReference.myself = circularReference;
+        return {
+          id: "circular reference",
+          arg: circularReference,
+          json: {myself: CIRCULAR_REFERENCE_TAG},
+        };
+      },
     ];
 
     for (const testCase of testCases) {
@@ -167,7 +175,15 @@ describe("Json helper", () => {
       },
 
       // Circular references
-      {id: "circular reference", json: circularReference, output: "myself=ERROR_CIRCULAR_REFERENCE"},
+      () => {
+        const circularReference: any = {};
+        circularReference.myself = circularReference;
+        return {
+          id: "circular reference",
+          json: circularReference,
+          output: `myself=${CIRCULAR_REFERENCE_TAG}`,
+        };
+      },
     ];
 
     for (const testCase of testCases) {
