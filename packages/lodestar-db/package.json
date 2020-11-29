@@ -18,7 +18,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "build": "yarn run build:lib && yarn run build:types",
+    "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:lib": "babel src -x .ts -d lib --source-maps",
     "build:lib:watch": "yarn run build:lib --watch",
