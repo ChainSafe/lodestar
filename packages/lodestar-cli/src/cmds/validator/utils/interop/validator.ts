@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
-import {IApiClient, interopKeypair} from "@chainsafe/lodestar-validator/lib";
-import bls from "@chainsafe/bls";
+import {IApiClient, interopSecretKey} from "@chainsafe/lodestar-validator/lib";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {join} from "path";
 import {mkdirSync} from "fs";
@@ -21,8 +20,7 @@ export function getInteropValidator(
   const logger = modules.logger.child({module: "Validator #" + index, level: modules.logger.level}) as ILogger;
   const dbPath = join(rootDir, "validators", index.toString());
   mkdirSync(dbPath, {recursive: true});
-  const secretKey = bls.SecretKey.fromBytes(interopKeypair(index).privkey);
-  const publicKey = secretKey.toPublicKey();
+  const secretKey = interopSecretKey(index);
   return new Validator({
     config,
     slashingProtection: new SlashingProtection({
@@ -31,6 +29,6 @@ export function getInteropValidator(
     }),
     api: modules.api,
     logger: logger,
-    keypairs: [{secretKey, publicKey}],
+    secretKeys: [secretKey],
   });
 }

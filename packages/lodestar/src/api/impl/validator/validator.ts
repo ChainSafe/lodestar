@@ -130,7 +130,7 @@ export class ValidatorApi implements IValidatorApi {
 
     // first iterate through collected committee attestations
     // expanding each signature and building an aggregated bitlist
-    const signatures = [] as ISignature[];
+    const signatures: ISignature[] = [];
     const aggregationBits = attestations[0].aggregationBits;
     for (const attestation of attestations) {
       try {

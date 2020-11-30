@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import bls, {IKeypair} from "@chainsafe/bls";
+import bls, {ISecretKey} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -39,14 +39,11 @@ describe("produce block", function () {
   const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
-    const keypairs: IKeypair[] = Array.from({length: 64}, () => {
-      const secretKey = bls.SecretKey.fromKeygen();
-      const publicKey = secretKey.toPublicKey();
-      return {secretKey, publicKey};
-    });
-    const validators = keypairs.map((keypair) => {
+    const secretKeys = Array.from({length: 64}, () => bls.SecretKey.fromKeygen());
+
+    const validators = secretKeys.map((secretKey) => {
       const validator = generateValidator({activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH});
-      validator.pubkey = keypair.publicKey.toBytes();
+      validator.pubkey = secretKey.toPublicKey().toBytes();
       validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
     });
@@ -85,7 +82,7 @@ describe("produce block", function () {
     });
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
-    const blockProposingService = getBlockProposingService(keypairs[validatorIndex]);
+    const blockProposingService = getBlockProposingService(secretKeys[validatorIndex]);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
@@ -94,10 +91,10 @@ describe("produce block", function () {
     expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
   });
 
-  function getBlockProposingService(keypair: IKeypair): BlockProposingService {
+  function getBlockProposingService(secretKey: ISecretKey): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);
-    return new BlockProposingService(config, [keypair], rpcClientStub, slashingProtection, silentLogger);
+    return new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtection, silentLogger);
   }
 });

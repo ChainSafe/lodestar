@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import lockFile from "lockfile";
-import bls, {IKeypair} from "@chainsafe/bls";
+import bls, {ISecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -90,7 +90,7 @@ export class ValidatorDir {
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir
    */
-  async votingKeypair(secretsDir: string): Promise<IKeypair> {
+  async votingKeypair(secretsDir: string): Promise<ISecretKey> {
     const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
@@ -102,7 +102,7 @@ export class ValidatorDir {
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir
    */
-  async withdrawalKeypair(secretsDir: string): Promise<IKeypair> {
+  async withdrawalKeypair(secretsDir: string): Promise<ISecretKey> {
     const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
@@ -112,13 +112,11 @@ export class ValidatorDir {
    * @param keystorePath Path to a EIP-2335 keystore
    * @param secretsDir Directory containing keystore passwords
    */
-  async unlockKeypair(keystorePath: string, secretsDir: string): Promise<IKeypair> {
+  async unlockKeypair(keystorePath: string, secretsDir: string): Promise<ISecretKey> {
     const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
     const privKey = await keystore.decrypt(password);
-    const secretKey = bls.SecretKey.fromBytes(privKey);
-    const publicKey = secretKey.toPublicKey();
-    return {secretKey, publicKey};
+    return bls.SecretKey.fromBytes(privKey);
   }
 
   /**

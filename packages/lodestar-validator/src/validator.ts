@@ -85,7 +85,7 @@ export class Validator {
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.opts.keypairs,
+      this.opts.secretKeys,
       this.apiClient,
       this.slashingProtection,
       this.logger,
@@ -94,7 +94,7 @@ export class Validator {
 
     this.attestationService = new AttestationService(
       this.config,
-      this.opts.keypairs,
+      this.opts.secretKeys,
       this.apiClient,
       this.slashingProtection,
       this.logger
