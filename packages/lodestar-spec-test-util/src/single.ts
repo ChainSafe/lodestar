@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {expect} from "chai";
 import {readdirSync, readFileSync, writeFile} from "fs";
-import {describe, it} from "mocha";
 import {basename, join, parse} from "path";
 import profiler from "v8-profiler-next";
 import {Type} from "@chainsafe/ssz";
