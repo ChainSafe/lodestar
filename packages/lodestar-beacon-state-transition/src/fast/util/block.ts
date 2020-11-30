@@ -1,6 +1,5 @@
 import bls from "@chainsafe/bls";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-
 import {computeSigningRoot, getDomain} from "../../util";
 import {DomainType} from "../../constants";
 import {EpochContext} from "../index";
