@@ -431,7 +431,7 @@
       "pluginVersion": "6.7.4",
       "targets": [
         {
-          "expr": "beaconchain_current_slot",
+          "expr": "beaconchain_head_slot",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -439,7 +439,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Current Slot",
+      "title": "Head Slot",
       "type": "stat"
     },
     {
@@ -477,7 +477,7 @@
       "pluginVersion": "6.7.4",
       "targets": [
         {
-          "expr": "beaconchain_current_finalized_epoch",
+          "expr": "beaconchain_finalized_epoch",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -523,7 +523,7 @@
       "pluginVersion": "6.7.4",
       "targets": [
         {
-          "expr": "beaconchain_peers",
+          "expr": "libp2p_peers",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -575,7 +575,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "beaconchain_current_slot",
+          "expr": "beaconchain_head_slot",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -585,7 +585,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Current Slot",
+      "title": "Head Slot",
       "tooltip": {
         "shared": true,
         "sort": 0,
