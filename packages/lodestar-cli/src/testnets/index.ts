@@ -3,9 +3,10 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IBeaconParamsUnparsed} from "../config/types";
 import {RecursivePartial} from "../util";
 import * as pyrmont from "./pyrmont";
+import * as mainnet from "./mainnet";
 
-export type TestnetName = "pyrmont";
-export const testnetNames: TestnetName[] = ["pyrmont"];
+export type TestnetName = "pyrmont" | "mainnet";
+export const testnetNames: TestnetName[] = ["pyrmont", "mainnet"];
 
 function getTestnetData(
   testnet: TestnetName
@@ -19,6 +20,8 @@ function getTestnetData(
   switch (testnet) {
     case "pyrmont":
       return pyrmont;
+    case "mainnet":
+      return mainnet;
     default:
       throw Error(`Testnet not supported: ${testnet}`);
   }
@@ -32,7 +35,13 @@ export function getTestnetBeaconNodeOptions(testnet: TestnetName): RecursivePart
   const {depositContractDeployBlock, bootEnrs} = getTestnetData(testnet);
   return {
     api: {rest: {enabled: true}},
-    eth1: {providerUrl: "https://goerli.prylabs.net", depositContractDeployBlock},
+    eth1: {
+      providerUrl:
+        testnet === "mainnet"
+          ? "https://mainnet.infura.io/v3/84842078b09946638c03157f83405213"
+          : "https://goerli.prylabs.net",
+      depositContractDeployBlock,
+    },
     metrics: {enabled: true},
     network: {
       discv5: {
