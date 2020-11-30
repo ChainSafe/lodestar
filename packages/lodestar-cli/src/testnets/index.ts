@@ -2,14 +2,10 @@ import got from "got";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IBeaconParamsUnparsed} from "../config/types";
 import {RecursivePartial} from "../util";
-import * as altona from "./altona";
-import * as medalla from "./medalla";
-import * as spadina from "./spadina";
-import * as zinken from "./zinken";
 import * as pyrmont from "./pyrmont";
 
-export type TestnetName = "altona" | "medalla" | "spadina" | "zinken" | "pyrmont";
-export const testnetNames: TestnetName[] = ["altona", "medalla", "spadina", "zinken", "pyrmont"];
+export type TestnetName = "pyrmont";
+export const testnetNames: TestnetName[] = ["pyrmont"];
 
 function getTestnetData(
   testnet: TestnetName
@@ -21,14 +17,6 @@ function getTestnetData(
   bootEnrs: string[];
 } {
   switch (testnet) {
-    case "altona":
-      return altona;
-    case "medalla":
-      return medalla;
-    case "spadina":
-      return spadina;
-    case "zinken":
-      return zinken;
     case "pyrmont":
       return pyrmont;
     default:
