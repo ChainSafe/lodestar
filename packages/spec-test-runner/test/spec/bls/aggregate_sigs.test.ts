@@ -34,7 +34,6 @@ describeDirectorySpecTest<IAggregateSigsTestCase, string | null>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "aggregate_na_signatures",
+    shouldError: (testCase) => testCase.data.output == null,
   }
 );

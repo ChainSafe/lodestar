@@ -30,7 +30,5 @@ describeDirectorySpecTest<IVerifyTestCase, boolean>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "verify_infinity_pubkey_and_infinity_signature",
   }
 );

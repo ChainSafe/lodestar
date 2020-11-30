@@ -30,7 +30,5 @@ describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "fast_aggregate_verify_infinity_pubkey",
   }
 );

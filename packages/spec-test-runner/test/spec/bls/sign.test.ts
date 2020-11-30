@@ -29,7 +29,6 @@ describeDirectorySpecTest<ISignMessageTestCase, string>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "sign_case_zero_privkey",
+    shouldError: (testCase) => testCase.data.output == null,
   }
 );
