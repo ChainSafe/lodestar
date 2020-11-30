@@ -36,6 +36,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
+    "@chainsafe/bls": "4.0.0",
     "@chainsafe/ssz": "^0.6.13",
     "abort-controller": "^3.0.0",
     "bigint-buffer": "^1.1.5",

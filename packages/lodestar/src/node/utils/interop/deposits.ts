@@ -1,7 +1,7 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
 import {Deposit, DepositData, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {interopSecretKeys} from "@chainsafe/lodestar-validator";
+import {interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../constants";
 

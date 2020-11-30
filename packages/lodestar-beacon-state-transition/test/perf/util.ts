@@ -1,11 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {WinstonLogger, interopKeypairs} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {hash} from "@chainsafe/ssz";
-import {generatePublicKey} from "@chainsafe/bls";
-import {bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
-import {toBufferBE} from "bigint-buffer";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
 
 let archivedState: TreeBacked<BeaconState> | null = null;
@@ -118,26 +114,4 @@ export async function generatePerformanceBlock(): Promise<TreeBacked<SignedBeaco
     logger.info("Loaded block at slot", signedBlock.message.slot);
   }
   return signedBlock.clone();
-}
-
-const CURVE_ORDER = BigInt("52435875175126190479447740508185965837690552500527637822603658699938581184513");
-
-interface IKeypair {
-  pubkey: Buffer;
-  privkey: Buffer;
-}
-
-function interopKeypairs(validatorCount: number): IKeypair[] {
-  return Array.from({length: validatorCount}, (_, i) => {
-    return interopKeypair(i);
-  });
-}
-
-function interopKeypair(index: number): IKeypair {
-  const privkey = toBufferBE(bytesToBigInt(hash(intToBytes(index, 32))) % CURVE_ORDER, 32);
-  const pubkey = generatePublicKey(privkey);
-  return {
-    privkey,
-    pubkey,
-  };
 }
