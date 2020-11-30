@@ -1,12 +1,11 @@
 import fs from "fs";
 import path from "path";
 import * as bip39 from "bip39";
-import {randomPassword, writeFile600Perm, YargsError, readPassphraseFile, ICliCommand} from "../../../../util";
+import {randomPassword, writeFile600Perm, YargsError, readPassphraseFile, ICliCommand, initBLS} from "../../../../util";
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
 import {IAccountWalletArgs} from "./options";
-import {init} from "@chainsafe/bls";
 
 export const command = "create";
 
@@ -75,7 +74,7 @@ wallets are supported presently.",
   },
 
   handler: async (args) => {
-    await init("blst-native");
+    await initBLS();
 
     const {name, type, passphraseFile, mnemonicOutputPath} = args;
     const accountPaths = getAccountPaths(args);

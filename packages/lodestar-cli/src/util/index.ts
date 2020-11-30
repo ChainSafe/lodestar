@@ -13,3 +13,4 @@ export * from "./recursivelyFind";
 export * from "./sleep";
 export * from "./stripOffNewlines";
 export * from "./types";
+export * from "./bls";

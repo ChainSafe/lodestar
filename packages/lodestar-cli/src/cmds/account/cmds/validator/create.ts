@@ -1,9 +1,8 @@
-import {init} from "@chainsafe/bls";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {getBeaconConfigFromArgs} from "../../../../config";
-import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix} from "../../../../util";
+import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, initBLS} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
 
@@ -72,7 +71,7 @@ and pre-computed deposit RPL data",
 
   handler: async (args) => {
     // Necessary to compute validator pubkey from privKey
-    await init("blst-native");
+    await initBLS();
 
     const config = getBeaconConfigFromArgs(args);
 
