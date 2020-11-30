@@ -1,5 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
+import {init} from "@chainsafe/bls";
 import {WinstonLogger, interopKeypairs} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
@@ -114,4 +115,13 @@ export async function generatePerformanceBlock(): Promise<TreeBacked<SignedBeaco
     logger.info("Loaded block at slot", signedBlock.message.slot);
   }
   return signedBlock.clone();
+}
+
+export async function initBLS(): Promise<void> {
+  try {
+    await init("blst-native");
+  } catch (e) {
+    console.warn("Performance warning: Using fallback wasm BLS implementation");
+    await init("herumi");
+  }
 }

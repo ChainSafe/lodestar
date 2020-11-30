@@ -1,11 +1,10 @@
-import {initBLS} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {SignedBeaconBlock, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {EpochContext, fastStateTransition, IStateContext} from "../../../src/fast";
-import {generatePerformanceBlock, generatePerformanceState} from "../util";
+import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../util";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);

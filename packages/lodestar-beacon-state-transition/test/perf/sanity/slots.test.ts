@@ -1,4 +1,3 @@
-import {initBLS} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -6,7 +5,7 @@ import {expect} from "chai";
 import {EpochContext} from "../../../src/fast";
 import {processSlots} from "../../../src/fast/slot";
 import {StateTransitionEpochContext} from "../../../src/fast/util/epochContext";
-import {generatePerformanceState} from "../util";
+import {generatePerformanceState, initBLS} from "../util";
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);

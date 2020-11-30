@@ -11,8 +11,7 @@ import {
   processSlashings,
   processForkChanged,
 } from "../../src/fast/epoch";
-import {generatePerformanceState} from "./util";
-import {initBLS} from "@chainsafe/bls";
+import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
 
 describe("Epoch Processing Performance Tests", function () {
