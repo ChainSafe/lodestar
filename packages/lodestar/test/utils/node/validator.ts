@@ -75,9 +75,9 @@ export function getDevValidator({
     }),
     logger: logger,
     keypairs: Array.from({length: count}, (_, i) => {
-      const privateKey = bls.PrivateKey.fromBytes(interopKeypair(i + startIndex).privkey);
-      const publicKey = privateKey.toPublicKey();
-      return {privateKey, publicKey};
+      const secretKey = bls.SecretKey.fromBytes(interopKeypair(i + startIndex).privkey);
+      const publicKey = secretKey.toPublicKey();
+      return {secretKey, publicKey};
     }),
   });
 }

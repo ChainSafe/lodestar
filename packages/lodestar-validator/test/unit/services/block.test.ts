@@ -28,9 +28,9 @@ describe("block proposing service", function () {
   });
 
   it("should not produce block in same slot", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
 
     const lastBlock = generateEmptySignedBlock();
     lastBlock.message.slot = 1;
@@ -46,9 +46,9 @@ describe("block proposing service", function () {
   });
 
   it("should produce correct block - last signed is null", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
 
     const slot = 2;
     rpcClientStub.beacon.blocks.publishBlock = sandbox.stub();
@@ -63,9 +63,9 @@ describe("block proposing service", function () {
   });
 
   it("should produce correct block - last signed in previous epoch", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
 
     const slot = config.params.SLOTS_PER_EPOCH;
     rpcClientStub.validator.produceBlock = sandbox.stub();

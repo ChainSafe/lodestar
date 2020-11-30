@@ -116,9 +116,9 @@ export class ValidatorDir {
     const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
     const privKey = await keystore.decrypt(password);
-    const privateKey = bls.PrivateKey.fromBytes(privKey);
-    const publicKey = privateKey.toPublicKey();
-    return {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(privKey);
+    const publicKey = secretKey.toPublicKey();
+    return {secretKey, publicKey};
   }
 
   /**

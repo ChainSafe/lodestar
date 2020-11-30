@@ -4,7 +4,7 @@
 
 import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IKeypair, IPrivateKey} from "@chainsafe/bls";
+import {IKeypair, ISecretKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -22,7 +22,7 @@ export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   // validators private keys (order is important)
-  private readonly privateKeys: IPrivateKey[] = [];
+  private readonly privateKeys: ISecretKey[] = [];
   // validators public keys (order is important)
   private readonly publicKeys: BLSPubkey[] = [];
   private readonly slashingProtection: ISlashingProtection;
@@ -41,7 +41,7 @@ export default class BlockProposingService {
   ) {
     this.config = config;
     keypairs.forEach((keypair) => {
-      this.privateKeys.push(keypair.privateKey);
+      this.privateKeys.push(keypair.secretKey);
       this.publicKeys.push(keypair.publicKey.toBytes());
     });
     this.provider = provider;

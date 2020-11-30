@@ -22,12 +22,12 @@ describe("Validator", () => {
       validator: new MockValidatorApi(),
     });
 
-    const privateKey = bls.PrivateKey.fromKeygen();
-    const publicKey = privateKey.toPublicKey();
+    const secretKey = bls.SecretKey.fromKeygen();
+    const publicKey = secretKey.toPublicKey();
 
     const validatorCtx: IValidatorOptions = {
       api: apiClient,
-      keypairs: [{privateKey, publicKey}],
+      keypairs: [{secretKey, publicKey}],
       config,
       slashingProtection: sinon.createStubInstance(SlashingProtection),
       logger: silentLogger,

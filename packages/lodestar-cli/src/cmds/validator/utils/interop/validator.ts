@@ -21,8 +21,8 @@ export function getInteropValidator(
   const logger = modules.logger.child({module: "Validator #" + index, level: modules.logger.level}) as ILogger;
   const dbPath = join(rootDir, "validators", index.toString());
   mkdirSync(dbPath, {recursive: true});
-  const privateKey = bls.PrivateKey.fromBytes(interopKeypair(index).privkey);
-  const publicKey = privateKey.toPublicKey();
+  const secretKey = bls.SecretKey.fromBytes(interopKeypair(index).privkey);
+  const publicKey = secretKey.toPublicKey();
   return new Validator({
     config,
     slashingProtection: new SlashingProtection({
@@ -31,6 +31,6 @@ export function getInteropValidator(
     }),
     api: modules.api,
     logger: logger,
-    keypairs: [{privateKey, publicKey}],
+    keypairs: [{secretKey, publicKey}],
   });
 }

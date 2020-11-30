@@ -11,7 +11,7 @@ export function generateValidator(opts: Partial<Validator> = {}): Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activationEpoch || opts.activationEpoch === 0 ? opts.activationEpoch : FAR_FUTURE_EPOCH;
   return {
-    pubkey: opts.pubkey || bls.PrivateKey.fromKeygen().toPublicKey().toBytes(),
+    pubkey: opts.pubkey || bls.SecretKey.fromKeygen().toPublicKey().toBytes(),
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,

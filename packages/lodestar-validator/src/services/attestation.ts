@@ -1,7 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {IKeypair, IPrivateKey} from "@chainsafe/bls";
+import {IKeypair, ISecretKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -41,7 +41,7 @@ export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   // order is important
-  private readonly privateKeys: IPrivateKey[] = [];
+  private readonly privateKeys: ISecretKey[] = [];
   // order is important
   private readonly publicKeys: BLSPubkey[] = [];
   // order is important
@@ -62,7 +62,7 @@ export class AttestationService {
     this.config = config;
     this.provider = rpcClient;
     keypairs.forEach((keypair) => {
-      this.privateKeys.push(keypair.privateKey);
+      this.privateKeys.push(keypair.secretKey);
       this.publicKeys.push(keypair.publicKey.toBytes());
       this.validators.push(null);
     });

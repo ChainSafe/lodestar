@@ -49,9 +49,9 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - no duty", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockEpoch({epoch: 1});
@@ -59,9 +59,9 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - with duty", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     const duty: AttesterDuty = {
       slot: 1,
@@ -79,18 +79,18 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - without duty", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockSlot({slot: 0});
   });
 
   it("on  new slot - with duty - not aggregator", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
@@ -118,9 +118,9 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - with duty - conflicting attestation", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
@@ -153,9 +153,9 @@ describe("validator attestation service", function () {
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
-    const privateKey = bls.PrivateKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = privateKey.toPublicKey();
-    const keypair = {privateKey, publicKey};
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    const publicKey = secretKey.toPublicKey();
+    const keypair = {secretKey, publicKey};
     const service = new AttestationService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);

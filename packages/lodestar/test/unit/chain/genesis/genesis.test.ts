@@ -31,9 +31,9 @@ describe("genesis builder", function () {
     const blocks: Eth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
-      const privateKey = bls.PrivateKey.fromBytes(interopKeypair(i).privkey);
-      const publicKey = privateKey.toPublicKey();
-      const keypair = {privateKey, publicKey};
+      const secretKey = bls.SecretKey.fromBytes(interopKeypair(i).privkey);
+      const publicKey = secretKey.toPublicKey();
+      const keypair = {secretKey, publicKey};
       const event: DepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
       keypairs.push(keypair);
       events.push(event);
@@ -116,6 +116,6 @@ function generateDeposit(index: ValidatorIndex, keypair: IKeypair): DepositData 
     amount: BigInt(32) * BigInt("1000000000000000000"),
   };
   const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
-  const signature = keypair.privateKey.sign(signingRoot);
+  const signature = keypair.secretKey.sign(signingRoot);
   return {...depositMessage, signature: signature.toBytes()};
 }

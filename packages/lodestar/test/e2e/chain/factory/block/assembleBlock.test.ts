@@ -40,9 +40,9 @@ describe("produce block", function () {
 
   it("should produce valid block - state without valid eth1 votes", async function () {
     const keypairs: IKeypair[] = Array.from({length: 64}, () => {
-      const privateKey = bls.PrivateKey.fromKeygen();
-      const publicKey = privateKey.toPublicKey();
-      return {privateKey, publicKey};
+      const secretKey = bls.SecretKey.fromKeygen();
+      const publicKey = secretKey.toPublicKey();
+      return {secretKey, publicKey};
     });
     const validators = keypairs.map((keypair) => {
       const validator = generateValidator({activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH});

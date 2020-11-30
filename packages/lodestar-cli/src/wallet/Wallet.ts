@@ -43,7 +43,7 @@ export class Wallet extends Keystore {
    */
   static async fromMnemonic(mnemonic: string, password: string, name: string): Promise<Wallet> {
     const seed = deriveKeyFromMnemonic(mnemonic);
-    const publicKey = bls.PrivateKey.fromBytes(seed).toPublicKey().toBytes();
+    const publicKey = bls.SecretKey.fromBytes(seed).toPublicKey().toBytes();
 
     const wallet = new Wallet(await this.create(password, seed, publicKey, ""));
     wallet.name = name;
@@ -97,7 +97,7 @@ export class Wallet extends Keystore {
 
     const keystores = mapValues(privKeys, async (privKey, key) => {
       const type = key as keyof typeof privKeys;
-      const publicKey = bls.PrivateKey.fromBytes(privKey).toPublicKey().toBytes();
+      const publicKey = bls.SecretKey.fromBytes(privKey).toPublicKey().toBytes();
       const keystore = await Keystore.create(passwords[type], privKey, publicKey, paths[type]);
       return keystore;
     });

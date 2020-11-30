@@ -2,7 +2,7 @@ import {ethers} from "ethers";
 import {hash, Json, toHexString} from "@chainsafe/ssz";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import bls, {IPrivateKey, IPublicKey} from "@chainsafe/bls";
+import bls, {ISecretKey, IPublicKey} from "@chainsafe/bls";
 import {computeSigningRoot, computeDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 
 const depositFunctionFragment =
@@ -37,7 +37,7 @@ export function decodeEth1TxData(
 export function encodeDepositData(
   amount: bigint,
   withdrawalPublicKey: IPublicKey,
-  signingKey: IPrivateKey,
+  signingKey: ISecretKey,
   config: IBeaconConfig
 ): string {
   const pubkey = signingKey.toPublicKey().toBytes();

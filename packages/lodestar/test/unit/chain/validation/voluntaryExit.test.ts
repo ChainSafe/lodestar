@@ -15,6 +15,7 @@ import {generateState} from "../../../utils/state";
 import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
+import bls, {init} from "@chainsafe/bls";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -22,6 +23,11 @@ describe("validate voluntary exit", () => {
     isValidIncomingVoluntaryExitStub: SinonStub,
     chainStub: StubbedChain,
     regenStub: SinonStubbedInstance<StateRegenerator>;
+
+  before(async () => {
+    await init("blst-native");
+    console.log(bls);
+  });
 
   beforeEach(() => {
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");

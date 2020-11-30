@@ -74,7 +74,7 @@ export class ValidatorDirBuilder {
     fs.mkdirSync(dir, {recursive: true});
 
     const withdrawalPublicKey = bls.PublicKey.fromHex(keystores.withdrawal.pubkey);
-    const votingPrivateKey = bls.PrivateKey.fromBytes(await keystores.signing.decrypt(passwords.signing));
+    const votingPrivateKey = bls.SecretKey.fromBytes(await keystores.signing.decrypt(passwords.signing));
 
     // Save `ETH1_DEPOSIT_DATA_FILE` to file.
     // This allows us to know the RLP data for the eth1 transaction without needing to know
