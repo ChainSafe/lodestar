@@ -20,6 +20,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
+import {readOnlyForEach} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -127,26 +128,30 @@ export class ValidatorApi implements IValidatorApi {
       throw Error("No matching attestations found for attestationData");
     }
 
-    const aggregate = attestations.reduce((current, attestation) => {
+    // first iterate through collected committee attestations
+    // expanding each signature and building an aggregated bitlist
+    const signatures = [];
+    const aggregationBits = attestations[0].aggregationBits;
+    for (const attestation of attestations) {
       try {
-        current.signature = bls.aggregateSignatures([
-          current.signature.valueOf() as Uint8Array,
-          attestation.signature.valueOf() as Uint8Array,
-        ]);
-        let index = 0;
-        for (const bit of attestation.aggregationBits) {
+        const signature = bls.Signature.fromBytes(attestation.signature);
+        signatures.push(signature);
+        readOnlyForEach(attestation.aggregationBits, (bit, index) => {
           if (bit) {
-            current.aggregationBits[index] = true;
+            aggregationBits[index] = true;
           }
-          index++;
-        }
+        });
       } catch (e) {
-        //ignored
+        this.logger.verbose("Invalid attestation signature", e);
       }
-      return current;
-    });
+    }
 
-    return aggregate;
+    // then create/return the aggregate signature
+    return {
+      data: attestations[0].data,
+      signature: bls.aggregateSignatures(signatures),
+      aggregationBits,
+    };
   }
 
   public async publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
