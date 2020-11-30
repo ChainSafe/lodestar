@@ -3,10 +3,11 @@ import {IBeaconParams} from "../interface";
 import {IPhase1Params, Phase1Params} from "../phase1";
 import {createParams, mapValuesNumToString} from "../utils";
 import {minimalYaml} from "./minimalYaml";
+import {minimalYaml as phase1MinimalYaml} from "../phase1/presets/minimalYaml";
 
 export const commit = "v1.0.0";
 export const phase0Yaml = mapValuesNumToString(minimalYaml);
-export const phase1Yaml = mapValuesNumToString(minimalYaml);
+export const phase1Yaml = mapValuesNumToString(phase1MinimalYaml);
 
 export const params: IBeaconParams = {
   ...createParams<IBeaconParams>(phase0Yaml, BeaconParams),

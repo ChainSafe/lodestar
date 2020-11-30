@@ -1,17 +1,13 @@
 import {expect} from "chai";
-import fs from "fs";
-import {load} from "js-yaml";
-import path from "path";
 import {IPhase1Params} from "../../src/phase1";
-import {createParams, schema} from "../../src/utils";
+import {mainnetYaml} from "../../src/phase1/presets/mainnetYaml";
+import {minimalYaml} from "../../src/phase1/presets/minimalYaml";
 import {Phase1Params} from "../../src/phase1/ssz";
+import {createParams, mapValuesNumToString} from "../../src/utils";
 
 describe("phase1", function () {
   it("should load all mainnet params", function () {
-    const params = createParams<IPhase1Params>(
-      load(fs.readFileSync(path.join(__dirname, "../../src/phase1/presets/mainnet.yaml"), "utf-8"), {schema}),
-      Phase1Params
-    );
+    const params = createParams<IPhase1Params>(mapValuesNumToString(mainnetYaml), Phase1Params);
     expect(Object.keys(params).length).to.be.greaterThan(0);
     Object.keys(params).forEach((key) => {
       if (key[0].toUpperCase() === key[0]) {
@@ -21,10 +17,7 @@ describe("phase1", function () {
     });
   });
   it("should load all minimal params", function () {
-    const params = createParams<IPhase1Params>(
-      load(fs.readFileSync(path.join(__dirname, "../../src/phase1/presets/minimal.yaml"), "utf-8"), {schema}),
-      Phase1Params
-    );
+    const params = createParams<IPhase1Params>(mapValuesNumToString(minimalYaml), Phase1Params);
     expect(Object.keys(params).length).to.be.greaterThan(0);
     Object.keys(params).forEach((key) => {
       if (key[0].toUpperCase() === key[0]) {

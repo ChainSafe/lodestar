@@ -1,17 +1,13 @@
 import {expect} from "chai";
-import fs from "fs";
-import {load} from "js-yaml";
-import path from "path";
 import {IBeaconParams} from "../../src";
-import {createParams, schema} from "../../src/utils";
 import {BeaconParams} from "../../src/beaconParams";
+import {mainnetYaml} from "../../src/presets/mainnetYaml";
+import {minimalYaml} from "../../src/presets/minimalYaml";
+import {createParams, mapValuesNumToString} from "../../src/utils";
 
 describe("phase0", function () {
   it("should load all mainnet params", function () {
-    const params = createParams<IBeaconParams>(
-      load(fs.readFileSync(path.join(__dirname, "../../src/presets/mainnet.yaml"), "utf-8"), {schema}),
-      BeaconParams
-    );
+    const params = createParams<IBeaconParams>(mapValuesNumToString(mainnetYaml), BeaconParams);
     Object.keys(params).forEach((key) => {
       if (key[0].toUpperCase() === key[0]) {
         expect(params[key as keyof IBeaconParams]).to.not.be.null;
@@ -20,10 +16,7 @@ describe("phase0", function () {
     });
   });
   it("should load all minimal params", function () {
-    const params = createParams<IBeaconParams>(
-      load(fs.readFileSync(path.join(__dirname, "../../src/presets/minimal.yaml"), "utf-8"), {schema}),
-      BeaconParams
-    );
+    const params = createParams<IBeaconParams>(mapValuesNumToString(minimalYaml), BeaconParams);
     Object.keys(params).forEach((key) => {
       if (key[0].toUpperCase() === key[0]) {
         expect(params[key as keyof IBeaconParams]).to.not.be.null;

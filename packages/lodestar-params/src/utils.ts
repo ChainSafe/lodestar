@@ -27,10 +27,16 @@ export const schema = new Schema({
   ],
 });
 
-export function mapValuesNumToString<T extends {[key: string]: number | string}>(obj: T): {[K in keyof T]: string} {
-  const objAsStrings = {} as {[K in keyof T]: string};
+export function mapValuesNumToString<T extends {[key: string]: number | string | Array<number | string>}>(
+  obj: T
+): {[K in keyof T]: string | string[]} {
+  const objAsStrings = {} as {[K in keyof T]: string | string[]};
   for (const key in obj) {
-    objAsStrings[key] = String(obj[key]);
+    if (Array.isArray(obj[key])) {
+      objAsStrings[key] = (obj[key] as Array<string | number>).map((i) => String(i));
+    } else {
+      objAsStrings[key] = String(obj[key]);
+    }
   }
   return objAsStrings;
 }
