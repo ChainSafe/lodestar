@@ -1,17 +1,14 @@
-import {load} from "js-yaml";
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-import minimalYaml from "./minimal.yaml";
-// eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-// @ts-ignore
-import phase1MinimalYaml from "../phase1/presets/minimal.yaml";
-import {createParams, schema} from "../utils";
-import {IBeaconParams} from "../interface";
-import {IPhase1Params} from "../phase1";
 import {BeaconParams} from "..";
-import {Phase1Params} from "../phase1";
+import {IBeaconParams} from "../interface";
+import {IPhase1Params, Phase1Params} from "../phase1";
+import {createParams, mapValuesNumToString} from "../utils";
+import {minimalYaml} from "./minimalYaml";
+
+export const commit = "v1.0.0";
+export const phase0Yaml = mapValuesNumToString(minimalYaml);
+export const phase1Yaml = mapValuesNumToString(minimalYaml);
 
 export const params: IBeaconParams = {
-  ...createParams<IBeaconParams>(load(minimalYaml, {schema}), BeaconParams),
-  phase1: createParams<IPhase1Params>(load(phase1MinimalYaml, {schema}), Phase1Params),
+  ...createParams<IBeaconParams>(phase0Yaml, BeaconParams),
+  phase1: createParams<IPhase1Params>(phase1Yaml, Phase1Params),
 };

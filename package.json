@@ -16,6 +16,7 @@
     "build:types:watch": "lerna run build:types:watch --parallel",
     "build:watch": "run-p build:lib:watch build:types:watch",
     "lint": "lerna run lint --no-bail",
+    "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
     "test:unit": "lerna run test:unit --no-bail",
     "test:e2e": "lerna run test:e2e --no-bail",
@@ -26,15 +27,15 @@
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
   },
   "devDependencies": {
-    "@babel/cli": "^7.8.3",
-    "@babel/core": "^7.8.3",
-    "@babel/generator": "^7.8.3",
-    "@babel/plugin-proposal-class-properties": "^7.8.3",
-    "@babel/plugin-proposal-object-rest-spread": "^7.8.3",
+    "@babel/cli": "^7.12.8",
+    "@babel/core": "^7.12.9",
+    "@babel/generator": "^7.12.5",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-proposal-object-rest-spread": "^7.12.1",
     "@babel/plugin-syntax-bigint": "^7.8.3",
-    "@babel/preset-env": "^7.8.3",
-    "@babel/preset-typescript": "^7.8.3",
-    "@babel/register": "^7.8.3",
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.7",
+    "@babel/register": "^7.12.1",
     "@mpetrunic/eslint-import-resolver-lerna": "1.0.0",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",
@@ -47,6 +48,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.6.5",
+    "concurrently": "^5.3.0",
     "eslint": "^6.8.0",
     "eslint-plugin-import": "^2.22.0",
     "eslint-plugin-no-only-tests": "^2.4.0",
@@ -60,14 +62,12 @@
     "sinon": "^9.0.2",
     "supertest": "^4.0.2",
     "ts-node": "^9.0.0",
-    "typedoc": "^0.17.8",
+    "typedoc": "^0.19.2",
     "typedoc-plugin-external-module-name": "^4.0.3",
     "typedoc-plugin-internal-external": "^2.2.0",
     "typedoc-plugin-markdown": "^2.4.0",
     "typescript": "^3.8.3",
     "webpack": "^4.42.0"
   },
-  "optionalDependencies": {
-    "@chainsafe/eth2-spec-tests": "0.12.3"
-  }
+  "dependencies": {}
 }

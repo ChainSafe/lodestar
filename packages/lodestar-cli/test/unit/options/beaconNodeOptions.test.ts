@@ -26,6 +26,7 @@ describe("options / beaconNodeOptions", () => {
       "metrics.pushGateway": true,
       "metrics.serverPort": 8765,
       "metrics.timeout": 5000,
+      "metrics.listenAddr": "0.0.0.0",
 
       "network.discv5.enabled": true,
       "network.discv5.bindAddr": "addr",
@@ -64,6 +65,7 @@ describe("options / beaconNodeOptions", () => {
         pushGateway: true,
         serverPort: 8765,
         timeout: 5000,
+        listenAddr: "0.0.0.0",
       },
       network: {
         discv5: {

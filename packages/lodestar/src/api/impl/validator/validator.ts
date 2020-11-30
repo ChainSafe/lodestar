@@ -2,46 +2,29 @@
  * @module api/rpc
  */
 
-import {Signature, verify} from "@chainsafe/bls";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  computeStartSlotAtEpoch,
-  computeSubnetForSlot,
-  getDomain,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
+import {Signature} from "@chainsafe/bls";
+import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  AggregateAndProof,
   Attestation,
   AttestationData,
   AttesterDuty,
   BeaconBlock,
-  BLSPubkey,
-  BLSSignature,
   Bytes96,
   CommitteeIndex,
   Epoch,
   ProposerDuty,
+  Root,
   SignedAggregateAndProof,
-  SignedBeaconBlock,
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
-import {IAttestationJob, IBeaconChain, IBlockJob} from "../../../chain";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
-import {assembleAttestation} from "../../../chain/factory/attestation";
+import {IAttestationJob, IBeaconChain} from "../../../chain";
+import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {assembleAttesterDuty} from "../../../chain/factory/duties";
-import {
-  validateGossipAggregateAndProof,
-  validateGossipAttestation,
-  validateGossipBlock,
-} from "../../../chain/validation";
-import {DomainType, EMPTY_SIGNATURE} from "../../../constants";
+import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
@@ -49,10 +32,10 @@ import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
 import {notNullish} from "../../../util/notNullish";
 import {IApiOptions} from "../../options";
+import {ApiError} from "../errors/api";
 import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
-import {ApiError} from "../errors/api";
 
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
@@ -79,77 +62,29 @@ export class ValidatorApi implements IValidatorApi {
     this.logger = modules.logger;
   }
 
-  public async produceBlock(
-    slot: Slot,
-    validatorPubkey: BLSPubkey,
-    randaoReveal: Bytes96,
-    graffiti = ""
-  ): Promise<BeaconBlock> {
+  public async produceBlock(slot: Slot, randaoReveal: Bytes96, graffiti = ""): Promise<BeaconBlock> {
     await checkSyncStatus(this.config, this.sync);
-    const validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorPubkey);
-    if (validatorIndex === undefined) {
-      throw Error(`Validator pubKey ${toHexString(validatorPubkey)} not in epochCtx`);
-    }
     return await assembleBlock(
       this.config,
       this.chain,
       this.db,
       this.eth1,
       slot,
-      validatorIndex,
       randaoReveal,
       toGraffitiBuffer(graffiti)
     );
   }
 
-  public async produceAttestation(validatorPubKey: BLSPubkey, index: CommitteeIndex, slot: Slot): Promise<Attestation> {
+  public async produceAttestationData(committeeIndex: CommitteeIndex, slot: Slot): Promise<AttestationData> {
     try {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      const validatorIndex = epochCtx.pubkey2index.get(validatorPubKey);
-      if (validatorIndex === undefined) {
-        throw Error(`Validator pubKey ${toHexString(validatorPubKey)} not in epochCtx`);
-      }
-      return await assembleAttestation(epochCtx, state, headRoot, validatorIndex, index, slot);
+      return await assembleAttestationData(epochCtx.config, state, headRoot, slot, committeeIndex);
     } catch (e) {
-      this.logger.warn(`Failed to produce attestation because: ${e.message}`);
+      this.logger.warn(`Failed to produce attestation data because: ${e.message}`);
       throw e;
     }
-  }
-
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
-    const blockJob = {
-      signedBlock: signedBlock,
-      trusted: false,
-      reprocess: false,
-    } as IBlockJob;
-    await validateGossipBlock(this.config, this.chain, this.db, blockJob);
-    await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
-  }
-
-  public async publishAttestation(attestation: Attestation): Promise<void> {
-    await checkSyncStatus(this.config, this.sync);
-    const attestationJob = {
-      attestation,
-      validSignature: false,
-    } as IAttestationJob;
-    let attestationPreStateContext;
-    try {
-      attestationPreStateContext = await this.chain.regen.getCheckpointState(attestation.data.target);
-    } catch (e) {
-      throw new AttestationError({
-        code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
-        job: attestationJob,
-      });
-    }
-    const subnet = computeSubnetForAttestation(this.config, attestationPreStateContext.epochCtx, attestation);
-    await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
-    await Promise.all([
-      this.network.gossip.publishCommiteeAttestation(attestation),
-      this.db.attestation.add(attestation),
-    ]);
   }
 
   public async getProposerDuties(epoch: Epoch): Promise<ProposerDuty[]> {
@@ -184,49 +119,15 @@ export class ValidatorApi implements IValidatorApi {
       .filter(notNullish) as AttesterDuty[];
   }
 
-  public async publishAggregateAndProof(signedAggregateAndProof: SignedAggregateAndProof): Promise<void> {
+  public async getAggregatedAttestation(attestationDataRoot: Root, slot: Slot): Promise<Attestation> {
     await checkSyncStatus(this.config, this.sync);
-    const attestation = signedAggregateAndProof.message.aggregate;
-    const attestationJob = {
-      attestation: attestation,
-      validSignature: false,
-    } as IAttestationJob;
-    await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
-    await Promise.all([
-      this.db.aggregateAndProof.add(signedAggregateAndProof.message),
-      this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
-      this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
-    ]);
-  }
+    const attestations = await this.db.attestation.getAttestationsByDataRoot(slot, attestationDataRoot);
 
-  public async getWireAttestations(epoch: number, committeeIndex: number): Promise<Attestation[]> {
-    return await this.db.attestation.getCommiteeAttestations(epoch, committeeIndex);
-  }
-
-  public async produceAggregateAndProof(
-    attestationData: AttestationData,
-    aggregator: BLSPubkey
-  ): Promise<AggregateAndProof> {
-    await checkSyncStatus(this.config, this.sync);
-    const attestations = await this.getWireAttestations(
-      computeEpochAtSlot(this.config, attestationData.slot),
-      attestationData.index
-    );
-    const epochCtx = await this.chain.getHeadEpochContext();
-    const matchingAttestations = attestations.filter((a) => {
-      return this.config.types.AttestationData.equals(a.data, attestationData);
-    });
-
-    if (matchingAttestations.length === 0) {
+    if (attestations.length === 0) {
       throw Error("No matching attestations found for attestationData");
     }
 
-    const aggregatorIndex = epochCtx.pubkey2index.get(aggregator);
-    if (aggregatorIndex === undefined) {
-      throw Error(`Aggregator pubkey ${toHexString(aggregator)} not in epochCtx`);
-    }
-
-    const aggregate = matchingAttestations.reduce((current, attestation) => {
+    const aggregate = attestations.reduce((current, attestation) => {
       try {
         current.signature = Signature.fromCompressedBytes(current.signature.valueOf() as Uint8Array)
           .add(Signature.fromCompressedBytes(attestation.signature.valueOf() as Uint8Array))
@@ -244,29 +145,50 @@ export class ValidatorApi implements IValidatorApi {
       return current;
     });
 
-    return {
-      aggregate,
-      aggregatorIndex,
-      selectionProof: EMPTY_SIGNATURE,
-    };
+    return aggregate;
   }
 
-  public async subscribeCommitteeSubnet(
-    slot: Slot,
-    slotSignature: BLSSignature,
+  public async publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
+    await checkSyncStatus(this.config, this.sync);
+    await Promise.all(
+      signedAggregateAndProofs.map(async (signedAggregateAndProof) => {
+        try {
+          const attestation = signedAggregateAndProof.message.aggregate;
+          const attestationJob = {
+            attestation: attestation,
+            validSignature: false,
+          } as IAttestationJob;
+          await validateGossipAggregateAndProof(
+            this.config,
+            this.chain,
+            this.db,
+            signedAggregateAndProof,
+            attestationJob
+          );
+          await Promise.all([
+            this.db.aggregateAndProof.add(signedAggregateAndProof.message),
+            this.db.seenAttestationCache.addAggregateAndProof(signedAggregateAndProof.message),
+            this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
+          ]);
+        } catch (e) {
+          this.logger.warn("Failed to publish aggregate and proof", {reason: e.message});
+        }
+      })
+    );
+  }
+
+  public async prepareBeaconCommitteeSubnet(
+    validatorIndex: ValidatorIndex,
     committeeIndex: CommitteeIndex,
-    aggregatorPubkey: BLSPubkey
+    committeesAtSlot: number,
+    slot: Slot,
+    isAggregator: boolean
   ): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    const state = await this.chain.getHeadState();
-    const domain = getDomain(this.config, state, DomainType.SELECTION_PROOF, computeEpochAtSlot(this.config, slot));
-    const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    const valid = verify(aggregatorPubkey.valueOf() as Uint8Array, signingRoot, slotSignature.valueOf() as Uint8Array);
-    if (!valid) {
-      throw new Error("Invalid slot signature");
+    if (isAggregator) {
+      await this.sync.collectAttestations(slot, committeeIndex);
     }
-    await this.sync.collectAttestations(slot, committeeIndex);
-    const subnet = computeSubnetForSlot(this.config, state, slot, committeeIndex);
+    const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
     await this.network.searchSubnetPeers(String(subnet));
   }
 }

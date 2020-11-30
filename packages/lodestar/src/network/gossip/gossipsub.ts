@@ -1,25 +1,23 @@
 import Gossipsub from "libp2p-gossipsub";
-import {assert} from "@chainsafe/lodestar-utils";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
+import {Libp2p} from "libp2p-gossipsub/src/interfaces";
 import {Type} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {compress, uncompress} from "snappyjs";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ForkDigest} from "@chainsafe/lodestar-types";
 
-import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator} from "./interface";
+import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
-  getMessageId,
   getSubnetFromAttestationSubnetTopic,
   isAttestationSubnetTopic,
   topicToGossipEvent,
   getGossipTopic,
+  msgIdToString,
 } from "./utils";
 import {ExtendedValidatorResult, GossipEvent} from "./constants";
 import {GOSSIP_MAX_SIZE, ATTESTATION_SUBNET_COUNT} from "../../constants";
-import {getTopicEncoding, GossipEncoding} from "./encoding";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
-import {ForkDigest} from "@chainsafe/lodestar-types";
+import {computeMsgId, decodeMessageData, encodeMessageData, GossipEncoding} from "./encoding";
 import {GossipValidationError} from "./errors";
 
 type ValidatorFn = (topic: string, msg: InMessage) => Promise<void>;
@@ -45,7 +43,7 @@ export class LodestarGossipsub extends Gossipsub {
     libp2p: Libp2p,
     options = {}
   ) {
-    super(libp2p, Object.assign(options, {msgIdFn: getMessageId, signMessages: false, strictSigning: false}));
+    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign", D: 8, Dlow: 6}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -107,11 +105,6 @@ export class LodestarGossipsub extends Gossipsub {
     if (!this.genericIsValid(message)) {
       throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
     }
-    // Gossipsub checks this already
-    assert.true(
-      this.transformedObjects.get(getMessageId(message)) === undefined,
-      "Duplicate message for topic " + topic
-    );
     try {
       const validatorFn = this.getLodestarTopicValidator(topic);
       const objSubnet = this.deserializeGossipMessage(topic, message);
@@ -124,7 +117,10 @@ export class LodestarGossipsub extends Gossipsub {
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT);
         default:
           // no error means accept
-          this.transformedObjects.set(getMessageId(message), {createdAt: new Date(), object: transformedObj!});
+          this.transformedObjects.set(msgIdToString(this.getMsgId(message)), {
+            createdAt: new Date(),
+            object: transformedObj,
+          });
       }
     } catch (e) {
       if (e.code === ERR_TOPIC_VALIDATOR_REJECT) {
@@ -141,7 +137,7 @@ export class LodestarGossipsub extends Gossipsub {
    */
   public _emitMessage(message: InMessage): void {
     message.topicIDs.forEach((topic) => {
-      const transformedObj = this.transformedObjects.get(getMessageId(message));
+      const transformedObj = this.transformedObjects.get(msgIdToString(this.getMsgId(message)));
       if (transformedObj && transformedObj.object) {
         super.emit(topic, transformedObj.object);
       }
@@ -149,16 +145,21 @@ export class LodestarGossipsub extends Gossipsub {
   }
 
   /**
-   * Override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.6.3/ts/index.ts#L1034
+   * Override default `_buildMessage` to snappy-compress the data
    */
-  public _publish(message: InMessage): Promise<void> {
-    assert.true(message.topicIDs && message.topicIDs.length === 1, "lodestar only supports 1 topic per message");
-    assert.true(!!message.data, "message to publish should have data");
-    const encoding = getTopicEncoding(message.topicIDs[0]);
-    if (encoding === GossipEncoding.SSZ_SNAPPY) {
-      message.data = compress<Uint8Array>(message.data!);
+  public _buildMessage(msg: InMessage): Promise<InMessage> {
+    msg.data = encodeMessageData(msg.topicIDs[0], msg.data!);
+    return super._buildMessage(msg);
+  }
+
+  /**
+   * Override default `getMsgId` function to cache the message-id
+   */
+  public getMsgId(msg: ILodestarGossipMessage): Uint8Array {
+    if (!msg.msgId) {
+      msg.msgId = computeMsgId(msg.topicIDs[0], msg.data!);
     }
-    return super._publish(message);
+    return msg.msgId;
   }
 
   private genericIsValid(message: InMessage): boolean | undefined {
@@ -194,14 +195,14 @@ export class LodestarGossipsub extends Gossipsub {
     return result as GossipMessageValidatorFn;
   }
 
-  private deserializeGossipMessage(topic: string, message: InMessage): {object: GossipObject; subnet?: number} {
-    if (getTopicEncoding(topic) === GossipEncoding.SSZ_SNAPPY) {
-      message.data = uncompress(message.data!);
-    }
+  private deserializeGossipMessage(topic: string, msg: InMessage): {object: GossipObject; subnet?: number} {
+    const data = decodeMessageData(topic, msg.data!);
+
     if (isAttestationSubnetTopic(topic)) {
       const subnet = getSubnetFromAttestationSubnetTopic(topic);
-      return {object: this.config.types.Attestation.deserialize(message.data!), subnet};
+      return {object: this.config.types.Attestation.deserialize(data), subnet};
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let objType: Type<any>;
     const gossipEvent = topicToGossipEvent(topic);
@@ -224,7 +225,7 @@ export class LodestarGossipsub extends Gossipsub {
       default:
         throw new Error(`Don't know how to deserialize object received under topic ${topic}`);
     }
-    return {object: objType.deserialize(message.data!)};
+    return {object: objType.deserialize(data)};
   }
 
   private cleanUp(): void {

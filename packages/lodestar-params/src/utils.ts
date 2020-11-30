@@ -1,5 +1,5 @@
+import {load, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {Json, ContainerType} from "@chainsafe/ssz";
-import {FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 
 export function createParams<T>(input: Record<string, unknown>, type: ContainerType<T>): T {
   const params: Partial<T> = {};
@@ -9,6 +9,10 @@ export function createParams<T>(input: Record<string, unknown>, type: ContainerT
     }
   });
   return params as T;
+}
+
+export function loadConfigYaml(configYaml: string): Record<string, unknown> {
+  return load(configYaml, {schema});
 }
 
 export const schema = new Schema({
@@ -22,3 +26,11 @@ export const schema = new Schema({
     }),
   ],
 });
+
+export function mapValuesNumToString<T extends {[key: string]: number | string}>(obj: T): {[K in keyof T]: string} {
+  const objAsStrings = {} as {[K in keyof T]: string};
+  for (const key in obj) {
+    objAsStrings[key] = String(obj[key]);
+  }
+  return objAsStrings;
+}

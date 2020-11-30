@@ -1,6 +1,6 @@
-import {Json} from "@chainsafe/ssz";
+import {fromHexString, Json} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {LodestarError, toJson, toString} from "../../src";
+import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src";
 
 describe("Json helper", () => {
   const circularReference = {};
@@ -50,6 +50,14 @@ describe("Json helper", () => {
       // Objects
       {id: "object of basic types", arg: {a: 1, b: 2}, json: {a: 1, b: 2}},
       {id: "object of objects", arg: {a: {b: 1}}, json: {a: {b: 1}}},
+      () => {
+        const rootHex = "0x11111111111111111111111111111111";
+        return {
+          id: "Object with Uint8Array prop",
+          arg: {root: fromHexString(rootHex)},
+          json: {root: rootHex},
+        };
+      },
 
       // Errors
       () => {
@@ -94,9 +102,31 @@ describe("Json helper", () => {
           },
         };
       },
+      () => {
+        const code = "ERR_PARENT_UNKNOWN";
+        const rootHex = "0x11111111111111111111111111111111";
+        const error = new LodestarError({code, root: fromHexString(rootHex)});
+        return {
+          id: "Lodestar error with Uint8Array",
+          arg: error,
+          json: {
+            code,
+            root: rootHex,
+            stack: error.stack,
+          },
+        };
+      },
 
       // Circular references
-      {id: "circular reference", arg: circularReference, json: circularReference},
+      () => {
+        const circularReference: any = {};
+        circularReference.myself = circularReference;
+        return {
+          id: "circular reference",
+          arg: circularReference,
+          json: {myself: CIRCULAR_REFERENCE_TAG},
+        };
+      },
     ];
 
     for (const testCase of testCases) {
@@ -135,9 +165,25 @@ describe("Json helper", () => {
       {id: "object of basic types", json: {a: 1, b: 2}, output: "a=1, b=2"},
       // eslint-disable-next-line quotes
       {id: "object of objects", json: {a: {b: 1}}, output: `a={"b":1}`},
+      {
+        id: "error metadata",
+        json: {
+          code: "ERR_PARENT_UNKNOWN",
+          parentRoot: "0x1111111111111111111111111111111111",
+        },
+        output: "code=ERR_PARENT_UNKNOWN, parentRoot=0x1111111111111111111111111111111111",
+      },
 
       // Circular references
-      {id: "circular reference", json: circularReference, output: "myself=ERROR_CIRCULAR_REFERENCE"},
+      () => {
+        const circularReference: any = {};
+        circularReference.myself = circularReference;
+        return {
+          id: "circular reference",
+          json: circularReference,
+          output: `myself=${CIRCULAR_REFERENCE_TAG}`,
+        };
+      },
     ];
 
     for (const testCase of testCases) {

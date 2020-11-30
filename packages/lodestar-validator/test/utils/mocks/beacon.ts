@@ -1,19 +1,11 @@
-import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {
-  BeaconBlock,
-  BeaconState,
-  Bytes32,
-  Fork,
-  Genesis,
-  Number64,
-  Root,
-  SyncingStatus,
-  Uint64,
-} from "@chainsafe/lodestar-types";
+import {BeaconBlock, Bytes32, Fork, Genesis, Number64} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {IBeaconApi, IBeaconStateApi} from "../../../src/api/interface/beacon";
+import {IBeaconBlocksApi} from "../../../lib/api/interface/beacon";
+import {RestBeaconBlocksApi} from "../../../src/api/impl/rest/beacon/blocks";
+import {RestBeaconPoolApi} from "../../../src/api/impl/rest/beacon/pool";
 import {RestBeaconStateApi} from "../../../src/api/impl/rest/beacon/state";
+import {IBeaconApi, IBeaconPoolApi, IBeaconStateApi} from "../../../src/api/interface/beacon";
 
 export interface IMockBeaconApiOpts {
   version?: Bytes32;
@@ -24,6 +16,8 @@ export interface IMockBeaconApiOpts {
 
 export class MockBeaconApi implements IBeaconApi {
   public state: SinonStubbedInstance<IBeaconStateApi>;
+  public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
+  public pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   private version: Bytes32;
   private fork: Fork;
@@ -36,18 +30,12 @@ export class MockBeaconApi implements IBeaconApi {
     this.head = (opts && opts.head) || generateEmptyBlock();
     this.genesisTime = (opts && opts.genesisTime) || Math.floor(Date.now() / 1000);
     this.state = sinon.createStubInstance(RestBeaconStateApi);
+    this.blocks = sinon.createStubInstance(RestBeaconBlocksApi);
+    this.pool = sinon.createStubInstance(RestBeaconPoolApi);
   }
 
   public async getValidator(): Promise<any> {
     throw new Error("Method not implemented.");
-  }
-
-  public async getClientVersion(): Promise<Bytes32> {
-    return this.version;
-  }
-
-  public async getFork(): Promise<{fork: Fork; chainId: Uint64; genesisValidatorsRoot: Root}> {
-    return {fork: this.fork, chainId: BigInt(1), genesisValidatorsRoot: ZERO_HASH};
   }
 
   public async getGenesis(): Promise<Genesis | null> {
@@ -56,17 +44,5 @@ export class MockBeaconApi implements IBeaconApi {
       genesisForkVersion: Buffer.alloc(8, 1),
       genesisValidatorsRoot: Buffer.alloc(32, 1),
     };
-  }
-
-  public async getSyncingStatus(): Promise<boolean | SyncingStatus> {
-    return false;
-  }
-
-  public async getChainHead(): Promise<BeaconBlock> {
-    return this.head;
-  }
-
-  public async getBeaconState(): Promise<BeaconState> {
-    throw new Error("Method not implemented.");
   }
 }

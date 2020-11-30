@@ -23,7 +23,7 @@ import {mkdir} from "../../util";
 import {defaultRootDir} from "../../paths/global";
 
 /**
- * Run a beacon node
+ * Run a beacon node with validator
  */
 export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   await initBLS();

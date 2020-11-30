@@ -25,7 +25,6 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     HYSTERESIS_DOWNWARD_MULTIPLIER: Number64,
     HYSTERESIS_UPWARD_MULTIPLIER: Number64,
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: Number64,
-    PROPORTIONAL_SLASHING_MULTIPLIER: Number64,
 
     // Fork choice
     SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
@@ -63,7 +62,6 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     SLOTS_PER_HISTORICAL_ROOT: Number64,
     MIN_VALIDATOR_WITHDRAWABILITY_DELAY: Number64,
     SHARD_COMMITTEE_PERIOD: Number64,
-    MAX_EPOCHS_PER_CROSSLINK: Number64,
     MIN_EPOCHS_TO_INACTIVITY_PENALTY: Number64,
 
     // State vector lengths
@@ -78,6 +76,7 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     PROPOSER_REWARD_QUOTIENT: Number64,
     INACTIVITY_PENALTY_QUOTIENT: BigInt64,
     MIN_SLASHING_PENALTY_QUOTIENT: Number64,
+    PROPORTIONAL_SLASHING_MULTIPLIER: Number64,
 
     // Max operations per block
     MAX_PROPOSER_SLASHINGS: Number64,

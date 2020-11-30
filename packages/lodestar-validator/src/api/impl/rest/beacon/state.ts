@@ -1,20 +1,9 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Fork, BLSPubkey, ValidatorIndex, ValidatorResponse} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {BLSPubkey, Fork, ValidatorIndex, ValidatorResponse} from "@chainsafe/lodestar-types";
 import {Json} from "@chainsafe/ssz";
-import {HttpClient} from "../../../../util/httpClient";
 import {IBeaconStateApi} from "../../../interface/beacon";
+import {RestApi} from "./abstract";
 
-export class RestBeaconStateApi implements IBeaconStateApi {
-  private readonly client: HttpClient;
-  private readonly logger: ILogger;
-  private readonly config: IBeaconConfig;
-
-  public constructor(config: IBeaconConfig, client: HttpClient, logger: ILogger) {
-    this.client = client;
-    this.logger = logger;
-    this.config = config;
-  }
+export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
   public async getStateValidator(
     stateId: "head",
     validatorId: ValidatorIndex | BLSPubkey

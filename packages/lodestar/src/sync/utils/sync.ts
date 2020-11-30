@@ -16,6 +16,9 @@ import {IPeerMetadataStore} from "../../network/peers/interface";
 import {getSyncPeers} from "./peers";
 import {DEFAULT_RPC_SCORE} from "../../network/peers";
 
+// timeout for getBlockRange is 3 minutes
+const GET_BLOCK_RANGE_TIMEOUT = 3 * 60 * 1000;
+
 export function getHighestCommonSlot(peerStatuses: (Status | null)[]): Slot {
   const slotStatuses = peerStatuses.reduce<Map<Slot, number>>((current, status) => {
     if (status && current.has(status.headSlot)) {
@@ -105,7 +108,17 @@ export function fetchBlockChunks(
           return;
         }
         try {
-          yield await getBlockRange(logger, reqResp, peers, slotRange);
+          // a work around of timeout issue that cause our sync stall
+          let timer: NodeJS.Timeout | null = null;
+          yield (await Promise.race([
+            getBlockRange(logger, reqResp, peers, slotRange),
+            new Promise((_, reject) => {
+              timer = setTimeout(() => {
+                reject(new Error("beacon_blocks_by_range timeout"));
+              }, GET_BLOCK_RANGE_TIMEOUT);
+            }),
+          ])) as SignedBeaconBlock[] | null;
+          if (timer) clearTimeout(timer);
         } catch (e) {
           logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
           yield null;
@@ -182,15 +195,23 @@ export function processSyncBlocks(
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);
-    while (blockBuffer.length > 0) {
+    // can't check linear chain for last block
+    // so we don't want to import it
+    while (blockBuffer.length > 1) {
       const signedBlock = blockBuffer.shift()!;
+      const nextBlock = blockBuffer[0];
       const block = signedBlock.message;
+      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+      // only import blocks that's part of a linear chain
       if (
         !isInitialSync ||
-        (isInitialSync && block.slot > headSlot! && config.types.Root.equals(headRoot!, block.parentRoot))
+        (isInitialSync &&
+          block.slot > headSlot! &&
+          config.types.Root.equals(headRoot!, block.parentRoot) &&
+          config.types.Root.equals(blockRoot, nextBlock.message.parentRoot))
       ) {
         await chain.receiveBlock(signedBlock, trusted);
-        headRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+        headRoot = blockRoot;
         headSlot = block.slot;
         if (block.slot > lastProcessedSlot!) {
           lastProcessedSlot = block.slot;

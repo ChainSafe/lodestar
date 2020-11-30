@@ -10,6 +10,9 @@ import {getValidatorPaths} from "../../../../validator/paths";
 import {getBeaconConfigFromArgs} from "../../../../../config";
 import {ISlashingProtectionArgs} from "./options";
 
+/**
+ * Returns a new SlashingProtection object instance based on global args.
+ */
 export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
   const validatorPaths = getValidatorPaths(args);
   const dbPath = validatorPaths.validatorsDbDir;
@@ -21,6 +24,9 @@ export function getSlashingProtection(args: IGlobalArgs): SlashingProtection {
   });
 }
 
+/**
+ * Returns genesisValidatorsRoot from validator API client.
+ */
 export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProtectionArgs): Promise<Root> {
   const server = args.server;
 

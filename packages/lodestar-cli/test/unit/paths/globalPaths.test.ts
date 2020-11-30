@@ -17,10 +17,10 @@ describe("paths / global", () => {
     },
     {
       id: "Testnet paths",
-      args: {testnet: "medalla"},
+      args: {testnet: "pyrmont"},
       globalPaths: {
-        rootDir: ".medalla",
-        paramsFile: ".medalla/config.yaml",
+        rootDir: ".pyrmont",
+        paramsFile: ".pyrmont/config.yaml",
       },
     },
     {

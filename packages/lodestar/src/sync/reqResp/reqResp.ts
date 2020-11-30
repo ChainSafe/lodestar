@@ -43,6 +43,21 @@ enum GoodByeReasonCode {
   ERROR = 3,
 }
 
+const GoodbyeReasonCodeDescriptions: Record<string, string> = {
+  // spec-defined codes
+  1: "Client shutdown",
+  2: "Irrelevant network",
+  3: "Internal fault/error",
+
+  // Teku-defined codes
+  128: "Unable to verify network",
+
+  // Lighthouse-defined codes
+  129: "Client has too many peers",
+  250: "Peer score too low",
+  251: "Peer banned this node",
+};
+
 /**
  * The BeaconReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
@@ -219,7 +234,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     peerId: PeerId,
     sink: Sink<unknown, unknown>
   ): Promise<void> {
-    this.logger.info(`Received goodbye request from ${peerId.toB58String()}, reason=${request}`);
+    this.logger.info("Received goodbye request", {
+      peer: peerId.toB58String(),
+      reason: request.body,
+      description: GoodbyeReasonCodeDescriptions[request.body.toString()],
+    });
     await sendResponse(
       {config: this.config, logger: this.logger},
       request.id,

@@ -16,7 +16,6 @@ export interface IGlobalPaths {
  * └── $paramsFile
  * ```
  */
-
 export function getGlobalPaths(args: Partial<IGlobalArgs>): IGlobalPaths {
   // Set rootDir to testnet name iff rootDir is not set explicitly
   const rootDir = args.rootDir || (args.testnet ? `.${args.testnet}` : defaultRootDir);

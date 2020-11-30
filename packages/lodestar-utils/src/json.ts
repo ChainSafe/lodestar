@@ -1,7 +1,10 @@
 import {Json, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "./errors";
+import {mapValues} from "./objects";
 
-export function toJson(arg: unknown): Json {
+export const CIRCULAR_REFERENCE_TAG = "CIRCULAR_REFERENCE";
+
+export function toJson(arg: unknown, refs = new WeakMap()): Json {
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -10,10 +13,18 @@ export function toJson(arg: unknown): Json {
 
     case "object":
       if (arg === null) return "null";
+
+      // Prevent recursive loops
+      if (refs.has(arg)) {
+        return CIRCULAR_REFERENCE_TAG;
+      }
+      refs.set(arg, true);
+
       if (arg instanceof Uint8Array) return toHexString(arg);
-      if (arg instanceof LodestarError) return toJson(arg.toObject());
-      if (arg instanceof Error) return toJson(errorToObject(arg));
-      return arg as Json;
+      if (arg instanceof LodestarError) return toJson(arg.toObject(), refs);
+      if (arg instanceof Error) return toJson(errorToObject(arg), refs);
+      if (Array.isArray(arg)) return arg.map((item) => toJson(item, refs));
+      return mapValues(arg, (item) => toJson(item, refs));
 
     // Already valid JSON
     case "number":
@@ -60,7 +71,7 @@ function JSONStringifyCircular(value: any): string {
     return JSON.stringify(value);
   } catch (e) {
     if (e instanceof TypeError && e.message.includes("circular")) {
-      return "ERROR_CIRCULAR_REFERENCE";
+      return CIRCULAR_REFERENCE_TAG;
     } else {
       throw e;
     }

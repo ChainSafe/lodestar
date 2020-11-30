@@ -54,6 +54,9 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
   return {beaconNodeOptions, config};
 }
 
+/**
+ * Write options and configs to disk
+ */
 export async function persistOptionsAndConfig(
   args: IBeaconArgs & IGlobalArgs,
   beaconNodeOptions: BeaconNodeOptions,

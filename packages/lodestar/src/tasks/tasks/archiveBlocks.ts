@@ -7,8 +7,7 @@ import {IBeaconDb} from "../../db/api";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 export interface IArchiveBlockModules {
   db: IBeaconDb;
@@ -39,37 +38,57 @@ export class ArchiveBlocksTask implements ITask {
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
   public async run(): Promise<void> {
-    this.logger.profile("Archive Blocks");
-    const finalizedSlot = computeStartSlotAtEpoch(this.config, this.finalized.epoch);
+    this.logger.profile("Archive Blocks epoch #" + this.finalized.epoch);
     // Use fork choice to determine the blocks to archive and delete
-    const canonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
-    const nonCanonicalSummaries = this.forkChoice
-      .forwardIterateBlockSummaries()
-      .filter(
-        (summary) =>
-          summary.slot < finalizedSlot && !this.forkChoice.isDescendant(summary.blockRoot, this.finalized.root)
-      );
-    // first archive the canonical blocks
+    const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
+    let i = 0;
+    // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
+    const BATCH_SIZE = 1000;
+    // process in chunks to avoid OOM
+    while (i < allCanonicalSummaries.length) {
+      const upperBound = Math.min(i + BATCH_SIZE, allCanonicalSummaries.length);
+      const canonicalSummaries = allCanonicalSummaries.slice(i, upperBound);
+      await this.processCanonicalBlocks(canonicalSummaries);
+      this.logger.verbose("Archive Blocks: processed chunk", {
+        lowerBound: i,
+        upperBound,
+        size: allCanonicalSummaries.length,
+      });
+      i = upperBound;
+    }
+    await this.deleteNonCanonicalBlocks();
+    this.logger.profile("Archive Blocks epoch #" + this.finalized.epoch);
+    this.logger.info("Archiving of finalized blocks complete.", {
+      totalArchived: allCanonicalSummaries.length,
+      finalizedEpoch: this.finalized.epoch,
+    });
+  }
+
+  private async processCanonicalBlocks(canonicalSummaries: IBlockSummary[]): Promise<void> {
+    if (!canonicalSummaries) return;
+    // load Buffer instead of SignedBeaconBlock to improve performance
     const canonicalBlockEntries = (
       await Promise.all(
         canonicalSummaries.map(async (summary) => {
-          const block = (await this.db.block.get(summary.blockRoot))!;
+          const blockBuffer = (await this.db.block.getBinary(summary.blockRoot))!;
           return {
             key: summary.slot,
-            value: block,
+            value: blockBuffer,
+            summary,
           };
         })
       )
     ).filter((kv) => kv.value);
+    // put to blockArchive db and delete block db
     await Promise.all([
-      this.db.blockArchive.batchPut(canonicalBlockEntries),
-      // delete all canonical and non-canonical blocks at once
-      this.db.block.batchDelete(canonicalSummaries.concat(nonCanonicalSummaries).map((summary) => summary.blockRoot)),
+      this.db.blockArchive.batchPutBinary(canonicalBlockEntries),
+      this.db.block.batchDelete(canonicalSummaries.map((summary) => summary.blockRoot)),
     ]);
-    this.logger.profile("Archive Blocks");
-    this.logger.info("Archiving of finalized blocks complete.", {
-      totalArchived: canonicalSummaries.length,
-      finalizedEpoch: this.finalized.epoch,
-    });
+  }
+
+  private async deleteNonCanonicalBlocks(): Promise<void> {
+    // loop through forkchoice single time
+    const nonCanonicalSummaries = this.forkChoice.iterateNonAncestors(this.finalized.root);
+    await this.db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
   }
 }

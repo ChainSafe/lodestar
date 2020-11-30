@@ -57,17 +57,4 @@ describe("gossipsub", function () {
     await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
     // no error means pass validation
   });
-
-  it("should return false because of duplicate", async () => {
-    validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.accept);
-    await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
-    // pass validation
-    // receive again => duplicate
-    try {
-      await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
-      assert.fail("Expect error here because of duplicate");
-    } catch (e) {
-      expect(e.message).to.be.equal("Duplicate message for topic /eth2/00000000/beacon_block/ssz");
-    }
-  });
 });

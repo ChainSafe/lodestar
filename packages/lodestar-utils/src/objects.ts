@@ -26,3 +26,14 @@ export function isPlainObject(o: any): boolean {
   // Most likely a plain Object
   return true;
 }
+
+export function mapValues<T, R>(
+  obj: object | {[key: string]: T},
+  iteratee: (value: T, key: string) => R
+): {[key: string]: R} {
+  const output: {[key: string]: R} = {};
+  for (const [key, value] of Object.entries(obj)) {
+    output[key] = iteratee(value, key);
+  }
+  return output;
+}

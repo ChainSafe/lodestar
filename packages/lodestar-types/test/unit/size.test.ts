@@ -6,5 +6,5 @@ it("should calculate correct minSize and maxSize", () => {
   const maxSize = config.types.BeaconState.maxSize();
   // https://gist.github.com/protolambda/db75c7faa1e94f2464787a480e5d613e
   expect(minSize).to.be.equal(2687377);
-  expect(maxSize).to.be.equal(141837542965649);
+  expect(maxSize).to.be.equal(141837543039377);
 });

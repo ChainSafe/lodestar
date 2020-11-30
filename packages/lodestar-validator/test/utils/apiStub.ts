@@ -1,22 +1,29 @@
 import {EventEmitter} from "events";
 import sinon, {SinonSandbox, SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import {IBeaconBlocksApi} from "../../lib/api/interface/beacon";
 import {ApiClientEventEmitter, IApiClient, RestValidatorApi} from "../../src/api";
+import {RestBeaconBlocksApi} from "../../src/api/impl/rest/beacon/blocks";
 import {RestBeaconStateApi} from "../../src/api/impl/rest/beacon/state";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
 import {RestNodeApi} from "../../src/api/impl/rest/node/node";
-import {IBeaconApi, IBeaconStateApi} from "../../src/api/interface/beacon";
+import {IBeaconApi, IBeaconStateApi, IBeaconPoolApi} from "../../src/api/interface/beacon";
 import {IEventsApi} from "../../src/api/interface/events";
 import {INodeApi} from "../../src/api/interface/node";
 import {IValidatorApi} from "../../src/api/interface/validators";
 import {LocalClock} from "../../src/api/LocalClock";
+import {RestBeaconPoolApi} from "../../src/api/impl/rest/beacon/pool";
 
 class SinonStubbedBeaconApi implements IBeaconApi {
   public getGenesis: SinonStubbedMember<IBeaconApi["getGenesis"]>;
   public state: SinonStubbedInstance<IBeaconStateApi>;
+  public blocks: SinonStubbedInstance<IBeaconBlocksApi>;
+  public pool: SinonStubbedInstance<IBeaconPoolApi>;
 
   constructor(sandbox: SinonSandbox = sinon) {
     this.getGenesis = sandbox.stub();
     this.state = sandbox.createStubInstance(RestBeaconStateApi);
+    this.blocks = sandbox.createStubInstance(RestBeaconBlocksApi);
+    this.pool = sandbox.createStubInstance(RestBeaconPoolApi);
   }
 }
 

@@ -105,7 +105,10 @@ export interface IForkChoice {
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
   isDescendant(ancestorRoot: Root, descendantRoot: Root): boolean;
-  prune(): IBlockSummary[];
+  /**
+   * Prune items up to a finalized root.
+   */
+  prune(finalizedRoot: Root): IBlockSummary[];
   setPruneThreshold(threshold: number): void;
   /**
    * Iterates backwards through block summaries, starting from a block root

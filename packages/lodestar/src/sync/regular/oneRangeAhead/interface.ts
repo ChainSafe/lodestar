@@ -1,6 +1,7 @@
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types/src";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IRegularSyncModules, ISyncCheckpoint} from "../..";
 import {IService} from "../../../node";
+import {AbortSignal} from "abort-controller";
 
 export interface IBlockRangeFetcher {
   setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void;

@@ -29,6 +29,8 @@ jobs:
       # </common-build>
       - name: Lint
         run: yarn lint
+      - name: Check Types
+        run: yarn run check-types
       - name: Unit tests
         run: yarn test:unit
       - name: Upload coverage data

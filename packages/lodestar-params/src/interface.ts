@@ -18,7 +18,6 @@ export interface IBeaconParams {
   HYSTERESIS_QUOTIENT: number;
   HYSTERESIS_DOWNWARD_MULTIPLIER: number;
   HYSTERESIS_UPWARD_MULTIPLIER: number;
-  PROPORTIONAL_SLASHING_MULTIPLIER: number;
 
   // Fork choice
   SAFE_SLOTS_TO_UPDATE_JUSTIFIED: number;
@@ -56,7 +55,6 @@ export interface IBeaconParams {
   SLOTS_PER_HISTORICAL_ROOT: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
   SHARD_COMMITTEE_PERIOD: number;
-  MAX_EPOCHS_PER_CROSSLINK: number;
   MIN_EPOCHS_TO_INACTIVITY_PENALTY: number;
 
   // State vector lengths
@@ -71,6 +69,7 @@ export interface IBeaconParams {
   PROPOSER_REWARD_QUOTIENT: number;
   INACTIVITY_PENALTY_QUOTIENT: bigint;
   MIN_SLASHING_PENALTY_QUOTIENT: number;
+  PROPORTIONAL_SLASHING_MULTIPLIER: number;
 
   // Max operations per block
   MAX_PROPOSER_SLASHINGS: number;

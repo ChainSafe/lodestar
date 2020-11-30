@@ -2,22 +2,23 @@
  * @module chain/stateTransition/util
  */
 
-import {BitList, List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   Attestation,
-  ATTESTATION_SUBNET_COUNT,
   AttestationData,
+  ATTESTATION_SUBNET_COUNT,
   BeaconState,
   IndexedAttestation,
   Slot,
   ValidatorIndex,
+  CommitteeIndex,
 } from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {DomainType} from "../constants";
 import {isSorted} from "@chainsafe/lodestar-utils";
-import {getDomain} from "./domain";
+import {BitList, List} from "@chainsafe/ssz";
+import {DomainType} from "../constants";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
+import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
 
@@ -149,7 +150,17 @@ export function computeSubnetForSlot(
   slot: number,
   committeeIndex: number
 ): number {
+  const committeesAtSlot = getCommitteeCountAtSlot(config, state, slot);
+  return computeSubnetForCommitteesAtSlot(config, slot, committeesAtSlot, committeeIndex);
+}
+
+export function computeSubnetForCommitteesAtSlot(
+  config: IBeaconConfig,
+  slot: Slot,
+  committeesAtSlot: number,
+  committeeIndex: CommitteeIndex
+): number {
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(config, slot);
-  const committeesSinceEpochStart = getCommitteeCountAtSlot(config, state, slot) * slotsSinceEpochStart;
+  const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }
