@@ -11,7 +11,7 @@ describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
   const presetName = "mainnet";
-  const testnetName = "medalla";
+  const testnetName = "pyrmont";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
