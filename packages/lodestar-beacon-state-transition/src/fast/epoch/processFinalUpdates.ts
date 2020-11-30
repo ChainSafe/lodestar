@@ -1,5 +1,5 @@
-import {readOnlyMap, List} from "@chainsafe/ssz";
 import {Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getRandaoMix} from "../../util";
@@ -35,7 +35,7 @@ export function processFinalUpdates(
   }
 
   // update effective balances with hysteresis
-  const balances = readOnlyMap(state.balances, (balance) => balance);
+  const balances = process.balances;
   for (let i = 0; i < process.statuses.length; i++) {
     const status = process.statuses[i];
     const balance = balances[i];
