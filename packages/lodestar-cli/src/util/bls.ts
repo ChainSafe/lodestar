@@ -8,4 +8,3 @@ export async function initBLS(): Promise<void> {
     await init("herumi");
   }
 }
-
