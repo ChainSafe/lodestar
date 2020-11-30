@@ -8,7 +8,6 @@ const BASE_URL = "https://github.com/ethereum/eth2.0-spec-tests/releases/downloa
 // eslint-disable-next-line prettier/prettier
 const TESTS = ["general", "mainnet", "minimal"];
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 export async function downloadTests(
   {specVersion, outputDir}: {specVersion: string; outputDir: string},
   log?: (msg: string) => void
