@@ -1,19 +1,16 @@
 #!/usr/bin/env node
 
-import fs from "fs";
-import path from "path";
-import rimraf from "rimraf";
-import {downloadTests} from "./downloadTests";
+import {downloadTestsAndManage} from "./downloadTests";
 
 /* eslint-disable no-console */
 
 async function downloadTestsCli(): Promise<void> {
-  const [specVersion, outputDirBase, ...flags] = process.argv.slice(2);
+  const [specVersion, outputDir, ...flags] = process.argv.slice(2);
   const cleanup = flags.includes("--cleanup");
   const force = flags.includes("--force");
 
   // Print help
-  if (specVersion === "--help" || !specVersion || !outputDirBase) {
+  if (specVersion === "--help" || !specVersion || !outputDir) {
     return console.log(`
   USAGE: 
   
@@ -29,22 +26,7 @@ async function downloadTestsCli(): Promise<void> {
   eth2-spec-test-download v1.0.0 ./path/to/output-dir \n`);
   }
 
-  const outputDir = path.join(outputDirBase, specVersion);
-  if (fs.existsSync(outputDir) && !force) {
-    throw Error(`Path ${outputDir} already exists`);
-  } else {
-    fs.mkdirSync(outputDir, {recursive: true});
-  }
-
-  if (cleanup) {
-    for (const dirpath of fs.readdirSync(outputDirBase)) {
-      if (dirpath !== specVersion) {
-        rimraf.sync(path.join(outputDirBase, dirpath));
-      }
-    }
-  }
-
-  await downloadTests({specVersion, outputDir}, console.log);
+  await downloadTestsAndManage({specVersion, outputDir, cleanup, force}, console.log);
 }
 
 downloadTestsCli().catch((e) => {
