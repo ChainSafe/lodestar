@@ -185,21 +185,51 @@ describe("sync utils", function () {
       chainStub.forkChoice = forkChoiceStub;
     });
 
-    it("should work", async function () {
+    it("should not import last fetched block", async function () {
       const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
       const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
       const block1 = generateEmptySignedBlock();
       block1.message.parentRoot = blockRoot;
       block1.message.slot = 1;
       const block2 = generateEmptySignedBlock();
-      block2.message.slot = 3;
+      block2.message.slot = 2;
       block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
+      // last fetched block maybe an orphaned block
+      const block3 = generateEmptySignedBlock();
+      block3.message.slot = 3;
+      block3.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block2.message);
       const lastProcesssedSlot = await pipe(
-        [[block2], [block1]],
-        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot})
+        [[block1, block2, block3]],
+        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot}, true)
       );
+      expect(chainStub.receiveBlock.calledWith(block1, true)).to.be.true;
+      expect(chainStub.receiveBlock.calledWith(block2, true)).to.be.true;
       expect(chainStub.receiveBlock.calledTwice).to.be.true;
-      expect(lastProcesssedSlot).to.be.equal(3);
+      expect(lastProcesssedSlot).to.be.equal(2);
+    });
+
+    it("should not import orphaned block", async function () {
+      const lastProcessedBlock = blockToHeader(config, generateEmptySignedBlock().message);
+      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(lastProcessedBlock);
+      const block1 = generateEmptySignedBlock();
+      block1.message.parentRoot = blockRoot;
+      block1.message.slot = 1;
+      const block2 = generateEmptySignedBlock();
+      block2.message.slot = 2;
+      block2.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block1.message);
+      // last fetched block maybe an orphaned block
+      const orphanedBlock = generateEmptySignedBlock();
+      orphanedBlock.message.slot = 3;
+      const lastBlock = generateEmptySignedBlock();
+      lastBlock.message.slot = 4;
+      const lastProcesssedSlot = await pipe(
+        [[block1, block2, orphanedBlock, lastBlock]],
+        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot}, true)
+      );
+      // only block 1 is imported bc block2 does not link to a child
+      // don't import orphaned and last block
+      expect(chainStub.receiveBlock.calledOnceWith(block1, true)).to.be.true;
+      expect(lastProcesssedSlot).to.be.equal(1);
     });
 
     it("should handle failed to get range - initial sync", async function () {
