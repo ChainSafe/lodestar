@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-floating-promises */
 import {parentPort, workerData} from "worker_threads";
 
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {Checkpoint} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
@@ -9,7 +9,10 @@ import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getDevValidator} from "../../utils/node/validator";
 
 (async function () {
-  await initBLS();
+  // blst Native bindings don't work right on worker threads. It errors with
+  // (node:1692547) UnhandledPromiseRejectionWarning: Error: Module did not self-register: '/home/cayman/Code/bls/node_modules/@chainsafe/blst/prebuild/linux-x64-72-binding.node'.
+  // Related issue: https://github.com/nodejs/node/issues/21783#issuecomment-429637117
+  await init("herumi");
 
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent} = workerData.options;
 

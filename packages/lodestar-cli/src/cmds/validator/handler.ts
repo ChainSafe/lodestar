@@ -1,12 +1,11 @@
 import fs from "fs";
-import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti} from "../../util";
+import {YargsError, getDefaultGraffiti, initBLS} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";

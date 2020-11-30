@@ -1,6 +1,6 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
-import bls, {initBLS} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
@@ -14,14 +14,6 @@ interface IAggregateSigsVerifyTestCase {
     output: boolean;
   };
 }
-
-before(async function f() {
-  try {
-    await initBLS();
-  } catch (e) {
-    console.log(e);
-  }
-});
 
 describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
   "bls/fast_aggregate_verify/small",
@@ -38,7 +30,5 @@ describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "fast_aggregate_verify_infinity_pubkey",
   }
 );

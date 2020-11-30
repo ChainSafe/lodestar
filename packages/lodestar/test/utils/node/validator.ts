@@ -1,4 +1,4 @@
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
@@ -75,7 +75,9 @@ export function getDevValidator({
     }),
     logger: logger,
     keypairs: Array.from({length: count}, (_, i) => {
-      return new Keypair(PrivateKey.fromBytes(interopKeypair(i + startIndex).privkey));
+      const secretKey = bls.SecretKey.fromBytes(interopKeypair(i + startIndex).privkey);
+      const publicKey = secretKey.toPublicKey();
+      return {secretKey, publicKey};
     }),
   });
 }

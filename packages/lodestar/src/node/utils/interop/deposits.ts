@@ -1,7 +1,7 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
 import {Deposit, DepositData, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {sign} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {interopKeypairs} from "@chainsafe/lodestar-validator";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../constants";
@@ -22,7 +22,7 @@ export function interopDeposits(
     };
     const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, data, domain);
-    data.signature = sign(privkey, signingRoot);
+    data.signature = bls.sign(privkey, signingRoot);
     // Add to merkle tree
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));
     return {

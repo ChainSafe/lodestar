@@ -2,7 +2,7 @@
  * @module chain/stateTransition/block
  */
 
-import {verify} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconState, Deposit, Validator} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../constants";
@@ -38,7 +38,7 @@ export function processDeposit(config: IBeaconConfig, state: BeaconState, deposi
     // Verify the deposit signature (proof of possession)
     // Note: The deposit contract does not check signatures.
     // Note: Deposits are valid across forks, thus the deposit domain is retrieved directly from `computeDomain`.
-    if (!verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
+    if (!bls.verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
       return;
     }
     // Add validator and balance entries

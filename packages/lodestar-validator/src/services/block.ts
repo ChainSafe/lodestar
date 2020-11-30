@@ -4,7 +4,7 @@
 
 import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import {IKeypair, ISecretKey} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {
@@ -22,7 +22,7 @@ export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   // validators private keys (order is important)
-  private readonly privateKeys: PrivateKey[] = [];
+  private readonly privateKeys: ISecretKey[] = [];
   // validators public keys (order is important)
   private readonly publicKeys: BLSPubkey[] = [];
   private readonly slashingProtection: ISlashingProtection;
@@ -33,7 +33,7 @@ export default class BlockProposingService {
 
   public constructor(
     config: IBeaconConfig,
-    keypairs: Keypair[],
+    keypairs: IKeypair[],
     provider: IApiClient,
     slashingProtection: ISlashingProtection,
     logger: ILogger,
@@ -41,8 +41,8 @@ export default class BlockProposingService {
   ) {
     this.config = config;
     keypairs.forEach((keypair) => {
-      this.privateKeys.push(keypair.privateKey);
-      this.publicKeys.push(keypair.publicKey.toBytesCompressed());
+      this.privateKeys.push(keypair.secretKey);
+      this.publicKeys.push(keypair.publicKey.toBytes());
     });
     this.provider = provider;
     this.slashingProtection = slashingProtection;
@@ -129,7 +129,7 @@ export default class BlockProposingService {
     try {
       block = await this.provider.validator.produceBlock(
         slot,
-        this.privateKeys[proposerIndex].signMessage(randaoSigningRoot).toBytesCompressed(),
+        this.privateKeys[proposerIndex].sign(randaoSigningRoot).toBytes(),
         this.graffiti || ""
       );
     } catch (e) {
@@ -153,7 +153,7 @@ export default class BlockProposingService {
 
     const signedBlock: SignedBeaconBlock = {
       message: block,
-      signature: this.privateKeys[proposerIndex].signMessage(signingRoot).toBytesCompressed(),
+      signature: this.privateKeys[proposerIndex].sign(signingRoot).toBytes(),
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);

@@ -1,4 +1,4 @@
-import {Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 
 import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
@@ -39,12 +39,7 @@ export function processVoluntaryExit(
     const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
     const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
     const pubkey = epochCtx.index2pubkey[voluntaryExit.validatorIndex];
-    if (
-      !pubkey.verifyMessage(
-        Signature.fromCompressedBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array),
-        signingRoot
-      )
-    ) {
+    if (!bls.Signature.fromBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array).verify(pubkey, signingRoot)) {
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }

@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {Keypair} from "@chainsafe/bls";
+import bls, {IKeypair} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -39,10 +39,14 @@ describe("produce block", function () {
   const eth1 = sinon.createStubInstance(Eth1ForBlockProduction);
 
   it("should produce valid block - state without valid eth1 votes", async function () {
-    const keypairs: Keypair[] = Array.from({length: 64}, () => Keypair.generate());
+    const keypairs: IKeypair[] = Array.from({length: 64}, () => {
+      const secretKey = bls.SecretKey.fromKeygen();
+      const publicKey = secretKey.toPublicKey();
+      return {secretKey, publicKey};
+    });
     const validators = keypairs.map((keypair) => {
       const validator = generateValidator({activationEpoch: 0, exitEpoch: FAR_FUTURE_EPOCH});
-      validator.pubkey = keypair.publicKey.toBytesCompressed();
+      validator.pubkey = keypair.publicKey.toBytes();
       validator.effectiveBalance = config.params.MAX_EFFECTIVE_BALANCE;
       return validator;
     });
@@ -90,7 +94,7 @@ describe("produce block", function () {
     expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
   });
 
-  function getBlockProposingService(keypair: Keypair): BlockProposingService {
+  function getBlockProposingService(keypair: IKeypair): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);

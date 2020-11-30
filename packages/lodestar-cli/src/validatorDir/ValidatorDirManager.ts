@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {ValidatorDir, IValidatorDirOptions} from "./ValidatorDir";
-import {Keypair} from "@chainsafe/bls";
+import {IKeypair} from "@chainsafe/bls";
 import {YargsError} from "../util";
 
 /**
@@ -62,7 +62,7 @@ export class ValidatorDirManager {
   /**
    * Opens all the validator directories in `this` and decrypts the validator keypairs.
    */
-  async decryptAllValidators(options?: IValidatorDirOptions): Promise<Keypair[]> {
+  async decryptAllValidators(options?: IValidatorDirOptions): Promise<IKeypair[]> {
     const validators = this.openAllValidators(options);
     return await Promise.all(validators.map(async (validator) => validator.votingKeypair(this.secretsDir)));
   }
