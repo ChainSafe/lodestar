@@ -1,19 +1,19 @@
 import {expect} from "chai";
 import {defaultOptions} from "@chainsafe/lodestar";
 import {BeaconNodeOptions} from "../../../src/config";
-import {bootEnrs as medallaBootEnrs} from "../../../src/testnets/medalla";
+import {bootEnrs as pyrmontBootEnrs} from "../../../src/testnets/pyrmont";
 
 describe("config / beaconNodeOptions", () => {
-  it("Should return medalla options", () => {
+  it("Should return pyrmont options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
-      testnet: "medalla",
+      testnet: "pyrmont",
       configFile: "./no/file",
       beaconNodeOptionsCli: {},
     });
 
     // Asserts only part of the data structure to avoid unnecesary duplicate code
     const optionsPartial = beaconNodeOptions.get();
-    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(medallaBootEnrs);
+    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(pyrmontBootEnrs);
   });
 
   it("Should return added partial options", () => {

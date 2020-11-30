@@ -7,11 +7,11 @@ import {getBeaconParams} from "../../../src/config";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";
-  const GENESIS_FORK_VERSION_MEDALLA = "0x00000001";
+  const GENESIS_FORK_VERSION_PYRMONT = "0x00002009";
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
   const presetName = "mainnet";
-  const testnetName = "medalla";
+  const testnetName = "pyrmont";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
@@ -36,7 +36,7 @@ describe("config / beaconParams", () => {
         paramsFile: "./no/file",
         additionalParamsCli: {},
       },
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MEDALLA,
+      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PYRMONT,
     },
     {
       id: "Params from preset & testnet & file > returns file",

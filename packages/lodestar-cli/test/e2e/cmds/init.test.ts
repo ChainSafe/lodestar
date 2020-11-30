@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ReturnType as InitReturnType} from "../../../src/cmds/init";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
-import {depositContractDeployBlock} from "../../../src/testnets/medalla";
+import {depositContractDeployBlock} from "../../../src/testnets/pyrmont";
 import {testFilesDir} from "../../utils";
 import {getLodestarCliTestRunner} from "../commandRunner";
 
@@ -11,7 +11,7 @@ describe("cmds / init", function () {
   const lodestar = getLodestarCliTestRunner();
 
   const rootDir = testFilesDir;
-  const testnetName = "medalla";
+  const testnetName = "pyrmont";
   const beaconPaths = getBeaconPaths({rootDir});
 
   it("should init beacon configuration with --testnet option", async function () {
@@ -27,7 +27,7 @@ describe("cmds / init", function () {
 
     expect(beaconConfig.eth1.depositContractDeployBlock).to.equal(
       depositContractDeployBlock,
-      "Wrong depositContractDeployBlock for --testnet medalla setting"
+      "Wrong depositContractDeployBlock for --testnet pyrmont setting"
     );
   });
 });
