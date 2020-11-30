@@ -19,14 +19,7 @@ if (specVersion === "--help" || !specVersion || !outputDir) {
   process.exit(0);
 }
 
-downloadTests({
-  specVersion,
-  outputDir,
-})
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+downloadTests({specVersion, outputDir}, console.log).catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
