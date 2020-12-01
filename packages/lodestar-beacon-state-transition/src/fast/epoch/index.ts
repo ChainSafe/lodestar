@@ -15,6 +15,7 @@ export {
   processRegistryUpdates,
   processSlashings,
   processFinalUpdates,
+  processForkChanged,
 };
 
 export function processEpoch(epochCtx: StateTransitionEpochContext, state: BeaconState): void {

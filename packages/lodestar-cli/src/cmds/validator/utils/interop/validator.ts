@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
-import {IApiClient, interopSecretKey} from "@chainsafe/lodestar-validator/lib";
+import {IApiClient} from "@chainsafe/lodestar-validator/lib";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {join} from "path";
 import {mkdirSync} from "fs";

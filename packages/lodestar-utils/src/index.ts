@@ -11,3 +11,4 @@ export * from "./sleep";
 export * from "./sort";
 export * from "./verifyMerkleBranch";
 export * from "./json";
+export * from "./interop";
