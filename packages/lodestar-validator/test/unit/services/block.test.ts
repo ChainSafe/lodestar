@@ -29,8 +29,6 @@ describe("block proposing service", function () {
 
   it("should not produce block in same slot", async function () {
     const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = secretKey.toPublicKey();
-    const keypair = {secretKey, publicKey};
 
     const lastBlock = generateEmptySignedBlock();
     lastBlock.message.slot = 1;
@@ -40,15 +38,13 @@ describe("block proposing service", function () {
       new InvalidBlockError({code: InvalidBlockErrorCode.DOUBLE_BLOCK_PROPOSAL} as any)
     );
 
-    const service = new BlockProposingService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
+    const service = new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     const result = await service.createAndPublishBlock(0, 1, generateFork(), ZERO_HASH);
     expect(result).to.be.null;
   });
 
   it("should produce correct block - last signed is null", async function () {
     const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = secretKey.toPublicKey();
-    const keypair = {secretKey, publicKey};
 
     const slot = 2;
     rpcClientStub.beacon.blocks.publishBlock = sandbox.stub();
@@ -56,7 +52,7 @@ describe("block proposing service", function () {
 
     slashingProtectionStub.checkAndInsertBlockProposal.resolves();
 
-    const service = new BlockProposingService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
+    const service = new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
     expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
@@ -64,8 +60,6 @@ describe("block proposing service", function () {
 
   it("should produce correct block - last signed in previous epoch", async function () {
     const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const publicKey = secretKey.toPublicKey();
-    const keypair = {secretKey, publicKey};
 
     const slot = config.params.SLOTS_PER_EPOCH;
     rpcClientStub.validator.produceBlock = sandbox.stub();
@@ -74,7 +68,7 @@ describe("block proposing service", function () {
 
     slashingProtectionStub.checkAndInsertBlockProposal.resolves();
 
-    const service = new BlockProposingService(config, [keypair], rpcClientStub, slashingProtectionStub, logger);
+    const service = new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
     expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
