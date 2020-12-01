@@ -14,7 +14,6 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {GENESIS_EPOCH, ZERO_HASH} from "../../constants";
 import {IPeerMetadataStore} from "../../network/peers/interface";
 import {getSyncPeers} from "./peers";
-import {DEFAULT_RPC_SCORE} from "../../network/peers";
 
 // timeout for getBlockRange is 3 minutes
 const GET_BLOCK_RANGE_TIMEOUT = 3 * 60 * 1000;
@@ -286,13 +285,39 @@ export function getBestPeer(config: IBeaconConfig, peers: PeerId[], peerMetaStor
  * Check if a peer is good to be a best peer.
  */
 export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: INetwork): boolean {
+  return getBestPeerCandidates(forkChoice, network).includes(peer);
+}
+
+/**
+ * Return candidate for gest peer.
+ */
+export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork): PeerId[] {
   return getSyncPeers(
     network,
     (peer) => {
       const status = network.peerMetadata.getStatus(peer);
       return !!status && status.headSlot > forkChoice.getHead().slot;
     },
-    10,
-    DEFAULT_RPC_SCORE - 1
-  ).includes(peer);
+    10
+  );
+}
+
+/**
+ * Some clients may send orphaned/non-canonical blocks.
+ * Check each block should link to a previous parent block and be a parent of next block.
+ * Throw errors if they're not so that it'll fetch again
+ */
+export function checkLinearChainSegment(
+  config: IBeaconConfig,
+  blocks: SignedBeaconBlock[] | null,
+  ancestorRoot: Root | null = null
+): void {
+  if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
+  let parentRoot = ancestorRoot;
+  blocks.forEach((block) => {
+    if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
+      throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
+    }
+    parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
+  });
 }

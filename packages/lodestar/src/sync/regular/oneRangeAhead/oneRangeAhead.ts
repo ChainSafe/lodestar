@@ -9,8 +9,7 @@ import {IRegularSync, IRegularSyncOptions, RegularSyncEventEmitter} from "..";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {GossipEvent} from "../../../network/gossip/constants";
-import {checkBestPeer, getBestPeer} from "../../utils";
-import {getSyncPeers} from "../../utils/peers";
+import {checkBestPeer, getBestPeer, getBestPeerCandidates} from "../../utils";
 import {BlockRangeFetcher} from "./fetcher";
 import {BlockRangeProcessor} from "./processor";
 import {ISyncCheckpoint} from "../../interface";
@@ -19,6 +18,8 @@ import {IBlockRangeFetcher, IBlockRangeProcessor, ORARegularSyncModules} from ".
 /**
  * One Range Ahead regular sync: fetch one range in advance and buffer blocks.
  * Fetch next range and process blocks at the same time.
+ * Fetcher may return blocks of a different forkchoice branch.
+ * This is ok, we handle that by beacon_blocks_by_root in sync service.
  */
 export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEmitter}) implements IRegularSync {
   private readonly config: IBeaconConfig;
@@ -115,35 +116,42 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   /**
    * Make sure the best peer is not disconnected and it's better than us.
+   * @param excludedPeers don't want to return peers in this list
    */
-  private getSyncPeers = async (): Promise<PeerId[]> => {
-    if (!checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)) {
+  private getSyncPeers = async (excludedPeers: string[] = []): Promise<PeerId[]> => {
+    if (
+      excludedPeers.includes(this.bestPeer?.toB58String() ?? "") ||
+      !checkBestPeer(this.bestPeer!, this.chain.forkChoice, this.network)
+    ) {
       this.logger.info("Regular Sync: wait for best peer");
-      this.bestPeer = undefined;
-      await this.waitForBestPeer(this.controller.signal);
+      this.bestPeer = await this.waitForBestPeer(this.controller.signal, excludedPeers);
       if (this.controller.signal.aborted) return [];
     }
     return [this.bestPeer!];
   };
 
-  private waitForBestPeer = async (signal: AbortSignal): Promise<void> => {
+  private waitForBestPeer = async (signal: AbortSignal, excludedPeers: string[] = []): Promise<PeerId> => {
     // statusSyncTimer is per slot
     const waitingTime = this.config.params.SECONDS_PER_SLOT * 1000;
+    let bestPeer: PeerId | undefined;
 
-    while (!this.bestPeer) {
-      const peers = getSyncPeers(this.network, undefined, this.network.getMaxPeer());
-      this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
-      if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
-        const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
-        this.logger.info(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}`, {
+    while (!bestPeer) {
+      const peers = getBestPeerCandidates(this.chain.forkChoice, this.network).filter(
+        (peer) => !excludedPeers.includes(peer.toB58String())
+      );
+      if (peers && peers.length > 0) {
+        bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
+        const peerHeadSlot = this.network.peerMetadata.getStatus(bestPeer)!.headSlot;
+        this.logger.info(`Regular Sync: Found best peer ${bestPeer.toB58String()}`, {
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,
         });
       } else {
         // continue to find best peer
-        this.bestPeer = undefined;
+        bestPeer = undefined;
         await sleep(waitingTime, signal);
       }
     }
+    return bestPeer;
   };
 }
