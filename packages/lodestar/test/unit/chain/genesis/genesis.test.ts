@@ -1,6 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {ISecretKey, IPublicKey} from "@chainsafe/bls";
+import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
@@ -104,7 +104,7 @@ describe("genesis builder", function () {
   });
 });
 
-function generateDeposit(index: ValidatorIndex, secretKey: ISecretKey, publicKey: IPublicKey): DepositData {
+function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): DepositData {
   const domain = computeDomain(config, DomainType.DEPOSIT);
   const depositMessage = {
     pubkey: publicKey.toBytes(),

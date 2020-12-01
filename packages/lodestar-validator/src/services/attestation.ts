@@ -1,7 +1,7 @@
 /**
  * @module validator/attestation
  */
-import {ISecretKey} from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -41,7 +41,7 @@ export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
   // order is important
-  private readonly secretKeys: ISecretKey[] = [];
+  private readonly secretKeys: SecretKey[] = [];
   // order is important
   private readonly publicKeys: BLSPubkey[] = [];
   // order is important
@@ -54,7 +54,7 @@ export class AttestationService {
 
   public constructor(
     config: IBeaconConfig,
-    secretKeys: ISecretKey[],
+    secretKeys: SecretKey[],
     rpcClient: IApiClient,
     slashingProtection: ISlashingProtection,
     logger: ILogger

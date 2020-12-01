@@ -1,5 +1,5 @@
 import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
-import bls, {IPublicKey} from "@chainsafe/bls";
+import bls, {PublicKey} from "@chainsafe/bls";
 import {
   Attestation,
   AttestationData,
@@ -45,7 +45,7 @@ export class EpochContext {
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
   public pubkey2index: PubkeyIndexMap;
   // Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.
-  public index2pubkey: IPublicKey[];
+  public index2pubkey: PublicKey[];
   public proposers: number[];
   // Per spec definition, shuffling will always be defined. They are never called before loadState()
   public previousShuffling!: IEpochShuffling;

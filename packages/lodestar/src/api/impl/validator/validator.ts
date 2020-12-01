@@ -2,7 +2,7 @@
  * @module api/rpc
  */
 
-import bls, {ISignature} from "@chainsafe/bls";
+import bls, {Signature} from "@chainsafe/bls";
 import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -130,7 +130,7 @@ export class ValidatorApi implements IValidatorApi {
 
     // first iterate through collected committee attestations
     // expanding each signature and building an aggregated bitlist
-    const signatures: ISignature[] = [];
+    const signatures: Signature[] = [];
     const aggregationBits = attestations[0].aggregationBits;
     for (const attestation of attestations) {
       try {

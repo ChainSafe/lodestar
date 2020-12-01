@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import bls, {ISecretKey} from "@chainsafe/bls";
+import bls, {SecretKey} from "@chainsafe/bls";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -91,7 +91,7 @@ describe("produce block", function () {
     expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
   });
 
-  function getBlockProposingService(secretKey: ISecretKey): BlockProposingService {
+  function getBlockProposingService(secretKey: SecretKey): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);
