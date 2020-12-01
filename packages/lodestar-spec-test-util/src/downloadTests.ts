@@ -8,48 +8,39 @@ import {promisify} from "util";
 
 const BASE_URL = "https://github.com/ethereum/eth2.0-spec-tests/releases/download";
 
-// eslint-disable-next-line prettier/prettier
-const TESTS = ["general", "mainnet", "minimal"];
+export type TestToDownload = "general" | "mainnet" | "minimal";
+export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
 
-interface IDownloadTestsOptions {
+export interface IDownloadTestsOptions {
   specVersion: string;
   outputDir: string;
-  cleanup?: boolean;
-  force?: boolean;
+  testsToDownload?: TestToDownload[];
 }
 
-export async function downloadTestsAndManage(
-  {specVersion, outputDir: outputDirBase, cleanup, force}: IDownloadTestsOptions,
-  log?: (msg: string) => void
+export async function downloadTests(
+  {specVersion, outputDir, testsToDownload = defaultTestsToDownload}: IDownloadTestsOptions,
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  log: (msg: string) => void = () => {}
 ): Promise<void> {
-  const outputDir = path.join(outputDirBase, specVersion);
-  if (log) log(`outputDir = ${outputDir}`);
+  log(`outputDir = ${outputDir}`);
 
-  if (fs.existsSync(outputDir) && !force) {
-    throw Error(`Path ${outputDir} already exists`);
-  } else {
-    fs.mkdirSync(outputDir, {recursive: true});
+  // Use version.txt as a flag to prevent re-downloading the tests
+  const versionFile = path.join(outputDir, "version.txt");
+  const existingVersion = fs.existsSync(versionFile) && fs.readFileSync(versionFile, "utf8").trim();
+
+  if (existingVersion && existingVersion === specVersion) {
+    return log(`version ${specVersion} already downloaded`);
   }
 
-  if (cleanup) {
-    for (const dirpath of fs.readdirSync(outputDir)) {
-      if (dirpath !== specVersion) {
-        rimraf.sync(path.join(outputDir, dirpath));
-      }
-    }
+  if (fs.existsSync(outputDir)) {
+    log(`Cleaning ${outputDir}`);
+    rimraf.sync(outputDir);
   }
 
-  await downloadTests({specVersion, outputDir});
-}
-
-async function downloadTests(
-  {specVersion, outputDir}: IDownloadTestsOptions,
-  log?: (msg: string) => void
-): Promise<void> {
-  if (log) log(`outputDir = ${outputDir}`);
+  fs.mkdirSync(outputDir, {recursive: true});
 
   await Promise.all(
-    TESTS.map(async (test) => {
+    testsToDownload.map(async (test) => {
       const url = `${BASE_URL}/${specVersion}/${test}.tar.gz`;
 
       // download tar
@@ -60,12 +51,14 @@ async function downloadTests(
       });
 
       const totalSize = headers["content-length"];
-      if (log) log(`Downloading ${URL} - ${totalSize} bytes`);
+      log(`Downloading ${url} - ${totalSize} bytes`);
 
       // extract tar into output directory
       await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
 
-      if (log) log(`Downloaded  ${URL}`);
+      log(`Downloaded  ${url}`);
     })
   );
+
+  fs.writeFileSync(versionFile, specVersion);
 }

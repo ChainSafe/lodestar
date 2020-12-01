@@ -1,32 +1,35 @@
 #!/usr/bin/env node
 
-import {downloadTestsAndManage} from "./downloadTests";
+import {downloadTests, TestToDownload} from "./downloadTests";
 
 /* eslint-disable no-console */
 
 async function downloadTestsCli(): Promise<void> {
-  const [specVersion, outputDir, ...flags] = process.argv.slice(2);
-  const cleanup = flags.includes("--cleanup");
-  const force = flags.includes("--force");
+  const [specVersion, outputDir, testsToDownloadCsv] = process.argv.slice(2);
 
   // Print help
   if (specVersion === "--help" || !specVersion || !outputDir) {
     return console.log(`
   USAGE: 
   
-  eth2-spec-test-download [specVersion] [outputDir]
+  eth2-spec-test-download [specVersion] [outputDir] [testToDownload]
 
-  Downloads tests to $outputDir/$specVersion
-
-  --cleanup   Remove different test versions in outputDir
-  --force     Download even if directory with same name exists
+  Downloads tests to $outputDir/$specVersion 
 
   EXAMPLE:
 
-  eth2-spec-test-download v1.0.0 ./path/to/output-dir \n`);
+  eth2-spec-test-download v1.0.0 ./spec-tests general,mainnet
+
+  Results in:
+
+  ./spec-tests/tests/general/phase0/bls/aggregate
+  ./spec-tests/tests/general/phase0/bls/aggregate_verify
+  ./spec-tests/tests/general/phase0/bls/fast_aggregate_verify
+  `);
   }
 
-  await downloadTestsAndManage({specVersion, outputDir, cleanup, force}, console.log);
+  const testsToDownload = testsToDownloadCsv ? (testsToDownloadCsv.split(",") as TestToDownload[]) : undefined;
+  await downloadTests({specVersion, outputDir, testsToDownload}, console.log);
 }
 
 downloadTestsCli().catch((e) => {

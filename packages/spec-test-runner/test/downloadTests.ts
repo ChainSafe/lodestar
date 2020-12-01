@@ -1,14 +1,12 @@
-import {downloadTestsAndManage} from "@chainsafe/lodestar-spec-test-util";
+import {downloadTests} from "@chainsafe/lodestar-spec-test-util";
 import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION} from "./utils/specTestCases";
 
 /* eslint-disable no-console */
 
-downloadTestsAndManage(
+downloadTests(
   {
     specVersion: SPEC_TEST_VERSION,
     outputDir: SPEC_TEST_LOCATION,
-    cleanup: true,
-    force: true,
   },
   console.log
 ).catch((e) => {
