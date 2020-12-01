@@ -23,11 +23,10 @@ describe("Validator", () => {
     });
 
     const secretKey = bls.SecretKey.fromKeygen();
-    const publicKey = secretKey.toPublicKey();
 
     const validatorCtx: IValidatorOptions = {
       api: apiClient,
-      keypairs: [{secretKey, publicKey}],
+      secretKeys: [secretKey],
       config,
       slashingProtection: sinon.createStubInstance(SlashingProtection),
       logger: silentLogger,

@@ -1,11 +1,10 @@
-import bls from "@chainsafe/bls";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
 import {
   ApiClientOverInstance,
   IApiClient,
-  interopKeypair,
+  interopSecretKey,
   SlashingProtection,
   Validator,
 } from "@chainsafe/lodestar-validator";
@@ -74,11 +73,7 @@ export function getDevValidator({
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     }),
     logger: logger,
-    keypairs: Array.from({length: count}, (_, i) => {
-      const secretKey = bls.SecretKey.fromBytes(interopKeypair(i + startIndex).privkey);
-      const publicKey = secretKey.toPublicKey();
-      return {secretKey, publicKey};
-    }),
+    secretKeys: Array.from({length: count}, (_, i) => interopSecretKey(i + startIndex)),
   });
 }
 
