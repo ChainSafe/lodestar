@@ -52,7 +52,7 @@ describe("Epoch Processing Performance Tests", function () {
     logger.profile("processRewardsAndPenalties");
     processRewardsAndPenalties(epochCtx, process, state);
     logger.profile("processRewardsAndPenalties");
-    expect(Date.now() - start).lt(520);
+    expect(Date.now() - start).lt(700);
   });
 
   it("processRegistryUpdates", async () => {

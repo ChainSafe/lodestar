@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
 import {init} from "@chainsafe/bls";
-import {WinstonLogger, interopKeypairs} from "@chainsafe/lodestar-utils";
+import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {getBeaconProposerIndex} from "../../src/util/proposer";
 
@@ -52,10 +52,10 @@ export async function generatePerformanceState(): Promise<TreeBacked<BeaconState
     state.eth1DepositIndex = 114038;
     const numValidators = 114038;
     const numKeyPairs = 100;
-    const keypairs = interopKeypairs(numKeyPairs);
+    const secretKeys = interopSecretKeys(numKeyPairs);
     state.validators = (Array.from({length: numValidators}, (_, i) => {
       return {
-        pubkey: keypairs[i % numKeyPairs].pubkey,
+        pubkey: secretKeys[i % numKeyPairs].toPublicKey().toBytes(),
         withdrawalCredentials: Buffer.alloc(32, i),
         effectiveBalance: BigInt(31000000000),
         slashed: false,
