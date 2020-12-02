@@ -3,6 +3,7 @@ import {Phase1} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {processAttesterSlashing, processDeposit, processProposerSlashing, processVoluntaryExit} from "../../..";
 import {processAttestation} from "./attestation";
+import {processShardTransitions} from "../../shard";
 
 export * from "./attestation";
 
@@ -54,5 +55,5 @@ export function processOperations(config: IBeaconConfig, state: Phase1.BeaconSta
   });
 
   //process_custody_game_operations
-  //process_shard_transitions
+  processShardTransitions(config, state, Array.from(block.body.shardTransitions), Array.from(block.body.attestations));
 }

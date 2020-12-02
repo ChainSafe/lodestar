@@ -13,8 +13,7 @@ import {
   SignedCustodySlashing,
 } from ".";
 import * as phase0 from "../..";
-import {PendingAttestation, Validator} from "../..";
-import {Attestation, AttesterSlashing} from "./misc";
+import {Attestation, AttesterSlashing, PendingAttestation, Validator} from "./misc";
 
 export interface BeaconBlockBody extends phase0.BeaconBlockBody {
   attestations: List<Attestation>;
