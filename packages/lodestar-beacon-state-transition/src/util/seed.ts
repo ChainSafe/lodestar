@@ -45,12 +45,20 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
 /**
  * Return the seed at [[epoch]].
  */
-export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): Uint8Array {
+export function getSeed(
+  config: IBeaconConfig,
+  state: BeaconState,
+  epoch: Epoch,
+  domainType: DomainType | Buffer
+): Uint8Array {
   const mix = getRandaoMix(
     config,
     state,
     epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
   );
+  if (!Buffer.isBuffer(domainType)) {
+    domainType = intToBytes(domainType, 4);
+  }
 
-  return hash(Buffer.concat([intToBytes(domainType, 4), intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
+  return hash(Buffer.concat([domainType, intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
 }
