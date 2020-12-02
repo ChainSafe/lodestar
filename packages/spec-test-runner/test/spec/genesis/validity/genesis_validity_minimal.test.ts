@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/camelcase */
+/* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";

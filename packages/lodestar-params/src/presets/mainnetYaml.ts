@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 // Mainnet preset
 // Note: the intention of this file (for now) is to illustrate what a mainnet configuration could look like.
 // Some of these constants may still change before the launch of Phase 0.

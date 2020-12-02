@@ -15,7 +15,7 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
   protected readonly config: IBeaconConfig;
   private readonly chain: IBeaconChain;
   private readonly logger: ILogger;
-  private target: {root: Root; resolve: Function; signal: AbortSignal} | null;
+  private target: {root: Root; resolve: () => void; signal: AbortSignal} | null;
   constructor(modules: Pick<IRegularSyncModules, "config" | "chain" | "logger">) {
     this.config = modules.config;
     this.chain = modules.chain;

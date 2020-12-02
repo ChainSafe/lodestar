@@ -14,15 +14,15 @@ interface IResult {
 }
 
 export function testStatic(type: keyof IBeaconSSZTypes): void {
-  const Type = safeType(config.types[type]) as CompositeType<any>;
+  const sszType = safeType(config.types[type]) as CompositeType<any>;
   ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
       `SSZ - ${type} ${caseName} minimal`,
       join(SPEC_TEST_LOCATION, `tests/minimal/phase0/ssz_static/${type}/${caseName}`),
       (testcase) => {
         //debugger;
-        const serialized = Type.serialize(testcase.serialized);
-        const root = Type.hashTreeRoot(testcase.serialized);
+        const serialized = sszType.serialize(testcase.serialized);
+        const root = sszType.hashTreeRoot(testcase.serialized);
         return {
           serialized,
           root,
@@ -34,7 +34,7 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
           serialized: InputType.SSZ,
         },
         sszTypes: {
-          serialized: Type,
+          serialized: sszType,
         },
         getExpected: (testCase) => {
           return {
@@ -56,17 +56,17 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
                */
             // debugger;
           }
-          const structural = Type.deserialize(testCase.serialized_raw);
+          const structural = sszType.deserialize(testCase.serialized_raw);
           // @ts-ignore
           const tree = Type.tree.deserialize(testCase.serialized_raw);
           // @ts-ignore
           const treeFromStructural = Type.tree.createValue(structural);
           expect(tree.serialize(), "tree serialization != structural serialization").to.deep.equal(
-            Type.serialize(structural)
+            sszType.serialize(structural)
           );
-          expect(Type.equals(tree, treeFromStructural), "tree != treeFromStructural");
-          expect(expected.serialized.equals(Type.serialize(structural)));
-          expect(expected.root.equals(Type.hashTreeRoot(structural)));
+          expect(sszType.equals(tree, treeFromStructural), "tree != treeFromStructural");
+          expect(expected.serialized.equals(sszType.serialize(structural)));
+          expect(expected.root.equals(sszType.hashTreeRoot(structural)));
           expect(expected.serialized.equals(actual.serialized), "incorrect serialize").to.be.true;
           expect(expected.root.equals(actual.root), "incorrect hashTreeRoot").to.be.true;
         },

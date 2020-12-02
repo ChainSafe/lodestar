@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/interface-name-prefix */
-
 import {Metadata} from "@chainsafe/lodestar-types";
 
 export type NodeIdentity = {

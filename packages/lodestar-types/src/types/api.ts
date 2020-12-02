@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/interface-name-prefix */
 import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,

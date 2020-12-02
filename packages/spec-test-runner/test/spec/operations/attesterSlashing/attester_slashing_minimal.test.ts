@@ -23,7 +23,7 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
     sszTypes: {
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
-      // eslint-disable-next-line @typescript-eslint/camelcase
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       attester_slashing: config.types.AttesterSlashing,
     },
     timeout: 100000000,

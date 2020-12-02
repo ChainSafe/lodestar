@@ -10,13 +10,17 @@ import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
  * Binds return types to Ethereum JSON RPC methods
  */
 interface IEthJsonRpcTypes {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   eth_getBlockByNumber: {
     hash: string; // "0x7f0c419985f2227c546a9c640ee05abb3d279316426e6c79d69f6e317d6bb301";
     number: string; // "0x63";
     timestamp: string; // "0x5c5315bb";
   };
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   eth_blockNumber: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   eth_getCode: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   eth_getLogs: {
     removed: boolean;
     logIndex: string;

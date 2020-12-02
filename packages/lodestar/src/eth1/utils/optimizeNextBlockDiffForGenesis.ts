@@ -6,8 +6,11 @@
 export function optimizeNextBlockDiffForGenesis(
   lastFetchedBlock: {timestamp: number},
   params: {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_TIME: number;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     GENESIS_DELAY: number;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_ETH1_BLOCK: number;
   }
 ): number {

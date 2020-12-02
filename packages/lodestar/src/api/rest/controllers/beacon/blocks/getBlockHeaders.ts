@@ -1,6 +1,7 @@
 import {Root, Slot} from "@chainsafe/lodestar-types";
 import {ApiController} from "../../types";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const getBlockHeaders: ApiController<{slot?: string | number; parent_root?: string}> = {
   url: "/headers",
 
@@ -29,7 +30,8 @@ export const getBlockHeaders: ApiController<{slot?: string | number; parent_root
             type: "number",
             minimum: 0,
           },
-          parentRoot: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          parent_root: {
             type: "string",
           },
         },

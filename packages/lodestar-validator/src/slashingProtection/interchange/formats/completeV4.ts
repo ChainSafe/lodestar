@@ -1,9 +1,8 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {IInterchangeLodestar} from "../types";
 import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils";
-
-/* eslint-disable @typescript-eslint/camelcase */
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators

@@ -41,25 +41,53 @@ module.exports = {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
-    "@typescript-eslint/class-name-casing": "error",
+    "@typescript-eslint/naming-convention": ["error", 
+    {selector: "default", format: ['camelCase']},
+    {selector: ["classProperty", "objectLiteralProperty", "classMethod", "parameter"], format: ['camelCase'], leadingUnderscore: "allow"},
+    //variable must be in camel or upper case
+    {selector: "variable", format: ["camelCase", "UPPER_CASE"], leadingUnderscore: "allow"},
+    //classes and types must be in PascalCase
+    {selector: ["typeLike", "enum"], format: ['PascalCase']},
+    {selector: "enumMember", format: null},
+    //interface must start with I
+    {selector: "interface", format: ['PascalCase'], prefix: ["I"]},
+    //ignore rule for quoted stuff
+    {
+      selector: [
+        "classProperty",
+        "objectLiteralProperty",
+        "typeProperty",
+        "classMethod",
+        "objectLiteralMethod",
+        "typeMethod",
+        "accessor",
+        "enumMember"
+      ],
+      format: null,
+      modifiers: ["requiresQuotes"]
+    },
+    //ignore rules on destructured params
+    {
+      selector: "variable",
+      modifiers: ["destructured"],
+      format: null
+    }
+  ],
     "@typescript-eslint/explicit-function-return-type": ["error", {
       "allowExpressions": true
     }],
     "@typescript-eslint/func-call-spacing": "error",
-    "@typescript-eslint/interface-name-prefix": ["error", "always"],
     "@typescript-eslint/member-ordering": "error",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-require-imports": "error",
     "@typescript-eslint/no-unused-vars": ["error", {
       "varsIgnorePattern": "^_"
     }],
-    "@typescript-eslint/ban-ts-ignore": "warn",
+    "@typescript-eslint/ban-ts-comment": "warn",
     "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/semi": "error",
     "@typescript-eslint/type-annotation-spacing": "error",
     "@typescript-eslint/no-floating-promises": "error",
-    //it doesn't recognize module/lib/something (like mainnet & minimal presets)
-    "import/no-duplicates": "off",
     "import/no-extraneous-dependencies": ["error", {
       "devDependencies": false,
       "optionalDependencies": false,
@@ -92,6 +120,14 @@ module.exports = {
       "rules": {
         "import/no-extraneous-dependencies": "off",
         "@typescript-eslint/no-explicit-any": "off"
+      }
+    },
+    {
+      "files": ["**/lodestar-types/**/*.ts"],
+      "rules": {
+        "@typescript-eslint/naming-convention": ["off", {
+          selector: "interface", prefix: ["I"]
+        }],
       }
     }
   ]

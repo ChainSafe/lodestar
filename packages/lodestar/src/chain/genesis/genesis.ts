@@ -30,6 +30,7 @@ export class GenesisBuilder implements IGenesisBuilder {
   private depositTree: TreeBacked<List<Root>>;
   private depositCache: Set<number>;
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   constructor(config: IBeaconConfig, {eth1Provider, logger, signal, MAX_BLOCKS_PER_POLL}: IGenesisBuilderKwargs) {
     this.config = config;
     this.eth1Provider = eth1Provider;
@@ -37,6 +38,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.signal = signal;
     this.eth1Params = {
       ...config.params,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       MAX_BLOCKS_PER_POLL: MAX_BLOCKS_PER_POLL || 10000,
     };
 

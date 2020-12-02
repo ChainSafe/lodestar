@@ -132,7 +132,7 @@ export function validateBlocks(
   config: IBeaconConfig,
   chain: IBeaconChain,
   logger: ILogger,
-  onBlockVerificationFail: Function
+  onBlockVerificationFail: () => void
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => AsyncGenerator<SignedBeaconBlock[]> {
   return (source) => {
     return (async function* () {

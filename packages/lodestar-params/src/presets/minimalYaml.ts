@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 // Minimal preset
 
 export const minimalYaml = {

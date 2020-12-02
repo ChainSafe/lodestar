@@ -6,7 +6,7 @@ import {ObjectKeys} from "../util";
 // No options are statically declared
 // If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.
 // Params will be parsed from an args object assuming to contain the required keys
-export type IParamsArgs = {};
+export type IParamsArgs = Record<string, unknown>;
 
 const getArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
 

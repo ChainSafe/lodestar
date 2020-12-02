@@ -150,7 +150,7 @@ function constructYamlInteger(data: string): bigint {
   return BigInt(value) * BigInt(sign);
 }
 
-function isInteger(object: object): boolean {
+function isInteger(object: unknown): boolean {
   return typeof object === "bigint" || typeof object === "number";
 }
 

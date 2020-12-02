@@ -24,7 +24,7 @@ import {validateGossipVoluntaryExit} from "../../chain/validation/voluntaryExit"
 import {VoluntaryExitError, VoluntaryExitErrorCode} from "../../chain/errors/voluntaryExitError";
 import {toHexString} from "@chainsafe/ssz";
 
-/* eslint-disable @typescript-eslint/interface-name-prefix */
+// eslint-disable-next-line @typescript-eslint/naming-convention
 interface GossipMessageValidatorModules {
   chain: IBeaconChain;
   db: IBeaconDb;
