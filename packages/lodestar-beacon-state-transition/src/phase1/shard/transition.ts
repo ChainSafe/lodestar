@@ -1,14 +1,12 @@
-import {getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Phase1, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot, computeSigningRoot, getDomain, getBlockRootAtSlot} from "../../util";
 import {computeUpdatedGasprice} from "../misc";
-import {getOffsetSlots, getShardProposerIndex} from "../state";
-import {computeSigningRoot, getDomain, computeEpochAtSlot} from "../../util";
-import {optionalAggregateVerify} from "../state/predicates";
 import {computePreviousSlot} from "../misc/slot";
-import {ShardTransition} from "../../../../lodestar-types/lib/types/phase1/types/shard";
+import {getOffsetSlots, getShardProposerIndex} from "../state";
 import {getActiveShardCount} from "../state/accessors";
+import {optionalAggregateVerify} from "../state/predicates";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export function applyShardTransition(
   config: IBeaconConfig,

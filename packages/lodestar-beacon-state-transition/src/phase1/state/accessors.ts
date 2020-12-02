@@ -1,14 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Epoch, Number64, Phase1, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "../../util/epoch";
+import {intToBytes, bytesToBigInt} from "@chainsafe/lodestar-utils";
+import {hash} from "@chainsafe/ssz";
 import {getActiveValidatorIndices} from "../..";
-import {List, hash} from "@chainsafe/ssz";
-import {computeCommitteeSourceEpoch} from "../misc/committee";
-import {getSeed} from "../../util/seed";
 import {computeCommittee} from "../../util";
-import {intToBytes} from "@chainsafe/lodestar-utils";
-import {bytesToBigInt} from "../../../../lodestar-utils/src/bytes";
-import {slashing} from "../../../../lodestar-cli/src/cmds/account/cmds/validator/slashingProtection/index";
+import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch} from "../../util/epoch";
+import {getSeed} from "../../util/seed";
+import {computeCommitteeSourceEpoch} from "../misc/committee";
 import {computeOffsetSlots} from "../misc/slot";
 
 /**

@@ -2,14 +2,18 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CommitteeIndex, Phase1, Root, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {getBaseReward} from "../../epoch/balanceUpdates/util";
-import {getAttestingIndices, getBeaconCommittee, getBeaconProposerIndex, getTotalBalance} from "../../util";
+import {
+  getAttestingIndices,
+  getBeaconCommittee,
+  getBeaconProposerIndex,
+  getTotalBalance,
+  computeEpochAtSlot,
+} from "../../util";
 import {decreaseBalance, increaseBalance} from "../../util/balance";
 import {computePreviousSlot, computeShardFromCommitteeIndex} from "../misc";
 import {getOffsetSlots, getOnlineValidatorIndices, getShardProposerIndex} from "../state";
 import {applyShardTransition} from "./transition";
-import {ShardTransition} from ".";
 import {getCommitteeCountPerSlot} from "../state/accessors";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {isOnTimeAttestation, isWinningAttestation} from "../state/predicates";
 import {ZERO_HASH} from "../..";
 
