@@ -7,7 +7,7 @@ const deprecatedDescription =
 - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli \
 - Ethereum Foundation launchpad: https://medalla.launchpad.ethereum.org";
 
-export const deposit: ICliCommand<Record<string, unknown>, IAccountValidatorArgs & IGlobalArgs> = {
+export const deposit: ICliCommand<Record<never, never>, IAccountValidatorArgs & IGlobalArgs> = {
   command: "deposit",
   describe: deprecatedDescription,
   examples: [],

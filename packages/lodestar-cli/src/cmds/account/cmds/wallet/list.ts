@@ -6,7 +6,7 @@ import {IAccountWalletArgs} from "./options";
 
 export type ReturnType = string[];
 
-export const list: ICliCommand<Record<string, unknown>, IAccountWalletArgs & IGlobalArgs, ReturnType> = {
+export const list: ICliCommand<Record<never, never>, IAccountWalletArgs & IGlobalArgs, ReturnType> = {
   command: "list",
 
   describe: "Lists the names of all wallets",
