@@ -1,10 +1,9 @@
-import bls from "@chainsafe/bls";
 import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
-
 import {DomainType} from "../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
+import {ISignatureSinglePubkeySet, verifySinglePubkeySet} from "../signatureSets";
 
 export function processProposerSlashing(
   epochCtx: EpochContext,
@@ -37,21 +36,38 @@ export function processProposerSlashing(
   if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
+
   // verify signatures
   if (verifySignatures) {
-    const pubkey = epochCtx.index2pubkey[header1.proposerIndex];
-    [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].forEach((signedHeader, i) => {
-      const domain = getDomain(
-        config,
-        state,
-        DomainType.BEACON_PROPOSER,
-        computeEpochAtSlot(config, signedHeader.message.slot)
-      );
-      const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
-      if (!bls.Signature.fromBytes(signedHeader.signature.valueOf() as Uint8Array).verify(pubkey, signingRoot)) {
+    getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).forEach((signatureSet, i) => {
+      if (!verifySinglePubkeySet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     });
   }
+
   slashValidator(epochCtx, state, header1.proposerIndex);
+}
+
+/**
+ * Extract signatures to allow validating all block signatures at once
+ */
+export function getProposerSlashingSignatureSets(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  proposerSlashing: ProposerSlashing
+): ISignatureSinglePubkeySet[] {
+  const config = epochCtx.config;
+  const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
+
+  return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader) => {
+    const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
+    const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
+
+    return {
+      pubkey,
+      signingRoot: computeSigningRoot(config, config.types.BeaconBlockHeader, signedHeader.message, domain),
+      signature: signedHeader.signature,
+    };
+  });
 }

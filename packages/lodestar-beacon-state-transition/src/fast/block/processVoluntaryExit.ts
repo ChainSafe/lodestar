@@ -1,8 +1,7 @@
-import bls from "@chainsafe/bls";
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
-
 import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
+import {ISignatureSinglePubkeySet, verifySinglePubkeySet} from "../signatureSets";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
@@ -34,15 +33,33 @@ export function processVoluntaryExit(
   if (!(currentEpoch >= validator.activationEpoch + config.params.SHARD_COMMITTEE_PERIOD)) {
     throw new Error("VoluntaryExit validator has not been active for long enough");
   }
+
   // verify signature
   if (verifySignature) {
-    const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, voluntaryExit.epoch);
-    const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
-    const pubkey = epochCtx.index2pubkey[voluntaryExit.validatorIndex];
-    if (!bls.Signature.fromBytes(signedVoluntaryExit.signature.valueOf() as Uint8Array).verify(pubkey, signingRoot)) {
+    const signatureSet = getVoluntaryExitSignatureSet(epochCtx, state, signedVoluntaryExit);
+    if (!verifySinglePubkeySet(signatureSet)) {
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
+
   // initiate exit
   initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);
+}
+
+/**
+ * Extract signatures to allow validating all block signatures at once
+ */
+export function getVoluntaryExitSignatureSet(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  signedVoluntaryExit: SignedVoluntaryExit
+): ISignatureSinglePubkeySet {
+  const config = epochCtx.config;
+  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
+
+  return {
+    pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
+    signingRoot: computeSigningRoot(config, config.types.VoluntaryExit, signedVoluntaryExit.message, domain),
+    signature: signedVoluntaryExit.signature,
+  };
 }

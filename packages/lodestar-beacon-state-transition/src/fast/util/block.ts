@@ -1,23 +1,29 @@
-import bls from "@chainsafe/bls";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, getDomain} from "../../util";
 import {DomainType} from "../../constants";
 import {EpochContext} from "../index";
+import {ISignatureSinglePubkeySet, verifySinglePubkeySet} from "../signatureSets";
 
 export function verifyBlockSignature(
   epochCtx: EpochContext,
   state: BeaconState,
   signedBlock: SignedBeaconBlock
 ): boolean {
-  const domain = getDomain(epochCtx.config, state, DomainType.BEACON_PROPOSER);
-  const signingRoot = computeSigningRoot(
-    epochCtx.config,
-    epochCtx.config.types.BeaconBlock,
-    signedBlock.message,
-    domain
-  );
-  return bls.Signature.fromBytes(signedBlock.signature.valueOf() as Uint8Array).verify(
-    epochCtx.index2pubkey[signedBlock.message.proposerIndex],
-    signingRoot
-  );
+  const signatureSet = getBlockSignatureSet(epochCtx, state, signedBlock);
+  return verifySinglePubkeySet(signatureSet);
+}
+
+export function getBlockSignatureSet(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  signedBlock: SignedBeaconBlock
+): ISignatureSinglePubkeySet {
+  const config = epochCtx.config;
+  const domain = getDomain(config, state, DomainType.BEACON_PROPOSER);
+
+  return {
+    pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
+    signingRoot: computeSigningRoot(config, config.types.BeaconBlock, signedBlock.message, domain),
+    signature: signedBlock.signature,
+  };
 }
