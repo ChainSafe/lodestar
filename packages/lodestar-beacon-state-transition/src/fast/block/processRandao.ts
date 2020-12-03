@@ -4,7 +4,7 @@ import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain, getRandaoMix} from "../../util";
 import {EpochContext} from "../util";
-import {ISignatureSinglePubkeySet, verifySinglePubkeySet} from "../signatureSets";
+import {ISignatureSet, verifySignatureSet} from "../signatureSets";
 
 export function processRandao(
   epochCtx: EpochContext,
@@ -19,7 +19,7 @@ export function processRandao(
   // verify RANDAO reveal
   if (verifySignature) {
     const signatureSet = getRandaoRevealSignatureSet(epochCtx, state, body);
-    if (!verifySinglePubkeySet(signatureSet)) {
+    if (!verifySignatureSet(signatureSet)) {
       throw new Error("RANDAO reveal is an invalid signature");
     }
   }
@@ -38,13 +38,14 @@ export function getRandaoRevealSignatureSet(
   epochCtx: EpochContext,
   state: BeaconState,
   body: BeaconBlockBody
-): ISignatureSinglePubkeySet {
+): ISignatureSet {
   const config = epochCtx.config;
   const epoch = epochCtx.currentShuffling.epoch;
   const proposerIndex = epochCtx.getBeaconProposer(state.slot);
   const domain = getDomain(config, state, DomainType.RANDAO);
 
   return {
+    type: "single-pubkey",
     pubkey: epochCtx.index2pubkey[proposerIndex],
     signingRoot: computeSigningRoot(config, config.types.Epoch, epoch, domain),
     signature: body.randaoReveal,

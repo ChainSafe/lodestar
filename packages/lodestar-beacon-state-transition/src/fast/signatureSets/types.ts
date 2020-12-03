@@ -3,13 +3,15 @@ import {BLSSignature, Root} from "@chainsafe/lodestar-types";
 
 export type ISignatureSet = ISignatureSinglePubkeySet | ISignatureMultiplePubkeySet;
 
-export interface ISignatureSinglePubkeySet {
+interface ISignatureSinglePubkeySet {
+  type: "single-pubkey";
   pubkey: PublicKey;
   signingRoot: Root;
   signature: BLSSignature;
 }
 
-export interface ISignatureMultiplePubkeySet {
+interface ISignatureMultiplePubkeySet {
+  type: "multiple-pubkeys";
   pubkeys: PublicKey[];
   signingRoot: Root;
   signature: BLSSignature;

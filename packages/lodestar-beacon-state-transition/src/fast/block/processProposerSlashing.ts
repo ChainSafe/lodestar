@@ -3,7 +3,7 @@ import {DomainType} from "../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
-import {ISignatureSinglePubkeySet, verifySinglePubkeySet} from "../signatureSets";
+import {ISignatureSet, verifySignatureSet} from "../signatureSets";
 
 export function processProposerSlashing(
   epochCtx: EpochContext,
@@ -40,7 +40,7 @@ export function processProposerSlashing(
   // verify signatures
   if (verifySignatures) {
     getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).forEach((signatureSet, i) => {
-      if (!verifySinglePubkeySet(signatureSet)) {
+      if (!verifySignatureSet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     });
@@ -56,18 +56,21 @@ export function getProposerSlashingSignatureSets(
   epochCtx: EpochContext,
   state: BeaconState,
   proposerSlashing: ProposerSlashing
-): ISignatureSinglePubkeySet[] {
+): ISignatureSet[] {
   const config = epochCtx.config;
   const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
-  return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map((signedHeader) => {
-    const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
-    const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
+  return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
+    (signedHeader): ISignatureSet => {
+      const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
+      const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
 
-    return {
-      pubkey,
-      signingRoot: computeSigningRoot(config, config.types.BeaconBlockHeader, signedHeader.message, domain),
-      signature: signedHeader.signature,
-    };
-  });
+      return {
+        type: "single-pubkey",
+        pubkey,
+        signingRoot: computeSigningRoot(config, config.types.BeaconBlockHeader, signedHeader.message, domain),
+        signature: signedHeader.signature,
+      };
+    }
+  );
 }

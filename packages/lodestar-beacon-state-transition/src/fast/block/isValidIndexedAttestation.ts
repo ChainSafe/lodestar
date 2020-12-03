@@ -1,7 +1,7 @@
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain} from "../../util";
-import {ISignatureMultiplePubkeySet, verifyMultilePubkeySet} from "../signatureSets";
+import {ISignatureSet, verifySignatureSet} from "../signatureSets";
 import {EpochContext} from "../util";
 
 export function isValidIndexedAttestation(
@@ -37,7 +37,7 @@ export function isValidIndexedAttestation(
 
   const signatureSet = getIndexedAttestationSignatureSet(epochCtx, state, indexedAttestation, indices);
   try {
-    return verifyMultilePubkeySet(signatureSet);
+    return verifySignatureSet(signatureSet);
   } catch (e) {
     return false;
   }
@@ -48,13 +48,14 @@ export function getIndexedAttestationSignatureSet(
   state: BeaconState,
   indexedAttestation: IndexedAttestation,
   indices?: number[]
-): ISignatureMultiplePubkeySet {
+): ISignatureSet {
   const config = epochCtx.config;
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
 
   // TODO: Should the indexes be sorted for signature validation?
   if (!indices) indices = getIndices(indexedAttestation);
   return {
+    type: "multiple-pubkeys",
     pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain),
     signature: indexedAttestation.signature.valueOf() as Uint8Array,
