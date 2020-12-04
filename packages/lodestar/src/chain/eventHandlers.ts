@@ -227,8 +227,8 @@ export async function onBlock(
     await this.db.block.add(block);
   }
 
-  if (!job.validSignatures) {
-    // Only process attestations in response to an "untrusted" block
+  if (!job.prefinalized) {
+    // Only process attestations in response to an non-prefinalized block
     await Promise.all([
       // process the attestations in the block
       ...readOnlyMap(block.message.body.attestations, (attestation) => {
@@ -257,6 +257,7 @@ export async function onBlock(
         return this.blockProcessor.processBlockJob({
           signedBlock: pendingBlock,
           reprocess: false,
+          prefinalized: false,
           validSignatures: false,
           validProposerSignature: false,
         });

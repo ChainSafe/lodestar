@@ -77,6 +77,7 @@ export function getNewBlockJob(signedBlock: SignedBeaconBlock): IBlockJob {
   return {
     signedBlock,
     reprocess: false,
+    prefinalized: false,
     validSignatures: false,
     validProposerSignature: false,
   };

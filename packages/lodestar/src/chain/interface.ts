@@ -23,9 +23,14 @@ import {AttestationPool} from "./attestation";
 export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
   /**
-   * Metadata: ????
+   * Metadata: lets a block thats already been processed to be processed again.
+   * After processing, the block will not be stored in the database
    */
   reprocess: boolean;
+  /**
+   * blocks fed to the processor that occur before the best known finalized checkpoint
+   */
+  prefinalized: boolean;
   /**
    * Metadata: `true` if only the block proposer signature has been verified
    */

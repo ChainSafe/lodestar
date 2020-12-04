@@ -173,6 +173,7 @@ export class StateRegenerator implements IStateRegenerator {
         stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
           signedBlock: block,
           reprocess: true,
+          prefinalized: true,
           validSignatures: true,
           validProposerSignature: true,
         });

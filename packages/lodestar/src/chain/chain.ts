@@ -228,6 +228,7 @@ export class BeaconChain implements IBeaconChain {
       .processBlockJob({
         signedBlock,
         reprocess,
+        prefinalized: trusted,
         validSignatures: trusted,
         validProposerSignature: trusted,
       })
