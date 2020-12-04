@@ -223,11 +223,11 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
-  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false, reprocess = false): Promise<void> {
+  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
     this.blockProcessor
       .processBlockJob({
         signedBlock,
-        reprocess,
+        reprocess: false,
         prefinalized: trusted,
         validSignatures: trusted,
         validProposerSignature: trusted,
