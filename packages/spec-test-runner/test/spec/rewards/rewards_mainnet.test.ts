@@ -10,7 +10,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
-import {generateSZZTypeMapping, IAttestationDeltas, IAttestationDeltasType, IDeltas, IRewardsTestCase} from "./types";
+import {generateSZZTypeMapping, IAttestationDeltas, AttestationDeltasType, IDeltas, IRewardsTestCase} from "./types";
 
 ["basic", "leak", "random"].forEach((testSuite) => {
   describeDirectorySpecTest<IRewardsTestCase, IAttestationDeltas>(
@@ -51,7 +51,7 @@ import {generateSZZTypeMapping, IAttestationDeltas, IAttestationDeltasType, IDel
         };
       },
       expectFunc: (testCase, expected, actual) => {
-        expect(IAttestationDeltasType.equals(actual, expected)).to.be.true;
+        expect(AttestationDeltasType.equals(actual, expected)).to.be.true;
       },
     }
   );
