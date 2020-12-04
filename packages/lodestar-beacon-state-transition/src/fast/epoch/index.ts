@@ -8,6 +8,7 @@ import {processRegistryUpdates} from "./processRegistryUpdates";
 import {processSlashings} from "./processSlashings";
 import {processFinalUpdates} from "./processFinalUpdates";
 import {processForkChanged} from "./processFork";
+import {getAttestationDeltas} from "./getAttestationDeltas";
 
 export {
   processJustificationAndFinalization,
@@ -16,6 +17,7 @@ export {
   processSlashings,
   processFinalUpdates,
   processForkChanged,
+  getAttestationDeltas,
 };
 
 export function processEpoch(epochCtx: StateTransitionEpochContext, state: BeaconState): void {

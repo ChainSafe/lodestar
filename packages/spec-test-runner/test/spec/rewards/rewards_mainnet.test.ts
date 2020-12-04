@@ -9,8 +9,14 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
 import {join} from "path";
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {IAttestationDeltas, IAttestationDeltasType, IDeltas, IDeltasType, IRewardsTestCase} from "../types";
+import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {
+  generateSZZTypeMapping,
+  IAttestationDeltas,
+  IAttestationDeltasType,
+  IDeltas,
+  IRewardsTestCase,
+} from "./types";
 
 ["basic", "leak", "random"].forEach((testSuite) => {
   describeDirectorySpecTest<IRewardsTestCase, IAttestationDeltas>(
@@ -56,13 +62,3 @@ import {IAttestationDeltas, IAttestationDeltasType, IDeltas, IDeltasType, IRewar
     }
   );
 });
-
-function generateSZZTypeMapping(): Record<string, unknown> {
-  const typeMappings: any = {};
-  typeMappings["source_deltas"] = IDeltasType;
-  typeMappings["target_deltas"] = IDeltasType;
-  typeMappings["head_deltas"] = IDeltasType;
-  typeMappings["inclusion_delay_deltas"] = IDeltasType;
-  typeMappings["inactivity_penalty_deltas"] = IDeltasType;
-  return typeMappings;
-}

@@ -42,3 +42,13 @@ export interface IRewardsTestCase {
   [k: string]: IDeltas | unknown | null | undefined;
   pre: BeaconState;
 }
+
+export function generateSZZTypeMapping(): Record<string, unknown> {
+  const typeMappings: any = {};
+  typeMappings["source_deltas"] = IDeltasType;
+  typeMappings["target_deltas"] = IDeltasType;
+  typeMappings["head_deltas"] = IDeltasType;
+  typeMappings["inclusion_delay_deltas"] = IDeltasType;
+  typeMappings["inactivity_penalty_deltas"] = IDeltasType;
+  return typeMappings;
+}
