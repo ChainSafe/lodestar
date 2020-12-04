@@ -5,6 +5,7 @@ type Params = {
   slot: number;
 };
 type Query = {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   randao_reveal: string;
   grafitti: string;
 };
@@ -42,7 +43,7 @@ export const produceBlockController: ApiController<Query, Params> = {
         type: "object",
         required: ["randao_reveal"],
         properties: {
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           randao_reveal: {
             type: "string",
             //TODO: add hex string signature regex

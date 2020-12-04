@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/camelcase */
-
+/* eslint-disable @typescript-eslint/naming-convention */
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   Attestation,

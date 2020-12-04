@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 import {fromHex} from "@chainsafe/lodestar-utils";
 
 type Query = {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   attestation_data_root: string;
   slot: number;
 };
@@ -25,7 +26,7 @@ export const produceAggregatedAttestation: ApiController<Query> = {
         type: "object",
         required: ["attestation_data_root", "slot"],
         properties: {
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           attestation_data_root: {
             type: "string",
           },

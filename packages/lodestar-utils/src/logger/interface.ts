@@ -13,6 +13,7 @@ export enum LogLevel {
   silly = "silly",
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const LogLevels = Object.values(LogLevel);
 
 export const customColors = {

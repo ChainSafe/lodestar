@@ -46,7 +46,10 @@ describeDirectorySpecTest<IFinalityTestCase, BeaconState>(
   }
 );
 
-function generateBlocksSZZTypeMapping(n: number, config: IBeaconConfig): object {
+function generateBlocksSZZTypeMapping(
+  n: number,
+  config: IBeaconConfig
+): Record<string, typeof config.types.SignedBeaconBlock> {
   const blocksMapping: any = {};
   for (let i = 0; i < n; i++) {
     blocksMapping[`blocks_${i}`] = config.types.SignedBeaconBlock;

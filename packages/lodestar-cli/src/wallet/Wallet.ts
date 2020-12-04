@@ -15,7 +15,7 @@ import {randomPassword} from "../util";
  */
 
 export interface IWalletKeystoreJson {
-  crypto: object;
+  crypto: Record<string, unknown>;
   uuid: string;
   name: string;
   nextaccount: number;

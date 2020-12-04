@@ -9,6 +9,7 @@ export interface IGenesisBuilderKwargs {
   eth1Provider: IEth1Provider;
   logger: ILogger;
   signal?: AbortSignal;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   MAX_BLOCKS_PER_POLL?: number;
 }
 

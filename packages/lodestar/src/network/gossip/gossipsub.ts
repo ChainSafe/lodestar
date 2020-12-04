@@ -43,6 +43,7 @@ export class LodestarGossipsub extends Gossipsub {
     libp2p: Libp2p,
     options = {}
   ) {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign", D: 8, Dlow: 6}));
     this.transformedObjects = new Map();
     this.config = config;
@@ -171,7 +172,7 @@ export class LodestarGossipsub extends Gossipsub {
       return this.validator.isValidIncomingCommitteeAttestation as GossipMessageValidatorFn;
     }
 
-    let result: Function;
+    let result: (...args: never[]) => Promise<ExtendedValidatorResult>;
     const gossipEvent = topicToGossipEvent(topic);
     switch (gossipEvent) {
       case GossipEvent.BLOCK:

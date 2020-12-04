@@ -3,7 +3,7 @@ import {Options, Argv} from "yargs";
 export type ICliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Options}>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface ICliCommand<OwnArgs = {}, ParentArgs = {}, R = any> {
+export interface ICliCommand<OwnArgs = Record<never, never>, ParentArgs = Record<never, never>, R = any> {
   command: string;
   describe: string;
   examples?: {command: string; description: string}[];

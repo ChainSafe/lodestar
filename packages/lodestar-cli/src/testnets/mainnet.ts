@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {IBeaconParamsUnparsed} from "../config/types";
 
 /* eslint-disable max-len */
