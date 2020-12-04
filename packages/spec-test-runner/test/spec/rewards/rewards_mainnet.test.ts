@@ -10,13 +10,7 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {expect} from "chai";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
-import {
-  generateSZZTypeMapping,
-  IAttestationDeltas,
-  IAttestationDeltasType,
-  IDeltas,
-  IRewardsTestCase,
-} from "./types";
+import {generateSZZTypeMapping, IAttestationDeltas, IAttestationDeltasType, IDeltas, IRewardsTestCase} from "./types";
 
 ["basic", "leak", "random"].forEach((testSuite) => {
   describeDirectorySpecTest<IRewardsTestCase, IAttestationDeltas>(
