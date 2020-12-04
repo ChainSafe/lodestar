@@ -52,7 +52,6 @@ export function getIndexedAttestationSignatureSet(
   const config = epochCtx.config;
   const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
 
-  // TODO: Should the indexes be sorted for signature validation?
   if (!indices) indices = getIndices(indexedAttestation);
   return {
     type: SignatureSetType.aggregate,
