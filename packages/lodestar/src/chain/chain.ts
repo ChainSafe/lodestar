@@ -240,7 +240,9 @@ export class BeaconChain implements IBeaconChain {
       this.config.params.ALL_FORKS.find((fork) =>
         this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4))
       );
+
     const forkDigest = await this.getForkDigest();
+
     return {
       forkDigest,
       nextForkVersion: nextVersion

@@ -29,14 +29,16 @@ export async function processBlock({
         code: BlockErrorCode.ERR_PRESTATE_MISSING,
         job,
       });
-    } else if (e instanceof BlockError) {
-      throw e;
-    } else {
-      throw new BlockError({
-        code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR,
-        error: e,
-        job,
-      });
     }
+
+    if (e instanceof BlockError) {
+      throw e;
+    }
+
+    throw new BlockError({
+      code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR,
+      error: e,
+      job,
+    });
   }
 }
