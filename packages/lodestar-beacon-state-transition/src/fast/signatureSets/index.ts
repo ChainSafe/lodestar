@@ -22,6 +22,20 @@ export function getAllBlockSignatureSets(
 ): ISignatureSet[] {
   return [
     getBlockSignatureSet(epochCtx, state, signedBlock),
+    ...getAllBlockSignatureSetsExceptProposer(epochCtx, state, signedBlock),
+  ];
+}
+
+/**
+ * Includes all signatures on the block (except the deposit signatures) for verification.
+ * Useful since block proposer signature is verified beforehand on gossip validation
+ */
+export function getAllBlockSignatureSetsExceptProposer(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  signedBlock: SignedBeaconBlock
+): ISignatureSet[] {
+  return [
     getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message.body),
     ...getProposerSlashingsSignatureSets(epochCtx, state, signedBlock),
     ...getAttesterSlashingsSignatureSets(epochCtx, state, signedBlock),
