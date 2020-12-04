@@ -14,7 +14,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {DeepPartial} from "./misc";
-import {IBlockJob} from "../chain";
+import {IBlockJob} from "../../src/chain";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
