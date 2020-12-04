@@ -51,11 +51,13 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       blockSlot: signedBlock.message.slot,
     };
     try {
-      const blockJob = {
-        signedBlock: signedBlock,
-        trusted: false,
+      const blockJob: IBlockJob = {
+        signedBlock,
         reprocess: false,
-      } as IBlockJob;
+        prefinalized: false,
+        validSignatures: false,
+        validProposerSignature: false,
+      };
       this.logger.verbose("Started gossip block validation", logContext);
       await validateGossipBlock(this.config, this.chain, this.db, blockJob);
       this.logger.info("Received valid gossip block", logContext);

@@ -141,8 +141,8 @@ export async function runStateTransition(
   const postStateContext = toTreeStateContext(
     fastStateTransition(checkpointStateContext, job.signedBlock, {
       verifyStateRoot: true,
-      verifyProposer: !job.trusted,
-      verifySignatures: !job.trusted,
+      verifyProposer: !job.validProposerSignature,
+      verifySignatures: !job.validSignatures,
     })
   );
 

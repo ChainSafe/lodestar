@@ -120,7 +120,13 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
       if (pendingBlock) {
         this.pendingBlocks.remove(pendingBlock);
         await this.db.pendingBlock.delete(root);
-        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+        return this.blockProcessor.processBlockJob({
+          signedBlock: pendingBlock,
+          reprocess: false,
+          prefinalized: false,
+          validSignatures: false,
+          validProposerSignature: false,
+        });
       }
     })
   );
@@ -222,8 +228,8 @@ export async function onBlock(
     await this.db.block.add(block);
   }
 
-  if (!job.trusted) {
-    // Only process attestations in response to an "untrusted" block
+  if (!job.prefinalized) {
+    // Only process attestations in response to an non-prefinalized block
     await Promise.all([
       // process the attestations in the block
       ...readOnlyMap(block.message.body.attestations, (attestation) => {
@@ -249,7 +255,13 @@ export async function onBlock(
       if (pendingBlock) {
         this.pendingBlocks.remove(pendingBlock);
         await this.db.pendingBlock.delete(root);
-        return this.blockProcessor.processBlockJob({signedBlock: pendingBlock, trusted: false, reprocess: false});
+        return this.blockProcessor.processBlockJob({
+          signedBlock: pendingBlock,
+          reprocess: false,
+          prefinalized: false,
+          validSignatures: false,
+          validProposerSignature: false,
+        });
       }
     })
   );

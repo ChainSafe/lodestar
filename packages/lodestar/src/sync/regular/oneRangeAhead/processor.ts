@@ -47,7 +47,7 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
         resolve,
         signal,
       };
-      sortedBlocks.forEach((block) => this.chain.receiveBlock(block, false));
+      sortedBlocks.forEach((block) => this.chain.receiveBlock(block));
     });
   }
 
