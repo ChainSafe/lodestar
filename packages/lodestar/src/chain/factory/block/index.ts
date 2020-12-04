@@ -22,6 +22,7 @@ export async function assembleBlock(
 ): Promise<BeaconBlock> {
   const head = chain.forkChoice.getHead();
   const stateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot);
+
   const block: BeaconBlock = {
     slot,
     proposerIndex: stateContext.epochCtx.getBeaconProposer(slot),
@@ -42,10 +43,12 @@ function computeNewStateRoot(config: IBeaconConfig, stateContext: IStateContext,
     message: block,
     signature: EMPTY_SIGNATURE,
   };
+
   const newState = fastStateTransition(stateContext, signedBlock, {
     verifyStateRoot: false,
     verifyProposer: false,
     verifySignatures: true,
   });
+
   return config.types.BeaconState.hashTreeRoot(newState.state);
 }

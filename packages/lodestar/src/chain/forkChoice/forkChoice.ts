@@ -38,12 +38,14 @@ export class LodestarForkChoice extends ForkChoice {
     };
     super({
       config,
+
       fcStore: new ForkChoiceStore({
         emitter,
         currentSlot,
         justifiedCheckpoint,
         finalizedCheckpoint,
       }),
+
       protoArray: ProtoArray.initialize({
         slot: blockHeader.slot,
         parentRoot: toHexString(blockHeader.parentRoot),
@@ -52,6 +54,7 @@ export class LodestarForkChoice extends ForkChoice {
         justifiedEpoch: justifiedCheckpoint.epoch,
         finalizedEpoch: finalizedCheckpoint.epoch,
       }),
+
       queuedAttestations: new Set(),
     });
   }

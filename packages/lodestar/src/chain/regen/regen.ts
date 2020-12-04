@@ -44,21 +44,25 @@ export class StateRegenerator implements IStateRegenerator {
         blockRoot: block.parentRoot,
       });
     }
+
     const parentEpoch = computeEpochAtSlot(this.config, parentBlock.slot);
     const blockEpoch = computeEpochAtSlot(this.config, block.slot);
+
+    // If the requested state crosses an epoch boundary and the block isn't a checkpoint block
+    // then we may use the checkpoint state before the block. This may save us at least one epoch transition.
     const isCheckpointBlock = block.slot % this.config.params.SLOTS_PER_EPOCH === 0;
     if (parentEpoch < blockEpoch && !isCheckpointBlock) {
-      // If the requested state crosses an epoch boundary and the block isn't a checkpoint block
-      // then we may use the checkpoint state before the block. This may save us at least one epoch transition.
       return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch});
-    } else if (parentEpoch < blockEpoch - 1) {
-      // If there's more than one epoch to pre-process (but the block is a checkpoint block)
-      // get the checkpoint state as close as possible
-      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
-    } else {
-      // Otherwise, get the state normally.
-      return this.getState(parentBlock.stateRoot);
     }
+
+    // If there's more than one epoch to pre-process (but the block is a checkpoint block)
+    // get the checkpoint state as close as possible
+    if (parentEpoch < blockEpoch - 1) {
+      return this.getCheckpointState({root: block.parentRoot, epoch: blockEpoch - 1});
+    }
+
+    // Otherwise, get the state normally.
+    return this.getState(parentBlock.stateRoot);
   }
 
   async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
@@ -74,6 +78,7 @@ export class StateRegenerator implements IStateRegenerator {
         blockRoot,
       });
     }
+
     if (slot < block.slot) {
       throw new RegenError({
         code: RegenErrorCode.ERR_SLOT_BEFORE_BLOCK_SLOT,
@@ -81,22 +86,23 @@ export class StateRegenerator implements IStateRegenerator {
         blockSlot: block.slot,
       });
     }
-    const cp = {
+
+    const latestCheckpointStateCtx = await this.db.checkpointStateCache.getLatest({
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, slot),
-    };
-    const latestCheckpointStateCtx = await this.db.checkpointStateCache.getLatest(cp);
+    });
+
+    // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
+    // or needs to have empty slots processed until the requested epoch
     if (latestCheckpointStateCtx) {
-      // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
-      // or needs to have empty slots processed until the requested epoch
       return await processSlotsByCheckpoint(this.emitter, latestCheckpointStateCtx, slot);
-    } else {
-      // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
-      // regenerate that state,
-      // then process empty slots until the requested epoch
-      const blockStateCtx = await this.getState(block.stateRoot);
-      return await processSlotsByCheckpoint(this.emitter, blockStateCtx, slot);
     }
+
+    // Otherwise, use the fork choice to get the stateRoot from block at the checkpoint root
+    // regenerate that state,
+    // then process empty slots until the requested epoch
+    const blockStateCtx = await this.getState(block.stateRoot);
+    return await processSlotsByCheckpoint(this.emitter, blockStateCtx, slot);
   }
 
   async getState(stateRoot: Root): Promise<ITreeStateContext> {
@@ -105,6 +111,7 @@ export class StateRegenerator implements IStateRegenerator {
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
+
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
     // searching the state caches
     // then replay blocks forward to the desired stateRoot
@@ -112,12 +119,14 @@ export class StateRegenerator implements IStateRegenerator {
     const block = this.forkChoice
       .forwardIterateBlockSummaries()
       .find((summary) => rootType.equals(summary.stateRoot, stateRoot));
+
     if (!block) {
       throw new RegenError({
         code: RegenErrorCode.ERR_STATE_NOT_IN_FORKCHOICE,
         stateRoot,
       });
     }
+
     // blocks to replay, ordered highest to lowest
     // gets reversed when replayed
     const blocksToReplay = [block];
@@ -136,11 +145,13 @@ export class StateRegenerator implements IStateRegenerator {
       }
       blocksToReplay.push(b);
     }
+
     if (stateCtx === null) {
       throw new RegenError({
         code: RegenErrorCode.ERR_NO_SEED_STATE,
       });
     }
+
     const MAX_EPOCH_TO_PROCESS = 5;
     if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * this.config.params.SLOTS_PER_EPOCH) {
       throw new RegenError({
@@ -148,6 +159,7 @@ export class StateRegenerator implements IStateRegenerator {
         stateRoot,
       });
     }
+
     for (const b of blocksToReplay.reverse()) {
       const block = await this.db.block.get(b.blockRoot);
       if (!block) {
@@ -156,6 +168,7 @@ export class StateRegenerator implements IStateRegenerator {
           blockRoot: b.blockRoot,
         });
       }
+
       try {
         stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
           signedBlock: block,
@@ -169,6 +182,7 @@ export class StateRegenerator implements IStateRegenerator {
         });
       }
     }
+
     return stateCtx;
   }
 }

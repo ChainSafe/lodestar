@@ -16,6 +16,7 @@ export async function validateGossipProposerSlashing(
       code: ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS,
     });
   }
+
   const state = await chain.getHeadState();
   if (!isValidProposerSlashing(config, state, proposerSlashing)) {
     throw new ProposerSlashingError({
