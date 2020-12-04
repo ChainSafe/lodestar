@@ -54,6 +54,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       const blockJob: IBlockJob = {
         signedBlock,
         reprocess: false,
+        prefinalized: false,
         validSignatures: false,
         validProposerSignature: false,
       };

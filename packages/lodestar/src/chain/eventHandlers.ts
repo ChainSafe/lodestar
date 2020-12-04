@@ -123,6 +123,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
         return this.blockProcessor.processBlockJob({
           signedBlock: pendingBlock,
           reprocess: false,
+          prefinalized: false,
           validSignatures: false,
           validProposerSignature: false,
         });
