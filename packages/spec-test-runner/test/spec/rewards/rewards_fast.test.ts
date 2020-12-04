@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
-import {generateSZZTypeMapping, IDeltas, IDeltasType, IRewardsTestCase} from "./types";
+import {generateSZZTypeMapping, IDeltas, DeltasType, IRewardsTestCase} from "./types";
 import {expect} from "chai";
 
 ["basic", "leak", "random"].forEach((testSuite) => {
@@ -65,7 +65,7 @@ import {expect} from "chai";
         };
       },
       expectFunc: (testCase, expected, actual) => {
-        expect(IDeltasType.equals(actual, expected)).to.be.true;
+        expect(DeltasType.equals(actual, expected)).to.be.true;
       },
     }
   );
