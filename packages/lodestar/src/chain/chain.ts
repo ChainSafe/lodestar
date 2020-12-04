@@ -224,7 +224,14 @@ export class BeaconChain implements IBeaconChain {
   }
 
   public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false, reprocess = false): Promise<void> {
-    this.blockProcessor.processBlockJob({signedBlock, trusted, reprocess}).catch(() => /* unreachable */ ({}));
+    this.blockProcessor
+      .processBlockJob({
+        signedBlock,
+        reprocess,
+        validSignatures: trusted,
+        validProposerSignature: trusted,
+      })
+      .catch(() => /* unreachable */ ({}));
   }
 
   public async getForkDigest(): Promise<ForkDigest> {

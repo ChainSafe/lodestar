@@ -22,8 +22,18 @@ import {AttestationPool} from "./attestation";
 
 export interface IBlockJob {
   signedBlock: SignedBeaconBlock;
-  trusted: boolean;
+  /**
+   * Metadata: ????
+   */
   reprocess: boolean;
+  /**
+   * Metadata: `true` if only the block proposer signature has been verified
+   */
+  validProposerSignature: boolean;
+  /**
+   * Metadata: `true` if all the signatures including the proposer signature have been verified
+   */
+  validSignatures: boolean;
 }
 
 export interface IAttestationJob {
