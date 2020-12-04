@@ -1,7 +1,7 @@
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain} from "../../util";
-import {ISignatureSet, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 import {EpochContext} from "../util";
 
 export function isValidIndexedAttestation(
@@ -55,7 +55,7 @@ export function getIndexedAttestationSignatureSet(
   // TODO: Should the indexes be sorted for signature validation?
   if (!indices) indices = getIndices(indexedAttestation);
   return {
-    type: "multiple-pubkeys",
+    type: SignatureSetType.aggregate,
     pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain),
     signature: indexedAttestation.signature.valueOf() as Uint8Array,

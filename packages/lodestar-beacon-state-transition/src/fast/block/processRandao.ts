@@ -4,7 +4,7 @@ import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain, getRandaoMix} from "../../util";
 import {EpochContext} from "../util";
-import {ISignatureSet, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function processRandao(
   epochCtx: EpochContext,
@@ -45,7 +45,7 @@ export function getRandaoRevealSignatureSet(
   const domain = getDomain(config, state, DomainType.RANDAO);
 
   return {
-    type: "single-pubkey",
+    type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[proposerIndex],
     signingRoot: computeSigningRoot(config, config.types.Epoch, epoch, domain),
     signature: body.randaoReveal,

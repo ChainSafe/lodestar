@@ -2,7 +2,7 @@ import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, getDomain} from "../../util";
 import {DomainType} from "../../constants";
 import {EpochContext} from "../index";
-import {ISignatureSet, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function verifyBlockSignature(
   epochCtx: EpochContext,
@@ -22,7 +22,7 @@ export function getBlockSignatureSet(
   const domain = getDomain(config, state, DomainType.BEACON_PROPOSER);
 
   return {
-    type: "single-pubkey",
+    type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[signedBlock.message.proposerIndex],
     signingRoot: computeSigningRoot(config, config.types.BeaconBlock, signedBlock.message, domain),
     signature: signedBlock.signature,

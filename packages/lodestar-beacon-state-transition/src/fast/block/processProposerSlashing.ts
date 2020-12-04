@@ -3,7 +3,7 @@ import {DomainType} from "../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
-import {ISignatureSet, verifySignatureSet} from "../signatureSets";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function processProposerSlashing(
   epochCtx: EpochContext,
@@ -66,7 +66,7 @@ export function getProposerSlashingSignatureSets(
       const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
 
       return {
-        type: "single-pubkey",
+        type: SignatureSetType.single,
         pubkey,
         signingRoot: computeSigningRoot(config, config.types.BeaconBlockHeader, signedHeader.message, domain),
         signature: signedHeader.signature,
