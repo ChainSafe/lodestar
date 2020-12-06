@@ -3,7 +3,6 @@ import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
 import {goerliRpcUrl} from "../../testParams";
-import {linspace} from "../../../src/util/numpy";
 import {Eth1JsonRpcClient} from "../../../src/eth1/eth1JsonRpcClient";
 
 describe("eth1 / httpEth1Client", function () {

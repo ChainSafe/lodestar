@@ -41,7 +41,7 @@ describe("rest - validator - produceBlock", function () {
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceBlockController.url.replace(":slot", "5")))
       .query({
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         randao_reveal: toHexString(Buffer.alloc(32, 1)),
         graffiti: "0x2123",
       })
@@ -62,7 +62,7 @@ describe("rest - validator - produceBlock", function () {
     await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceBlockController.url.replace(":slot", "0")))
       .query({
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         randao_reveal: toHexString(Buffer.alloc(32, 1)),
       })
       .expect(400)

@@ -1,5 +1,4 @@
 import {assert} from "chai";
-import fs from "fs";
 import {ensureDirectoryExistence} from "../../../src/util/file";
 
 describe("util/file", function () {

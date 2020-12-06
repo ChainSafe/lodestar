@@ -10,7 +10,9 @@ import {ChainEvent} from "../../../src/chain";
 describe("syncing", function () {
   const validatorCount = 8;
   const beaconParams: Partial<IBeaconParams> = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
 

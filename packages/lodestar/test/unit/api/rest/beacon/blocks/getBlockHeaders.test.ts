@@ -64,6 +64,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .resolves([generateSignedBeaconHeaderResponse()]);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getBlockHeaders.url))
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       .query({parent_root: toHexString(Buffer.alloc(32, 1))})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

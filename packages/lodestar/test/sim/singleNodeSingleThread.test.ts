@@ -9,11 +9,14 @@ import {ChainEvent} from "../../src/chain";
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
   const testParams: Partial<IBeaconParams> = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
   const manyValidatorParams: Partial<IBeaconParams> = {
     ...testParams,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
 
