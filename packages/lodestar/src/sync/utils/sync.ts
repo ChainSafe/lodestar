@@ -119,7 +119,7 @@ export function fetchBlockChunks(
           ])) as SignedBeaconBlock[] | null;
           if (timer) clearTimeout(timer);
         } catch (e) {
-          logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+          logger.debug("Failed to get block range", {...slotRange}, e);
           yield null;
           return;
         }
