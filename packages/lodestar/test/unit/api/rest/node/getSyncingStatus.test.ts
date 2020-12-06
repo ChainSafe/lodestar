@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import supertest from "supertest";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getHealth, getSyncingStatus} from "../../../../../src/api/rest/controllers/node";

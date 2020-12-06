@@ -1,6 +1,6 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {randBetween} from "../../../utils/misc";
 import {isSlashableAttestationData} from "../../../../src/util";

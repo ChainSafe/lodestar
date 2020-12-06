@@ -3,7 +3,7 @@ import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils"
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";

@@ -1,6 +1,6 @@
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {INetworkOptions} from "../../../../src/network/options";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import sinon from "sinon";
 import {NodejsNode} from "../../../../src/network/nodejs";
 import {ChainEvent, IBeaconChain} from "../../../../src/chain";

@@ -1,7 +1,7 @@
 import {SinonStubbedInstance} from "sinon";
 import {BlockRangeProcessor} from "../../../../../src/sync/regular/oneRangeAhead/processor";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain, IBlockJob} from "../../../../../src/chain";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon from "sinon";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateEmptySignedBlock} from "../../../../utils/block";

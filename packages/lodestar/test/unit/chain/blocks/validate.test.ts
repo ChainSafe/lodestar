@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateBlock} from "../../../../src/chain/blocks/validate";

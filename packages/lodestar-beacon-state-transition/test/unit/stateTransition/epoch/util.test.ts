@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
 import {PendingAttestation, Validator} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {
   getAttestingBalance,
   getMatchingHeadAttestations,

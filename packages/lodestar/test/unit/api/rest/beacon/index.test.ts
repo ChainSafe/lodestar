@@ -1,5 +1,5 @@
 import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {StubbedApi} from "../../../../utils/stub/api";

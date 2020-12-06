@@ -5,7 +5,7 @@ import {AggregateAndProof, SignedAggregateAndProof} from "@chainsafe/lodestar-ty
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - aggregate and proof", function () {

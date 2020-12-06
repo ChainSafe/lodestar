@@ -1,5 +1,5 @@
 import {BeaconEventType, EventsApi} from "../../../../../src/api/impl/events";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
 import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";

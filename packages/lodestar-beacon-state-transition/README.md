@@ -16,7 +16,7 @@ The beacon state transition and state transition utilities
 
 import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {mainnetConfig} from "@chainsafe/lodestar-config/mainnet";
 
 const state: BeaconState = {
   ...

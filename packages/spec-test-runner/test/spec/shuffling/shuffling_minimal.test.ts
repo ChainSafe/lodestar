@@ -1,5 +1,5 @@
 import {join} from "path";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {computeShuffledIndex} from "@chainsafe/lodestar-beacon-state-transition";
 import {IShufflingTestCase} from "./type";

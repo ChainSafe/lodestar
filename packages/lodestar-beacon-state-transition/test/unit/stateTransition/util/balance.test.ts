@@ -2,7 +2,7 @@ import {assert} from "chai";
 
 import {List} from "@chainsafe/ssz";
 import {BeaconState, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../../src/util";
 

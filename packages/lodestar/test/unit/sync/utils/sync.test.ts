@@ -6,7 +6,7 @@ import PeerId from "peer-id";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {Checkpoint, Status} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 

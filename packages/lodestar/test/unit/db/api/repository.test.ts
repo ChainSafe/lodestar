@@ -6,7 +6,7 @@ import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {IDatabaseController, LevelDbController, Repository, Bucket} from "@chainsafe/lodestar-db";
 
 chai.use(chaiAsPromised);

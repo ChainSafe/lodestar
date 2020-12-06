@@ -1,5 +1,5 @@
 import {generateEmptySignedBlock} from "../../../utils/block";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {getGossipTopic} from "../../../../src/network/gossip/utils";
 import {ExtendedValidatorResult, GossipEvent} from "../../../../src/network/gossip/constants";

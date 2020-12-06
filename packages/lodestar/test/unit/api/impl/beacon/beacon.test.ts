@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {generateState} from "../../../../utils/state";
 import {Libp2pNetwork} from "../../../../../src/network/network";

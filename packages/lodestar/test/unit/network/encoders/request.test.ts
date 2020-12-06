@@ -1,7 +1,7 @@
 import pipe from "it-pipe";
 import all from "it-all";
 import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 import sinon, {SinonStubbedInstance} from "sinon";

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import sinon from "sinon";
 import {BeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";

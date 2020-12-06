@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import supertest from "supertest";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlockHeader} from "../../../../../../src/api/rest/controllers/beacon/blocks";
 import {StubbedApi} from "../../../../../utils/stub/api";

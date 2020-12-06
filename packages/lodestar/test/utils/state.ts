@@ -1,7 +1,7 @@
 import {BeaconState, PendingAttestation, Eth1Data, Validator, Gwei, Root} from "@chainsafe/lodestar-types";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {TreeBacked, List} from "@chainsafe/ssz";
 
 /**
