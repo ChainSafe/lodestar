@@ -190,7 +190,7 @@ export function processSyncBlocks(
         });
         return headSlot;
       }
-      logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
+      logger.info("Imported blocks for slots", {blocks: blocks.map((block) => block.message.slot).join(",")});
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);

@@ -79,7 +79,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       await this.stop();
       return;
     }
-    this.logger.info("Start initial sync from finalized slot " + this.blockImportTarget);
+    this.logger.info("Start initial sync", {finalizedSlot: this.blockImportTarget});
     this.setBlockImportTarget();
     await this.stats.start();
     await this.sync();
@@ -116,7 +116,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   private setBlockImportTarget = (fromSlot?: Slot): void => {
     const lastTarget = fromSlot ?? this.blockImportTarget;
     const newTarget = this.getNewBlockImportTarget(lastTarget);
-    this.logger.info(`Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`);
+    this.logger.info("Fetching blocks range", {fromSlot: lastTarget + 1, toSlot: newTarget});
     this.syncTriggerSource.push({start: lastTarget + 1, end: newTarget});
     this.updateBlockImportTarget(newTarget);
   };

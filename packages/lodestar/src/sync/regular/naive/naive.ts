@@ -61,7 +61,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+      this.logger.info("Regular Sync: node is up to date", {headSlot});
       this.emit("syncCompleted");
       await this.stop();
       return;
@@ -105,7 +105,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private setTarget = (newTarget?: Slot, triggerSync = true): void => {
     newTarget = newTarget ?? this.getNewTarget();
     if (triggerSync && newTarget > this.currentTarget) {
-      this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
+      this.logger.info("Regular Sync: Requesting blocks range", {fromSlot: this.currentTarget + 1, toSlot: newTarget});
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
     this.currentTarget = newTarget;
@@ -130,7 +130,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         };
         this.setTarget();
         this.subscribeToBlock = false;
-        this.logger.info(`Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} `, {
+        this.logger.info("Regular Sync: Sync progress", {
+          lastProcessedSlot: lastProcessedBlock.message.slot,
           currentSlot: this.chain.clock.currentSlot,
           gossipParentBlockRoot: this.gossipParentBlockRoot ? toHexString(this.gossipParentBlockRoot) : "undefined",
         });
@@ -259,7 +260,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
-        this.logger.info(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}`, {
+        this.logger.info("Regular Sync: Found best peer", {
+          peerId: this.bestPeer.toB58String(),
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,
         });

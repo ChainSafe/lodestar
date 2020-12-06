@@ -23,7 +23,7 @@ export class RestApi {
     if (_opts.enabled) {
       try {
         const address = await api.server.listen(_opts.port, _opts.host);
-        logger.info(`Started rest api server on ${address}`);
+        logger.info("Started rest api server", {address});
       } catch (e) {
         logger.error(`Failed to start rest api server on ${_opts.host}:${_opts.port}`, e);
         throw e;

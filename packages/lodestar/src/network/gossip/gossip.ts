@@ -256,7 +256,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private logSubscriptions = (): void => {
     if (this.pubsub && this.pubsub.subscriptions) {
-      this.logger.info("Current gossip subscriptions: " + Array.from(this.pubsub.subscriptions).join(","));
+      this.logger.info("Current gossip subscriptions", {subscriptions: Array.from(this.pubsub.subscriptions)});
     } else {
       this.logger.info("Gossipsub not started");
     }

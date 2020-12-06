@@ -262,7 +262,7 @@ export class AttestationService {
     fork: Fork,
     genesisValidatorsRoot: Root
   ): Promise<void> => {
-    this.logger.info(`Aggregating attestations for committee ${duty.committeeIndex} at slot ${duty.slot}`);
+    this.logger.info("Aggregating attestations", {committeeIndex: duty.committeeIndex, slot: duty.slot});
     let aggregate: Attestation;
     try {
       aggregate = await this.provider.validator.getAggregatedAttestation(
@@ -290,9 +290,7 @@ export class AttestationService {
     };
     try {
       await this.provider.validator.publishAggregateAndProofs([signedAggregateAndProof]);
-      this.logger.info(
-        `Published signed aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.slot}`
-      );
+      this.logger.info("Published signed aggregate and proof", {committeeIndex: duty.committeeIndex, slot: duty.slot});
     } catch (e) {
       this.logger.error(
         `Failed to publish aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.slot}`,
@@ -358,10 +356,11 @@ export class AttestationService {
       data: attestationData,
       signature: this.secretKeys[attesterIndex].sign(signingRoot).toBytes(),
     };
-    this.logger.info(
-      `Signed new attestation for block ${toHexString(attestation.data.target.root)} ` +
-        `and committee ${committeeIndex} at slot ${slot}`
-    );
+    this.logger.info("Signed new attestation", {
+      block: toHexString(attestation.data.target.root),
+      committeeIndex,
+      slot,
+    });
     return attestation;
   }
 

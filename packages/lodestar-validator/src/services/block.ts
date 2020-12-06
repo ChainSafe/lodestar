@@ -157,9 +157,7 @@ export default class BlockProposingService {
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info(
-        `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
-      );
+      this.logger.info("Proposed block", {hash: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)), slot});
     } catch (e) {
       this.logger.error(`Failed to publish block for slot ${slot}`, e);
     }
