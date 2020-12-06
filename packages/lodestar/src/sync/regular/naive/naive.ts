@@ -68,7 +68,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     }
     this.currentTarget = headSlot;
     this.lastProcessedBlock = this.chain.forkChoice.getHead();
-    this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
+    this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
     await this.waitForBestPeer(this.controller.signal);
@@ -141,10 +141,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   private onGossipBlock = async (block: SignedBeaconBlock): Promise<void> => {
     this.gossipParentBlockRoot = block.message.parentRoot;
-    this.logger.verbose(
-      `Regular Sync: Set gossip parent block to ${toHexString(this.gossipParentBlockRoot)}` +
-        `, gossip slot ${block.message.slot}`
-    );
+    this.logger.verbose("Regular Sync: Set gossip parent block", {
+      root: toHexString(this.gossipParentBlockRoot),
+      slot: block.message.slot,
+    });
     await this.checkSyncComplete();
   };
 

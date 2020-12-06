@@ -109,7 +109,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   }
 
   private updateBlockImportTarget = (target: Slot): void => {
-    this.logger.verbose(`updating block target ${target}`);
+    this.logger.verbose("updating block target", {target});
     this.blockImportTarget = target;
   };
 
@@ -140,7 +140,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
             fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
             processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
           );
-          logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);
+          logger.verbose("last processed slot range", {lastSlot, ...slotRange});
           if (typeof lastSlot === "number") {
             if (lastSlot === getLastProcessedBlock().slot) {
               // failed at start of range
@@ -196,7 +196,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       const newTarget = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses())!;
       if (newTarget.epoch > this.targetCheckpoint!.epoch) {
         this.targetCheckpoint = newTarget;
-        this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
+        this.logger.verbose("Set new target checkpoint", {epoch: newTarget.epoch});
         return;
       }
       this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint!.epoch}`);

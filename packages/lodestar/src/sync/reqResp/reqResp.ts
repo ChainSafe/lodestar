@@ -94,7 +94,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           try {
             await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
           } catch (e) {
-            this.logger.verbose("Failed to send goodbye", {reason: e.message});
+            this.logger.verbose("Failed to send goodbye", {error: e.message});
           }
         })
     );
@@ -167,18 +167,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = await this.chain.getForkDigest();
     if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.verbose(
-        "Fork digest mismatch " +
-          `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
-      );
+      this.logger.verbose("Fork digest mismatch", {
+        expected: toHexString(currentForkDigest),
+        received: toHexString(request.forkDigest),
+      });
       return true;
     }
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.verbose(
-          "Genesis finalized root must be zeroed " +
-            `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
-        );
+        this.logger.verbose("Genesis finalized root must be zeroed", {
+          expected: toHexString(ZERO_HASH),
+          received: toHexString(request.finalizedRoot),
+        });
         return true;
       }
     } else {
@@ -190,10 +190,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
         if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.verbose(
-            "Status with same finalized epoch has different root " +
-              `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
-          );
+          this.logger.verbose("Status with same finalized epoch has different root", {
+            expected: toHexString(finalizedCheckpoint.root),
+            received: toHexString(request.finalizedRoot),
+          });
           return true;
         }
       } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
@@ -222,9 +222,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         }
       } else {
         // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
-        this.logger.verbose(
-          "Status with future finalized epoch " + `${request.finalizedEpoch}: ${toHexString(request.finalizedRoot)}`
-        );
+        this.logger.verbose("Status with future finalized epoch", {
+          finalizedEpoch: request.finalizedEpoch,
+          finalizedRoot: toHexString(request.finalizedRoot),
+        });
       }
     }
     return false;
@@ -382,8 +383,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       try {
         this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {
-        this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status and metadata`, {
-          reason: e.message,
+        this.logger.verbose("Failed to get peer latest status and metadata", {
+          peerId: peerId.toB58String(),
+          error: e.message,
         });
         await this.network.disconnect(peerId);
       }
