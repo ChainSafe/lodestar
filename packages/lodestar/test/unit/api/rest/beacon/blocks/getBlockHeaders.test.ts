@@ -17,17 +17,20 @@ describe("rest - beacon - getBlockHeaders", function () {
 
   beforeEach(async function () {
     api = new StubbedApi();
-    restApi = await RestApi.init({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0,
-    }, {
-      config,
-      logger: silentLogger,
-      api,
-    });
+    restApi = await RestApi.init(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: silentLogger,
+        api,
+      }
+    );
   });
 
   afterEach(async function () {

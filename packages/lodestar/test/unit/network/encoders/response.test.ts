@@ -19,7 +19,7 @@ import {encode} from "varint";
 import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
 import {silentLogger} from "../../../utils/logger";
-import { randomBytes } from "crypto";
+import {randomBytes} from "crypto";
 
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {

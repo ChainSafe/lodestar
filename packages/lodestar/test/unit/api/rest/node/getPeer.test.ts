@@ -55,7 +55,7 @@ describe("rest - node - getPeer", function () {
   it("peer not found", async function () {
     api.node.getPeer.resolves(null);
     await supertest(restApi.server.server)
-        .get(urlJoin(NODE_PREFIX, getPeer.url.replace(":peerId", "16")))
-        .expect(404);
+      .get(urlJoin(NODE_PREFIX, getPeer.url.replace(":peerId", "16")))
+      .expect(404);
   });
 });

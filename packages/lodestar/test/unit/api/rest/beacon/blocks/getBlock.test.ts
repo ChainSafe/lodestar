@@ -47,9 +47,9 @@ describe("rest - beacon - getBlock", function () {
 
   it("should not found block header", async function () {
     api.beacon.blocks.getBlock.withArgs("4").resolves(null);
-    await supertest(restApi.server.server).get(
-        urlJoin(BEACON_PREFIX, getBlock.url.replace(":blockId", "4"))
-    ).expect(404);
+    await supertest(restApi.server.server)
+      .get(urlJoin(BEACON_PREFIX, getBlock.url.replace(":blockId", "4")))
+      .expect(404);
   });
 
   it("should fail validation", async function () {
