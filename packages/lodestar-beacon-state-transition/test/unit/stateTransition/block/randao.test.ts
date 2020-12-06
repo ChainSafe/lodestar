@@ -37,13 +37,10 @@ describe("process block - randao", function () {
     const state = generateState({validators: generateValidators(1)});
     const block = generateEmptyBlock();
     getBeaconProposerStub.returns(0);
-    try {
-      processRandao(config, state, block.body, false);
-      expect(getBeaconProposerStub.calledOnce).to.be.true;
-      expect(state.randaoMixes[getCurrentEpoch(config, state) % config.params.EPOCHS_PER_HISTORICAL_VECTOR]).to.not.be
-        .null;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processRandao(config, state, block.body, false);
+    expect(getBeaconProposerStub.calledOnce).to.be.true;
+    expect(state.randaoMixes[getCurrentEpoch(config, state) % config.params.EPOCHS_PER_HISTORICAL_VECTOR]).to.not.be
+      .null;
   });
 });

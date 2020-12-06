@@ -95,12 +95,9 @@ describe("process block - proposer slashings", function () {
     proposerSlashing.signedHeader1.message.slot = 1;
     proposerSlashing.signedHeader2.message.slot = 1;
     isSlashableValidatorStub.returns(true);
-    try {
-      processProposerSlashing(config, state, proposerSlashing, false);
-      expect(isSlashableValidatorStub.calledOnce).to.be.true;
-      expect(slashValidatorStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processProposerSlashing(config, state, proposerSlashing, false);
+    expect(isSlashableValidatorStub.calledOnce).to.be.true;
+    expect(slashValidatorStub.calledOnce).to.be.true;
   });
 });

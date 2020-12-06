@@ -37,11 +37,8 @@ describe("process epoch - slashings", function () {
     const state = generateState({
       validators: [validator1, validator2, validator3] as List<Validator>,
     });
-    try {
-      processSlashings(config, state);
-      expect(decreaseBalanceStub.withArgs(sinon.match.any, 2, sinon.match.any).calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processSlashings(config, state);
+    expect(decreaseBalanceStub.withArgs(sinon.match.any, 2, sinon.match.any).calledOnce).to.be.true;
   });
 });
