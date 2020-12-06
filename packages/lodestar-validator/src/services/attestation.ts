@@ -119,7 +119,7 @@ export class AttestationService {
         this.validators.map((v) => v?.index ?? null).filter((i) => i !== null) as ValidatorIndex[]
       );
     } catch (e) {
-      this.logger.error(`Failed to obtain attester duty for epoch ${epoch}`, e.message);
+      this.logger.error("Failed to obtain attester duty", {epoch, error: e.message});
       return;
     }
     const fork = await this.provider.beacon.state.getFork("head");
@@ -293,7 +293,8 @@ export class AttestationService {
       this.logger.info("Published signed aggregate and proof", {committeeIndex: duty.committeeIndex, slot: duty.slot});
     } catch (e) {
       this.logger.error(
-        `Failed to publish aggregate and proof for committee ${duty.committeeIndex} at slot ${duty.slot}`,
+        "Failed to publish aggregate and proof",
+        {committeeIndex: duty.committeeIndex, slot: duty.slot},
         e
       );
     }

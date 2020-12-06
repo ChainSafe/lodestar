@@ -36,7 +36,7 @@ function wrapHandler<
       await handler(...args);
       emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
     } catch (e) {
-      logger.error(`Error handling event: ${event}`, e);
+      logger.error("Error handling event", {event}, e);
     }
   };
 }
@@ -269,7 +269,7 @@ export async function onBlock(
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
   if (!(err instanceof AttestationError)) {
-    this.logger.error("Non AttestationError received:", err);
+    this.logger.error("Non AttestationError received", err);
     return;
   }
 
@@ -304,7 +304,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
 
 export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<void> {
   if (!(err instanceof BlockError)) {
-    this.logger.error("Non BlockError received:", err);
+    this.logger.error("Non BlockError received", err);
     return;
   }
 

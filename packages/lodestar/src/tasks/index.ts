@@ -92,7 +92,7 @@ export class TasksService implements IService {
       this.chain.forkChoice.prune(finalized.root);
       this.logger.info("Finish processing finalized checkpoint", {epoch: finalized.epoch});
     } catch (e) {
-      this.logger.error(`Error processing finalized checkpoint on epoch ${finalized.epoch}`, e);
+      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
     }
   };
 

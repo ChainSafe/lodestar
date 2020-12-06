@@ -247,6 +247,6 @@ export class BeaconSync implements IBeaconSync {
       retry++;
     } // end while
     this.processingRoots.delete(missingRootHex);
-    if (!found) this.logger.error("Failed to get unknown ancestor root", missingRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", {missingRootHex});
   };
 }

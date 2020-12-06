@@ -84,7 +84,7 @@ export async function getBlockRange(
     ).filter(notNullish);
     retry++;
     if ((retry > maxRetry || retry > peers.length) && chunks.length > 0) {
-      logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
+      logger.error("Max req retry for blocks by range. Failed chunks", JSON.stringify(chunks));
       return null;
     }
   }

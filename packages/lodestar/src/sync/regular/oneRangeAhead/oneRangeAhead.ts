@@ -54,7 +54,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     this.setLastProcessedBlock(this.chain.forkChoice.getHead());
     this.sync().catch((e) => {
-      this.logger.error("Regular Sync: error", e);
+      this.logger.error("Regular Sync", e);
     });
   }
 

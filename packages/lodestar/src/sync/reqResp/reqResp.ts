@@ -152,7 +152,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         status
       );
     } catch (e) {
-      this.logger.error("Failed to create response status", e.message);
+      this.logger.error("Failed to create response status", {error: e.message});
       await sendResponse(
         {config: this.config, logger: this.logger},
         request.id,
@@ -326,7 +326,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         responseStream
       );
     } catch (e) {
-      this.logger.error(`Error processing request id ${request.id}: ${e.message}`);
+      this.logger.error("Error processing request", {id: request.id, error: e.message});
       await sendResponse(
         {config: this.config, logger: this.logger},
         request.id,
