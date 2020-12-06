@@ -59,23 +59,23 @@ export class WinstonLogger implements ILogger {
     this.createLogEntry(LogLevel.warn, message, context);
   }
 
-  public info(message: string, ...context: Context[]): void {
+  public info(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.info, message, context);
   }
 
-  public important(message: string, ...context: Context[]): void {
+  public important(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
   }
 
-  public verbose(message: string, ...context: Context[]): void {
+  public verbose(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.verbose, message, context);
   }
 
-  public debug(message: string, ...context: Context[]): void {
+  public debug(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.debug, message, context);
   }
 
-  public silly(message: string, ...context: Context[]): void {
+  public silly(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.silly, message, context);
   }
 
