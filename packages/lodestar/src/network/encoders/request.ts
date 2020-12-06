@@ -24,7 +24,7 @@ export function eth2RequestEncode(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           serialized = type.serialize(request as any);
         } catch (e) {
-          logger.warn("Malformed input. Failed to serialize request for method " + method);
+          logger.warn("Malformed input. Failed to serialize request", {method}, e);
           continue;
         }
         yield Buffer.from(encode(serialized.length));

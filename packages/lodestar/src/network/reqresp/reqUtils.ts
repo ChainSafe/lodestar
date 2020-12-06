@@ -40,10 +40,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       handleResponses<T>(modules, peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
     );
   } catch (e) {
-    modules.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
-      method,
-      reason: e.message,
-    });
+    modules.logger.warn("failed to send request", {requestId, peerId: peerId.toB58String(), method}, e);
     throw e;
   }
 }

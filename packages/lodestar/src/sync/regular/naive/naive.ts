@@ -224,7 +224,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   };
 
   private handleFailedToGetRange = (range: ISlotRange): void => {
-    this.logger.warn(`Regular Sync: retrying range ${JSON.stringify(range)}`);
+    this.logger.warn("Regular Sync: retrying block range", {...range});
     // retry again
     this.setTarget(range.start - 1, false);
     this.setTarget();

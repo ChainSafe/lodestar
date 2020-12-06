@@ -264,7 +264,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     );
     // no need to wait
     handlePeerMetadataSequence(this.network, this.logger, peerId, request.body).catch(() => {
-      this.logger.warn(`Failed to handle peer ${peerId.toB58String()} metadata sequence ${request}`);
+      this.logger.warn("Failed to handle peer metadata sequence", {peerId: peerId.toB58String(), request});
     });
   }
 
@@ -303,10 +303,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     try {
       if (request.body.count > MAX_REQUEST_BLOCKS) {
-        this.logger.warn(
-          `Request id ${request.id} asked for ${request.body.count} blocks, ` +
-            `just return ${MAX_REQUEST_BLOCKS} maximum`
-        );
+        this.logger.warn("Request asked for more blocks than maximum", {
+          id: request.id,
+          requestedCount: request.body.count,
+          maxCount: MAX_REQUEST_BLOCKS,
+        });
         request.body.count = MAX_REQUEST_BLOCKS;
       }
       const archiveBlocksStream = this.db.blockArchive.valuesStream({

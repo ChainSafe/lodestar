@@ -144,7 +144,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
           if (typeof lastSlot === "number") {
             if (lastSlot === getLastProcessedBlock().slot) {
               // failed at start of range
-              logger.warn(`Failed to process range, retrying, lastSlot=${lastSlot} range=${JSON.stringify(slotRange)}`);
+
+              logger.warn("Failed to process block range, retrying", {lastSlot, ...slotRange});
               setBlockImportTarget(lastSlot);
             } else {
               // success
@@ -154,7 +155,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
             }
           } else {
             // no blocks in range
-            logger.warn(`Didn't receive any valid block in range range ${JSON.stringify(slotRange)}`);
+            logger.warn("Didn't receive any valid block in block range", {...slotRange});
             //we didn't receive any block, set target from last requested slot
             setBlockImportTarget(slotRange.end);
           }
