@@ -3,6 +3,7 @@ import {toJson, toString} from "../json";
 import {Context, ILoggerOptions} from "./interface";
 
 type Format = ReturnType<typeof format.combine>;
+type Contexts = (Context | Error)[];
 
 // TODO: Find a more typesafe way of enforce this properties
 interface IWinstonInfoArg {
@@ -12,7 +13,7 @@ interface IWinstonInfoArg {
   namespace?: string;
   timestamp?: string;
   durationMs?: string;
-  context: Context | Error;
+  context: Contexts;
 }
 
 export function getFormat(opts: ILoggerOptions): Format {
@@ -40,7 +41,7 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     format((_info) => {
       const info = _info as IWinstonInfoArg;
-      info.context = toJson(info.context);
+      info.context = info.context.map((contextItem) => toJson(contextItem));
       return info;
     })(),
     format.json()
@@ -59,16 +60,13 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
   const infoString = info.module || info.namespace || "";
   const infoPad = paddingBetweenInfo - infoString.length;
 
-  const {context, stack} = splitContextAndStackTrace(info.context);
-
   const logParts: (string | undefined)[] = [
     info.timestamp,
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    context,
+    ...info.context.map((contextItem) => printStackTraceLast(contextItem)),
     info.durationMs && ` - duration=${info.durationMs}ms`,
-    stack && `\n${stack}`,
   ];
 
   return logParts.filter((s) => s).join(" ");
@@ -77,17 +75,17 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 /**
  * Extract stack property from context to allow appending at the end of the log
  */
-function splitContextAndStackTrace(context?: Context | Error): {context?: string; stack?: string} {
+function printStackTraceLast(context?: Context | Error): string {
   if (!context) {
-    return {};
+    return "";
   }
 
   const json = toJson(context);
 
   if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {
     const {stack, ...errJsonData} = json;
-    return {context: toString(errJsonData), stack: toString(stack)};
+    return `${toString(errJsonData)}\n${toString(stack)}`;
   } else {
-    return {context: toString(json)};
+    return toString(json);
   }
 }

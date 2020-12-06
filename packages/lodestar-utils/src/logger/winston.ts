@@ -51,31 +51,31 @@ export class WinstonLogger implements ILogger {
     }
   }
 
-  public debug(message: string, context?: Context): void {
-    this.createLogEntry(LogLevel.debug, message, context);
-  }
-
-  public info(message: string, context?: Context): void {
-    this.createLogEntry(LogLevel.info, message, context);
-  }
-
-  public important(message: string, context?: Context): void {
-    this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
-  }
-
-  public error(message: string, context?: Context | Error): void {
+  public error(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.error, message, context);
   }
 
-  public warn(message: string, context?: Context | Error): void {
+  public warn(message: string, ...context: (Context | Error)[]): void {
     this.createLogEntry(LogLevel.warn, message, context);
   }
 
-  public verbose(message: string, context?: Context): void {
+  public info(message: string, ...context: Context[]): void {
+    this.createLogEntry(LogLevel.info, message, context);
+  }
+
+  public important(message: string, ...context: Context[]): void {
+    this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
+  }
+
+  public verbose(message: string, ...context: Context[]): void {
     this.createLogEntry(LogLevel.verbose, message, context);
   }
 
-  public silly(message: string, context?: Context): void {
+  public debug(message: string, ...context: Context[]): void {
+    this.createLogEntry(LogLevel.debug, message, context);
+  }
+
+  public silly(message: string, ...context: Context[]): void {
     this.createLogEntry(LogLevel.silly, message, context);
   }
 
@@ -120,7 +120,7 @@ export class WinstonLogger implements ILogger {
     });
   }
 
-  private createLogEntry(level: LogLevel, message: string, context?: Context | Error): void {
+  private createLogEntry(level: LogLevel, message: string, context: (Context | Error)[]): void {
     //don't propagate if silenced or message level is more detailed than logger level
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
