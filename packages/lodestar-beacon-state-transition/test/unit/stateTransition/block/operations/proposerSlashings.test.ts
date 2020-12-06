@@ -8,6 +8,8 @@ import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateValidators} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 
+/* eslint-disable no-empty */
+
 describe("process block - proposer slashings", function () {
   const sandbox = sinon.createSandbox();
 

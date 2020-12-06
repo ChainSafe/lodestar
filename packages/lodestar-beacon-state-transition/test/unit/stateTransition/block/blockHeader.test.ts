@@ -8,6 +8,8 @@ import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateValidator} from "../../../utils/validator";
 
+/* eslint-disable no-empty */
+
 describe("process block - block header", function () {
   const sandbox = sinon.createSandbox();
 

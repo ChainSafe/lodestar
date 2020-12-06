@@ -17,6 +17,8 @@ import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../.
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
 
+/* eslint-disable no-empty */
+
 describe("process block - process operations", function () {
   const sandbox = sinon.createSandbox();
 

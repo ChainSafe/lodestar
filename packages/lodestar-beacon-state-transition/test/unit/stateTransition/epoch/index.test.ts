@@ -11,6 +11,8 @@ import * as slashingUtils from "../../../../src/epoch/slashings";
 import * as finalUtils from "../../../../src/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
 
+/* eslint-disable no-empty */
+
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
 
