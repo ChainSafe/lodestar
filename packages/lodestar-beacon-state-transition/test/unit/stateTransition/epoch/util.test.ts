@@ -14,7 +14,6 @@ import {
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";
-import {getAttestingIndices} from "../../../../src/util";
 import {generateValidator} from "../../../utils/validator";
 import {generateState} from "../../../utils/state";
 

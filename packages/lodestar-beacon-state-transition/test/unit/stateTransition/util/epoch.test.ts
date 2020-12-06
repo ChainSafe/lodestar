@@ -6,7 +6,6 @@ import {GENESIS_SLOT} from "../../../../src/constants";
 import {
   computeStartSlotAtEpoch,
   getPreviousEpoch,
-  getCurrentEpoch,
   computeActivationExitEpoch,
   computeEpochAtSlot,
 } from "../../../../src/util";

@@ -11,10 +11,9 @@ import {generateValidator} from "../../../utils/validator";
 describe("process block - block header", function () {
   const sandbox = sinon.createSandbox();
 
-  let getTemporaryBlockHeaderStub: any, getBeaconProposeIndexStub: any;
+  let getBeaconProposeIndexStub: any;
 
   beforeEach(() => {
-    getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
   });
 

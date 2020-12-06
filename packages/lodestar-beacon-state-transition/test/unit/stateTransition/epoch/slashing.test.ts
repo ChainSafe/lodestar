@@ -13,12 +13,11 @@ import {intDiv} from "@chainsafe/lodestar-utils";
 describe("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any, getTotalBalanceStub: any, getActiveValidatorIndicesStub: any, decreaseBalanceStub: any;
+  let getCurrentEpochStub: any, getTotalBalanceStub: any, decreaseBalanceStub: any;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getTotalBalanceStub = sandbox.stub(utils, "getTotalBalance");
-    getActiveValidatorIndicesStub = sandbox.stub(utils, "getActiveValidatorIndices");
     decreaseBalanceStub = sandbox.stub(utils, "decreaseBalance");
   });
 

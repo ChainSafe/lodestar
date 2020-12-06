@@ -12,10 +12,8 @@ import {generateValidator} from "../../../../utils/validator";
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
   const verifyMerkleBranchStub = sinon.stub();
-  let processDeposit: Function,
-    getTemporaryBlockHeaderStub,
-    getBeaconProposeIndexStub,
-    blsStub = sinon.stub();
+  let processDeposit: any, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub;
+  const blsStub = sinon.stub();
 
   before(function () {
     mockery.registerMock("@chainsafe/lodestar-utils", {
