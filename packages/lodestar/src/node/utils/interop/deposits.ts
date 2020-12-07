@@ -1,8 +1,7 @@
 import {hash, TreeBacked, List} from "@chainsafe/ssz";
 import {Deposit, DepositData, Root} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {sign} from "@chainsafe/bls";
-import {interopKeypairs} from "@chainsafe/lodestar-validator";
+import {interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../constants";
 
@@ -12,7 +11,8 @@ export function interopDeposits(
   validatorCount: number
 ): Deposit[] {
   const tree = depositDataRootList.tree();
-  return interopKeypairs(validatorCount).map(({pubkey, privkey}, i) => {
+  return interopSecretKeys(validatorCount).map((secretKey, i) => {
+    const pubkey = secretKey.toPublicKey().toBytes();
     // create DepositData
     const data: DepositData = {
       pubkey,
@@ -22,7 +22,7 @@ export function interopDeposits(
     };
     const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, data, domain);
-    data.signature = sign(privkey, signingRoot);
+    data.signature = secretKey.sign(signingRoot).toBytes();
     // Add to merkle tree
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(data));
     return {

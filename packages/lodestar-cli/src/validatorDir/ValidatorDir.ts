@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import lockFile from "lockfile";
-import {Keypair, PrivateKey} from "@chainsafe/bls";
+import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {DepositData} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -84,25 +84,25 @@ export class ValidatorDir {
   }
 
   /**
-   * Attempts to read the keystore in `this.dir` and decrypt the keypair using
+   * Attempts to read the keystore in `this.dir` and decrypt the secretKey using
    * a password file in `password_dir`.
    * The password file that is used will be based upon the pubkey value in the keystore.
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir
    */
-  async votingKeypair(secretsDir: string): Promise<Keypair> {
+  async votingKeypair(secretsDir: string): Promise<SecretKey> {
     const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
   /**
-   * Attempts to read the keystore in `this.dir` and decrypt the keypair using
+   * Attempts to read the keystore in `this.dir` and decrypt the secretKey using
    * a password file in `password_dir`.
    * The password file that is used will be based upon the pubkey value in the keystore.
    * Errors if there is a filesystem error, a password is missing or the password is incorrect.
    * @param secretsDir
    */
-  async withdrawalKeypair(secretsDir: string): Promise<Keypair> {
+  async withdrawalKeypair(secretsDir: string): Promise<SecretKey> {
     const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
@@ -112,11 +112,11 @@ export class ValidatorDir {
    * @param keystorePath Path to a EIP-2335 keystore
    * @param secretsDir Directory containing keystore passwords
    */
-  async unlockKeypair(keystorePath: string, secretsDir: string): Promise<Keypair> {
+  async unlockKeypair(keystorePath: string, secretsDir: string): Promise<SecretKey> {
     const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
     const privKey = await keystore.decrypt(password);
-    return new Keypair(PrivateKey.fromBytes(privKey));
+    return bls.SecretKey.fromBytes(privKey);
   }
 
   /**

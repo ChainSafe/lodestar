@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Interchange, parseInterchange, serializeInterchange} from "../../../../src/slashingProtection/interchange";
-
-/* eslint-disable @typescript-eslint/camelcase */
 
 describe("interchange", () => {
   it("Should parseInterchange and serializeInterchange", () => {

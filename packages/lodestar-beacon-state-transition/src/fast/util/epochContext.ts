@@ -1,5 +1,5 @@
 import {ByteVector, hash, toHexString, readOnlyMap, BitList, List} from "@chainsafe/ssz";
-import {PublicKey} from "@chainsafe/bls";
+import bls, {PublicKey} from "@chainsafe/bls";
 import {
   Attestation,
   AttestationData,
@@ -116,7 +116,7 @@ export class EpochContext {
     for (let i = currentCount; i < newCount; i++) {
       const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
       this.pubkey2index.set(pubkey, i);
-      this.index2pubkey.push(PublicKey.fromBytes(pubkey));
+      this.index2pubkey.push(bls.PublicKey.fromBytes(pubkey));
     }
   }
 

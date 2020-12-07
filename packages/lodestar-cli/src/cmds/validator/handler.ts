@@ -1,12 +1,11 @@
 import fs from "fs";
-import {initBLS} from "@chainsafe/bls";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti} from "../../util";
+import {YargsError, getDefaultGraffiti, initBLS} from "../../util";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {getValidatorPaths} from "./paths";
@@ -29,10 +28,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const logger = new WinstonLogger();
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
-  const keypairs = await validatorDirManager.decryptAllValidators({force});
+  const secretKeys = await validatorDirManager.decryptAllValidators({force});
 
-  if (keypairs.length === 0) throw new YargsError("No validator keystores found");
-  logger.info(`Decrypted ${keypairs.length} validator keystores`);
+  if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
+  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
 
   const dbPath = validatorPaths.validatorsDbDir;
   fs.mkdirSync(dbPath, {recursive: true});
@@ -47,7 +46,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     }),
     api,
     logger,
-    keypairs,
+    secretKeys,
     graffiti,
   });
 

@@ -8,7 +8,7 @@ export type ApiHandler<
   Headers = DefaultHeaders
 > = RequestHandler<IncomingMessage, ServerResponse, Query, Params, Headers, Body>;
 
-// eslint-disable-next-line @typescript-eslint/interface-name-prefix
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export interface ApiController<
   Query = DefaultQuery,
   Params = DefaultParams,

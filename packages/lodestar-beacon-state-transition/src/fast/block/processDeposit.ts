@@ -1,4 +1,4 @@
-import {verify} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
@@ -38,7 +38,7 @@ export function processDeposit(epochCtx: EpochContext, state: BeaconState, depos
     // fork-agnostic domain since deposits are valid across forks
     const domain = computeDomain(config, DomainType.DEPOSIT);
     const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
-    if (!verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
+    if (!bls.verify(pubkey.valueOf() as Uint8Array, signingRoot, deposit.data.signature.valueOf() as Uint8Array)) {
       return;
     }
 

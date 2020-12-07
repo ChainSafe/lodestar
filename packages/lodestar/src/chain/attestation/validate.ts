@@ -27,12 +27,14 @@ export async function validateAttestation({
   const currentSlot = clock.currentSlot;
   const currentEpoch = clock.currentEpoch;
   const previousEpoch = currentEpoch > GENESIS_EPOCH ? currentEpoch - 1 : GENESIS_EPOCH;
+
   if (target.epoch !== computeEpochAtSlot(config, attestation.data.slot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
       job,
     });
   }
+
   if (target.epoch < previousEpoch) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_PAST_EPOCH,
@@ -41,6 +43,7 @@ export async function validateAttestation({
       job,
     });
   }
+
   if (target.epoch > currentEpoch) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FUTURE_EPOCH,
@@ -49,6 +52,7 @@ export async function validateAttestation({
       job,
     });
   }
+
   if (currentSlot - 1 < attestation.data.slot) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FUTURE_SLOT,
@@ -57,6 +61,7 @@ export async function validateAttestation({
       job,
     });
   }
+
   if (!forkChoice.hasBlock(target.root)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT,
@@ -64,6 +69,7 @@ export async function validateAttestation({
       job,
     });
   }
+
   if (!forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
@@ -71,6 +77,7 @@ export async function validateAttestation({
       job,
     });
   }
+
   if (!forkChoice.isDescendant(target.root, attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT,

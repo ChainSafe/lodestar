@@ -4,11 +4,11 @@ export const bench = (dir: string): BenchSuite => {
   // Set the function test
   const FUNCTION_NAME = "example"; // PLEASE FILL THIS OUT
 
-  const regExp = () => {
+  const regExp = (): void => {
     /o/.test("Hello World!");
   };
 
-  const indexOf = () => {
+  const indexOf = (): void => {
     "Hello World!".indexOf("o") > -1;
   };
 

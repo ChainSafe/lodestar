@@ -134,124 +134,40 @@ export enum AttestationErrorCode {
 }
 
 export type AttestationErrorType =
-  | {
-      code: AttestationErrorCode.ERR_TARGET_STATE_MISSING;
-    }
-  | {
-      code: AttestationErrorCode.ERR_FUTURE_SLOT;
-      attestationSlot: Slot;
-      latestPermissibleSlot: Slot;
-    }
-  | {
-      code: AttestationErrorCode.ERR_PAST_SLOT;
-      attestationSlot: Slot;
-      earliestPermissibleSlot: Slot;
-    }
-  | {
-      code: AttestationErrorCode.ERR_EMPTY_AGGREGATION_BITFIELD;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF;
-    }
-  | {
-      code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE;
-    }
+  | {code: AttestationErrorCode.ERR_TARGET_STATE_MISSING}
+  | {code: AttestationErrorCode.ERR_FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
+  | {code: AttestationErrorCode.ERR_PAST_SLOT; attestationSlot: Slot; earliestPermissibleSlot: Slot}
+  | {code: AttestationErrorCode.ERR_EMPTY_AGGREGATION_BITFIELD}
+  | {code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF}
+  | {code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE}
   | {
       code: AttestationErrorCode.ERR_AGGREGATOR_PUBKEY_UNKNOWN;
       aggregatorIndex: ValidatorIndex;
     }
-  | {
-      code: AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN;
-      root: Uint8Array;
-    }
-  | {
-      code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN;
-    }
-  | {
-      code: AttestationErrorCode.ERR_AGGREGATOR_INDEX_TOO_HIGH;
-      aggregatorIndex: ValidatorIndex;
-    }
-  | {
-      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT;
-      beaconBlockRoot: Uint8Array;
-    }
-  | {
-      code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH;
-    }
-  | {
-      code: AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT;
-    }
-  | {
-      code: AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT;
-      root: Uint8Array;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID_SIGNATURE;
-    }
-  | {
-      code: AttestationErrorCode.ERR_NO_COMMITTEE_FOR_SLOT_AND_INDEX;
-      slot: Slot;
-      index: CommitteeIndex;
-    }
-  | {
-      code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET;
-      numBits: number;
-    }
-  | {
-      code: AttestationErrorCode.ERR_PRIOR_ATTESTATION_KNOWN;
-      validatorIndex: ValidatorIndex;
-      epoch: Epoch;
-    }
-  | {
-      code: AttestationErrorCode.ERR_FUTURE_EPOCH;
-      attestationEpoch: Epoch;
-      currentEpoch: Epoch;
-    }
-  | {
-      code: AttestationErrorCode.ERR_PAST_EPOCH;
-      attestationEpoch: Epoch;
-      currentEpoch: Epoch;
-    }
-  | {
-      code: AttestationErrorCode.ERR_ATTESTS_TO_FUTURE_BLOCK;
-      block: Slot;
-      attestation: Slot;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID_SUBNET_ID;
-      received: number;
-      expected: number;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID;
-      error: Error;
-    }
-  | {
-      code: AttestationErrorCode.ERR_BEACON_CHAIN_ERROR;
-      error: Error;
-    }
-  | {
-      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS;
-    }
-  | {
-      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK;
-    }
-  | {
-      code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT;
-    }
-  | {
-      code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK;
-    }
-  | {
-      code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE;
-      index: number;
-    }
-  | {
-      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE;
-    }
-  | {
-      code: AttestationErrorCode.ERR_INVALID_AGGREGATOR;
-    };
+  | {code: AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN; root: Uint8Array}
+  | {code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN}
+  | {code: AttestationErrorCode.ERR_AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
+  | {code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT; beaconBlockRoot: Uint8Array}
+  | {code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH}
+  | {code: AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT}
+  | {code: AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT; root: Uint8Array}
+  | {code: AttestationErrorCode.ERR_INVALID_SIGNATURE}
+  | {code: AttestationErrorCode.ERR_NO_COMMITTEE_FOR_SLOT_AND_INDEX; slot: Slot; index: CommitteeIndex}
+  | {code: AttestationErrorCode.ERR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET; numBits: number}
+  | {code: AttestationErrorCode.ERR_PRIOR_ATTESTATION_KNOWN; validatorIndex: ValidatorIndex; epoch: Epoch}
+  | {code: AttestationErrorCode.ERR_FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: AttestationErrorCode.ERR_PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: AttestationErrorCode.ERR_ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
+  | {code: AttestationErrorCode.ERR_INVALID_SUBNET_ID; received: number; expected: number}
+  | {code: AttestationErrorCode.ERR_INVALID; error: Error}
+  | {code: AttestationErrorCode.ERR_BEACON_CHAIN_ERROR; error: Error}
+  | {code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS}
+  | {code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK}
+  | {code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT}
+  | {code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
+  | {code: AttestationErrorCode.ERR_COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
+  | {code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE}
+  | {code: AttestationErrorCode.ERR_INVALID_AGGREGATOR};
 
 type IJobObject = {
   job: IAttestationJob;

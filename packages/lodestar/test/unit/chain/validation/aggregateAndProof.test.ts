@@ -2,7 +2,8 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {List} from "@chainsafe/ssz";
-import {PrivateKey, PublicKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
@@ -256,7 +257,8 @@ describe("gossip aggregate and proof test", function () {
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
+    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
+    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
       epochCtx: (epochCtx as unknown) as EpochContext,
@@ -287,7 +289,8 @@ describe("gossip aggregate and proof test", function () {
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
+    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
+    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
       epochCtx: (epochCtx as unknown) as EpochContext,
@@ -327,7 +330,8 @@ describe("gossip aggregate and proof test", function () {
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
+    const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
+    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
       epochCtx: (epochCtx as unknown) as EpochContext,
@@ -360,7 +364,8 @@ describe("gossip aggregate and proof test", function () {
     const state = generateState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = PublicKey.fromPrivateKey(PrivateKey.fromInt(1));
+    const privateKey = bls.SecretKey.fromKeygen();
+    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
     regen.getBlockSlotState.resolves({
       state,
       epochCtx: (epochCtx as unknown) as EpochContext,

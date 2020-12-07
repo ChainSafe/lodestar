@@ -136,27 +136,31 @@ export async function runStateTransition(
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
   const checkpointStateContext = await processSlotsToNearestCheckpoint(emitter, stateContext, postSlot - 1);
+
   // if block is trusted don't verify proposer or op signature
   const postStateContext = toTreeStateContext(
     fastStateTransition(checkpointStateContext, job.signedBlock, {
       verifyStateRoot: true,
-      verifyProposer: !job.trusted,
-      verifySignatures: !job.trusted,
+      verifyProposer: !job.validProposerSignature,
+      verifySignatures: !job.validSignatures,
     })
   );
 
   const oldHead = forkChoice.getHead();
+
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
     ?.epochCtx.epochBalances;
   forkChoice.onBlock(job.signedBlock.message, postStateContext.state, justifiedBalances);
+
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
   }
+
   emitBlockEvent(emitter, job, postStateContext);
-  const head = forkChoice.getHead();
-  emitForkChoiceHeadEvents(emitter, forkChoice, head, oldHead);
+  emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead);
+
   // this avoids keeping our node busy processing blocks
   await sleep(0);
   return postStateContext;
@@ -172,10 +176,12 @@ function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
     state: stateCtx.state as TreeBacked<BeaconState>,
     epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
   };
+
   if (stateCtx.epochProcess) {
     treeStateCtx.epochCtx.epochBalances = stateCtx.epochProcess.statuses.map((s) =>
       s.active ? s.validator.effectiveBalance : BigInt(0)
     );
   }
+
   return treeStateCtx;
 }

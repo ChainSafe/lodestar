@@ -14,6 +14,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {DeepPartial} from "./misc";
+import {IBlockJob} from "../../src/chain";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
@@ -67,4 +68,17 @@ export function generateBlockSummary(overrides: DeepPartial<IBlockSummary> = {})
   return deepmerge<IBlockSummary, DeepPartial<IBlockSummary>>(generateEmptyBlockSummary(), overrides, {
     isMergeableObject: isPlainObject,
   });
+}
+
+/**
+ * Block job with all metadata set to false
+ */
+export function getNewBlockJob(signedBlock: SignedBeaconBlock): IBlockJob {
+  return {
+    signedBlock,
+    reprocess: false,
+    prefinalized: false,
+    validSignatures: false,
+    validProposerSignature: false,
+  };
 }

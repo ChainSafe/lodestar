@@ -25,6 +25,7 @@ export async function processAttestation({
 }): Promise<void> {
   const {attestation} = job;
   const target = attestation.data.target;
+
   let targetState;
   try {
     targetState = await regen.getCheckpointState(target);
@@ -34,6 +35,7 @@ export async function processAttestation({
       job,
     });
   }
+
   let indexedAttestation;
   try {
     indexedAttestation = targetState.epochCtx.getIndexedAttestation(attestation);
@@ -45,6 +47,7 @@ export async function processAttestation({
       job,
     });
   }
+
   //TODO: we could signal to skip this in case it came from validated from gossip or from block
   //we need to check this again, because gossip validation might put it in pool before it validated signature
   if (!isValidIndexedAttestation(targetState.epochCtx, targetState.state, indexedAttestation, true)) {
@@ -53,6 +56,7 @@ export async function processAttestation({
       job,
     });
   }
+
   forkChoice.onAttestation(indexedAttestation);
   emitter.emit(ChainEvent.attestation, attestation);
 }

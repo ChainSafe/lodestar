@@ -1,7 +1,7 @@
+import bls from "@chainsafe/bls";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, getDomain} from "../../util";
 import {DomainType} from "../../constants";
-import {Signature} from "@chainsafe/bls";
 import {EpochContext} from "../index";
 
 export function verifyBlockSignature(
@@ -16,8 +16,8 @@ export function verifyBlockSignature(
     signedBlock.message,
     domain
   );
-  return epochCtx.index2pubkey[signedBlock.message.proposerIndex].verifyMessage(
-    Signature.fromCompressedBytes(signedBlock.signature.valueOf() as Uint8Array),
+  return bls.Signature.fromBytes(signedBlock.signature.valueOf() as Uint8Array).verify(
+    epochCtx.index2pubkey[signedBlock.message.proposerIndex],
     signingRoot
   );
 }

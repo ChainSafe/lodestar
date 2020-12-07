@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {IBeaconParams} from "./interface";
 import {ContainerType, BigIntUintType, NumberUintType, ByteVectorType} from "@chainsafe/ssz";
 import {Phase1Params} from "./phase1";

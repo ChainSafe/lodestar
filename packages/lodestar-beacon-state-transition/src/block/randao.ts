@@ -4,7 +4,7 @@
 
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
-import {verify} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconBlockBody, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -26,7 +26,7 @@ export function processRandao(
   // Verify RANDAO reveal
   assert.true(
     !verifySignature ||
-      verify(proposer.pubkey.valueOf() as Uint8Array, signingRoot, body.randaoReveal.valueOf() as Uint8Array),
+      bls.verify(proposer.pubkey.valueOf() as Uint8Array, signingRoot, body.randaoReveal.valueOf() as Uint8Array),
     "Invalid RANDAO reveal"
   );
   // Mix it in

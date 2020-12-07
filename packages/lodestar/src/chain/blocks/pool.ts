@@ -37,13 +37,16 @@ export class BlockPool {
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
     this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
+
     // blocks by parent
     const parentKey = this.getParentKey(signedBlock);
+
     let blocksWithParent = this.blocksByParent.get(parentKey);
     if (!blocksWithParent) {
       blocksWithParent = new Set();
       this.blocksByParent.set(parentKey, blocksWithParent);
     }
+
     blocksWithParent.add(blockKey);
   }
 
@@ -52,13 +55,16 @@ export class BlockPool {
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
     this.blocks.set(blockKey, toHexString(signedBlock.message.parentRoot));
+
     // blocks by slot
     const slotKey = this.getSlotKey(signedBlock);
+
     let blocksAtSlot = this.blocksBySlot.get(slotKey);
     if (!blocksAtSlot) {
       blocksAtSlot = new Set();
       this.blocksBySlot.set(slotKey, blocksAtSlot);
     }
+
     blocksAtSlot.add(blockKey);
   }
 
@@ -67,18 +73,22 @@ export class BlockPool {
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
     this.blocks.delete(blockKey);
+
     // blocks by slot
     const slotKey = this.getSlotKey(signedBlock);
     const blocksAtSlot = this.blocksBySlot.get(slotKey);
+
     if (blocksAtSlot) {
       blocksAtSlot.delete(blockKey);
       if (!blocksAtSlot.size) {
         this.blocksBySlot.delete(slotKey);
       }
     }
+
     // blocks by parent
     const parentKey = this.getParentKey(signedBlock);
     const blocksWithParent = this.blocksByParent.get(parentKey);
+
     if (blocksWithParent) {
       blocksWithParent.delete(blockKey);
       if (!blocksWithParent.size) {
@@ -89,9 +99,11 @@ export class BlockPool {
 
   public getMissingAncestor(blockRoot: Root): Root {
     let root = toHexString(blockRoot);
+
     while (this.blocks.has(root)) {
       root = this.blocks.get(root)!;
     }
+
     return fromHexString(root);
   }
 

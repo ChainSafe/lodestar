@@ -7,6 +7,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
 import {BlockErrorCode} from "../../../../src/chain/errors";
+import {getNewBlockJob} from "../../../utils/block";
 
 describe("validateBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -23,11 +24,7 @@ describe("validateBlock", function () {
 
   it("should throw on genesis block", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
-    const job = {
-      signedBlock,
-      reprocess: false,
-      trusted: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     try {
       await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
@@ -39,11 +36,7 @@ describe("validateBlock", function () {
   it("should throw on already known block", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const job = {
-      signedBlock,
-      reprocess: false,
-      trusted: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);
     try {
       await validateBlock({config, forkChoice, clock, job});
@@ -56,11 +49,7 @@ describe("validateBlock", function () {
   it("should throw on already known block", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const job = {
-      signedBlock,
-      reprocess: false,
-      trusted: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32)});
     try {
@@ -74,11 +63,7 @@ describe("validateBlock", function () {
   it("should throw on future slot", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const job = {
-      signedBlock,
-      reprocess: false,
-      trusted: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     sinon.stub(clock, "currentSlot").get(() => 0);
@@ -93,11 +78,7 @@ describe("validateBlock", function () {
   it("should throw on unknown parent", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const job = {
-      signedBlock,
-      reprocess: false,
-      trusted: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     sinon.stub(clock, "currentSlot").get(() => 1);

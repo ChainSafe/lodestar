@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/interface-name-prefix */
 import {List} from "@chainsafe/ssz";
 
 import {Slot, Epoch, Root, Number64, Uint64, ForkDigest, Uint8} from "./primitive";

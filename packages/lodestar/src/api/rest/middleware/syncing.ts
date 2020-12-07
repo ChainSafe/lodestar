@@ -7,7 +7,7 @@ export const applySyncingMiddleware = (fastify: FastifyInstance, route: string, 
   const syncingMiddleware: Middleware<Server, IncomingMessage, ServerResponse> = async (
     request: IncomingMessage,
     response: ServerResponse,
-    next: Function
+    next: () => void
   ): Promise<void> => {
     if (!(await modules.sync.isSynced())) {
       response.statusCode = 503;

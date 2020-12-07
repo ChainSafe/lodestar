@@ -1,12 +1,11 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {initBLS, Keypair, PrivateKey} from "@chainsafe/bls";
+import {SecretKey, PublicKey} from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
-import {ErrorAborted, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {interopKeypair} from "@chainsafe/lodestar-validator/lib";
 import {AbortController} from "abort-controller";
 import {IEth1Provider} from "../../../../src/eth1";
 import {GenesisBuilder} from "../../../../src/chain/genesis/genesis";
@@ -21,28 +20,17 @@ describe("genesis builder", function () {
     MIN_GENESIS_DELAY: 3600,
   });
 
-  before(async function f() {
-    try {
-      await initBLS();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log(e);
-    }
-  });
-
   function generateGenesisBuilderMockData(): {
     events: DepositEvent[];
-    keypairs: Keypair[];
     blocks: Eth1Block[];
   } {
     const events: DepositEvent[] = [];
-    const keypairs: Keypair[] = [];
     const blocks: Eth1Block[] = [];
 
     for (let i = 0; i < schlesiConfig.params.MIN_GENESIS_ACTIVE_VALIDATOR_COUNT; i++) {
-      const keypair = new Keypair(PrivateKey.fromBytes(interopKeypair(i).privkey));
-      const event: DepositEvent = {depositData: generateDeposit(i, keypair), index: i, blockNumber: i};
-      keypairs.push(keypair);
+      const secretKey = interopSecretKey(i);
+      const publicKey = secretKey.toPublicKey();
+      const event: DepositEvent = {depositData: generateDeposit(i, secretKey, publicKey), index: i, blockNumber: i};
       events.push(event);
       // All blocks satisfy MIN_GENESIS_TIME, so genesis will happen when the min validator count is reached
       blocks.push({
@@ -52,7 +40,7 @@ describe("genesis builder", function () {
       });
     }
 
-    return {events, keypairs, blocks};
+    return {events, blocks};
   }
 
   it("should build genesis state", async () => {
@@ -115,14 +103,14 @@ describe("genesis builder", function () {
   });
 });
 
-function generateDeposit(index: ValidatorIndex, keypair: Keypair): DepositData {
+function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey: PublicKey): DepositData {
   const domain = computeDomain(config, DomainType.DEPOSIT);
   const depositMessage = {
-    pubkey: keypair.publicKey.toBytesCompressed(),
+    pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
     amount: BigInt(32) * BigInt("1000000000000000000"),
   };
   const signingRoot = computeSigningRoot(config, config.types.DepositMessage, depositMessage, domain);
-  const signature = keypair.privateKey.signMessage(signingRoot);
-  return {...depositMessage, signature: signature.toBytesCompressed()};
+  const signature = secretKey.sign(signingRoot);
+  return {...depositMessage, signature: signature.toBytes()};
 }

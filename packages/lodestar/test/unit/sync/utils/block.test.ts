@@ -17,6 +17,7 @@ describe("sync - block utils", function () {
     let rpcStub: SinonStubbedInstance<ReqResp>;
 
     beforeEach(function () {
+      sandbox.useFakeTimers();
       rpcStub = sandbox.createStubInstance(ReqResp);
     });
 
@@ -36,17 +37,15 @@ describe("sync - block utils", function () {
     });
 
     it("refetch failed chunks", async function () {
-      const timer = sinon.useFakeTimers();
       const peer1 = await PeerId.create();
       const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
       rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
       rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
-      await timer.tickAsync(1000);
+      await sandbox.clock.tickAsync(1000);
       const blocks = await blockPromise;
       expect(blocks?.length).to.be.equal(2);
-      timer.reset();
     });
 
     it("no chunks", async function () {

@@ -1,6 +1,6 @@
-import {BaseCase} from "@chainsafe/lodestar-spec-test-util";
+import {IBaseCase} from "@chainsafe/lodestar-spec-test-util";
 
-export interface IUintCase extends BaseCase {
+export interface IUintCase extends IBaseCase {
   value: string;
   ssz: string;
   type: string;

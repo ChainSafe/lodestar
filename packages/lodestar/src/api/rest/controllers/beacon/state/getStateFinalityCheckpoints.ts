@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
-
 import {ApiController} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
@@ -20,7 +18,9 @@ export const getStateFinalityCheckpoints: ApiController<DefaultQuery, Params> = 
       }
       return resp.status(200).send({
         data: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           previous_justified: this.config.types.Checkpoint.toJson(state.previousJustifiedCheckpoint, {case: "snake"}),
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           current_justified: this.config.types.Checkpoint.toJson(state.currentJustifiedCheckpoint, {case: "snake"}),
           finalized: this.config.types.Checkpoint.toJson(state.finalizedCheckpoint, {case: "snake"}),
         },

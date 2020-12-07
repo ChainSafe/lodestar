@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {ApiController} from "../types";
 import {DefaultParams, DefaultQuery} from "fastify";
 
@@ -38,17 +39,14 @@ export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, 
           type: "object",
           required: ["validator_index", "committee_index", "committees_at_slot", "slot", "is_aggregator"],
           properties: {
-            // eslint-disable-next-line @typescript-eslint/camelcase
             validator_index: {
               type: "number",
               minimum: 0,
             },
-            // eslint-disable-next-line @typescript-eslint/camelcase
             committee_index: {
               type: "number",
               minimum: 0,
             },
-            // eslint-disable-next-line @typescript-eslint/camelcase
             committees_at_slot: {
               type: "number",
               minimum: 0,
@@ -57,7 +55,6 @@ export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, 
               type: "number",
               minimum: 0,
             },
-            // eslint-disable-next-line @typescript-eslint/camelcase
             is_aggregator: {
               type: "boolean",
             },

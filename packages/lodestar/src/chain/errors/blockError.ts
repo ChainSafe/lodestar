@@ -84,72 +84,24 @@ export enum BlockErrorCode {
 }
 
 export type BlockErrorType =
-  | {
-      code: BlockErrorCode.ERR_PRESTATE_MISSING;
-    }
-  | {
-      code: BlockErrorCode.ERR_PARENT_UNKNOWN;
-      parentRoot: Root;
-    }
-  | {
-      code: BlockErrorCode.ERR_FUTURE_SLOT;
-      blockSlot: Slot;
-      currentSlot: Slot;
-    }
-  | {
-      code: BlockErrorCode.ERR_STATE_ROOT_MISMATCH;
-    }
-  | {
-      code: BlockErrorCode.ERR_GENESIS_BLOCK;
-    }
-  | {
-      code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT;
-      blockSlot: Slot;
-      finalizedSlot: Slot;
-    }
-  | {
-      code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN;
-    }
-  | {
-      code: BlockErrorCode.ERR_REPEAT_PROPOSAL;
-      proposer: ValidatorIndex;
-    }
-  | {
-      code: BlockErrorCode.ERR_BLOCK_SLOT_LIMIT_REACHED;
-    }
-  | {
-      code: BlockErrorCode.ERR_INCORRECT_PROPOSER;
-      blockProposer: ValidatorIndex;
-    }
-  | {
-      code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID;
-    }
-  | {
-      code: BlockErrorCode.ERR_UNKNOWN_PROPOSER;
-      proposer: ValidatorIndex;
-    }
-  | {
-      code: BlockErrorCode.ERR_BLOCK_IS_NOT_LATER_THAN_PARENT;
-      blockSlot: Slot;
-      stateSlot: Slot;
-    }
-  | {
-      code: BlockErrorCode.ERR_NON_LINEAR_PARENT_ROOTS;
-    }
-  | {
-      code: BlockErrorCode.ERR_NON_LINEAR_SLOTS;
-    }
-  | {
-      code: BlockErrorCode.ERR_PER_BLOCK_PROCESSING_ERROR;
-      error: Error;
-    }
-  | {
-      code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR;
-      error: Error;
-    }
-  | {
-      code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK;
-    };
+  | {code: BlockErrorCode.ERR_PRESTATE_MISSING}
+  | {code: BlockErrorCode.ERR_PARENT_UNKNOWN; parentRoot: Root}
+  | {code: BlockErrorCode.ERR_FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
+  | {code: BlockErrorCode.ERR_STATE_ROOT_MISMATCH}
+  | {code: BlockErrorCode.ERR_GENESIS_BLOCK}
+  | {code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
+  | {code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN}
+  | {code: BlockErrorCode.ERR_REPEAT_PROPOSAL; proposer: ValidatorIndex}
+  | {code: BlockErrorCode.ERR_BLOCK_SLOT_LIMIT_REACHED}
+  | {code: BlockErrorCode.ERR_INCORRECT_PROPOSER; blockProposer: ValidatorIndex}
+  | {code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID}
+  | {code: BlockErrorCode.ERR_UNKNOWN_PROPOSER; proposer: ValidatorIndex}
+  | {code: BlockErrorCode.ERR_BLOCK_IS_NOT_LATER_THAN_PARENT; blockSlot: Slot; stateSlot: Slot}
+  | {code: BlockErrorCode.ERR_NON_LINEAR_PARENT_ROOTS}
+  | {code: BlockErrorCode.ERR_NON_LINEAR_SLOTS}
+  | {code: BlockErrorCode.ERR_PER_BLOCK_PROCESSING_ERROR; error: Error}
+  | {code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR; error: Error}
+  | {code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK};
 
 type JobObject = {
   job: IBlockJob;

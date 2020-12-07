@@ -11,14 +11,18 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateState} from "../../../utils/state";
 import {silentLogger} from "../../../utils/logger";
-import { sleep } from "@chainsafe/lodestar-utils";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
   const logger = silentLogger;
+  beforeEach(() => {
+    sandbox.useFakeTimers();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
 
   it("should subscribe and collect attestations", async function () {
-    const clock = sandbox.useFakeTimers();
     const fakeGossip = sandbox.createStubInstance(Gossip);
     const dbStub = sandbox.createStubInstance(BeaconDb);
     const computeSubnetStub = sandbox.stub(attestationUtils, "computeSubnetForSlot");
@@ -49,13 +53,13 @@ describe("Attestation collector", function () {
     computeSubnetStub.returns(10);
     await collector.subscribeToCommitteeAttestations(1, 1);
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
-    clock.tick(config.params.SECONDS_PER_SLOT * 1000);
+    sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     await new Promise((resolve) => {
       fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
     });
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
-    clock.tick(config.params.SECONDS_PER_SLOT * 1000);
+    sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.unsubscribeFromAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
     await collector.stop();
@@ -63,7 +67,6 @@ describe("Attestation collector", function () {
   });
 
   it("should skip if there is no duties", async function () {
-    const clock = sandbox.useFakeTimers();
     const emitter = new ChainEventEmitter();
     const abortController = new AbortController();
     const realClock = new LocalClock({
@@ -88,7 +91,7 @@ describe("Attestation collector", function () {
       logger,
     });
     await collector.start();
-    clock.tick(config.params.SECONDS_PER_SLOT * 1000);
+    sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
     expect(fakeGossip.subscribeToAttestationSubnet.called).to.be.false;
     await collector.stop();
     abortController.abort();

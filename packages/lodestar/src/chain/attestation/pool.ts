@@ -39,6 +39,7 @@ export class AttestationPool {
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
     this.attestations.set(attestationKey, job);
+
     // attestations by block
     const blockKey = toHexString(blockRoot);
     let attestationsAtBlock = this.attestationsByBlock.get(blockKey);
@@ -46,6 +47,7 @@ export class AttestationPool {
       attestationsAtBlock = new Map();
       this.attestationsByBlock.set(blockKey, attestationsAtBlock);
     }
+
     attestationsAtBlock.set(attestationKey, job);
   }
 
@@ -54,12 +56,14 @@ export class AttestationPool {
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
     this.attestations.set(attestationKey, job);
+
     // attestations by slot
     let attestationsAtSlot = this.attestationsBySlot.get(slot);
     if (!attestationsAtSlot) {
       attestationsAtSlot = new Map();
       this.attestationsBySlot.set(slot, attestationsAtSlot);
     }
+
     attestationsAtSlot.set(attestationKey, job);
   }
 
@@ -68,6 +72,7 @@ export class AttestationPool {
     // attestations
     const attestationKey = this.getAttestationKey(job.attestation);
     this.attestations.delete(attestationKey);
+
     // attestations by block
     // both target and beaconBlockRoot
     const targetKey = toHexString(job.attestation.data.target.root);
@@ -78,6 +83,7 @@ export class AttestationPool {
         this.attestationsByBlock.delete(targetKey);
       }
     }
+
     const beaconBlockRootKey = toHexString(job.attestation.data.beaconBlockRoot);
     const attestationsAtBeaconBlockRoot = this.attestationsByBlock.get(beaconBlockRootKey);
     if (attestationsAtBeaconBlockRoot) {
@@ -86,6 +92,7 @@ export class AttestationPool {
         this.attestationsByBlock.delete(beaconBlockRootKey);
       }
     }
+
     // attestations by slot
     const slotKey = job.attestation.data.slot;
     const attestationsAtSlot = this.attestationsBySlot.get(slotKey);

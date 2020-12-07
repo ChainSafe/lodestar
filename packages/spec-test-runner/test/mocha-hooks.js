@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable @typescript-eslint/no-require-imports */
-const {initBLS} = require("@chainsafe/bls");
+const {init} = require("@chainsafe/bls");
 
 // Mocha.js: Root Hook Plugins
 // The modern and parallel compatible way of running code before all tests
@@ -8,7 +8,7 @@ const {initBLS} = require("@chainsafe/bls");
 exports.mochaHooks = {
   beforeAll: [
     async function () {
-      await initBLS();
+      await init("herumi");
     },
   ],
 };

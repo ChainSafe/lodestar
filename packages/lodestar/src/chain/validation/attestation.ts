@@ -43,6 +43,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FUTURE_SLOT,
@@ -51,6 +52,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   // no other validator attestation for same target epoch has been seen
   if (await db.seenAttestationCache.hasCommitteeAttestation(attestation)) {
     throw new AttestationError({
@@ -59,12 +61,14 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   if (await db.badBlock.has(attestation.data.beaconBlockRoot.valueOf() as Uint8Array)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
       job: attestationJob,
     });
   }
+
   if (!chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
@@ -72,6 +76,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   let attestationPreStateContext;
   try {
     attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
@@ -91,6 +96,7 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   if (
     !isValidIndexedAttestation(
       attestationPreStateContext.epochCtx,
@@ -104,12 +110,14 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   if (!config.types.Epoch.equals(attestation.data.target.epoch, computeEpochAtSlot(config, attestationSlot))) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
       job: attestationJob,
     });
   }
+
   try {
     if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
       throw new AttestationError({
@@ -125,18 +133,21 @@ export async function validateGossipAttestation(
       job: attestationJob,
     });
   }
+
   if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
       job: attestationJob,
     });
   }
+
   if (!chain.forkChoice.isDescendant(attestation.data.target.root, attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK,
       job: attestationJob,
     });
   }
+
   if (!chain.forkChoice.isDescendantOfFinalized(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FINALIZED_CHECKPOINT_NOT_AN_ANCESTOR_OF_ROOT,
