@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 export interface IPhase1Params {
   PHASE_1_FORK_VERSION: Buffer;
   PHASE_1_FORK_SLOT: number;
