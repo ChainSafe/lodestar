@@ -22,7 +22,7 @@ export function computeDomain(
   }
   const forkDataRoot = computeForkDataRoot(config, forkVersion, genesisValidatorRoot);
   if (typeof domainType === "number") {
-    domainType = intToBytes(domainType, 8);
+    domainType = intToBytes(domainType, 4);
   }
   return Buffer.concat([domainType.valueOf() as Uint8Array, (forkDataRoot.valueOf() as Uint8Array).slice(0, 28)]);
 }

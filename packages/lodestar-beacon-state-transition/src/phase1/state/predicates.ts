@@ -42,10 +42,9 @@ export function optionalAggregateVerify(
   if (pubkeys.length === 0) {
     return config.types.BLSSignature.equals(signature, EMPTY_SIGNATURE);
   } else {
-    return Signature.fromCompressedBytes(signature.valueOf() as Uint8Array).verifyMultiple(
+    return Signature.fromBytes(signature.valueOf() as Uint8Array).verifyMultiple(
       pubkeys.map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array)),
-      messages.map((m) => m.valueOf() as Uint8Array),
-      true
+      messages.map((m) => m.valueOf() as Uint8Array)
     );
   }
 }
@@ -63,7 +62,7 @@ export function optionalFastAggregateVerify(
   if (pubkeys.length === 0) {
     return config.types.BLSSignature.equals(signature, EMPTY_SIGNATURE);
   } else {
-    return Signature.fromCompressedBytes(signature.valueOf() as Uint8Array).verifyAggregate(
+    return Signature.fromBytes(signature.valueOf() as Uint8Array).verifyAggregate(
       pubkeys.map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array)),
       message.valueOf() as Uint8Array
     );
