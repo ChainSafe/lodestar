@@ -1,10 +1,9 @@
 import {expect} from "chai";
-import sinon from "sinon";
 import supertest from "supertest";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {getHealth, getSyncingStatus} from "../../../../../src/api/rest/controllers/node";
+import {getSyncingStatus} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";

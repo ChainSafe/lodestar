@@ -5,15 +5,19 @@ import {Checkpoint} from "@chainsafe/lodestar-types";
 import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
+import {IRestApiOptions} from "../../src/api/rest/options";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
   const testParams: Partial<IBeaconParams> = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
   const manyValidatorParams: Partial<IBeaconParams> = {
     ...testParams,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     TARGET_AGGREGATORS_PER_COMMITTEE: 1,
   };
 
@@ -33,7 +37,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       this.timeout(timeout);
       const bn = await getDevBeaconNode({
         params: testCase.params,
-        options: {sync: {minPeers: 0}, api: {rest: {enabled: true}}},
+        options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.vc * testCase.validators,
       });
       const justificationEventListener = waitForEvent<Checkpoint>(

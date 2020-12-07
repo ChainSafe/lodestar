@@ -11,9 +11,9 @@ import {
 } from "@chainsafe/lodestar-types";
 import crypto from "crypto";
 import {AggregateAndProof} from "@chainsafe/lodestar-types/src";
-import {DeepPartial} from "./misc";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -45,8 +45,8 @@ export function generateAttestationData(
   };
 }
 
-export function generateAttestation(override: DeepPartial<Attestation> = {}): Attestation {
-  return deepmerge<Attestation, DeepPartial<Attestation>>(
+export function generateAttestation(override: RecursivePartial<Attestation> = {}): Attestation {
+  return deepmerge<Attestation, RecursivePartial<Attestation>>(
     {
       aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
       data: {

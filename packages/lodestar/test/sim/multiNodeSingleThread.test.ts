@@ -12,7 +12,9 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
   const checkpointEvent = ChainEvent.justified;
   const validatorsPerNode = 8;
   const beaconParams: Pick<IBeaconParams, "SECONDS_PER_SLOT" | "SLOTS_PER_EPOCH"> = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 3,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
 
