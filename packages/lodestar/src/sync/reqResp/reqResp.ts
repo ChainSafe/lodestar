@@ -347,7 +347,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     try {
       const getBlock = this.db.block.get.bind(this.db.block);
       const getFinalizedBlock = this.db.blockArchive.getByRoot.bind(this.db.blockArchive);
-      const blockGenerator = (async function* () {
+      const blockGenerator = async function* (): AsyncGenerator<SignedBeaconBlock> {
         for (const blockRoot of request.body) {
           const root = blockRoot.valueOf() as Uint8Array;
           const block = (await getBlock(root)) || (await getFinalizedBlock(root));
@@ -355,7 +355,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
             yield block;
           }
         }
-      })();
+      };
       await sendResponseStream(
         {config: this.config, logger: this.logger},
         request.id,
@@ -363,7 +363,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         request.encoding,
         sink,
         null,
-        blockGenerator
+        blockGenerator()
       );
     } catch (e) {
       await sendResponse(

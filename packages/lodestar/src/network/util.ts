@@ -120,14 +120,12 @@ export function eth2ResponseTimer<T>(
   const cancelTimer = (): void => {
     clearTimeout(responseTimer);
   };
-  return (source) => {
-    return (async function* () {
-      for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
-        renewTimer();
-        yield item;
-      }
-      cancelTimer();
-    })();
+  return async function* (source) {
+    for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
+      renewTimer();
+      yield item;
+    }
+    cancelTimer();
   };
 }
 

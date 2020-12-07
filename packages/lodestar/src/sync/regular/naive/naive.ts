@@ -164,27 +164,25 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const {config, logger, chain, controller} = this;
     const reqResp = this.network.reqResp;
     const {getSyncPeers, handleSuccessRange, handleEmptyRange, handleFailedToGetRange, getLastProcessedBlock} = this;
-    await pipe(this.targetSlotRangeSource, (source) => {
-      return (async function () {
-        for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
-          const lastFetchedSlot = await pipe(
-            [range],
-            fetchBlockChunks(logger, reqResp, getSyncPeers, controller.signal),
-            processSyncBlocks(config, chain, logger, false, getLastProcessedBlock())
-          );
-          if (lastFetchedSlot) {
-            // failed to fetch range
-            if (lastFetchedSlot === getLastProcessedBlock().slot) {
-              handleFailedToGetRange(range);
-            } else {
-              handleSuccessRange(lastFetchedSlot);
-            }
+    await pipe(this.targetSlotRangeSource, async (source) => {
+      for await (const range of abortSource(source, controller.signal, {returnOnAbort: true})) {
+        const lastFetchedSlot = await pipe(
+          [range],
+          fetchBlockChunks(logger, reqResp, getSyncPeers, controller.signal),
+          processSyncBlocks(config, chain, logger, false, getLastProcessedBlock())
+        );
+        if (lastFetchedSlot) {
+          // failed to fetch range
+          if (lastFetchedSlot === getLastProcessedBlock().slot) {
+            handleFailedToGetRange(range);
           } else {
-            // no block, retry expanded range with same start slot
-            await handleEmptyRange(range);
+            handleSuccessRange(lastFetchedSlot);
           }
+        } else {
+          // no block, retry expanded range with same start slot
+          await handleEmptyRange(range);
         }
-      })();
+      }
     });
   }
 

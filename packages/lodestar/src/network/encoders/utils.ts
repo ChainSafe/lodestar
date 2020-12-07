@@ -15,11 +15,9 @@ export function getCompressor(encoding: ReqRespEncoding): (data: Buffer) => Asyn
       };
     }
     case ReqRespEncoding.SSZ:
-      return (data) => {
-        return (async function* () {
-          //TODO: split into smaller chunks
-          yield data;
-        })();
+      return async function* (data) {
+        //TODO: split into smaller chunks
+        yield data;
       };
   }
 }

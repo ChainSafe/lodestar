@@ -19,30 +19,29 @@ export const getEventStream: ApiController<Query> = {
       });
     });
     const config = this.config;
-    const transform = (source: AsyncIterable<BeaconEvent>): AsyncIterable<EventMessage> =>
-      (async function* () {
-        for await (const event of source) {
-          switch (event.type) {
-            case BeaconEventType.HEAD:
-              yield serializeEvent(config.types.ChainHead, event);
-              break;
-            case BeaconEventType.BLOCK:
-              yield serializeEvent(config.types.BlockEventPayload, event);
-              break;
-            case BeaconEventType.ATTESTATION:
-              yield serializeEvent(config.types.Attestation, event);
-              break;
-            case BeaconEventType.FINALIZED_CHECKPOINT:
-              yield serializeEvent(config.types.FinalizedCheckpoint, event);
-              break;
-            case BeaconEventType.CHAIN_REORG:
-              yield serializeEvent(config.types.ChainReorg, event);
-              break;
-            default:
-              req.log.warn("Missing serializer for event " + event.type);
-          }
+    async function* transform(source: AsyncIterable<BeaconEvent>): AsyncIterable<EventMessage> {
+      for await (const event of source) {
+        switch (event.type) {
+          case BeaconEventType.HEAD:
+            yield serializeEvent(config.types.ChainHead, event);
+            break;
+          case BeaconEventType.BLOCK:
+            yield serializeEvent(config.types.BlockEventPayload, event);
+            break;
+          case BeaconEventType.ATTESTATION:
+            yield serializeEvent(config.types.Attestation, event);
+            break;
+          case BeaconEventType.FINALIZED_CHECKPOINT:
+            yield serializeEvent(config.types.FinalizedCheckpoint, event);
+            break;
+          case BeaconEventType.CHAIN_REORG:
+            yield serializeEvent(config.types.ChainReorg, event);
+            break;
+          default:
+            req.log.warn("Missing serializer for event " + event.type);
         }
-      })();
+      }
+    }
     resp
       .type("text/event-stream")
       .header("Cache-Control", "no-cache")
