@@ -5,7 +5,7 @@ export function objectToExpectedCase(
   expectedCase: "snake" | "camel" = "camel"
 ): Record<string, unknown> {
   if (Object(obj) === obj) {
-    Object.getOwnPropertyNames(obj).forEach((name) => {
+    for (const name of Object.getOwnPropertyNames(obj)) {
       const newName = toExpectedCase(name, expectedCase);
       if (newName !== name) {
         if (obj.hasOwnProperty(newName)) {
@@ -15,7 +15,7 @@ export function objectToExpectedCase(
         delete obj[name];
       }
       objectToExpectedCase(obj[newName] as Record<string, unknown>, expectedCase);
-    });
+    }
   } else if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++) {
       obj[i] = objectToExpectedCase(obj[i], expectedCase);

@@ -17,8 +17,8 @@ export class AttesterSlashingRepository extends Repository<Uint8Array, AttesterS
     const attesterSlashings = (await this.values()) || [];
     const indices = new Set<ValidatorIndex>();
     for (const slashing of attesterSlashings) {
-      slashing.attestation1.attestingIndices.forEach((index) => indices.add(index));
-      slashing.attestation2.attestingIndices.forEach((index) => indices.add(index));
+      for (const index of slashing.attestation1.attestingIndices) indices.add(index);
+      for (const index of slashing.attestation2.attestingIndices) indices.add(index);
     }
     for (const attesterIndice of attesterIndices) {
       if (!indices.has(attesterIndice)) {

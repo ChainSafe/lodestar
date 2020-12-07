@@ -12,7 +12,7 @@ import {join} from "path";
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {generateSZZTypeMapping, IAttestationDeltas, AttestationDeltasType, IDeltas, IRewardsTestCase} from "./types";
 
-["basic", "leak", "random"].forEach((testSuite) => {
+for (const testSuite of ["basic", "leak", "random"]) {
   describeDirectorySpecTest<IRewardsTestCase, IAttestationDeltas>(
     "process attestation mainnet",
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
@@ -55,4 +55,4 @@ import {generateSZZTypeMapping, IAttestationDeltas, AttestationDeltasType, IDelt
       },
     }
   );
-});
+}

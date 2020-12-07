@@ -105,12 +105,12 @@ export default class BlockProposingService {
     if (!proposerDuties) {
       return;
     }
-    proposerDuties.forEach((duty) => {
+    for (const duty of proposerDuties) {
       if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.pubkey) !== -1) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
         this.nextProposals.set(duty.slot, duty.pubkey);
       }
-    });
+    }
   };
 
   /**

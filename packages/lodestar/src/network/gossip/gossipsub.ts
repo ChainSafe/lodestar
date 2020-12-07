@@ -76,15 +76,15 @@ export class LodestarGossipsub extends Gossipsub {
 
   public registerLibp2pTopicValidators(forkDigest: ForkDigest): void {
     this.topicValidators = new Map();
-    [
+    for (const event of [
       GossipEvent.BLOCK,
       GossipEvent.AGGREGATE_AND_PROOF,
       GossipEvent.ATTESTER_SLASHING,
       GossipEvent.PROPOSER_SLASHING,
       GossipEvent.VOLUNTARY_EXIT,
-    ].forEach((event) =>
-      this.topicValidators.set(getGossipTopic(event, forkDigest), this.libP2pTopicValidator as ValidatorFn)
-    );
+    ]) {
+      this.topicValidators.set(getGossipTopic(event, forkDigest), this.libP2pTopicValidator as ValidatorFn);
+    }
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       const topic = getGossipTopic(
         GossipEvent.ATTESTATION_SUBNET,
@@ -137,12 +137,12 @@ export class LodestarGossipsub extends Gossipsub {
    * we want to emit our transformed object instead of the raw message here.
    */
   public _emitMessage(message: InMessage): void {
-    message.topicIDs.forEach((topic) => {
+    for (const topic of message.topicIDs) {
       const transformedObj = this.transformedObjects.get(msgIdToString(this.getMsgId(message)));
       if (transformedObj && transformedObj.object) {
         super.emit(topic, transformedObj.object);
       }
-    });
+    }
   }
 
   /**

@@ -8,7 +8,7 @@ import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 import {generateSZZTypeMapping, IDeltas, DeltasType, IRewardsTestCase} from "./types";
 import {expect} from "chai";
 
-["basic", "leak", "random"].forEach((testSuite) => {
+for (const testSuite of ["basic", "leak", "random"]) {
   describeDirectorySpecTest<IRewardsTestCase, IDeltas>(
     "process attestation mainnet",
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
@@ -69,4 +69,4 @@ import {expect} from "chai";
       },
     }
   );
-});
+}

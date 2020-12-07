@@ -37,7 +37,13 @@ export function processOperations(
     "Outstanding deposits are not processed"
   );
 
-  [
+  const operationsData: {
+    operations: List<Operation>;
+    maxOperations: number;
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
+    verifySignatures: boolean;
+  }[] = [
     {
       operations: body.proposerSlashings,
       maxOperations: config.params.MAX_PROPOSER_SLASHINGS,
@@ -68,23 +74,12 @@ export function processOperations(
       func: processVoluntaryExit,
       verifySignatures,
     },
-  ].forEach(
-    ({
-      operations,
-      maxOperations,
-      func,
-      verifySignatures,
-    }: {
-      operations: List<Operation>;
-      maxOperations: number;
-      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-      func: (config: IBeaconConfig, state: BeaconState, operation: any, verifySignatures: boolean) => void;
-      verifySignatures: boolean;
-    }) => {
-      assert.lte(operations.length, maxOperations, "Too many operations");
-      operations.forEach((operation) => {
-        func(config, state, operation, verifySignatures);
-      });
+  ];
+
+  for (const {operations, maxOperations, func, verifySignatures} of operationsData) {
+    assert.lte(operations.length, maxOperations, "Too many operations");
+    for (const operation of operations) {
+      func(config, state, operation, verifySignatures);
     }
-  );
+  }
 }

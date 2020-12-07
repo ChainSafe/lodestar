@@ -9,7 +9,7 @@ export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochPr
   let endChurn = process.exitQueueEndChurn;
   const {MIN_VALIDATOR_WITHDRAWABILITY_DELAY} = epochCtx.config.params;
   // process ejections
-  process.indicesToEject.forEach((index) => {
+  for (const index of process.indicesToEject) {
     const validator = state.validators[index];
 
     // set validator exit epoch and withdrawable epoch
@@ -21,12 +21,12 @@ export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochPr
       endChurn = 0;
       exitEnd += 1;
     }
-  });
+  }
 
   // set new activation eligibilities
-  process.indicesToSetActivationEligibility.forEach((index) => {
+  for (const index of process.indicesToSetActivationEligibility) {
     state.validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
-  });
+  }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit

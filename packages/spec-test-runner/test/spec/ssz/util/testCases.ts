@@ -15,7 +15,15 @@ interface IResult {
 
 export function testStatic(type: keyof IBeaconSSZTypes): void {
   const sszType = safeType(config.types[type]) as CompositeType<any>;
-  ["ssz_lengthy", "ssz_max", "ssz_one", "ssz_nil", "ssz_random", "ssz_random_chaos", "ssz_zero"].forEach((caseName) => {
+  for (const caseName of [
+    "ssz_lengthy",
+    "ssz_max",
+    "ssz_one",
+    "ssz_nil",
+    "ssz_random",
+    "ssz_random_chaos",
+    "ssz_zero",
+  ]) {
     describeDirectorySpecTest<IBaseSSZStaticTestCase<any>, IResult>(
       `SSZ - ${type} ${caseName} minimal`,
       join(SPEC_TEST_LOCATION, `tests/minimal/phase0/ssz_static/${type}/${caseName}`),
@@ -74,5 +82,5 @@ export function testStatic(type: keyof IBeaconSSZTypes): void {
         //shouldSkip: (a, b, i) => b !== 'case_10',
       }
     );
-  });
+  }
 }

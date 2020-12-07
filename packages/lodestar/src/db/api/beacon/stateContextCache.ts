@@ -68,11 +68,11 @@ export class StateContextCache {
     const keys = Object.keys(this.cache);
     if (keys.length > MAX_STATES) {
       // object keys are stored in insertion order, delete keys starting from the front
-      keys.slice(0, keys.length - MAX_STATES).forEach((key) => {
+      for (const key of keys.slice(0, keys.length - MAX_STATES)) {
         if (key !== toHexString(headStateRoot)) {
           delete this.cache[key];
         }
-      });
+      }
     }
   }
 

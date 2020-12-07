@@ -55,9 +55,13 @@ export function getUnslashedAttestingIndices(
   attestations: PendingAttestation[]
 ): ValidatorIndex[] {
   const output: Set<ValidatorIndex> = new Set();
-  attestations.forEach((a) =>
-    getAttestingIndices(config, state, a.data, a.aggregationBits).forEach((index) => output.add(index))
-  );
+
+  for (const a of attestations) {
+    for (const index of getAttestingIndices(config, state, a.data, a.aggregationBits)) {
+      output.add(index);
+    }
+  }
+
   return Array.from(output)
     .filter((index) => !state.validators[index].slashed)
     .sort();

@@ -65,9 +65,9 @@ describe("process epoch - balance updates", function () {
 
     const result = getAttestationDeltas(config, state);
     const rewards = result[0];
-    rewards.forEach((value) => {
+    for (const value of rewards) {
       expect(value > BigInt(0)).to.be.true;
-    });
+    }
   });
 
   it("should return penalties", function () {
@@ -93,8 +93,8 @@ describe("process epoch - balance updates", function () {
 
     const result = getAttestationDeltas(config, state);
     const penalties = result[1];
-    penalties.forEach((value) => {
+    for (const value of penalties) {
       expect(value > BigInt(0)).to.be.true;
-    });
+    }
   });
 });

@@ -44,7 +44,7 @@ function getAttestationComponentDeltas(
   const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const totalBalance = getTotalActiveBalance(config, state);
 
-  getEligibleValidatorIndices(config, state).forEach((index) => {
+  for (const index of getEligibleValidatorIndices(config, state)) {
     if (unslashedAttestingIndices.includes(index)) {
       const increment = BigInt(config.params.EFFECTIVE_BALANCE_INCREMENT);
       if (isInInactivityLeak(config, state)) {
@@ -57,7 +57,8 @@ function getAttestationComponentDeltas(
     } else {
       penalties[index] += getBaseReward(config, state, index);
     }
-  });
+  }
+
   return [rewards, penalties];
 }
 
@@ -83,7 +84,8 @@ export function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconStat
   const previousEpoch = getPreviousEpoch(config, state);
   const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
-  getUnslashedAttestingIndices(config, state, matchingSourceAttestations).forEach((index) => {
+
+  for (const index of getUnslashedAttestingIndices(config, state, matchingSourceAttestations)) {
     const earliestAttestation = matchingSourceAttestations
       .filter((a) => getAttestingIndices(config, state, a.data, a.aggregationBits).includes(index))
       .reduce((a1, a2) => (a2.inclusionDelay < a1.inclusionDelay ? a2 : a1));
@@ -92,7 +94,8 @@ export function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconStat
     rewards[earliestAttestation.proposerIndex] += getProposerReward(config, state, index);
     const maxAttesterReward = BigInt(baseReward - getProposerReward(config, state, index));
     rewards[index] += BigInt(maxAttesterReward / BigInt(earliestAttestation.inclusionDelay));
-  });
+  }
+
   // No penalties associated with inclusion delay
   return rewards;
 }
@@ -103,7 +106,7 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconS
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
   if (isInInactivityLeak(config, state)) {
     const matchingTargetAttestingIndices = getUnslashedAttestingIndices(config, state, matchingTargetAttestations);
-    getEligibleValidatorIndices(config, state).forEach((index) => {
+    for (const index of getEligibleValidatorIndices(config, state)) {
       const baseReward = getBaseReward(config, state, index);
       penalties[index] += BigInt(BASE_REWARDS_PER_EPOCH) * baseReward - getProposerReward(config, state, index);
       if (!matchingTargetAttestingIndices.includes(index)) {
@@ -111,7 +114,7 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconS
           (state.validators[index].effectiveBalance * BigInt(getFinalityDelay(config, state))) /
           config.params.INACTIVITY_PENALTY_QUOTIENT;
       }
-    });
+    }
   }
   // No rewards associated with inactivity penalties
   return penalties;

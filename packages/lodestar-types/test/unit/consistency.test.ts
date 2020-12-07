@@ -134,7 +134,7 @@ describe("@chainsafe/lodestar-types", () => {
         );
       }
     };
-    Object.values(vars).forEach((rtVar: any) => {
+    for (const rtVar of Object.values(vars)) {
       // @ts-ignore
       const iface = interfaces[rtVar.name];
       if (!iface) return;
@@ -155,6 +155,6 @@ describe("@chainsafe/lodestar-types", () => {
         );
         checkType(iface.name, ifaceFieldName, ifaceFieldType, rtVarFieldType);
       }
-    });
+    }
   });
 });

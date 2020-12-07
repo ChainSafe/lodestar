@@ -42,9 +42,10 @@ export const writeReport = (file: string, data: string): void => {
 export const runSuite = (bench: BenchSuite, name?: string): void => {
   let suite = new Benchmark.Suite(name);
   const profileId = `${bench.name} - ${Date.now()}.profile`;
-  bench.testFunctions.forEach((func) => {
+  for (const func of bench.testFunctions) {
     suite = suite.add(func.name, func, {setup: bench.setup, teardown: bench.teardown, minSamples: 2});
-  });
+  }
+
   suite.on("start", function () {
     if (bench.profile) {
       profiler.startProfiling(profileId);
