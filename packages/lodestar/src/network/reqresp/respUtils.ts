@@ -17,19 +17,13 @@ export async function sendResponse(
   err: RpcError | null,
   response?: ResponseBody
 ): Promise<void> {
-  return sendResponseStream(
-    modules,
-    id,
-    method,
-    encoding,
-    sink,
-    err,
-    (async function* () {
-      if (response != null) {
-        yield response;
-      }
-    })()
-  );
+  async function* chunkIter(): AsyncGenerator<ResponseBody> {
+    if (response != null) {
+      yield response;
+    }
+  }
+
+  return sendResponseStream(modules, id, method, encoding, sink, err, chunkIter());
 }
 
 export async function sendResponseStream(
@@ -42,22 +36,21 @@ export async function sendResponseStream(
   chunkIter: AsyncIterable<ResponseBody>
 ): Promise<void> {
   const {logger, config} = modules;
-  let respSource: AsyncIterable<IResponseChunk>;
-  if (err) {
-    respSource = (async function* () {
+
+  async function* respSource(): AsyncIterable<IResponseChunk> {
+    if (err) {
       yield {
         requestId: id,
         status: err.status,
         body: encodeP2pErrorMessage(config, err.message || ""),
       };
-    })();
-  } else {
-    respSource = (async function* () {
+    } else {
       for await (const chunk of chunkIter) {
         yield {status: RpcResponseStatus.SUCCESS, requestId: id, body: chunk};
       }
-    })();
+    }
   }
-  await pipe(respSource, eth2ResponseEncode(config, logger, method, encoding), sink);
+
+  await pipe(respSource(), eth2ResponseEncode(config, logger, method, encoding), sink);
   logger.verbose("Sent reqresp response", {requestId: id, method, encoding, error: err?.message ?? "false"});
 }

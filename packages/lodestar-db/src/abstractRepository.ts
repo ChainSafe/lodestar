@@ -135,27 +135,23 @@ export abstract class Repository<I extends Id, T> {
     const data = await this.db.keys(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeKey(data));
   }
-  public keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
+  public async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
-    return (async function* () {
-      for await (const key of keysStream) {
-        yield decodeKey(key);
-      }
-    })();
+    for await (const key of keysStream) {
+      yield decodeKey(key);
+    }
   }
   public async values(opts?: IFilterOptions<I>): Promise<T[]> {
     const data = await this.db.values(this.dbFilterOptions(opts));
     return (data || []).map((data) => this.decodeValue(data));
   }
-  public valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
+  public async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
     const decodeValue = this.decodeValue.bind(this);
-    return (async function* () {
-      for await (const value of valuesStream) {
-        yield decodeValue(value);
-      }
-    })();
+    for await (const value of valuesStream) {
+      yield decodeValue(value);
+    }
   }
   public async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
     const data = await this.db.entries(this.dbFilterOptions(opts));
@@ -164,18 +160,16 @@ export abstract class Repository<I extends Id, T> {
       value: this.decodeValue(data.value),
     }));
   }
-  public entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
+  public async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));
     const decodeKey = this.decodeKey.bind(this);
     const decodeValue = this.decodeValue.bind(this);
-    return (async function* () {
-      for await (const entry of entriesStream) {
-        yield {
-          key: decodeKey(entry.key),
-          value: decodeValue(entry.value),
-        };
-      }
-    })();
+    for await (const entry of entriesStream) {
+      yield {
+        key: decodeKey(entry.key),
+        value: decodeValue(entry.value),
+      };
+    }
   }
 
   public async firstKey(): Promise<I | null> {

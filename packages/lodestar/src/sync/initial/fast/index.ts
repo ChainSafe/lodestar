@@ -133,34 +133,33 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         updateBlockImportTarget,
         getInitialSyncPeers,
       } = this;
-      return (async function () {
-        for await (const slotRange of source) {
-          const lastSlot = await pipe(
-            [slotRange],
-            fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
-            processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
-          );
-          logger.verbose("last processed slot range", {lastSlot, ...slotRange});
-          if (typeof lastSlot === "number") {
-            if (lastSlot === getLastProcessedBlock().slot) {
-              // failed at start of range
 
-              logger.warn("Failed to process block range, retrying", {lastSlot, ...slotRange});
-              setBlockImportTarget(lastSlot);
-            } else {
-              // success
-              // set new target from last block we've processed
-              // it will trigger new sync once last block is processed
-              updateBlockImportTarget(lastSlot);
-            }
+      for await (const slotRange of source) {
+        const lastSlot = await pipe(
+          [slotRange],
+          fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
+          processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
+        );
+        logger.verbose("last processed slot range", {lastSlot, ...slotRange});
+        if (typeof lastSlot === "number") {
+          if (lastSlot === getLastProcessedBlock().slot) {
+            // failed at start of range
+
+            logger.warn("Failed to process block range, retrying", {lastSlot, ...slotRange});
+            setBlockImportTarget(lastSlot);
           } else {
-            // no blocks in range
-            logger.warn("Didn't receive any valid block in block range", {...slotRange});
-            //we didn't receive any block, set target from last requested slot
-            setBlockImportTarget(slotRange.end);
+            // success
+            // set new target from last block we've processed
+            // it will trigger new sync once last block is processed
+            updateBlockImportTarget(lastSlot);
           }
+        } else {
+          // no blocks in range
+          logger.warn("Didn't receive any valid block in block range", {...slotRange});
+          //we didn't receive any block, set target from last requested slot
+          setBlockImportTarget(slotRange.end);
         }
-      })();
+      }
     });
   }
 
