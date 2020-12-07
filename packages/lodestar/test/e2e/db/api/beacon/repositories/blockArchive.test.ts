@@ -1,5 +1,5 @@
 import {BeaconDb} from "../../../../../../src/db";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generateSignedBlock} from "../../../../../utils/block";

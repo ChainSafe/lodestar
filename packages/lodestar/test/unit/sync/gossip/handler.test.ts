@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../src/network";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {IGossip} from "../../../../src/network/gossip/interface";
 import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconGossipHandler} from "../../../../src/sync/gossip";

@@ -1,4 +1,4 @@
-/* import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+/* import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-types";
 import {assert, expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";

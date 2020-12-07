@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/fetcher";
 import {BeaconChain, IBeaconChain} from "../../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../../src/network";

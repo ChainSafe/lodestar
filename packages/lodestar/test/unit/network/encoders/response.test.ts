@@ -8,7 +8,7 @@ import {
   encodeP2pErrorMessage,
   decodeP2pErrorMessage,
 } from "../../../../src/network/encoders/response";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../src/constants";
 import {expect} from "chai";
 import {createStatus} from "./utils";

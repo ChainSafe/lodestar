@@ -5,7 +5,7 @@ import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 
 import {generateEmptyBlock} from "./block";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

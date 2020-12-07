@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {Gossip} from "../../../../../src/network/gossip/gossip";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {handleIncomingBlock} from "../../../../../src/network/gossip/handlers/block";
 import {silentLogger} from "../../../../utils/logger";

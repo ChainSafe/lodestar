@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import supertest from "supertest";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 
 import {ApiNamespace, RestApi} from "../../../../../src/api";
 import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";

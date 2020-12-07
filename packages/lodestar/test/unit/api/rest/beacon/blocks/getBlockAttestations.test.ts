@@ -3,7 +3,7 @@ import supertest from "supertest";
 
 import {List} from "@chainsafe/ssz";
 import {Attestation} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StubbedApi} from "../../../../../utils/stub/api";

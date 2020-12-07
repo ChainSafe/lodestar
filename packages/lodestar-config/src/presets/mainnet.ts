@@ -3,7 +3,5 @@ import {types} from "@chainsafe/lodestar-types/lib/ssz/presets/mainnet";
 
 import {IBeaconConfig} from "../interface";
 
-export const config: IBeaconConfig = {
-  params,
-  types,
-};
+export const config: IBeaconConfig = {params, types};
+export const mainnetConfig = config;
