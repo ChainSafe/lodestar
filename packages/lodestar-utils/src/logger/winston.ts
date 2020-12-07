@@ -51,32 +51,32 @@ export class WinstonLogger implements ILogger {
     }
   }
 
-  public error(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.error, message, context);
+  public error(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.error, message, context, error);
   }
 
-  public warn(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.warn, message, context);
+  public warn(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.warn, message, context, error);
   }
 
-  public info(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.info, message, context);
+  public info(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.info, message, context, error);
   }
 
-  public important(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.info, chalk.red(message as string), context);
+  public important(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.info, chalk.red(message as string), context, error);
   }
 
-  public verbose(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.verbose, message, context);
+  public verbose(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.verbose, message, context, error);
   }
 
-  public debug(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.debug, message, context);
+  public debug(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.debug, message, context, error);
   }
 
-  public silly(message: string, ...context: (Context | Error)[]): void {
-    this.createLogEntry(LogLevel.silly, message, context);
+  public silly(message: string, context?: Context, error?: Error): void {
+    this.createLogEntry(LogLevel.silly, message, context, error);
   }
 
   public profile(message: string, option?: {level: string; message: string}): void {
@@ -120,11 +120,11 @@ export class WinstonLogger implements ILogger {
     });
   }
 
-  private createLogEntry(level: LogLevel, message: string, context: (Context | Error)[]): void {
+  private createLogEntry(level: LogLevel, message: string, context?: Context, error?: Error): void {
     //don't propagate if silenced or message level is more detailed than logger level
     if (this.silent || this.winston.levels[level] > this.winston.levels[this._level]) {
       return;
     }
-    this.winston[level](message, {context});
+    this.winston[level](message, {context, error});
   }
 }

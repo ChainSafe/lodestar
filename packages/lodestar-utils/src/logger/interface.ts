@@ -48,9 +48,7 @@ export type Context =
     }
   | Context[];
 
-export type Contexts = (Context | Error)[];
-
-export type LogHandler = (message: string, ...context: (Context | Error)[]) => void;
+export type LogHandler = (message: string, context?: Context, error?: Error) => void;
 
 export interface ILogger {
   level: LogLevel;

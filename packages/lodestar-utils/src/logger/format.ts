@@ -3,7 +3,6 @@ import {toJson, toString} from "../json";
 import {Context, ILoggerOptions} from "./interface";
 
 type Format = ReturnType<typeof format.combine>;
-type Contexts = (Context | Error)[];
 
 // TODO: Find a more typesafe way of enforce this properties
 interface IWinstonInfoArg {
@@ -13,7 +12,8 @@ interface IWinstonInfoArg {
   namespace?: string;
   timestamp?: string;
   durationMs?: string;
-  context: Contexts;
+  context: Context;
+  error: Error;
 }
 
 export function getFormat(opts: ILoggerOptions): Format {
@@ -41,7 +41,8 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     format((_info) => {
       const info = _info as IWinstonInfoArg;
-      info.context = info.context.map((contextItem) => toJson(contextItem));
+      info.context = toJson(info.context);
+      info.error = (toJson(info.error) as unknown) as Error;
       return info;
     })(),
     format.json()
@@ -65,7 +66,8 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    ...info.context.map((contextItem) => printStackTraceLast(contextItem)),
+    info.context ? printStackTraceLast(info.context) : undefined,
+    info.error ? printStackTraceLast(info.error) : undefined,
     info.durationMs && ` - duration=${info.durationMs}ms`,
   ];
 
@@ -84,7 +86,7 @@ function printStackTraceLast(context?: Context | Error): string {
 
   if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {
     const {stack, ...errJsonData} = json;
-    return `${toString(errJsonData)}\n${toString(stack)}`;
+    return `${toString(errJsonData)} \n${toString(stack)}`;
   } else {
     return toString(json);
   }

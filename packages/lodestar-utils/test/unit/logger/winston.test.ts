@@ -22,7 +22,8 @@ describe("winston logger", () => {
     interface ITestCase {
       id: string;
       message: string;
-      context?: Context | Error;
+      context?: Context;
+      error?: Error;
       output: {[P in LogFormat]: string};
     }
     const testCases: (ITestCase | (() => ITestCase))[] = [
@@ -55,24 +56,24 @@ describe("winston logger", () => {
           id: "error with metadata",
           opts: {format: "human", module: "SAMPLE"},
           message: "foo bar",
-          context: error,
+          error: error,
           output: {
             human: `[]                 \u001b[33mwarn\u001b[39m: foo bar code=SAMPLE_ERROR, data={"foo":"bar"} \n${error.stack}`,
             // eslint-disable-next-line quotes
-            json: `{"module":"","context":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
+            json: `{"module":"","error":{"code":"SAMPLE_ERROR","data":{"foo":"bar"},"stack":"$STACK"},"level":"warn","message":"foo bar"}`,
           },
         };
       },
     ];
 
     for (const testCase of testCases) {
-      const {id, message, context, output} = typeof testCase === "function" ? testCase() : testCase;
+      const {id, message, context, error, output} = typeof testCase === "function" ? testCase() : testCase;
       for (const format of logFormats) {
         it(`${id} ${format} output`, () => {
           let allOutput = "";
           const callbackTransport = new CallbackTransport((data: any) => (allOutput += data));
           const logger = new WinstonLogger({format, hideTimestamp: true}, [callbackTransport]);
-          logger.warn(message, context);
+          logger.warn(message, context, error);
           expect(allOutput).to.equal(output[format]);
         });
       }

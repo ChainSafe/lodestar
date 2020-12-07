@@ -269,11 +269,11 @@ export async function onBlock(
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
   if (!(err instanceof AttestationError)) {
-    this.logger.error("Non AttestationError received", err);
+    this.logger.error("Non AttestationError received", {}, err);
     return;
   }
 
-  this.logger.debug("Attestation error", err);
+  this.logger.debug("Attestation error", {}, err);
   const attestationRoot = this.config.types.Attestation.hashTreeRoot(err.job.attestation);
 
   switch (err.type.code) {
@@ -304,11 +304,11 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
 
 export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<void> {
   if (!(err instanceof BlockError)) {
-    this.logger.error("Non BlockError received", err);
+    this.logger.error("Non BlockError received", {}, err);
     return;
   }
 
-  this.logger.debug("Block error", err);
+  this.logger.debug("Block error", {}, err);
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
