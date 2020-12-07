@@ -1,7 +1,7 @@
 import {getLodestarCli} from "../../src/cli";
 
 export function getLodestarCliTestRunner() {
-  return async <T = any>(arg: string | readonly string[], context?: object): Promise<T> => {
+  return async <T = any>(arg: string | readonly string[], context?: Record<string, unknown>): Promise<T> => {
     return new Promise((resolve, reject) => {
       const lodestar = getLodestarCli();
       lodestar

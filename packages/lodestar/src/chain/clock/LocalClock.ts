@@ -50,24 +50,29 @@ export class LocalClock implements IBeaconClock {
     if (this.signal.aborted) {
       throw new ErrorAborted();
     }
+
     if (this.currentSlot >= slot) {
       return;
     }
+
     return new Promise((resolve, reject) => {
       const onSlot = (clockSlot: Slot): void => {
         if (clockSlot >= slot) {
           onDone();
         }
       };
+
       const onDone = (): void => {
         this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
+
       const onAbort = (): void => {
         this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
         reject(new ErrorAborted());
       };
+
       this.emitter.on(ChainEvent.clockSlot, onSlot);
       this.signal.addEventListener("abort", onAbort, {once: true});
     });
@@ -79,9 +84,12 @@ export class LocalClock implements IBeaconClock {
     while (this._currentSlot < clockSlot) {
       const previousSlot = this._currentSlot;
       this._currentSlot++;
+
       this.emitter.emit(ChainEvent.clockSlot, this._currentSlot);
+
       const previousEpoch = computeEpochAtSlot(this.config, previousSlot);
       const currentEpoch = computeEpochAtSlot(this.config, this._currentSlot);
+
       if (previousEpoch < currentEpoch) {
         this.emitter.emit(ChainEvent.clockEpoch, currentEpoch);
       }
@@ -91,8 +99,7 @@ export class LocalClock implements IBeaconClock {
   };
 
   private msUntilNextSlot(): number {
-    const {SECONDS_PER_SLOT} = this.config.params;
-    const miliSecondsPerSlot = SECONDS_PER_SLOT * 1000;
+    const miliSecondsPerSlot = this.config.params.SECONDS_PER_SLOT * 1000;
     const diffInMiliSeconds = Date.now() - this.genesisTime * 1000;
     return miliSecondsPerSlot - (diffInMiliSeconds % miliSecondsPerSlot);
   }

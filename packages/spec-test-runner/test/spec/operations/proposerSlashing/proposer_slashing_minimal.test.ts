@@ -20,7 +20,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
     sszTypes: {
       pre: config.types.BeaconState,
       post: config.types.BeaconState,
-      // eslint-disable-next-line @typescript-eslint/camelcase
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       proposer_slashing: config.types.ProposerSlashing,
     },
     timeout: 100000000,

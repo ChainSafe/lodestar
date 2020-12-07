@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
-
 import {DefaultQuery} from "fastify";
 import {StateId} from "../../../../impl/beacon/state/interface";
 import {ApiError} from "../../../../impl/errors/api";

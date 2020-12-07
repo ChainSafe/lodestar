@@ -65,20 +65,20 @@ export async function initStateFromEth1(
   signal: AbortSignal
 ): Promise<TreeBacked<BeaconState>> {
   logger.info("Listening to eth1 for genesis state");
-  const builder = new GenesisBuilder(config, {
-    eth1Provider,
-    logger,
-    signal,
-  });
+
+  const builder = new GenesisBuilder(config, {eth1Provider, logger, signal});
+
   const genesisResult = await builder.waitForGenesis();
   const genesisBlock = createGenesisBlock(config, genesisResult.state);
   const stateRoot = config.types.BeaconState.hashTreeRoot(genesisResult.state);
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(genesisBlock.message);
+
   logger.info("Initializing genesis state", {
     stateRoot: toHexString(stateRoot),
     blockRoot: toHexString(blockRoot),
     validatorCount: genesisResult.state.validators.length,
   });
+
   await persistGenesisResult(db, genesisResult, genesisBlock);
   return genesisResult.state;
 }
@@ -95,11 +95,13 @@ export async function initStateFromDb(
   if (!state) {
     throw new Error("No state exists in database");
   }
+
   logger.info("Initializing beacon state from db", {
     slot: state.slot,
     epoch: computeEpochAtSlot(config, state.slot),
     stateRoot: toHexString(config.types.BeaconState.hashTreeRoot(state)),
   });
+
   return state;
 }
 
@@ -117,7 +119,9 @@ export async function initStateFromAnchorState(
     epoch: computeEpochAtSlot(config, anchorState.slot),
     stateRoot: toHexString(config.types.BeaconState.hashTreeRoot(anchorState)),
   });
+
   await persistAnchorState(config, db, anchorState);
+
   return anchorState;
 }
 
@@ -133,6 +137,7 @@ export async function restoreStateCaches(
   const {checkpoint} = computeAnchorCheckpoint(config, state);
   const epochCtx = new EpochContext(config);
   epochCtx.loadState(state);
+
   const stateCtx = {state, epochCtx};
   await Promise.all([db.stateCache.add(stateCtx), db.checkpointStateCache.add(checkpoint, stateCtx)]);
 }
@@ -162,6 +167,7 @@ export function computeAnchorCheckpoint(
     }
     root = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
   }
+
   return {
     checkpoint: {
       root,

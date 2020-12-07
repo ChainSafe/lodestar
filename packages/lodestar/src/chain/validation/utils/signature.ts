@@ -31,6 +31,7 @@ export function isValidAggregateAndProofSignature(
     aggregateAndProof.message,
     aggregatorDomain
   );
+
   return bls.Signature.fromBytes(aggregateAndProof.signature.valueOf() as Uint8Array).verify(
     aggregator,
     aggregatorSigningRoot

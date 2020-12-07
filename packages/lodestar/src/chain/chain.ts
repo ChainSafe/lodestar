@@ -223,8 +223,16 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
-  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false, reprocess = false): Promise<void> {
-    this.blockProcessor.processBlockJob({signedBlock, trusted, reprocess}).catch(() => /* unreachable */ ({}));
+  public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
+    this.blockProcessor
+      .processBlockJob({
+        signedBlock,
+        reprocess: false,
+        prefinalized: trusted,
+        validSignatures: trusted,
+        validProposerSignature: trusted,
+      })
+      .catch(() => /* unreachable */ ({}));
   }
 
   public async getForkDigest(): Promise<ForkDigest> {
@@ -240,7 +248,9 @@ export class BeaconChain implements IBeaconChain {
       this.config.params.ALL_FORKS.find((fork) =>
         this.config.types.Version.equals(currentVersion, intToBytes(fork.previousVersion, 4))
       );
+
     const forkDigest = await this.getForkDigest();
+
     return {
       forkDigest,
       nextForkVersion: nextVersion

@@ -17,6 +17,7 @@ describe("config / beaconParams", () => {
   const testCases: {
     id: string;
     kwargs: Parameters<typeof getBeaconParams>[0];
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     GENESIS_FORK_VERSION: string;
   }[] = [
     {
@@ -26,6 +27,7 @@ describe("config / beaconParams", () => {
         paramsFile: "./no/file",
         additionalParamsCli: {},
       },
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MAINNET,
     },
     {
@@ -36,6 +38,7 @@ describe("config / beaconParams", () => {
         paramsFile: "./no/file",
         additionalParamsCli: {},
       },
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PYRMONT,
     },
     {
@@ -46,6 +49,7 @@ describe("config / beaconParams", () => {
         paramsFile: paramsFilepath,
         additionalParamsCli: {},
       },
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE,
     },
     {
@@ -54,13 +58,16 @@ describe("config / beaconParams", () => {
         preset: presetName,
         testnet: testnetName,
         paramsFile: paramsFilepath,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         additionalParamsCli: {GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI},
       },
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI,
     },
   ];
 
   before("Write config file", () => {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     fs.writeFileSync(paramsFilepath, yaml.dump({GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE}));
   });
 

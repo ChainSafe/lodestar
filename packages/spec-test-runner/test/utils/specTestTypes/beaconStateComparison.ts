@@ -6,6 +6,7 @@ export interface IBeaconStateComparisonCase extends IBaseCase {
 }
 
 export interface IOperationsCase extends IBeaconStateComparisonCase {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   bls_setting?: bigint;
 }
 

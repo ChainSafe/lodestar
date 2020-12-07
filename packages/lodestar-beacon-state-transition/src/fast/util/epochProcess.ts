@@ -66,7 +66,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
   const out = createIEpochProcess();
 
   const config = epochCtx.config;
-  const Root = config.types.Root;
+  const rootType = config.types.Root;
   const {
     EPOCHS_PER_SLASHINGS_VECTOR,
     MAX_EFFECTIVE_BALANCE,
@@ -173,8 +173,8 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
       const attTarget = attData.target;
 
       const attBits = readOnlyMap(aggregationBits, (b) => b);
-      const attVotedTargetRoot = Root.equals(attTarget.root, actualTargetBlockRoot);
-      const attVotedHeadRoot = Root.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
+      const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
+      const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
 
       // attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
       const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);

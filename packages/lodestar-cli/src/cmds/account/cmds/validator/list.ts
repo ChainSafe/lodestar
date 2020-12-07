@@ -7,7 +7,7 @@ import {add0xPrefix} from "../../../../util/format";
 
 export type ReturnType = string[];
 
-export const list: ICliCommand<{}, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
+export const list: ICliCommand<Record<never, never>, IAccountValidatorArgs & IGlobalArgs, ReturnType> = {
   command: "list",
 
   describe: "Lists the public keys of all validators",

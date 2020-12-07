@@ -24,7 +24,7 @@ export function toJson(arg: unknown, refs = new WeakMap()): Json {
       if (arg instanceof LodestarError) return toJson(arg.toObject(), refs);
       if (arg instanceof Error) return toJson(errorToObject(arg), refs);
       if (Array.isArray(arg)) return arg.map((item) => toJson(item, refs));
-      return mapValues(arg, (item) => toJson(item, refs));
+      return mapValues(arg as Record<string, unknown>, (item) => toJson(item, refs));
 
     // Already valid JSON
     case "number":
@@ -65,7 +65,7 @@ function errorToObject(err: Error): Json {
 /**
  * Does not throw on circular references, prevent silencing the actual logged error
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention
 function JSONStringifyCircular(value: any): string {
   try {
     return JSON.stringify(value);
