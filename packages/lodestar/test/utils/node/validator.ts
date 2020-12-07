@@ -1,14 +1,7 @@
-import {Keypair, PrivateKey} from "@chainsafe/bls";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ILogger, intDiv, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ILogger, intDiv, LogLevel, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "@chainsafe/lodestar-validator/lib/api/interface/events";
-import {
-  ApiClientOverInstance,
-  IApiClient,
-  interopKeypair,
-  SlashingProtection,
-  Validator,
-} from "@chainsafe/lodestar-validator";
+import {ApiClientOverInstance, IApiClient, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import tmp from "tmp";
 import {ApiClientOverRest} from "../../../../lodestar-validator/src/api/impl/rest/apiClient";
 import {BeaconApi} from "../../../src/api/impl/beacon";
@@ -74,9 +67,7 @@ export function getDevValidator({
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     }),
     logger: logger,
-    keypairs: Array.from({length: count}, (_, i) => {
-      return new Keypair(PrivateKey.fromBytes(interopKeypair(i + startIndex).privkey));
-    }),
+    secretKeys: Array.from({length: count}, (_, i) => interopSecretKey(i + startIndex)),
   });
 }
 

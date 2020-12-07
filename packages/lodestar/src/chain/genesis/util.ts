@@ -71,8 +71,10 @@ export function applyDeposits(
       depositDataRootList.push(fullDepositDataRootList[index]);
     }
   }
+
   const initDepositCount = depositDataRootList.length;
   const depositDatas = fullDepositDataRootList ? null : newDeposits.map((deposit) => deposit.data);
+
   newDeposits.forEach((deposit, index) => {
     if (fullDepositDataRootList) {
       depositDataRootList.push(fullDepositDataRootList[index + initDepositCount]);
@@ -83,6 +85,7 @@ export function applyDeposits(
         depositDataList.map((d) => config.types.DepositData.hashTreeRoot(d)) as List<Root>
       );
     }
+
     state.eth1Data.depositCount += 1;
     processDeposit(config, state, deposit);
   });
@@ -94,6 +97,7 @@ export function applyDeposits(
       balance - (balance % config.params.EFFECTIVE_BALANCE_INCREMENT),
       config.params.MAX_EFFECTIVE_BALANCE
     );
+
     if (validator.effectiveBalance === config.params.MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = computeEpochAtSlot(config, GENESIS_SLOT);
       validator.activationEpoch = computeEpochAtSlot(config, GENESIS_SLOT);

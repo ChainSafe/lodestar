@@ -49,7 +49,7 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   });
   server.setErrorHandler(errorHandler);
   if (opts.cors) {
-    server.register(fastifyCors as fastify.Plugin<Server, IncomingMessage, ServerResponse, {}>, {
+    server.register(fastifyCors as fastify.Plugin<Server, IncomingMessage, ServerResponse, Record<string, unknown>>, {
       origin: opts.cors,
     });
   }

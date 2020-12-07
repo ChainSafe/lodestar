@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {Keypair} from "@chainsafe/bls/lib/keypair";
+import bls from "@chainsafe/bls";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";
@@ -22,9 +22,11 @@ describe("Validator", () => {
       validator: new MockValidatorApi(),
     });
 
+    const secretKey = bls.SecretKey.fromKeygen();
+
     const validatorCtx: IValidatorOptions = {
       api: apiClient,
-      keypairs: [Keypair.generate()],
+      secretKeys: [secretKey],
       config,
       slashingProtection: sinon.createStubInstance(SlashingProtection),
       logger: silentLogger,

@@ -146,7 +146,11 @@ function loadInputFiles<TestCase, Result>(directory: string, options: ISpecTestO
   return testCase as TestCase;
 }
 
-function deserializeTestCase<TestCase, Result>(file, inputName, options: ISpecTestOptions<TestCase, Result>): object {
+function deserializeTestCase<TestCase, Result>(
+  file,
+  inputName,
+  options: ISpecTestOptions<TestCase, Result>
+): Record<string, unknown> {
   if (file.endsWith(InputType.SSZ)) {
     if (!options.sszTypes) throw Error("sszTypes is not defined");
     return options.sszTypes[inputName].deserialize(readFileSync(file));

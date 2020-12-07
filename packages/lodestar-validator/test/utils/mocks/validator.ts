@@ -23,7 +23,7 @@ export interface IMockValidatorAPIOpts {
   validatorIndex?: ValidatorIndex;
   pendingAttestations?: Attestation[];
   getPendingDeposits?: Deposit[];
-  Eth1Data?: Eth1Data;
+  eth1Data?: Eth1Data;
   attestationData?: AttestationData;
 }
 

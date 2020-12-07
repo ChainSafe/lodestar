@@ -118,7 +118,7 @@ export function handleResponses<T extends ResponseBody | ResponseBody[]>(
       encoding,
       body:
         body != null &&
-        (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<object | unknown>).toJson(body),
+        (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<unknown>).toJson(body),
     });
     return requestOnly ? null : (finalResponse as T);
   };

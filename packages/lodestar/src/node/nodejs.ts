@@ -6,7 +6,6 @@ import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
 
 import {TreeBacked} from "@chainsafe/ssz";
-import {initBLS} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -118,7 +117,6 @@ export class BeaconNode {
     anchorState,
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
-    await initBLS();
     // start db if not already started
     await db.start();
     await restoreStateCaches(config, db, anchorState);

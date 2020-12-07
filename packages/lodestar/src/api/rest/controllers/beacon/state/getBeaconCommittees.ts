@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
-
 import {StateId} from "../../../../impl/beacon/state";
 import {ApiController} from "../../types";
 

@@ -3,7 +3,6 @@ import path from "path";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import {join} from "path";
-import {initBLS} from "@chainsafe/bls";
 import {BeaconNode} from "@chainsafe/lodestar/lib/node";
 import {createNodeJsLibp2p} from "@chainsafe/lodestar/lib/network/nodejs";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -19,7 +18,7 @@ import {createEnr, createPeerId} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {IDevArgs} from "./options";
 import {initializeOptionsAndConfig} from "../init/handler";
-import {mkdir} from "../../util";
+import {mkdir, initBLS} from "../../util";
 import {defaultRootDir} from "../../paths/global";
 
 /**

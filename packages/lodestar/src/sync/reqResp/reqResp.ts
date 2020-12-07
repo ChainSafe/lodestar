@@ -43,6 +43,7 @@ enum GoodByeReasonCode {
   ERROR = 3,
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const GoodbyeReasonCodeDescriptions: Record<string, string> = {
   // spec-defined codes
   1: "Client shutdown",

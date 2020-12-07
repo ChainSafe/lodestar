@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import {ContainerType, ListType, NumberUintType, ByteVectorType, BigIntUintType} from "@chainsafe/ssz";
 import {IPhase1Params} from "./interface";
 

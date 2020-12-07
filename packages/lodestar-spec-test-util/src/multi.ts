@@ -12,7 +12,7 @@ export interface IBaseCase {
  * TestSpec - represent structure of yaml file containing spec test cases
  * TestCase - single test case, usually under test_cases property in yaml file
  */
-// eslint-disable-next-line @typescript-eslint/interface-name-prefix
+// eslint-disable-next-line @typescript-eslint/naming-convention
 interface TestSpec<TestCase extends IBaseCase> {
   title: string;
   summary: string;
@@ -55,7 +55,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   expectFunc = (testCase, expect, expected, actual) => expect(actual).to.be.equal(expected),
   timeout = 10 * 60 * 1000
 ): void {
-  const testSpec = loadYamlFile(testYamlPath) as TestSpec<TestCase>;
+  const testSpec = (loadYamlFile(testYamlPath) as unknown) as TestSpec<TestCase>;
 
   const testSuiteName = `${testSpec.runner} - ${testSpec.handler} - ${testSpec.title} - ${testSpec.config}`;
 

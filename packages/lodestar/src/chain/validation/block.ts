@@ -26,6 +26,7 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
+
   const currentSlot = chain.clock.currentSlot;
   if (currentSlot < blockSlot) {
     throw new BlockError({
@@ -35,12 +36,14 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
+
   if (await db.badBlock.has(blockRoot)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
       job: blockJob,
     });
   }
+
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
@@ -60,15 +63,16 @@ export async function validateGossipBlock(
       job: blockJob,
     });
   }
+
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
     });
   }
-  let validProposer;
+
   try {
-    validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
+    const validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
     if (!validProposer) {
       throw new BlockError({
         code: BlockErrorCode.ERR_INCORRECT_PROPOSER,

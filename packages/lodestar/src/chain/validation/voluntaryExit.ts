@@ -16,10 +16,12 @@ export async function validateGossipVoluntaryExit(
       code: VoluntaryExitErrorCode.ERR_EXIT_ALREADY_EXISTS,
     });
   }
+
   const {state} = await chain.regen.getCheckpointState({
     root: chain.forkChoice.getHeadRoot(),
     epoch: voluntaryExit.message.epoch,
   });
+
   if (!isValidVoluntaryExit(config, state, voluntaryExit)) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.ERR_INVALID_EXIT,

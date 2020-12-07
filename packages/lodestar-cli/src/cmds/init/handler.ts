@@ -31,7 +31,7 @@ export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<Retu
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({
-    testnet: args.testnet,
+    testnet: args.testnet || "mainnet",
     configFile: beaconPaths.configFile,
     beaconNodeOptionsCli: parseBeaconNodeArgs(args),
   });

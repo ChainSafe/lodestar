@@ -9,6 +9,7 @@ import {BlockErrorCode} from "../../../../src/chain/errors";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../../utils/stub";
+import {getNewBlockJob} from "../../../utils/block";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
@@ -29,11 +30,7 @@ describe("processBlock", function () {
   it("should throw on missing prestate", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
-    const job = {
-      signedBlock,
-      trusted: false,
-      reprocess: false,
-    };
+    const job = getNewBlockJob(signedBlock);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.ERR_STATE_TRANSITION_ERROR, error: new Error()}));
     try {
       await processBlock({

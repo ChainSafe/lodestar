@@ -23,6 +23,7 @@ export async function assembleAttestationData(
   } else {
     epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
   }
+
   if (!epochBoundaryBlockRoot) {
     throw new Error(`Missing target block at slot ${epochStartSlot} for attestation`);
   }

@@ -17,11 +17,13 @@ export async function validateGossipAttesterSlashing(
     attesterSlashing.attestation2.attestingIndices.valueOf() as ValidatorIndex[],
     sszEqualPredicate(config.types.ValidatorIndex)
   );
+
   if (await db.attesterSlashing.hasAll(attesterSlashedIndices)) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS,
     });
   }
+
   const state = await chain.getHeadState();
   if (!isValidAttesterSlashing(config, state, attesterSlashing)) {
     throw new AttesterSlashingError({

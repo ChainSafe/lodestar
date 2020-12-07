@@ -14,8 +14,10 @@ export enum GossipEvent {
   ATTESTER_SLASHING = "attester_slashing",
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const AttestationSubnetRegExp = new RegExp("^(/eth2/)([a-f0-9]{8})(/beacon_attestation_)([0-9]+/)([a-z_]+)$");
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const GossipTopicRegExp = new RegExp("^(/eth2/)([a-f0-9]{8})/(\\w+)(/[a-z]+)");
 
 export function getCommitteeSubnetEvent(index: CommitteeIndex): string {

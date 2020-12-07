@@ -20,7 +20,6 @@ import {AttestationService} from "./services/attestation";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
-import {initBLS} from "@chainsafe/bls";
 import {ISlashingProtection} from "./slashingProtection";
 
 /**
@@ -50,7 +49,6 @@ export class Validator {
    */
   public async start(): Promise<void> {
     this.isRunning = true;
-    await initBLS();
     await this.setup();
     this.logger.info("Checking if chain has started...");
     this.apiClient.once("beaconChainStarted", this.run);
@@ -87,7 +85,7 @@ export class Validator {
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.opts.keypairs,
+      this.opts.secretKeys,
       this.apiClient,
       this.slashingProtection,
       this.logger,
@@ -96,7 +94,7 @@ export class Validator {
 
     this.attestationService = new AttestationService(
       this.config,
-      this.opts.keypairs,
+      this.opts.secretKeys,
       this.apiClient,
       this.slashingProtection,
       this.logger

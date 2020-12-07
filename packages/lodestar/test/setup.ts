@@ -1,6 +1,10 @@
-import {initBLS} from "@chainsafe/bls";
+import {init} from "@chainsafe/bls";
 import {before} from "mocha";
 
 before(async function () {
-  await initBLS();
+  try {
+    await init("blst-native");
+  } catch (e) {
+    console.log(e);
+  }
 });

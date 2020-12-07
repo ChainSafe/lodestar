@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/camelcase */
+/* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
@@ -49,7 +49,7 @@ describeDirectorySpecTest<IGenesisInitSpecTest, BeaconState>(
   }
 );
 
-function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): object {
+function generateDepositSSZTypeMapping(n: number, config: IBeaconConfig): Record<string, typeof config.types.Deposit> {
   const depositMappings = {};
   for (let i = 0; i < n; i++) {
     depositMappings[`deposits_${i}`] = config.types.Deposit;

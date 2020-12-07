@@ -61,25 +61,25 @@ function getAttestationComponentDeltas(
   return [rewards, penalties];
 }
 
-function getSourceDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
+export function getSourceDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingSourceAttestations);
 }
 
-function getTargetDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
+export function getTargetDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingTargetAttestations);
 }
 
-function getHeadDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
+export function getHeadDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingHeadAttestations = getMatchingHeadAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingHeadAttestations);
 }
 
-function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
+export function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
   const previousEpoch = getPreviousEpoch(config, state);
   const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
@@ -97,7 +97,7 @@ function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): big
   return rewards;
 }
 
-function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
+export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
   const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);

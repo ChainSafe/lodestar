@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 // Mainnet preset - phase 1
 export const mainnetYaml = {
   CONFIG_NAME: "mainnet",

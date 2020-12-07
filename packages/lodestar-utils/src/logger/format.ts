@@ -37,6 +37,7 @@ function humanReadableLogFormat(opts: ILoggerOptions): Format {
 function jsonLogFormat(opts: ILoggerOptions): Format {
   return format.combine(
     ...(opts.hideTimestamp ? [] : [format.timestamp()]),
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     format((_info) => {
       const info = _info as IWinstonInfoArg;
       info.context = toJson(info.context);
@@ -49,7 +50,7 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
 /**
  * Winston template function print a human readable string given a log object
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention
 function humanReadableTemplateFn(_info: {[key: string]: any; level: string; message: string}): string {
   const info = _info as IWinstonInfoArg;
 

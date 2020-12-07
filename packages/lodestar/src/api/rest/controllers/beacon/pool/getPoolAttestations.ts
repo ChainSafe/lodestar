@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import {ApiController} from "../../types";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 export const getPoolAttestations: ApiController<{slot: string; committee_index: string}> = {
   url: "/pool/attestations",
 
@@ -26,6 +26,7 @@ export const getPoolAttestations: ApiController<{slot: string; committee_index: 
             types: "number",
             min: 0,
           },
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           committee_index: {
             types: "number",
             min: 0,

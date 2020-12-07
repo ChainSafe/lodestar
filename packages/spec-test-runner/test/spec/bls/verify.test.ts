@@ -1,6 +1,6 @@
 import path from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
-import bls, {initBLS} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 
 import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
 
@@ -14,10 +14,6 @@ interface IVerifyTestCase {
     output: boolean;
   };
 }
-
-before(async function f() {
-  await initBLS();
-});
 
 describeDirectorySpecTest<IVerifyTestCase, boolean>(
   "BLS - verify",
@@ -34,7 +30,5 @@ describeDirectorySpecTest<IVerifyTestCase, boolean>(
       data: InputType.YAML,
     },
     getExpected: (testCase) => testCase.data.output,
-    // Temporally disabled until @chainsafe/bls update
-    shouldSkip: (_, name) => name === "verify_infinity_pubkey_and_infinity_signature",
   }
 );

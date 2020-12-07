@@ -2,6 +2,7 @@ import {ApiController} from "../types";
 
 type Query = {
   slot: number;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   committee_index: number;
 };
 
@@ -25,7 +26,7 @@ export const produceAttestationData: ApiController<Query> = {
             type: "number",
             minimum: 0,
           },
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           committee_index: {
             type: "number",
             minimum: 0,

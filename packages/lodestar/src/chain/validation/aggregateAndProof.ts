@@ -4,7 +4,6 @@ import {IBeaconDb} from "../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {Signature} from "@chainsafe/bls";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
@@ -23,6 +22,7 @@ export async function validateGossipAggregateAndProof(
   const latestPermissibleSlot = chain.clock.currentSlot;
   const earliestPermissibleSlot = chain.clock.currentSlot - ATTESTATION_PROPAGATION_SLOT_RANGE;
   const attestationSlot = aggregate.data.slot;
+
   if (attestationSlot < earliestPermissibleSlot) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_PAST_SLOT,
@@ -31,6 +31,7 @@ export async function validateGossipAggregateAndProof(
       job: attestationJob,
     });
   }
+
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_FUTURE_SLOT,
@@ -39,12 +40,14 @@ export async function validateGossipAggregateAndProof(
       job: attestationJob,
     });
   }
+
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
       job: attestationJob,
     });
   }
+
   if (!hasAttestationParticipants(aggregate)) {
     // missing attestation participants
     throw new AttestationError({
@@ -52,6 +55,7 @@ export async function validateGossipAggregateAndProof(
       job: attestationJob,
     });
   }
+
   if (await isAttestingToInValidBlock(db, aggregate)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
@@ -96,18 +100,21 @@ export async function validateAggregateAttestation(
       job: attestationJob,
     });
   }
+
   if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
       job: attestationJob,
     });
   }
+
   if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_AGGREGATOR,
       job: attestationJob,
     });
   }
+
   const aggregator = epochCtx.index2pubkey[aggregateAndProof.message.aggregatorIndex];
   if (
     !isValidSelectionProofSignature(
@@ -115,7 +122,7 @@ export async function validateAggregateAttestation(
       state,
       attestation.data.slot,
       aggregator,
-      Signature.fromCompressedBytes(aggregateAndProof.message.selectionProof.valueOf() as Uint8Array)
+      aggregateAndProof.message.selectionProof.valueOf() as Uint8Array
     )
   ) {
     throw new AttestationError({
@@ -123,6 +130,7 @@ export async function validateAggregateAttestation(
       job: attestationJob,
     });
   }
+
   if (
     !isValidAggregateAndProofSignature(
       config,

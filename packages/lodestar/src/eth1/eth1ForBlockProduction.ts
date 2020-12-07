@@ -26,7 +26,9 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   private eth1DataCache: Eth1DataCache;
   private eth1Provider: IEth1Provider;
   private lastProcessedDepositBlockNumber: number | null;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   private MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   private MAX_BLOCKS_PER_LOG_QUERY = 1000;
 
   constructor({

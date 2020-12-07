@@ -1,6 +1,9 @@
 import {toExpectedCase} from "@chainsafe/ssz/lib/backings/utils";
 
-export function objectToExpectedCase(obj: Record<string, unknown>, expectedCase: "snake" | "camel" = "camel"): object {
+export function objectToExpectedCase(
+  obj: Record<string, unknown>,
+  expectedCase: "snake" | "camel" = "camel"
+): Record<string, unknown> {
   if (Object(obj) === obj) {
     Object.getOwnPropertyNames(obj).forEach((name) => {
       const newName = toExpectedCase(name, expectedCase);

@@ -4,17 +4,16 @@ import Benchmark from "benchmark";
 import profiler from "v8-profiler-next";
 import {dirname} from "path";
 
-// eslint-disable-next-line @typescript-eslint/interface-name-prefix
-export interface BenchSuite {
+export type BenchSuite = {
   //to compare multiple function implementation speed, add array of implementations here
   //to check speed of different functions create multiple BenchSuites
-  testFunctions: Function[];
+  testFunctions: (() => void)[];
   file: string;
   name: string;
-  setup?: Function;
-  teardown?: Function;
+  setup?: () => void;
+  teardown?: () => void;
   profile?: boolean;
-}
+};
 
 export const createReportDir = (): string => {
   const curDate: string = new Date().toISOString();

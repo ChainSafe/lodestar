@@ -6,7 +6,7 @@ import {ICliCommandOptions, ObjectKeys} from "../../util";
 // No options are statically declared
 // If an arbitraty key notation is used, it removes typesafety on most of the CLI arg parsing code.
 // Params will be parsed from an args object assuming to contain the required keys
-export type ILoggerArgs = {};
+export type ILoggerArgs = Record<string, unknown>;
 
 const getArgKey = (logModule: keyof IBeaconNodeOptions["logger"]): keyof ILoggerArgs =>
   `logger.${logModule}.level` as keyof ILoggerArgs;

@@ -1,4 +1,4 @@
-import {Signature} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
 
 import {DomainType} from "../../constants";
@@ -48,12 +48,7 @@ export function processProposerSlashing(
         computeEpochAtSlot(config, signedHeader.message.slot)
       );
       const signingRoot = computeSigningRoot(config, BeaconBlockHeader, signedHeader.message, domain);
-      if (
-        !pubkey.verifyMessage(
-          Signature.fromCompressedBytes(signedHeader.signature.valueOf() as Uint8Array),
-          signingRoot
-        )
-      ) {
+      if (!bls.Signature.fromBytes(signedHeader.signature.valueOf() as Uint8Array).verify(pubkey, signingRoot)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     });

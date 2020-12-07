@@ -3,6 +3,13 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 describe("rate counter", function () {
+  const sandbox = sinon.createSandbox();
+  beforeEach(() => {
+    sandbox.useFakeTimers();
+  });
+  afterEach(() => {
+    sandbox.restore();
+  });
   it("should throw if period less than one", function () {
     expect(() => new RateCounter(0)).to.throw();
   });
@@ -14,16 +21,15 @@ describe("rate counter", function () {
   });
 
   it("should get rate", async function () {
-    const timer = sinon.useFakeTimers();
     const rate = new RateCounter(10);
     await rate.start();
     rate.increment(2);
-    timer.tick(2000);
+    sandbox.clock.tick(2000);
     expect(rate.rate()).to.equal(1);
-    timer.tick(8000);
+    sandbox.clock.tick(8000);
     expect(rate.rate()).to.equal(0);
     rate.increment(1);
-    timer.tick(2000);
+    sandbox.clock.tick(2000);
     expect(rate.rate()).to.equal(0.5);
     await rate.stop();
   });
