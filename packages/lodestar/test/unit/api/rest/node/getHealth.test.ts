@@ -1,4 +1,3 @@
-import sinon from "sinon";
 import supertest from "supertest";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
@@ -7,8 +6,6 @@ import {getHealth} from "../../../../../src/api/rest/controllers/node";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
-import {BEACON_PREFIX} from "../beacon/index.test";
-import {getGenesis} from "../../../../../src/api/rest/controllers/beacon";
 import {NODE_PREFIX} from "./index";
 
 describe("rest - node - getHealth", function () {

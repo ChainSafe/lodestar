@@ -178,12 +178,12 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     );
     if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
-      this.logger.verbose(`Finding new peers for subnet ${subnet}`);
+      this.logger.verbose("Finding new peers", {subnet});
       const found = await this.connectToNewPeersBySubnet(parseInt(subnet));
       if (found) {
-        this.logger.verbose(`Found new peer for subnet ${subnet}`);
+        this.logger.verbose("Found new peer", {subnet});
       } else {
-        this.logger.verbose(`Not found any peers for subnet ${subnet}`);
+        this.logger.verbose("Not found any peers", {subnet});
       }
     }
   }
@@ -205,7 +205,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         break;
       } catch (e) {
         // this runs too frequently so make it verbose
-        this.logger.verbose(`Cannot connect to peer ${peer.peerId.toB58String()} for subnet ${subnet}`, e.message);
+        this.logger.verbose("Cannot connect to peer", {peerId: peer.peerId.toB58String(), subnet, error: e.message});
       }
     }
     return found;
@@ -235,13 +235,13 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {
     this.metrics.peers.inc();
-    this.logger.verbose("peer connected " + conn.remotePeer.toB58String() + " " + conn.stat.direction);
+    this.logger.verbose("peer connected", {peerId: conn.remotePeer.toB58String(), direction: conn.stat.direction});
     //tmp fix, we will just do double status exchange but nothing major
     this.emit("peer:connect", conn.remotePeer, conn.stat.direction);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
-    this.logger.verbose("peer disconnected " + conn.remotePeer.toB58String());
+    this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
     this.metrics.peers.dec();
     this.emit("peer:disconnect", conn.remotePeer);
   };

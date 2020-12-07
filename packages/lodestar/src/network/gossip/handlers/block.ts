@@ -11,7 +11,7 @@ import {GossipObject} from "../interface";
 export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Promise<void> {
   try {
     const signedBlock = obj as SignedBeaconBlock;
-    this.logger.verbose(`Incoming gossip block at slot: ${signedBlock.message.slot}`);
+    this.logger.verbose("Incoming gossip block", {slot: signedBlock.message.slot});
     this.emit(GossipEvent.BLOCK, signedBlock);
   } catch (e) {
     this.logger.warn("Incoming block error", e);
@@ -24,5 +24,5 @@ export async function publishBlock(this: Gossip, signedBlock: SignedBeaconBlock)
     getGossipTopic(GossipEvent.BLOCK, forkDigestValue),
     Buffer.from(this.config.types.SignedBeaconBlock.serialize(signedBlock))
   );
-  this.logger.verbose(`Publishing block at slot: ${signedBlock.message.slot}`);
+  this.logger.verbose("Publishing block", {block: signedBlock.message.slot});
 }

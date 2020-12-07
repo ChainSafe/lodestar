@@ -51,7 +51,7 @@ export class CheckPeerAliveTask {
           peerSeq = await this.network.reqResp.ping(peer, seq);
           if (peerSeq === null) throw new Error("ping method return null for peer " + peer.toB58String());
         } catch (e) {
-          this.logger.warn("Cannot ping peer" + peer.toB58String() + ", disconnecting it. Error:", e.message);
+          this.logger.warn("Cannot ping peer, disconnecting it", {peerId: peer.toB58String(), error: e.message});
           // a peer may still be good for gossip blocks even it does not response to ping
           // temporarily disable this due to https://github.com/ChainSafe/lodestar/issues/1619
           // await this.network.disconnect(peer);

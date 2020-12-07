@@ -83,7 +83,7 @@ export class ValidatorApi implements IValidatorApi {
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
       return await assembleAttestationData(epochCtx.config, state, headRoot, slot, committeeIndex);
     } catch (e) {
-      this.logger.warn(`Failed to produce attestation data because: ${e.message}`);
+      this.logger.warn("Failed to produce attestation data", e);
       throw e;
     }
   }
@@ -177,7 +177,7 @@ export class ValidatorApi implements IValidatorApi {
             this.network.gossip.publishAggregatedAttestation(signedAggregateAndProof),
           ]);
         } catch (e) {
-          this.logger.warn("Failed to publish aggregate and proof", {reason: e.message});
+          this.logger.warn("Failed to publish aggregate and proof", e);
         }
       })
     );

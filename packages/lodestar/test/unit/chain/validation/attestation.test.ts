@@ -29,7 +29,7 @@ describe("gossip attestation validation", function () {
   let computeAttestationSubnetStub: SinonStub;
   let isValidIndexedAttestationStub: SinonStub;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  let toIndexedAttestation: Function;
+  let toIndexedAttestation: (attestation: Attestation) => IndexedAttestation;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);

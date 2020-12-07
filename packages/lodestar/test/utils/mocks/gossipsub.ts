@@ -1,14 +1,19 @@
 import {EventEmitter} from "events";
 import {IGossipSub} from "../../../src/network/gossip/interface";
-import {Vector} from "@chainsafe/ssz";
 
 export class MockGossipSub extends EventEmitter implements IGossipSub {
   subscriptions: Set<string> = new Set();
-  public async publish(topic: string, data: Buffer): Promise<void> {}
+  public async publish(): Promise<void> {
+    //
+  }
 
-  public async start(): Promise<void> {}
+  public async start(): Promise<void> {
+    //
+  }
 
-  public async stop(): Promise<void> {}
+  public async stop(): Promise<void> {
+    //
+  }
 
   public subscribe(topic: string): void {
     this.subscriptions.add(topic);
@@ -25,5 +30,7 @@ export class MockGossipSub extends EventEmitter implements IGossipSub {
     return false;
   }
 
-  public registerLibp2pTopicValidators(forkDigest: Vector<number>): void {}
+  public registerLibp2pTopicValidators(): void {
+    //
+  }
 }

@@ -112,7 +112,7 @@ export async function generatePerformanceBlock(): Promise<TreeBacked<SignedBeaco
     );
     // eth1Data, graffiti, attestations
     signedBlock = config.types.SignedBeaconBlock.tree.createValue(block);
-    logger.info("Loaded block at slot", signedBlock.message.slot);
+    logger.info("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();
 }

@@ -1,9 +1,8 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
-import pipe from "it-pipe";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {computeStartSlotAtEpoch, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ForkChoice} from "../../../../src/chain";
 import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";

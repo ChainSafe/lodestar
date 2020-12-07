@@ -35,6 +35,7 @@ describe("interopSubnetsJoiningTask", () => {
       previousVersion: bytesToInt(minimalConfig.params.GENESIS_FORK_VERSION),
     },
   ];
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const params = Object.assign({}, minimalConfig.params, {ALL_FORKS});
   const config: IBeaconConfig = Object.assign({}, minimalConfig, {params});
 

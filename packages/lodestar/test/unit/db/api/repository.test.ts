@@ -11,11 +11,13 @@ import {IDatabaseController, LevelDbController, Repository, Bucket} from "@chain
 
 chai.use(chaiAsPromised);
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 interface TestType {
   bool: boolean;
   bytes: Bytes32;
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const TestSSZType = new ContainerType<TestType>({
   fields: {
     bool: config.types.Boolean,

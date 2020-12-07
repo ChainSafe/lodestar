@@ -42,7 +42,7 @@ describe("rest - validator - produceAggregatedAttestation", function () {
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAggregatedAttestation.url))
       .query({
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         attestation_data_root: toHexString(root),
         slot: 0,
       })

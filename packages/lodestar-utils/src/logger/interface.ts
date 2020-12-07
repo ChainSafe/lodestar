@@ -48,17 +48,19 @@ export type Context =
     }
   | Context[];
 
+export type LogHandler = (message: string, context?: Context, error?: Error) => void;
+
 export interface ILogger {
   level: LogLevel;
   silent: boolean;
 
-  error(message: string, context?: Context | Error): void;
-  warn(message: string, context?: Context | Error): void;
-  info(message: string, context?: Context): void;
-  important(message: string, context?: Context): void;
-  verbose(message: string, context?: Context): void;
-  debug(message: string, context?: Context): void;
-  silly(message: string, context?: Context): void;
+  error: LogHandler;
+  warn: LogHandler;
+  info: LogHandler;
+  important: LogHandler;
+  verbose: LogHandler;
+  debug: LogHandler;
+  silly: LogHandler;
   profile(message: string, option?: {level: string; message: string}): void;
   stream(): Writable;
   // custom

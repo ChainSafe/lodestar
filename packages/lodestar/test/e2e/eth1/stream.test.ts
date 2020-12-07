@@ -16,6 +16,7 @@ describe("Eth1 streams", function () {
 
   const MAX_BLOCKS_PER_POLL = 1000;
   const depositsToFetch = 1000;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   const eth1Params = {...config.params, MAX_BLOCKS_PER_POLL};
 
   it(`Should fetch ${depositsToFetch} deposits with getDepositsStream`, async function () {

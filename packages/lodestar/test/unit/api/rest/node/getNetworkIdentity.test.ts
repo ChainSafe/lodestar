@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import sinon from "sinon";
 import supertest from "supertest";
 import {config} from "@chainsafe/lodestar-config/minimal";
 
@@ -9,7 +8,6 @@ import {StubbedApi} from "../../../../utils/stub/api";
 import {silentLogger} from "../../../../utils/logger";
 import {urlJoin} from "../utils";
 import {NODE_PREFIX} from "./index";
-import {getHealth} from "../../../../../src/api/rest/controllers/node";
 
 describe("rest - node - getNetworkIdentity", function () {
   let restApi: RestApi;

@@ -1,6 +1,6 @@
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
-import {ILogger, toJson} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
@@ -36,7 +36,7 @@ function wrapHandler<
       await handler(...args);
       emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
     } catch (e) {
-      logger.error(`Error handling event: ${event}`, e);
+      logger.error("Error handling event", {event}, e);
     }
   };
 }
@@ -269,11 +269,11 @@ export async function onBlock(
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
   if (!(err instanceof AttestationError)) {
-    this.logger.error("Non AttestationError received:", err);
+    this.logger.error("Non AttestationError received", {}, err);
     return;
   }
 
-  this.logger.debug("Attestation error", toJson(err));
+  this.logger.debug("Attestation error", {}, err);
   const attestationRoot = this.config.types.Attestation.hashTreeRoot(err.job.attestation);
 
   switch (err.type.code) {
@@ -304,11 +304,11 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
 
 export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<void> {
   if (!(err instanceof BlockError)) {
-    this.logger.error("Non BlockError received:", err);
+    this.logger.error("Non BlockError received", {}, err);
     return;
   }
 
-  this.logger.debug("Block error", toJson(err));
+  this.logger.debug("Block error", {}, err);
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
@@ -339,10 +339,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     case BlockErrorCode.ERR_BLOCK_IS_NOT_LATER_THAN_PARENT:
     case BlockErrorCode.ERR_UNKNOWN_PROPOSER:
       await this.db.badBlock.put(blockRoot);
-      this.logger.warn("Found bad block", {
-        blockRoot: toHexString(blockRoot),
-        error: toJson(err),
-      });
+      this.logger.warn("Found bad block", {blockRoot: toHexString(blockRoot)}, err);
       break;
   }
 }

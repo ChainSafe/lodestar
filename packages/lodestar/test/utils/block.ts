@@ -10,10 +10,10 @@ import {
 import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
 
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
-import {DeepPartial} from "./misc";
 import {IBlockJob} from "../../src/chain";
 
 export function generateEmptyBlock(): BeaconBlock {
@@ -46,8 +46,8 @@ export function generateEmptySignedBlock(): SignedBeaconBlock {
   };
 }
 
-export function generateSignedBlock(override: DeepPartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
-  return deepmerge<SignedBeaconBlock, DeepPartial<SignedBeaconBlock>>(generateEmptySignedBlock(), override, {
+export function generateSignedBlock(override: RecursivePartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
+  return deepmerge<SignedBeaconBlock, RecursivePartial<SignedBeaconBlock>>(generateEmptySignedBlock(), override, {
     isMergeableObject: isPlainObject,
   });
 }
@@ -64,8 +64,8 @@ export function generateEmptyBlockSummary(): IBlockSummary {
   };
 }
 
-export function generateBlockSummary(overrides: DeepPartial<IBlockSummary> = {}): IBlockSummary {
-  return deepmerge<IBlockSummary, DeepPartial<IBlockSummary>>(generateEmptyBlockSummary(), overrides, {
+export function generateBlockSummary(overrides: RecursivePartial<IBlockSummary> = {}): IBlockSummary {
+  return deepmerge<IBlockSummary, RecursivePartial<IBlockSummary>>(generateEmptyBlockSummary(), overrides, {
     isMergeableObject: isPlainObject,
   });
 }

@@ -2,7 +2,7 @@ import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "../../../../src/constants";
-import {getRandaoMix, getSeed} from "../../../../src/util";
+import {getRandaoMix} from "../../../../src/util";
 
 import {generateState} from "../../../utils/state";
 
