@@ -57,7 +57,7 @@ export function sendRequestStream<T extends ResponseBody>(
   const {libp2p, config, logger} = modules;
   return (async function* () {
     const protocol = createRpcProtocol(method, encoding);
-    logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
+    logger.verbose("sending request to peer", {peer: peerId.toB58String(), method, requestId, encoding});
     let conn: {stream: Stream} | undefined;
     const controller = new AbortController();
     let requestTimer: NodeJS.Timeout | null = null;
@@ -69,7 +69,7 @@ export function sendRequestStream<T extends ResponseBody>(
         } catch (e) {
           throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
         }
-        logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
+        logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
         await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
       })(),
       new Promise((_, reject) => {
@@ -104,13 +104,14 @@ export function handleResponses<T extends ResponseBody | ResponseBody[]>(
     const responses = await all(source);
     if (requestSingleChunk && responses.length === 0) {
       // allow empty response for beacon blocks by range/root
-      logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
-        peer: peerId.toB58String(),
-      });
+      logger.verbose("No response returned", {method, requestId, peer: peerId.toB58String()});
       return null;
     }
     const finalResponse = requestSingleChunk ? responses[0] : responses;
-    logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
+    logger.verbose("received response chunks", {
+      peer: peerId.toB58String(),
+      method,
+      chunks: responses.length,
       requestId,
       encoding,
       body:

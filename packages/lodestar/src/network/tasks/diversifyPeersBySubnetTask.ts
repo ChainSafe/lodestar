@@ -51,7 +51,7 @@ export class DiversifyPeersBySubnetTask {
     this.logger.profile("DiversifyPeersBySubnetTask");
     const missingSubnets = this.isSynced ? findMissingSubnets(this.network) : [];
     if (missingSubnets.length > 0) {
-      this.logger.verbose(`Search for ${missingSubnets.length} peers with subnets: ` + missingSubnets.join(","));
+      this.logger.verbose("Searching peers for missing subnets", {missingSubnets});
     } else {
       this.logger.info(
         this.isSynced
@@ -63,7 +63,10 @@ export class DiversifyPeersBySubnetTask {
       ? gossipPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || []
       : syncPeersToDisconnect(this.network) || [];
     if (toDiscPeers.length > 0) {
-      this.logger.verbose(`Disconnecting ${toDiscPeers.length} peers to find ${missingSubnets.length} new peers`);
+      this.logger.verbose("Disconnecting peers to find new peers", {
+        peersToDisconnect: toDiscPeers.length,
+        peersToConnect: missingSubnets.length,
+      });
       try {
         await Promise.all(toDiscPeers.map((peer) => this.network.disconnect(peer)));
       } catch (e) {
