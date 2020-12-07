@@ -15,10 +15,12 @@ export function getCommitteeAttestationHandler(subnet: number): GossipHandlerFn 
   return function handleIncomingCommitteeAttestation(this: Gossip, obj: GossipObject): void {
     try {
       const attestation = obj as Attestation;
-      this.logger.verbose(
-        `Received committee attestation for block ${toHexString(attestation.data.beaconBlockRoot)}` +
-          `subnet: ${subnet}, (${attestation.data.source.epoch}, ${attestation.data.target.epoch})`
-      );
+      this.logger.verbose("Received committee attestation", {
+        block: toHexString(attestation.data.beaconBlockRoot),
+        subnet,
+        source: attestation.data.source.epoch,
+        target: attestation.data.target.epoch,
+      });
       // attestation subnet event is dynamic, so it is not typed and declared in IGossipEvents
       // @ts-ignore
       this.emit(getAttestationSubnetEvent(subnet), {attestation, subnet});
@@ -42,5 +44,5 @@ export async function publishCommiteeAttestation(this: Gossip, attestation: Atte
     Buffer.from(this.config.types.Attestation.serialize(attestation))
   );
   const attestationHex = toHexString(this.config.types.Attestation.hashTreeRoot(attestation));
-  this.logger.verbose(`Publishing attestation ${attestationHex} for subnet ${subnet}`);
+  this.logger.verbose("Publishing attestation", {attestationHex, subnet});
 }

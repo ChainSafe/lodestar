@@ -133,7 +133,7 @@ export default class BlockProposingService {
         this.graffiti || ""
       );
     } catch (e) {
-      this.logger.error(`Failed to produce block for slot ${slot}`, e);
+      this.logger.error("Failed to produce block", {slot}, e);
     }
     if (!block) {
       return null;
@@ -157,11 +157,9 @@ export default class BlockProposingService {
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info(
-        `Proposed block with hash ${toHexString(this.config.types.BeaconBlock.hashTreeRoot(block))} and slot ${slot}`
-      );
+      this.logger.info("Proposed block", {hash: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)), slot});
     } catch (e) {
-      this.logger.error(`Failed to publish block for slot ${slot}`, e);
+      this.logger.error("Failed to publish block", {slot}, e);
     }
     return signedBlock;
   }

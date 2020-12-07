@@ -5,7 +5,6 @@ import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import * as utils from "../../../../src/util";
-import {initiateValidatorExit} from "../../../../src/util";
 import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";

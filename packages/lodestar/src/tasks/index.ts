@@ -90,9 +90,9 @@ export class TasksService implements IService {
       ]);
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.root);
-      this.logger.info("Finish processing finalized checkpoint for epoch #", finalized.epoch);
+      this.logger.info("Finish processing finalized checkpoint", {epoch: finalized.epoch});
     } catch (e) {
-      this.logger.error("Error processing finalized checkpoint of epoch #" + finalized.epoch, e);
+      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
     }
   };
 

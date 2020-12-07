@@ -119,7 +119,7 @@ describe("request encoders", function () {
         all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint 11, method status";
+      const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -130,7 +130,7 @@ describe("request encoders", function () {
         all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid szzLength of 0 for method status";
+      const err = "eth2RequestDecode: Invalid szzLength";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -141,7 +141,7 @@ describe("request encoders", function () {
         all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: too much bytes read (94) for method status, sszLength 84";
+      const err = "eth2RequestDecode: too much bytes read";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -152,7 +152,7 @@ describe("request encoders", function () {
         all
       );
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "Failed to decompress request data. Error: Unsupported snappy chunk type";
+      const err = "Failed to decompress request data";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 

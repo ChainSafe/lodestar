@@ -19,8 +19,8 @@ import {encode} from "varint";
 import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
 import {silentLogger} from "../../../utils/logger";
-import { randomBytes } from "crypto";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {
   const logger = silentLogger;

@@ -12,10 +12,8 @@ import {generateValidator} from "../../../../utils/validator";
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
   const verifyMerkleBranchStub = sinon.stub();
-  let processDeposit: Function,
-    getTemporaryBlockHeaderStub,
-    getBeaconProposeIndexStub,
-    blsStub = sinon.stub();
+  let processDeposit: any, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub;
+  const blsStub = sinon.stub();
 
   before(function () {
     mockery.registerMock("@chainsafe/lodestar-utils", {
@@ -30,12 +28,12 @@ describe("process block - deposits", function () {
     mockery.enable({useCleanCache: true, warnOnReplace: false, warnOnUnregistered: false});
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub.resetHistory();
     verifyMerkleBranchStub.resetHistory();
-    processDeposit = require("../../../../../src/block/operations").processDeposit;
+    processDeposit = (await import("../../../../../src/block/operations")).processDeposit;
   });
 
   afterEach(() => {
