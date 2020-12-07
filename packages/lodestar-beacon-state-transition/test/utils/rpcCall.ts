@@ -1,4 +1,12 @@
-export function generateRPCCall(method: string, params: any[]): object {
+export function generateRPCCall(
+  method: string,
+  params: any[]
+): {
+  method: string;
+  params: any[];
+  jsonrpc: string;
+  id: number;
+} {
   //TODO hex encode params
   return {
     method,

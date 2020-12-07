@@ -2,7 +2,7 @@ import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
 
-export interface ValidatorGeneratorOpts {
+export interface IValidatorGeneratorOpts {
   activation?: number;
   exit?: number;
   slashed?: boolean;
@@ -16,8 +16,8 @@ export interface ValidatorGeneratorOpts {
  * @param {boolean} slashed
  * @returns {Validator}
  */
-export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator {
-  const randNum = () => Math.floor(Math.random() * Math.floor(4));
+export function generateValidator(opts: IValidatorGeneratorOpts = {}): Validator {
+  const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activation || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: Buffer.alloc(48),
@@ -36,6 +36,6 @@ export function generateValidator(opts: ValidatorGeneratorOpts = {}): Validator 
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: ValidatorGeneratorOpts): List<Validator> {
+export function generateValidators(n: number, opts?: IValidatorGeneratorOpts): List<Validator> {
   return Array.from({length: n}, () => generateValidator(opts)) as List<Validator>;
 }

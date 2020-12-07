@@ -12,8 +12,6 @@ import {generateState} from "../../../utils/state";
 describe("process block - eth1data", function () {
   const sandbox = sinon.createSandbox();
 
-  beforeEach(() => {});
-
   afterEach(() => {
     sandbox.restore();
   });
