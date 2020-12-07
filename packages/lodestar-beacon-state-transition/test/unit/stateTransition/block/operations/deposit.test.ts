@@ -84,15 +84,12 @@ describe("process block - deposits", function () {
     const deposit = generateDeposit();
     deposit.data.amount = config.params.MAX_EFFECTIVE_BALANCE;
     blsStub.returns(true);
-    try {
-      processDeposit(config, state, deposit);
-      expect(verifyMerkleBranchStub.calledOnce).to.be.true;
-      expect(state.validators.length).to.be.equal(1);
-      expect(state.balances.length).to.be.equal(1);
-      expect(blsStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processDeposit(config, state, deposit);
+    expect(verifyMerkleBranchStub.calledOnce).to.be.true;
+    expect(state.validators.length).to.be.equal(1);
+    expect(state.balances.length).to.be.equal(1);
+    expect(blsStub.calledOnce).to.be.true;
   });
 
   it("should process deposit - increase deposit", function () {
@@ -103,12 +100,9 @@ describe("process block - deposits", function () {
     state.validators.push(validator);
     state.balances.push(BigInt(0));
     deposit.data.pubkey = validator.pubkey;
-    try {
-      processDeposit(config, state, deposit);
-      expect(verifyMerkleBranchStub.calledOnce).to.be.true;
-      expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
-    } catch (e) {
-      expect.fail(e);
-    }
+
+    processDeposit(config, state, deposit);
+    expect(verifyMerkleBranchStub.calledOnce).to.be.true;
+    expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
   });
 });

@@ -41,11 +41,8 @@ describe("process epoch - crosslinks", function () {
   it("should get total active balance", function () {
     const validatorIndices = [1, 2];
     getActiveValidatorIndicesStub.returns(validatorIndices);
-    try {
-      utils.getTotalActiveBalance(config, generateState());
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    utils.getTotalActiveBalance(config, generateState());
   });
 
   it("should get matching source attestation - for current epoch", function () {
@@ -60,12 +57,9 @@ describe("process epoch - crosslinks", function () {
       slot: config.params.SLOTS_PER_EPOCH,
       currentEpochAttestations: pendingAttestations as List<PendingAttestation>,
     });
-    try {
-      const result = getMatchingSourceAttestations(config, state, 1);
-      expect(result).to.be.deep.equal(pendingAttestations);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getMatchingSourceAttestations(config, state, 1);
+    expect(result).to.be.deep.equal(pendingAttestations);
   });
 
   it("should get matching source attestation - for previous epoch", function () {
@@ -88,12 +82,9 @@ describe("process epoch - crosslinks", function () {
       currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
       previousEpochAttestations: previousPendingAttestations as List<PendingAttestation>,
     });
-    try {
-      const result = getMatchingSourceAttestations(config, state, 0);
-      expect(result).to.be.deep.equal(previousPendingAttestations);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getMatchingSourceAttestations(config, state, 0);
+    expect(result).to.be.deep.equal(previousPendingAttestations);
   });
 
   it("should get matching target attestation", function () {
@@ -116,13 +107,10 @@ describe("process epoch - crosslinks", function () {
       currentEpochAttestations: currentPendingAttestations as List<PendingAttestation>,
     });
     getBlockRootStub.returns(blockRoot);
-    try {
-      const result = getMatchingTargetAttestations(config, state, 1);
-      expect(getBlockRootStub.calledOnce).to.be.true;
-      expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getMatchingTargetAttestations(config, state, 1);
+    expect(getBlockRootStub.calledOnce).to.be.true;
+    expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
 
   it("should get matching head attestation", function () {
@@ -146,13 +134,10 @@ describe("process epoch - crosslinks", function () {
     });
     getBlockRootAtSlotStub.returns(blockRoot);
     getBlockRootStub.returns(Buffer.alloc(32));
-    try {
-      const result = getMatchingHeadAttestations(config, state, 1);
-      expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
-      expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getMatchingHeadAttestations(config, state, 1);
+    expect(getBlockRootAtSlotStub.withArgs(config, sinon.match.any, 1).calledTwice).to.be.true;
+    expect(result).to.be.deep.equal([currentPendingAttestations[0]]);
   });
 
   it("should get unslashed attesting indices", function () {
@@ -172,13 +157,10 @@ describe("process epoch - crosslinks", function () {
     const validator1 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: true});
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2] as List<Validator>});
-    try {
-      const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
-      expect(result).to.be.deep.equal([1]);
-      expect(getAttestingIndicesStub.calledTwice).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getUnslashedAttestingIndices(config, state, pendingAttestations);
+    expect(result).to.be.deep.equal([1]);
+    expect(getAttestingIndicesStub.calledTwice).to.be.true;
   });
 
   it("should get attesting balance", function () {
@@ -199,12 +181,9 @@ describe("process epoch - crosslinks", function () {
     const validator2 = generateValidator({activation: 0, exit: FAR_FUTURE_EPOCH, slashed: false});
     const state = generateState({validators: [validator1, validator2] as List<Validator>});
     getTotalBalanceStub.returns(BigInt(1));
-    try {
-      const result = getAttestingBalance(config, state, pendingAttestations);
-      expect(result.toString()).to.be.deep.equal(BigInt(1).toString());
-      expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getAttestingBalance(config, state, pendingAttestations);
+    expect(result.toString()).to.be.deep.equal(BigInt(1).toString());
+    expect(getTotalBalanceStub.withArgs(sinon.match.any, sinon.match.any, [1]).calledOnce).to.be.true;
   });
 });

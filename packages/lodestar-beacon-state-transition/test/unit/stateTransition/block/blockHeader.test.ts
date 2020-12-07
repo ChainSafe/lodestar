@@ -63,10 +63,7 @@ describe("process block - block header", function () {
     block.slot = 5;
     block.parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader);
     getBeaconProposeIndexStub.returns(0);
-    try {
-      processBlockHeader(config, state, block);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processBlockHeader(config, state, block);
   });
 });

@@ -59,17 +59,13 @@ describe("block assembly", function () {
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
 
-    try {
-      const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, Buffer.alloc(96, 0));
-      expect(result).to.not.be.null;
-      expect(result.slot).to.equal(1);
-      expect(result.proposerIndex).to.equal(2);
-      expect(result.stateRoot).to.not.be.null;
-      expect(result.parentRoot).to.not.be.null;
-      expect(regenStub.getBlockSlotState.calledTwice).to.be.true;
-      expect(assembleBodyStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, Buffer.alloc(96, 0));
+    expect(result).to.not.be.null;
+    expect(result.slot).to.equal(1);
+    expect(result.proposerIndex).to.equal(2);
+    expect(result.stateRoot).to.not.be.null;
+    expect(result.parentRoot).to.not.be.null;
+    expect(regenStub.getBlockSlotState.calledTwice).to.be.true;
+    expect(assembleBodyStub.calledOnce).to.be.true;
   });
 });

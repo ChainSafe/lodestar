@@ -49,15 +49,11 @@ describe("process epoch - crosslinks", function () {
   });
 
   it("should process epoch", function () {
-    try {
-      processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
-      expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
-      expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
-      expect(processRegistryUpdatesStub.calledOnce).to.be.true;
-      expect(processSlashingsStub.calledOnce).to.be.true;
-      expect(processFinalUpdatesStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
+    expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
+    expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
+    expect(processRegistryUpdatesStub.calledOnce).to.be.true;
+    expect(processSlashingsStub.calledOnce).to.be.true;
+    expect(processFinalUpdatesStub.calledOnce).to.be.true;
   });
 });

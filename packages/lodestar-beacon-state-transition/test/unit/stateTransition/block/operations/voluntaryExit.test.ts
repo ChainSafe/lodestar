@@ -99,12 +99,9 @@ describe("process block - voluntary exits", function () {
     exit.message.epoch = 0;
     state.validators.push(validator);
     isActiveValidatorStub.returns(true);
-    try {
-      processVoluntaryExit(config, state, exit, false);
-      expect(isActiveValidatorStub.calledOnce).to.be.true;
-      expect(initiateValidatorExitStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processVoluntaryExit(config, state, exit, false);
+    expect(isActiveValidatorStub.calledOnce).to.be.true;
+    expect(initiateValidatorExitStub.calledOnce).to.be.true;
   });
 });

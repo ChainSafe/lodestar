@@ -92,23 +92,20 @@ describe("processAttestation", function () {
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
     isValidIndexedAttestationStub.returns(true);
     forkChoice.onAttestation.returns();
-    try {
-      const eventPromise = new Promise((resolve, reject) => {
-        const timeout = setTimeout(reject, 1000);
-        emitter.once(ChainEvent.attestation, () => {
-          clearTimeout(timeout);
-          resolve();
-        });
+
+    const eventPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(reject, 1000);
+      emitter.once(ChainEvent.attestation, () => {
+        clearTimeout(timeout);
+        resolve();
       });
-      await processAttestation({
-        emitter,
-        forkChoice,
-        regen,
-        job: {attestation, validSignature: false},
-      });
-      await eventPromise;
-    } catch (e) {
-      expect.fail("attestation should not throw");
-    }
+    });
+    await processAttestation({
+      emitter,
+      forkChoice,
+      regen,
+      job: {attestation, validSignature: false},
+    });
+    await eventPromise;
   });
 });
