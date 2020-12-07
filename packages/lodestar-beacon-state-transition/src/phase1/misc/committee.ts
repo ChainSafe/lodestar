@@ -6,7 +6,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 /**
  * Given a state and a list of validator indices, outputs the ``CompactCommittee`` representing them.
  */
-export function committeeToComactCommittee(
+export function committeeToCompactCommittee(
   config: IBeaconConfig,
   state: Phase1.BeaconState,
   committee: List<ValidatorIndex>
