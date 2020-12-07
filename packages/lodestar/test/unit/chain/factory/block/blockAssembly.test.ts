@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance, SinonStubStatic} from "sinon";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -65,6 +65,7 @@ describe("block assembly", function () {
     expect(result.stateRoot).to.not.be.null;
     expect(result.parentRoot).to.not.be.null;
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
+    expect(processBlockStub.calledOnce).to.be.true;
     expect(assembleBodyStub.calledOnce).to.be.true;
   });
 });
