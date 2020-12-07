@@ -61,14 +61,14 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     if (headSlot >= currentSlot) {
-      this.logger.info(`Regular Sync: node is up to date, headSlot=${headSlot}`);
+      this.logger.info("Regular Sync: node is up to date", {headSlot});
       this.emit("syncCompleted");
       await this.stop();
       return;
     }
     this.currentTarget = headSlot;
     this.lastProcessedBlock = this.chain.forkChoice.getHead();
-    this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
+    this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
     await this.waitForBestPeer(this.controller.signal);
@@ -105,7 +105,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   private setTarget = (newTarget?: Slot, triggerSync = true): void => {
     newTarget = newTarget ?? this.getNewTarget();
     if (triggerSync && newTarget > this.currentTarget) {
-      this.logger.info(`Regular Sync: Requesting blocks from slot ${this.currentTarget + 1} to slot ${newTarget}`);
+      this.logger.info("Regular Sync: Requesting blocks range", {fromSlot: this.currentTarget + 1, toSlot: newTarget});
       this.targetSlotRangeSource.push({start: this.currentTarget + 1, end: newTarget});
     }
     this.currentTarget = newTarget;
@@ -130,7 +130,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
         };
         this.setTarget();
         this.subscribeToBlock = false;
-        this.logger.info(`Regular Sync: Synced up to slot ${lastProcessedBlock.message.slot} `, {
+        this.logger.info("Regular Sync: Sync progress", {
+          lastProcessedSlot: lastProcessedBlock.message.slot,
           currentSlot: this.chain.clock.currentSlot,
           gossipParentBlockRoot: this.gossipParentBlockRoot ? toHexString(this.gossipParentBlockRoot) : "undefined",
         });
@@ -140,10 +141,10 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
 
   private onGossipBlock = async (block: SignedBeaconBlock): Promise<void> => {
     this.gossipParentBlockRoot = block.message.parentRoot;
-    this.logger.verbose(
-      `Regular Sync: Set gossip parent block to ${toHexString(this.gossipParentBlockRoot)}` +
-        `, gossip slot ${block.message.slot}`
-    );
+    this.logger.verbose("Regular Sync: Set gossip parent block", {
+      root: toHexString(this.gossipParentBlockRoot),
+      slot: block.message.slot,
+    });
     await this.checkSyncComplete();
   };
 
@@ -223,7 +224,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   };
 
   private handleFailedToGetRange = (range: ISlotRange): void => {
-    this.logger.warn(`Regular Sync: retrying range ${JSON.stringify(range)}`);
+    this.logger.warn("Regular Sync: retrying block range", {...range});
     // retry again
     this.setTarget(range.start - 1, false);
     this.setTarget();
@@ -259,7 +260,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       this.bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
       if (checkBestPeer(this.bestPeer, this.chain.forkChoice, this.network)) {
         const peerHeadSlot = this.network.peerMetadata.getStatus(this.bestPeer)!.headSlot;
-        this.logger.info(`Regular Sync: Found best peer ${this.bestPeer.toB58String()}`, {
+        this.logger.info("Regular Sync: Found best peer", {
+          peerId: this.bestPeer.toB58String(),
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,
         });

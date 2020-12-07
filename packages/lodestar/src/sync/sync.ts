@@ -216,7 +216,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     } else {
       this.processingRoots.add(missingRootHex);
-      this.logger.verbose("Finding block for unknown ancestor root", missingRootHex);
+      this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
     }
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
@@ -230,7 +230,7 @@ export class BeaconSync implements IBeaconSync {
       try {
         const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
         if (blocks && blocks[0]) {
-          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, root: missingRootHex});
+          this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, blockRoot: missingRootHex});
           found = true;
           await this.chain.receiveBlock(blocks[0]);
           break;
@@ -247,6 +247,6 @@ export class BeaconSync implements IBeaconSync {
       retry++;
     } // end while
     this.processingRoots.delete(missingRootHex);
-    if (!found) this.logger.error("Failed to get unknown ancestor root", missingRootHex);
+    if (!found) this.logger.error("Failed to get unknown ancestor root", {blockRoot: missingRootHex});
   };
 }

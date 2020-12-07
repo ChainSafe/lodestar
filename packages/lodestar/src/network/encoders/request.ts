@@ -24,7 +24,7 @@ export function eth2RequestEncode(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           serialized = type.serialize(request as any);
         } catch (e) {
-          logger.warn("Malformed input. Failed to serialize request for method " + method);
+          logger.warn("Malformed input. Failed to serialize request", {method}, e);
           continue;
         }
         yield Buffer.from(encode(serialized.length));
@@ -60,9 +60,10 @@ export function eth2RequestDecode(
         if (sszDataLength === null) {
           sszDataLength = decode(chunk.slice());
           if (decode.bytes > 10) {
-            logger.error(
-              `eth2RequestDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` + `, method ${method}`
-            );
+            logger.error("eth2RequestDecode: Invalid number of bytes for protobuf varint", {
+              bytes: decode.bytes,
+              method,
+            });
             yield {isValid: false};
             break;
           }
@@ -72,15 +73,12 @@ export function eth2RequestDecode(
           }
         }
         if (sszDataLength < type.minSize() || sszDataLength > type.maxSize()) {
-          logger.error(`eth2RequestDecode: Invalid szzLength of ${sszDataLength} for method ${method}`);
+          logger.error("eth2RequestDecode: Invalid szzLength", {sszDataLength, method});
           yield {isValid: false};
           break;
         }
         if (chunk.length > maxEncodedLen(sszDataLength, encoding)) {
-          logger.error(
-            `eth2RequestDecode: too much bytes read (${chunk.length}) for method ${method}, ` +
-              `sszLength ${sszDataLength}`
-          );
+          logger.error("eth2RequestDecode: too much bytes read", {chunkLength: chunk.length, sszDataLength, method});
           yield {isValid: false};
           break;
         }
@@ -88,7 +86,7 @@ export function eth2RequestDecode(
         try {
           uncompressed = decompressor.uncompress(chunk.slice());
         } catch (e) {
-          logger.error("Failed to decompress request data. Error: " + e.message);
+          logger.error("Failed to decompress request data", {error: e.message});
           yield {isValid: false};
           break;
         }
@@ -99,14 +97,14 @@ export function eth2RequestDecode(
           continue;
         }
         if (buffer.length > sszDataLength) {
-          logger.error("Too long message received for method " + method);
+          logger.error("Too long message received", {method});
           yield {isValid: false};
           break;
         }
         try {
           yield {isValid: true, body: type.deserialize(buffer.slice(0, sszDataLength)) as RequestBody};
         } catch (e) {
-          logger.error(`Malformed input. Failed to deserialize ${method} request type. Error: ${e.message}`);
+          logger.error("Malformed input. Failed to deserialize request type", {method, error: e.message});
           yield {isValid: false};
           break;
         }

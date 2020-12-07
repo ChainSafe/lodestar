@@ -79,7 +79,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       await this.stop();
       return;
     }
-    this.logger.info("Start initial sync from finalized slot " + this.blockImportTarget);
+    this.logger.info("Start initial sync", {finalizedSlot: this.blockImportTarget});
     this.setBlockImportTarget();
     await this.stats.start();
     await this.sync();
@@ -109,14 +109,14 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   }
 
   private updateBlockImportTarget = (target: Slot): void => {
-    this.logger.verbose(`updating block target ${target}`);
+    this.logger.verbose("updating block target", {target});
     this.blockImportTarget = target;
   };
 
   private setBlockImportTarget = (fromSlot?: Slot): void => {
     const lastTarget = fromSlot ?? this.blockImportTarget;
     const newTarget = this.getNewBlockImportTarget(lastTarget);
-    this.logger.info(`Fetching blocks for ${lastTarget + 1}...${newTarget} slot range`);
+    this.logger.info("Fetching blocks range", {fromSlot: lastTarget + 1, toSlot: newTarget});
     this.syncTriggerSource.push({start: lastTarget + 1, end: newTarget});
     this.updateBlockImportTarget(newTarget);
   };
@@ -140,11 +140,12 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
             fetchBlockChunks(logger, network.reqResp, getInitialSyncPeers),
             processSyncBlocks(config, chain, logger, true, getLastProcessedBlock(), true)
           );
-          logger.verbose("last processed slot=" + lastSlot + ` range=${JSON.stringify(slotRange)}`);
+          logger.verbose("last processed slot range", {lastSlot, ...slotRange});
           if (typeof lastSlot === "number") {
             if (lastSlot === getLastProcessedBlock().slot) {
               // failed at start of range
-              logger.warn(`Failed to process range, retrying, lastSlot=${lastSlot} range=${JSON.stringify(slotRange)}`);
+
+              logger.warn("Failed to process block range, retrying", {lastSlot, ...slotRange});
               setBlockImportTarget(lastSlot);
             } else {
               // success
@@ -154,7 +155,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
             }
           } else {
             // no blocks in range
-            logger.warn(`Didn't receive any valid block in range range ${JSON.stringify(slotRange)}`);
+            logger.warn("Didn't receive any valid block in block range", {...slotRange});
             //we didn't receive any block, set target from last requested slot
             setBlockImportTarget(slotRange.end);
           }
@@ -195,7 +196,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       const newTarget = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses())!;
       if (newTarget.epoch > this.targetCheckpoint!.epoch) {
         this.targetCheckpoint = newTarget;
-        this.logger.verbose(`Set new target checkpoint to ${newTarget.epoch}`);
+        this.logger.verbose("Set new target checkpoint", {epoch: newTarget.epoch});
         return;
       }
       this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint!.epoch}`);

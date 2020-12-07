@@ -119,7 +119,7 @@ export function fetchBlockChunks(
           ])) as SignedBeaconBlock[] | null;
           if (timer) clearTimeout(timer);
         } catch (e) {
-          logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
+          logger.debug("Failed to get block range", {...slotRange}, e);
           yield null;
           return;
         }
@@ -144,11 +144,12 @@ export function validateBlocks(
         if (isValidChainOfBlocks(config, head, blockChunk)) {
           yield blockChunk;
         } else {
-          logger.warn(
-            "Hash chain doesnt match! " +
-              `Head(${head.slot}): ${toHexString(config.types.BeaconBlockHeader.hashTreeRoot(head))}` +
-              `Blocks: (${blockChunk[0].message.slot}..${blockChunk[blockChunk.length - 1].message.slot})`
-          );
+          logger.warn("Hash chain doesnt match!", {
+            headSlot: head.slot,
+            headHash: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(head)),
+            fromSlot: blockChunk[0].message.slot,
+            toSlot: blockChunk[blockChunk.length - 1].message.slot,
+          });
           //discard blocks and trigger resync so we try to fetch blocks again
           onBlockVerificationFail();
         }
@@ -185,12 +186,10 @@ export function processSyncBlocks(
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry
-        logger.warn("Failed to get blocks for range", {
-          headSlot,
-        });
+        logger.warn("Failed to get blocks for range", {headSlot});
         return headSlot;
       }
-      logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
+      logger.info("Imported blocks for slots", {blocks: blocks.map((block) => block.message.slot).join(",")});
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);

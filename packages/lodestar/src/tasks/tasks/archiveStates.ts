@@ -33,7 +33,7 @@ export class ArchiveStatesTask implements ITask {
   }
 
   public async run(): Promise<void> {
-    this.logger.info(`Started archiving states (finalized epoch #${this.finalized.epoch})...`);
+    this.logger.info("Archive states started", {finalizedEpoch: this.finalized.epoch});
     this.logger.profile("Archive States epoch #" + this.finalized.epoch);
     // store the state of finalized checkpoint
     const stateCache = await this.db.checkpointStateCache.get(this.finalized);
@@ -43,7 +43,7 @@ export class ArchiveStatesTask implements ITask {
     const finalizedState = stateCache.state;
     await this.db.stateArchive.add(finalizedState);
     // don't delete states before the finalized state, auto-prune will take care of it
-    this.logger.info(`Archiving of finalized states completed (finalized epoch #${this.finalized.epoch})`);
+    this.logger.info("Archive states completed", {finalizedEpoch: this.finalized.epoch});
     this.logger.profile("Archive States epoch #" + this.finalized.epoch);
   }
 }

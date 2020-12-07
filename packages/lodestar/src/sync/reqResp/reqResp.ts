@@ -94,7 +94,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
           try {
             await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
           } catch (e) {
-            this.logger.verbose("Failed to send goodbye", {reason: e.message});
+            this.logger.verbose("Failed to send goodbye", {error: e.message});
           }
         })
     );
@@ -152,7 +152,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         status
       );
     } catch (e) {
-      this.logger.error("Failed to create response status", e.message);
+      this.logger.error("Failed to create response status", {error: e.message});
       await sendResponse(
         {config: this.config, logger: this.logger},
         request.id,
@@ -167,18 +167,18 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   public async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = await this.chain.getForkDigest();
     if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
-      this.logger.verbose(
-        "Fork digest mismatch " +
-          `expected=${toHexString(currentForkDigest)} received=${toHexString(request.forkDigest)}`
-      );
+      this.logger.verbose("Fork digest mismatch", {
+        expected: toHexString(currentForkDigest),
+        received: toHexString(request.forkDigest),
+      });
       return true;
     }
     if (request.finalizedEpoch === GENESIS_EPOCH) {
       if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
-        this.logger.verbose(
-          "Genesis finalized root must be zeroed " +
-            `expected=${toHexString(ZERO_HASH)} received=${toHexString(request.finalizedRoot)}`
-        );
+        this.logger.verbose("Genesis finalized root must be zeroed", {
+          expected: toHexString(ZERO_HASH),
+          received: toHexString(request.finalizedRoot),
+        });
         return true;
       }
     } else {
@@ -190,10 +190,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
       if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
         if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
-          this.logger.verbose(
-            "Status with same finalized epoch has different root " +
-              `expected=${toHexString(finalizedCheckpoint.root)} received=${toHexString(request.finalizedRoot)}`
-          );
+          this.logger.verbose("Status with same finalized epoch has different root", {
+            expected: toHexString(finalizedCheckpoint.root),
+            received: toHexString(request.finalizedRoot),
+          });
           return true;
         }
       } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
@@ -222,9 +222,10 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         }
       } else {
         // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
-        this.logger.verbose(
-          "Status with future finalized epoch " + `${request.finalizedEpoch}: ${toHexString(request.finalizedRoot)}`
-        );
+        this.logger.verbose("Status with future finalized epoch", {
+          finalizedEpoch: request.finalizedEpoch,
+          finalizedRoot: toHexString(request.finalizedRoot),
+        });
       }
     }
     return false;
@@ -264,7 +265,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     );
     // no need to wait
     handlePeerMetadataSequence(this.network, this.logger, peerId, request.body).catch(() => {
-      this.logger.warn(`Failed to handle peer ${peerId.toB58String()} metadata sequence ${request}`);
+      this.logger.warn("Failed to handle peer metadata sequence", {peerId: peerId.toB58String(), request});
     });
   }
 
@@ -303,10 +304,11 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
     try {
       if (request.body.count > MAX_REQUEST_BLOCKS) {
-        this.logger.warn(
-          `Request id ${request.id} asked for ${request.body.count} blocks, ` +
-            `just return ${MAX_REQUEST_BLOCKS} maximum`
-        );
+        this.logger.warn("Request asked for more blocks than maximum", {
+          id: request.id,
+          requestedCount: request.body.count,
+          maxCount: MAX_REQUEST_BLOCKS,
+        });
         request.body.count = MAX_REQUEST_BLOCKS;
       }
       const archiveBlocksStream = this.db.blockArchive.valuesStream({
@@ -325,7 +327,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         responseStream
       );
     } catch (e) {
-      this.logger.error(`Error processing request id ${request.id}: ${e.message}`);
+      this.logger.error("Error processing request", {id: request.id, error: e.message});
       await sendResponse(
         {config: this.config, logger: this.logger},
         request.id,
@@ -381,8 +383,9 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       try {
         this.network.peerMetadata.setStatus(peerId, await this.network.reqResp.status(peerId, request));
       } catch (e) {
-        this.logger.verbose(`Failed to get peer ${peerId.toB58String()} latest status and metadata`, {
-          reason: e.message,
+        this.logger.verbose("Failed to get peer latest status and metadata", {
+          peerId: peerId.toB58String(),
+          error: e.message,
         });
         await this.network.disconnect(peerId);
       }

@@ -32,7 +32,7 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async start(): Promise<void> {
     await this.db.open();
-    this.logger.info(`Connected to LevelDB database at ${this.opts.name}`);
+    this.logger.info("Connected to LevelDB database", {name: this.opts.name});
   }
 
   public async stop(): Promise<void> {

@@ -22,7 +22,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
         }
       );
     } catch (e) {
-      this.logger.error("Failed to fetch validator", {validatorId: id, reason: e.message});
+      this.logger.error("Failed to fetch validator", {validatorId: id, error: e.message});
       return null;
     }
   }
@@ -32,7 +32,7 @@ export class RestBeaconStateApi extends RestApi implements IBeaconStateApi {
         case: "snake",
       });
     } catch (e) {
-      this.logger.error("Failed to fetch head fork version", {reason: e.message});
+      this.logger.error("Failed to fetch head fork version", {error: e.message});
       return null;
     }
   }

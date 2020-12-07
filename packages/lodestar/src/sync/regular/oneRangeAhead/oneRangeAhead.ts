@@ -47,14 +47,14 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     const headSlot = this.chain.forkChoice.getHead().slot;
     const currentSlot = this.chain.clock.currentSlot;
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
-    this.logger.verbose(`Regular Sync: Current slot at start: ${currentSlot}`);
+    this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
     await this.processor.start();
     this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     this.setLastProcessedBlock(this.chain.forkChoice.getHead());
     this.sync().catch((e) => {
-      this.logger.error("Regular Sync: error", e);
+      this.logger.error("Regular Sync", e);
     });
   }
 
@@ -87,7 +87,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
 
   private onProcessedBlock = async (signedBlock: SignedBeaconBlock): Promise<void> => {
     if (signedBlock.message.slot >= this.chain.clock.currentSlot) {
-      this.logger.info(`Regular Sync: processed up to current slot ${signedBlock.message.slot}`);
+      this.logger.info("Regular Sync: processed up to current slot", {slot: signedBlock.message.slot});
       this.emit("syncCompleted");
       await this.stop();
     }
@@ -108,7 +108,8 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
         return;
       }
       this.blockBuffer = result[0];
-      this.logger.info(`Regular Sync: Synced up to slot ${lastSlot} `, {
+      this.logger.info("Regular Sync: Synced up to slot", {
+        lastProcessedSlot: lastSlot,
         currentSlot: this.chain.clock.currentSlot,
       });
     }
@@ -142,7 +143,8 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       if (peers && peers.length > 0) {
         bestPeer = getBestPeer(this.config, peers, this.network.peerMetadata);
         const peerHeadSlot = this.network.peerMetadata.getStatus(bestPeer)!.headSlot;
-        this.logger.info(`Regular Sync: Found best peer ${bestPeer.toB58String()}`, {
+        this.logger.info("Regular Sync: Found best peer", {
+          peerId: bestPeer.toB58String(),
           peerHeadSlot,
           currentSlot: this.chain.clock.currentSlot,
         });

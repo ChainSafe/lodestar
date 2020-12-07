@@ -37,7 +37,7 @@ export function eth2ResponseEncode(
           const serialized = type.serialize(chunk.body as any);
           serializedData = Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length);
         } catch (e) {
-          logger.warn(`Failed to ssz serialize chunk of method ${method}. Error: ${e.message}`);
+          logger.warn("Failed to ssz serialize chunk", {method}, e);
         }
         //yield encoded ssz length
         yield Buffer.from(encode(serializedData!.length));
@@ -81,7 +81,7 @@ export function eth2ResponseDecode(
             errorMessage = decodeP2pErrorMessage(config, buffer.slice());
             buffer = new BufferList();
           } catch (e) {
-            logger.warn("Failed to get error message from response", {method, requestId, error: e.message});
+            logger.warn("Failed to get error message from response", {method, requestId}, e);
           }
           logger.warn("eth2ResponseDecode: Received err status", {status, errorMessage, method, requestId});
           controller.abort();
@@ -111,7 +111,7 @@ export function eth2ResponseDecode(
           uncompressed = decompressor.uncompress(buffer.slice());
           buffer.consume(buffer.length);
         } catch (e) {
-          logger.warn(`Failed to uncompress data for method ${method}. Error: ${e.message}`, {requestId, encoding});
+          logger.warn("Failed to uncompress data", {method, requestId, encoding}, e);
         }
         if (uncompressed) {
           uncompressedData.append(uncompressed);
@@ -131,10 +131,7 @@ export function eth2ResponseDecode(
                 continue;
               }
             } catch (e) {
-              logger.warn(`Failed to ssz deserialize data for method ${method}. Error: ${e.message}`, {
-                requestId,
-                encoding,
-              });
+              logger.warn("Failed to ssz deserialize data", {method, requestId, encoding}, e);
             }
           }
         }
