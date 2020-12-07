@@ -45,8 +45,6 @@ export function getTestnetBeaconNodeOptions(testnet: TestnetName): RecursivePart
     metrics: {enabled: true},
     network: {
       discv5: {
-        // TODO: Add `network.discv5.enabled` to the `IDiscv5DiscoveryInputOptions` type
-        // @ts-ignore
         enabled: true,
         bootEnrs,
       },
