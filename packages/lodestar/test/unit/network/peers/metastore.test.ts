@@ -35,6 +35,7 @@ describe("Libp2pPeerMetadataStore", function () {
     const value = ReqRespEncoding.SSZ_SNAPPY;
     store.setEncoding(peerId, value);
     const result = store.getEncoding(peerId);
+
     expect(result).to.be.equal(value);
   });
 
@@ -49,6 +50,7 @@ describe("Libp2pPeerMetadataStore", function () {
     };
     store.setStatus(peerId, value);
     const result = store.getStatus(peerId);
+
     expect(config.types.Status.equals(result as Status, value)).to.be.true;
   });
 
@@ -60,6 +62,7 @@ describe("Libp2pPeerMetadataStore", function () {
     };
     store.setMetadata(peerId, value);
     const result = store.getMetadata(peerId);
+
     expect(config.types.Metadata.equals(result as Metadata, value)).to.be.true;
   });
 
@@ -68,6 +71,7 @@ describe("Libp2pPeerMetadataStore", function () {
     const value = 80;
     store.setRpcScore(peerId, value);
     const result = store.getRpcScore(peerId);
+
     expect(config.types.Number64.equals(result as number, value)).to.be.true;
   });
 });

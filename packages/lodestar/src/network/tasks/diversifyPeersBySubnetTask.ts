@@ -49,6 +49,7 @@ export class DiversifyPeersBySubnetTask {
   public run = async (): Promise<void> => {
     this.logger.info("Running DiversifyPeersBySubnetTask");
     this.logger.profile("DiversifyPeersBySubnetTask");
+
     const missingSubnets = this.isSynced ? findMissingSubnets(this.network) : [];
     if (missingSubnets.length > 0) {
       this.logger.verbose("Searching peers for missing subnets", {missingSubnets});
@@ -59,9 +60,11 @@ export class DiversifyPeersBySubnetTask {
           : "Node not synced, no need to search for missing subnets"
       );
     }
+
     const toDiscPeers: PeerId[] = this.isSynced
       ? gossipPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || []
       : syncPeersToDisconnect(this.network) || [];
+
     if (toDiscPeers.length > 0) {
       this.logger.verbose("Disconnecting peers to find new peers", {
         peersToDisconnect: toDiscPeers.length,
@@ -73,6 +76,7 @@ export class DiversifyPeersBySubnetTask {
         this.logger.warn("Cannot disconnect peers", {error: e.message});
       }
     }
+
     await Promise.all(
       missingSubnets.map(async (subnet) => {
         try {
@@ -82,6 +86,7 @@ export class DiversifyPeersBySubnetTask {
         }
       })
     );
+
     this.logger.profile("DiversifyPeersBySubnetTask");
   };
 }

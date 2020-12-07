@@ -22,6 +22,7 @@ describe("network peer utils", function () {
   let peerMetadataStoreStub: SinonStubbedInstance<IPeerMetadataStore>;
   let scoreTrackerStub: SinonStubbedInstance<IRpcScoreTracker>;
   let getSyncPeersStub: SinonStub;
+
   beforeEach(() => {
     peerMetadataStoreStub = sinon.createStubInstance(Libp2pPeerMetadataStore);
     networkStub = sinon.createStubInstance(Libp2pNetwork);
@@ -30,6 +31,7 @@ describe("network peer utils", function () {
     networkStub.peerMetadata = peerMetadataStoreStub;
     getSyncPeersStub = sinon.stub(peersUtil, "getSyncPeers");
   });
+
   afterEach(() => {
     sinon.restore();
   });
@@ -58,6 +60,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(10),
         attnets: Array(64).fill(true),
       });
+
       await handlePeerMetadataSequence(networkStub, logger, peer, BigInt(10));
       expect(reqRespStub.metadata.called).to.be.false;
     });
@@ -67,6 +70,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(9),
         attnets: Array(64).fill(true),
       });
+
       await handlePeerMetadataSequence(networkStub, logger, peer, BigInt(10));
       expect(reqRespStub.metadata.calledOnce).to.be.true;
     });
@@ -85,6 +89,7 @@ describe("network peer utils", function () {
       const peers: PeerId[] = [];
       peers.push(await PeerId.create());
       peers.push(await PeerId.create());
+
       peerMetadataStoreStub.getMetadata.returns(null);
       peerMetadataStoreStub.getMetadata.returns({
         seqNumber: BigInt(1),
@@ -102,6 +107,7 @@ describe("network peer utils", function () {
       const peers: PeerId[] = [];
       peers.push(await PeerId.create());
       peers.push(await PeerId.create());
+
       peerMetadataStoreStub.getMetadata.returns(null);
       peerMetadataStoreStub.getMetadata.returns({
         seqNumber: BigInt(1),
@@ -109,6 +115,7 @@ describe("network peer utils", function () {
       });
       networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
       const missingSubnets = findMissingSubnets(networkStub);
+
       expect(missingSubnets).to.be.deep.equal([]);
     });
 
@@ -123,6 +130,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets0,
       });
+
       const attnets1 = Array(64).fill(false);
       attnets1[2] = true;
       attnets1[3] = true;
@@ -131,12 +139,14 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets1,
       });
+
       networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
       const missingSubnets = findMissingSubnets(networkStub);
       const expected: number[] = [];
       for (let i = 4; i < 64; i++) {
         expected.push(i);
       }
+
       expect(missingSubnets).to.be.deep.equal(expected);
     });
   });
@@ -144,18 +154,21 @@ describe("network peer utils", function () {
   describe("syncPeersToDisconnect", function () {
     let peer1: PeerId, peer2: PeerId, peer3: PeerId;
     let peers: PeerId[];
+
     beforeEach(async () => {
       peer1 = await PeerId.create();
       peer2 = await PeerId.create();
       peer3 = await PeerId.create();
       peers = [peer1, peer2, peer3];
     });
+
     afterEach(() => {
       sinon.restore();
     });
 
     it("should return all non sync peers", async () => {
       networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+
       // non of peers are sync peers
       networkStub.getPeers
         .withArgs({
@@ -163,6 +176,7 @@ describe("network peer utils", function () {
           supportsProtocols: getSyncProtocols(),
         })
         .returns([]);
+
       // so non of them are good score sync peers
       getSyncPeersStub.returns([]);
 
@@ -178,6 +192,7 @@ describe("network peer utils", function () {
           supportsProtocols: getSyncProtocols(),
         })
         .returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+
       // non of them are good score sync peers
       getSyncPeersStub.returns([]);
       scoreTrackerStub.getScore.withArgs(peers[0]).returns(10);
@@ -188,6 +203,7 @@ describe("network peer utils", function () {
 
     it("should return non sync peers and half of bad score sync peers", async () => {
       networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+
       // peer 2 and peer3 are sync peers
       networkStub.getPeers
         .withArgs({
@@ -195,10 +211,12 @@ describe("network peer utils", function () {
           supportsProtocols: getSyncProtocols(),
         })
         .returns([peer2, peer3].map((peerId) => ({id: peerId} as LibP2p.Peer)));
+
       // non of them are good score sync peers
       getSyncPeersStub.returns([]);
       scoreTrackerStub.getScore.withArgs(peers[1]).returns(20);
       scoreTrackerStub.getScore.withArgs(peers[2]).returns(30);
+
       // peer1 is not sync peer, peer2 is half of bad score sync peers
       expect(syncPeersToDisconnect(networkStub)).to.be.deep.equal([peer1, peer2]);
     });
@@ -207,12 +225,14 @@ describe("network peer utils", function () {
   describe("gossipPeersToDisconnect", function () {
     let peer1: PeerId, peer2: PeerId;
     let peers: PeerId[];
+
     beforeEach(async () => {
       peer1 = await PeerId.create();
       peer2 = await PeerId.create();
       peers = [peer1, peer2];
       networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
     });
+
     afterEach(() => {
       sinon.restore();
     });
@@ -225,12 +245,14 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets1,
       });
+
       const attnets2 = Array(64).fill(false);
       attnets2[1] = true;
       peerMetadataStoreStub.getMetadata.withArgs(peer2).returns({
         seqNumber: BigInt(1),
         attnets: attnets2,
       });
+
       const importantPeers = getImportantPeers(peers, peerMetadataStoreStub);
       expect(importantPeers).to.be.deep.equal(new Set([peer1]));
     });
@@ -254,6 +276,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets1,
       });
+
       // peer2 is not imporant
       const attnets2 = Array(64).fill(false);
       attnets2[1] = true;
@@ -261,6 +284,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets2,
       });
+
       // need to disconnect 1 peer and it's peer2
       expect(gossipPeersToDisconnect(networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
     });
@@ -277,6 +301,7 @@ describe("network peer utils", function () {
         attnets: Array(64).fill(false),
         seqNumber: BigInt(1),
       });
+
       // peer2 has no metadata
       expect(gossipPeersToDisconnect(networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
     });
@@ -290,12 +315,14 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnets3,
       });
+
       const attnet1 = Array(64).fill(true);
       attnet1[0] = false;
       peerMetadataStoreStub.getMetadata.withArgs(peer1).returns({
         seqNumber: BigInt(1),
         attnets: attnet1,
       });
+
       const attnet2 = Array(64).fill(true);
       attnet2[0] = false;
       attnet2[1] = false;
@@ -303,6 +330,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: attnet2,
       });
+
       // peer1 and peer2 are all not important but peer1 is connected to more subnets
       // if we have to choose 1 peer to disconnect, it's peer2
       expect(gossipPeersToDisconnect(networkStub, 1, 3, 0)).to.be.deep.equal([peer2]);

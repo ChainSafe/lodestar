@@ -25,6 +25,7 @@ describe("gossip handlers - block", function () {
   it("handle valid block", async function () {
     const block = generateEmptySignedBlock();
     await handleIncomingBlock.bind(gossipStub)(block);
+
     expect(gossipStub.emit.withArgs(GossipEvent.BLOCK, block).calledOnce).to.be.true;
   });
 });

@@ -58,26 +58,31 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         validSignatures: false,
         validProposerSignature: false,
       };
+
       this.logger.verbose("Started gossip block validation", logContext);
       await validateGossipBlock(this.config, this.chain, this.db, blockJob);
       this.logger.info("Received valid gossip block", logContext);
+
       return ExtendedValidatorResult.accept;
     } catch (e) {
       if (!(e instanceof BlockError)) {
         this.logger.error("Gossip block validation threw a non-BlockError", e);
         return ExtendedValidatorResult.ignore;
       }
+
       switch (e.type.code) {
         case BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID:
         case BlockErrorCode.ERR_INCORRECT_PROPOSER:
         case BlockErrorCode.ERR_KNOWN_BAD_BLOCK:
           this.logger.warn("Rejecting gossip block", logContext, e);
           return ExtendedValidatorResult.reject;
+
         case BlockErrorCode.ERR_FUTURE_SLOT:
         case BlockErrorCode.ERR_PARENT_UNKNOWN:
           await this.chain.receiveBlock(signedBlock);
           this.logger.warn("Ignoring gossip block", logContext, e);
           return ExtendedValidatorResult.ignore;
+
         case BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT:
         case BlockErrorCode.ERR_REPEAT_PROPOSAL:
         default:
@@ -97,14 +102,17 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
       subnet,
     };
+
     try {
       const attestationJob = {
         attestation,
         validSignature: false,
       } as IAttestationJob;
+
       this.logger.verbose("Started gossip committee attestation validation", logContext);
       await validateGossipAttestation(this.config, this.chain, this.db, attestationJob, subnet);
       this.logger.info("Received valid committee attestation", logContext);
+
       return ExtendedValidatorResult.accept;
     } catch (e) {
       if (!(e instanceof AttestationError)) {
@@ -123,12 +131,14 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
           this.logger.warn("Rejecting gossip attestation", logContext, e);
           return ExtendedValidatorResult.reject;
+
         case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
           // attestation might be valid after we receive block
           await this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip attestation", logContext, e);
           return ExtendedValidatorResult.ignore;
+
         case AttestationErrorCode.ERR_PAST_SLOT:
         case AttestationErrorCode.ERR_FUTURE_SLOT:
         case AttestationErrorCode.ERR_ATTESTATION_ALREADY_KNOWN:
@@ -152,20 +162,24 @@ export class GossipMessageValidator implements IGossipMessageValidator {
       attestationRoot: toHexString(this.config.types.Attestation.hashTreeRoot(attestation)),
       targetEpoch: attestation.data.target.epoch,
     };
+
     try {
       const attestationJob = {
         attestation: attestation,
         validSignature: false,
       } as IAttestationJob;
+
       this.logger.verbose("Started gossip aggregate and proof validation", logContext);
       await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
       this.logger.info("Received valid gossip aggregate and proof", logContext);
+
       return ExtendedValidatorResult.accept;
     } catch (e) {
       if (!(e instanceof AttestationError)) {
         this.logger.error("Gossip aggregate and proof validation threw a non-AttestationError", e);
         return ExtendedValidatorResult.ignore;
       }
+
       switch (e.type.code) {
         case AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS:
         case AttestationErrorCode.ERR_KNOWN_BAD_BLOCK:
@@ -175,10 +189,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         case AttestationErrorCode.ERR_INVALID_AGGREGATOR:
           this.logger.warn("Rejecting gossip aggregate and proof", logContext, e);
           return ExtendedValidatorResult.reject;
+
         case AttestationErrorCode.ERR_FUTURE_SLOT:
           await this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
           return ExtendedValidatorResult.ignore;
+
         case AttestationErrorCode.ERR_PAST_SLOT:
         case AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN:
         case AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE:
@@ -202,10 +218,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         this.logger.error("Gossip voluntary exit validation threw a non-VoluntaryExitError", e);
         return ExtendedValidatorResult.ignore;
       }
+
       switch (e.type.code) {
         case VoluntaryExitErrorCode.ERR_INVALID_EXIT:
           this.logger.warn("Rejecting gossip voluntary exit", {}, e);
           return ExtendedValidatorResult.reject;
+
         case VoluntaryExitErrorCode.ERR_EXIT_ALREADY_EXISTS:
         default:
           this.logger.warn("Ignoring gossip voluntary exit", {}, e);
@@ -225,10 +243,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         this.logger.error("Gossip proposer slashing validation threw a non-ProposerSlashingError", e);
         return ExtendedValidatorResult.ignore;
       }
+
       switch (e.type.code) {
         case ProposerSlashingErrorCode.ERR_INVALID_SLASHING:
           this.logger.warn("Rejecting gossip proposer slashing", {}, e);
           return ExtendedValidatorResult.reject;
+
         case ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
         default:
           this.logger.warn("Ignoring gossip proposer slashing", {}, e);
@@ -248,10 +268,12 @@ export class GossipMessageValidator implements IGossipMessageValidator {
         this.logger.error("Gossip attester slashing validation threw a non-AttesterSlashingError", e);
         return ExtendedValidatorResult.ignore;
       }
+
       switch (e.type.code) {
         case AttesterSlashingErrorCode.ERR_INVALID_SLASHING:
           this.logger.warn("Rejecting gossip attester slashing", {}, e);
           return ExtendedValidatorResult.reject;
+
         case AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS:
         default:
           this.logger.warn("Ignoring gossip attester slashing", {}, e);

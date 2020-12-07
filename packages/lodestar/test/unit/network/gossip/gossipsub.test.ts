@@ -32,6 +32,7 @@ describe("gossipsub", function () {
       signature: undefined,
       key: undefined,
     };
+
     validator = {} as IGossipMessageValidator;
     const multiaddr = "/ip4/127.0.0.1/tcp/0";
     const libp2p = await createNode(multiaddr);
@@ -44,6 +45,7 @@ describe("gossipsub", function () {
 
   it("should throw exception because of failed validation", async () => {
     validator.isValidIncomingBlock = () => Promise.resolve(ExtendedValidatorResult.reject);
+
     try {
       await gossipSub.libP2pTopicValidator(message.topicIDs[0], message);
       assert.fail("Expect error here");

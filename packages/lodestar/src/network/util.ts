@@ -76,24 +76,29 @@ export function getUnknownRootProtocols(): string[] {
  */
 export function isLocalMultiAddr(multiaddr: Multiaddr | undefined): boolean {
   if (!multiaddr) return false;
+
   const protoNames = multiaddr.protoNames();
   if (protoNames.length !== 2 && protoNames[1] !== "udp") {
     throw new Error("Invalid udp multiaddr");
   }
+
   const interfaces = networkInterfaces();
   const tuples = multiaddr.tuples();
   const isIPv4: boolean = tuples[0][0] === 4;
   const family = isIPv4 ? "IPv4" : "IPv6";
   const ip = tuples[0][1];
+
   const ipStr = isIPv4
     ? Array.from(ip).join(".")
     : Array.from(Uint16Array.from(ip))
         .map((n) => n.toString(16))
         .join(":");
+
   const localIpStrs = Object.values(interfaces)
     .reduce((finalArr, val) => finalArr.concat(val), [])
     .filter((networkInterface) => networkInterface.family === family)
     .map((networkInterface) => networkInterface.address);
+
   return localIpStrs.includes(ipStr);
 }
 
@@ -109,17 +114,22 @@ export function eth2ResponseTimer<T>(
   streamAbortController: AbortController
 ): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
+
   let responseTimer = setTimeout(() => {
     controller.abort();
   }, TTFB_TIMEOUT);
+
   controller.signal.addEventListener("abort", () => streamAbortController.abort());
+
   const renewTimer = (): void => {
     clearTimeout(responseTimer);
     responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
   };
+
   const cancelTimer = (): void => {
     clearTimeout(responseTimer);
   };
+
   return async function* (source) {
     for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
       renewTimer();
@@ -137,14 +147,18 @@ export async function dialProtocol(
   signal?: AbortSignal
 ): ReturnType<LibP2p["dialProtocol"]> {
   const abortController = new AbortController();
+
   const timer = setTimeout(() => {
     abortController.abort();
   }, timeout);
+
   const signals = [abortController.signal];
   if (signal) {
     signals.push(signal);
   }
+
   const abortSignal = anySignal(signals);
+
   try {
     const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortSignal});
     if (!conn) {

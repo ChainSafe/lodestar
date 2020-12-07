@@ -28,6 +28,7 @@ export function eth2ResponseEncode(
         }
         break;
       }
+
       //yield status
       yield encodeResponseStatus(chunk.status);
       let serializedData: Buffer;
@@ -38,10 +39,13 @@ export function eth2ResponseEncode(
       } catch (e) {
         logger.warn("Failed to ssz serialize chunk", {method}, e);
       }
+
       //yield encoded ssz length
       yield Buffer.from(encode(serializedData!.length));
+
       //yield compressed or uncompressed data chunks
       yield* compressor(serializedData!);
+
       //reset compressor
       compressor = getCompressor(encoding);
     }
@@ -59,19 +63,23 @@ export function eth2ResponseDecode(
   return async function* (source) {
     //floating buffer with current chunk
     let buffer = new BufferList();
+
     //holds uncompressed chunks
     let uncompressedData = new BufferList();
     let status: number | null = null;
     let errorMessage: string | null = null;
     let sszLength: number | null = null;
+
     const decompressor = getDecompressor(encoding);
     const type = Methods[method].responseSSZType(config);
+
     for await (const chunk of source) {
       buffer.append(chunk);
       if (status === null) {
         status = buffer.get(0);
         buffer.consume(1);
       }
+
       if (buffer.length === 0) continue;
       if (status && status !== RpcResponseStatus.SUCCESS) {
         try {
@@ -84,6 +92,7 @@ export function eth2ResponseDecode(
         controller.abort();
         continue;
       }
+
       if (sszLength === null) {
         sszLength = decode(buffer.slice());
         if (decode.bytes > 10) {
@@ -93,14 +102,17 @@ export function eth2ResponseDecode(
         }
         buffer.consume(decode.bytes);
       }
+
       if (sszLength < type.minSize() || sszLength > type.maxSize()) {
         throw new Error(`eth2ResponseDecode: Invalid szzLength of ${sszLength} for method ${method}`);
       }
+
       if (buffer.length > maxEncodedLen(sszLength, encoding)) {
         throw new Error(
           `eth2ResponseDecode: too much bytes read (${buffer.length}) for method ${method}, ` + `sszLength ${sszLength}`
         );
       }
+
       if (buffer.length === 0) continue;
       let uncompressed: Buffer | null = null;
       try {
@@ -109,11 +121,13 @@ export function eth2ResponseDecode(
       } catch (e) {
         logger.warn("Failed to uncompress data", {method, requestId, encoding}, e);
       }
+
       if (uncompressed) {
         uncompressedData.append(uncompressed);
         if (uncompressedData.length > sszLength) {
           throw new Error(`Received too much data for method ${method}`);
         }
+
         if (uncompressedData.length === sszLength) {
           try {
             yield type.deserialize(uncompressedData.slice()) as ResponseBody;

@@ -29,11 +29,14 @@ describe("gossip handlers - aggregate and proof", function () {
       selectionProof: Buffer.alloc(0),
       aggregate: generateEmptyAttestation(),
     };
+
     const signedAggregate: SignedAggregateAndProof = {
       message: aggregate,
       signature: Buffer.alloc(96),
     };
+
     await handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
+
     expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, signedAggregate).calledOnce).to.be.true;
   });
 });
