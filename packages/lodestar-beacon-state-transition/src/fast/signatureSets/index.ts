@@ -36,7 +36,7 @@ export function getAllBlockSignatureSetsExceptProposer(
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return [
-    getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message.body),
+    getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message),
     ...getProposerSlashingsSignatureSets(epochCtx, state, signedBlock),
     ...getAttesterSlashingsSignatureSets(epochCtx, state, signedBlock),
     ...getAttestationsSignatureSets(epochCtx, state, signedBlock),

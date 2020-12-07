@@ -30,7 +30,7 @@ export function processBlock(
   verifySignatures = true
 ): void {
   processBlockHeader(epochCtx, state, block);
-  processRandao(epochCtx, state, block.body, verifySignatures);
+  processRandao(epochCtx, state, block, verifySignatures);
   processEth1Data(epochCtx, state, block.body);
   processOperations(epochCtx, state, block.body, verifySignatures);
 }
