@@ -1,8 +1,7 @@
-import bls from "@chainsafe/bls";
 import {BeaconState, IndexedAttestation} from "@chainsafe/lodestar-types";
-
 import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain} from "../../util";
+import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 import {EpochContext} from "../util";
 
 export function isValidIndexedAttestation(
@@ -13,7 +12,7 @@ export function isValidIndexedAttestation(
 ): boolean {
   const config = epochCtx.config;
   const {MAX_VALIDATORS_PER_COMMITTEE} = config.params;
-  const indices = Array.from(indexedAttestation.attestingIndices);
+  const indices = getIndices(indexedAttestation);
 
   // verify max number of indices
   if (!(indices.length > 0 && indices.length <= MAX_VALIDATORS_PER_COMMITTEE)) {
@@ -35,15 +34,33 @@ export function isValidIndexedAttestation(
   if (!verifySignature) {
     return true;
   }
-  const pubkeys = indices.map((i) => epochCtx.index2pubkey[i]);
-  const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
-  const signingRoot = computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain);
+
+  const signatureSet = getIndexedAttestationSignatureSet(epochCtx, state, indexedAttestation, indices);
   try {
-    return bls.Signature.fromBytes(indexedAttestation.signature.valueOf() as Uint8Array).verifyAggregate(
-      pubkeys,
-      signingRoot
-    );
+    return verifySignatureSet(signatureSet);
   } catch (e) {
     return false;
   }
+}
+
+export function getIndexedAttestationSignatureSet(
+  epochCtx: EpochContext,
+  state: BeaconState,
+  indexedAttestation: IndexedAttestation,
+  indices?: number[]
+): ISignatureSet {
+  const config = epochCtx.config;
+  const domain = getDomain(config, state, DomainType.BEACON_ATTESTER, indexedAttestation.data.target.epoch);
+
+  if (!indices) indices = getIndices(indexedAttestation);
+  return {
+    type: SignatureSetType.aggregate,
+    pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
+    signingRoot: computeSigningRoot(config, config.types.AttestationData, indexedAttestation.data, domain),
+    signature: indexedAttestation.signature.valueOf() as Uint8Array,
+  };
+}
+
+function getIndices(indexedAttestation: IndexedAttestation): number[] {
+  return Array.from(indexedAttestation.attestingIndices);
 }
