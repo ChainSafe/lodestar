@@ -44,6 +44,7 @@ export interface IBeaconSSZTypes {
   ForkData: ContainerType<t.ForkData>;
   ENRForkID: ContainerType<t.ENRForkID>;
   Checkpoint: ContainerType<t.Checkpoint>;
+  SlotRoot: ContainerType<t.SlotRoot>;
   Validator: ContainerType<t.Validator>;
   AttestationData: ContainerType<t.AttestationData>;
   CommitteeIndices: ListType<List<t.ValidatorIndex>>;
