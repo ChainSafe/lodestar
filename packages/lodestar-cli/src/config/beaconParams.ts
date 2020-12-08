@@ -1,7 +1,7 @@
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {createIBeaconParams, BeaconParams, IBeaconParams} from "@chainsafe/lodestar-params";
-import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
+import {params as mainnetParams} from "@chainsafe/lodestar-params/mainnet";
+import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {writeFile, readFileIfExists} from "../util";
 import {getTestnetBeaconParams, TestnetName} from "../testnets";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";

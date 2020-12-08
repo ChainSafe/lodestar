@@ -1,6 +1,6 @@
 import {DepositEvent} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {params} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {params} from "@chainsafe/lodestar-params/mainnet";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
 

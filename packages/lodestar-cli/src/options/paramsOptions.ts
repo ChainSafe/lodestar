@@ -1,5 +1,5 @@
 import {Options} from "yargs";
-import {params} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {params} from "@chainsafe/lodestar-params/mainnet";
 import {IBeaconParamsUnparsed} from "../config/types";
 import {ObjectKeys} from "../util";
 
