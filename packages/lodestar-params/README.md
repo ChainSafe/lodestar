@@ -14,8 +14,8 @@ Parameters for configuring an Eth2 network
 
 ```typescript
 // mainnet and minimal presets are available under non-default exports
-import {params as mainnetParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/mainnet";
+import {params as mainnetParams} from "@chainsafe/lodestar-params/mainnet";
+import {params as minimalParams} from "@chainsafe/lodestar-params/mainnet";
 
 mainnetParams.SHARD_COUNT;
 
