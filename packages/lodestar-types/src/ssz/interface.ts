@@ -137,6 +137,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "ForkData",
   "ENRForkID",
   "Checkpoint",
+  "SlotRoot",
   "Validator",
   "AttestationData",
   "CommitteeIndices",

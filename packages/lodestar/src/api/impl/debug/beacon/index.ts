@@ -21,7 +21,7 @@ export class DebugBeaconApi implements IDebugBeaconApi {
         .map((blockSummary) => ({slot: blockSummary.slot, root: blockSummary.blockRoot}));
     } catch (e) {
       this.logger.error("Failed to get forkchoice heads", e);
-      return [];
+      return null;
     }
   }
 }
