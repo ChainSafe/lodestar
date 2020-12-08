@@ -23,6 +23,10 @@ import {
 
 import {getBaseReward, isInInactivityLeak, getProposerReward, getFinalityDelay} from "./util";
 
+/**
+ * Both active validators and slashed-but-not-yet-withdrawn validators are eligible to receive
+ * penalties. This is done to prevent self-slashing from being a way to escape inactivity leaks.
+ */
 function getEligibleValidatorIndices(config: IBeaconConfig, state: BeaconState): ValidatorIndex[] {
   const previousEpoch = getPreviousEpoch(config, state);
   return Array.from(state.validators).reduce((indices: ValidatorIndex[], v, index) => {
@@ -33,6 +37,9 @@ function getEligibleValidatorIndices(config: IBeaconConfig, state: BeaconState):
   }, []);
 }
 
+/**
+ * Helper with shared logic for use by get source, target, and head deltas functions
+ */
 function getAttestationComponentDeltas(
   config: IBeaconConfig,
   state: BeaconState,
@@ -61,24 +68,36 @@ function getAttestationComponentDeltas(
   return [rewards, penalties];
 }
 
+/**
+ * Return attester micro-rewards/penalties for source-vote for each validator.
+ */
 export function getSourceDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingSourceAttestations = getMatchingSourceAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingSourceAttestations);
 }
 
+/**
+ * Return attester micro-rewards/penalties for target-vote for each validator.
+ */
 export function getTargetDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingTargetAttestations = getMatchingTargetAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingTargetAttestations);
 }
 
+/**
+ * Return attester micro-rewards/penalties for head-vote for each validator.
+ */
 export function getHeadDeltas(config: IBeaconConfig, state: BeaconState): [bigint[], bigint[]] {
   const previousEpoch = getPreviousEpoch(config, state);
   const matchingHeadAttestations = getMatchingHeadAttestations(config, state, previousEpoch);
   return getAttestationComponentDeltas(config, state, matchingHeadAttestations);
 }
 
+/**
+ * Return proposer and inclusion delay micro-rewards/penalties for each validator.
+ */
 export function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
   const previousEpoch = getPreviousEpoch(config, state);
   const rewards = Array.from({length: state.validators.length}, () => BigInt(0));
@@ -97,6 +116,9 @@ export function getInclusionDelayDeltas(config: IBeaconConfig, state: BeaconStat
   return rewards;
 }
 
+/**
+ * Return inactivity reward/penalty deltas for each validator.
+ */
 export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconState): bigint[] {
   const penalties = Array.from({length: state.validators.length}, () => BigInt(0));
   const previousEpoch = getPreviousEpoch(config, state);
@@ -117,6 +139,9 @@ export function getInactivityPenaltyDeltas(config: IBeaconConfig, state: BeaconS
   return penalties;
 }
 
+/**
+ * Return attestation reward/penalty deltas for each validator.
+ */
 export function getAttestationDeltas(config: IBeaconConfig, state: BeaconState): [Gwei[], Gwei[]] {
   const [sourceRewards, sourcePenalties] = getSourceDeltas(config, state);
   const [targetRewards, targetPenalties] = getTargetDeltas(config, state);

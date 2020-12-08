@@ -2,7 +2,9 @@ import {readOnlyEntries} from "@chainsafe/ssz";
 import {Gwei, Epoch, Validator} from "@chainsafe/lodestar-types";
 
 /**
- * Concrete Validator w/o pubkey & withdrawCredentials
+ * Concrete Validator w/o pubkey & withdrawCredentials.
+ * For intermediate computation the remerkleable representation slows things down, so a regular object
+ * is used instead.
  */
 export interface IFlatValidator {
   effectiveBalance: Gwei;
