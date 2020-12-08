@@ -5,6 +5,9 @@ import {FAR_FUTURE_EPOCH} from "../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
 import {EpochContext} from "../util";
 
+/**
+ * Initiate the exit of the validator with index ``index``.
+ */
 export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState, index: ValidatorIndex): void {
   const config = epochCtx.config;
   // return if validator already initiated exit

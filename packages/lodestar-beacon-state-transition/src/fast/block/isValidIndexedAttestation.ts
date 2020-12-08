@@ -5,6 +5,9 @@ import {DomainType} from "../../constants";
 import {computeSigningRoot, getDomain} from "../../util";
 import {EpochContext} from "../util";
 
+/**
+ * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
+ */
 export function isValidIndexedAttestation(
   epochCtx: EpochContext,
   state: BeaconState,

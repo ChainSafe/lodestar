@@ -15,6 +15,10 @@ import {
   isEligibleForActivation,
 } from "../util";
 
+/**
+ * Processes (i) the validator activation queue, and (ii) the rule that validators with <=
+ * `EJECTION_BALANCE` ETH get ejected.
+ */
 export function processRegistryUpdates(config: IBeaconConfig, state: BeaconState): BeaconState {
   const currentEpoch = getCurrentEpoch(config, state);
   // Process activation eligibility and ejections
