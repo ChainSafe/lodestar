@@ -25,6 +25,7 @@ describe("gossip handlers - proposerSlashing", function () {
   it("handle valid proposer slashing", async function () {
     const proposerSlashing = generateEmptyProposerSlashing();
     await handleIncomingProposerSlashing.bind(gossipStub)(proposerSlashing);
+
     expect(gossipStub.emit.withArgs(GossipEvent.PROPOSER_SLASHING, proposerSlashing).calledOnce).to.be.true;
   });
 });

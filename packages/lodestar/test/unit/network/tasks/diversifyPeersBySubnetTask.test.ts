@@ -14,6 +14,7 @@ describe("DiversifyPeersBySubnetTask", function () {
   let reqRespStub: SinonStubbedInstance<IReqResp>;
   let peerMetadataStore: SinonStubbedInstance<IPeerMetadataStore>;
   let task: DiversifyPeersBySubnetTask;
+
   beforeEach(() => {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     reqRespStub = sinon.createStubInstance(ReqResp);
@@ -34,16 +35,19 @@ describe("DiversifyPeersBySubnetTask", function () {
     networkStub.getPeers.returns([]);
     await task.handleSyncCompleted();
     await task.run();
+
     expect(networkStub.searchSubnetPeers.callCount).to.be.equal(64);
   });
 
   it("should not search subnets", async () => {
     const peerId = await PeerId.create();
     networkStub.getPeers.returns([{id: peerId} as LibP2p.Peer]);
+
     peerMetadataStore.getMetadata.withArgs(peerId).returns({
       attnets: Array(64).fill(true),
       seqNumber: BigInt(1),
     });
+
     expect(networkStub.searchSubnetPeers.called).to.be.false;
   });
 
@@ -51,6 +55,7 @@ describe("DiversifyPeersBySubnetTask", function () {
     const peerId = await PeerId.create();
     const peerId2 = await PeerId.create();
     networkStub.getPeers.returns([peerId, peerId2].map((peerId) => ({id: peerId} as LibP2p.Peer)));
+
     const attNets = Array(64).fill(false);
     attNets[0] = true;
     attNets[1] = true;
@@ -58,6 +63,7 @@ describe("DiversifyPeersBySubnetTask", function () {
       attnets: attNets,
       seqNumber: BigInt(1),
     });
+
     const attNets2 = Array(64).fill(false);
     attNets2[1] = true;
     attNets2[2] = true;
@@ -65,8 +71,10 @@ describe("DiversifyPeersBySubnetTask", function () {
       attnets: attNets2,
       seqNumber: BigInt(1),
     });
+
     await task.handleSyncCompleted();
     await task.run();
+
     expect(networkStub.searchSubnetPeers.callCount).to.be.equal(61);
   });
 });

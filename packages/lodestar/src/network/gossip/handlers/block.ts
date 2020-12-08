@@ -20,9 +20,11 @@ export async function handleIncomingBlock(this: Gossip, obj: GossipObject): Prom
 
 export async function publishBlock(this: Gossip, signedBlock: SignedBeaconBlock): Promise<void> {
   const forkDigestValue = await this.getForkDigest(signedBlock.message.slot);
+
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.BLOCK, forkDigestValue),
     Buffer.from(this.config.types.SignedBeaconBlock.serialize(signedBlock))
   );
+
   this.logger.verbose("Publishing block", {block: signedBlock.message.slot});
 }

@@ -25,6 +25,7 @@ describe("gossip handlers - voluntaryExit", function () {
   it("handle valid voluntary exit", async function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
     await handleIncomingVoluntaryExit.bind(gossipStub)(voluntaryExit);
+
     expect(gossipStub.emit.withArgs(GossipEvent.VOLUNTARY_EXIT, voluntaryExit).calledOnce).to.be.true;
   });
 });
