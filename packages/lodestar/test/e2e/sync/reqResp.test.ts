@@ -1,5 +1,5 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";

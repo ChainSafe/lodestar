@@ -1,8 +1,7 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
-import {attesterDutiesController} from "../../../../../src/api/rest/controllers/validator/duties/attesterDuties";
 import {silentLogger} from "../../../../utils/logger";
 import {StubbedApi} from "../../../../utils/stub/api";
 import {urlJoin} from "../utils";
@@ -41,14 +40,14 @@ describe("rest - validator - prepareCommitteeSubnet", function () {
       .post(urlJoin(VALIDATOR_PREFIX, prepareCommitteeSubnet.url))
       .send([
         {
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           validator_index: 1,
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           committee_index: 2,
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           committees_at_slot: 64,
           slot: 0,
-          // eslint-disable-next-line @typescript-eslint/camelcase
+          // eslint-disable-next-line @typescript-eslint/naming-convention
           is_aggregator: false,
         },
       ])

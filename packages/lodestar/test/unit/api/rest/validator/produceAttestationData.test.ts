@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../src/api";
@@ -40,7 +40,7 @@ describe("rest - validator - produceAttestationData", function () {
     const response = await supertest(restApi.server.server)
       .get(urlJoin(VALIDATOR_PREFIX, produceAttestationData.url))
       .query({
-        // eslint-disable-next-line @typescript-eslint/camelcase
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         committee_index: 1,
         slot: 0,
       })

@@ -90,41 +90,39 @@ export function fetchBlockChunks(
   getPeers: () => Promise<PeerId[]>,
   signal?: AbortSignal
 ): (source: AsyncIterable<ISlotRange>) => AsyncGenerator<SignedBeaconBlock[] | null> {
-  return (source) => {
-    return (async function* () {
-      for await (const slotRange of source) {
-        let peers = await getPeers();
-        let retry = 0;
-        while (peers.length === 0 && retry < 5) {
-          logger.info("Waiting for peers...");
-          await sleep(6000, signal);
-          peers = await getPeers();
-          retry++;
-        }
-        if (peers.length === 0) {
-          logger.error("Can't find new peers");
-          yield null;
-          return;
-        }
-        try {
-          // a work around of timeout issue that cause our sync stall
-          let timer: NodeJS.Timeout | null = null;
-          yield (await Promise.race([
-            getBlockRange(logger, reqResp, peers, slotRange),
-            new Promise((_, reject) => {
-              timer = setTimeout(() => {
-                reject(new Error("beacon_blocks_by_range timeout"));
-              }, GET_BLOCK_RANGE_TIMEOUT);
-            }),
-          ])) as SignedBeaconBlock[] | null;
-          if (timer) clearTimeout(timer);
-        } catch (e) {
-          logger.debug("Failed to get block range " + JSON.stringify(slotRange) + ". Error: " + e.message);
-          yield null;
-          return;
-        }
+  return async function* (source) {
+    for await (const slotRange of source) {
+      let peers = await getPeers();
+      let retry = 0;
+      while (peers.length === 0 && retry < 5) {
+        logger.info("Waiting for peers...");
+        await sleep(6000, signal);
+        peers = await getPeers();
+        retry++;
       }
-    })();
+      if (peers.length === 0) {
+        logger.error("Can't find new peers");
+        yield null;
+        return;
+      }
+      try {
+        // a work around of timeout issue that cause our sync stall
+        let timer: NodeJS.Timeout | null = null;
+        yield (await Promise.race([
+          getBlockRange(logger, reqResp, peers, slotRange),
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error("beacon_blocks_by_range timeout"));
+            }, GET_BLOCK_RANGE_TIMEOUT);
+          }),
+        ])) as SignedBeaconBlock[] | null;
+        if (timer) clearTimeout(timer);
+      } catch (e) {
+        logger.debug("Failed to get block range", {...slotRange}, e);
+        yield null;
+        return;
+      }
+    }
   };
 }
 
@@ -134,26 +132,25 @@ export function validateBlocks(
   logger: ILogger,
   onBlockVerificationFail: () => void
 ): (source: AsyncIterable<SignedBeaconBlock[]>) => AsyncGenerator<SignedBeaconBlock[]> {
-  return (source) => {
-    return (async function* () {
-      for await (const blockChunk of source) {
-        if (blockChunk.length === 0) {
-          continue;
-        }
-        const head = blockToHeader(config, (await chain.getHeadBlock())!.message);
-        if (isValidChainOfBlocks(config, head, blockChunk)) {
-          yield blockChunk;
-        } else {
-          logger.warn(
-            "Hash chain doesnt match! " +
-              `Head(${head.slot}): ${toHexString(config.types.BeaconBlockHeader.hashTreeRoot(head))}` +
-              `Blocks: (${blockChunk[0].message.slot}..${blockChunk[blockChunk.length - 1].message.slot})`
-          );
-          //discard blocks and trigger resync so we try to fetch blocks again
-          onBlockVerificationFail();
-        }
+  return async function* (source) {
+    for await (const blockChunk of source) {
+      if (blockChunk.length === 0) {
+        continue;
       }
-    })();
+      const head = blockToHeader(config, (await chain.getHeadBlock())!.message);
+      if (isValidChainOfBlocks(config, head, blockChunk)) {
+        yield blockChunk;
+      } else {
+        logger.warn("Hash chain doesnt match!", {
+          headSlot: head.slot,
+          headHash: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(head)),
+          fromSlot: blockChunk[0].message.slot,
+          toSlot: blockChunk[blockChunk.length - 1].message.slot,
+        });
+        //discard blocks and trigger resync so we try to fetch blocks again
+        onBlockVerificationFail();
+      }
+    }
   };
 }
 
@@ -185,12 +182,10 @@ export function processSyncBlocks(
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry
-        logger.warn("Failed to get blocks for range", {
-          headSlot,
-        });
+        logger.warn("Failed to get blocks for range", {headSlot});
         return headSlot;
       }
-      logger.info("Imported blocks for slots: " + blocks.map((block) => block.message.slot).join(","));
+      logger.info("Imported blocks for slots", {blocks: blocks.map((block) => block.message.slot).join(",")});
       blockBuffer.push(...blocks);
     }
     blockBuffer = sortBlocks(blockBuffer);

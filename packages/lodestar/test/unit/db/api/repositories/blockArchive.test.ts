@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import rimraf from "rimraf";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 

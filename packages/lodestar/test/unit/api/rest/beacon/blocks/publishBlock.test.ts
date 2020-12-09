@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
@@ -40,7 +40,7 @@ describe("rest - beacon - publishBlock", function () {
     api.beacon.blocks.publishBlock.resolves();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
-      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as object)
+      .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
       .expect("Content-Type", "application/json");
   });

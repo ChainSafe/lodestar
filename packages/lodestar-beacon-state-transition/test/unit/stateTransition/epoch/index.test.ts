@@ -1,19 +1,17 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {GENESIS_SLOT} from "../../../../src/constants";
 import {processEpoch} from "../../../../src/epoch";
 import * as justificationUtils from "../../../../src/epoch/justification";
-import {processJustificationAndFinalization} from "../../../../src/epoch/justification";
 import * as balanceUpdateUtils from "../../../../src/epoch/balanceUpdates";
-import {processRewardsAndPenalties} from "../../../../src/epoch/balanceUpdates";
 import * as registryUpdateUtils from "../../../../src/epoch/registryUpdates";
 import * as slashingUtils from "../../../../src/epoch/slashings";
 import * as finalUtils from "../../../../src/epoch/finalUpdates";
-import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
-import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 import {generateState} from "../../../utils/state";
+
+/* eslint-disable no-empty */
 
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();
@@ -51,15 +49,11 @@ describe("process epoch - crosslinks", function () {
   });
 
   it("should process epoch", function () {
-    try {
-      processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
-      expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
-      expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
-      expect(processRegistryUpdatesStub.calledOnce).to.be.true;
-      expect(processSlashingsStub.calledOnce).to.be.true;
-      expect(processFinalUpdatesStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    processEpoch(config, generateState({slot: config.params.SLOTS_PER_EPOCH - 1}));
+    expect(processJustificationAndFinalizationStub.calledOnce).to.be.true;
+    expect(processRewardsAndPenaltiesStub.calledOnce).to.be.true;
+    expect(processRegistryUpdatesStub.calledOnce).to.be.true;
+    expect(processSlashingsStub.calledOnce).to.be.true;
+    expect(processFinalUpdatesStub.calledOnce).to.be.true;
   });
 });

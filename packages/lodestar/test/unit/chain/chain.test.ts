@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 

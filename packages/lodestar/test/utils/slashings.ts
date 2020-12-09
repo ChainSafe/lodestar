@@ -1,5 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "./block";
 import {getTemporaryBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";

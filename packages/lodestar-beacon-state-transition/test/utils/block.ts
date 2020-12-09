@@ -9,7 +9,7 @@ import {
   SignedVoluntaryExit,
   Attestation,
 } from "@chainsafe/lodestar-types";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
+import {ZERO_HASH} from "../../src/constants";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {

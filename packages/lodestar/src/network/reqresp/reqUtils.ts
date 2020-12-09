@@ -31,24 +31,23 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
   }
+
   const requestOnly = isRequestOnly(method);
   const requestSingleChunk = isRequestSingleChunk(method);
   const requestId = randomRequestId();
+
   try {
     return await pipe(
       sendRequestStream(modules, peerId, method, encoding, requestId, body, signal),
       handleResponses<T>(modules, peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
     );
   } catch (e) {
-    modules.logger.warn(`failed to send request ${requestId} to peer ${peerId.toB58String()}`, {
-      method,
-      reason: e.message,
-    });
+    modules.logger.warn("failed to send request", {requestId, peerId: peerId.toB58String(), method}, e);
     throw e;
   }
 }
 
-export function sendRequestStream<T extends ResponseBody>(
+export async function* sendRequestStream<T extends ResponseBody>(
   modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
   method: Method,
@@ -58,38 +57,40 @@ export function sendRequestStream<T extends ResponseBody>(
   signal?: AbortSignal
 ): AsyncIterable<T> {
   const {libp2p, config, logger} = modules;
-  return (async function* () {
-    const protocol = createRpcProtocol(method, encoding);
-    logger.verbose(`sending ${method} request to ${peerId.toB58String()}`, {requestId, encoding});
-    let conn: {stream: Stream} | undefined;
-    const controller = new AbortController();
-    let requestTimer: NodeJS.Timeout | null = null;
-    // write
-    await Promise.race([
-      (async function () {
-        try {
-          conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
-        } catch (e) {
-          throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
-        }
-        logger.verbose(`got stream to ${peerId.toB58String()}`, {requestId, encoding});
-        await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
-      })(),
-      new Promise((_, reject) => {
-        requestTimer = setTimeout(() => {
-          conn?.stream?.close();
-          reject(new Error(REQUEST_TIMEOUT_ERR));
-        }, REQUEST_TIMEOUT);
-      }),
-    ]);
-    if (requestTimer) clearTimeout(requestTimer);
-    logger.verbose("sent request", {peer: peerId.toB58String(), method});
-    yield* pipe(
-      abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
-      eth2ResponseTimer(controller),
-      eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
-    );
-  })();
+
+  const protocol = createRpcProtocol(method, encoding);
+  logger.verbose("sending request to peer", {peer: peerId.toB58String(), method, requestId, encoding});
+  let conn: {stream: Stream} | undefined;
+  const controller = new AbortController();
+  let requestTimer: NodeJS.Timeout | null = null;
+
+  // write
+  await Promise.race([
+    (async function () {
+      try {
+        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
+      } catch (e) {
+        throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
+      }
+      logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
+      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+    })(),
+    new Promise((_, reject) => {
+      requestTimer = setTimeout(() => {
+        conn?.stream?.close();
+        reject(new Error(REQUEST_TIMEOUT_ERR));
+      }, REQUEST_TIMEOUT);
+    }),
+  ]);
+
+  if (requestTimer) clearTimeout(requestTimer);
+  logger.verbose("sent request", {peer: peerId.toB58String(), method});
+
+  yield* pipe(
+    abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
+    eth2ResponseTimer(controller),
+    eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
+  );
 }
 
 export function handleResponses<T extends ResponseBody | ResponseBody[]>(
@@ -107,19 +108,22 @@ export function handleResponses<T extends ResponseBody | ResponseBody[]>(
     const responses = await all(source);
     if (requestSingleChunk && responses.length === 0) {
       // allow empty response for beacon blocks by range/root
-      logger.verbose(`No response returned for method ${method}. request=${requestId}`, {
-        peer: peerId.toB58String(),
-      });
+      logger.verbose("No response returned", {method, requestId, peer: peerId.toB58String()});
       return null;
     }
+
     const finalResponse = requestSingleChunk ? responses[0] : responses;
-    logger.verbose(`receive ${method} response with ${responses.length} chunks from ${peerId.toB58String()}`, {
+    logger.verbose("received response chunks", {
+      peer: peerId.toB58String(),
+      method,
+      chunks: responses.length,
       requestId,
       encoding,
       body:
         body != null &&
         (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<unknown>).toJson(body),
     });
+
     return requestOnly ? null : (finalResponse as T);
   };
 }

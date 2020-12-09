@@ -1,15 +1,9 @@
 import {assert} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Fork} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "../../../../src/constants";
-import {
-  getBeaconProposerIndex,
-  getBlockRootAtSlot,
-  getBlockRoot,
-  getDomain,
-  getValidatorChurnLimit,
-} from "../../../../src/util";
+import {getBlockRoot, getDomain} from "../../../../src/util";
 
 import {toBigIntLE} from "bigint-buffer";
 

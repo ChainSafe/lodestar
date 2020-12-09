@@ -117,10 +117,12 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       if (opts?.connected && !this.getPeerConnection(peer.id)) {
         return false;
       }
+
       this.logger.debug("Peer supported protocols", {
         id: peer.id.toB58String(),
         protocols: peer.protocols,
       });
+
       if (opts?.supportsProtocols) {
         for (const protocol of opts.supportsProtocols) {
           if (!peer.protocols.includes(protocol)) {
@@ -128,8 +130,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
           }
         }
       }
+
       return true;
     });
+
     return peers.slice(0, opts?.count ?? peers.length) || [];
   }
 
@@ -142,12 +146,14 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     if (!peer) {
       return false;
     }
+
     if (connected) {
       const conn = this.getPeerConnection(peerId);
       if (!conn || conn.stat.status !== "open") {
         return false;
       }
     }
+
     return true;
   }
 
@@ -159,6 +165,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     if (localMultiaddrs) {
       this.libp2p.peerStore.addressBook.add(peerId, localMultiaddrs);
     }
+
     await this.libp2p.dial(peerId);
   }
 
@@ -176,14 +183,15 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
       this.peerMetadata,
       subnet
     );
+
     if (peerIds.length === 0) {
       // the validator must discover new peers on this topic
-      this.logger.verbose(`Finding new peers for subnet ${subnet}`);
+      this.logger.verbose("Finding new peers", {subnet});
       const found = await this.connectToNewPeersBySubnet(parseInt(subnet));
       if (found) {
-        this.logger.verbose(`Found new peer for subnet ${subnet}`);
+        this.logger.verbose("Found new peer", {subnet});
       } else {
-        this.logger.verbose(`Not found any peers for subnet ${subnet}`);
+        this.logger.verbose("Not found any peers", {subnet});
       }
     }
   }
@@ -196,6 +204,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
     const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id.toB58String());
     const candidatePeers = discv5Peers.filter((peer) => !knownPeers.includes(peer.peerId.toB58String()));
+
     let found = false;
     for (const peer of candidatePeers) {
       // will automatically get metadata once we connect
@@ -205,15 +214,17 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
         break;
       } catch (e) {
         // this runs too frequently so make it verbose
-        this.logger.verbose(`Cannot connect to peer ${peer.peerId.toB58String()} for subnet ${subnet}`, e.message);
+        this.logger.verbose("Cannot connect to peer", {peerId: peer.peerId.toB58String(), subnet, error: e.message});
       }
     }
+
     return found;
   }
 
   private searchDiscv5Peers = async (subnet: number): Promise<{peerId: PeerId; multiaddr: Multiaddr}[]> => {
     const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
     const discv5: Discv5 = discovery.discv5;
+
     return await Promise.all(
       discv5
         .kadValues()
@@ -235,13 +246,14 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
   private emitPeerConnect = (conn: LibP2pConnection): void => {
     this.metrics.peers.inc();
-    this.logger.verbose("peer connected " + conn.remotePeer.toB58String() + " " + conn.stat.direction);
+    this.logger.verbose("peer connected", {peerId: conn.remotePeer.toB58String(), direction: conn.stat.direction});
+
     //tmp fix, we will just do double status exchange but nothing major
     this.emit("peer:connect", conn.remotePeer, conn.stat.direction);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
-    this.logger.verbose("peer disconnected " + conn.remotePeer.toB58String());
+    this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
     this.metrics.peers.dec();
     this.emit("peer:disconnect", conn.remotePeer);
   };

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
 import {IDistanceStore, IDistanceEntry} from "../../../../src/slashingProtection/minMaxSurround";
 

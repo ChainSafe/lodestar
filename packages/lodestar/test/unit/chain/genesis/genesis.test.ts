@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {DepositData, ValidatorIndex, DepositEvent, Eth1Block} from "@chainsafe/lodestar-types";
 import {ErrorAborted, WinstonLogger, interopSecretKey} from "@chainsafe/lodestar-utils";
@@ -15,8 +15,11 @@ chai.use(chaiAsPromised);
 describe("genesis builder", function () {
   const schlesiConfig = Object.assign({}, {params: config.params}, config);
   schlesiConfig.params = Object.assign({}, config.params, {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_TIME: 1587755000,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     MIN_GENESIS_DELAY: 3600,
   });
 
@@ -62,6 +65,7 @@ describe("genesis builder", function () {
     const genesisBuilder = new GenesisBuilder(schlesiConfig, {
       eth1Provider,
       logger: new WinstonLogger(),
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       MAX_BLOCKS_PER_POLL: 1,
     });
 
@@ -96,6 +100,7 @@ describe("genesis builder", function () {
       eth1Provider,
       logger: new WinstonLogger(),
       signal: controller.signal,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       MAX_BLOCKS_PER_POLL: 1,
     });
 

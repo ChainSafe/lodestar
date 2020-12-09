@@ -1,6 +1,6 @@
 import bls from "@chainsafe/bls";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {generateEmptyBlock, generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";

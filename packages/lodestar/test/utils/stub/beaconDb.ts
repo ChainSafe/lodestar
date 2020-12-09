@@ -20,7 +20,7 @@ import {
 import {StateContextCache} from "../../../src/db/api/beacon/stateContextCache";
 import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
 import {CheckpointStateCache} from "../../../src/db/api/beacon/stateContextCheckpointsCache";
-import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 
 export class StubbedBeaconDb extends BeaconDb {

@@ -2,7 +2,7 @@
 import sinon from "sinon";
 import mockery from "mockery";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
 import {bigIntMin, intToBytes, assert} from "@chainsafe/lodestar-utils";
 import {generateState} from "../../../../utils/state";
@@ -12,10 +12,8 @@ import {generateValidator} from "../../../../utils/validator";
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
   const verifyMerkleBranchStub = sinon.stub();
-  let processDeposit: Function,
-    getTemporaryBlockHeaderStub,
-    getBeaconProposeIndexStub,
-    blsStub = sinon.stub();
+  let processDeposit: any, getTemporaryBlockHeaderStub, getBeaconProposeIndexStub;
+  const blsStub = sinon.stub();
 
   before(function () {
     mockery.registerMock("@chainsafe/lodestar-utils", {
@@ -30,12 +28,12 @@ describe("process block - deposits", function () {
     mockery.enable({useCleanCache: true, warnOnReplace: false, warnOnUnregistered: false});
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     getTemporaryBlockHeaderStub = sandbox.stub(utils, "getTemporaryBlockHeader");
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub.resetHistory();
     verifyMerkleBranchStub.resetHistory();
-    processDeposit = require("../../../../../src/block/operations").processDeposit;
+    processDeposit = (await import("../../../../../src/block/operations")).processDeposit;
   });
 
   afterEach(() => {
@@ -86,15 +84,12 @@ describe("process block - deposits", function () {
     const deposit = generateDeposit();
     deposit.data.amount = config.params.MAX_EFFECTIVE_BALANCE;
     blsStub.returns(true);
-    try {
-      processDeposit(config, state, deposit);
-      expect(verifyMerkleBranchStub.calledOnce).to.be.true;
-      expect(state.validators.length).to.be.equal(1);
-      expect(state.balances.length).to.be.equal(1);
-      expect(blsStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processDeposit(config, state, deposit);
+    expect(verifyMerkleBranchStub.calledOnce).to.be.true;
+    expect(state.validators.length).to.be.equal(1);
+    expect(state.balances.length).to.be.equal(1);
+    expect(blsStub.calledOnce).to.be.true;
   });
 
   it("should process deposit - increase deposit", function () {
@@ -105,12 +100,9 @@ describe("process block - deposits", function () {
     state.validators.push(validator);
     state.balances.push(BigInt(0));
     deposit.data.pubkey = validator.pubkey;
-    try {
-      processDeposit(config, state, deposit);
-      expect(verifyMerkleBranchStub.calledOnce).to.be.true;
-      expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
-    } catch (e) {
-      expect.fail(e);
-    }
+
+    processDeposit(config, state, deposit);
+    expect(verifyMerkleBranchStub.calledOnce).to.be.true;
+    expect(state.balances[0].toString()).to.be.equal(deposit.data.amount.toString());
   });
 });

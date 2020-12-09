@@ -58,7 +58,7 @@ export class ArchiveBlocksTask implements ITask {
     }
     await this.deleteNonCanonicalBlocks();
     this.logger.profile("Archive Blocks epoch #" + this.finalized.epoch);
-    this.logger.info("Archiving of finalized blocks complete.", {
+    this.logger.info("Archiving of finalized blocks complete", {
       totalArchived: allCanonicalSummaries.length,
       finalizedEpoch: this.finalized.epoch,
     });

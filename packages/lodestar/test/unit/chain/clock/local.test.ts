@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {AbortController} from "abort-controller";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {LocalClock} from "../../../../src/chain/clock/LocalClock";
 import {ChainEvent, ChainEventEmitter} from "../../../../src/chain/emitter";

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chainsafe/lodestar-types";
 import {init} from "@chainsafe/bls";
 import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
@@ -112,7 +112,7 @@ export async function generatePerformanceBlock(): Promise<TreeBacked<SignedBeaco
     );
     // eth1Data, graffiti, attestations
     signedBlock = config.types.SignedBeaconBlock.tree.createValue(block);
-    logger.info("Loaded block at slot", signedBlock.message.slot);
+    logger.info("Loaded block", {slot: signedBlock.message.slot});
   }
   return signedBlock.clone();
 }

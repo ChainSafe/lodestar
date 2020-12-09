@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {List} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Eth1Data} from "@chainsafe/lodestar-types";
 import {processEth1Data} from "../../../../src/block/eth1Data";
 
@@ -11,8 +11,6 @@ import {generateState} from "../../../utils/state";
 
 describe("process block - eth1data", function () {
   const sandbox = sinon.createSandbox();
-
-  beforeEach(() => {});
 
   afterEach(() => {
     sandbox.restore();

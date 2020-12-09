@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {processSlashings} from "../../../../src/epoch/slashings";
@@ -13,12 +13,11 @@ import {intDiv} from "@chainsafe/lodestar-utils";
 describe("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();
 
-  let getCurrentEpochStub: any, getTotalBalanceStub: any, getActiveValidatorIndicesStub: any, decreaseBalanceStub: any;
+  let getCurrentEpochStub: any, getTotalBalanceStub: any, decreaseBalanceStub: any;
 
   beforeEach(() => {
     getCurrentEpochStub = sandbox.stub(utils, "getCurrentEpoch");
     getTotalBalanceStub = sandbox.stub(utils, "getTotalBalance");
-    getActiveValidatorIndicesStub = sandbox.stub(utils, "getActiveValidatorIndices");
     decreaseBalanceStub = sandbox.stub(utils, "decreaseBalance");
   });
 
@@ -37,11 +36,8 @@ describe("process epoch - slashings", function () {
     const state = generateState({
       validators: [validator1, validator2, validator3] as List<Validator>,
     });
-    try {
-      processSlashings(config, state);
-      expect(decreaseBalanceStub.withArgs(sinon.match.any, 2, sinon.match.any).calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processSlashings(config, state);
+    expect(decreaseBalanceStub.withArgs(sinon.match.any, 2, sinon.match.any).calledOnce).to.be.true;
   });
 });

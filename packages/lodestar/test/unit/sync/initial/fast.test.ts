@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
@@ -104,6 +104,7 @@ describe("fast sync", function () {
       endCallbackStub.restore();
       done();
     });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
     chainStub.emitter.emit(ChainEvent.checkpoint, {epoch: 1, root: Buffer.alloc(32)} as Checkpoint, {} as any);
     chainStub.emitter.emit(ChainEvent.checkpoint, target, {} as any);
@@ -144,6 +145,7 @@ describe("fast sync", function () {
       endCallbackStub.restore();
       done();
     });
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
     chainStub.emitter.emit(ChainEvent.checkpoint, target1, {} as any);
     chainStub.emitter.emit(ChainEvent.checkpoint, target2, {} as any);

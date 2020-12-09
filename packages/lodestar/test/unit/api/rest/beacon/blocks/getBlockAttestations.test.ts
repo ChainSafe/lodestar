@@ -3,7 +3,7 @@ import supertest from "supertest";
 
 import {List} from "@chainsafe/ssz";
 import {Attestation} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {StubbedApi} from "../../../../../utils/stub/api";
@@ -58,9 +58,9 @@ describe("rest - beacon - getBlockAttestations", function () {
 
   it("should not found block", async function () {
     api.beacon.blocks.getBlock.withArgs("4").resolves(null);
-    await supertest(restApi.server.server).get(
-        urlJoin(BEACON_PREFIX, getBlockAttestations.url.replace(":blockId", "4"))
-    ).expect(404);
+    await supertest(restApi.server.server)
+      .get(urlJoin(BEACON_PREFIX, getBlockAttestations.url.replace(":blockId", "4")))
+      .expect(404);
   });
 
   it("should fail validation", async function () {

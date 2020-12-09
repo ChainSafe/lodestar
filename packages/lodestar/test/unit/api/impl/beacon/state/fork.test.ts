@@ -1,5 +1,5 @@
 import {BeaconStateApi} from "../../../../../../src/api/impl/beacon/state/state";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconChain} from "../../../../../../src/chain";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import sinon, {SinonStubbedMember} from "sinon";

@@ -37,7 +37,11 @@ export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
 }
 
 /**
- * The standard / Exchange Interface of EpochContext, this is what's exported from lodestar-beacon-state-transition
+ * The standard / Exchange Interface of EpochContext, this is what's exported from
+ * lodestar-beacon-state-transition.
+ * A collection of contextual information to re-use during an epoch, and rotating precomputed data of
+ * the next epoch into the current epoch. This includes shuffling, but also proposer information is
+ * available.
  **/
 export class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
@@ -65,6 +69,9 @@ export class EpochContext {
     }
   }
 
+  /**
+   * Precomputes the data for the given state.
+   */
   public loadState(state: BeaconState): void {
     this.syncPubkeys(state);
     const currentEpoch = computeEpochAtSlot(this.config, state.slot);
@@ -88,6 +95,9 @@ export class EpochContext {
     this._resetProposers(state);
   }
 
+  /**
+   * Copies a given EpochContext while avoiding copying its immutable parts.
+   */
   public copy(): EpochContext {
     const ctx = new EpochContext(this.config);
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
@@ -101,6 +111,10 @@ export class EpochContext {
     return ctx;
   }
 
+  /**
+   * Checks the precomputed data (from loadState) against a state, and then adds missing pubkeys (strictly append-only
+   * however, not meant to fork this information).
+   */
   public syncPubkeys(state: BeaconState): void {
     if (!this.pubkey2index) {
       this.pubkey2index = new PubkeyIndexMap();
@@ -120,6 +134,10 @@ export class EpochContext {
     }
   }
 
+  /**
+   * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
+   * new epoch.
+   */
   public rotateEpochs(state: BeaconState): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
@@ -133,6 +151,9 @@ export class EpochContext {
     this._resetProposers(state);
   }
 
+  /**
+   * Return the beacon committee at slot for index.
+   */
   public getBeaconCommittee(slot: Slot, index: CommitteeIndex): ValidatorIndex[] {
     const slotCommittees = this._getSlotCommittees(slot);
     if (index >= slotCommittees.length) {
@@ -153,6 +174,9 @@ export class EpochContext {
     return this.proposers[slot % this.config.params.SLOTS_PER_EPOCH];
   }
 
+  /**
+   * Return the indexed attestation corresponding to ``attestation``.
+   */
   public getIndexedAttestation(attestation: Attestation): IndexedAttestation {
     const data = attestation.data;
     const bits = readOnlyMap(attestation.aggregationBits, (b) => b);

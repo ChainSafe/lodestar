@@ -1,9 +1,9 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as blockTransitions from "@chainsafe/lodestar-beacon-state-transition/lib/fast";
+import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../../src/chain";
@@ -23,12 +23,12 @@ describe("block assembly", function () {
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     regenStub: SinonStubbedInstance<StateRegenerator>,
-    stateTransitionStub: any,
+    processBlockStub: SinonStub,
     beaconDB: StubbedBeaconDb;
 
   beforeEach(() => {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
-    stateTransitionStub = sandbox.stub(blockTransitions, "fastStateTransition");
+    processBlockStub = sandbox.stub(processBlock, "processBlock");
 
     chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
     forkChoiceStub = chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
@@ -54,22 +54,18 @@ describe("block assembly", function () {
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     const state = generateState();
-    stateTransitionStub.returns({state});
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
 
-    try {
-      const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, Buffer.alloc(96, 0));
-      expect(result).to.not.be.null;
-      expect(result.slot).to.equal(1);
-      expect(result.proposerIndex).to.equal(2);
-      expect(result.stateRoot).to.not.be.null;
-      expect(result.parentRoot).to.not.be.null;
-      expect(regenStub.getBlockSlotState.calledTwice).to.be.true;
-      expect(assembleBodyStub.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    const result = await assembleBlock(config, chainStub, beaconDB, eth1, 1, Buffer.alloc(96, 0));
+    expect(result).to.not.be.null;
+    expect(result.slot).to.equal(1);
+    expect(result.proposerIndex).to.equal(2);
+    expect(result.stateRoot).to.not.be.null;
+    expect(result.parentRoot).to.not.be.null;
+    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
+    expect(processBlockStub.calledOnce).to.be.true;
+    expect(assembleBodyStub.calledOnce).to.be.true;
   });
 });

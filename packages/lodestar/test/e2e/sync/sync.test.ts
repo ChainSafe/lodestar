@@ -4,13 +4,15 @@ import {waitForEvent} from "../../utils/events/resolver";
 import {Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import * as assert from "assert";
 import {getDevValidators} from "../../utils/node/validator";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
 
 describe("syncing", function () {
   const validatorCount = 8;
   const beaconParams: Partial<IBeaconParams> = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     SLOTS_PER_EPOCH: 8,
   };
 

@@ -1,6 +1,9 @@
 import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
 import {Bytes32, IBeaconSSZTypes} from "@chainsafe/lodestar-types";
+import {join} from "path";
+import {config} from "@chainsafe/lodestar-config/minimal";
+import {expect} from "chai";
 import {CompositeType} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {IBaseSSZStaticTestCase} from "../type";

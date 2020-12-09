@@ -9,6 +9,9 @@ import {processBlock} from "./block";
 
 export {IStateContext, EpochContext};
 
+/**
+ * Implementation of protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
+ */
 export function fastStateTransition(
   {state, epochCtx: eiEpochCtx}: IStateContext,
   signedBlock: SignedBeaconBlock,

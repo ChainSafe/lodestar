@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
@@ -9,7 +9,7 @@ import {StubbedApi} from "../../../../../utils/stub/api";
 import {generateValidator} from "../../../../../utils/validator";
 import {urlJoin} from "../../utils";
 import {BEACON_PREFIX} from "../index.test";
-import { ValidatorStatus } from "@chainsafe/lodestar-types";
+import {ValidatorStatus} from "@chainsafe/lodestar-types";
 
 describe("rest - beacon - getStateValidators", function () {
   let restApi: RestApi;

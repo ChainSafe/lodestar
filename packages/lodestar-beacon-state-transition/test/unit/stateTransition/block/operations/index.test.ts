@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
 import {ProposerSlashing, AttesterSlashing, Attestation, Deposit, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as processProposerSlashing from "../../../../../src/block/operations/proposerSlashing";
 import * as processAttesterSlashing from "../../../../../src/block/operations/attesterSlashing";
 import * as processAttestation from "../../../../../src/block/operations/attestation";
@@ -16,6 +16,8 @@ import {generateDeposit} from "../../../../utils/deposit";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
+
+/* eslint-disable no-empty */
 
 describe("process block - process operations", function () {
   const sandbox = sinon.createSandbox();

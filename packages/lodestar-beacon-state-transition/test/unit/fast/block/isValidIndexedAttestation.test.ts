@@ -1,5 +1,5 @@
 import {List} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {generateAttestationData} from "../../../utils/attestation";
 import {expect} from "chai";
 import {isValidIndexedAttestation} from "../../../../src/fast/block/isValidIndexedAttestation";

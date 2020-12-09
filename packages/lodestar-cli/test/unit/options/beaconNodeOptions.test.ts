@@ -69,8 +69,6 @@ describe("options / beaconNodeOptions", () => {
       },
       network: {
         discv5: {
-          // ### TODO: declare discv5.enable in its types
-          // @ts-ignore
           enabled: true,
           bindAddr: "addr",
           bootEnrs: ["enr:-somedata"],

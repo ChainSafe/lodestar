@@ -144,7 +144,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     const toBlock = Math.min(remoteFollowBlock, fromBlock + this.MAX_BLOCKS_PER_LOG_QUERY - 1);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
-    this.logger.verbose(`Fetched deposits ${depositEvents.length}`, {fromBlock, toBlock});
+    this.logger.verbose("Fetched deposits", {depositCount: depositEvents.length, fromBlock, toBlock});
 
     await this.depositsCache.add(depositEvents);
     // Store the `toBlock` since that block may not contain
@@ -180,7 +180,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     );
 
     const eth1Blocks = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock, this.signal);
-    this.logger.verbose(`Fetched eth1 blocks ${eth1Blocks.length}`, {fromBlock, toBlock});
+    this.logger.verbose("Fetched eth1 blocks", {blockCount: eth1Blocks.length, fromBlock, toBlock});
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);

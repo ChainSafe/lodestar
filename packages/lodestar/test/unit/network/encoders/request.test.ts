@@ -1,7 +1,7 @@
 import pipe from "it-pipe";
 import all from "it-all";
 import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
 import sinon, {SinonStubbedInstance} from "sinon";
@@ -26,6 +26,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
   });
@@ -37,6 +38,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
   });
@@ -49,6 +51,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
   });
@@ -61,6 +64,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
   });
@@ -72,6 +76,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
   });
@@ -83,6 +88,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       all
     );
+
     expect(requests.length).to.be.equal(1);
     expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
   });
@@ -108,6 +114,7 @@ describe("request encoders", function () {
       eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
       all
     );
+
     expect(loggerStub.warn.calledOnce).to.be.true;
   });
 
@@ -118,8 +125,9 @@ describe("request encoders", function () {
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
       );
+
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint 11, method status";
+      const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -129,8 +137,9 @@ describe("request encoders", function () {
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
       );
+
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid szzLength of 0 for method status";
+      const err = "eth2RequestDecode: Invalid szzLength";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -140,8 +149,9 @@ describe("request encoders", function () {
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
         all
       );
+
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: too much bytes read (94) for method status, sszLength 84";
+      const err = "eth2RequestDecode: too much bytes read";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -151,8 +161,9 @@ describe("request encoders", function () {
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
       );
+
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "Failed to decompress request data. Error: Unsupported snappy chunk type";
+      const err = "Failed to decompress request data";
       expect(loggerStub.error.calledOnceWith(err)).to.be.true;
     });
 
@@ -164,6 +175,7 @@ describe("request encoders", function () {
         eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
         all
       );
+
       expect(validatedRequestBody).to.be.deep.equal([{isValid: true, body: status}]);
     });
   });

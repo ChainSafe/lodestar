@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
 import {GENESIS_EPOCH} from "../../../../../src/constants";
 import {processRewardsAndPenalties} from "../../../../../src/epoch/balanceUpdates";
@@ -28,12 +28,8 @@ describe("process epoch - balance updates", function () {
     const state = generateState();
     getCurrentEpochStub.returns(GENESIS_EPOCH);
 
-    try {
-      processRewardsAndPenalties(config, state);
-      expect(getAttestationDeltasStub.called).to.be.false;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    processRewardsAndPenalties(config, state);
+    expect(getAttestationDeltasStub.called).to.be.false;
   });
 
   it("should process rewards and penalties", function () {
@@ -44,12 +40,8 @@ describe("process epoch - balance updates", function () {
     getCurrentEpochStub.returns(10);
     getAttestationDeltasStub.returns([[reward], [penalty]]);
 
-    try {
-      processRewardsAndPenalties(config, state);
-      expect(increaseBalanceStub.calledOnceWith(state, 0, reward + reward));
-      expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty + penalty));
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    processRewardsAndPenalties(config, state);
+    expect(increaseBalanceStub.calledOnceWith(state, 0, reward + reward));
+    expect(decreaseBalanceStub.calledOnceWith(state, 0, penalty + penalty));
   });
 });

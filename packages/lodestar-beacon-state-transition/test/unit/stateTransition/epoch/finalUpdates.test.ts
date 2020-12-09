@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
 import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 
@@ -31,12 +31,8 @@ describe("process epoch - final updates", function () {
     getCurrentEpochStub.returns(127);
     getRandaoMixStub.returns(0);
 
-    try {
-      processFinalUpdates(config, state);
-      expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
-      expect(getRandaoMixStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    processFinalUpdates(config, state);
+    expect(getCurrentEpochStub.calledOnceWith(config, state)).to.be.true;
+    expect(getRandaoMixStub.calledOnceWith(config, state, sinon.match.number)).to.be.true;
   });
 });

@@ -1,7 +1,7 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
 import {createEnr} from "@chainsafe/lodestar-cli/src/config";
-import {params as minimalParams} from "@chainsafe/lodestar-params/lib/presets/minimal";
+import {params as minimalParams} from "@chainsafe/lodestar-params/minimal";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -18,7 +18,7 @@ import {silentLogger} from "../logger";
 type RecursivePartial<T> = {
   [P in keyof T]?: T[P] extends (infer U)[]
     ? RecursivePartial<U>[]
-    : T[P] extends object
+    : T[P] extends Record<string, unknown>
     ? RecursivePartial<T[P]>
     : T[P];
 };

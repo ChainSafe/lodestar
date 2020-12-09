@@ -1,3 +1,4 @@
+/*
 import {assert} from "chai";
 
 import {
@@ -7,7 +8,7 @@ import {
   getBeaconCommittee,
 } from "../../../../src/util";
 
-/*
+
 describe("getEpochCommitteeCount", () => {
   // this defines the # of validators required to have 1 committee
   // per slot for epoch length.

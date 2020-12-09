@@ -12,10 +12,10 @@ import {GossipObject} from "../interface";
 export async function handleIncomingAggregateAndProof(this: Gossip, obj: GossipObject): Promise<void> {
   try {
     const signedAggregateAndProof = obj as SignedAggregateAndProof;
-    this.logger.verbose(
-      `Received AggregateAndProof from validator #${signedAggregateAndProof.message.aggregatorIndex}` +
-        ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
-    );
+    this.logger.verbose("Received AggregateAndProof", {
+      validator: signedAggregateAndProof.message.aggregatorIndex,
+      target: toHexString(signedAggregateAndProof.message.aggregate.data.target.root),
+    });
     this.emit(GossipEvent.AGGREGATE_AND_PROOF, signedAggregateAndProof);
   } catch (e) {
     this.logger.warn("Incoming aggregate and proof error", e);
@@ -32,8 +32,8 @@ export async function publishAggregatedAttestation(
     Buffer.from(this.config.types.SignedAggregateAndProof.serialize(signedAggregateAndProof))
   );
 
-  this.logger.verbose(
-    `Publishing SignedAggregateAndProof for validator #${signedAggregateAndProof.message.aggregatorIndex}` +
-      ` for target ${toHexString(signedAggregateAndProof.message.aggregate.data.target.root)}`
-  );
+  this.logger.verbose("Publishing SignedAggregateAndProof", {
+    validator: signedAggregateAndProof.message.aggregatorIndex,
+    target: toHexString(signedAggregateAndProof.message.aggregate.data.target.root),
+  });
 }

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
@@ -39,7 +39,7 @@ describe("rest - beacon - submitVoluntaryExit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitVoluntaryExit.url))
-      .send(config.types.SignedVoluntaryExit.toJson(voluntaryExit, {case: "snake"}) as object)
+      .send(config.types.SignedVoluntaryExit.toJson(voluntaryExit, {case: "snake"}) as Record<string, unknown>)
       .expect(200);
     expect(api.beacon.pool.submitVoluntaryExit.calledOnce).to.be.true;
   });
@@ -48,7 +48,7 @@ describe("rest - beacon - submitVoluntaryExit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, submitVoluntaryExit.url))
-      .send(config.types.SignedVoluntaryExit.toJson(voluntaryExit, {case: "camel"}) as object)
+      .send(config.types.SignedVoluntaryExit.toJson(voluntaryExit, {case: "camel"}) as Record<string, unknown>)
       .expect(400)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(api.beacon.pool.submitVoluntaryExit.notCalled).to.be.true;

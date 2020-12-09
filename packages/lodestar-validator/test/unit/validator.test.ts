@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import bls from "@chainsafe/bls";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import sinon from "sinon";
 import {ApiClientOverInstance} from "../../src/api";
 import {MockBeaconApi} from "../utils/mocks/beacon";

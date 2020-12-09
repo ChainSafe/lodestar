@@ -1,5 +1,5 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
   BeaconBlocksByRangeRequest,
@@ -79,12 +79,8 @@ describe("sync req resp", function () {
     networkStub.hasPeer.returns(true);
     networkStub.getPeers.returns([generatePeer(peerId), generatePeer(peerId)]);
 
-    try {
-      await syncRpc.start();
-      await syncRpc.stop();
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    await syncRpc.start();
+    await syncRpc.stop();
   });
 
   it("should handle request  - onStatus(success)", async function () {
@@ -98,22 +94,19 @@ describe("sync req resp", function () {
     };
     sendResponseStub.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
-    try {
-      await syncRpc.onRequest(
-        {
-          body,
-          encoding: ReqRespEncoding.SSZ_SNAPPY,
-          id: "abc",
-          method: Method.Status,
-        },
-        peerId,
-        (null as unknown) as Sink<unknown, unknown>
-      );
-      expect(sendResponseStub.calledOnce).to.be.true;
-      expect(reqRespStub.goodbye.called).to.be.false;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    await syncRpc.onRequest(
+      {
+        body,
+        encoding: ReqRespEncoding.SSZ_SNAPPY,
+        id: "abc",
+        method: Method.Status,
+      },
+      peerId,
+      (null as unknown) as Sink<unknown, unknown>
+    );
+    expect(sendResponseStub.calledOnce).to.be.true;
+    expect(reqRespStub.goodbye.called).to.be.false;
   });
 
   it("should handle request  - onStatus(error)", async function () {
@@ -210,43 +203,37 @@ describe("sync req resp", function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
     const goodbye: Goodbye = BigInt(1);
     networkStub.disconnect.resolves();
-    try {
-      await syncRpc.onRequest(
-        {
-          body: goodbye,
-          encoding: ReqRespEncoding.SSZ_SNAPPY,
-          id: "abc",
-          method: Method.Goodbye,
-        },
-        peerId,
-        (null as unknown) as Sink<unknown, unknown>
-      );
-      // expect(networkStub.disconnect.calledOnce).to.be.true;
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    await syncRpc.onRequest(
+      {
+        body: goodbye,
+        encoding: ReqRespEncoding.SSZ_SNAPPY,
+        id: "abc",
+        method: Method.Goodbye,
+      },
+      peerId,
+      (null as unknown) as Sink<unknown, unknown>
+    );
+    // expect(networkStub.disconnect.calledOnce).to.be.true;
   });
 
   it("should fail to handle request ", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
-    try {
-      await syncRpc.onRequest(
-        {
-          body: {
-            step: 0,
-            startSlot: 0,
-            count: 10,
-          },
-          encoding: ReqRespEncoding.SSZ_SNAPPY,
-          method: Method.BeaconBlocksByRange,
-          id: "random",
+
+    await syncRpc.onRequest(
+      {
+        body: {
+          step: 0,
+          startSlot: 0,
+          count: 10,
         },
-        peerId,
-        null!
-      );
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+        encoding: ReqRespEncoding.SSZ_SNAPPY,
+        method: Method.BeaconBlocksByRange,
+        id: "random",
+      },
+      peerId,
+      null!
+    );
   });
 
   it("should handle request - onBeaconBlocksByRange", async function () {

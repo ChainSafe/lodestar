@@ -11,9 +11,11 @@ export function getTopicEncoding(topic: string): GossipEncoding {
   if (topic.endsWith(GossipEncoding.SSZ)) {
     return GossipEncoding.SSZ;
   }
+
   if (topic.endsWith(GossipEncoding.SSZ_SNAPPY)) {
     return GossipEncoding.SSZ_SNAPPY;
   }
+
   throw `Unknown gossip encoding "${topic.split("/").pop()}"`;
 }
 
@@ -23,6 +25,7 @@ export function decodeMessageData(topic: string, data: Uint8Array): Uint8Array {
   switch (encoding) {
     case GossipEncoding.SSZ_SNAPPY:
       return uncompress(data);
+
     default:
       return data;
   }
@@ -34,6 +37,7 @@ export function encodeMessageData(topic: string, data: Uint8Array): Uint8Array {
   switch (encoding) {
     case GossipEncoding.SSZ_SNAPPY:
       return compress(data);
+
     default:
       return data;
   }
@@ -52,6 +56,7 @@ export function computeMsgId(topic: string, data: Uint8Array): Uint8Array {
         dataToHash = Buffer.concat([MESSAGE_DOMAIN_INVALID_SNAPPY, data]);
       }
       break;
+
     default:
       dataToHash = data;
   }

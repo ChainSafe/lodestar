@@ -75,7 +75,7 @@ export async function getBlockRange(
             blocks = blocks.concat(chunkBlocks);
             return null;
           } else {
-            logger.warn(`Failed to obtain chunk ${JSON.stringify(chunk)} ` + `from peer ${peer!.toB58String()}`);
+            logger.warn("Failed to obtain chunk from peer", {peerId: peer!.toB58String(), ...chunk});
             //if failed to obtain blocks, try in next round on another peer
             return chunk;
           }
@@ -84,7 +84,7 @@ export async function getBlockRange(
     ).filter(notNullish);
     retry++;
     if ((retry > maxRetry || retry > peers.length) && chunks.length > 0) {
-      logger.error("Max req retry for blocks by range. Failed chunks: " + JSON.stringify(chunks));
+      logger.error("Max req retry for blocks by range. Failed chunks", JSON.stringify(chunks));
       return null;
     }
   }

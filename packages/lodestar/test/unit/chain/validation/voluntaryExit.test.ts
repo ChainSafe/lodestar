@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";

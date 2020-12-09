@@ -13,6 +13,9 @@ import {
   FLAG_PREV_HEAD_ATTESTER,
 } from "../util";
 
+/**
+ * Return attestation reward/penalty deltas for each validator.
+ */
 export function getAttestationDeltas(
   epochCtx: EpochContext,
   process: IEpochProcess,

@@ -12,7 +12,8 @@ interface IWinstonInfoArg {
   namespace?: string;
   timestamp?: string;
   durationMs?: string;
-  context: Context | Error;
+  context: Context;
+  error: Error;
 }
 
 export function getFormat(opts: ILoggerOptions): Format {
@@ -41,6 +42,7 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
     format((_info) => {
       const info = _info as IWinstonInfoArg;
       info.context = toJson(info.context);
+      info.error = (toJson(info.error) as unknown) as Error;
       return info;
     })(),
     format.json()
@@ -59,16 +61,14 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
   const infoString = info.module || info.namespace || "";
   const infoPad = paddingBetweenInfo - infoString.length;
 
-  const {context, stack} = splitContextAndStackTrace(info.context);
-
   const logParts: (string | undefined)[] = [
     info.timestamp,
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    context,
+    info.context ? printStackTraceLast(info.context) : undefined,
+    info.error ? printStackTraceLast(info.error) : undefined,
     info.durationMs && ` - duration=${info.durationMs}ms`,
-    stack && `\n${stack}`,
   ];
 
   return logParts.filter((s) => s).join(" ");
@@ -77,17 +77,17 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 /**
  * Extract stack property from context to allow appending at the end of the log
  */
-function splitContextAndStackTrace(context?: Context | Error): {context?: string; stack?: string} {
+function printStackTraceLast(context?: Context | Error): string {
   if (!context) {
-    return {};
+    return "";
   }
 
   const json = toJson(context);
 
   if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {
     const {stack, ...errJsonData} = json;
-    return {context: toString(errJsonData), stack: toString(stack)};
+    return `${toString(errJsonData)} \n${toString(stack)}`;
   } else {
-    return {context: toString(json)};
+    return toString(json);
   }
 }

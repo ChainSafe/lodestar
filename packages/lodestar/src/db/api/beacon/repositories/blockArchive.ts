@@ -112,7 +112,7 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     return all(this.valuesStream(opts));
   }
 
-  public valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
+  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlock> {
     const dbFilterOpts = this.dbFilterOptions(opts);
     const firstSlot = dbFilterOpts.gt
       ? this.decodeKey(dbFilterOpts.gt) + 1
@@ -122,13 +122,12 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
     if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) || 1;
-    return (async function* () {
-      for await (const value of valuesStream) {
-        if ((value.message.slot - firstSlot) % step === 0) {
-          yield value;
-        }
+
+    for await (const value of valuesStream) {
+      if ((value.message.slot - firstSlot) % step === 0) {
+        yield value;
       }
-    })();
+    }
   }
 
   private async storeRootIndex(slot: Slot, blockRoot: Root): Promise<void> {

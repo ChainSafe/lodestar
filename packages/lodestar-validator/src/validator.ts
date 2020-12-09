@@ -105,8 +105,8 @@ export class Validator {
    * Establishes a connection to a specified beacon chain url.
    */
   private async setupAPI(): Promise<void> {
-    this.logger.info("Setting up RPC connection...");
+    this.logger.info("RPC connection setting up");
     await this.apiClient.connect();
-    this.logger.info(`RPC connection successfully established: ${this.apiClient.url}!`);
+    this.logger.info("RPC connection successfully established", {url: this.apiClient.url});
   }
 }

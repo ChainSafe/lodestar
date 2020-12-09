@@ -21,13 +21,10 @@ describe("Job queue", () => {
       }
       activeJobs--;
     };
-    try {
-      // Start all jobs at the same time
-      // expect none of the jobs to be running simultaneously
-      await Promise.all(Array.from({length: queueSize}, () => jobQueue.enqueueJob(job)));
-    } catch (e) {
-      expect.fail();
-    }
+
+    // Start all jobs at the same time
+    // expect none of the jobs to be running simultaneously
+    await Promise.all(Array.from({length: queueSize}, () => jobQueue.enqueueJob(job)));
   });
   it("should throw after the queue is full", async () => {
     const controller = new AbortController();
@@ -47,11 +44,8 @@ describe("Job queue", () => {
       expect(e).to.be.instanceOf(QueueError);
       expect(e.code).to.be.equal(QueueErrorCode.ERR_QUEUE_THROTTLED);
     }
-    try {
-      await jobs;
-    } catch (e) {
-      expect.fail();
-    }
+
+    await jobs;
   });
   it("should throw after the queue is aborted", async () => {
     const controller = new AbortController();

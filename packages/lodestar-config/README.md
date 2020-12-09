@@ -14,15 +14,14 @@ Configuration variables for an Eth2 network -- consists of params and ssz types 
 
 ```typescript
 // mainet and minimal presets are available under non-default exports
-import {config as mainnetConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {config as minimalConfig} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
+// or
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 // params available under `params`
-
 const shardCount = mainnetConfig.params.SHARD_COUNT;
 
 // types available under `types`
-
 const BeaconStateType = mainnetConfig.types.BeaconState;
 ```
 

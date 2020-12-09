@@ -8,7 +8,7 @@ import {
   encodeP2pErrorMessage,
   decodeP2pErrorMessage,
 } from "../../../../src/network/encoders/response";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../src/constants";
 import {expect} from "chai";
 import {createStatus} from "./utils";
@@ -19,8 +19,8 @@ import {encode} from "varint";
 import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
 import {silentLogger} from "../../../utils/logger";
-import { randomBytes } from "crypto";
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {
   const logger = silentLogger;
@@ -32,6 +32,7 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(0);
   });
 
@@ -42,6 +43,7 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(0);
   });
 
@@ -52,6 +54,7 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(0);
   });
 
@@ -62,6 +65,7 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(0);
   });
 
@@ -72,6 +76,7 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
@@ -83,12 +88,14 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response simple (sent multiple)- ssz", async function () {
     const controller = new AbortController();
+
     const responses = await pipe(
       abortSource(
         [
@@ -102,12 +109,14 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", controller),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
     const controller = new AbortController();
+
     const responses = await pipe(
       abortSource(
         [
@@ -121,42 +130,49 @@ describe("response decoders", function () {
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", controller),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
   });
 
   it("should work - single response complex- ssz", async function () {
     const status = createStatus();
+
     const responses = await pipe(
       [{status: 0, body: status}],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Status.equals(status, responses[0])).to.be.true;
   });
 
   it("should work - single response complex - ssz_snappy", async function () {
     const status = createStatus();
+
     const responses = await pipe(
       [{status: 0, body: status}],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     );
+
     expect(responses.length).to.be.equal(1);
     expect(config.types.Status.equals(status, responses[0])).to.be.true;
   });
 
   it("should work - response stream- ssz", async function () {
     const chunks = generateBlockChunks(10);
+
     const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", fakeController),
       all
     )) as ResponseBody[];
+
     expect(responses.length).to.be.equal(10);
     responses.forEach((response, i) => {
       expect(config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock))
@@ -166,12 +182,14 @@ describe("response decoders", function () {
 
   it("should work - response stream - ssz_snappy", async function () {
     const chunks = generateBlockChunks(10);
+
     const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     )) as ResponseBody[];
+
     expect(responses.length).to.be.equal(10);
     responses.forEach((response, i) => {
       expect(config.types.SignedBeaconBlock.equals(chunks[i].body as SignedBeaconBlock, response as SignedBeaconBlock))
@@ -184,24 +202,28 @@ describe("response decoders", function () {
     const chunks = generateBlockChunks(10);
     chunks[4].status = RpcResponseStatus.ERR_INVALID_REQ;
     chunks[4].body = encodeP2pErrorMessage(config, "Invalid request");
+
     const responses = (await pipe(
       abortSource(chunks, controller.signal, {returnOnAbort: true}),
       eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ, "abc", controller),
       all
     )) as ResponseBody[];
+
     expect(responses.length).to.be.equal(4);
   });
 
   it("should work - response stream with error - ssz_snappy", async function () {
     const chunks = generateBlockChunks(10);
     chunks[5].status = RpcResponseStatus.ERR_INVALID_REQ;
+
     const responses = (await pipe(
       chunks,
       eth2ResponseEncode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
     )) as ResponseBody[];
+
     expect(responses.length).to.be.equal(5);
   });
 
@@ -317,6 +339,7 @@ describe("response decoders", function () {
       const result = encodeP2pErrorMessage(config, err);
       expect(result.length).to.be.lte(256);
     });
+
     it("should encode too long error message", () => {
       const err = "e".repeat(1000);
       const result = encodeP2pErrorMessage(config, err);

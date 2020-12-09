@@ -6,16 +6,18 @@ import all from "it-all";
 
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {IDatabaseController, LevelDbController, Repository, Bucket} from "@chainsafe/lodestar-db";
 
 chai.use(chaiAsPromised);
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 interface TestType {
   bool: boolean;
   bytes: Bytes32;
 }
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const TestSSZType = new ContainerType<TestType>({
   fields: {
     bool: config.types.Boolean,

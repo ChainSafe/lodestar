@@ -50,6 +50,7 @@ describe("[network] nodejs libp2p", () => {
     assert(!nodeA.connectionManager.get(nodeB.peerId), "nodeA should NOT have connection to nodeB");
     await sleep(200);
     assert(!nodeB.connectionManager.get(nodeA.peerId), "nodeB should NOT have connection to nodeA");
+
     // teardown
     await Promise.all([nodeA.stop(), nodeB.stop()]);
   });

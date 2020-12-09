@@ -96,6 +96,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.ERR_INCORRECT_PROPOSER; blockProposer: ValidatorIndex}
   | {code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID}
   | {code: BlockErrorCode.ERR_UNKNOWN_PROPOSER; proposer: ValidatorIndex}
+  | {code: BlockErrorCode.ERR_INVALID_SIGNATURE}
   | {code: BlockErrorCode.ERR_BLOCK_IS_NOT_LATER_THAN_PARENT; blockSlot: Slot; stateSlot: Slot}
   | {code: BlockErrorCode.ERR_NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.ERR_NON_LINEAR_SLOTS}

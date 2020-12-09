@@ -2,11 +2,12 @@
  * @module chain/blockAssembly
  */
 
-import {fastStateTransition, IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {processBlock} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlock, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../constants";
+import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db/api";
+import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
@@ -30,25 +31,22 @@ export async function assembleBlock(
     stateRoot: ZERO_HASH,
     body: await assembleBody(config, db, eth1, stateContext.state, randaoReveal, graffiti),
   };
-
-  const preStateContext = await chain.regen.getBlockSlotState(head.blockRoot, slot - 1);
-  block.stateRoot = computeNewStateRoot(config, preStateContext, block);
+  block.stateRoot = computeNewStateRoot(config, stateContext, block);
 
   return block;
 }
 
-function computeNewStateRoot(config: IBeaconConfig, stateContext: IStateContext, block: BeaconBlock): Root {
-  // state is cloned from the cache already
-  const signedBlock = {
-    message: block,
-    signature: EMPTY_SIGNATURE,
+/**
+ * Instead of running fastStateTransition(), only need to process block since
+ * stateContext is processed until block.slot already (this is to avoid double
+ * epoch transition which happen at slot % 32 === 0)
+ */
+function computeNewStateRoot(config: IBeaconConfig, stateContext: ITreeStateContext, block: BeaconBlock): Root {
+  const postState = {
+    state: stateContext.state.clone(),
+    epochCtx: stateContext.epochCtx.copy(),
   };
+  processBlock(postState.epochCtx, postState.state, block, true);
 
-  const newState = fastStateTransition(stateContext, signedBlock, {
-    verifyStateRoot: false,
-    verifyProposer: false,
-    verifySignatures: true,
-  });
-
-  return config.types.BeaconState.hashTreeRoot(newState.state);
+  return config.types.BeaconState.hashTreeRoot(postState.state);
 }

@@ -164,14 +164,12 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     method: Method,
     encoding: ReqRespEncoding
   ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
-    return (source) => {
-      const peerReputations = this.peerMetadata;
-      return (async function* () {
-        if (method === Method.Status) {
-          peerReputations.setEncoding(peerId, encoding);
-        }
-        yield* source;
-      })();
+    const peerReputations = this.peerMetadata;
+    return async function* (source) {
+      if (method === Method.Status) {
+        peerReputations.setEncoding(peerId, encoding);
+      }
+      yield* source;
     };
   }
 

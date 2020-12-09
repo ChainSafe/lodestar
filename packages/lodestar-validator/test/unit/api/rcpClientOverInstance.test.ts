@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LodestarEventIterator} from "@chainsafe/lodestar-utils";
 
 import {ApiClientOverInstance} from "../../../src/api";

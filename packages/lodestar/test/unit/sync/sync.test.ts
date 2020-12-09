@@ -7,7 +7,7 @@ import {INetwork, Libp2pNetwork} from "../../../src/network";
 import {IRegularSync, NaiveRegularSync} from "../../../src/sync/regular";
 import {FastSync, InitialSync} from "../../../src/sync/initial";
 import {BeaconSync, SyncMode} from "../../../src/sync";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect} from "chai";
 import {BeaconDb} from "../../../src/db/api";
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -52,12 +52,15 @@ describe("sync", function () {
     gossipStub = sandbox.createStubInstance(BeaconGossipHandler);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     initialSyncStub = sandbox.createStubInstance(FastSync);
-    regularSync = new NaiveRegularSync({}, {
-      config,
-      network: networkStub,
-      chain: chainStub,
-      logger: new WinstonLogger(),
-    });
+    regularSync = new NaiveRegularSync(
+      {},
+      {
+        config,
+        network: networkStub,
+        chain: chainStub,
+        logger: new WinstonLogger(),
+      }
+    );
     sandbox.stub(regularSync, "start").resolves();
     sandbox.stub(regularSync, "stop").resolves();
   });

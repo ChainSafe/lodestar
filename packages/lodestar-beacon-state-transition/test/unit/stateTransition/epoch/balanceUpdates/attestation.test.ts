@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/epoch/util";
 import * as utils from "../../../../../src/util";
 import * as baseReward from "../../../../../src/epoch/balanceUpdates/util";
@@ -63,16 +63,11 @@ describe("process epoch - balance updates", function () {
     getBaseRewardStub.returns(BigInt(10));
     getAttestingIndicesStub.returns([0, 1]);
 
-    try {
-      const result = getAttestationDeltas(config, state);
-      const rewards = result[0];
-      const penalties = result[1];
-      rewards.forEach((value) => {
-        expect(value > BigInt(0)).to.be.true;
-      });
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+    const result = getAttestationDeltas(config, state);
+    const rewards = result[0];
+    rewards.forEach((value) => {
+      expect(value > BigInt(0)).to.be.true;
+    });
   });
 
   it("should return penalties", function () {
@@ -95,15 +90,11 @@ describe("process epoch - balance updates", function () {
     getMatchingHeadAttestationsStub.returns(emptyPendingAttestation);
     getBaseRewardStub.returns(BigInt(2));
     getAttestingIndicesStub.returns([2, 3]);
-    try {
-      const result = getAttestationDeltas(config, state);
-      const rewards = result[0];
-      const penalties = result[1];
-      penalties.forEach((value) => {
-        expect(value > BigInt(0)).to.be.true;
-      });
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    const result = getAttestationDeltas(config, state);
+    const penalties = result[1];
+    penalties.forEach((value) => {
+      expect(value > BigInt(0)).to.be.true;
+    });
   });
 });

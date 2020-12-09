@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../../utils/block";

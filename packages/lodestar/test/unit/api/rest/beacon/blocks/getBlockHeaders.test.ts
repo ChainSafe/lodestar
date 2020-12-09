@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import supertest from "supertest";
 import {toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {getBlockHeaders} from "../../../../../../src/api/rest/controllers/beacon/blocks";
@@ -17,17 +17,20 @@ describe("rest - beacon - getBlockHeaders", function () {
 
   beforeEach(async function () {
     api = new StubbedApi();
-    restApi = await RestApi.init({
-      api: [ApiNamespace.BEACON],
-      cors: "*",
-      enabled: true,
-      host: "127.0.0.1",
-      port: 0,
-    }, {
-      config,
-      logger: silentLogger,
-      api,
-    });
+    restApi = await RestApi.init(
+      {
+        api: [ApiNamespace.BEACON],
+        cors: "*",
+        enabled: true,
+        host: "127.0.0.1",
+        port: 0,
+      },
+      {
+        config,
+        logger: silentLogger,
+        api,
+      }
+    );
   });
 
   afterEach(async function () {
@@ -61,6 +64,7 @@ describe("rest - beacon - getBlockHeaders", function () {
       .resolves([generateSignedBeaconHeaderResponse()]);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(BEACON_PREFIX, getBlockHeaders.url))
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       .query({parent_root: toHexString(Buffer.alloc(32, 1))})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");

@@ -3,9 +3,8 @@ import {expect} from "chai";
 
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
-import {initiateValidatorExit} from "../../../../src/util";
 import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
@@ -36,12 +35,9 @@ describe("process epoch - slashings", function () {
     validatorToExit.effectiveBalance = BigInt(1);
     isActiveValidatorStub.withArgs(sinon.match.any, sinon.match.any).returns(true);
     const state = generateState({validators: [validatorEligble, validatorToExit] as List<Validator>});
-    try {
-      processRegistryUpdates(config, state);
-      expect(initiateValidatorExitStub.calledOnceWith(sinon.match.any, sinon.match.any, 1)).to.be.true;
-      expect(state.validators[0].activationEligibilityEpoch).to.be.equal(2);
-    } catch (e) {
-      expect.fail(e.stack);
-    }
+
+    processRegistryUpdates(config, state);
+    expect(initiateValidatorExitStub.calledOnceWith(sinon.match.any, sinon.match.any, 1)).to.be.true;
+    expect(state.validators[0].activationEligibilityEpoch).to.be.equal(2);
   });
 });

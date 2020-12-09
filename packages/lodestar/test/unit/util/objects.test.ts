@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {Uint64} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {arrayIntersection, mostFrequent, sszEqualPredicate} from "../../../src/util/objects";
 
 describe("Objects helper", () => {

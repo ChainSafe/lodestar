@@ -1,6 +1,6 @@
 import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {
   BeaconState,
   Checkpoint,
