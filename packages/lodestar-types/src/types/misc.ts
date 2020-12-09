@@ -50,6 +50,11 @@ export interface Checkpoint {
   root: Root;
 }
 
+export interface SlotRoot {
+  slot: Slot;
+  root: Root;
+}
+
 export interface Validator {
   // BLS public key
   pubkey: BLSPubkey;

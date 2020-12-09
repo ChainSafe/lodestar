@@ -11,20 +11,15 @@ import {IBeaconApi} from "./beacon";
 import {INodeApi} from "./node";
 import {IValidatorApi} from "./validator";
 import {IEventsApi} from "./events";
+import {IDebugApi} from "./debug/interface";
 
 export const enum ApiNamespace {
   BEACON = "beacon",
   VALIDATOR = "validator",
   NODE = "node",
   EVENTS = "events",
+  DEBUG = "debug",
 }
-
-export const apiNamespaces: ApiNamespace[] = [
-  ApiNamespace.BEACON,
-  ApiNamespace.VALIDATOR,
-  ApiNamespace.NODE,
-  ApiNamespace.EVENTS,
-];
 
 export interface IApiModules {
   config: IBeaconConfig;
@@ -41,4 +36,5 @@ export interface IApi {
   node: INodeApi;
   validator: IValidatorApi;
   events: IEventsApi;
+  debug: IDebugApi;
 }

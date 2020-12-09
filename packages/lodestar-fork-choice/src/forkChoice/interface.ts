@@ -34,6 +34,10 @@ export interface IForkChoice {
    */
   getHeadRoot(): Uint8Array;
   getHead(): IBlockSummary;
+  /**
+   * Retrieves all possible chain heads (leaves of fork choice tree).
+   */
+  getHeads(): IBlockSummary[];
   getFinalizedCheckpoint(): Checkpoint;
   getJustifiedCheckpoint(): Checkpoint;
   /**

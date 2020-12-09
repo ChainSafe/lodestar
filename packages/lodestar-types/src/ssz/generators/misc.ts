@@ -42,6 +42,14 @@ export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
+export const SlotRoot = (ssz: IBeaconSSZTypes): ContainerType =>
+  new ContainerType({
+    fields: {
+      slot: ssz.Slot,
+      root: ssz.Root,
+    },
+  });
+
 export const Validator = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {

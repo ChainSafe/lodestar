@@ -240,6 +240,10 @@ export class ForkChoice implements IForkChoice {
     return toBlockSummary(headNode);
   }
 
+  public getHeads(): IBlockSummary[] {
+    return this.protoArray.nodes.filter((node) => !node.bestChild).map(toBlockSummary);
+  }
+
   public getFinalizedCheckpoint(): Checkpoint {
     return this.fcStore.finalizedCheckpoint;
   }
