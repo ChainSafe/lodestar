@@ -1,6 +1,7 @@
+import {AbortSignal} from "abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ErrorAborted} from "@chainsafe/lodestar-utils";
+import {sleep, ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -13,7 +14,6 @@ import {IBeaconClock} from "./interface";
 export class LocalClock implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
-  private timeoutId: NodeJS.Timeout;
   private readonly emitter: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private _currentSlot: number;
@@ -31,11 +31,17 @@ export class LocalClock implements IBeaconClock {
   }) {
     this.config = config;
     this.genesisTime = genesisTime;
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
     this.emitter = emitter;
+
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
-    this.signal.addEventListener("abort", () => clearTimeout(this.timeoutId), {once: true});
+    this.start().catch((e) => {
+      if (e instanceof ErrorAborted) {
+        // Aborted
+      } else {
+        throw e;
+      }
+    });
   }
 
   public get currentSlot(): Slot {
@@ -78,6 +84,14 @@ export class LocalClock implements IBeaconClock {
     });
   }
 
+  private async start(): Promise<void> {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      this.onNextSlot();
+      await sleep(this.msUntilNextSlot(), this.signal);
+    }
+  }
+
   private onNextSlot = (): void => {
     const clockSlot = getCurrentSlot(this.config, this.genesisTime);
     // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT
@@ -94,8 +108,6 @@ export class LocalClock implements IBeaconClock {
         this.emitter.emit(ChainEvent.clockEpoch, currentEpoch);
       }
     }
-    //recursively invoke onNextSlot
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
   };
 
   private msUntilNextSlot(): number {

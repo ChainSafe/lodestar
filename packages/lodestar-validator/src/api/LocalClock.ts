@@ -1,5 +1,7 @@
+import {AbortSignal} from "abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {sleep, ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiClientEventEmitter, IBeaconClock} from "./interface";
 import {ClockEventType} from "./interface/clock";
@@ -10,7 +12,6 @@ import {ClockEventType} from "./interface/clock";
 export class LocalClock implements IBeaconClock {
   private readonly config: IBeaconConfig;
   private readonly genesisTime: number;
-  private timeoutId: NodeJS.Timeout;
   private readonly emitter: ApiClientEventEmitter;
   private readonly signal?: AbortSignal;
   private _currentSlot: number;
@@ -28,13 +29,17 @@ export class LocalClock implements IBeaconClock {
   }) {
     this.config = config;
     this.genesisTime = genesisTime;
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
     this.signal = signal;
     this.emitter = emitter;
+
     this._currentSlot = getCurrentSlot(this.config, this.genesisTime);
-    if (this.signal) {
-      this.signal.addEventListener("abort", this.abort);
-    }
+    this.start().catch((e) => {
+      if (e instanceof ErrorAborted) {
+        // Aborted
+      } else {
+        throw e;
+      }
+    });
   }
 
   public get currentSlot(): Slot {
@@ -45,12 +50,13 @@ export class LocalClock implements IBeaconClock {
     return computeEpochAtSlot(this.config, this.currentSlot);
   }
 
-  private abort = (): void => {
-    clearTimeout(this.timeoutId);
-    if (this.signal) {
-      this.signal.removeEventListener("abort", this.abort);
+  private async start(): Promise<void> {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      this.onNextSlot();
+      await sleep(this.msUntilNextSlot(), this.signal);
     }
-  };
+  }
 
   private onNextSlot = (): void => {
     const clockSlot = getCurrentSlot(this.config, this.genesisTime);
@@ -69,8 +75,6 @@ export class LocalClock implements IBeaconClock {
         });
       }
     }
-    //recursively invoke onNextSlot
-    this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
   };
 
   private msUntilNextSlot(): number {
