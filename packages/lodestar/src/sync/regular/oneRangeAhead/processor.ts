@@ -48,6 +48,7 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
         signal,
       };
       for (const block of sortedBlocks) {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.chain.receiveBlock(block);
       }
     });
