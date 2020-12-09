@@ -1,8 +1,8 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {IEpochProcess, prepareEpochProcessState} from "../../src/fast/util";
-import {EpochContext, StateTransitionEpochContext} from "../../src/fast/util/epochContext";
+import {IEpochProcess, prepareEpochProcessState} from "../../lib/fast/util";
+import {EpochContext, StateTransitionEpochContext} from "../../lib/fast/util/epochContext";
 import {
   processFinalUpdates,
   processJustificationAndFinalization,
@@ -10,7 +10,7 @@ import {
   processRewardsAndPenalties,
   processSlashings,
   processForkChanged,
-} from "../../src/fast/epoch";
+} from "../../lib/fast/epoch";
 import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
 

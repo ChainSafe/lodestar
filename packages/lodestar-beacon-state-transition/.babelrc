@@ -1,3 +1,4 @@
 {
-  "extends": "../../.babelrc"
+  "extends": "../../.babelrc",
+  "plugins": ["module:faster.js", "closure-elimination", "object-to-json-parse"]
 }

@@ -43,7 +43,7 @@
   resolved "https://registry.yarnpkg.com/@babel/compat-data/-/compat-data-7.12.7.tgz#9329b4782a7d6bbd7eef57e11addf91ee3ef1e41"
   integrity sha512-YaxPMGs/XIWtYqrdEOZOCPsVWfEoriXopnsz3/i7apYPXQ3698UFhS6dVT1KN5qOsWmVgw/FOrmQgpRaZayGsw==
 
-"@babel/core@^7.12.9":
+"@babel/core@^7.12.9", "@babel/core@^7.7.7":
   version "7.12.9"
   resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.12.9.tgz#fd450c4ec10cdbb980e2928b7aa7a28484593fc8"
   integrity sha512-gTXYh3M5wb7FRXQy+FErKFAv90BnlOuNn1QkCK2lREoPAjrQCO49+HVSrFoe5uakFAF5eenS75KbO2vQiLrTMQ==
@@ -1066,7 +1066,7 @@
     lodash "^4.17.19"
     to-fast-properties "^2.0.0"
 
-"@babel/types@^7.10.5", "@babel/types@^7.12.1", "@babel/types@^7.12.5", "@babel/types@^7.12.7":
+"@babel/types@^7.10.5", "@babel/types@^7.12.1", "@babel/types@^7.12.5", "@babel/types@^7.12.7", "@babel/types@^7.7.4":
   version "7.12.7"
   resolved "https://registry.yarnpkg.com/@babel/types/-/types-7.12.7.tgz#6039ff1e242640a29452c9ae572162ec9a8f5d13"
   integrity sha512-MNyI92qZq6jrQkXvtIiykvl4WtoRrVV9MPn+ZfsoEENjiWcBQ3ZSHrkxnJWgWtLX3XXqX5hrSQ+X69wkmesXuQ==
@@ -3720,6 +3720,11 @@ axios@^0.21.0:
   dependencies:
     follow-redirects "^1.10.0"
 
+babel-plugin-closure-elimination@^1.3.2:
+  version "1.3.2"
+  resolved "https://registry.yarnpkg.com/babel-plugin-closure-elimination/-/babel-plugin-closure-elimination-1.3.2.tgz#2c9a90360bdf888fd3b3694391a745a70ce18c34"
+  integrity sha512-GJnezbVp5ejiwh74fXJPznsrrWHR9bTuJV20FhXivbgEtg1WyNG/9KaDyHEpfU7G9iB6Gy+F2UffYLZ7DJh+Jw==
+
 babel-plugin-const-enum@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-const-enum/-/babel-plugin-const-enum-1.0.1.tgz#0d742faf9731be4f213c4d01d61fc4e93c44d159"
@@ -3734,6 +3739,14 @@ babel-plugin-dynamic-import-node@^2.3.3:
   integrity sha512-jZVI+s9Zg3IqA/kdi0i6UDCybUI3aSBLnglhYbSSjKlV7yF1F/5LWv8MakQmvYpnbJDS6fcBL2KzHSxNCMtWSQ==
   dependencies:
     object.assign "^4.1.0"
+
+babel-plugin-object-to-json-parse@^0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/babel-plugin-object-to-json-parse/-/babel-plugin-object-to-json-parse-0.2.1.tgz#c03aaa2808e83d05dd2488cf957660d2c261ad51"
+  integrity sha512-dxDar/rzwC18D7MWUdiTIZ6HQ0v5anvqa0FxLw+X+QxsKvgUBNPm3Hq1R1gr5WZOU6P1PYPnRhm9cXDNqwjbUA==
+  dependencies:
+    "@babel/core" "^7.7.7"
+    "@babel/types" "^7.7.4"
 
 balanced-match@^1.0.0:
   version "1.0.0"
@@ -5970,6 +5983,11 @@ fast-safe-stringify@^2.0.4, fast-safe-stringify@^2.0.7:
   version "2.0.7"
   resolved "https://registry.yarnpkg.com/fast-safe-stringify/-/fast-safe-stringify-2.0.7.tgz#124aa885899261f68aedb42a7c080de9da608743"
   integrity sha512-Utm6CdzT+6xsDk2m8S6uL8VHxNwI6Jub+e9NYTcAms28T84pTa25GJQV9j0CY0N1rM8hK4x6grpF2BQf+2qwVA==
+
+faster.js@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/faster.js/-/faster.js-1.1.1.tgz#8bbd7eefdb8f03faac26ad5025b059f94c5cfb4d"
+  integrity sha512-vPThNSLL/E1f7cLHd9yuayxZR82o/Iic4S5ZY45iY5AgBLNIlr3b3c+VpDjoYqjY9a9C/FQVUQy9oTILVP7X0g==
 
 fastify-cors@^3.0.3:
   version "3.0.3"
