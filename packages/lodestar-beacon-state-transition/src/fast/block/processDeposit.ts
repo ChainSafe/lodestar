@@ -1,12 +1,12 @@
 import bls from "@chainsafe/bls";
-import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
+import {Deposit} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 
-export function processDeposit(epochCtx: EpochContext, state: BeaconState, deposit: Deposit): void {
+export function processDeposit(epochCtx: EpochContext, state: CachedValidatorsBeaconState, deposit: Deposit): void {
   const config = epochCtx.config;
   const {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} = config.params;
   // verify the merkle branch
@@ -43,7 +43,7 @@ export function processDeposit(epochCtx: EpochContext, state: BeaconState, depos
     }
 
     // add validator and balance entries
-    state.validators.push({
+    state.addValidator({
       pubkey: pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials,
       activationEligibilityEpoch: FAR_FUTURE_EPOCH,

@@ -1,13 +1,13 @@
-import {AttesterSlashing, BeaconState} from "@chainsafe/lodestar-types";
+import {AttesterSlashing, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {isSlashableValidator, isSlashableAttestationData} from "../../util";
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttesterSlashing(
   epochCtx: EpochContext,
-  state: BeaconState,
+  state: CachedValidatorsBeaconState,
   attesterSlashing: AttesterSlashing,
   verifySignatures = true
 ): void {
@@ -27,7 +27,7 @@ export function processAttesterSlashing(
   let slashedAny = false;
   const attSet1 = new Set(attestation1.attestingIndices);
   const attSet2 = new Set(attestation2.attestingIndices);
-  const indices = [];
+  const indices: ValidatorIndex[] = [];
   for (const i of attSet1.values()) {
     if (attSet2.has(i)) {
       indices.push(i);

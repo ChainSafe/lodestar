@@ -4,6 +4,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {EpochContext, fastStateTransition, IStateContext} from "../../../src/fast";
+import {createCachedValidatorsBeaconState} from "../../../src/fast/util";
 import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../util";
 
 describe("Process Blocks Performance Test", function () {
@@ -12,10 +13,10 @@ describe("Process Blocks Performance Test", function () {
   const logger = new WinstonLogger();
   before(async () => {
     await initBLS();
-    const state = await generatePerformanceState();
+    const origState = await generatePerformanceState();
     const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    stateCtx = {state, epochCtx};
+    epochCtx.loadState(origState);
+    stateCtx = {state: createCachedValidatorsBeaconState(origState), epochCtx};
   });
 
   it("should process block", async () => {
@@ -50,8 +51,7 @@ describe("Process Blocks Performance Test", function () {
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    // could be up to 7000
-    expect(Date.now() - start).lt(6000);
+    expect(Date.now() - start).lt(1400);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
 });

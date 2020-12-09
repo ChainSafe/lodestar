@@ -1,5 +1,5 @@
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {createCachedValidatorsBeaconState, prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getAttestationDeltas} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -16,7 +16,8 @@ import {expect} from "chai";
       const state = testcase.pre;
       const epochCtx = new EpochContext(config);
       epochCtx.loadState(state);
-      const process = prepareEpochProcessState(epochCtx, state);
+      const wrappedState = createCachedValidatorsBeaconState(state);
+      const process = prepareEpochProcessState(epochCtx, wrappedState);
       const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
       return {
         rewards,

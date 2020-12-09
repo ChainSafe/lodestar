@@ -1,11 +1,15 @@
 import {readOnlyMap, List} from "@chainsafe/ssz";
-import {BeaconState, Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
+import {Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
 
 import {getRandaoMix} from "../../util";
-import {EpochContext, IEpochProcess} from "../util";
+import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
 
-export function processFinalUpdates(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
+export function processFinalUpdates(
+  epochCtx: EpochContext,
+  process: IEpochProcess,
+  state: CachedValidatorsBeaconState
+): void {
   const config = epochCtx.config;
   const currentEpoch = process.currentEpoch;
   const nextEpoch = currentEpoch + 1;
@@ -37,10 +41,9 @@ export function processFinalUpdates(epochCtx: EpochContext, process: IEpochProce
     const balance = balances[i];
     const effectiveBalance = status.validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
-      state.validators[i].effectiveBalance = bigIntMin(
-        balance - (balance % EFFECTIVE_BALANCE_INCREMENT),
-        MAX_EFFECTIVE_BALANCE
-      );
+      state.setValidator(i, {
+        effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
+      });
     }
   }
 

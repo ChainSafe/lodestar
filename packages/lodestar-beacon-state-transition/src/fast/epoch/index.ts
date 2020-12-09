@@ -1,6 +1,4 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
-
-import {prepareEpochProcessState} from "../util";
+import {CachedValidatorsBeaconState, prepareEpochProcessState} from "../util";
 import {StateTransitionEpochContext} from "../util/epochContext";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
@@ -20,7 +18,7 @@ export {
   getAttestationDeltas,
 };
 
-export function processEpoch(epochCtx: StateTransitionEpochContext, state: BeaconState): void {
+export function processEpoch(epochCtx: StateTransitionEpochContext, state: CachedValidatorsBeaconState): void {
   const process = prepareEpochProcessState(epochCtx, state);
   epochCtx.epochProcess = process;
   processJustificationAndFinalization(epochCtx, process, state);

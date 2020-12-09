@@ -1,5 +1,5 @@
 import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
-import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Gwei, PendingAttestation} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 
 import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../util";
@@ -19,7 +19,8 @@ import {
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {StateTransitionEpochContext} from "./epochContext";
-import {createIFlatValidator, isActiveIFlatValidator} from "./flatValidator";
+import {isActiveIFlatValidator} from "./flatValidator";
+import {CachedValidatorsBeaconState} from "./interface";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -67,7 +68,10 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, state: BeaconState): IEpochProcess {
+export function prepareEpochProcessState(
+  epochCtx: StateTransitionEpochContext,
+  state: CachedValidatorsBeaconState
+): IEpochProcess {
   const out = createIEpochProcess();
 
   const config = epochCtx.config;
@@ -87,8 +91,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  readOnlyForEach(state.validators, (validator, i) => {
-    const v = createIFlatValidator(validator);
+  state.flatValidators().forEach((v, i) => {
     const status = createIAttesterStatus(v);
 
     if (v.slashed) {
