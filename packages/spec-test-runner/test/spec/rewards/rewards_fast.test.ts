@@ -1,5 +1,8 @@
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {createCachedValidatorsBeaconState, prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {
+  createCachedValidatorsBeaconState,
+  prepareEpochProcessState,
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getAttestationDeltas} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
