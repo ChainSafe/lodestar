@@ -71,7 +71,7 @@ describe("@chainsafe/lodestar-types", () => {
   });
   //
   // put runtime type variables into an object
-  const vars = {};
+  const vars: Record<string, any> = {};
   const blackList: Record<string, boolean> = {
     Boolean: true,
     CommitteeIndices: true,
