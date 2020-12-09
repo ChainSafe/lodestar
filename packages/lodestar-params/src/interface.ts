@@ -4,9 +4,11 @@
  */
 
 import {IPhase1Params} from "./phase1";
+import {LightClientParams} from "./presets/lightclient";
 
 export interface IBeaconParams {
   phase1: IPhase1Params;
+  lightclient: LightClientParams;
   // Misc
   MAX_COMMITTEES_PER_SLOT: number;
   TARGET_COMMITTEE_SIZE: number;
