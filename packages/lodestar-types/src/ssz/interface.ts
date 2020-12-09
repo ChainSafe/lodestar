@@ -13,9 +13,11 @@ import {
 } from "@chainsafe/ssz";
 import * as t from "../types";
 import {IPhase1SSZTypes} from "../types/phase1/interface";
+import {ILightClientSSZTypes} from "../types/lightclient/interface";
 
 export interface IBeaconSSZTypes {
   phase1: IPhase1SSZTypes;
+  lightclient: ILightClientSSZTypes;
 
   // primitive
   Boolean: BooleanType;
