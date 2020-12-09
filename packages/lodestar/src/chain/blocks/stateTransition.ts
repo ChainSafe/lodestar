@@ -23,6 +23,8 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
 import {BlockError, BlockErrorCode} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {StateTransitionEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -65,26 +67,30 @@ export async function processSlotsToNearestCheckpoint(
   emitter: ChainEventEmitter,
   stateCtx: ITreeStateContext,
   slot: Slot
-): Promise<ITreeStateContext> {
+): Promise<IStateContext> {
   const config = stateCtx.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = stateCtx.state.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
-  let postCtx = cloneStateCtx(stateCtx);
+  const postCtx = cloneStateCtx(stateCtx);
+  const stateTransitionState = createCachedValidatorsBeaconState(postCtx.state);
+  const stateTranstionEpochContext = new StateTransitionEpochContext(undefined, postCtx.epochCtx);
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
-    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
-    emitCheckpointEvent(emitter, postCtx);
-    postCtx = cloneStateCtx(postCtx);
+    processSlots(stateTranstionEpochContext, stateTransitionState, nextEpochSlot);
+    const checkpointCtx = toTreeStateContext(toIStateContext(stateTranstionEpochContext, stateTransitionState));
+    emitCheckpointEvent(emitter, cloneStateCtx(checkpointCtx));
     // this avoids keeping our node busy processing blocks
     await sleep(0);
   }
-  return postCtx;
+  return {
+    epochCtx: stateTranstionEpochContext,
+    state: stateTransitionState,
+  };
 }
 
 /**
@@ -97,12 +103,11 @@ export async function processSlotsByCheckpoint(
   stateCtx: ITreeStateContext,
   slot: Slot
 ): Promise<ITreeStateContext> {
-  let postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
+  const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
   if (postCtx.state.slot < slot) {
     processSlots(postCtx.epochCtx, postCtx.state, slot);
-    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
   }
-  return postCtx;
+  return toTreeStateContext(postCtx);
 }
 
 export function emitForkChoiceHeadEvents(
@@ -196,7 +201,7 @@ export async function runStateTransition(
  */
 function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
   const treeStateCtx: ITreeStateContext = {
-    state: stateCtx.state as TreeBacked<BeaconState>,
+    state: stateCtx.state.getOriginalState() as TreeBacked<BeaconState>,
     epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
   };
 

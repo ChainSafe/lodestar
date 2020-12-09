@@ -1,12 +1,12 @@
-import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {decreaseBalance, increaseBalance} from "../../util";
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function slashValidator(
   epochCtx: EpochContext,
-  state: BeaconState,
+  state: CachedValidatorsBeaconState,
   slashedIndex: ValidatorIndex,
   whistleblowerIndex?: ValidatorIndex
 ): void {
@@ -19,8 +19,10 @@ export function slashValidator(
   const epoch = epochCtx.currentShuffling.epoch;
   initiateValidatorExit(epochCtx, state, slashedIndex);
   const validator = state.validators[slashedIndex];
-  validator.slashed = true;
-  validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
+  state.setValidator(slashedIndex, {
+    slashed: true,
+    withdrawableEpoch: Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR),
+  });
   state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effectiveBalance;
   decreaseBalance(state, slashedIndex, validator.effectiveBalance / BigInt(MIN_SLASHING_PENALTY_QUOTIENT));
 

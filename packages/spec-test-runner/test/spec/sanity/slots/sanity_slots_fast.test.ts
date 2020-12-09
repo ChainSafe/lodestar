@@ -4,6 +4,7 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {BeaconState} from "@chainsafe/lodestar-types";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -15,7 +16,8 @@ describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
     const state = config.types.BeaconState.tree.createValue(testcase.pre);
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    processSlots(epochCtx, state, state.slot + Number(testcase.slots));
+    const wrappedState = createCachedValidatorsBeaconState(state);
+    processSlots(epochCtx, wrappedState, state.slot + Number(testcase.slots));
     return state;
   },
   {

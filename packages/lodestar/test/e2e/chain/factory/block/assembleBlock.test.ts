@@ -27,6 +27,7 @@ import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {silentLogger} from "../../../../utils/logger";
 import {StateRegenerator} from "../../../../../src/chain/regen";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describe("produce block", function () {
   this.timeout("10 min");
@@ -90,7 +91,8 @@ describe("produce block", function () {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
     const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
-    expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
+    const wrappedState = createCachedValidatorsBeaconState(state);
+    expect(() => fastStateTransition({state: wrappedState, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
   });
 
   function getBlockProposingService(secretKey: SecretKey): BlockProposingService {

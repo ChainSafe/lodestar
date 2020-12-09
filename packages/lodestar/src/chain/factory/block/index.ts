@@ -3,6 +3,7 @@
  */
 
 import {processBlock} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlock, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
@@ -43,7 +44,7 @@ export async function assembleBlock(
  */
 function computeNewStateRoot(config: IBeaconConfig, stateContext: ITreeStateContext, block: BeaconBlock): Root {
   const postState = {
-    state: stateContext.state.clone(),
+    state: createCachedValidatorsBeaconState(stateContext.state.clone()),
     epochCtx: stateContext.epochCtx.copy(),
   };
   processBlock(postState.epochCtx, postState.state, block, true);
