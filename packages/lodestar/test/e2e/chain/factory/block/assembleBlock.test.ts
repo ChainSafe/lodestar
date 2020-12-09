@@ -69,7 +69,9 @@ describe("produce block", function () {
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
     sinon.stub(epochCtx, "getBeaconProposer").returns(20);
-    regenStub.getBlockSlotState.resolves({state: state.clone(), epochCtx});
+    const slotState = state.clone();
+    slotState.slot = 1;
+    regenStub.getBlockSlotState.withArgs(sinon.match.any, 1).resolves({state: slotState, epochCtx});
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
