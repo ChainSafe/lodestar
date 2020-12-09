@@ -1,3 +1,4 @@
+import {AbortSignal} from "abort-controller";
 import {BeaconBlock, Root, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
