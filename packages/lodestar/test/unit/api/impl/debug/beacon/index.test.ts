@@ -32,4 +32,10 @@ describe("api - debug - beacon - getHeads", function () {
     const heads = await debugApi.getHeads();
     expect(heads).to.be.deep.equal([{slot: 1000, root: ZERO_HASH}]);
   });
+
+  it("should return null", async () => {
+    forkchoiceStub.getHeads.throws("error from unit test");
+    const heads = await debugApi.getHeads();
+    expect(heads).to.be.null;
+  });
 });

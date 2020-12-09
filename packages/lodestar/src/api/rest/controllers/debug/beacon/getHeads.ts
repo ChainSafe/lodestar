@@ -1,7 +1,4 @@
-import {ListType} from "@chainsafe/ssz";
 import {ApiController} from "../../types";
-
-const MAX_FORKCHOICE_HEADS = 1000;
 
 export const getHeads: ApiController = {
   url: "/beacon/heads",
@@ -11,12 +8,9 @@ export const getHeads: ApiController = {
     if (!heads) {
       return resp.status(404).send();
     }
-    const slotRootsType = new ListType({
-      elementType: this.config.types.SlotRoot,
-      limit: MAX_FORKCHOICE_HEADS,
-    });
+    const headJsons = heads.map((head) => this.config.types.SlotRoot.toJson(head, {case: "snake"}));
     return resp.status(200).send({
-      data: slotRootsType.toJson(heads, {case: "snake"}),
+      data: headJsons,
     });
   },
 
