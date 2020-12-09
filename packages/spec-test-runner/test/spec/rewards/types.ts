@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {ContainerType, ListType} from "@chainsafe/ssz";
 

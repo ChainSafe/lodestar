@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utilsEpoch from "../../../../../src/epoch/util";
 import * as utils from "../../../../../src/util";
 import * as baseReward from "../../../../../src/epoch/balanceUpdates/util";

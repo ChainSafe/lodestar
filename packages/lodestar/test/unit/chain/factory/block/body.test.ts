@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttesterSlashing, generateEmptyProposerSlashing} from "../../../../utils/slashings";

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {join} from "path";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {isValidGenesisState} from "@chainsafe/lodestar/lib/chain/genesis/util";

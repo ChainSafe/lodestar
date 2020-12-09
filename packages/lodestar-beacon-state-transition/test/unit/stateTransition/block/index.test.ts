@@ -2,7 +2,7 @@ import {generateState} from "../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as processEth1Data from "../../../../src/block/eth1Data";
 import * as processBlockHeader from "../../../../src/block/blockHeader";
 import * as processRandao from "../../../../src/block/randao";

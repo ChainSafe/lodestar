@@ -4,7 +4,7 @@ import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
 import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";

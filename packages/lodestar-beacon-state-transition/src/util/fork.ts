@@ -1,6 +1,9 @@
 import {Version, Root, ForkData, ForkDigest} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
+/**
+ * Used primarily in signature domains to avoid collisions across forks/chains.
+ */
 export function computeForkDataRoot(config: IBeaconConfig, currentVersion: Version, genesisValidatorsRoot: Root): Root {
   const forkData: ForkData = {
     currentVersion,

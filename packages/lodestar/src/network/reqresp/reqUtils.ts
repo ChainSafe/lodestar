@@ -31,9 +31,11 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
   }
+
   const requestOnly = isRequestOnly(method);
   const requestSingleChunk = isRequestSingleChunk(method);
   const requestId = randomRequestId();
+
   try {
     return await pipe(
       sendRequestStream(modules, peerId, method, encoding, requestId, body, signal),
@@ -61,6 +63,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   let conn: {stream: Stream} | undefined;
   const controller = new AbortController();
   let requestTimer: NodeJS.Timeout | null = null;
+
   // write
   await Promise.race([
     (async function () {
@@ -79,8 +82,10 @@ export async function* sendRequestStream<T extends ResponseBody>(
       }, REQUEST_TIMEOUT);
     }),
   ]);
+
   if (requestTimer) clearTimeout(requestTimer);
   logger.verbose("sent request", {peer: peerId.toB58String(), method});
+
   yield* pipe(
     abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
     eth2ResponseTimer(controller),
@@ -106,6 +111,7 @@ export function handleResponses<T extends ResponseBody | ResponseBody[]>(
       logger.verbose("No response returned", {method, requestId, peer: peerId.toB58String()});
       return null;
     }
+
     const finalResponse = requestSingleChunk ? responses[0] : responses;
     logger.verbose("received response chunks", {
       peer: peerId.toB58String(),
@@ -117,6 +123,7 @@ export function handleResponses<T extends ResponseBody | ResponseBody[]>(
         body != null &&
         (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<unknown>).toJson(body),
     });
+
     return requestOnly ? null : (finalResponse as T);
   };
 }

@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync} from "../../../../../lib/sync/interface";
 import {IApiModules} from "../../../../../src/api/impl/interface";

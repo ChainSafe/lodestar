@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
 import {processAttestation} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";

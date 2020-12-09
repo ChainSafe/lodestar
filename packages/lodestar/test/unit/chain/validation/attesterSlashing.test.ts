@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon, {SinonStub} from "sinon";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {generateEmptyAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/test/utils/slashings";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";

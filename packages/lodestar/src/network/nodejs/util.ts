@@ -44,6 +44,7 @@ export async function createNodeJsLibp2p(
   const localMultiaddrs = network.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
   const bootMultiaddrs = network.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
   const enr = network.discv5?.enr;
+
   if (enr && typeof enr !== "string") {
     if (enr instanceof ENR) {
       if (enr.getLocationMultiaddr("udp") && !isLocalMultiAddr(enr.getLocationMultiaddr("udp"))) {
@@ -53,6 +54,7 @@ export async function createNodeJsLibp2p(
       throw Error("network.discv5.enr must be an instance of ENR");
     }
   }
+
   return new NodejsNode({
     peerId,
     addresses: {listen: localMultiaddrs},

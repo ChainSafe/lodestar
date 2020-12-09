@@ -1,4 +1,4 @@
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {generateState} from "../../../utils/state";
 import {processForkChanged} from "../../../../src/epoch/fork";

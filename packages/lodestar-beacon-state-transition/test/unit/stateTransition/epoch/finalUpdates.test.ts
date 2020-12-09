@@ -1,7 +1,7 @@
 import sinon from "sinon";
 import {expect} from "chai";
 
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
 import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
 

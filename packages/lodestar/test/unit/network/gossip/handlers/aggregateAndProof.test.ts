@@ -5,7 +5,7 @@ import {AggregateAndProof, SignedAggregateAndProof} from "@chainsafe/lodestar-ty
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 import {expect} from "chai";
 import {GossipEvent} from "../../../../../src/network/gossip/constants";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {silentLogger} from "../../../../utils/logger";
 
 describe("gossip handlers - aggregate and proof", function () {
@@ -29,11 +29,14 @@ describe("gossip handlers - aggregate and proof", function () {
       selectionProof: Buffer.alloc(0),
       aggregate: generateEmptyAttestation(),
     };
+
     const signedAggregate: SignedAggregateAndProof = {
       message: aggregate,
       signature: Buffer.alloc(96),
     };
+
     await handleIncomingAggregateAndProof.bind(gossipStub)(signedAggregate);
+
     expect(gossipStub.emit.withArgs(GossipEvent.AGGREGATE_AND_PROOF, signedAggregate).calledOnce).to.be.true;
   });
 });

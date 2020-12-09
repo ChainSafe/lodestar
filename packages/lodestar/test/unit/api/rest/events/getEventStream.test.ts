@@ -5,7 +5,7 @@ import {RestApi} from "../../../../../src/api/rest";
 import {StubbedApi} from "../../../../utils/stub/api";
 import sinon from "sinon";
 import {ApiNamespace} from "../../../../../src/api/impl";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {silentLogger} from "../../../../utils/logger";
 import pushable from "it-pushable/index";
 import {generateAttestation} from "../../../../utils/attestation";

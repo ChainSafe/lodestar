@@ -1,5 +1,5 @@
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Attestation, RequestBody, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";

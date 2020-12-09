@@ -13,10 +13,12 @@
   "files": [
     "lib/**/*.js",
     "lib/**/*.js.map",
-    "lib/**/*.d.ts"
+    "lib/**/*.d.ts",
+    "mainnet.*",
+    "minimal.*"
   ],
   "scripts": {
-    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo",
+    "clean": "rm -rf lib && rm -f tsconfig.build.tsbuildinfo",
     "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
     "build:release": "yarn clean && yarn build",
     "build:lib": "babel src -x .ts -d lib --source-maps",

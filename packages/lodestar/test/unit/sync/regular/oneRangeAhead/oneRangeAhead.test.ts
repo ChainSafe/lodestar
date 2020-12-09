@@ -4,7 +4,7 @@ import {IBlockRangeFetcher, IBlockRangeProcessor} from "../../../../../src/sync/
 import {BlockRangeFetcher} from "../../../../../src/sync/regular/oneRangeAhead/fetcher";
 import sinon from "sinon";
 import {BlockRangeProcessor} from "../../../../../src/sync/regular/oneRangeAhead/processor";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconChain, ChainEventEmitter, ForkChoice, IBeaconChain} from "../../../../../src/chain";
 import {INetwork, Libp2pNetwork} from "../../../../../src/network";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";

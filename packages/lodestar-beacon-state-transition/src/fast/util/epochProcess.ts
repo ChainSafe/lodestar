@@ -21,6 +21,11 @@ import {IEpochStakeSummary} from "./epochStakeSummary";
 import {StateTransitionEpochContext} from "./epochContext";
 import {createIFlatValidator, isActiveIFlatValidator} from "./flatValidator";
 
+/**
+ * The AttesterStatus (and FlatValidator under status.validator) objects and
+ * EpochStakeSummary are tracked in the IEpochProcess and made available as additional context in the
+ * epoch transition.
+ */
 export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;

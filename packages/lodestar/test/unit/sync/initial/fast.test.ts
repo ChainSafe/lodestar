@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {Checkpoint} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../src/chain";

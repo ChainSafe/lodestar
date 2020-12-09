@@ -2,7 +2,7 @@ import {BeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {ForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {config} from "@chainsafe/lodestar-config/lib/presets/minimal";
+import {config} from "@chainsafe/lodestar-config/minimal";
 import {
   generateBlockSummary,
   generateEmptyBlock,

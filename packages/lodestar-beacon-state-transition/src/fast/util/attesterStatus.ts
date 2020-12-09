@@ -9,6 +9,11 @@ export const FLAG_CURR_HEAD_ATTESTER = 1 << 5;
 export const FLAG_UNSLASHED = 1 << 6;
 export const FLAG_ELIGIBLE_ATTESTER = 1 << 7;
 
+/**
+ * During the epoch transition, additional data is precomputed to avoid traversing any state a second
+ * time. Attestations are a big part of this, and each validator has a "status" to represent its
+ * precomputed participation.
+ */
 export interface IAttesterStatus {
   flags: number;
   proposerIndex: number; // -1 when not included by any proposer

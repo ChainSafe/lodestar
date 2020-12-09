@@ -3,7 +3,7 @@ import {CheckPeerAliveTask} from "../../../../src/network/tasks/checkPeerAliveTa
 import {INetwork, IReqResp, Libp2pNetwork} from "../../../../src/network";
 import {ReqResp} from "../../../../src/network/reqresp/reqResp";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {config} from "@chainsafe/lodestar-config/mainnet";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {IPeerMetadataStore} from "../../../../src/network/peers/interface";
@@ -15,6 +15,7 @@ describe("CheckPeerAliveTask", function () {
   let peerMetadataStub: SinonStubbedInstance<IPeerMetadataStore>;
   let task: CheckPeerAliveTask;
   let peerId: PeerId;
+
   beforeEach(async () => {
     networkStub = sinon.createStubInstance(Libp2pNetwork);
     reqRespStub = sinon.createStubInstance(ReqResp);
@@ -25,6 +26,7 @@ describe("CheckPeerAliveTask", function () {
       logger: new WinstonLogger(),
       network: networkStub,
     });
+
     // @ts-ignore
     networkStub.metadata = {
       seqNumber: BigInt(1),
@@ -40,6 +42,7 @@ describe("CheckPeerAliveTask", function () {
   it("cannot ping, should disconnect", async () => {
     reqRespStub.ping.throws("Error from unit test");
     await task.run();
+
     // expect(networkStub.disconnect.calledOnce).to.be.true;
     expect(reqRespStub.metadata.called).to.be.false;
   });
@@ -47,6 +50,7 @@ describe("CheckPeerAliveTask", function () {
   it("ping returns null, should disconnect", async () => {
     reqRespStub.ping.resolves(null);
     await task.run();
+
     // expect(networkStub.disconnect.calledOnce).to.be.true;
     expect(reqRespStub.metadata.called).to.be.false;
   });
@@ -58,6 +62,7 @@ describe("CheckPeerAliveTask", function () {
       attnets: Array(64).fill(true),
     });
     await task.run();
+
     expect(networkStub.disconnect.called).to.be.false;
     expect(reqRespStub.metadata.called).to.be.false;
   });
@@ -69,6 +74,7 @@ describe("CheckPeerAliveTask", function () {
       attnets: Array(64).fill(true),
     });
     await task.run();
+
     expect(networkStub.disconnect.called).to.be.false;
     expect(reqRespStub.metadata.calledOnce).to.be.true;
   });

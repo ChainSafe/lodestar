@@ -20,9 +20,11 @@ export async function handleIncomingVoluntaryExit(this: Gossip, obj: GossipObjec
 
 export async function publishVoluntaryExit(this: Gossip, voluntaryExit: SignedVoluntaryExit): Promise<void> {
   const forkDigestValue = await this.getForkDigestByEpoch(voluntaryExit.message.epoch);
+
   await this.pubsub.publish(
     getGossipTopic(GossipEvent.VOLUNTARY_EXIT, forkDigestValue),
     Buffer.from(this.config.types.SignedVoluntaryExit.serialize(voluntaryExit))
   );
+
   this.logger.verbose("Publishing voluntary exit", {validator: voluntaryExit.message.validatorIndex});
 }
