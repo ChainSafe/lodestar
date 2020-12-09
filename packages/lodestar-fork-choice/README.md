@@ -16,7 +16,7 @@ import {toHexString} from "@chainsafe/ssz";
 const config = createIBeaconConfig({params}); // see @chainsafe/lodestar-config for more info
 let someExistingBlockData = {
   // block data from somewhere to initialize the fork choice
-  // ArrayBuffer(0) is just a placeholder
+  // Buffer(32) is just a placeholder
   blockHeader: Buffer(32),
   finalizedCheckpoint: {checkpoint: Buffer(32)}
 };
