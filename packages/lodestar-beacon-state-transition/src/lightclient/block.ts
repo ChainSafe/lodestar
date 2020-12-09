@@ -1,6 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LightClient} from "@chainsafe/lodestar-types";
 import * as phase0Block from "../block";
+import {processSyncCommittee} from ".";
 
 export function processBlock(
   config: IBeaconConfig,
