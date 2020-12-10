@@ -1,6 +1,6 @@
 import {aggregatePublicKeys, verifyAggregate} from "@chainsafe/bls";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Epoch, LightClient, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Lightclient, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, intDiv, intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
 import {
@@ -20,8 +20,8 @@ const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
 export function processSyncCommittee(
   config: IBeaconConfig,
-  state: LightClient.BeaconState,
-  block: LightClient.BeaconBlock
+  state: Lightclient.BeaconState,
+  block: Lightclient.BeaconBlock
 ): void {
   const previousSlot = Math.max(state.slot, 1) - 1;
   const currentEpoch = getCurrentEpoch(config, state);
@@ -71,7 +71,7 @@ export function processSyncCommittee(
  */
 export function getSyncCommitteeIndices(
   config: IBeaconConfig,
-  state: LightClient.BeaconState,
+  state: Lightclient.BeaconState,
   epoch: Epoch
 ): ValidatorIndex[] {
   const baseEpoch =
@@ -101,9 +101,9 @@ export function getSyncCommitteeIndices(
  */
 export function getSyncCommittee(
   config: IBeaconConfig,
-  state: LightClient.BeaconState,
+  state: Lightclient.BeaconState,
   epoch: Epoch
-): LightClient.SyncCommittee {
+): Lightclient.SyncCommittee {
   const indices = getSyncCommitteeIndices(config, state, epoch);
   const pubkeys = indices.map((index) => state.validators[index].pubkey);
   const aggregates = [];
