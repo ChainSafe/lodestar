@@ -1,3 +1,4 @@
+import {AbortSignal} from "abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
