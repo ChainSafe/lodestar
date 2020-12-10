@@ -14,6 +14,7 @@ import * as api from "./api";
 
 import {IBeaconSSZTypes, typeNames} from "../interface";
 import {createPhase1SSTTypes} from "./phase1";
+import {createLightClientTypes} from "./lightclient";
 
 const allGenerators = {
   ...misc,
@@ -59,5 +60,6 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
   }
    */
   types.phase1 = createPhase1SSTTypes(params, types);
+  types.lightclient = createLightClientTypes(params, types);
   return types;
 }
