@@ -4,11 +4,9 @@
 
 ## Usage
 
-```
-const lodestarDb = require('@chainsafe/lodestar-db');
+ See here for the lodestar implementation of the interface provided by this package:
+https://github.com/ChainSafe/lodestar/blob/0cf18e3bedcbf402e46917d402eb92938dafd49c/packages/lodestar/src/db/api/beacon/beacon.ts#L27
 
-// TODO: DEMONSTRATE API
-```
 ## License
 
 Apache-2.0 [ChainSafe Systems](https://chainsafe.io)
