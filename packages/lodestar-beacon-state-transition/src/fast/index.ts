@@ -1,11 +1,16 @@
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {verifyBlockSignature} from "./util";
-import {IStateContext} from "./util";
+import {getBlockSignatureSet, IStateContext} from "./util";
 import {StateTransitionEpochContext} from "./util/epochContext";
 import {EpochContext} from "./util/epochContext";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
+import {
+  getAllBlockSignatureSets,
+  getAllBlockSignatureSetsExceptProposer,
+  ISignatureSet,
+  verifySignatureSetsBatch,
+} from "./signatureSets";
 
 export {IStateContext, EpochContext};
 
@@ -26,14 +31,21 @@ export function fastStateTransition(
   // process slots (including those with no blocks) since block
   processSlots(epochCtx, postState, block.slot);
 
-  // verify signature
-  if (verifyProposer) {
-    if (!verifyBlockSignature(epochCtx, postState, signedBlock)) {
-      throw new Error("Invalid block signature");
-    }
+  let signatureSets: ISignatureSet[] = [];
+  if (verifySignatures && verifyProposer) {
+    signatureSets = getAllBlockSignatureSets(epochCtx, state, signedBlock);
+  } else if (verifySignatures) {
+    signatureSets = getAllBlockSignatureSetsExceptProposer(epochCtx, state, signedBlock);
+  } else if (verifyProposer) {
+    signatureSets = [getBlockSignatureSet(epochCtx, state, signedBlock)];
   }
-  // process block
-  processBlock(epochCtx, postState, block, verifySignatures);
+
+  if (signatureSets.length > 0 && !verifySignatureSetsBatch(signatureSets)) {
+    throw new Error("Invalid block signature");
+  }
+
+  // process block, signatures were verified above already
+  processBlock(epochCtx, postState, block, false);
   // verify state root
   if (verifyStateRoot) {
     if (!types.Root.equals(block.stateRoot, types.BeaconState.hashTreeRoot(postState))) {
