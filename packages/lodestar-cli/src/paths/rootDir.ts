@@ -8,6 +8,5 @@ import {TestnetName} from "../testnets";
  */
 export function getDefaultRootDir(testnet?: TestnetName): string {
   const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
-  const lodestarHome = path.join(dataHome, "lodestar");
-  return path.join(lodestarHome, testnet || "mainnet");
+  return path.join(dataHome, "lodestar", testnet || "mainnet");
 }

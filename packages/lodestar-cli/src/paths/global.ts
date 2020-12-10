@@ -2,8 +2,6 @@ import {IGlobalArgs} from "../options";
 import {joinIfRelative} from "../util";
 import {getDefaultRootDir} from "./rootDir";
 
-export const defaultRootDir = getDefaultRootDir("mainnet");
-
 export interface IGlobalPaths {
   rootDir: string;
   paramsFile: string;
