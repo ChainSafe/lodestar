@@ -1,1 +1,1 @@
-export * as LightClient from "./types";
+export * as Lightclient from "./types";

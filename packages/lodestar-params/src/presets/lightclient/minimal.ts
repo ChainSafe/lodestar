@@ -1,8 +1,8 @@
-import {lightClientMinimalYaml} from "./minimalYaml";
+import {lightclientMinimalYaml} from "./minimalYaml";
 import {mapValuesNumToString} from "../../utils";
-import {LightClientParams, LightClientParamsSSZ} from "./types";
+import {LightclientParams, LightclientParamsSSZ} from "./types";
 import {createIBeaconParams} from "../..";
 
-export const lightClientCommit = "060619deffccd38ec82921e186967d9464b7d5c8";
-export const lightClientyaml = mapValuesNumToString(lightClientMinimalYaml);
-export const lightClientParams = createIBeaconParams(lightClientyaml, LightClientParamsSSZ) as LightClientParams;
+export const lightclientCommit = "060619deffccd38ec82921e186967d9464b7d5c8";
+export const lightclientyaml = mapValuesNumToString(lightclientMinimalYaml);
+export const lightclientParams = createIBeaconParams(lightclientyaml, LightclientParamsSSZ) as LightclientParams;

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-export const lightClientMainnetYaml = {
+export const lightclientMainnetYaml = {
   CONFIG_NAME: "mainnet",
 
   // 2**10 (=1,024)

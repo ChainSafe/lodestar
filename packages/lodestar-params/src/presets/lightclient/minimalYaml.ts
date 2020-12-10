@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export const lightClientMinimalYaml = {
+export const lightclientMinimalYaml = {
   CONFIG_NAME: "minimal",
 
   SYNC_COMMITTEE_SIZE: 64,

@@ -3,7 +3,7 @@ import {IBeaconParams} from "../interface";
 import {IPhase1Params, Phase1Params} from "../phase1";
 import {mainnetYaml as phase1MainnetYaml} from "../phase1/presets/mainnetYaml";
 import {createParams, mapValuesNumToString} from "../utils";
-import {lightClientParams} from "./lightclient/mainnet";
+import {lightclientParams} from "./lightclient/mainnet";
 import {mainnetYaml} from "./mainnetYaml";
 
 export const commit = "v1.0.0";
@@ -13,5 +13,5 @@ export const phase1Yaml = mapValuesNumToString(phase1MainnetYaml);
 export const params: IBeaconParams = {
   ...createParams<IBeaconParams>(phase0Yaml, BeaconParams),
   phase1: createParams<IPhase1Params>(phase1Yaml, Phase1Params),
-  lightclient: lightClientParams,
+  lightclient: lightclientParams,
 };
