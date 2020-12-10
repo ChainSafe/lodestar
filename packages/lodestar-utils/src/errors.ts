@@ -14,6 +14,9 @@ export class LodestarError<T extends {code: string}> extends Error {
     return this.type;
   }
 
+  /**
+   * Get the metadata and the stacktrace for the error.
+   */
   toObject(): {[key: string]: Json} {
     return {
       // Ignore message since it's just type.code
