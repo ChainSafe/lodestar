@@ -55,7 +55,7 @@ describe("BlockRangeFetcher", function () {
   });
 
   it("should fetch next range initially", async () => {
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     const firstBlock = generateEmptySignedBlock();
     const secondBlock = generateEmptySignedBlock();
@@ -70,7 +70,7 @@ describe("BlockRangeFetcher", function () {
   it("should fetch next range based on last fetch block", async () => {
     // handle the case when peer does not return all blocks
     // next fetch should start from last fetch block
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
@@ -96,7 +96,7 @@ describe("BlockRangeFetcher", function () {
     // should switch peer
     const firstPeerId = await PeerId.create();
     getPeers.onFirstCall().resolves([firstPeerId]);
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     getBlockRangeStub.onFirstCall().throws("");
     const firstBlock = generateEmptySignedBlock();
@@ -117,7 +117,7 @@ describe("BlockRangeFetcher", function () {
     // should switch peer
     const firstPeerId = await PeerId.create();
     getPeers.onFirstCall().resolves([firstPeerId]);
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     getBlockRangeStub.onFirstCall().resolves(null);
     const firstBlock = generateEmptySignedBlock();
@@ -143,7 +143,7 @@ describe("BlockRangeFetcher", function () {
     const secondPeerId = await PeerId.create();
     getPeers.onSecondCall().resolves([secondPeerId]);
     // fetcher should not trust a getBlockRange returning empty array using handleEmptyRange
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1010;
@@ -177,7 +177,7 @@ describe("BlockRangeFetcher", function () {
     getCurrentSlotStub.returns(2000);
     const firstBlock = generateEmptySignedBlock();
     firstBlock.message.slot = 1000;
-    fetcher.setLastProcessedBlock({blockRoot: config.types.BeaconBlock.hashTreeRoot(firstBlock.message), slot: 1000});
+    fetcher.setLastProcessedBlock({root: config.types.BeaconBlock.hashTreeRoot(firstBlock.message), slot: 1000});
     const secondBlock = generateEmptySignedBlock();
     secondBlock.message.slot = 1001;
     secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
@@ -230,7 +230,7 @@ describe("BlockRangeFetcher", function () {
     // should switch peer or the sync will keep getting the same chain segment and be stale
     const firstPeerId = await PeerId.create();
     getPeers.onFirstCall().resolves([firstPeerId]);
-    fetcher.setLastProcessedBlock({blockRoot: ZERO_HASH, slot: 1000});
+    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
     getCurrentSlotStub.returns(2000);
     // first call returns non-linear chain
     getBlockRangeStub.onFirstCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);

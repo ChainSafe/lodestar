@@ -1,10 +1,11 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {IRegularSyncModules, ISyncCheckpoint} from "../..";
+import {SlotRoot} from "@chainsafe/lodestar-types";
+import {IRegularSyncModules} from "../..";
 import {IService} from "../../../node";
 import {AbortSignal} from "abort-controller";
 
 export interface IBlockRangeFetcher {
-  setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void;
+  setLastProcessedBlock(lastProcessedBlock: SlotRoot): void;
   getNextBlockRange(): Promise<SignedBeaconBlock[]>;
 }
 

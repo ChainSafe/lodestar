@@ -1,10 +1,11 @@
 import PeerId from "peer-id";
 import {AbortSignal} from "abort-controller";
+import {SlotRoot} from "@chainsafe/lodestar-types";
 import {Checkpoint, SignedBeaconBlock, Slot, Status, Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getStatusProtocols, INetwork, IReqResp} from "../../network";
-import {ISlotRange, ISyncCheckpoint} from "../interface";
+import {ISlotRange} from "../interface";
 import {IBeaconChain} from "../../chain";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBlockRange, isValidChainOfBlocks, sortBlocks} from "./blocks";
@@ -172,13 +173,13 @@ export function processSyncBlocks(
   chain: IBeaconChain,
   logger: ILogger,
   isInitialSync: boolean,
-  lastProcessedBlock: ISyncCheckpoint,
+  lastProcessedBlock: SlotRoot,
   trusted = false
 ): (source: AsyncIterable<SignedBeaconBlock[] | null>) => Promise<Slot | null> {
   return async (source) => {
     let blockBuffer: SignedBeaconBlock[] = [];
     let lastProcessedSlot: Slot | null = null;
-    let {slot: headSlot, blockRoot: headRoot} = lastProcessedBlock;
+    let {slot: headSlot, root: headRoot} = lastProcessedBlock;
     for await (const blocks of source) {
       if (!blocks) {
         // failed to fetch range, trigger sync to retry
