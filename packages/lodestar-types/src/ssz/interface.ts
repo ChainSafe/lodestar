@@ -187,7 +187,7 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "BeaconBlocksByRangeRequest",
   "BeaconBlocksByRootRequest",
   "P2pErrorMessage",
-  //api
+  // api
   "SignedBeaconHeaderResponse",
   "SubscribeToCommitteeSubnetPayload",
   "SyncingStatus",
