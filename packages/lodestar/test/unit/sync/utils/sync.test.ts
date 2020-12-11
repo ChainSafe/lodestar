@@ -202,7 +202,7 @@ describe("sync utils", function () {
       block3.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(block2.message);
       const lastProcesssedSlot = await pipe(
         [[block1, block2, block3]],
-        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot}, true)
+        processSyncBlocks(config, chainStub, logger, true, {root: blockRoot, slot: lastProcessedBlock.slot}, true)
       );
       expect(chainStub.receiveBlock.calledWith(block1, true)).to.be.true;
       expect(chainStub.receiveBlock.calledWith(block2, true)).to.be.true;
@@ -226,7 +226,7 @@ describe("sync utils", function () {
       lastBlock.message.slot = 4;
       const lastProcesssedSlot = await pipe(
         [[block1, block2, orphanedBlock, lastBlock]],
-        processSyncBlocks(config, chainStub, logger, true, {blockRoot, slot: lastProcessedBlock.slot}, true)
+        processSyncBlocks(config, chainStub, logger, true, {root: blockRoot, slot: lastProcessedBlock.slot}, true)
       );
       // only block 1 is imported bc block2 does not link to a child
       // don't import orphaned and last block
@@ -235,7 +235,7 @@ describe("sync utils", function () {
     });
 
     it("should handle failed to get range - initial sync", async function () {
-      const lastProcessedBlock = {blockRoot: ZERO_HASH, slot: 10};
+      const lastProcessedBlock = {root: ZERO_HASH, slot: 10};
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
@@ -248,13 +248,13 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [null],
-        processSyncBlocks(config, chainStub, logger, false, {slot: 100, blockRoot: ZERO_HASH})
+        processSyncBlocks(config, chainStub, logger, false, {slot: 100, root: ZERO_HASH})
       );
       expect(lastProcessSlot).to.be.equal(100);
     });
 
     it("should handle empty range - initial sync", async function () {
-      const lastProcessedBlock = {blockRoot: ZERO_HASH, slot: 10};
+      const lastProcessedBlock = {root: ZERO_HASH, slot: 10};
       const lastProcessSlot = await pipe(
         // failed to fetch range
         [[]],
@@ -267,7 +267,7 @@ describe("sync utils", function () {
       const lastProcessSlot = await pipe(
         // empty range
         [[]],
-        processSyncBlocks(config, chainStub, logger, false, {slot: 100, blockRoot: ZERO_HASH})
+        processSyncBlocks(config, chainStub, logger, false, {slot: 100, root: ZERO_HASH})
       );
       expect(lastProcessSlot).to.be.null;
     });
