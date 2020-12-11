@@ -19,8 +19,6 @@ import {IGlobalArgs} from "../../options";
 import {IDevArgs} from "./options";
 import {initializeOptionsAndConfig} from "../init/handler";
 import {mkdir, initBLS} from "../../util";
-import {getGlobalPaths} from "../../paths/global";
-import {TestnetName} from "../../testnets";
 
 /**
  * Run a beacon node with validator
@@ -36,9 +34,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   beaconNodeOptions.set({network: {discv5: {enr}}});
 
   // Custom paths different than regular beacon, validator paths
-  const globalPaths = getGlobalPaths({...args, testnet: "dev" as TestnetName});
-  const chainDir = path.join(globalPaths.rootDir, "beacon");
-  const validatorsDir = path.join(globalPaths.rootDir, "validators");
+  const rootDir = path.join(args.rootDir || "./.lodestar", "dev");
+  const chainDir = path.join(rootDir, "beacon");
+  const validatorsDir = path.join(rootDir, "validators");
   const dbPath = path.join(chainDir, "db-" + peerId.toB58String());
 
   mkdir(chainDir);
