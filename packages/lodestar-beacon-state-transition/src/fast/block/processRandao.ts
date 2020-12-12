@@ -2,7 +2,7 @@ import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
-import {computeSigningRoot, getDomain, getRandaoMix} from "../../util";
+import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../util";
 import {EpochContext} from "../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
@@ -40,13 +40,13 @@ export function getRandaoRevealSignatureSet(
   block: BeaconBlock
 ): ISignatureSet {
   const config = epochCtx.config;
-  const epoch = epochCtx.currentShuffling.epoch;
-  const proposerIndex = epochCtx.getBeaconProposer(block.slot);
+  // should not get epoch from epochCtx
+  const epoch = computeEpochAtSlot(config, block.slot);
   const domain = getDomain(config, state, DomainType.RANDAO);
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[proposerIndex],
+    pubkey: epochCtx.index2pubkey[block.proposerIndex],
     signingRoot: computeSigningRoot(config, config.types.Epoch, epoch, domain),
     signature: block.body.randaoReveal,
   };
