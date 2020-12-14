@@ -1,3 +1,4 @@
+import {AbortSignal} from "abort-controller";
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";

@@ -5,5 +5,10 @@
   "npmClient": "yarn",
   "useWorkspaces": true,
   "version": "0.12.0",
-  "stream": "true"
+  "stream": "true",
+  "command": {
+    "version": {
+      "message": "chore(release): %s"
+    }
+  }
 }

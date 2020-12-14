@@ -3,6 +3,7 @@
  */
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {SlotRoot} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../../../chain";
 import {getSyncProtocols, INetwork} from "../../../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -13,7 +14,7 @@ import {Checkpoint, SignedBeaconBlock, Slot, Status} from "@chainsafe/lodestar-t
 import pushable, {Pushable} from "it-pushable";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import pipe from "it-pipe";
-import {ISlotRange, ISyncCheckpoint} from "../../interface";
+import {ISlotRange} from "../../interface";
 import {fetchBlockChunks, getCommonFinalizedCheckpoint, processSyncBlocks} from "../../utils";
 import {GENESIS_EPOCH} from "../../../constants";
 import {ISyncStats, SyncStats} from "../../stats";
@@ -46,7 +47,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * The last processed block
    */
-  private lastProcessedBlock!: ISyncCheckpoint;
+  private lastProcessedBlock!: SlotRoot;
 
   public constructor(opts: ISyncOptions, {config, chain, network, logger, db, stats}: IInitialSyncModules) {
     super();
@@ -68,7 +69,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.targetCheckpoint = getCommonFinalizedCheckpoint(this.config, this.getPeerStatuses());
     // head may not be on finalized chain so we start from finalized block
     // there are unfinalized blocks in db so we reprocess all of them
-    this.lastProcessedBlock = this.chain.forkChoice.getFinalizedBlock();
+    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
+    this.lastProcessedBlock = {slot: finalizedBlock.slot, root: finalizedBlock.blockRoot};
     this.blockImportTarget = this.lastProcessedBlock.slot;
     if (
       !this.targetCheckpoint ||
@@ -167,7 +169,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     if (processedBlock.message.slot === this.blockImportTarget) {
       this.lastProcessedBlock = {
         slot: processedBlock.message.slot,
-        blockRoot: this.config.types.BeaconBlock.hashTreeRoot(processedBlock.message),
+        root: this.config.types.BeaconBlock.hashTreeRoot(processedBlock.message),
       };
       this.setBlockImportTarget();
     }
@@ -217,7 +219,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   /**
    * Make sure we get up-to-date lastProcessedBlock from sync().
    */
-  private getLastProcessedBlock = (): ISyncCheckpoint => {
+  private getLastProcessedBlock = (): SlotRoot => {
     return this.lastProcessedBlock;
   };
 

@@ -1,6 +1,7 @@
 import {FastifyInstance} from "fastify";
 import {ApiNamespace} from "../../impl";
 import {registerBeaconRoutes} from "./beacon";
+import {registerDebugRoutes} from "./debug";
 import {registerEventsRoutes} from "./events";
 import {registerNodeRoutes} from "./node";
 import {registerValidatorRoutes} from "./validator";
@@ -22,6 +23,9 @@ export function registerRoutes(server: FastifyInstance, enabledNamespaces: ApiNa
       }
       if (enabledNamespaces.includes(ApiNamespace.VALIDATOR)) {
         registerValidatorRoutes(fastify);
+      }
+      if (enabledNamespaces.includes(ApiNamespace.DEBUG)) {
+        registerDebugRoutes(fastify);
       }
     },
     {prefix: "/eth"}

@@ -1,3 +1,4 @@
+import {AbortSignal} from "abort-controller";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 

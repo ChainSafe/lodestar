@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {SlotRoot} from "@chainsafe/lodestar-types";
 import {AbortController, AbortSignal} from "abort-controller";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -12,7 +13,6 @@ import {GossipEvent} from "../../../network/gossip/constants";
 import {checkBestPeer, getBestPeer, getBestPeerCandidates} from "../../utils";
 import {BlockRangeFetcher} from "./fetcher";
 import {BlockRangeProcessor} from "./processor";
-import {ISyncCheckpoint} from "../../interface";
 import {IBlockRangeFetcher, IBlockRangeProcessor, ORARegularSyncModules} from "./interface";
 
 /**
@@ -52,7 +52,8 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     await this.processor.start();
     this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
-    this.setLastProcessedBlock(this.chain.forkChoice.getHead());
+    const head = this.chain.forkChoice.getHead();
+    this.setLastProcessedBlock({slot: head.slot, root: head.blockRoot});
     this.sync().catch((e) => {
       this.logger.error("Regular Sync", e);
     });
@@ -67,7 +68,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 
-  public setLastProcessedBlock(lastProcessedBlock: ISyncCheckpoint): void {
+  public setLastProcessedBlock(lastProcessedBlock: SlotRoot): void {
     this.fetcher.setLastProcessedBlock(lastProcessedBlock);
   }
 

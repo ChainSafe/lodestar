@@ -110,56 +110,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Instantiates a ForkChoice from genesis parameters
-   */
-  public static fromGenesis(config: IBeaconConfig, fcStore: IForkChoiceStore, genesisBlock: BeaconBlock): ForkChoice {
-    const protoArray = ProtoArray.initialize({
-      slot: genesisBlock.slot,
-      parentRoot: toHexString(genesisBlock.parentRoot),
-      stateRoot: toHexString(genesisBlock.stateRoot),
-      blockRoot: toHexString(fcStore.finalizedCheckpoint.root),
-      justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
-      finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-    });
-
-    return new ForkChoice({
-      config,
-      fcStore,
-      protoArray,
-      queuedAttestations: new Set(),
-    });
-  }
-
-  /**
-   * Instantiates a ForkChoice from a weak subjectivity state
-   */
-  public static fromCheckpointState(
-    config: IBeaconConfig,
-    fcStore: IForkChoiceStore,
-    anchorState: BeaconState
-  ): ForkChoice {
-    const blockHeader = config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-    if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-      blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
-    }
-    const protoArray = ProtoArray.initialize({
-      slot: anchorState.latestBlockHeader.slot,
-      parentRoot: toHexString(blockHeader.parentRoot),
-      stateRoot: toHexString(blockHeader.stateRoot),
-      blockRoot: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(blockHeader)),
-      justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
-      finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-    });
-
-    return new ForkChoice({
-      config,
-      fcStore,
-      protoArray,
-      queuedAttestations: new Set(),
-    });
-  }
-
-  /**
    * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
    * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)
    *
@@ -238,6 +188,10 @@ export class ForkChoice implements IForkChoice {
       });
     }
     return toBlockSummary(headNode);
+  }
+
+  public getHeads(): IBlockSummary[] {
+    return this.protoArray.nodes.filter((node) => !node.bestChild).map(toBlockSummary);
   }
 
   public getFinalizedCheckpoint(): Checkpoint {

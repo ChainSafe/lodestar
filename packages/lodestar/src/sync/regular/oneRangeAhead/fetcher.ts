@@ -1,5 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {SlotRoot} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
 import PeerId from "peer-id";
@@ -8,7 +9,7 @@ import {defaultOptions, IRegularSyncOptions} from "../options";
 import {IBeaconChain} from "../../../chain";
 import {INetwork} from "../../../network";
 import {getBlockRange} from "../../utils/blocks";
-import {ISlotRange, ISyncCheckpoint} from "../../interface";
+import {ISlotRange} from "../../interface";
 import {ZERO_HASH} from "../../../constants";
 import {IBlockRangeFetcher} from "./interface";
 import {checkLinearChainSegment} from "../../utils/sync";
@@ -25,7 +26,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
   private readonly logger: ILogger;
   private readonly opts: IRegularSyncOptions;
   // for control range across next() calls
-  private lastFetchCheckpoint: ISyncCheckpoint;
+  private lastFetchCheckpoint: SlotRoot;
   // for each next() call
   private rangeStart: Slot = 0;
   private rangeEnd: Slot = 0;
@@ -42,10 +43,10 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     this.logger = modules.logger;
     this.opts = deepmerge(defaultOptions, options);
     this.getPeers = getPeers;
-    this.lastFetchCheckpoint = {blockRoot: ZERO_HASH, slot: 0};
+    this.lastFetchCheckpoint = {root: ZERO_HASH, slot: 0};
   }
 
-  public setLastProcessedBlock(lastFetchCheckpoint: ISyncCheckpoint): void {
+  public setLastProcessedBlock(lastFetchCheckpoint: SlotRoot): void {
     this.lastFetchCheckpoint = lastFetchCheckpoint;
   }
 
@@ -88,7 +89,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
           result = result.filter(
             (signedBlock) =>
               !this.config.types.Root.equals(
-                this.lastFetchCheckpoint.blockRoot,
+                this.lastFetchCheckpoint.root,
                 this.config.types.BeaconBlock.hashTreeRoot(signedBlock.message)
               )
           );
@@ -105,7 +106,7 @@ export class BlockRangeFetcher implements IBlockRangeFetcher {
     // success, ignore last block (there should be >= 2 blocks) since we can't validate parent-child
     result.splice(result.length - 1, 1);
     const lastBlock = result[result.length - 1].message;
-    this.lastFetchCheckpoint = {blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
+    this.lastFetchCheckpoint = {root: this.config.types.BeaconBlock.hashTreeRoot(lastBlock), slot: lastBlock.slot};
     return result!;
   }
 

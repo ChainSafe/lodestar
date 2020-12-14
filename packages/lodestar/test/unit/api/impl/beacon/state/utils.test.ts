@@ -142,7 +142,9 @@ describe("beacon state api utils", function () {
       const stateContext = getApiContext();
       stateContext.state = generateState({
         slot: 0,
-        validators: Array.from({length: 24}, () => generateValidator({activationEpoch: 1})) as List<Validator>,
+        validators: Array.from({length: 24}, () => generateValidator({activationEpoch: 0, exitEpoch: 10})) as List<
+          Validator
+        >,
       });
       const committees = getEpochBeaconCommittees(config, chainStub, stateContext, 1);
       expect(committees[0][0][0]).to.not.be.undefined;
