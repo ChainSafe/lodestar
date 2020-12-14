@@ -1,5 +1,5 @@
 // this will need async once we wan't to resolve archive slot
-import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, Validator, ValidatorIndex, ValidatorStatus, ValidatorResponse} from "@chainsafe/lodestar-types";

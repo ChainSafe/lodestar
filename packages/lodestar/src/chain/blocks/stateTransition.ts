@@ -9,11 +9,11 @@ import {
   IStateContext,
   toIStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {processSlots} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {
   getAllBlockSignatureSets,
   getAllBlockSignatureSetsExceptProposer,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
+} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";

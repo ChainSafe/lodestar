@@ -4,7 +4,7 @@ import {IBeaconDb} from "../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
+import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";

@@ -1,4 +1,4 @@
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
+import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, AttesterSlashing, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {SignedVoluntaryExit} from "../../../../../../lodestar-types/lib/types/operations";

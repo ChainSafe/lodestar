@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import * as processBlock from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../../src/chain";

@@ -3,7 +3,7 @@ import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db/api";
 import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(

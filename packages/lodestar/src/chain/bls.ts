@@ -1,5 +1,5 @@
 import {bls, PublicKey, Signature} from "@chainsafe/bls";
-import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
+import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 export function verifySignatureSetsBatch(signatureSets: ISignatureSet[]): boolean {
   const publicKeys: PublicKey[] = [];

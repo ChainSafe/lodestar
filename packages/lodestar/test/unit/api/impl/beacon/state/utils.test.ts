@@ -1,5 +1,5 @@
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
+import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Validator} from "@chainsafe/lodestar-types";

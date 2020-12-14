@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {processBlock} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {processBlock} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlock, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";

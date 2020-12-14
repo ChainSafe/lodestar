@@ -12,7 +12,7 @@ import {IBeaconChain} from "../../../../../../src/chain/interface";
 import {generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub/beaconDb";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
-import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
+import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 use(chaiAsPromised);
 
