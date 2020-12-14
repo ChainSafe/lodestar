@@ -60,13 +60,13 @@ jobs:
         run: yarn install --frozen-lockfile --ignore-optional
 
       - name: Build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-deps.outputs.cache-hit == 'true'
         run: yarn run build
       
-      # - name: Publish to npm registry
-      #   run: yarn run publish 
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to npm registry
+        run: yarn run publish 
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate changelog
         id: changelog
