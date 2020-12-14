@@ -1,13 +1,13 @@
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {generateAttestationData} from "../../../utils/attestation";
 import {expect} from "chai";
-import {isValidIndexedAttestation} from "../../../../src/fast/block/isValidIndexedAttestation";
-import {EpochContext} from "../../../../src/fast";
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
-import {EMPTY_SIGNATURE} from "../../../../src";
-import {generateState} from "../../../utils/state";
-import {generateValidators} from "../../../utils/validator";
+import {generateAttestationData} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
+import {EMPTY_SIGNATURE} from "@chainsafe/lodestar-beacon-state-transition";
+import {generateState} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
+import {generateValidators} from "@chainsafe/lodestar-beacon-state-transition/test/utils/validator";
+import {EpochContext} from "../../../src";
+import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation";
 
 describe("validate indexed attestation", () => {
   const epochCtx = new EpochContext(config);

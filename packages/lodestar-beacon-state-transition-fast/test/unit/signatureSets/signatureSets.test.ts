@@ -16,11 +16,11 @@ import {
   IndexedAttestation,
   AttestationData,
 } from "@chainsafe/lodestar-types";
-import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../../src/constants";
-import {generateState} from "../../../utils/state";
-import {generateValidators} from "../../../utils/validator";
-import {getAllBlockSignatureSets} from "../../../../src/fast/signatureSets";
-import {EpochContext} from "../../../../src/fast";
+import {ZERO_HASH, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
+import {generateValidators} from "@chainsafe/lodestar-beacon-state-transition/test/utils/validator";
+import {generateState} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
+import {getAllBlockSignatureSets} from "../../../src/signatureSets";
+import {EpochContext} from "../../../src";
 import {expect} from "chai";
 
 describe("signatureSets", () => {

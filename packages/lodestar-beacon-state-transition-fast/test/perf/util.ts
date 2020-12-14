@@ -3,7 +3,7 @@ import {BeaconState, Eth1Data, Gwei, SignedBeaconBlock, Validator} from "@chains
 import {init} from "@chainsafe/bls";
 import {WinstonLogger, interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {getBeaconProposerIndex} from "../../src/util/proposer";
+import {getBeaconProposerIndex} from "@chainsafe/lodestar-beacon-state-transition";
 
 let archivedState: TreeBacked<BeaconState> | null = null;
 let signedBlock: TreeBacked<SignedBeaconBlock> | null = null;
