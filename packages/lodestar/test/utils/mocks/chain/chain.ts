@@ -14,7 +14,8 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";

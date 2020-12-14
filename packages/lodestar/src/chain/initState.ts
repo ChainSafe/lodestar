@@ -4,7 +4,8 @@
 
 import {AbortSignal} from "abort-controller";
 
-import {blockToHeader, computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlockHeader, BeaconState, Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";

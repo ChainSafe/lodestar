@@ -7,7 +7,11 @@ import {EpochContext} from "./util/epochContext";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
 
-export {IStateContext, EpochContext};
+export * from "./block";
+export * from "./util";
+export * from "./signatureSets";
+export * from "./slot";
+export {isValidIndexedAttestation} from "./block/isValidIndexedAttestation";
 
 /**
  * Implementation of protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)

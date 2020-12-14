@@ -2,9 +2,10 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "./epochContext";
 import {IEpochProcess} from "./epochProcess";
 
-export * from "./block";
+export * from "./attestation";
 export * from "./attesterStatus";
-export {EpochContext} from "./epochContext";
+export * from "./block";
+export * from "./epochContext";
 export * from "./epochProcess";
 export * from "./epochShuffling";
 export * from "./epochStakeSummary";

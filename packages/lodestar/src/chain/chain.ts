@@ -6,8 +6,8 @@ import {
   computeEpochAtSlot,
   computeForkDigest,
   computeStartSlotAtEpoch,
-  EpochContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {

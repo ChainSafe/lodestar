@@ -11,6 +11,7 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
+export {getNewEth1Data} from "./processEth1Data";
 export {
   processBlockHeader,
   processRandao,
