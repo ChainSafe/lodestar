@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import * as specUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";

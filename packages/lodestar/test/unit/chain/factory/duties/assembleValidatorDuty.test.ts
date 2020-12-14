@@ -1,4 +1,4 @@
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";

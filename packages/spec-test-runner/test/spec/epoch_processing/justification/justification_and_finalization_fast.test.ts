@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {processJustificationAndFinalization} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {BeaconState} from "@chainsafe/lodestar-types";

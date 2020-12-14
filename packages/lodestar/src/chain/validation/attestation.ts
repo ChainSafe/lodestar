@@ -6,7 +6,7 @@ import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-tran
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 

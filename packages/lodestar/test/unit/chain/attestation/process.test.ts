@@ -3,7 +3,7 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {processAttestation} from "../../../../src/chain/attestation/process";

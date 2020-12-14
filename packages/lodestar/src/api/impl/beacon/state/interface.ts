@@ -11,7 +11,7 @@ import {
   BeaconCommitteeResponse,
   Fork,
 } from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
