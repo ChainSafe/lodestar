@@ -12,6 +12,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Get latest tag
+        uses: actions-ecosystem/action-get-latest-tag@v1
+        with:
+          with_initial_version: false
+        id: get-latest-tag
+
       - name: Create tag
         id: tag
         uses: butlerlogic/action-autotag@1.1.1
@@ -21,6 +28,7 @@ jobs:
           tag_prefix: "v"
     outputs:
       tag: ${{ steps.tag.outputs.tagname }}
+      previous_tag: ${{ steps.get-latest-tag.outputs.tag }}
       version: ${{ steps.tag.outputs.version }}
 
   release:
