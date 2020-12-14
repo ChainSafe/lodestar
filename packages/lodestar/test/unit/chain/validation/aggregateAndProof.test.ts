@@ -6,8 +6,9 @@ import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
-import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition-fast";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";

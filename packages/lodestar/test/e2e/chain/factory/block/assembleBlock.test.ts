@@ -9,12 +9,8 @@ import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {
-  getBeaconProposerIndex,
-  signedBlockToSignedHeader,
-  EpochContext,
-  fastStateTransition,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {getBeaconProposerIndex, signedBlockToSignedHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";

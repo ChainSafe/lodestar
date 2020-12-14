@@ -5,7 +5,8 @@ import {expect} from "chai";
 
 import {Attestation, IndexedAttestation} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {EpochContext, IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {BitList, toHexString} from "@chainsafe/ssz";
@@ -18,7 +19,6 @@ import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {generateAttestation} from "../../../utils/attestation";
 import {generateState} from "../../../utils/state";
 import {LocalClock} from "../../../../src/chain/clock";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition-fast";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip attestation validation", function () {
