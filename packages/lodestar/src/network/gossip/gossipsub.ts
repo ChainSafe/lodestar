@@ -2,10 +2,10 @@ import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
 import {Libp2p} from "libp2p-gossipsub/src/interfaces";
-import {Type} from "@chainsafe/ssz";
+import {CompositeType} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ForkDigest} from "@chainsafe/lodestar-types";
+import {ForkDigest, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 import {GossipMessageValidatorFn, GossipObject, IGossipMessageValidator, ILodestarGossipMessage} from "./interface";
 import {
@@ -205,11 +205,11 @@ export class LodestarGossipsub extends Gossipsub {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let objType: Type<any>;
+    let objType: {deserialize: (data: Uint8Array) => any};
     const gossipEvent = topicToGossipEvent(topic);
     switch (gossipEvent) {
       case GossipEvent.BLOCK:
-        objType = this.config.types.SignedBeaconBlock;
+        objType = (this.config.types.SignedBeaconBlock as CompositeType<SignedBeaconBlock>).tree;
         break;
       case GossipEvent.AGGREGATE_AND_PROOF:
         objType = this.config.types.SignedAggregateAndProof;

@@ -11,6 +11,7 @@ import {JobQueue} from "../../util/queue";
 import {processBlock} from "./process";
 import {validateBlock} from "./validate";
 import {IBeaconDb} from "../../db";
+import {isTreeBacked} from "@chainsafe/ssz";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
@@ -57,10 +58,12 @@ export class BlockProcessor {
  */
 export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
   try {
-    // First convert incoming blocks to TreeBacked backing (for efficiency reasons)
+    // First convert incoming blocks to TreeBacked backing (for efficiency reasons) if it's a regular block
     // The root is computed multiple times, the contents are hash-tree-rooted multiple times,
     // and some of the contents end up in the state as tree-form.
-    job.signedBlock = modules.config.types.SignedBeaconBlock.tree.createValue(job.signedBlock);
+    if (!isTreeBacked(job.signedBlock)) {
+      job.signedBlock = modules.config.types.SignedBeaconBlock.tree.createValue(job.signedBlock);
+    }
     await validateBlock({...modules, job});
     await processBlock({...modules, job});
   } catch (e) {

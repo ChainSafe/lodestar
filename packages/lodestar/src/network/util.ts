@@ -4,9 +4,7 @@
  */
 
 import PeerId from "peer-id";
-import {Type} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
 import {source as abortSource} from "abortable-iterator";
 import Multiaddr from "multiaddr";
@@ -41,14 +39,6 @@ export function createRpcProtocol(method: Method, encoding: "ssz" | "ssz_snappy"
  */
 export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
-}
-
-export function getRequestMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {
-  return Methods[method].requestSSZType(config)!;
-}
-
-export function getResponseMethodSSZType(config: IBeaconConfig, method: Method): Type<any> {
-  return Methods[method].responseSSZType(config);
 }
 
 export function isRequestOnly(method: Method): boolean {

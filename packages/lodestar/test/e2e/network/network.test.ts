@@ -213,7 +213,7 @@ describe("[network] network", function () {
     block.message.slot = 2020;
     void netB.gossip.publishBlock(block).catch((e) => console.error(e));
     const receivedBlock = await received;
-    expect(receivedBlock).to.be.deep.equal(block);
+    expect(config.types.SignedBeaconBlock.equals(receivedBlock as SignedBeaconBlock, block)).to.be.true;
   });
   it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([
