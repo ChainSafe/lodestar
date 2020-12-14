@@ -1,12 +1,29 @@
-import {Method, Methods, ReqRespEncoding} from "../../constants";
-import {toBuffer} from "../../util/buffer";
+import pipe from "it-pipe";
+import BufferList from "bl";
+import {decode, encode} from "varint";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
-import {decode, encode} from "varint";
-import BufferList from "bl";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Method, Methods, ReqRespEncoding} from "../../constants";
+import {toBuffer} from "../../util/buffer";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import {IValidatedRequestBody} from "./interface";
+
+export async function streamRequestBodyTo(
+  config: IBeaconConfig,
+  method: Method,
+  encoding: ReqRespEncoding,
+  requestBody: RequestBody,
+  requestBodySink: Stream
+): Promise<void> {
+  if (requestBody == null) return;
+
+  const serialized = serializeRequestBody(config, method, requestBody);
+  if (serialized == null) return;
+
+  const bodyEncodedStream = getRequestBodyEncodedStream(encoding, serialized);
+  await pipe(bodyEncodedStream, requestBodySink);
+}
 
 /**
  * Serializes `requestBody` to bytes serialization of `method` SSZ type

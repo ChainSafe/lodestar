@@ -1,124 +1,70 @@
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
+import sinon, {SinonStubbedInstance} from "sinon";
+import {encode} from "varint";
 import pipe from "it-pipe";
 import all from "it-all";
-import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
+import {eth2RequestDecode, streamRequestBodyTo} from "../../../../src/network/encoders/request";
+import {IValidatedRequestBody} from "../../../../src/network/encoders/interface";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
-import sinon, {SinonStubbedInstance} from "sinon";
-import {expect} from "chai";
 import {createStatus} from "./utils";
-import {encode} from "varint";
-import {Status} from "@chainsafe/lodestar-types";
+import {RequestBody, Status} from "@chainsafe/lodestar-types";
 import {silentLogger} from "../../../utils/logger";
 
-describe("request encoders", function () {
-  const logger = silentLogger;
-  let loggerStub: SinonStubbedInstance<ILogger>;
+chai.use(chaiAsPromised);
 
-  beforeEach(function () {
-    loggerStub = sinon.createStubInstance(WinstonLogger);
+describe("network / encoders", () => {
+  describe("request encoder", () => {
+    for (const encoding of [ReqRespEncoding.SSZ, ReqRespEncoding.SSZ_SNAPPY]) {
+      it(`simulate request basic - ${encoding}`, async function () {
+        const requestBody = BigInt(0);
+        const returnedRequest = await simulateRequest(Method.Ping, encoding, requestBody);
+
+        expect(config.types.Uint64.equals(returnedRequest.body as typeof requestBody, requestBody)).to.be.true;
+      });
+
+      it(`simulate request container - ${encoding}`, async function () {
+        const requestBody = createStatus();
+        const returnedRequest = await simulateRequest(Method.Status, encoding, requestBody);
+
+        expect(config.types.Status.equals(returnedRequest.body as typeof requestBody, requestBody)).to.be.true;
+      });
+
+      it(`simulate request bad body - ${encoding}`, async function () {
+        const requestBody = BigInt(0);
+
+        await expect(simulateRequest(Method.Status, encoding, requestBody)).to.be.rejectedWith(
+          "Cannot convert undefined or null to object"
+        );
+      });
+    }
+
+    async function simulateRequest(
+      method: Method,
+      encoding: ReqRespEncoding,
+      requestBody: RequestBody
+    ): Promise<IValidatedRequestBody> {
+      let decodedRequestBody: IValidatedRequestBody[] = [];
+      async function streamSink(source: any): Promise<void> {
+        decodedRequestBody = await all(eth2RequestDecode(config, silentLogger, method, encoding)(source));
+      }
+
+      await streamRequestBodyTo(config, method, encoding, requestBody, streamSink as any);
+
+      return decodedRequestBody[0];
+    }
   });
 
-  it("should work - basic request - ssz", async function () {
-    const requests = await pipe(
-      [BigInt(0)],
-      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      all
-    );
+  describe("request decoder", () => {
+    const logger = silentLogger;
+    let loggerStub: SinonStubbedInstance<ILogger>;
 
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
-  });
+    beforeEach(function () {
+      loggerStub = sinon.createStubInstance(WinstonLogger);
+    });
 
-  it("should work - basic request - ssz_snappy", async function () {
-    const requests = await pipe(
-      [BigInt(0)],
-      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      all
-    );
-
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
-  });
-
-  it("should work - container request - ssz", async function () {
-    const status = createStatus();
-    const requests = await pipe(
-      [status],
-      eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
-      all
-    );
-
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
-  });
-
-  it("should work - container request - ssz", async function () {
-    const status = createStatus();
-    const requests = await pipe(
-      [status],
-      eth2RequestEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
-      all
-    );
-
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
-  });
-
-  it("should work - multiple request - ssz", async function () {
-    const requests = await pipe(
-      [BigInt(1), BigInt(2)],
-      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
-      all
-    );
-
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
-  });
-
-  it("should work - multiple request - ssz_snappy", async function () {
-    const requests = await pipe(
-      [BigInt(1), BigInt(2)],
-      eth2RequestEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      eth2RequestDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
-      all
-    );
-
-    expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
-  });
-
-  it("should work - no request body - ssz", async function () {
-    const requests = await pipe([], eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ), all);
-    expect(requests.length).to.be.equal(1);
-  });
-
-  it("should work - no request body - ssz_snappy", async function () {
-    const requests = await pipe(
-      [],
-      eth2RequestDecode(config, logger, Method.Metadata, ReqRespEncoding.SSZ_SNAPPY),
-      all
-    );
-    expect(requests.length).to.be.equal(1);
-  });
-
-  it("should warn user if failed to encode request", async function () {
-    await pipe(
-      [BigInt(1)],
-      eth2RequestEncode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-      eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
-      all
-    );
-
-    expect(loggerStub.warn.calledOnce).to.be.true;
-  });
-
-  describe("eth2RequestDecode - request validation", () => {
     it("should yield {isValid: false} if it takes more than 10 bytes for varint", async function () {
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(99999999999999999999999))],

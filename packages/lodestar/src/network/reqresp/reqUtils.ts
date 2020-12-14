@@ -16,7 +16,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
-import {getRequestBodyEncodedStream, serializeRequestBody} from "../encoders/request";
+import {getRequestBodyEncodedStream, serializeRequestBody, streamRequestBodyTo} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
@@ -74,13 +74,8 @@ export async function* sendRequestStream<T extends ResponseBody>(
       }
       logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
 
-      if (requestBody) {
-        const serialized = serializeRequestBody(config, method, requestBody);
-        if (serialized) {
-          const bodyEncodedStream = getRequestBodyEncodedStream(encoding, serialized);
-          await pipe(bodyEncodedStream, conn.stream);
-        }
-      }
+      if (requestBody == null) return;
+      await streamRequestBodyTo(config, method, encoding, requestBody, conn.stream);
     })(),
     new Promise((_, reject) => {
       requestTimer = setTimeout(() => {
