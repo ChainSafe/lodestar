@@ -35,12 +35,12 @@ export async function resolveStateId(
     //TODO: support getting finalized states by root as well
     return (await db.stateCache.get(fromHexString(stateId))) ?? null;
   }
-  //block id must be slot
+  // block id must be slot
   const slot = parseInt(stateId, 10);
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new Error("Invalid block id");
   }
-  //todo: resolve archive slot -> state
+  // TODO: resolve archive slot -> state
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return (await db.stateCache.get(blockSummary.stateRoot)) ?? null;

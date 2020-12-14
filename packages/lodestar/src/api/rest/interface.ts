@@ -7,6 +7,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IApi, IBeaconApi, IValidatorApi} from "../impl";
 
 export interface ILodestarApiOpts {
+  // path prefix
   prefix: string;
   api: {
     beacon: IBeaconApi;

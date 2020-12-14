@@ -19,7 +19,7 @@ export function getPeersWithSubnet(peers: PeerId[], peerMetadata: IPeerMetadataS
 
   return peers.filter((peer) => {
     const meta = peerMetadata.getMetadata(peer);
-    //remove if no metadata or not in subnet
+    // remove if no metadata or not in subnet
     return !(!meta || !meta.attnets[subnet]);
   });
 }

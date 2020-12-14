@@ -42,7 +42,7 @@ export async function resolveBlockId(
     const root = fromHexString(blockId);
     return (await db.block.get(root)) || (await db.blockArchive.getByRoot(root));
   }
-  //block id must be slot
+  // block id must be slot
   const slot = parseInt(blockId, 10);
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new Error("Invalid block id");

@@ -170,6 +170,6 @@ export class InteropSubnetsJoiningTask {
   };
 
   private handleWireAttestation = (): void => {
-    //ignore random committee attestations
+    // ignore random committee attestations
   };
 }

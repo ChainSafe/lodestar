@@ -15,6 +15,11 @@ export interface IMetadataModules {
   logger: ILogger;
 }
 
+/**
+ * Implementation of eth2 p2p MetaData.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#metadata
+ */
 export class MetadataController {
   private enr?: ENR;
   private config: IBeaconConfig;

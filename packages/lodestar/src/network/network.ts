@@ -248,7 +248,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.metrics.peers.inc();
     this.logger.verbose("peer connected", {peerId: conn.remotePeer.toB58String(), direction: conn.stat.direction});
 
-    //tmp fix, we will just do double status exchange but nothing major
+    // tmp fix, we will just do double status exchange but nothing major
+    // TODO: fix it?
     this.emit("peer:connect", conn.remotePeer, conn.stat.direction);
   };
 

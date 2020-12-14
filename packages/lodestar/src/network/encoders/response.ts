@@ -29,7 +29,7 @@ export function eth2ResponseEncode(
         break;
       }
 
-      //yield status
+      // yield status
       yield encodeResponseStatus(chunk.status);
       let serializedData: Buffer;
       try {
@@ -40,13 +40,13 @@ export function eth2ResponseEncode(
         logger.warn("Failed to ssz serialize chunk", {method}, e);
       }
 
-      //yield encoded ssz length
+      // yield encoded ssz length
       yield Buffer.from(encode(serializedData!.length));
 
-      //yield compressed or uncompressed data chunks
+      // yield compressed or uncompressed data chunks
       yield* compressor(serializedData!);
 
-      //reset compressor
+      // reset compressor
       compressor = getCompressor(encoding);
     }
   };
@@ -61,10 +61,10 @@ export function eth2ResponseDecode(
   controller: AbortController
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return async function* (source) {
-    //floating buffer with current chunk
+    // floating buffer with current chunk
     let buffer = new BufferList();
 
-    //holds uncompressed chunks
+    // holds uncompressed chunks
     let uncompressedData = new BufferList();
     let status: number | null = null;
     let errorMessage: string | null = null;
@@ -163,10 +163,9 @@ export function encodeP2pErrorMessage(config: IBeaconConfig, err: string): P2pEr
 
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
- *
  */
 export function decodeP2pErrorMessage(config: IBeaconConfig, err: Uint8Array): string {
   const encoder = new TextDecoder();
-  //remove non ascii characters from string
+  // remove non ascii characters from string
   return encoder.decode(err).replace(/[^\x20-\x7F]/g, "");
 }

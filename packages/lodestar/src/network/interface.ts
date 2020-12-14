@@ -38,8 +38,6 @@ export interface IReqResp extends ReqEventEmitter {
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
 }
 
-// network
-
 export interface INetworkEvents {
   ["peer:connect"]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
   ["peer:disconnect"]: (peerId: PeerId) => void;
@@ -66,9 +64,21 @@ export interface INetwork extends NetworkEventEmitter {
   getEnr(): ENR | undefined;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
   getMaxPeer(): number;
+  /**
+   * Get the instance of a connection with a given peer.
+   */
   getPeerConnection(peerId: PeerId): LibP2pConnection | null;
+  /**
+   * Checks to see whether or not we are connected to a given peer.
+   */
   hasPeer(peerId: PeerId): boolean;
+  /**
+   * Connect to given peer(s).
+   */
   connect(peerId: PeerId, localMultiaddrs?: Multiaddr[]): Promise<void>;
+  /**
+   * Disconnect from given peer.
+   */
   disconnect(peerId: PeerId): Promise<void>;
   searchSubnetPeers(subnet: string): Promise<void>;
   // Service

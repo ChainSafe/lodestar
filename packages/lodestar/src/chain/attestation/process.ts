@@ -49,7 +49,7 @@ export async function processAttestation({
   }
 
   //TODO: we could signal to skip this in case it came from validated from gossip or from block
-  //we need to check this again, because gossip validation might put it in pool before it validated signature
+  // we need to check this again, because gossip validation might put it in pool before it validated signature
   if (!isValidIndexedAttestation(targetState.epochCtx, targetState.state, indexedAttestation, true)) {
     throw new AttestationError({
       code: AttestationErrorCode.ERR_INVALID_SIGNATURE,

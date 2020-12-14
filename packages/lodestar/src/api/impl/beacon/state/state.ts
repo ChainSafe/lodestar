@@ -78,7 +78,7 @@ export class BeaconStateApi implements IBeaconStateApi {
       }
     } else {
       validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
-      //validator added later than given stateId
+      // validator added later than given stateId
       if (validatorIndex && validatorIndex >= state.state.validators.length) {
         validatorIndex = undefined;
       }

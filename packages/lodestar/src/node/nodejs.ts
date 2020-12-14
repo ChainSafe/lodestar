@@ -60,7 +60,8 @@ export enum BeaconNodeStatus {
 }
 
 /**
- * Beacon Node
+ * The main Beacon Node class.  Contains various components for getting and processing data from the
+ * eth2 ecosystem as well as systems for getting beacon node metadata.
  */
 export class BeaconNode {
   public opts: IBeaconNodeOptions;
@@ -108,6 +109,10 @@ export class BeaconNode {
     this.status = BeaconNodeStatus.started;
   }
 
+  /**
+   * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
+   * beacon node
+   */
   public static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
@@ -216,6 +221,9 @@ export class BeaconNode {
     }) as T;
   }
 
+  /**
+   * Stop beacon node and its sub-components.
+   */
   public async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;

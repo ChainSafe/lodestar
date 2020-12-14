@@ -103,7 +103,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     const finalizedTargetSlot = this.getHighestBlock();
     const maxSlotImport = this.opts.maxSlotImport ?? defaultSyncOptions.maxSlotImport;
     if (fromSlot + maxSlotImport > finalizedTargetSlot) {
-      //first slot of epoch is skip slot
+      // first slot of epoch is skip slot
       return fromSlot + this.config.params.SLOTS_PER_EPOCH;
     } else {
       return fromSlot + maxSlotImport;
@@ -158,7 +158,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         } else {
           // no blocks in range
           logger.warn("Didn't receive any valid block in block range", {...slotRange});
-          //we didn't receive any block, set target from last requested slot
+          // we didn't receive any block, set target from last requested slot
           setBlockImportTarget(slotRange.end);
         }
       }
@@ -187,7 +187,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
       estimatedTillComplete: Math.round((estimate / 3600) * 10) / 10 + " hours",
     });
     if (processedCheckpoint.epoch === this.targetCheckpoint!.epoch) {
-      //this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
+      // this doesn't work because finalized checkpoint root is first slot of that epoch as per ffg,
       // while our processed checkpoint has root of last slot of that epoch
       // if(!this.config.types.Root.equals(processedCheckpoint.root, this.targetCheckpoint.root)) {
       //   this.logger.error("Different finalized root. Something fishy is going on: "
@@ -201,7 +201,7 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
         return;
       }
       this.logger.important(`Reach common finalized checkpoint at epoch ${this.targetCheckpoint!.epoch}`);
-      //finished initial sync
+      // finished initial sync
       await this.stop();
     }
   };

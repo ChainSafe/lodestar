@@ -1,11 +1,36 @@
-// gossip
-
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
+/**
+ * For more info on some of these constants:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#configuration
+ */
+
+/**
+ *
+ * Gossip constants
+ *
+ */
+
+/**
+ * Rationale: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#why-are-there-attestation_subnet_count-attestation-subnets
+ */
 export const ATTESTATION_SUBNET_COUNT = 64;
+
+/**
+ * The maximum number of slots during which an attestation can be propagated.
+ */
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
+
+/**
+ * The maximum milliseconds of clock disparity assumed between honest nodes.
+ */
 export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;
-// req/resp
+
+/**
+ *
+ * Request/Response constants
+ *
+ */
 
 export type RequestId = string;
 
@@ -33,6 +58,10 @@ export enum MethodResponseType {
   Stream = "Stream",
 }
 
+/**
+ * Request method types as defined by message types in:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#messages
+ */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const Methods = {
   [Method.Status]: {
@@ -69,6 +98,10 @@ export const Methods = {
   },
 };
 
+/**
+ * Available request/response encoding strategies:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#encoding-strategies
+ */
 export enum ReqRespEncoding {
   SSZ = "ssz",
   SSZ_SNAPPY = "ssz_snappy",
@@ -80,8 +113,12 @@ export enum RpcResponseStatus {
   SERVER_ERROR = 2,
 }
 
+/** The maximum allowed size of uncompressed gossip messages. */
 export const GOSSIP_MAX_SIZE = 2 ** 20;
+/** The maximum allowed size of uncompressed req/resp chunked responses. */
 export const MAX_CHUNK_SIZE = 2 ** 20;
+/** The maximum time to wait for first byte of request response (time-to-first-byte). */
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
+/** The maximum time for complete response transfer. */
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
 export const REQUEST_TIMEOUT = 5 * 1000; // 5 sec

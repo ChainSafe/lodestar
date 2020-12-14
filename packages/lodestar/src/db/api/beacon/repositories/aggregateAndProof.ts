@@ -31,7 +31,7 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
         return isValidAttestationSlot(this.config, a.data.slot, state.slot);
       })
       .sort((a, b) => {
-        //prefer aggregated attestations
+        // prefer aggregated attestations
         return b.aggregationBits.length - a.aggregationBits.length;
       });
   }

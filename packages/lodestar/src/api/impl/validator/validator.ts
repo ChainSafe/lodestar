@@ -38,6 +38,10 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
 
+/**
+ * Server implementation for handling validator duties.
+ * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
+ */
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
 

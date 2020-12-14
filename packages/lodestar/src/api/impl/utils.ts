@@ -2,6 +2,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconSync} from "../../sync";
 import {ApiError} from "./errors/api";
 
+/**
+ * Check the sync status of the beacon chain.
+ */
 export async function checkSyncStatus(config: IBeaconConfig, sync: IBeaconSync): Promise<void> {
   if (!sync.isSynced()) {
     let syncStatus;

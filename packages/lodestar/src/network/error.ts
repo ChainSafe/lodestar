@@ -5,7 +5,6 @@ import PeerId from "peer-id";
 /**
  * Error of network req/resp
  */
-
 export class RpcError extends Error {
   public status: RpcResponseStatus;
   constructor(status: RpcResponseStatus, message?: string) {

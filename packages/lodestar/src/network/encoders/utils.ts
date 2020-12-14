@@ -33,7 +33,7 @@ export function getDecompressor(encoding: ReqRespEncoding): IDecompressor {
           return chunk;
         },
         reset(): void {
-          //nothing to ignore
+          // nothing to ignore
         },
       };
   }

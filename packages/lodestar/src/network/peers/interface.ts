@@ -2,6 +2,9 @@ import PeerId from "peer-id";
 import {Metadata, Status} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../../constants";
 
+/**
+ * Get/set data about peers.
+ */
 export interface IPeerMetadataStore {
   setStatus(peer: PeerId, status: Status | null): void;
   getStatus(peer: PeerId): Status | null;
