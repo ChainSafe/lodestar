@@ -17,7 +17,7 @@ jobs:
         uses: butlerlogic/action-autotag@1.1.1
         with:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          strategy: package # Optional, since "package" is the default strategy
+          root: "packages/lodestar" # lerna doesn't update version root package.json and this action cannot read from lerna.json
           tag_prefix: "v"
     outputs:
       tag: ${{ steps.tag.outputs.tagname }}
