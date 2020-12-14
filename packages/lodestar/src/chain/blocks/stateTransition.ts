@@ -1,5 +1,5 @@
-import {byteArrayEquals, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Slot} from "@chainsafe/lodestar-types";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   ZERO_HASH,
@@ -23,7 +23,6 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
 import {BlockError, BlockErrorCode} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {StateTransitionEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
 
 /**
@@ -74,7 +73,7 @@ export async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
   const postCtx = cloneStateCtx(stateCtx);
-  const stateTransitionState = createCachedValidatorsBeaconState(postCtx.state);
+  const stateTransitionState = postCtx.state;
   const stateTranstionEpochContext = new StateTransitionEpochContext(undefined, postCtx.epochCtx);
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
@@ -180,7 +179,7 @@ export async function runStateTransition(
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
     ?.epochCtx.epochBalances;
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, justifiedBalances);
+  forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
 
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
@@ -201,7 +200,7 @@ export async function runStateTransition(
  */
 function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
   const treeStateCtx: ITreeStateContext = {
-    state: stateCtx.state.getOriginalState() as TreeBacked<BeaconState>,
+    state: stateCtx.state,
     epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
   };
 

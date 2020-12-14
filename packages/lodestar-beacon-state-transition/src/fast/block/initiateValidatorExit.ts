@@ -25,7 +25,7 @@ export function initiateValidatorExit(
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
   exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
   let exitQueueEpoch = Math.max(...exitEpochs);
-  const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).length;
+  const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).size;
   if (exitQueueChurn >= getChurnLimit(config, epochCtx.currentShuffling.activeIndices.length)) {
     exitQueueEpoch += 1;
   }

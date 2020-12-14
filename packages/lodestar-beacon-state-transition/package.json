@@ -41,7 +41,8 @@
     "@chainsafe/lodestar-utils": "^0.13.0",
     "@chainsafe/ssz": "^0.6.13",
     "bigint-buffer": "^1.1.5",
-    "buffer-xor": "^2.0.2"
+    "buffer-xor": "^2.0.2",
+    "immutable": "4.0.0-rc.12"
   },
   "devDependencies": {
     "@chainsafe/blst": "^0.1.3",

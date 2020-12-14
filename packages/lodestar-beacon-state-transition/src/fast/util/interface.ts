@@ -1,5 +1,6 @@
 import {IReadonlyEpochShuffling} from ".";
 import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-types";
+import {List} from "immutable";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
 import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -24,7 +25,7 @@ export type ReadonlyEpochContext = {
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export interface CachedValidatorsBeaconState extends BeaconState {
-  flatValidators(): IFlatValidator[];
+  flatValidators(): List<IFlatValidator>;
   setValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
   addValidator(validator: Validator): void;
   getOriginalState(): BeaconState;
@@ -39,18 +40,11 @@ export interface CachedValidatorsBeaconState extends BeaconState {
  */
 export class CachedValidatorsBeaconState {
   public _state: BeaconState;
-  private _cachedValidators: IFlatValidator[];
-  private isSynced: boolean;
+  private _cachedValidators: List<IFlatValidator>;
 
-  constructor(state: BeaconState, cachedValidators?: IFlatValidator[]) {
+  constructor(state: BeaconState, cachedValidators: List<IFlatValidator>) {
     this._state = state;
-    if (cachedValidators && cachedValidators.length > 0) {
-      this._cachedValidators = cachedValidators;
-      this.isSynced = true;
-    } else {
-      this._cachedValidators = [];
-      this.isSynced = false;
-    }
+    this._cachedValidators = cachedValidators;
   }
 
   public createProxy(): CachedValidatorsBeaconState {
@@ -62,8 +56,8 @@ export class CachedValidatorsBeaconState {
    */
   public setValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void {
     if (this._cachedValidators) {
-      const validator = this._cachedValidators[i];
-      this._cachedValidators[i] = {...validator, ...value};
+      const validator = this._cachedValidators.get(i)!;
+      this._cachedValidators = this._cachedValidators.set(i, {...validator, ...value});
     }
     const validator = this._state.validators[i];
     if (value.activationEligibilityEpoch !== undefined)
@@ -79,45 +73,39 @@ export class CachedValidatorsBeaconState {
    * Add validator to both the cache and BeaconState
    */
   public addValidator(validator: Validator): void {
-    if (this.isSynced) {
-      this._cachedValidators.push(createIFlatValidator(validator));
-    }
+    this._cachedValidators = this._cachedValidators.push(createIFlatValidator(validator));
     this._state.validators.push(validator);
   }
 
   /**
    * Loop through the cached validators, not the TreeBacked validators inside BeaconState.
    */
-  public flatValidators(): IFlatValidator[] {
-    this.sync();
+  public flatValidators(): List<IFlatValidator> {
     return this._cachedValidators;
   }
 
   public clone(): CachedValidatorsBeaconState {
     const clonedState = config.types.BeaconState.clone(this._state);
-    return cloneCachedValidatorsBeaconState(clonedState, [...this._cachedValidators]);
+    return cloneCachedValidatorsBeaconState(clonedState, this._cachedValidators);
   }
 
   public getOriginalState(): BeaconState {
     return this._state;
   }
 
-  private sync(): void {
-    if (this.isSynced) return;
-    readOnlyForEach(this._state.validators, (validator) => {
-      this._cachedValidators!.push(createIFlatValidator(validator));
-    });
-    this.isSynced = true;
-  }
 }
 
 export function createCachedValidatorsBeaconState(state: BeaconState): CachedValidatorsBeaconState {
-  return new CachedValidatorsBeaconState(state).createProxy();
+  const tmpValidators: IFlatValidator[] = [];
+  readOnlyForEach(state.validators, (validator) => {
+    tmpValidators.push(createIFlatValidator(validator));
+  });
+  return new CachedValidatorsBeaconState(state, List(tmpValidators)).createProxy();
 }
 
 function cloneCachedValidatorsBeaconState(
   state: BeaconState,
-  cachedValidators: IFlatValidator[]
+  cachedValidators: List<IFlatValidator>
 ): CachedValidatorsBeaconState {
   return new CachedValidatorsBeaconState(state, cachedValidators).createProxy();
 }
