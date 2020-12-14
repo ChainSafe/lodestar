@@ -16,7 +16,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
-import {eth2RequestEncode} from "../encoders/request";
+import {getRequestBodyEncodedStream, serializeRequestBody} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
@@ -53,7 +53,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   method: Method,
   encoding: ReqRespEncoding,
   requestId: RequestId,
-  body?: RequestBody,
+  requestBody?: RequestBody,
   signal?: AbortSignal
 ): AsyncIterable<T> {
   const {libp2p, config, logger} = modules;
@@ -73,7 +73,14 @@ export async function* sendRequestStream<T extends ResponseBody>(
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
       logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
-      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+
+      if (requestBody) {
+        const serialized = serializeRequestBody(config, method, requestBody);
+        if (serialized) {
+          const bodyEncodedStream = getRequestBodyEncodedStream(encoding, serialized);
+          await pipe(bodyEncodedStream, conn.stream);
+        }
+      }
     })(),
     new Promise((_, reject) => {
       requestTimer = setTimeout(() => {

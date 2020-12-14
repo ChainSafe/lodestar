@@ -1,4 +1,5 @@
 import {Method, Methods, ReqRespEncoding} from "../../constants";
+import {toBuffer} from "../../util/buffer";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {decode, encode} from "varint";
@@ -7,36 +8,35 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import {IValidatedRequestBody} from "./interface";
 
-export function eth2RequestEncode(
+/**
+ * Serializes `requestBody` to bytes serialization of `method` SSZ type
+ * SSZ type for `method` may not exist, then returns null
+ */
+export function serializeRequestBody(
   config: IBeaconConfig,
-  logger: ILogger,
   method: Method,
-  encoding: ReqRespEncoding
-): (source: AsyncIterable<RequestBody | null>) => AsyncGenerator<Buffer> {
-  return async function* (source) {
-    const type = Methods[method].requestSSZType(config);
-    let compressor = getCompressor(encoding);
+  requestBody: RequestBody
+): Uint8Array | null {
+  const type = Methods[method].requestSSZType(config);
+  if (type == null || requestBody == null) {
+    return null;
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return type.serialize(requestBody as any);
+  }
+}
 
-    for await (const request of source) {
-      if (!type || request === null) continue;
+/**
+ * Returns a stream of `encoding` compressed bytes of `requestBodySerialized`
+ */
+export async function* getRequestBodyEncodedStream(
+  encoding: ReqRespEncoding,
+  requestBodySerialized: Uint8Array
+): AsyncGenerator<Buffer> {
+  const compressor = getCompressor(encoding);
 
-      let serialized: Uint8Array;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        serialized = type.serialize(request as any);
-      } catch (e) {
-        logger.warn("Malformed input. Failed to serialize request", {method}, e);
-        continue;
-      }
-
-      yield Buffer.from(encode(serialized.length));
-
-      yield* compressor(Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length));
-
-      //reset compressor
-      compressor = getCompressor(encoding);
-    }
-  };
+  yield Buffer.from(encode(requestBodySerialized.length));
+  yield* compressor(toBuffer(requestBodySerialized));
 }
 
 export function eth2RequestDecode(
