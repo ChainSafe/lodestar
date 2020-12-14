@@ -69,6 +69,10 @@ jobs:
           issuesWoLabels: false
           pullRequests: true
           prWoLabels: true
+          author: true
+          usernamesAsGithubLogins: true
+          compareLink: true
+          onlyLastTag: true
           filterByMilestone: false
           unreleased: false
 
