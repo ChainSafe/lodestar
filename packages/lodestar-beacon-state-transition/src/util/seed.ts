@@ -3,7 +3,7 @@
  */
 
 import {hash} from "@chainsafe/ssz";
-import {Epoch, BeaconState, Bytes32} from "@chainsafe/lodestar-types";
+import {Epoch, BeaconState, Bytes32, Bytes4} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {assert, bytesToBigInt, intToBytes, intDiv} from "@chainsafe/lodestar-utils";
 import {DomainType} from "../constants";
@@ -45,12 +45,22 @@ export function getRandaoMix(config: IBeaconConfig, state: BeaconState, epoch: E
 /**
  * Return the seed at [[epoch]].
  */
-export function getSeed(config: IBeaconConfig, state: BeaconState, epoch: Epoch, domainType: DomainType): Uint8Array {
+export function getSeed(
+  config: IBeaconConfig,
+  state: BeaconState,
+  epoch: Epoch,
+  domainType: DomainType | Bytes4
+): Uint8Array {
   const mix = getRandaoMix(
     config,
     state,
     epoch + config.params.EPOCHS_PER_HISTORICAL_VECTOR - config.params.MIN_SEED_LOOKAHEAD - 1
   );
 
-  return hash(Buffer.concat([intToBytes(domainType, 4), intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
+  //enum
+  if (typeof domainType === "number") {
+    domainType = intToBytes(domainType, 4);
+  }
+
+  return hash(Buffer.concat([domainType as Buffer, intToBytes(epoch, 8), mix.valueOf() as Uint8Array]));
 }
