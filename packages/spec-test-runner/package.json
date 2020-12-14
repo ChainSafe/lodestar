@@ -37,6 +37,7 @@
     "@chainsafe/bls": "5.1.0",
     "@chainsafe/lodestar": "^0.12.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.12.0",
+    "@chainsafe/lodestar-beacon-state-transition-fast": "^0.12.0",
     "@chainsafe/lodestar-config": "^0.12.0",
     "@chainsafe/lodestar-params": "^0.12.0",
     "@chainsafe/lodestar-spec-test-util": "^0.12.0",
