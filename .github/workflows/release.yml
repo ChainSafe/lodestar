@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  tag:
+    name: Check and Tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Create tag
+        id: tag
+        uses: butlerlogic/action-autotag@1.1.1
+        with:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          strategy: package # Optional, since "package" is the default strategy
+          tag_prefix: "v"
+    outputs:
+      tag: ${{ steps.tag.outputs.tagname }}
+      version: ${{ steps.tag.outputs.version }}
+
+  release:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: tag
+    if: needs.tag.outputs.tag != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Nodejs
+        uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional
+      
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional
+
+      - name: Build
+        run: yarn run build
+      
+      - name: Publish to npm registry
+        run: yarn publish --no-git-tag-version --no-commit-hooks --non-interactive
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.tag.outputs.tag }}
+          body: ""
+          release_name: Release ${{ needs.tag.outputs.tag }}
+      #in case of failure
+      - name: Rollback on failure
+        if: failure()
+        uses: author/action-rollback@9ec72a6af74774e00343c6de3e946b0901c23013
+        with:
+          id: ${{ steps.create_release.outputs.id }}
+          tag: ${{ needs.tag.outputs.tag }}
+          delete_orphan_tag: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
