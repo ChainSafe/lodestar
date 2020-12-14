@@ -7,7 +7,6 @@
   "workspaces": [
     "packages/*"
   ],
-  "version": "0.11.0",
   "scripts": {
     "postinstall": "lerna run clean && lerna run build",
     "build": "lerna run build",
@@ -24,7 +23,10 @@
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
-    "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar"
+    "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar",
+    "publish": "lerna publish from-git --yes",
+    "release": "lerna version --no-push --sign-git-commit",
+    "postrelease": "git tag -d $(git describe --abbrev=0)"
   },
   "devDependencies": {
     "@babel/cli": "^7.12.8",
