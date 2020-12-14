@@ -1,11 +1,13 @@
-import {generateState} from "../../../../utils/state";
+import {generateState} from "../../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
+
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utils from "../../../../../src/util";
-import {processAttesterSlashing} from "../../../../../src/block/operations";
-import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
+import * as utils from "../../../../src/util";
+import {processAttesterSlashing} from "../../../../src/block/operations";
+
+import {generateEmptyAttesterSlashing} from "../../../utils/slashings";
 
 describe("process block - attester slashings", function () {
   const sandbox = sinon.createSandbox();

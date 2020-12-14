@@ -2,11 +2,11 @@ import sinon from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utils from "../../../../src/util";
-import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
+import * as utils from "../../../src/util";
+import {processFinalUpdates} from "../../../src/epoch/finalUpdates";
 
-import {generateState} from "../../../utils/state";
-import {generateValidator} from "../../../utils/validator";
+import {generateState} from "../../utils/state";
+import {generateValidator} from "../../utils/validator";
 
 describe("process epoch - final updates", function () {
   const sandbox = sinon.createSandbox();

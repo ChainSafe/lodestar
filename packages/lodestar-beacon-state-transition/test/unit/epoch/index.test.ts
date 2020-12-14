@@ -2,14 +2,15 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {GENESIS_SLOT} from "../../../../src/constants";
-import {processEpoch} from "../../../../src/epoch";
-import * as justificationUtils from "../../../../src/epoch/justification";
-import * as balanceUpdateUtils from "../../../../src/epoch/balanceUpdates";
-import * as registryUpdateUtils from "../../../../src/epoch/registryUpdates";
-import * as slashingUtils from "../../../../src/epoch/slashings";
-import * as finalUtils from "../../../../src/epoch/finalUpdates";
-import {generateState} from "../../../utils/state";
+import {GENESIS_SLOT} from "../../../src/constants";
+import {processEpoch} from "../../../src/epoch";
+import * as justificationUtils from "../../../src/epoch/justification";
+import * as balanceUpdateUtils from "../../../src/epoch/balanceUpdates";
+import * as registryUpdateUtils from "../../../src/epoch/registryUpdates";
+import * as slashingUtils from "../../../src/epoch/slashings";
+import * as finalUtils from "../../../src/epoch/finalUpdates";
+
+import {generateState} from "../../utils/state";
 
 /* eslint-disable no-empty */
 

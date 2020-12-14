@@ -1,12 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {processRandao} from "../../../../src/block";
-import * as utils from "../../../../src/util";
-import {getCurrentEpoch} from "../../../../src/util";
-import {generateEmptyBlock} from "../../../utils/block";
-import {generateState} from "../../../utils/state";
-import {generateValidators} from "../../../utils/validator";
+import {processRandao} from "../../../src/block";
+import * as utils from "../../../src/util";
+import {getCurrentEpoch} from "../../../src/util";
+
+import {generateEmptyBlock} from "../../utils/block";
+import {generateState} from "../../utils/state";
+import {generateValidators} from "../../utils/validator";
 
 describe("process block - randao", function () {
   const sandbox = sinon.createSandbox();

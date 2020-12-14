@@ -1,9 +1,11 @@
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {generateState} from "../../../utils/state";
-import {processForkChanged} from "../../../../src/epoch/fork";
-import {expect} from "chai";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
+
+import {processForkChanged} from "../../../src/epoch/fork";
+
+import {generateState} from "../../utils/state";
 
 describe("processForkChanged", () => {
   let state: BeaconState;

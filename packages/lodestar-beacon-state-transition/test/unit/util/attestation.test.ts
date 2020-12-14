@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {generateEmptyAttestation} from "../../../utils/attestation";
-import {isUnaggregatedAttestation} from "../../../../src/util/attestation";
+import {isUnaggregatedAttestation} from "../../../src/util/attestation";
+import {generateEmptyAttestation} from "../../utils/attestation";
 
 describe("validate unaggregated attestation", () => {
   it("should return invalid unaggregated attestation", () => {

@@ -2,12 +2,14 @@
 import sinon from "sinon";
 import mockery from "mockery";
 import {expect} from "chai";
+
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utils from "../../../../../src/util";
 import {bigIntMin, intToBytes, assert} from "@chainsafe/lodestar-utils";
-import {generateState} from "../../../../utils/state";
-import {generateDeposit} from "../../../../utils/deposit";
-import {generateValidator} from "../../../../utils/validator";
+import * as utils from "../../../../src/util";
+
+import {generateState} from "../../../utils/state";
+import {generateDeposit} from "../../../utils/deposit";
+import {generateValidator} from "../../../utils/validator";
 
 describe("process block - deposits", function () {
   const sandbox = sinon.createSandbox();
@@ -33,7 +35,7 @@ describe("process block - deposits", function () {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub.resetHistory();
     verifyMerkleBranchStub.resetHistory();
-    processDeposit = (await import("../../../../../src/block/operations")).processDeposit;
+    processDeposit = (await import("../../../../src/block/operations")).processDeposit;
   });
 
   afterEach(() => {

@@ -1,11 +1,13 @@
 import {expect} from "chai";
 import sinon from "sinon";
+
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ZERO_HASH} from "../../../../../src/constants";
-import {processAttestation} from "../../../../../src/block/operations";
-import * as utils from "../../../../../src/util";
-import {generateState} from "../../../../utils/state";
-import {generateEmptyAttestation} from "../../../../utils/attestation";
+import {ZERO_HASH} from "../../../../src/constants";
+import {processAttestation} from "../../../../src/block/operations";
+import * as utils from "../../../../src/util";
+
+import {generateState} from "../../../utils/state";
+import {generateEmptyAttestation} from "../../../utils/attestation";
 
 describe("process block - attestation", function () {
   const sandbox = sinon.createSandbox();

@@ -10,12 +10,13 @@ import {
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
   getUnslashedAttestingIndices,
-} from "../../../../src/epoch/util";
-import * as utils from "../../../../src/util";
-import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
-import {generateEmptyAttestation} from "../../../utils/attestation";
-import {generateValidator} from "../../../utils/validator";
-import {generateState} from "../../../utils/state";
+} from "../../../src/epoch/util";
+import * as utils from "../../../src/util";
+
+import {FAR_FUTURE_EPOCH} from "../../../src/constants";
+import {generateEmptyAttestation} from "../../utils/attestation";
+import {generateValidator} from "../../utils/validator";
+import {generateState} from "../../utils/state";
 
 describe("process epoch - crosslinks", function () {
   const sandbox = sinon.createSandbox();

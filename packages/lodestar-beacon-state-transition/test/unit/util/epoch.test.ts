@@ -2,15 +2,15 @@ import {assert} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState, Epoch, Slot} from "@chainsafe/lodestar-types";
-import {GENESIS_SLOT} from "../../../../src/constants";
+import {GENESIS_SLOT} from "../../../src/constants";
 import {
   computeStartSlotAtEpoch,
   getPreviousEpoch,
   computeActivationExitEpoch,
   computeEpochAtSlot,
-} from "../../../../src/util";
+} from "../../../src/util";
 
-import {generateState} from "../../../utils/state";
+import {generateState} from "../../utils/state";
 
 describe("computeEpochAtSlot", () => {
   const pairs = [

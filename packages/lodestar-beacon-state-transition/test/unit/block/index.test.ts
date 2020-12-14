@@ -1,14 +1,15 @@
-import {generateState} from "../../../utils/state";
+import {generateState} from "../../utils/state";
 import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as processEth1Data from "../../../../src/block/eth1Data";
-import * as processBlockHeader from "../../../../src/block/blockHeader";
-import * as processRandao from "../../../../src/block/randao";
-import * as processOperations from "../../../../src/block/operations";
-import {processBlock} from "../../../../src";
-import {generateEmptyBlock} from "../../../utils/block";
+import * as processEth1Data from "../../../src/block/eth1Data";
+import * as processBlockHeader from "../../../src/block/blockHeader";
+import * as processRandao from "../../../src/block/randao";
+import * as processOperations from "../../../src/block/operations";
+import {processBlock} from "../../../src";
+
+import {generateEmptyBlock} from "../../utils/block";
 
 describe("process block", function () {
   const sandbox = sinon.createSandbox();

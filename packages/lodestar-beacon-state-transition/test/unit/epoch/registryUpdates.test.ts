@@ -4,10 +4,11 @@ import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utils from "../../../../src/util";
-import {processRegistryUpdates} from "../../../../src/epoch/registryUpdates";
-import {generateState} from "../../../utils/state";
-import {generateValidator} from "../../../utils/validator";
+import {processRegistryUpdates} from "../../../src/epoch/registryUpdates";
+import * as utils from "../../../src/util";
+
+import {generateState} from "../../utils/state";
+import {generateValidator} from "../../utils/validator";
 
 describe("process epoch - slashings", function () {
   const sandbox = sinon.createSandbox();

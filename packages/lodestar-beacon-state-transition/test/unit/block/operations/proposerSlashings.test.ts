@@ -1,12 +1,14 @@
 import {expect} from "chai";
 import sinon from "sinon";
+
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {processProposerSlashing} from "../../../../../src/block/operations";
-import * as utils from "../../../../../src/util";
-import * as validatorUtils from "../../../../../src/util/validator";
-import {generateEmptyProposerSlashing} from "../../../../utils/slashings";
-import {generateValidators} from "../../../../utils/validator";
-import {generateState} from "../../../../utils/state";
+import {processProposerSlashing} from "../../../../src/block/operations";
+import * as utils from "../../../../src/util";
+import * as validatorUtils from "../../../../src/util/validator";
+
+import {generateEmptyProposerSlashing} from "../../../utils/slashings";
+import {generateValidators} from "../../../utils/validator";
+import {generateState} from "../../../utils/state";
 
 /* eslint-disable no-empty */
 

@@ -2,12 +2,13 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utils from "../../../../../src/util";
-import {GENESIS_EPOCH} from "../../../../../src/constants";
-import {processRewardsAndPenalties} from "../../../../../src/epoch/balanceUpdates";
-import * as attestationDeltas from "../../../../../src/epoch/balanceUpdates/attestation";
-import {generateValidator} from "../../../../utils/validator";
-import {generateState} from "../../../../utils/state";
+import * as utils from "../../../../src/util";
+import {GENESIS_EPOCH} from "../../../../src/constants";
+import {processRewardsAndPenalties} from "../../../../src/epoch/balanceUpdates";
+import * as attestationDeltas from "../../../../src/epoch/balanceUpdates/attestation";
+
+import {generateValidator} from "../../../utils/validator";
+import {generateState} from "../../../utils/state";
 
 describe("process epoch - balance updates", function () {
   const sandbox = sinon.createSandbox();
