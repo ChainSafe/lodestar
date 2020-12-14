@@ -196,7 +196,7 @@ export function processSyncBlocks(
       const signedBlock = blockBuffer.shift()!;
       const nextBlock = blockBuffer[0];
       const block = signedBlock.message;
-      const blockRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockToHeader(config, block));
+      const blockRoot = config.types.BeaconBlock.hashTreeRoot(block);
       // only import blocks that's part of a linear chain
       if (
         !isInitialSync ||
