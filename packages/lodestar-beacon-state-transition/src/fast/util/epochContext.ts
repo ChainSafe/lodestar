@@ -143,9 +143,10 @@ export class EpochContext {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = state
+    const indicesBounded = state
       .flatValidators()
-      .map((v, i) => [i, v.activationEpoch, v.exitEpoch]);
+      .map((v, i) => [i, v.activationEpoch, v.exitEpoch])
+      .toJS();
     this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
     this._resetProposers(state);
   }

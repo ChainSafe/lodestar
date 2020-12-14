@@ -6,7 +6,8 @@ import {ITask} from "../interface";
 import {IBeaconDb} from "../../db/api";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {BeaconState, Checkpoint} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
 
 export interface IArchiveStatesModules {
   db: IBeaconDb;
@@ -41,7 +42,7 @@ export class ArchiveStatesTask implements ITask {
       throw Error("No state in cache for finalized checkpoint state epoch #" + this.finalized.epoch);
     }
     const finalizedState = stateCache.state;
-    await this.db.stateArchive.add(finalizedState);
+    await this.db.stateArchive.add(finalizedState.getOriginalState() as TreeBacked<BeaconState>);
     // don't delete states before the finalized state, auto-prune will take care of it
     this.logger.info("Archive states completed", {finalizedEpoch: this.finalized.epoch});
     this.logger.profile("Archive States epoch #" + this.finalized.epoch);

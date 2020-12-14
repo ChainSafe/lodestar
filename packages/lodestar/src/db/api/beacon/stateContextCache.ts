@@ -1,10 +1,11 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {
-  state: TreeBacked<BeaconState>;
+  state: CachedValidatorsBeaconState; // TreeBacked<BeaconState>
   epochCtx: LodestarEpochContext;
 }
 
@@ -40,7 +41,9 @@ export class StateContextCache {
   }
 
   public async add(item: ITreeStateContext): Promise<void> {
-    this.cache[toHexString(item.state.hashTreeRoot())] = this.clone(item);
+    this.cache[toHexString((item.state.getOriginalState() as TreeBacked<BeaconState>).hashTreeRoot())] = this.clone(
+      item
+    );
   }
 
   public async delete(root: ByteVector): Promise<void> {
