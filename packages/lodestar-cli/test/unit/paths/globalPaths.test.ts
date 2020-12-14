@@ -2,6 +2,9 @@ import {expect} from "chai";
 import {getGlobalPaths} from "../../../src/paths/global";
 
 describe("paths / global", () => {
+  process.env.XDG_DATA_HOME = "/my-root-dir";
+  const defaultRootDir = "/my-root-dir/lodestar/mainnet";
+
   const testCases: {
     id: string;
     args: Parameters<typeof getGlobalPaths>[0];
@@ -11,16 +14,16 @@ describe("paths / global", () => {
       id: "Default paths",
       args: {},
       globalPaths: {
-        rootDir: "./.lodestar",
-        paramsFile: ".lodestar/config.yaml",
+        rootDir: defaultRootDir,
+        paramsFile: "/my-root-dir/lodestar/mainnet/config.yaml",
       },
     },
     {
       id: "Testnet paths",
       args: {testnet: "pyrmont"},
       globalPaths: {
-        rootDir: ".pyrmont",
-        paramsFile: ".pyrmont/config.yaml",
+        rootDir: "/my-root-dir/lodestar/pyrmont",
+        paramsFile: "/my-root-dir/lodestar/pyrmont/config.yaml",
       },
     },
     {
@@ -35,7 +38,7 @@ describe("paths / global", () => {
       id: "Custom paramsFile",
       args: {paramsFile: "/tmp/custom-config.yaml"},
       globalPaths: {
-        rootDir: "./.lodestar",
+        rootDir: defaultRootDir,
         paramsFile: "/tmp/custom-config.yaml",
       },
     },
@@ -43,8 +46,8 @@ describe("paths / global", () => {
       id: "Custom relative paramsFile",
       args: {paramsFile: "custom-config.yaml"},
       globalPaths: {
-        rootDir: "./.lodestar",
-        paramsFile: ".lodestar/custom-config.yaml",
+        rootDir: defaultRootDir,
+        paramsFile: "/my-root-dir/lodestar/mainnet/custom-config.yaml",
       },
     },
   ];
