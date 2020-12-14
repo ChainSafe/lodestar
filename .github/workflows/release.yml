@@ -54,10 +54,23 @@ jobs:
       - name: Build
         run: yarn run build
       
-      - name: Publish to npm registry
-        run: yarn publish --no-git-tag-version --no-commit-hooks --non-interactive
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish to npm registry
+      #   run: yarn run publish 
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate changelog
+        id: changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issues: false
+          issuesWoLabels: false
+          pullRequests: true
+          prWoLabels: true
+          filterByMilestone: false
+          unreleased: false
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -65,8 +78,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.tag.outputs.tag }}
-          body: ""
+          body: ${{ steps.changelog.output.changelog }}
           release_name: Release ${{ needs.tag.outputs.tag }}
+
       #in case of failure
       - name: Rollback on failure
         if: failure()
