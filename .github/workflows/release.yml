@@ -92,6 +92,7 @@ jobs:
           tag_name: ${{ needs.tag.outputs.tag }}
           body_path: "CHANGELOG.md"
           release_name: Release ${{ needs.tag.outputs.tag }}
+          prerelease: true # we can promote to in github
 
       #in case of failure
       - name: Rollback on failure
