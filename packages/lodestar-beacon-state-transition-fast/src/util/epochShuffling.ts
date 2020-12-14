@@ -1,9 +1,7 @@
 import {Epoch, ValidatorIndex, BeaconState} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intDiv} from "@chainsafe/lodestar-utils";
-
-import {getSeed, unshuffleList} from "../../util";
-import {DomainType} from "../../constants";
+import {getSeed, unshuffleList, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Readonly interface for IEpochShuffling.

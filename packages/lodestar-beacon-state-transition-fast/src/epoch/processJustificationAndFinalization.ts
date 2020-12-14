@@ -1,7 +1,5 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
-
-import {GENESIS_EPOCH} from "../../constants";
-import {getBlockRoot} from "../../util";
+import {GENESIS_EPOCH, getBlockRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext, IEpochProcess} from "../util";
 
 export function processJustificationAndFinalization(

@@ -1,6 +1,5 @@
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {computeSigningRoot, getDomain} from "../../util";
-import {DomainType} from "../../constants";
+import {computeSigningRoot, getDomain, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../index";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 

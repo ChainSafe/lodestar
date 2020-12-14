@@ -1,8 +1,6 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
-
-import {FAR_FUTURE_EPOCH} from "../../constants";
-import {computeActivationExitEpoch, getChurnLimit} from "../../util";
+import {FAR_FUTURE_EPOCH, computeActivationExitEpoch, getChurnLimit} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 
 /**

@@ -1,6 +1,5 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
-
-import {computeActivationExitEpoch} from "../../util";
+import {computeActivationExitEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext, IEpochProcess} from "../util";
 
 export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {

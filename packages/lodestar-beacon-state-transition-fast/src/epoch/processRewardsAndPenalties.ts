@@ -1,7 +1,6 @@
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {readOnlyMap, List} from "@chainsafe/ssz";
-
-import {GENESIS_EPOCH} from "../../constants";
+import {GENESIS_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext, IEpochProcess} from "../util";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 

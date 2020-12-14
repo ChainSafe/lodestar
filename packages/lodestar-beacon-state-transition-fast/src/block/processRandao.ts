@@ -1,8 +1,13 @@
 import xor from "buffer-xor";
 import {hash} from "@chainsafe/ssz";
 import {BeaconBlock, BeaconState} from "@chainsafe/lodestar-types";
-import {DomainType} from "../../constants";
-import {computeEpochAtSlot, computeSigningRoot, getDomain, getRandaoMix} from "../../util";
+import {
+  DomainType,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  getDomain,
+  getRandaoMix,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 

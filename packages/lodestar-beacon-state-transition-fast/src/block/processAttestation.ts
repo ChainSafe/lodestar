@@ -1,6 +1,5 @@
 import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
-
-import {computeEpochAtSlot} from "../../util";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 

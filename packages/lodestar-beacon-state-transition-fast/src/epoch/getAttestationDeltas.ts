@@ -1,6 +1,6 @@
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
-import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
+import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {
   EpochContext,

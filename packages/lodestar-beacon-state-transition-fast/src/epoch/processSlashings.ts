@@ -1,8 +1,7 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
-
-import {decreaseBalance} from "../../util";
+import {decreaseBalance} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext, IEpochProcess} from "../util";
 
 export function processSlashings(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {

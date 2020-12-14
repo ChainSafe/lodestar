@@ -1,9 +1,14 @@
 import bls from "@chainsafe/bls";
 import {BeaconState, Deposit} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
-
-import {DEPOSIT_CONTRACT_TREE_DEPTH, DomainType, FAR_FUTURE_EPOCH} from "../../constants";
-import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
+import {
+  DEPOSIT_CONTRACT_TREE_DEPTH,
+  DomainType,
+  FAR_FUTURE_EPOCH,
+  computeDomain,
+  computeSigningRoot,
+  increaseBalance,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 
 export function processDeposit(epochCtx: EpochContext, state: BeaconState, deposit: Deposit): void {

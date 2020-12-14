@@ -1,6 +1,11 @@
 import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
-import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
-import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
+import {
+  DomainType,
+  FAR_FUTURE_EPOCH,
+  computeSigningRoot,
+  getDomain,
+  isActiveValidator,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";

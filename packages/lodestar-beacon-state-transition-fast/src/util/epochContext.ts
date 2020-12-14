@@ -14,16 +14,16 @@ import {
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
-
-import {DomainType, GENESIS_EPOCH} from "../../constants";
 import {
+  DomainType,
+  GENESIS_EPOCH,
   computeEpochAtSlot,
   computeProposerIndex,
   computeStartSlotAtEpoch,
   getAttestingIndicesFromCommittee,
   getSeed,
   isAggregatorFromCommitteeLength,
-} from "../../util";
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {IEpochProcess} from "./epochProcess";
 

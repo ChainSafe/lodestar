@@ -1,6 +1,5 @@
 import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
-
-import {decreaseBalance, increaseBalance} from "../../util";
+import {decreaseBalance, increaseBalance} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 

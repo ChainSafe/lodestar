@@ -1,9 +1,13 @@
 import {List, readOnlyForEach, readOnlyMap} from "@chainsafe/ssz";
 import {Epoch, ValidatorIndex, Gwei, BeaconState, PendingAttestation} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-
-import {computeActivationExitEpoch, getBlockRootAtSlot, computeStartSlotAtEpoch, getChurnLimit} from "../../util";
-import {FAR_FUTURE_EPOCH} from "../../constants";
+import {
+  FAR_FUTURE_EPOCH,
+  computeActivationExitEpoch,
+  getBlockRootAtSlot,
+  computeStartSlotAtEpoch,
+  getChurnLimit,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   IAttesterStatus,
   createIAttesterStatus,

@@ -1,6 +1,11 @@
 import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
-import {DomainType} from "../../constants";
-import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
+import {
+  DomainType,
+  computeEpochAtSlot,
+  computeSigningRoot,
+  getDomain,
+  isSlashableValidator,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "../util";
 import {slashValidator} from "./slashValidator";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
