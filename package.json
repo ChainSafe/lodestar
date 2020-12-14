@@ -26,7 +26,8 @@
     "test:spec-main": "lerna run test:spec-main --no-bail",
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar",
     "publish": "lerna publish from-git --yes",
-    "release": "lerna version --no-git-tag-version --no-push --sign-git-commit"
+    "release": "lerna version --no-push --sign-git-commit",
+    "postrelease": "git tag -d $(git describe --abbrev=0)"
   },
   "devDependencies": {
     "@babel/cli": "^7.12.8",
