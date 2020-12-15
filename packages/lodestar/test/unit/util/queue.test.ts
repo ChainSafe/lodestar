@@ -42,7 +42,7 @@ describe("Job queue", () => {
       await jobQueue.enqueueJob(job);
     } catch (e) {
       expect(e).to.be.instanceOf(QueueError);
-      expect(e.code).to.be.equal(QueueErrorCode.QUEUE_THROTTLED);
+      expect(e.type.code).to.be.equal(QueueErrorCode.QUEUE_THROTTLED);
     }
 
     await jobs;
@@ -72,7 +72,7 @@ describe("Job queue", () => {
       await jobQueue.enqueueJob(job);
     } catch (e) {
       expect(e).to.be.instanceOf(QueueError);
-      expect(e.code).to.be.equal(QueueErrorCode.QUEUE_ABORTED);
+      expect(e.type.code).to.be.equal(QueueErrorCode.QUEUE_ABORTED);
     }
   });
 });
