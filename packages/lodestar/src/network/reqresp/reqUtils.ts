@@ -65,26 +65,30 @@ export async function* sendRequestStream<T extends ResponseBody>(
   let requestTimer: NodeJS.Timeout | null = null;
 
   // write
-  await Promise.race([
-    (async function () {
-      try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
-      } catch (e) {
-        throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
-      }
-      logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
+  try {
+    await Promise.race([
+      (async function () {
+        try {
+          conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
+        } catch (e) {
+          throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
+        }
+        logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
 
-      if (requestBody) {
-        await streamRequestBodyTo(config, method, encoding, requestBody, conn.stream);
-      }
-    })(),
-    new Promise((_, reject) => {
-      requestTimer = setTimeout(() => {
-        conn?.stream?.close();
-        reject(new Error(REQUEST_TIMEOUT_ERR));
-      }, REQUEST_TIMEOUT);
-    }),
-  ]);
+        if (requestBody) {
+          await streamRequestBodyTo(config, method, encoding, requestBody, conn.stream);
+        }
+      })(),
+      new Promise((_, reject) => {
+        requestTimer = setTimeout(() => {
+          reject(new Error(REQUEST_TIMEOUT_ERR));
+        }, REQUEST_TIMEOUT);
+      }),
+    ]);
+  } catch (e) {
+    conn?.stream?.close();
+    throw e;
+  }
 
   if (requestTimer) clearTimeout(requestTimer);
   logger.verbose("sent request", {peer: peerId.toB58String(), method});
