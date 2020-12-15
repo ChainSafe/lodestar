@@ -42,7 +42,7 @@ describe("rest - beacon - getStateValidator", function () {
     const pubkey = toHexString(Buffer.alloc(48, 1));
     api.beacon.state.getStateValidator.withArgs("head", config.types.BLSPubkey.fromJson(pubkey)).resolves({
       index: 1,
-      pubkey: Buffer.alloc(48, 1),
+      balance: BigInt(3200000),
       status: ValidatorStatus.ACTIVE,
       validator: generateValidator(),
     });
@@ -51,13 +51,13 @@ describe("rest - beacon - getStateValidator", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.pubkey).to.not.be.undefined;
+    expect(response.body.data.balance).to.not.be.undefined;
   });
 
   it("should get by index", async function () {
     api.beacon.state.getStateValidator.withArgs("head", 1).resolves({
       index: 1,
-      pubkey: Buffer.alloc(32, 1),
+      balance: BigInt(3200000),
       status: ValidatorStatus.ACTIVE,
       validator: generateValidator(),
     });
@@ -66,7 +66,7 @@ describe("rest - beacon - getStateValidator", function () {
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
-    expect(response.body.data.pubkey).to.not.be.undefined;
+    expect(response.body.data.balance).to.not.be.undefined;
   });
 
   it("should not found validator", async function () {

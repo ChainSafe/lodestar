@@ -60,7 +60,9 @@ export class BeaconStateApi implements IBeaconStateApi {
       throw new StateNotFound();
     }
     //TODO: implement filters
-    return readOnlyMap(state.state.validators, (v, index) => toValidatorResponse(index, v));
+    return readOnlyMap(state.state.validators, (v, index) =>
+      toValidatorResponse(index, v, state.state.balances[index])
+    );
   }
 
   public async getStateValidator(
@@ -86,7 +88,11 @@ export class BeaconStateApi implements IBeaconStateApi {
     if (!validatorIndex) {
       throw new ApiError(404, "Validator not found");
     }
-    return toValidatorResponse(validatorIndex, state.state.validators[validatorIndex]);
+    return toValidatorResponse(
+      validatorIndex,
+      state.state.validators[validatorIndex],
+      state.state.balances[validatorIndex]
+    );
   }
 
   public async getStateValidatorBalances(

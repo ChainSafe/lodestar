@@ -123,7 +123,7 @@ export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       index: ssz.ValidatorIndex,
-      pubkey: ssz.BLSPubkey,
+      balance: ssz.Gwei,
       status: new StringType<ValidatorStatus>(),
       validator: ssz.Validator,
     },
