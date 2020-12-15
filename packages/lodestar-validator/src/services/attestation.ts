@@ -35,17 +35,16 @@ import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
-import {getAggregationBits, getAggregatorModulo} from "./utils";
+import {getAggregationBits, getAggregatorModulo, getPubKeyIndex} from "./utils";
 
 export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  // order is important
-  private readonly secretKeys: SecretKey[] = [];
-  // order is important
-  private readonly publicKeys: BLSPubkey[] = [];
-  // order is important
-  private readonly validators: (ValidatorResponse | null)[] = [];
+  private readonly validatorClients: {
+    validator: ValidatorResponse | null;
+    publicKey: BLSPubkey;
+    secretKey: SecretKey;
+  }[] = [];
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
@@ -62,9 +61,7 @@ export class AttestationService {
     this.config = config;
     this.provider = rpcClient;
     for (const secretKey of secretKeys) {
-      this.secretKeys.push(secretKey);
-      this.publicKeys.push(secretKey.toPublicKey().toBytes());
-      this.validators.push(null);
+      this.validatorClients.push({validator: null, secretKey: secretKey, publicKey: secretKey.toPublicKey().toBytes()});
     }
     this.slashingProtection = slashingProtection;
     this.logger = logger;
@@ -116,7 +113,7 @@ export class AttestationService {
     try {
       attesterDuties = await this.provider.validator.getAttesterDuties(
         epoch,
-        this.validators.map((v) => v?.index ?? null).filter((i) => i !== null) as ValidatorIndex[]
+        this.validatorClients.map((v) => v.validator?.index ?? null).filter((i) => i !== null) as ValidatorIndex[]
       );
     } catch (e) {
       this.logger.error("Failed to obtain attester duty", {epoch, error: e.message});
@@ -127,9 +124,7 @@ export class AttestationService {
       return;
     }
     for (const duty of attesterDuties) {
-      const attesterIndex = this.publicKeys.findIndex((pubkey) => {
-        return this.config.types.BLSPubkey.equals(pubkey, duty.pubkey);
-      });
+      const attesterIndex = getPubKeyIndex(this.config, duty.pubkey, this.validatorClients);
       const slotSignature = this.getSlotSignature(attesterIndex, duty.slot, fork, this.provider.genesisValidatorsRoot);
       const modulo = getAggregatorModulo(this.config, duty);
       const isAggregator = isValidatorAggregator(slotSignature, modulo);
@@ -314,7 +309,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, aggregate.data.slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
-    return this.secretKeys[aggregatorIndex].sign(signingRoot).toBytes();
+    return this.validatorClients[aggregatorIndex].secretKey.sign(signingRoot).toBytes();
   }
 
   private getSlotSignature(attesterIndex: number, slot: Slot, fork: Fork, genesisValidatorsRoot: Root): BLSSignature {
@@ -325,7 +320,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    return this.secretKeys[attesterIndex].sign(signingRoot).toBytes();
+    return this.validatorClients[attesterIndex].secretKey.sign(signingRoot).toBytes();
   }
 
   private async createAttestation(duty: IAttesterDuty, fork: Fork, genesisValidatorsRoot: Root): Promise<Attestation> {
@@ -346,7 +341,7 @@ export class AttestationService {
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestationData, domain);
 
-    await this.slashingProtection.checkAndInsertAttestation(this.publicKeys[attesterIndex], {
+    await this.slashingProtection.checkAndInsertAttestation(this.validatorClients[attesterIndex].publicKey, {
       sourceEpoch: attestationData.target.epoch,
       targetEpoch: attestationData.target.epoch,
       signingRoot,
@@ -355,7 +350,7 @@ export class AttestationService {
     const attestation: Attestation = {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
-      signature: this.secretKeys[attesterIndex].sign(signingRoot).toBytes(),
+      signature: this.validatorClients[attesterIndex].secretKey.sign(signingRoot).toBytes(),
     };
     this.logger.info("Signed new attestation", {
       block: toHexString(attestation.data.target.root),
@@ -366,18 +361,19 @@ export class AttestationService {
   }
 
   private async updateValidators(): Promise<void> {
-    let index = 0;
-    for (const pubkey of this.publicKeys) {
-      //fetch validator details if missing
-      if (!this.validators[index]) {
+    for (const validatorClient of this.validatorClients) {
+      // fetch validator details if missing
+      if (!validatorClient.validator) {
         try {
-          this.validators[index] = await this.provider.beacon.state.getStateValidator("head", pubkey);
+          validatorClient.validator = await this.provider.beacon.state.getStateValidator(
+            "head",
+            validatorClient.publicKey
+          );
         } catch (e) {
           this.logger.error("Failed to get validator details", e);
-          this.validators[index] = null;
+          validatorClient.validator = null;
         }
       }
-      index++;
     }
   }
 }

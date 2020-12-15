@@ -17,14 +17,12 @@ import {IApiClient} from "../api";
 import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
 import {ISlashingProtection} from "../slashingProtection";
+import {getPubKeyIndex} from "./utils";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  // validators private keys (order is important)
-  private readonly secretKeys: SecretKey[] = [];
-  // validators public keys (order is important)
-  private readonly publicKeys: BLSPubkey[] = [];
+  private readonly validatorKeys: {publicKey: BLSPubkey; secretKey: SecretKey}[] = [];
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
   private readonly graffiti?: string;
@@ -41,8 +39,7 @@ export default class BlockProposingService {
   ) {
     this.config = config;
     for (const secretKey of secretKeys) {
-      this.secretKeys.push(secretKey);
-      this.publicKeys.push(secretKey.toPublicKey().toBytes());
+      this.validatorKeys.push({publicKey: secretKey.toPublicKey().toBytes(), secretKey});
     }
     this.provider = provider;
     this.slashingProtection = slashingProtection;
@@ -81,7 +78,7 @@ export default class BlockProposingService {
         return;
       }
       await this.createAndPublishBlock(
-        this.getPubKeyIndex(proposerPubKey),
+        getPubKeyIndex(this.config, proposerPubKey, this.validatorKeys),
         slot,
         fork,
         this.provider.genesisValidatorsRoot
@@ -97,8 +94,8 @@ export default class BlockProposingService {
   };
 
   public updateDuties = async (epoch: Epoch): Promise<void> => {
-    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
-    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch((e) => {
+    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.validatorKeys[0].publicKey)});
+    const proposerDuties = await this.provider.validator.getProposerDuties(epoch, []).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
     });
@@ -106,7 +103,7 @@ export default class BlockProposingService {
       return;
     }
     proposerDuties.forEach((duty) => {
-      if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.pubkey) !== -1) {
+      if (!this.nextProposals.has(duty.slot) && getPubKeyIndex(this.config, duty.pubkey, this.validatorKeys) !== -1) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
         this.nextProposals.set(duty.slot, duty.pubkey);
       }
@@ -129,7 +126,7 @@ export default class BlockProposingService {
     try {
       block = await this.provider.validator.produceBlock(
         slot,
-        this.secretKeys[proposerIndex].sign(randaoSigningRoot).toBytes(),
+        this.validatorKeys[proposerIndex].secretKey.sign(randaoSigningRoot).toBytes(),
         this.graffiti || ""
       );
     } catch (e) {
@@ -146,14 +143,14 @@ export default class BlockProposingService {
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
 
-    await this.slashingProtection.checkAndInsertBlockProposal(this.publicKeys[proposerIndex], {
+    await this.slashingProtection.checkAndInsertBlockProposal(this.validatorKeys[proposerIndex].publicKey, {
       slot: block.slot,
       signingRoot,
     });
 
     const signedBlock: SignedBeaconBlock = {
       message: block,
-      signature: this.secretKeys[proposerIndex].sign(signingRoot).toBytes(),
+      signature: this.validatorKeys[proposerIndex].secretKey.sign(signingRoot).toBytes(),
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
@@ -166,11 +163,5 @@ export default class BlockProposingService {
 
   public getRpcClient(): IApiClient {
     return this.provider;
-  }
-
-  private getPubKeyIndex(search: BLSPubkey): number {
-    return this.publicKeys.findIndex((pubkey) => {
-      return this.config.types.BLSPubkey.equals(pubkey, search);
-    });
   }
 }
