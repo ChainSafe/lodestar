@@ -25,7 +25,7 @@ export async function validateGossipAggregateAndProof(
 
   if (attestationSlot < earliestPermissibleSlot) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_PAST_SLOT,
+      code: AttestationErrorCode.PAST_SLOT,
       earliestPermissibleSlot,
       attestationSlot,
       job: attestationJob,
@@ -34,7 +34,7 @@ export async function validateGossipAggregateAndProof(
 
   if (attestationSlot > latestPermissibleSlot) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_FUTURE_SLOT,
+      code: AttestationErrorCode.FUTURE_SLOT,
       attestationSlot,
       latestPermissibleSlot,
       job: attestationJob,
@@ -43,7 +43,7 @@ export async function validateGossipAggregateAndProof(
 
   if (await db.seenAttestationCache.hasAggregateAndProof(aggregateAndProof)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_AGGREGATE_ALREADY_KNOWN,
+      code: AttestationErrorCode.AGGREGATE_ALREADY_KNOWN,
       job: attestationJob,
     });
   }
@@ -51,14 +51,14 @@ export async function validateGossipAggregateAndProof(
   if (!hasAttestationParticipants(aggregate)) {
     // missing attestation participants
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_WRONG_NUMBER_OF_AGGREGATION_BITS,
+      code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
       job: attestationJob,
     });
   }
 
   if (await isAttestingToInValidBlock(db, aggregate)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_KNOWN_BAD_BLOCK,
+      code: AttestationErrorCode.KNOWN_BAD_BLOCK,
       job: attestationJob,
     });
   }
@@ -85,7 +85,7 @@ export async function validateAggregateAttestation(
     attestationPreState = await chain.regen.getBlockSlotState(attestation.data.target.root, attestation.data.slot);
   } catch (e) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_MISSING_ATTESTATION_PRESTATE,
+      code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
       job: attestationJob,
     });
   }
@@ -96,21 +96,21 @@ export async function validateAggregateAttestation(
     committee = epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
   } catch (error) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
+      code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE,
       job: attestationJob,
     });
   }
 
   if (!committee.includes(aggregateAndProof.message.aggregatorIndex)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_AGGREGATOR_NOT_IN_COMMITTEE,
+      code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE,
       job: attestationJob,
     });
   }
 
   if (!isAggregatorFromCommitteeLength(config, committee.length, aggregateAndProof.message.selectionProof)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_AGGREGATOR,
+      code: AttestationErrorCode.INVALID_AGGREGATOR,
       job: attestationJob,
     });
   }
@@ -126,7 +126,7 @@ export async function validateAggregateAttestation(
     )
   ) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SELECTION_PROOF,
+      code: AttestationErrorCode.INVALID_SELECTION_PROOF,
       job: attestationJob,
     });
   }
@@ -141,7 +141,7 @@ export async function validateAggregateAttestation(
     )
   ) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
+      code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,
     });
   }
@@ -150,7 +150,7 @@ export async function validateAggregateAttestation(
 
   if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
+      code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,
     });
   }

@@ -30,14 +30,14 @@ export async function validateAttestation({
 
   if (target.epoch !== computeEpochAtSlot(config, attestation.data.slot)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_BAD_TARGET_EPOCH,
+      code: AttestationErrorCode.BAD_TARGET_EPOCH,
       job,
     });
   }
 
   if (target.epoch < previousEpoch) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_PAST_EPOCH,
+      code: AttestationErrorCode.PAST_EPOCH,
       attestationEpoch: target.epoch,
       currentEpoch,
       job,
@@ -46,7 +46,7 @@ export async function validateAttestation({
 
   if (target.epoch > currentEpoch) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_FUTURE_EPOCH,
+      code: AttestationErrorCode.FUTURE_EPOCH,
       attestationEpoch: target.epoch,
       currentEpoch,
       job,
@@ -55,7 +55,7 @@ export async function validateAttestation({
 
   if (currentSlot - 1 < attestation.data.slot) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_FUTURE_SLOT,
+      code: AttestationErrorCode.FUTURE_SLOT,
       attestationSlot: attestation.data.slot,
       latestPermissibleSlot: currentSlot - 1,
       job,
@@ -64,7 +64,7 @@ export async function validateAttestation({
 
   if (!forkChoice.hasBlock(target.root)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT,
+      code: AttestationErrorCode.UNKNOWN_TARGET_ROOT,
       root: target.root.valueOf() as Uint8Array,
       job,
     });
@@ -72,7 +72,7 @@ export async function validateAttestation({
 
   if (!forkChoice.hasBlock(attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT,
+      code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
       beaconBlockRoot: attestation.data.beaconBlockRoot.valueOf() as Uint8Array,
       job,
     });
@@ -80,7 +80,7 @@ export async function validateAttestation({
 
   if (!forkChoice.isDescendant(target.root, attestation.data.beaconBlockRoot)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT,
+      code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT,
       job,
     });
   }

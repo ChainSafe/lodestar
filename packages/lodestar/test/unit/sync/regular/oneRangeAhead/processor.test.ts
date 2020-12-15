@@ -49,7 +49,7 @@ describe("BlockRangeProcessor", function () {
         ChainEvent.errorBlock,
         new BlockError({
           job: {signedBlock: secondBlock} as IBlockJob,
-          code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN,
+          code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN,
         })
       ),
     ]);

@@ -33,7 +33,7 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS);
+      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS);
     }
   });
 
@@ -46,7 +46,7 @@ describe("validate proposer slashing", () => {
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     } catch (error) {
-      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.ERR_INVALID_SLASHING);
+      expect(error.type).to.have.property("code", ProposerSlashingErrorCode.INVALID_SLASHING);
     }
   });
 

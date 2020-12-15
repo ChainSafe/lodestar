@@ -82,7 +82,7 @@ export class ProtoArray {
   applyScoreChanges(deltas: Gwei[], justifiedEpoch: Epoch, finalizedEpoch: Epoch): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_DELTA_LEN,
+        code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
         deltas: deltas.length,
         indices: this.indices.size,
       });
@@ -98,7 +98,7 @@ export class ProtoArray {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
           index: nodeIndex,
         });
       }
@@ -113,7 +113,7 @@ export class ProtoArray {
       const nodeDelta = deltas[nodeIndex];
       if (nodeDelta === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_DELTA,
+          code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
           index: nodeIndex,
         });
       }
@@ -127,7 +127,7 @@ export class ProtoArray {
         const parentDelta = deltas[parentIndex];
         if (parentDelta === undefined) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INVALID_PARENT_DELTA,
+            code: ProtoArrayErrorCode.INVALID_PARENT_DELTA,
             index: parentIndex,
           });
         }
@@ -181,7 +181,7 @@ export class ProtoArray {
     const justifiedIndex = this.indices.get(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_JUSTIFIED_NODE_UNKNOWN,
+        code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN,
         root: justifiedRoot,
       });
     }
@@ -189,7 +189,7 @@ export class ProtoArray {
     const justifiedNode = this.nodes[justifiedIndex];
     if (justifiedNode === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_JUSTIFIED_INDEX,
+        code: ProtoArrayErrorCode.INVALID_JUSTIFIED_INDEX,
         index: justifiedIndex,
       });
     }
@@ -199,7 +199,7 @@ export class ProtoArray {
     const bestNode = this.nodes[bestDescendantIndex];
     if (bestNode === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_BEST_DESCENDANT_INDEX,
+        code: ProtoArrayErrorCode.INVALID_BEST_DESCENDANT_INDEX,
         index: bestDescendantIndex,
       });
     }
@@ -207,7 +207,7 @@ export class ProtoArray {
     // Perform a sanity check that the node is indeed valid to be the head
     if (!this.nodeIsViableForHead(bestNode)) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_BEST_NODE,
+        code: ProtoArrayErrorCode.INVALID_BEST_NODE,
         startRoot: justifiedRoot,
         justifiedEpoch: this.justifiedEpoch,
         finalizedEpoch: this.finalizedEpoch,
@@ -239,7 +239,7 @@ export class ProtoArray {
     const finalizedIndex = this.indices.get(finalizedRoot);
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_FINALIZED_NODE_UNKNOWN,
+        code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN,
         root: finalizedRoot,
       });
     }
@@ -254,7 +254,7 @@ export class ProtoArray {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
           index: nodeIndex,
         });
       }
@@ -270,7 +270,7 @@ export class ProtoArray {
     for (const [key, value] of this.indices.entries()) {
       if (value < finalizedIndex) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INDEX_OVERFLOW,
+          code: ProtoArrayErrorCode.INDEX_OVERFLOW,
           value: "indices",
         });
       }
@@ -288,7 +288,7 @@ export class ProtoArray {
       if (bestChild !== undefined) {
         if (bestChild < finalizedIndex) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INDEX_OVERFLOW,
+            code: ProtoArrayErrorCode.INDEX_OVERFLOW,
             value: "bestChild",
           });
         }
@@ -298,7 +298,7 @@ export class ProtoArray {
       if (bestDescendant !== undefined) {
         if (bestDescendant < finalizedIndex) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INDEX_OVERFLOW,
+            code: ProtoArrayErrorCode.INDEX_OVERFLOW,
             value: "bestDescendant",
           });
         }
@@ -326,7 +326,7 @@ export class ProtoArray {
     const childNode = this.nodes[childIndex];
     if (childNode === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
         index: childIndex,
       });
     }
@@ -334,7 +334,7 @@ export class ProtoArray {
     const parentNode = this.nodes[parentIndex];
     if (parentNode === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
         index: parentIndex,
       });
     }
@@ -365,7 +365,7 @@ export class ProtoArray {
         const bestChildNode = this.nodes[bestChildIndex];
         if (bestChildNode === undefined) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INVALID_BEST_CHILD_INDEX,
+            code: ProtoArrayErrorCode.INVALID_BEST_CHILD_INDEX,
             index: bestChildIndex,
           });
         }
@@ -417,7 +417,7 @@ export class ProtoArray {
       const bestDescendantNode = this.nodes[bestDescendantIndex];
       if (bestDescendantNode === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_BEST_DESCENDANT_INDEX,
+          code: ProtoArrayErrorCode.INVALID_BEST_DESCENDANT_INDEX,
           index: bestDescendantIndex,
         });
       }
@@ -456,7 +456,7 @@ export class ProtoArray {
     let node = this.nodes[startIndex];
     if (node === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
         index: startIndex,
       });
     }
@@ -466,7 +466,7 @@ export class ProtoArray {
       node = this.nodes[nodeParent];
       if (node === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
           index: nodeParent,
         });
       }
@@ -489,7 +489,7 @@ export class ProtoArray {
     let node = this.nodes[startIndex];
     if (node === undefined) {
       throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
         index: startIndex,
       });
     }
@@ -500,7 +500,7 @@ export class ProtoArray {
       node = this.nodes[parentIndex];
       if (node === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
           index: parentIndex,
         });
       }
@@ -541,7 +541,7 @@ export class ProtoArray {
       const node = this.nodes[index];
       if (node === undefined) {
         throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.ERR_INVALID_NODE_INDEX,
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
           index,
         });
       }

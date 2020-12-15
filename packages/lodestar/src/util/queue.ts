@@ -1,17 +1,18 @@
 import {AbortSignal} from "abort-controller";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum QueueErrorCode {
-  ERR_QUEUE_ABORTED = "ERR_QUEUE_ABORTED",
-  ERR_QUEUE_THROTTLED = "ERR_QUEUE_THROTTLED",
+  QUEUE_ABORTED = "QUEUE_ERROR_QUEUE_ABORTED",
+  QUEUE_THROTTLED = "QUEUE_ERROR_QUEUE_THROTTLED",
 }
 
-export class QueueError extends Error {
-  code: QueueErrorCode;
-  constructor(code: QueueErrorCode, msg?: string) {
-    super(msg || code);
-    this.code = code;
+export type QueueErrorCodeType = {code: QueueErrorCode.QUEUE_ABORTED} | {code: QueueErrorCode.QUEUE_THROTTLED};
+
+export class QueueError extends LodestarError<QueueErrorCodeType> {
+  constructor(type: QueueErrorCodeType) {
+    super(type);
   }
 }
 
@@ -44,7 +45,7 @@ export class JobQueue {
 
   async processJob({job, resolve, reject}: JobQueueItem): Promise<void> {
     if (this.signal.aborted) {
-      reject(new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED));
+      reject(new QueueError({code: QueueErrorCode.QUEUE_ABORTED}));
     } else {
       try {
         const result = await job();
@@ -58,10 +59,10 @@ export class JobQueue {
 
   async enqueueJob<T extends Job>(job: T): Promise<ReturnType<T>> {
     if (this.signal.aborted) {
-      throw new QueueError(QueueErrorCode.ERR_QUEUE_ABORTED);
+      throw new QueueError({code: QueueErrorCode.QUEUE_ABORTED});
     }
     if (this.currentSize + 1 > this.queueSize) {
-      throw new QueueError(QueueErrorCode.ERR_QUEUE_THROTTLED);
+      throw new QueueError({code: QueueErrorCode.QUEUE_THROTTLED});
     }
     return new Promise((resolve, reject) => {
       this.queue.push({job, resolve, reject});

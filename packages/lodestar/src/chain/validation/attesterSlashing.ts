@@ -20,14 +20,14 @@ export async function validateGossipAttesterSlashing(
 
   if (await db.attesterSlashing.hasAll(attesterSlashedIndices)) {
     throw new AttesterSlashingError({
-      code: AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS,
+      code: AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS,
     });
   }
 
   const state = await chain.getHeadState();
   if (!isValidAttesterSlashing(config, state, attesterSlashing)) {
     throw new AttesterSlashingError({
-      code: AttesterSlashingErrorCode.ERR_INVALID_SLASHING,
+      code: AttesterSlashingErrorCode.INVALID_SLASHING,
     });
   }
 }

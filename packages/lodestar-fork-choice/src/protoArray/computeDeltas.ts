@@ -47,7 +47,7 @@ export function computeDeltas(
       if (currentDeltaIndex !== undefined) {
         if (currentDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INVALID_NODE_DELTA,
+            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
             index: currentDeltaIndex,
           });
         }
@@ -59,7 +59,7 @@ export function computeDeltas(
       if (nextDeltaIndex !== undefined) {
         if (nextDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.ERR_INVALID_NODE_DELTA,
+            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
             index: nextDeltaIndex,
           });
         }

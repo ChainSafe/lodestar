@@ -42,7 +42,7 @@ describe("Job queue", () => {
       await jobQueue.enqueueJob(job);
     } catch (e) {
       expect(e).to.be.instanceOf(QueueError);
-      expect(e.code).to.be.equal(QueueErrorCode.ERR_QUEUE_THROTTLED);
+      expect(e.code).to.be.equal(QueueErrorCode.QUEUE_THROTTLED);
     }
 
     await jobs;
@@ -62,7 +62,7 @@ describe("Job queue", () => {
     results.forEach((e) => {
       if (e.status === "rejected") {
         expect(e.reason).to.be.instanceOf(QueueError);
-        expect(e.reason.code).to.be.equal(QueueErrorCode.ERR_QUEUE_ABORTED);
+        expect(e.reason.code).to.be.equal(QueueErrorCode.QUEUE_ABORTED);
       } else {
         expect.fail();
       }
@@ -72,7 +72,7 @@ describe("Job queue", () => {
       await jobQueue.enqueueJob(job);
     } catch (e) {
       expect(e).to.be.instanceOf(QueueError);
-      expect(e.code).to.be.equal(QueueErrorCode.ERR_QUEUE_ABORTED);
+      expect(e.code).to.be.equal(QueueErrorCode.QUEUE_ABORTED);
     }
   });
 });
