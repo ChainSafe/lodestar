@@ -16,5 +16,5 @@ export function getPubKeyIndex(
   search: BLSPubkey,
   validatorData: {publicKey: BLSPubkey; secretKey: SecretKey}[]
 ): number {
-  return validatorData.findIndex((vc) => config.types.BLSPubkey.equals(vc.publicKey, search));
+  return validatorData.findIndex((vd) => config.types.BLSPubkey.equals(vd.publicKey, search));
 }
