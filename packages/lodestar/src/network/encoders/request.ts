@@ -5,7 +5,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, Methods, ReqRespEncoding} from "../../constants";
-import {toBuffer} from "../../util/buffer";
+import {castToBufferUnsafe} from "../../util/buffer";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import {IValidatedRequestBody} from "./interface";
 import {ReqRespSerializeError} from "../error";
@@ -58,7 +58,7 @@ export async function* getRequestBodyEncodedStream(
   const compressor = getCompressor(encoding);
 
   yield Buffer.from(encode(requestBodySerialized.length));
-  yield* compressor(toBuffer(requestBodySerialized));
+  yield* compressor(castToBufferUnsafe(requestBodySerialized));
 }
 
 export function eth2RequestDecode(
