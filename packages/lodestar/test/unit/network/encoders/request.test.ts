@@ -38,6 +38,12 @@ describe("network / encoders", () => {
 
         await expect(simulateRequest(Method.Status, encoding, requestBody)).to.be.rejectedWith(ReqRespSerializeError);
       });
+
+      it(`simulate request no body - ${encoding}`, async function () {
+        // streamRequestBodyTo should not be called with no body, but just make sure it doesn't break
+        const requestBody = (null as any) as RequestBody;
+        await simulateRequest(Method.Status, encoding, requestBody);
+      });
     }
 
     async function simulateRequest(
