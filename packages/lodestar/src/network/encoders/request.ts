@@ -8,6 +8,7 @@ import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {toBuffer} from "../../util/buffer";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
 import {IValidatedRequestBody} from "./interface";
+import {ReqRespSerializeError} from "../error";
 
 export async function streamRequestBodyTo(
   config: IBeaconConfig,
@@ -38,8 +39,12 @@ export function serializeRequestBody(
   if (type == null || requestBody == null) {
     return null;
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return type.serialize(requestBody as any);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return type.serialize(requestBody as any);
+    } catch (e) {
+      throw new ReqRespSerializeError(e);
+    }
   }
 }
 

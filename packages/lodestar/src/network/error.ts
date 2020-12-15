@@ -6,6 +6,14 @@ import PeerId from "peer-id";
  * Error of network req/resp
  */
 
+export class ReqRespSerializeError extends Error {
+  serializeError: Error;
+  constructor(serializeError: Error) {
+    super(`REQRESP_SERIALIZE_BODY_ERROR: ${serializeError.message}`);
+    this.serializeError = serializeError;
+  }
+}
+
 export class RpcError extends Error {
   public status: RpcResponseStatus;
   constructor(status: RpcResponseStatus, message?: string) {

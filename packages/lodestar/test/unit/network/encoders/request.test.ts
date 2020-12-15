@@ -4,14 +4,15 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {encode} from "varint";
 import pipe from "it-pipe";
 import all from "it-all";
+import {config} from "@chainsafe/lodestar-config/minimal";
+import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {RequestBody, Status} from "@chainsafe/lodestar-types";
 import {eth2RequestDecode, streamRequestBodyTo} from "../../../../src/network/encoders/request";
 import {IValidatedRequestBody} from "../../../../src/network/encoders/interface";
-import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
-import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {createStatus} from "./utils";
-import {RequestBody, Status} from "@chainsafe/lodestar-types";
+import {ReqRespSerializeError} from "../../../../src/network/error";
 import {silentLogger} from "../../../utils/logger";
+import {createStatus} from "./utils";
 
 chai.use(chaiAsPromised);
 
@@ -35,9 +36,7 @@ describe("network / encoders", () => {
       it(`simulate request bad body - ${encoding}`, async function () {
         const requestBody = BigInt(0);
 
-        await expect(simulateRequest(Method.Status, encoding, requestBody)).to.be.rejectedWith(
-          "Cannot convert undefined or null to object"
-        );
+        await expect(simulateRequest(Method.Status, encoding, requestBody)).to.be.rejectedWith(ReqRespSerializeError);
       });
     }
 
