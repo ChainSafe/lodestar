@@ -2,7 +2,7 @@
 import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, Validator, ValidatorIndex, ValidatorStatus, ValidatorResponse} from "@chainsafe/lodestar-types";
+import {Epoch, Validator, ValidatorIndex, ValidatorStatus, ValidatorResponse, Gwei} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
@@ -49,11 +49,11 @@ export async function resolveStateId(
   return null;
 }
 
-export function toValidatorResponse(index: ValidatorIndex, validator: Validator): ValidatorResponse {
+export function toValidatorResponse(index: ValidatorIndex, validator: Validator, balance: Gwei): ValidatorResponse {
   return {
     index,
     status: ValidatorStatus.ACTIVE,
-    pubkey: validator.pubkey,
+    balance,
     validator,
   };
 }

@@ -125,7 +125,7 @@ export enum ValidatorStatus {
 
 export interface ValidatorResponse {
   index: ValidatorIndex;
-  pubkey: BLSPubkey;
+  balance: Gwei;
   status: ValidatorStatus;
   validator: Validator;
 }

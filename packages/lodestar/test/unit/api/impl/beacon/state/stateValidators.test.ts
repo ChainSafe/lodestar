@@ -31,7 +31,7 @@ describe("beacon api impl - state - validators", function () {
     toValidatorResponseStub = sandbox.stub(stateApiUtils, "toValidatorResponse");
     toValidatorResponseStub.returns({
       index: 1,
-      pubkey: Buffer.alloc(32, 1),
+      balance: BigInt(3200000),
       status: ValidatorStatus.ACTIVE,
       validator: generateValidator(),
     });
@@ -63,7 +63,7 @@ describe("beacon api impl - state - validators", function () {
       });
       toValidatorResponseStub.onFirstCall().returns({
         index: 1,
-        pubkey: Buffer.alloc(32, 1),
+        balance: BigInt(3200000),
         status: ValidatorStatus.WITHDRAWABLE_SLASHED,
         validator: generateValidator(),
       });
