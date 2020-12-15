@@ -13,7 +13,7 @@ export async function validateGossipVoluntaryExit(
 ): Promise<void> {
   if (await db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.ERR_EXIT_ALREADY_EXISTS,
+      code: VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS,
     });
   }
 
@@ -24,7 +24,7 @@ export async function validateGossipVoluntaryExit(
 
   if (!isValidVoluntaryExit(config, state, voluntaryExit)) {
     throw new VoluntaryExitError({
-      code: VoluntaryExitErrorCode.ERR_INVALID_EXIT,
+      code: VoluntaryExitErrorCode.INVALID_EXIT,
     });
   }
 }

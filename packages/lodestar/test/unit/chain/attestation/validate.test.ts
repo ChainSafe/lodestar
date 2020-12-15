@@ -37,7 +37,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_BAD_TARGET_EPOCH);
+      expect(e.type.code).to.equal(AttestationErrorCode.BAD_TARGET_EPOCH);
     }
   });
 
@@ -56,7 +56,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_PAST_EPOCH);
+      expect(e.type.code).to.equal(AttestationErrorCode.PAST_EPOCH);
     }
   });
 
@@ -75,7 +75,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_FUTURE_EPOCH);
+      expect(e.type.code).to.equal(AttestationErrorCode.FUTURE_EPOCH);
     }
   });
 
@@ -97,7 +97,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_FUTURE_SLOT);
+      expect(e.type.code).to.equal(AttestationErrorCode.FUTURE_SLOT);
     }
   });
 
@@ -120,7 +120,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT);
+      expect(e.type.code).to.equal(AttestationErrorCode.UNKNOWN_TARGET_ROOT);
     }
   });
 
@@ -150,7 +150,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT);
+      expect(e.type.code).to.equal(AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
     }
   });
 
@@ -177,7 +177,7 @@ describe("velidateAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_HEAD_NOT_TARGET_DESCENDANT);
+      expect(e.type.code).to.equal(AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT);
     }
   });
 });

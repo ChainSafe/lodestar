@@ -114,7 +114,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   };
 
   private onErrorBlock = async (err: BlockError): Promise<void> => {
-    if (err.type.code === BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN) {
+    if (err.type.code === BlockErrorCode.BLOCK_IS_ALREADY_KNOWN) {
       await this.onProcessedBlock(err.job.signedBlock);
     }
   };

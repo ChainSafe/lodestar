@@ -13,14 +13,14 @@ export async function validateGossipProposerSlashing(
 ): Promise<void> {
   if (await db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
     throw new ProposerSlashingError({
-      code: ProposerSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS,
+      code: ProposerSlashingErrorCode.SLASHING_ALREADY_EXISTS,
     });
   }
 
   const state = await chain.getHeadState();
   if (!isValidProposerSlashing(config, state, proposerSlashing)) {
     throw new ProposerSlashingError({
-      code: ProposerSlashingErrorCode.ERR_INVALID_SLASHING,
+      code: ProposerSlashingErrorCode.INVALID_SLASHING,
     });
   }
 }

@@ -200,7 +200,7 @@ describe("response decoders", function () {
   it("should work - response stream with error - ssz", async function () {
     const controller = new AbortController();
     const chunks = generateBlockChunks(10);
-    chunks[4].status = RpcResponseStatus.ERR_INVALID_REQ;
+    chunks[4].status = RpcResponseStatus.INVALID_REQ;
     chunks[4].body = encodeP2pErrorMessage(config, "Invalid request");
 
     const responses = (await pipe(
@@ -215,7 +215,7 @@ describe("response decoders", function () {
 
   it("should work - response stream with error - ssz_snappy", async function () {
     const chunks = generateBlockChunks(10);
-    chunks[5].status = RpcResponseStatus.ERR_INVALID_REQ;
+    chunks[5].status = RpcResponseStatus.INVALID_REQ;
 
     const responses = (await pipe(
       chunks,
