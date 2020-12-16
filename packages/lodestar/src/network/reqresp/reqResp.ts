@@ -50,8 +50,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   public async start(): Promise<void> {
     this.controller = new AbortController();
-    Object.values(Method).forEach((method) => {
-      Object.values(ReqRespEncoding).forEach((encoding) => {
+    for (const method of Object.values(Method)) {
+      for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
           pipe(
@@ -61,16 +61,16 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             this.handleRpcRequest(peerId, method, encoding, stream.sink)
           );
         });
-      });
-    });
+      }
+    }
   }
 
   public async stop(): Promise<void> {
-    Object.values(Method).forEach((method) => {
-      Object.values(ReqRespEncoding).forEach((encoding) => {
+    for (const method of Object.values(Method)) {
+      for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
-      });
-    });
+      }
+    }
     this.controller?.abort();
   }
 

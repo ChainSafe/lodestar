@@ -133,16 +133,16 @@ function constructYamlInteger(data: string): bigint {
   }
 
   if (value.indexOf(":") !== -1) {
-    value.split(":").forEach(function (v) {
+    for (const v of value.split(":")) {
       digits.unshift(parseInt(v, 10));
-    });
+    }
     value = BigInt(0);
     base = BigInt(1);
 
-    digits.forEach(function (d) {
+    for (const d of digits) {
       value = (BigInt(value) + BigInt(base)) * BigInt(d);
       base = BigInt(base) * BigInt(60);
-    });
+    }
 
     return value * BigInt(sign);
   }

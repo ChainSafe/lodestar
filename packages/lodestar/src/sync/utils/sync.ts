@@ -310,10 +310,10 @@ export function checkLinearChainSegment(
 ): void {
   if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
   let parentRoot = ancestorRoot;
-  blocks.forEach((block) => {
+  for (const block of blocks) {
     if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
       throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
     }
     parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-  });
+  }
 }
