@@ -1,8 +1,17 @@
 // this will need async once we wan't to resolve archive slot
-import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochShuffling, EpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, Validator, ValidatorIndex, ValidatorStatus, ValidatorResponse, Gwei} from "@chainsafe/lodestar-types";
+import {
+  Epoch,
+  Validator,
+  ValidatorIndex,
+  ValidatorStatus,
+  ValidatorResponse,
+  Gwei,
+  BeaconState,
+} from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
@@ -19,7 +28,7 @@ export async function resolveStateId(
     return (await db.stateCache.get(forkChoice.getHead().stateRoot)) ?? null;
   }
   if (stateId === "genesis") {
-    const state = await db.stateArchive.get(0);
+    const state = await db.stateArchive.get(GENESIS_SLOT);
     if (!state) return null;
     return {
       state,
@@ -32,21 +41,24 @@ export async function resolveStateId(
     return (await db.stateCache.get(forkChoice.getJustifiedCheckpoint().root)) ?? null;
   }
   if (stateId.startsWith("0x")) {
-    //TODO: support getting finalized states by root as well
-    return (await db.stateCache.get(fromHexString(stateId))) ?? null;
+    const stateRoot = fromHexString(stateId);
+    const cachedStateCtx = await db.stateCache.get(stateRoot);
+    if (cachedStateCtx) return cachedStateCtx;
+    const finalizedState = await db.stateArchive.getByRoot(stateRoot);
+    return stateToApiStateContext(config, finalizedState);
   }
   //block id must be slot
   const slot = parseInt(stateId, 10);
   if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new Error("Invalid block id");
+    throw new Error("Invalid state id");
   }
-  //todo: resolve archive slot -> state
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
     return (await db.stateCache.get(blockSummary.stateRoot)) ?? null;
+  } else {
+    const finalizedState = await db.stateArchive.get(slot);
+    return stateToApiStateContext(config, finalizedState);
   }
-
-  return null;
 }
 
 export function toValidatorResponse(index: ValidatorIndex, validator: Validator, balance: Gwei): ValidatorResponse {
@@ -91,4 +103,14 @@ export function getEpochBeaconCommittees(
     committees = shuffling.committees;
   }
   return committees;
+}
+
+function stateToApiStateContext(config: IBeaconConfig, state: BeaconState | null): ApiStateContext | null {
+  if (!state) return null;
+  const epochCtx = new EpochContext(config);
+  epochCtx.loadState(state);
+  return {
+    state: state,
+    epochCtx,
+  };
 }
