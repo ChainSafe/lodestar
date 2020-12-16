@@ -67,7 +67,7 @@ This command will:
 To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
 
 ```bash
-./lodestar account validator import --testnet .$TESTNET_NAME --directory <path to your launchpad keys>
+./lodestar account validator import --testnet $TESTNET_NAME --directory <path to your launchpad keys>
 ```
 
 You will be prompted to enter a password. Use the same one you used to create the keys initially.
@@ -75,7 +75,7 @@ You will be prompted to enter a password. Use the same one you used to create th
 To confirm your keys have been imported run:
 
 ```bash
-./lodestar account validator list --testnet .$TESTNET_NAME
+./lodestar account validator list --testnet $TESTNET_NAME
 ```
 
 This command will print the public address of every active keystore.
