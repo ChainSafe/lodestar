@@ -1,6 +1,6 @@
 import {ApiController, HttpHeader} from "../../types";
 import {DefaultQuery} from "fastify";
-import {FastifyError} from "fastify";
+import {toRestValidationError} from "../../utils";
 
 const SSZ_MIME_TYPE = "application/octet-stream";
 
@@ -23,15 +23,7 @@ export const getState: ApiController<DefaultQuery, {stateId: string}> = {
       }
     } catch (e) {
       if (e.message === "Invalid state id") {
-        throw {
-          statusCode: 400,
-          validation: [
-            {
-              dataPath: "state_id",
-              message: e.message,
-            },
-          ],
-        } as FastifyError;
+        throw toRestValidationError("state_id", e.message);
       }
       throw e;
     }
