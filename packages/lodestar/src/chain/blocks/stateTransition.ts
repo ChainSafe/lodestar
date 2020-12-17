@@ -151,7 +151,7 @@ export async function runStateTransition(
 
     if (!verifySignatureSetsBatch(signatureSets)) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_INVALID_SIGNATURE,
+        code: BlockErrorCode.INVALID_SIGNATURE,
         job,
       });
     }

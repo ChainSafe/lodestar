@@ -141,11 +141,11 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
   );
 
   let exitQueueEndChurn = 0;
-  out.statuses.forEach((status) => {
+  for (const status of out.statuses) {
     if (status.validator.exitEpoch === exitQueueEnd) {
       exitQueueEndChurn += 1;
     }
-  });
+  }
 
   const churnLimit = getChurnLimit(config, activeCount);
   if (exitQueueEndChurn >= churnLimit) {
@@ -192,7 +192,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
       });
 
       if (epoch === prevEpoch) {
-        participants.forEach((p) => {
+        for (const p of participants) {
           const status = statuses[p];
 
           // If the attestation is the earliest, i.e. has the smallest delay
@@ -200,10 +200,10 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
             status.proposerIndex = proposerIndex;
             status.inclusionDelay = inclusionDelay;
           }
-        });
+        }
       }
 
-      participants.forEach((p) => {
+      for (const p of participants) {
         const status = statuses[p];
 
         // remember the participant as one of the good validators
@@ -218,7 +218,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
             status.flags |= headFlag;
           }
         }
-      });
+      }
     });
   };
   statusProcessEpoch(
@@ -244,7 +244,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
 
   let currTargetUnslStake = BigInt(0);
 
-  out.statuses.forEach((status) => {
+  for (const status of out.statuses) {
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED)) {
       prevSourceUnslStake += status.validator.effectiveBalance;
       if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER)) {
@@ -257,7 +257,7 @@ export function prepareEpochProcessState(epochCtx: StateTransitionEpochContext, 
     if (hasMarkers(status.flags, FLAG_CURR_TARGET_ATTESTER | FLAG_UNSLASHED)) {
       currTargetUnslStake += status.validator.effectiveBalance;
     }
-  });
+  }
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.

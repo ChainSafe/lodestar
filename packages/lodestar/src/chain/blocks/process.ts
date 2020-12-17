@@ -26,7 +26,7 @@ export async function processBlock({
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_PRESTATE_MISSING,
+        code: BlockErrorCode.PRESTATE_MISSING,
         job,
       });
     }
@@ -36,7 +36,7 @@ export async function processBlock({
     }
 
     throw new BlockError({
-      code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR,
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
       error: e,
       job,
     });

@@ -36,7 +36,7 @@ export class AttestationCollector implements IService {
   }
 
   public async stop(): Promise<void> {
-    this.timers.forEach((timer) => clearTimeout(timer));
+    for (const timer of this.timers) clearTimeout(timer);
     this.chain.emitter.removeListener(ChainEvent.clockSlot, this.checkDuties);
   }
 
@@ -61,7 +61,7 @@ export class AttestationCollector implements IService {
     const forkDigest = await this.chain.getForkDigest();
     const headState = await this.chain.getHeadState();
     this.timers = [];
-    committees.forEach((committeeIndex) => {
+    for (const committeeIndex of committees) {
       const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
       this.timers.push(
@@ -69,7 +69,7 @@ export class AttestationCollector implements IService {
           this.unsubscribeSubnet(subnet, forkDigest);
         }, this.config.params.SECONDS_PER_SLOT * 1000)
       );
-    });
+    }
     this.aggregationDuties.delete(slot);
   };
 

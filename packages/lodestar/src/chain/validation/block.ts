@@ -20,7 +20,7 @@ export async function validateGossipBlock(
   // block is too old
   if (blockSlot <= finalizedSlot) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+      code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
       blockSlot,
       finalizedSlot,
       job: blockJob,
@@ -30,7 +30,7 @@ export async function validateGossipBlock(
   const currentSlot = chain.clock.currentSlot;
   if (currentSlot < blockSlot) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_FUTURE_SLOT,
+      code: BlockErrorCode.FUTURE_SLOT,
       currentSlot,
       blockSlot,
       job: blockJob,
@@ -39,14 +39,14 @@ export async function validateGossipBlock(
 
   if (await db.badBlock.has(blockRoot)) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_KNOWN_BAD_BLOCK,
+      code: BlockErrorCode.KNOWN_BAD_BLOCK,
       job: blockJob,
     });
   }
 
   if (await hasProposerAlreadyProposed(db, blockRoot, block.message.proposerIndex)) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_REPEAT_PROPOSAL,
+      code: BlockErrorCode.REPEAT_PROPOSAL,
       proposer: block.message.proposerIndex,
       job: blockJob,
     });
@@ -58,7 +58,7 @@ export async function validateGossipBlock(
     blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_PARENT_UNKNOWN,
+      code: BlockErrorCode.PARENT_UNKNOWN,
       parentRoot: block.message.parentRoot,
       job: blockJob,
     });
@@ -66,7 +66,7 @@ export async function validateGossipBlock(
 
   if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID,
+      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
     });
   }
@@ -75,14 +75,14 @@ export async function validateGossipBlock(
     const validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
     if (!validProposer) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
+        code: BlockErrorCode.INCORRECT_PROPOSER,
         blockProposer: block.message.proposerIndex,
         job: blockJob,
       });
     }
   } catch (error) {
     throw new BlockError({
-      code: BlockErrorCode.ERR_INCORRECT_PROPOSER,
+      code: BlockErrorCode.INCORRECT_PROPOSER,
       blockProposer: block.message.proposerIndex,
       job: blockJob,
     });

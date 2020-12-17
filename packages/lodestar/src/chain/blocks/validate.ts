@@ -22,14 +22,14 @@ export async function validateBlock({
     const blockSlot = job.signedBlock.message.slot;
     if (blockSlot === 0) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_GENESIS_BLOCK,
+        code: BlockErrorCode.GENESIS_BLOCK,
         job,
       });
     }
 
     if (!job.reprocess && forkChoice.hasBlock(blockHash)) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN,
+        code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN,
         job,
       });
     }
@@ -38,7 +38,7 @@ export async function validateBlock({
     const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
     if (blockSlot <= finalizedSlot) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT,
+        code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
         blockSlot,
         finalizedSlot,
         job,
@@ -48,7 +48,7 @@ export async function validateBlock({
     const currentSlot = clock.currentSlot;
     if (blockSlot > currentSlot) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_FUTURE_SLOT,
+        code: BlockErrorCode.FUTURE_SLOT,
         blockSlot,
         currentSlot,
         job,
@@ -57,7 +57,7 @@ export async function validateBlock({
 
     if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
       throw new BlockError({
-        code: BlockErrorCode.ERR_PARENT_UNKNOWN,
+        code: BlockErrorCode.PARENT_UNKNOWN,
         parentRoot: job.signedBlock.message.parentRoot.valueOf() as Uint8Array,
         job,
       });
@@ -68,7 +68,7 @@ export async function validateBlock({
     }
 
     throw new BlockError({
-      code: BlockErrorCode.ERR_BEACON_CHAIN_ERROR,
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
       error: e,
       job,
     });

@@ -10,6 +10,7 @@ export interface IRestApiOptions {
 
 export const defaultApiRestOptions: IRestApiOptions = {
   enabled: false,
+  // ApiNamespace.DEBUG is not turned on by default
   api: [ApiNamespace.BEACON, ApiNamespace.NODE, ApiNamespace.VALIDATOR, ApiNamespace.EVENTS],
   host: "127.0.0.1",
   port: 9596,

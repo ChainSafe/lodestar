@@ -160,13 +160,13 @@ export function getImportantPeers(peers: PeerId[], peerMetadata: IPeerMetadataSt
   for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
     let count = 0;
     let candidatePeer: PeerId | null = null;
-    peers.forEach((peer) => {
+    for (const peer of peers) {
       const latestMetadata = peerMetadata.getMetadata(peer);
       if (latestMetadata && latestMetadata.attnets[subnet]) {
         candidatePeer = peer;
         count++;
       }
-    });
+    }
 
     if (count === 1) importantPeers.add(candidatePeer!);
   }

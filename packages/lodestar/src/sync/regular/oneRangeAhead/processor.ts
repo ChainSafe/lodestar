@@ -38,17 +38,26 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
    */
   public async processUntilComplete(blocks: SignedBeaconBlock[], signal: AbortSignal): Promise<void> {
     if (!blocks || !blocks.length) return;
-    await new Promise((resolve) => {
-      const sortedBlocks = sortBlocks(blocks);
-      this.logger.info("Imported blocks for slots", {blocks: blocks.map((block) => block.message.slot)});
-      const lastRoot = this.config.types.BeaconBlock.hashTreeRoot(sortedBlocks[sortedBlocks.length - 1].message);
-      this.target = {
-        root: lastRoot,
-        resolve,
-        signal,
-      };
-      sortedBlocks.forEach((block) => this.chain.receiveBlock(block));
-    });
+
+    const sortedBlocks = sortBlocks(blocks);
+    const chain = this.chain;
+
+    await Promise.all([
+      new Promise((resolve) => {
+        this.logger.info("Imported blocks for slots", {blocks: blocks.map((block) => block.message.slot)});
+        const lastRoot = this.config.types.BeaconBlock.hashTreeRoot(sortedBlocks[sortedBlocks.length - 1].message);
+        this.target = {
+          root: lastRoot,
+          resolve,
+          signal,
+        };
+      }),
+      (async function () {
+        for (const block of sortedBlocks) {
+          await chain.receiveBlock(block);
+        }
+      })(),
+    ]);
   }
 
   private onProcessedBlock = (signedBlock: SignedBeaconBlock): void => {
@@ -61,7 +70,7 @@ export class BlockRangeProcessor implements IBlockRangeProcessor {
   };
 
   private onErrorBlock = async (err: BlockError): Promise<void> => {
-    if (err.type.code === BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN) {
+    if (err.type.code === BlockErrorCode.BLOCK_IS_ALREADY_KNOWN) {
       await this.onProcessedBlock(err.job.signedBlock);
     }
   };

@@ -1,3 +1,4 @@
+import {AbortSignal} from "abort-controller";
 import {readOnlyMap, toHexString} from "@chainsafe/ssz";
 import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -277,7 +278,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
   const attestationRoot = this.config.types.Attestation.hashTreeRoot(err.job.attestation);
 
   switch (err.type.code) {
-    case AttestationErrorCode.ERR_FUTURE_SLOT:
+    case AttestationErrorCode.FUTURE_SLOT:
       this.logger.debug("Add attestation to pool", {
         reason: err.type.code,
         attestationRoot: toHexString(attestationRoot),
@@ -285,7 +286,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       this.pendingAttestations.putBySlot(err.type.attestationSlot, err.job);
       break;
 
-    case AttestationErrorCode.ERR_UNKNOWN_TARGET_ROOT:
+    case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
       this.logger.debug("Add attestation to pool", {
         reason: err.type.code,
         attestationRoot: toHexString(attestationRoot),
@@ -293,7 +294,7 @@ export async function onErrorAttestation(this: BeaconChain, err: AttestationErro
       this.pendingAttestations.putByBlock(err.type.root, err.job);
       break;
 
-    case AttestationErrorCode.ERR_UNKNOWN_BEACON_BLOCK_ROOT:
+    case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
       this.pendingAttestations.putByBlock(err.type.beaconBlockRoot, err.job);
       break;
 
@@ -312,7 +313,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
-    case BlockErrorCode.ERR_FUTURE_SLOT:
+    case BlockErrorCode.FUTURE_SLOT:
       this.logger.debug("Add block to pool", {
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
@@ -321,7 +322,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
       this.pendingBlocks.addBySlot(err.job.signedBlock);
       break;
 
-    case BlockErrorCode.ERR_PARENT_UNKNOWN:
+    case BlockErrorCode.PARENT_UNKNOWN:
       this.logger.debug("Add block to pool", {
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
@@ -332,12 +333,12 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
       await this.db.pendingBlock.add(err.job.signedBlock);
       break;
 
-    case BlockErrorCode.ERR_INCORRECT_PROPOSER:
-    case BlockErrorCode.ERR_REPEAT_PROPOSAL:
-    case BlockErrorCode.ERR_STATE_ROOT_MISMATCH:
-    case BlockErrorCode.ERR_PER_BLOCK_PROCESSING_ERROR:
-    case BlockErrorCode.ERR_BLOCK_IS_NOT_LATER_THAN_PARENT:
-    case BlockErrorCode.ERR_UNKNOWN_PROPOSER:
+    case BlockErrorCode.INCORRECT_PROPOSER:
+    case BlockErrorCode.REPEAT_PROPOSAL:
+    case BlockErrorCode.STATE_ROOT_MISMATCH:
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+    case BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT:
+    case BlockErrorCode.UNKNOWN_PROPOSER:
       await this.db.badBlock.put(blockRoot);
       this.logger.warn("Found bad block", {blockRoot: toHexString(blockRoot)}, err);
       break;

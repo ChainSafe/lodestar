@@ -110,56 +110,6 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Instantiates a ForkChoice from genesis parameters
-   */
-  public static fromGenesis(config: IBeaconConfig, fcStore: IForkChoiceStore, genesisBlock: BeaconBlock): ForkChoice {
-    const protoArray = ProtoArray.initialize({
-      slot: genesisBlock.slot,
-      parentRoot: toHexString(genesisBlock.parentRoot),
-      stateRoot: toHexString(genesisBlock.stateRoot),
-      blockRoot: toHexString(fcStore.finalizedCheckpoint.root),
-      justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
-      finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-    });
-
-    return new ForkChoice({
-      config,
-      fcStore,
-      protoArray,
-      queuedAttestations: new Set(),
-    });
-  }
-
-  /**
-   * Instantiates a ForkChoice from a weak subjectivity state
-   */
-  public static fromCheckpointState(
-    config: IBeaconConfig,
-    fcStore: IForkChoiceStore,
-    anchorState: BeaconState
-  ): ForkChoice {
-    const blockHeader = config.types.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
-    if (config.types.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-      blockHeader.stateRoot = config.types.BeaconState.hashTreeRoot(anchorState);
-    }
-    const protoArray = ProtoArray.initialize({
-      slot: anchorState.latestBlockHeader.slot,
-      parentRoot: toHexString(blockHeader.parentRoot),
-      stateRoot: toHexString(blockHeader.stateRoot),
-      blockRoot: toHexString(config.types.BeaconBlockHeader.hashTreeRoot(blockHeader)),
-      justifiedEpoch: fcStore.justifiedCheckpoint.epoch,
-      finalizedEpoch: fcStore.finalizedCheckpoint.epoch,
-    });
-
-    return new ForkChoice({
-      config,
-      fcStore,
-      protoArray,
-      queuedAttestations: new Set(),
-    });
-  }
-
-  /**
    * Returns the block root of an ancestor of `blockRoot` at the given `slot`.
    * (Note: `slot` refers to the block that is *returned*, not the one that is supplied.)
    *
@@ -173,7 +123,7 @@ export class ForkChoice implements IForkChoice {
     const block = this.protoArray.getBlock(toHexString(blockRoot));
     if (!block) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot.valueOf() as Uint8Array,
       });
     }
@@ -187,7 +137,7 @@ export class ForkChoice implements IForkChoice {
         }
       }
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_UNKNOWN_ANCESTOR,
+        code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR,
         descendantRoot: blockRoot.valueOf() as Uint8Array,
         ancestorSlot,
       });
@@ -226,18 +176,22 @@ export class ForkChoice implements IForkChoice {
     const headIndex = this.protoArray.indices.get(headRoot);
     if (headIndex === undefined) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: fromHexString(headRoot),
       });
     }
     const headNode = this.protoArray.nodes[headIndex];
     if (headNode === undefined) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: fromHexString(headRoot),
       });
     }
     return toBlockSummary(headNode);
+  }
+
+  public getHeads(): IBlockSummary[] {
+    return this.protoArray.nodes.filter((node) => !node.bestChild).map(toBlockSummary);
   }
 
   public getFinalizedCheckpoint(): Checkpoint {
@@ -271,7 +225,7 @@ export class ForkChoice implements IForkChoice {
     // Parent block must be known
     if (!this.protoArray.hasBlock(toHexString(block.parentRoot))) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_BLOCK,
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.UNKNOWN_PARENT,
           root: block.parentRoot.valueOf() as Uint8Array,
@@ -285,7 +239,7 @@ export class ForkChoice implements IForkChoice {
     // Note: presently, we do not delay consideration. We just drop the block.
     if (block.slot > this.fcStore.currentSlot) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_BLOCK,
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.FUTURE_SLOT,
           currentSlot: this.fcStore.currentSlot,
@@ -299,7 +253,7 @@ export class ForkChoice implements IForkChoice {
     const finalizedSlot = computeStartSlotAtEpoch(this.config, this.fcStore.finalizedCheckpoint.epoch);
     if (block.slot <= finalizedSlot) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_BLOCK,
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.FINALIZED_SLOT,
           finalizedSlot,
@@ -313,7 +267,7 @@ export class ForkChoice implements IForkChoice {
     const finalizedRoot = this.fcStore.finalizedCheckpoint.root;
     if (!this.config.types.Root.equals(blockAncestor, finalizedRoot)) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_BLOCK,
+        code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
           code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT,
           finalizedRoot: finalizedRoot.valueOf() as Uint8Array,
@@ -328,7 +282,7 @@ export class ForkChoice implements IForkChoice {
     if (state.currentJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
       if (!justifiedBalances) {
         throw new ForkChoiceError({
-          code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
+          code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
           error: new Error("No validator balances supplied"),
         });
       }
@@ -362,7 +316,7 @@ export class ForkChoice implements IForkChoice {
     if (shouldUpdateJustified) {
       if (!justifiedBalances) {
         throw new ForkChoiceError({
-          code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
+          code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
           error: new Error("No validator balances supplied"),
         });
       }
@@ -506,7 +460,7 @@ export class ForkChoice implements IForkChoice {
     const block = this.getBlock(this.fcStore.finalizedCheckpoint.root);
     if (!block) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK,
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: this.fcStore.finalizedCheckpoint.root.valueOf() as Uint8Array,
       });
     }
@@ -612,7 +566,7 @@ export class ForkChoice implements IForkChoice {
     // This sanity check is not in the spec, but the invariant is implied
     if (justifiedSlot >= state.slot) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_ATTEMPT_TO_REVERT_JUSTIFICATION,
+        code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION,
         store: justifiedSlot,
         state: state.slot,
       });
@@ -656,7 +610,7 @@ export class ForkChoice implements IForkChoice {
     // return early here to avoid wasting precious resources verifying the rest of it.
     if (!indexedAttestation.attestingIndices.length) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD,
         },
@@ -669,7 +623,7 @@ export class ForkChoice implements IForkChoice {
     // Attestation must be from the current of previous epoch.
     if (target.epoch > epochNow) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.FUTURE_EPOCH,
           attestationEpoch: target.epoch,
@@ -678,7 +632,7 @@ export class ForkChoice implements IForkChoice {
       });
     } else if (target.epoch + 1 < epochNow) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.PAST_EPOCH,
           attestationEpoch: target.epoch,
@@ -689,7 +643,7 @@ export class ForkChoice implements IForkChoice {
 
     if (target.epoch !== computeEpochAtSlot(this.config, indexedAttestation.data.slot)) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.BAD_TARGET_EPOCH,
           target: target.epoch,
@@ -704,7 +658,7 @@ export class ForkChoice implements IForkChoice {
     // surface.
     if (!this.protoArray.hasBlock(toHexString(target.root))) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
           root: target.root.valueOf() as Uint8Array,
@@ -723,7 +677,7 @@ export class ForkChoice implements IForkChoice {
     const block = this.protoArray.getBlock(toHexString(indexedAttestation.data.beaconBlockRoot));
     if (!block) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
           beaconBlockRoot: indexedAttestation.data.beaconBlockRoot.valueOf() as Uint8Array,
@@ -742,7 +696,7 @@ export class ForkChoice implements IForkChoice {
 
     if (!this.config.types.Root.equals(expectedTarget, target.root)) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.INVALID_TARGET,
           attestation: target.root.valueOf() as Uint8Array,
@@ -755,7 +709,7 @@ export class ForkChoice implements IForkChoice {
     // should not be considered.
     if (block.slot > indexedAttestation.data.slot) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION,
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
           block: block.slot,
@@ -818,7 +772,7 @@ export class ForkChoice implements IForkChoice {
 
     if (time > previousSlot + 1) {
       throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.ERR_INCONSISTENT_ON_TICK,
+        code: ForkChoiceErrorCode.INCONSISTENT_ON_TICK,
         previousSlot,
         time,
       });

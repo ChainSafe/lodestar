@@ -65,10 +65,11 @@ export class CheckpointStateCache {
   }
 
   public async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
-    Object.keys(this.epochIndex)
-      .map(Number)
-      .filter((epoch) => epoch < finalizedEpoch)
-      .forEach((epoch) => this.deleteAllEpochItems(epoch));
+    for (const epoch of Object.keys(this.epochIndex).map(Number)) {
+      if (epoch < finalizedEpoch) {
+        await this.deleteAllEpochItems(epoch);
+      }
+    }
   }
 
   public async prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): Promise<void> {
@@ -77,7 +78,9 @@ export class CheckpointStateCache {
       .filter((epoch) => epoch !== finalizedEpoch && epoch !== justifiedEpoch);
     const MAX_EPOCHS = 10;
     if (epochs.length > MAX_EPOCHS) {
-      epochs.slice(0, epochs.length - MAX_EPOCHS).forEach((epoch) => this.deleteAllEpochItems(epoch));
+      for (const epoch of epochs.slice(0, epochs.length - MAX_EPOCHS)) {
+        await this.deleteAllEpochItems(epoch);
+      }
     }
   }
 
@@ -92,9 +95,9 @@ export class CheckpointStateCache {
   }
 
   public async deleteAllEpochItems(epoch: Epoch): Promise<void> {
-    this.epochIndex[epoch]?.forEach((hexRoot) => {
+    for (const hexRoot of this.epochIndex[epoch] || []) {
       delete this.cache[toHexString(this.config.types.Checkpoint.hashTreeRoot({root: fromHexString(hexRoot), epoch}))];
-    });
+    }
     delete this.epochIndex[epoch];
   }
 

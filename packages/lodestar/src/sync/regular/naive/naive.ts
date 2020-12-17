@@ -1,5 +1,6 @@
 import PeerId from "peer-id";
 import {AbortController, AbortSignal} from "abort-controller";
+import {SlotRoot} from "@chainsafe/lodestar-types";
 import {source as abortSource} from "abortable-iterator";
 import {IRegularSync, IRegularSyncModules, RegularSyncEventEmitter} from "../interface";
 import {INetwork} from "../../../network";
@@ -13,7 +14,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 import pushable, {Pushable} from "it-pushable";
 import pipe from "it-pipe";
 import {checkBestPeer, fetchBlockChunks, getBestPeer, processSyncBlocks} from "../../utils";
-import {ISlotRange, ISyncCheckpoint} from "../../interface";
+import {ISlotRange} from "../../interface";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {toHexString} from "@chainsafe/ssz";
 import {EventEmitter} from "events";
@@ -41,7 +42,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   /**
    * The last processed block
    */
-  private lastProcessedBlock!: ISyncCheckpoint;
+  private lastProcessedBlock!: SlotRoot;
   // only listen for blocks from this sync instead of gossip
   private subscribeToBlock: boolean;
 
@@ -67,7 +68,8 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       return;
     }
     this.currentTarget = headSlot;
-    this.lastProcessedBlock = this.chain.forkChoice.getHead();
+    const head = this.chain.forkChoice.getHead();
+    this.lastProcessedBlock = {slot: head.slot, root: head.blockRoot};
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.targetSlotRangeSource = pushable<ISlotRange>();
     this.controller = new AbortController();
@@ -112,7 +114,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   };
 
   private onErrorBlock = async (err: BlockError): Promise<void> => {
-    if (err.type.code === BlockErrorCode.ERR_BLOCK_IS_ALREADY_KNOWN) {
+    if (err.type.code === BlockErrorCode.BLOCK_IS_ALREADY_KNOWN) {
       await this.onProcessedBlock(err.job.signedBlock);
     }
   };
@@ -126,7 +128,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
       if (this.currentTarget === lastProcessedBlock.message.slot) {
         this.lastProcessedBlock = {
           slot: lastProcessedBlock.message.slot,
-          blockRoot: this.config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message),
+          root: this.config.types.BeaconBlock.hashTreeRoot(lastProcessedBlock.message),
         };
         this.setTarget();
         this.subscribeToBlock = false;
@@ -231,7 +233,7 @@ export class NaiveRegularSync extends (EventEmitter as {new (): RegularSyncEvent
   /**
    * Make sure we get up-to-date lastProcessedBlock from sync().
    */
-  private getLastProcessedBlock = (): ISyncCheckpoint => {
+  private getLastProcessedBlock = (): SlotRoot => {
     return this.lastProcessedBlock;
   };
 

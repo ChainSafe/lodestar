@@ -76,7 +76,7 @@ export enum ReqRespEncoding {
 
 export enum RpcResponseStatus {
   SUCCESS = 0,
-  ERR_INVALID_REQ = 1,
+  INVALID_REQ = 1,
   SERVER_ERROR = 2,
 }
 

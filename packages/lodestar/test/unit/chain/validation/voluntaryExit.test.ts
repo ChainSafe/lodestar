@@ -52,7 +52,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.ERR_EXIT_ALREADY_EXISTS);
+      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.EXIT_ALREADY_EXISTS);
     }
   });
 
@@ -74,7 +74,7 @@ describe("validate voluntary exit", () => {
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
-      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.ERR_INVALID_EXIT);
+      expect(error.type).to.have.property("code", VoluntaryExitErrorCode.INVALID_EXIT);
     }
   });
 

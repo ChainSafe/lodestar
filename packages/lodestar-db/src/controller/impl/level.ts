@@ -64,13 +64,13 @@ export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
 
   public async batchPut(items: IKeyValue<Buffer, Buffer>[]): Promise<void> {
     const batch = this.db.batch();
-    items.forEach((item) => batch.put(item.key, item.value));
+    for (const item of items) batch.put(item.key, item.value);
     await batch.write();
   }
 
   public async batchDelete(keys: Buffer[]): Promise<void> {
     const batch = this.db.batch();
-    keys.forEach((key) => batch.del(key));
+    for (const key of keys) batch.del(key);
     await batch.write();
   }
 

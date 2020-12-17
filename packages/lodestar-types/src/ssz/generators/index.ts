@@ -35,30 +35,10 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
     types[type] = primitive[type];
   }
   // relies on list of typenames in dependency order
-  typeNames.forEach((type) => {
+  for (const type of typeNames) {
     // @ts-ignore
     types[type] = allGenerators[type](types, params);
-  });
-  /* or if we can separate out types w/ dependencies into files
-  for (const type in misc) {
-    types[type] = misc[type](types, params);
   }
-  for (const type in operations) {
-    types[type] = operations[type](types, params);
-  }
-  for (const type in block) {
-    types[type] = block[type](types, params);
-  }
-  for (const type in state) {
-    types[type] = state[type](types, params);
-  }
-  for (const type in validator) {
-    types[type] = validator[type](types, params);
-  }
-  for (const type in wire) {
-    types[type] = wire[type](types, params);
-  }
-   */
   types.phase1 = createPhase1SSTTypes(params, types);
   types.lightclient = createLightClientTypes(params, types);
   return types;
