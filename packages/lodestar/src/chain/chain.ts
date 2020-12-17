@@ -137,7 +137,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
-    //head state should always exist
+    // head state should always exist
     const head = this.forkChoice.getHead();
     const headStateRoot =
       (await this.db.checkpointStateCache.getLatest({
@@ -148,11 +148,11 @@ export class BeaconChain implements IBeaconChain {
     return headStateRoot;
   }
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
-    //head state should always have epoch ctx
+    // head state should always have epoch ctx
     return (await this.getHeadStateContext()).state;
   }
   public async getHeadEpochContext(): Promise<EpochContext> {
-    //head should always have epoch ctx
+    // head should always have epoch ctx
     return (await this.getHeadStateContext()).epochCtx;
   }
 

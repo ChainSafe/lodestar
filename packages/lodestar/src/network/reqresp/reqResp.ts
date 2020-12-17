@@ -31,6 +31,11 @@ import {ReqRespRequest} from "./interface";
 import {sendResponse} from "./respUtils";
 import {EventEmitter} from "events";
 
+/**
+ * Implementation of eth2 p2p Req/Resp domain.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
+ */
 export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;

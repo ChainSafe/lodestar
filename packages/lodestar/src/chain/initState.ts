@@ -126,7 +126,7 @@ export async function initStateFromAnchorState(
 }
 
 /**
- * Restore a beacon state
+ * Restore a beacon state to the state cache.
  */
 export async function restoreStateCaches(
   config: IBeaconConfig,

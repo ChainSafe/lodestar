@@ -9,6 +9,9 @@ import {defaultApiRestOptions, IRestApiOptions} from "./options";
 import {registerRoutes} from "./routes";
 import {errorHandler} from "./routes/error";
 
+/**
+ * REST API powered by `fastify` server.
+ */
 export class RestApi {
   public server: FastifyInstance;
 
@@ -16,6 +19,9 @@ export class RestApi {
     this.server = server;
   }
 
+  /**
+   * Initialize and start the REST API server.
+   */
   public static async init(opts: Partial<IRestApiOptions>, modules: IRestApiModules): Promise<RestApi> {
     const _opts = {...defaultApiRestOptions, ...opts};
     const api = new RestApi(setupServer(_opts, modules));
@@ -32,6 +38,9 @@ export class RestApi {
     return api;
   }
 
+  /**
+   * Close the server instance.
+   */
   public async close(): Promise<void> {
     await this.server.close();
   }
@@ -57,7 +66,7 @@ function setupServer(opts: IRestApiOptions, modules: IRestApiModules): FastifyIn
   const api = modules.api;
   server.decorate("config", modules.config);
   server.decorate("api", api);
-  //new api
+  // new api
   const enabledApiNamespaces = opts.api;
   server.register(async function (instance) {
     registerRoutes(instance, enabledApiNamespaces);

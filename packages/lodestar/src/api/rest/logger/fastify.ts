@@ -3,6 +3,9 @@ import {IncomingMessage} from "http";
 import {FastifyRequest} from "fastify";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
+/**
+ * Logs REST API request/response messages.
+ */
 export class FastifyLogger {
   public readonly stream: Stream;
 

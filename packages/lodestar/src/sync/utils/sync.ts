@@ -148,7 +148,7 @@ export function validateBlocks(
           fromSlot: blockChunk[0].message.slot,
           toSlot: blockChunk[blockChunk.length - 1].message.slot,
         });
-        //discard blocks and trigger resync so we try to fetch blocks again
+        // discard blocks and trigger resync so we try to fetch blocks again
         onBlockVerificationFail();
       }
     }
@@ -218,7 +218,7 @@ export function processSyncBlocks(
           blockParent: toHexString(block.parentRoot),
           blockSlot: block.slot,
         });
-        //this will trigger sync to retry to fetch this chunk again
+        // this will trigger sync to retry to fetch this chunk again
         lastProcessedSlot = lastProcessedSlot || headSlot;
         break;
       }
@@ -285,7 +285,7 @@ export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: IN
 }
 
 /**
- * Return candidate for gest peer.
+ * Return candidate for best peer.
  */
 export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork): PeerId[] {
   return getSyncPeers(

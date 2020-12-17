@@ -42,7 +42,7 @@ export interface IBeaconDb {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
 
-  //cache
+  // cache for attestations that have already been seen via gossip or other sources
   seenAttestationCache: SeenAttestationCache;
 
   // finalized blocks
@@ -67,6 +67,13 @@ export interface IBeaconDb {
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 
+  /**
+   * Start the connection to the db instance and open the db store.
+   */
   start(): Promise<void>;
+
+  /**
+   *  Stop the connection to the db instance and close the db store.
+   */
   stop(): Promise<void>;
 }
