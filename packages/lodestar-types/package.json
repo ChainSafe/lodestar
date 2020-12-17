@@ -28,7 +28,7 @@
     "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
-    "lint": "eslint --color --ext .ts src/ test/",
+    "lint": "eslint --ignore-pattern \"**/phase1/**\" --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
     "prepublishOnly": "yarn build",
     "test:unit": "mocha 'test/**/*.test.ts'"
