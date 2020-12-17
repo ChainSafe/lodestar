@@ -41,12 +41,12 @@ export class SeenAttestationCache {
   private add(key: string): void {
     this.cache.set(key, true);
     if (this.cache.size > this.maxSize) {
-      //deletes oldest element added (map keep list of insert order)
+      // deletes oldest element added (map keep list of insert order)
       this.cache.delete(this.cache.keys().next().value);
     }
   }
 
-  //serialize attestation key as concatenation of interested properties
+  // serialize attestation key as concatenation of interested properties
   private attestationKey(attestation: Attestation): string {
     return (
       "" +
@@ -59,7 +59,7 @@ export class SeenAttestationCache {
     );
   }
 
-  //serialize aggregate key as concatenation of interested properties
+  // serialize aggregate key as concatenation of interested properties
   private aggregateAndProofKey(aggreate: AggregateAndProof): string {
     return "" + aggreate.aggregatorIndex + aggreate.aggregate.data.target.epoch;
   }

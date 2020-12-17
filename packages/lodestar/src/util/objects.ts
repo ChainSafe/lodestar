@@ -12,7 +12,7 @@ interface IElementDescription {
 export function mostFrequent<T>(type: Type<T>, array: T[]): T[] {
   const hashMap: Map<string, IElementDescription> = new Map<string, IElementDescription>();
   array.forEach((e, index) => {
-    //We can optimize this by using faster hash like https://github.com/bevacqua/hash-sum
+    // We can optimize this by using faster hash like https://github.com/bevacqua/hash-sum
     const hash = toHexString(type.hashTreeRoot(e));
 
     const desc = hashMap.get(hash);

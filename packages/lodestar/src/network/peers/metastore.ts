@@ -49,7 +49,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
 
   public setMetadata(peer: PeerId, metadata: Metadata | null): void {
     if (!metadata) {
-      //clears metadata
+      // clears metadata
       return this.set(peer, MetadataKey.METADATA, this.config.types.Metadata, metadata);
     }
     const currentMetadata = this.getMetadata(peer);

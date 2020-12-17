@@ -4,6 +4,11 @@ import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, 
 import {Type} from "@chainsafe/ssz";
 import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 
+/**
+ * Manages validator db storage of blocks.
+ * Entries in the db are indexed by an encoded key which combines the validator's public key and the
+ * block's slot.
+ */
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
   protected db: IDatabaseController<Buffer, Buffer>;

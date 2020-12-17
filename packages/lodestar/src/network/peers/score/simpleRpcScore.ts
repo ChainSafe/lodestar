@@ -33,7 +33,7 @@ export class SimpleRpcScoreTracker implements IRpcScoreTracker {
   public update(peer: PeerId, event: RpcScoreEvent): void {
     const currentScore = this.getScore(peer);
     const delta = scoreConstants[event];
-    //ensure score is between min and max
+    // ensure score is between min and max
     this.store.setRpcScore(peer, Math.max(Math.min(MAX_SCORE, currentScore + delta), MIN_SCORE));
   }
 }

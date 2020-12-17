@@ -42,6 +42,7 @@ export enum Bucket {
   slashingProtectionMinSpanDistance = 23,
   slashingProtectionMaxSpanDistance = 24,
   pendingBlock = 25, // Root -> SignedBeaconBlock
+  stateArchiveRootIndex = 26, // State Root -> slot
 }
 
 export enum Key {

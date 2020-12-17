@@ -33,7 +33,7 @@ export function eth2RequestEncode(
 
       yield* compressor(Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length));
 
-      //reset compressor
+      // reset compressor
       compressor = getCompressor(encoding);
     }
   };
@@ -48,7 +48,7 @@ export function eth2RequestDecode(
   return async function* (source) {
     const type = Methods[method].requestSSZType(config);
     if (!type) {
-      //method has no body, emit null to trigger response
+      // method has no body, emit null to trigger response
       yield {isValid: true, body: null!};
       return;
     }
@@ -121,7 +121,7 @@ export function eth2RequestDecode(
         yield {isValid: false};
         break;
       }
-      //only one request body accepted
+      // only one request body accepted
       break;
     }
   };

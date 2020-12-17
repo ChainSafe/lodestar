@@ -57,14 +57,16 @@ describe("Job queue", () => {
     const jobs = Promise.allSettled(Array.from({length: queueSize}, () => jobQueue.enqueueJob(job)));
     controller.abort();
     const results = await jobs;
+
     // all jobs should be rejected with ERR_QUEUE_ABORTED
-    results.forEach((e) => {
+    for (const e of results) {
       if (e.status === "rejected") {
         assertQueueErrorCode(e.reason, QueueErrorCode.QUEUE_ABORTED);
       } else {
         expect.fail();
       }
-    });
+    }
+
     // any subsequently enqueued job should also be rejected
     try {
       await jobQueue.enqueueJob(job);

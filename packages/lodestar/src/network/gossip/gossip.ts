@@ -156,9 +156,9 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   ): void {
     if (!this.listeners(event as keyof IGossipEvents).includes(listener as (...args: unknown[]) => void)) return;
     if (this.listenerCount(event.toString()) === 1 && !event.toString().startsWith("gossipsub")) {
-      this.supportedEncodings.forEach((encoding) => {
+      for (const encoding of this.supportedEncodings) {
         this.pubsub.unsubscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
-      });
+      }
     }
     if (listener) {
       this.removeListener(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
@@ -183,9 +183,9 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     params: Map<string, string> = new Map()
   ): void {
     if (this.listenerCount(event.toString()) === 0 && !event.toString().startsWith("gossipsub")) {
-      this.supportedEncodings.forEach((encoding) => {
+      for (const encoding of this.supportedEncodings) {
         this.pubsub.subscribe(getGossipTopic(mapGossipEvent(event), forkDigest, encoding, params));
-      });
+      }
     }
     if (listener) {
       this.on(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
@@ -220,7 +220,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
-    this.supportedEncodings.forEach((encoding) => {
+    for (const encoding of this.supportedEncodings) {
       handlers.set(getGossipTopic(GossipEvent.BLOCK, forkDigest, encoding), handleIncomingBlock.bind(that));
       handlers.set(
         getGossipTopic(GossipEvent.AGGREGATE_AND_PROOF, forkDigest, encoding),
@@ -246,7 +246,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
           committeeAttestationHandler.bind(that)
         );
       }
-    });
+    }
     return handlers;
   }
 

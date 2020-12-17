@@ -77,9 +77,9 @@ describe("signatureSets", () => {
       activation: 0,
       exit: FAR_FUTURE_EPOCH,
     });
-    validators.forEach((validator) => {
+    for (const validator of validators) {
       validator.pubkey = bls.SecretKey.fromKeygen().toPublicKey().toBytes();
-    });
+    }
 
     // Create EpochContext with generated validators
     const epochCtx = new EpochContext(config);

@@ -148,7 +148,7 @@ export function validateBlocks(
           fromSlot: blockChunk[0].message.slot,
           toSlot: blockChunk[blockChunk.length - 1].message.slot,
         });
-        //discard blocks and trigger resync so we try to fetch blocks again
+        // discard blocks and trigger resync so we try to fetch blocks again
         onBlockVerificationFail();
       }
     }
@@ -218,7 +218,7 @@ export function processSyncBlocks(
           blockParent: toHexString(block.parentRoot),
           blockSlot: block.slot,
         });
-        //this will trigger sync to retry to fetch this chunk again
+        // this will trigger sync to retry to fetch this chunk again
         lastProcessedSlot = lastProcessedSlot || headSlot;
         break;
       }
@@ -285,7 +285,7 @@ export function checkBestPeer(peer: PeerId, forkChoice: IForkChoice, network: IN
 }
 
 /**
- * Return candidate for gest peer.
+ * Return candidate for best peer.
  */
 export function getBestPeerCandidates(forkChoice: IForkChoice, network: INetwork): PeerId[] {
   return getSyncPeers(
@@ -310,10 +310,10 @@ export function checkLinearChainSegment(
 ): void {
   if (!blocks || blocks.length <= 1) throw new Error("Not enough blocks to validate");
   let parentRoot = ancestorRoot;
-  blocks.forEach((block) => {
+  for (const block of blocks) {
     if (parentRoot && !config.types.Root.equals(block.message.parentRoot, parentRoot)) {
       throw new Error(`Block ${block.message.slot} does not link to parent ${toHexString(parentRoot)}`);
     }
     parentRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-  });
+  }
 }

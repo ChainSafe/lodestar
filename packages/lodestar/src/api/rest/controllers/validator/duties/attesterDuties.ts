@@ -5,7 +5,7 @@ type Params = {
   epoch: number;
 };
 
-//validator indices
+// validator indices
 type Body = number[];
 
 export const attesterDutiesController: ApiController<DefaultQuery, Params, Body> = {

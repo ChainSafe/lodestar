@@ -37,10 +37,13 @@ import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import {getAggregationBits, getAggregatorModulo, getPubKeyIndex} from "./utils";
 
+/**
+ * Service that sets up and handles validator attester duties.
+ */
 export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  private readonly validatorClients: {
+  private readonly validators: {
     validator: ValidatorResponse | null;
     publicKey: BLSPubkey;
     secretKey: SecretKey;
@@ -61,12 +64,15 @@ export class AttestationService {
     this.config = config;
     this.provider = rpcClient;
     for (const secretKey of secretKeys) {
-      this.validatorClients.push({validator: null, secretKey: secretKey, publicKey: secretKey.toPublicKey().toBytes()});
+      this.validators.push({validator: null, secretKey: secretKey, publicKey: secretKey.toPublicKey().toBytes()});
     }
     this.slashingProtection = slashingProtection;
     this.logger = logger;
   }
 
+  /**
+   * Starts the AttestationService by updating the validator attester duties and turning on the relevant listeners for clock events.
+   */
   public start = async (): Promise<void> => {
     this.controller = new AbortController();
     const currentEpoch = this.provider.clock.currentEpoch;
@@ -79,6 +85,9 @@ export class AttestationService {
     this.provider.on(BeaconEventType.HEAD, this.onHead);
   };
 
+  /**
+   * Stops the AttestationService by turning off the relevant listeners for clock events.
+   */
   public stop = async (): Promise<void> => {
     if (this.controller) {
       this.controller.abort();
@@ -88,11 +97,17 @@ export class AttestationService {
     this.provider.off(BeaconEventType.HEAD, this.onHead);
   };
 
+  /**
+   * Update validator attester duties on each clock epoch.
+   */
   public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
     await this.updateValidators();
     await this.updateDuties(epoch + 1);
   };
 
+  /**
+   * Perform attestation duties if the validator is an attester for a given clock slot.
+   */
   public onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
     const duties = this.nextAttesterDuties.get(slot);
     if (duties && duties.size > 0) {
@@ -101,6 +116,9 @@ export class AttestationService {
     }
   };
 
+  /**
+   * Update list of attester duties on head upate.
+   */
   public onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
     if (epochTransition) {
       // refetch next epoch's duties
@@ -108,13 +126,16 @@ export class AttestationService {
     }
   };
 
+  /**
+   * Fetch validator attester duties from the validator api and update local list of attester duties accordingly.
+   */
   public async updateDuties(epoch: Epoch): Promise<void> {
     let attesterDuties: AttesterDuty[] | undefined;
     try {
-      attesterDuties = await this.provider.validator.getAttesterDuties(
-        epoch,
-        this.validatorClients.map((v) => v.validator?.index ?? null).filter((i) => i !== null) as ValidatorIndex[]
-      );
+      const indices = this.validators
+        .map((v) => v.validator?.index ?? null)
+        .filter((i) => i !== null) as ValidatorIndex[];
+      attesterDuties = await this.provider.validator.getAttesterDuties(epoch, indices);
     } catch (e) {
       this.logger.error("Failed to obtain attester duty", {epoch, error: e.message});
       return;
@@ -124,7 +145,7 @@ export class AttestationService {
       return;
     }
     for (const duty of attesterDuties) {
-      const attesterIndex = getPubKeyIndex(this.config, duty.pubkey, this.validatorClients);
+      const attesterIndex = getPubKeyIndex(this.config, duty.pubkey, this.validators);
       const slotSignature = this.getSlotSignature(attesterIndex, duty.slot, fork, this.provider.genesisValidatorsRoot);
       const modulo = getAggregatorModulo(this.config, duty);
       const isAggregator = isValidatorAggregator(slotSignature, modulo);
@@ -160,6 +181,11 @@ export class AttestationService {
     }
   }
 
+  /**
+   * Perform attestation/aggregation duties.
+   * IFF a validator is an attester, create and submit an attestation.
+   * IFF a validator is an aggregator, aggregate the attestations and submit the aggregated data.
+   */
   private async handleDuty(duty: IAttesterDuty): Promise<void> {
     this.logger.info("Handling attestation duty", {
       slot: duty.slot,
@@ -221,6 +247,9 @@ export class AttestationService {
     }
   }
 
+  /**
+   * Makes sure that the block we are trying to attest to is available.
+   */
   private async waitForAttestationBlock(blockSlot: Slot, signal: AbortSignal): Promise<void> {
     this.logger.debug("Waiting for block at slot", {blockSlot});
     return new Promise((resolve, reject) => {
@@ -251,6 +280,9 @@ export class AttestationService {
     });
   }
 
+  /**
+   * Aggregate attestations publish the aggregate.
+   */
   private aggregateAttestations = async (
     duty: IAttesterDuty,
     attestation: Attestation,
@@ -309,7 +341,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, aggregate.data.slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AggregateAndProof, aggregateAndProof, domain);
-    return this.validatorClients[aggregatorIndex].secretKey.sign(signingRoot).toBytes();
+    return this.validators[aggregatorIndex].secretKey.sign(signingRoot).toBytes();
   }
 
   private getSlotSignature(attesterIndex: number, slot: Slot, fork: Fork, genesisValidatorsRoot: Root): BLSSignature {
@@ -320,7 +352,7 @@ export class AttestationService {
       computeEpochAtSlot(this.config, slot)
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.Slot, slot, domain);
-    return this.validatorClients[attesterIndex].secretKey.sign(signingRoot).toBytes();
+    return this.validators[attesterIndex].secretKey.sign(signingRoot).toBytes();
   }
 
   private async createAttestation(duty: IAttesterDuty, fork: Fork, genesisValidatorsRoot: Root): Promise<Attestation> {
@@ -341,7 +373,7 @@ export class AttestationService {
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.AttestationData, attestationData, domain);
 
-    await this.slashingProtection.checkAndInsertAttestation(this.validatorClients[attesterIndex].publicKey, {
+    await this.slashingProtection.checkAndInsertAttestation(this.validators[attesterIndex].publicKey, {
       sourceEpoch: attestationData.target.epoch,
       targetEpoch: attestationData.target.epoch,
       signingRoot,
@@ -350,7 +382,7 @@ export class AttestationService {
     const attestation: Attestation = {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
-      signature: this.validatorClients[attesterIndex].secretKey.sign(signingRoot).toBytes(),
+      signature: this.validators[attesterIndex].secretKey.sign(signingRoot).toBytes(),
     };
     this.logger.info("Signed new attestation", {
       block: toHexString(attestation.data.target.root),
@@ -360,18 +392,18 @@ export class AttestationService {
     return attestation;
   }
 
+  /**
+   * Update the local list of validators based on the current head state.
+   */
   private async updateValidators(): Promise<void> {
-    for (const validatorClient of this.validatorClients) {
+    for (const v of this.validators) {
       // fetch validator details if missing
-      if (!validatorClient.validator) {
+      if (!v.validator) {
         try {
-          validatorClient.validator = await this.provider.beacon.state.getStateValidator(
-            "head",
-            validatorClient.publicKey
-          );
+          v.validator = await this.provider.beacon.state.getStateValidator("head", v.publicKey);
         } catch (e) {
           this.logger.error("Failed to get validator details", e);
-          validatorClient.validator = null;
+          v.validator = null;
         }
       }
     }

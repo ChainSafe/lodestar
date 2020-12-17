@@ -13,11 +13,12 @@ export const getEventStream: ApiController<Query> = {
   handler: async function (req, resp) {
     resp.sent = true;
     const source = this.api.events.getEventStream(req.query.topics ?? Object.values(BeaconEventType));
-    ["end", "error", "close"].forEach((event) => {
+    for (const event of ["end", "error", "close"]) {
       req.req.once(event, () => {
         source.stop();
       });
-    });
+    }
+
     const config = this.config;
     async function* transform(source: AsyncIterable<BeaconEvent>): AsyncIterable<EventMessage> {
       for await (const event of source) {

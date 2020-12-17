@@ -29,12 +29,12 @@ export function processAttesterSlashing(
   const sortedIndices = intersectionIndices.sort((index1: ValidatorIndex, index2: ValidatorIndex) => index1 - index2);
 
   const currentEpoch = getCurrentEpoch(config, state);
-  sortedIndices.forEach((index) => {
+  for (const index of sortedIndices) {
     if (isSlashableValidator(state.validators[index], currentEpoch)) {
       slashValidator(config, state, index);
       slashedAny = true;
     }
-  });
+  }
 
   assert.true(slashedAny, "No slashable validators for attester slashing found");
 }

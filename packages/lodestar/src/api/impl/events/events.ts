@@ -31,17 +31,18 @@ export class EventsApi implements IEventsApi {
     return new LodestarEventIterator<BeaconEvent>(({push}) => {
       const eventHandlerMapping = getEventHandlerMapping(this.config, push);
 
-      topics.forEach((topic) => {
+      for (const topic of topics) {
         const eventHandler = eventHandlerMapping[topic];
         if (eventHandler) {
           this.chain.emitter.on(eventHandler.chainEvent, eventHandler.handler);
         }
-      });
+      }
+
       return () => {
-        topics.forEach((topic) => {
+        for (const topic of topics) {
           const eventHandler = eventHandlerMapping[topic];
           this.chain.emitter.removeListener(eventHandler.chainEvent, eventHandler.handler);
-        });
+        }
       };
     });
   }

@@ -31,6 +31,11 @@ import {ReqRespRequest} from "./interface";
 import {sendResponse} from "./respUtils";
 import {EventEmitter} from "events";
 
+/**
+ * Implementation of eth2 p2p Req/Resp domain.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
+ */
 export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
@@ -50,8 +55,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
 
   public async start(): Promise<void> {
     this.controller = new AbortController();
-    Object.values(Method).forEach((method) => {
-      Object.values(ReqRespEncoding).forEach((encoding) => {
+    for (const method of Object.values(Method)) {
+      for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
           pipe(
@@ -61,16 +66,16 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             this.handleRpcRequest(peerId, method, encoding, stream.sink)
           );
         });
-      });
-    });
+      }
+    }
   }
 
   public async stop(): Promise<void> {
-    Object.values(Method).forEach((method) => {
-      Object.values(ReqRespEncoding).forEach((encoding) => {
+    for (const method of Object.values(Method)) {
+      for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.unhandle(createRpcProtocol(method, encoding));
-      });
-    });
+      }
+    }
     this.controller?.abort();
   }
 

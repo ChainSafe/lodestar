@@ -19,7 +19,7 @@ export function chunkify(blocksPerChunk: number, currentSlot: Slot, targetSlot: 
     blocksPerChunk = 5;
   }
   const chunks: ISlotRange[] = [];
-  //currentSlot is our state slot so we need block from next slot
+  // currentSlot is our state slot so we need block from next slot
   for (let i = currentSlot; i <= targetSlot; i = i + blocksPerChunk + 1) {
     chunks.push({
       start: i,
@@ -56,10 +56,10 @@ export async function getBlockRange(
   }
   let chunks = chunkify(blocksPerChunk, range.start, range.end);
   let blocks: SignedBeaconBlock[] = [];
-  //try to fetch chunks from different peers until all chunks are fetched
+  // try to fetch chunks from different peers until all chunks are fetched
   let retry = 0;
   while (chunks.length > 0) {
-    //rotate peers
+    // rotate peers
     const peerBalancer = new RoundRobinArray(peers);
     chunks = (
       await Promise.all(
@@ -76,7 +76,7 @@ export async function getBlockRange(
             return null;
           } else {
             logger.warn("Failed to obtain chunk from peer", {peerId: peer!.toB58String(), ...chunk});
-            //if failed to obtain blocks, try in next round on another peer
+            // if failed to obtain blocks, try in next round on another peer
             return chunk;
           }
         })

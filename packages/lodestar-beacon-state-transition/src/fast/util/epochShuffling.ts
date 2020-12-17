@@ -61,11 +61,11 @@ export function computeEpochShuffling(
   const seed = getSeed(config, state, epoch, DomainType.BEACON_ATTESTER);
 
   const activeIndices: ValidatorIndex[] = [];
-  indicesBounded.forEach(([index, activationEpoch, exitEpoch]) => {
+  for (const [index, activationEpoch, exitEpoch] of indicesBounded) {
     if (activationEpoch <= epoch && epoch < exitEpoch) {
       activeIndices.push(index);
     }
-  });
+  }
 
   // copy
   const shuffling = activeIndices.slice();
