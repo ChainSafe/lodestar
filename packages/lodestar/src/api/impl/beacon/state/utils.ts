@@ -1,6 +1,6 @@
 // this will need async once we wan't to resolve archive slot
 import {GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
-import {computeEpochShuffling, EpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
@@ -11,8 +11,9 @@ import {
   ValidatorResponse,
   Gwei,
   BeaconState,
+  Slot,
 } from "@chainsafe/lodestar-types";
-import {fromHexString, readOnlyMap} from "@chainsafe/ssz";
+import {fromHexString, readOnlyMap, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
 import {ApiStateContext, StateId} from "./interface";
@@ -24,40 +25,17 @@ export async function resolveStateId(
   stateId: StateId
 ): Promise<ApiStateContext | null> {
   stateId = stateId.toLowerCase();
-  if (stateId === "head") {
-    return (await db.stateCache.get(forkChoice.getHead().stateRoot)) ?? null;
-  }
-  if (stateId === "genesis") {
-    const state = await db.stateArchive.get(GENESIS_SLOT);
-    if (!state) return null;
-    return {
-      state,
-    };
-  }
-  if (stateId === "finalized") {
-    return (await db.stateCache.get(forkChoice.getFinalizedCheckpoint().root)) ?? null;
-  }
-  if (stateId === "justified") {
-    return (await db.stateCache.get(forkChoice.getJustifiedCheckpoint().root)) ?? null;
-  }
-  if (stateId.startsWith("0x")) {
-    const stateRoot = fromHexString(stateId);
-    const cachedStateCtx = await db.stateCache.get(stateRoot);
-    if (cachedStateCtx) return cachedStateCtx;
-    const finalizedState = await db.stateArchive.getByRoot(stateRoot);
-    return stateToApiStateContext(config, finalizedState);
-  }
-  //block id must be slot
-  const slot = parseInt(stateId, 10);
-  if (isNaN(slot) && isNaN(slot - 0)) {
-    throw new Error("Invalid state id");
-  }
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-  if (blockSummary) {
-    return (await db.stateCache.get(blockSummary.stateRoot)) ?? null;
+  if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
+    return await stateByName(db, forkChoice, stateId);
+  } else if (stateId.startsWith("0x")) {
+    return await stateByRoot(db, stateId);
   } else {
-    const finalizedState = await db.stateArchive.get(slot);
-    return stateToApiStateContext(config, finalizedState);
+    //block id must be slot
+    const slot = parseInt(stateId, 10);
+    if (isNaN(slot) && isNaN(slot - 0)) {
+      throw new Error("Invalid state id");
+    }
+    return await stateBySlot(db, forkChoice, slot);
   }
 }
 
@@ -105,12 +83,41 @@ export function getEpochBeaconCommittees(
   return committees;
 }
 
-function stateToApiStateContext(config: IBeaconConfig, state: BeaconState | null): ApiStateContext | null {
-  if (!state) return null;
-  const epochCtx = new EpochContext(config);
-  epochCtx.loadState(state);
-  return {
-    state: state,
-    epochCtx,
-  };
+async function stateByName(db: IBeaconDb, forkChoice: IForkChoice, stateId: StateId): Promise<ApiStateContext | null> {
+  let state: TreeBacked<BeaconState> | null = null;
+  switch (stateId) {
+    case "head":
+      return (await db.stateCache.get(forkChoice.getHead().stateRoot)) ?? null;
+    case "genesis":
+      state = await db.stateArchive.get(GENESIS_SLOT);
+      return state ? {state} : null;
+    case "finalized":
+      return (await db.stateCache.get(forkChoice.getFinalizedCheckpoint().root)) ?? null;
+    case "justified":
+      return (await db.stateCache.get(forkChoice.getJustifiedCheckpoint().root)) ?? null;
+    default:
+      throw new Error("not a named state id");
+  }
+}
+
+async function stateByRoot(db: IBeaconDb, stateId: StateId): Promise<ApiStateContext | null> {
+  if (stateId.startsWith("0x")) {
+    const stateRoot = fromHexString(stateId);
+    const cachedStateCtx = await db.stateCache.get(stateRoot);
+    if (cachedStateCtx) return cachedStateCtx;
+    const finalizedState = await db.stateArchive.getByRoot(stateRoot);
+    return finalizedState ? {state: finalizedState} : null;
+  } else {
+    throw new Error("not a root state id");
+  }
+}
+
+async function stateBySlot(db: IBeaconDb, forkChoice: IForkChoice, slot: Slot): Promise<ApiStateContext | null> {
+  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
+  if (blockSummary) {
+    return (await db.stateCache.get(blockSummary.stateRoot)) ?? null;
+  } else {
+    const finalizedState = await db.stateArchive.get(slot);
+    return finalizedState ? {state: finalizedState} : null;
+  }
 }

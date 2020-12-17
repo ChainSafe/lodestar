@@ -1,6 +1,8 @@
-import {ApiController} from "../../types";
+import {ApiController, HttpHeader} from "../../types";
 import {DefaultQuery} from "fastify";
 import {FastifyError} from "fastify";
+
+const SSZ_MIME_TYPE = "application/octet-stream";
 
 export const getState: ApiController<DefaultQuery, {stateId: string}> = {
   url: "/beacon/states/:stateId",
@@ -11,9 +13,9 @@ export const getState: ApiController<DefaultQuery, {stateId: string}> = {
       if (!state) {
         return resp.status(404).send();
       }
-      if (req.headers["accept"] === "application/octet-stream") {
+      if (req.headers[HttpHeader.ACCEPT] === SSZ_MIME_TYPE) {
         const stateSsz = this.config.types.BeaconState.serialize(state);
-        resp.status(200).header("Content-Type", "application/octet-stream").send(Buffer.from(stateSsz));
+        resp.status(200).header(HttpHeader.CONTENT_TYPE, SSZ_MIME_TYPE).send(Buffer.from(stateSsz));
       } else {
         return resp.status(200).send({
           data: this.config.types.BeaconState.toJson(state, {case: "snake"}),
