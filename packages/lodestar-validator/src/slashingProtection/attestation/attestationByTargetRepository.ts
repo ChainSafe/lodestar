@@ -4,6 +4,11 @@ import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, 
 import {Type} from "@chainsafe/ssz";
 import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 
+/**
+ * Manages validator db storage of attestations.
+ * Entries in the db are indexed by an encoded key which combines the validator's public key and the
+ * attestation's target epoch.
+ */
 export class AttestationByTargetRepository {
   protected type: Type<SlashingProtectionAttestation>;
   protected db: IDatabaseController<Buffer, Buffer>;

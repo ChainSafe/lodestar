@@ -18,6 +18,9 @@ import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
 import {IValidatorApi} from "../../../interface/validators";
 
+/**
+ * Rest API class for fetching and performing validator duties
+ */
 export class RestValidatorApi implements IValidatorApi {
   private readonly clientV2: HttpClient;
 

@@ -11,7 +11,7 @@
  * 5. Wait for role change
  * 6. Execute role
  * 7. Wait for new role
- * 6. Repeat step 5
+ * 8. Repeat step 5
  */
 import BlockProposingService from "./services/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -33,27 +33,28 @@ export class Validator {
   private attestationService?: AttestationService;
   private slashingProtection: ISlashingProtection;
   private logger: ILogger;
-  private isRunning: boolean;
 
   public constructor(opts: IValidatorOptions) {
     this.opts = opts;
     this.config = opts.config;
     this.logger = opts.logger;
-    this.isRunning = false;
     this.slashingProtection = opts.slashingProtection;
     this.apiClient = this.initApiClient(opts.api);
   }
 
   /**
-   * Creates a new block processing service and starts it.
+   * Instantiates block and attestation services and runs them once the chain has been started.
    */
   public async start(): Promise<void> {
-    this.isRunning = true;
     await this.setup();
     this.logger.info("Checking if chain has started...");
     this.apiClient.once("beaconChainStarted", this.run);
   }
 
+  /**
+   * Start the blockService and attestationService.
+   * Should only be called once the beacon chain has been started.
+   */
   public run = async (): Promise<void> => {
     this.logger.info("Chain start has occured!");
     if (!this.blockService) throw Error("blockService not setup");
@@ -63,15 +64,17 @@ export class Validator {
   };
 
   /**
-   * Stops all validator functions
+   * Stops all validator functions.
    */
   public async stop(): Promise<void> {
-    this.isRunning = false;
     await this.apiClient.disconnect();
     if (this.attestationService) await this.attestationService.stop();
     if (this.blockService) await this.blockService.stop();
   }
 
+  /**
+   * Create and return a new rest API client.
+   */
   private initApiClient(api: string | IApiClient): IApiClient {
     if (typeof api === "string") {
       return new ApiClientOverRest(this.config, api, this.logger);
@@ -79,6 +82,9 @@ export class Validator {
     return api;
   }
 
+  /**
+   * Creates a new block processing service and attestation service.
+   */
   private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
     await this.setupAPI();

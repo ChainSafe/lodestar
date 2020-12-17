@@ -16,7 +16,7 @@ import {
 export interface IValidatorApi {
   getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
 
-  getAttesterDuties(epoch: Epoch, validatorPubKeys: ValidatorIndex[]): Promise<AttesterDuty[]>;
+  getAttesterDuties(epoch: Epoch, indices: ValidatorIndex[]): Promise<AttesterDuty[]>;
 
   /**
    * Requests a BeaconNode to produce a valid block,
