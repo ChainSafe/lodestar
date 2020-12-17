@@ -30,7 +30,7 @@ export async function resolveStateId(
   } else if (stateId.startsWith("0x")) {
     return await stateByRoot(db, stateId);
   } else {
-    //block id must be slot
+    // state id must be slot
     const slot = parseInt(stateId, 10);
     if (isNaN(slot) && isNaN(slot - 0)) {
       throw new Error("Invalid state id");
