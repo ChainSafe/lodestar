@@ -22,6 +22,10 @@ export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
 export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
 export {ISlashingProtection};
 
+/**
+ * Handles slashing protection for validator proposer and attester duties as well as slashing protection
+ * during a validator interchange import/export process.
+ */
 export class SlashingProtection extends DatabaseService implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;
   private attestationService: SlashingProtectionAttestationService;

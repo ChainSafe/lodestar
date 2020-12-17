@@ -70,7 +70,7 @@ export class LocalClock implements IBeaconClock {
         });
       }
     }
-    //recursively invoke onNextSlot
+    // recursively invoke onNextSlot
     this.timeoutId = setTimeout(this.onNextSlot, this.msUntilNextSlot());
   };
 

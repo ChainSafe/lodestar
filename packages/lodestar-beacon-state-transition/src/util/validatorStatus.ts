@@ -36,11 +36,11 @@ export function initiateValidatorExit(config: IBeaconConfig, state: BeaconState,
 
   // Compute exit queue epoch
   let exitQueueEpoch = computeActivationExitEpoch(config, getCurrentEpoch(config, state));
-  state.validators.forEach((v) => {
+  for (const v of state.validators) {
     if (v.exitEpoch !== FAR_FUTURE_EPOCH) {
       exitQueueEpoch = Math.max(v.exitEpoch, exitQueueEpoch);
     }
-  });
+  }
   const exitQueueChurn = Array.from(state.validators).filter((v: Validator) => v.exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getValidatorChurnLimit(config, state)) {
     exitQueueEpoch += 1;

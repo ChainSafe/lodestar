@@ -53,7 +53,10 @@ export class AggregateAndProofRepository extends Repository<Uint8Array, Aggregat
 
   public async removeIncluded(attestations: ArrayLike<Attestation>): Promise<void> {
     const ids: Uint8Array[] = [];
-    attestations.forEach((attestation) => ids.push(this.config.types.Attestation.hashTreeRoot(attestation)));
+    for (const attestation of attestations) {
+      ids.push(this.config.types.Attestation.hashTreeRoot(attestation));
+    }
+
     await this.batchDelete(ids);
   }
 

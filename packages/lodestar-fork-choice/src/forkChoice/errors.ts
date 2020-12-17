@@ -9,25 +9,10 @@ export enum InvalidBlockCode {
 }
 
 export type InvalidBlock =
-  | {
-      code: InvalidBlockCode.UNKNOWN_PARENT;
-      root: Uint8Array;
-    }
-  | {
-      code: InvalidBlockCode.FUTURE_SLOT;
-      currentSlot: Slot;
-      blockSlot: Slot;
-    }
-  | {
-      code: InvalidBlockCode.FINALIZED_SLOT;
-      finalizedSlot: Slot;
-      blockSlot: Slot;
-    }
-  | {
-      code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT;
-      finalizedRoot: Uint8Array;
-      blockAncestor?: Uint8Array;
-    };
+  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: Uint8Array}
+  | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
+  | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
+  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: Uint8Array; blockAncestor?: Uint8Array};
 
 export enum InvalidAttestationCode {
   /**
@@ -66,110 +51,43 @@ export enum InvalidAttestationCode {
 }
 
 export type InvalidAttestation =
-  | {
-      code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD;
-    }
-  | {
-      code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK;
-      beaconBlockRoot: Uint8Array;
-    }
-  | {
-      code: InvalidAttestationCode.BAD_TARGET_EPOCH;
-      target: Epoch;
-      slot: Slot;
-    }
-  | {
-      code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT;
-      root: Uint8Array;
-    }
-  | {
-      code: InvalidAttestationCode.FUTURE_EPOCH;
-      attestationEpoch: Epoch;
-      currentEpoch: Epoch;
-    }
-  | {
-      code: InvalidAttestationCode.PAST_EPOCH;
-      attestationEpoch: Epoch;
-      currentEpoch: Epoch;
-    }
-  | {
-      code: InvalidAttestationCode.INVALID_TARGET;
-      attestation: Uint8Array;
-      local: Uint8Array;
-    }
-  | {
-      code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK;
-      block: Slot;
-      attestation: Slot;
-    };
+  | {code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD}
+  | {code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK; beaconBlockRoot: Uint8Array}
+  | {code: InvalidAttestationCode.BAD_TARGET_EPOCH; target: Epoch; slot: Slot}
+  | {code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
+  | {code: InvalidAttestationCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: InvalidAttestationCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
+  | {code: InvalidAttestationCode.INVALID_TARGET; attestation: Uint8Array; local: Uint8Array}
+  | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot};
 
 export enum ForkChoiceErrorCode {
-  ERR_INVALID_ATTESTATION = "ERR_INVALID_ATTESTATION",
-  ERR_INVALID_BLOCK = "ERR_INVALID_BLOCK",
-  ERR_PROTO_ARRAY_ERROR = "ERR_PROTO_ARRAY_ERROR",
-  ERR_INVALID_PROTO_ARRAY_BYTES = "ERR_INVALID_PROTO_ARRAY_BYTES",
-  ERR_MISSING_PROTO_ARRAY_BLOCK = "ERR_MISSING_PROTO_ARRAY_BLOCK",
-  ERR_UNKNOWN_ANCESTOR = "ERR_UNKNOWN_ANCESTOR",
-  ERR_INCONSISTENT_ON_TICK = "ERR_INCONSISTENT_ON_TICK",
-  ERR_BEACON_STATE_ERROR = "ERR_BEACON_STATE_ERROR",
-  ERR_ATTEMPT_TO_REVERT_JUSTIFICATION = "ERR_ATTEMPT_TO_REVERT_JUSTIFICATION",
-  ERR_FORK_CHOICE_STORE_ERROR = "ERR_FORK_CHOICE_STORE_ERROR",
-  ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT = "ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT",
-  ERR_AFTER_BLOCK_FAILED = "ERR_AFTER_BLOCK_FAILED",
+  INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",
+  INVALID_BLOCK = "FORKCHOICE_ERROR_INVALID_BLOCK",
+  PROTO_ARRAY_ERROR = "FORKCHOICE_ERROR_PROTO_ARRAY_ERROR",
+  INVALID_PROTO_ARRAY_BYTES = "FORKCHOICE_ERROR_INVALID_PROTO_ARRAY_BYTES",
+  MISSING_PROTO_ARRAY_BLOCK = "FORKCHOICE_ERROR_MISSING_PROTO_ARRAY_BLOCK",
+  UNKNOWN_ANCESTOR = "FORKCHOICE_ERROR_UNKNOWN_ANCESTOR",
+  INCONSISTENT_ON_TICK = "FORKCHOICE_ERROR_INCONSISTENT_ON_TICK",
+  BEACON_STATE_ERROR = "FORKCHOICE_ERROR_BEACON_STATE_ERROR",
+  ATTEMPT_TO_REVERT_JUSTIFICATION = "FORKCHOICE_ERROR_ATTEMPT_TO_REVERT_JUSTIFICATION",
+  FORK_CHOICE_STORE_ERROR = "FORKCHOICE_ERROR_FORK_CHOICE_STORE_ERROR",
+  UNABLE_TO_SET_JUSTIFIED_CHECKPOINT = "FORKCHOICE_ERROR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT",
+  AFTER_BLOCK_FAILED = "FORKCHOICE_ERROR_AFTER_BLOCK_FAILED",
 }
 
 export type ForkChoiceErrorType =
-  | {
-      code: ForkChoiceErrorCode.ERR_INVALID_ATTESTATION;
-      err: InvalidAttestation;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_INVALID_BLOCK;
-      err: InvalidBlock;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_PROTO_ARRAY_ERROR;
-      err: string;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_INVALID_PROTO_ARRAY_BYTES;
-      err: string;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_MISSING_PROTO_ARRAY_BLOCK;
-      root: Uint8Array;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_UNKNOWN_ANCESTOR;
-      ancestorSlot: Slot;
-      descendantRoot: Uint8Array;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_INCONSISTENT_ON_TICK;
-      previousSlot: Slot;
-      time: Slot;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_BEACON_STATE_ERROR;
-      error: Error;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_ATTEMPT_TO_REVERT_JUSTIFICATION;
-      store: Slot;
-      state: Slot;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_FORK_CHOICE_STORE_ERROR;
-      error: Error;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT;
-      error: Error;
-    }
-  | {
-      code: ForkChoiceErrorCode.ERR_AFTER_BLOCK_FAILED;
-      error: Error;
-    };
+  | {code: ForkChoiceErrorCode.INVALID_ATTESTATION; err: InvalidAttestation}
+  | {code: ForkChoiceErrorCode.INVALID_BLOCK; err: InvalidBlock}
+  | {code: ForkChoiceErrorCode.PROTO_ARRAY_ERROR; err: string}
+  | {code: ForkChoiceErrorCode.INVALID_PROTO_ARRAY_BYTES; err: string}
+  | {code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK; root: Uint8Array}
+  | {code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR; ancestorSlot: Slot; descendantRoot: Uint8Array}
+  | {code: ForkChoiceErrorCode.INCONSISTENT_ON_TICK; previousSlot: Slot; time: Slot}
+  | {code: ForkChoiceErrorCode.BEACON_STATE_ERROR; error: Error}
+  | {code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION; store: Slot; state: Slot}
+  | {code: ForkChoiceErrorCode.FORK_CHOICE_STORE_ERROR; error: Error}
+  | {code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT; error: Error}
+  | {code: ForkChoiceErrorCode.AFTER_BLOCK_FAILED; error: Error};
 
 export class ForkChoiceError extends LodestarError<ForkChoiceErrorType> {
   constructor(type: ForkChoiceErrorType) {

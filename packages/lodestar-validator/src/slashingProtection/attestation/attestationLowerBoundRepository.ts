@@ -2,6 +2,10 @@ import {BLSPubkey, SlashingProtectionAttestationLowerBound} from "@chainsafe/lod
 import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 
+/**
+ * Manages validator db storage of the minimum source and target epochs required of a validator
+ * attestation.
+ */
 export class AttestationLowerBoundRepository {
   protected type: Type<SlashingProtectionAttestationLowerBound>;
   protected db: IDatabaseController<Buffer, Buffer>;

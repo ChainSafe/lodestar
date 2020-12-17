@@ -4,6 +4,9 @@ import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chai
 import {Type} from "@chainsafe/ssz";
 import {IDistanceEntry, IDistanceStore} from "./interface";
 
+/**
+ * Manages validator db storage of min/max ranges for min/max surround vote slashing protection.
+ */
 export class DistanceStoreRepository implements IDistanceStore {
   minSpan: SpanDistanceRepository;
   maxSpan: SpanDistanceRepository;

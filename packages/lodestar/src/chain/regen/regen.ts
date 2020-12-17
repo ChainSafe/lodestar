@@ -40,7 +40,7 @@ export class StateRegenerator implements IStateRegenerator {
     const parentBlock = this.forkChoice.getBlock(block.parentRoot);
     if (!parentBlock) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_BLOCK_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
         blockRoot: block.parentRoot,
       });
     }
@@ -74,14 +74,14 @@ export class StateRegenerator implements IStateRegenerator {
     const block = this.forkChoice.getBlock(blockRoot);
     if (!block) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_BLOCK_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
         blockRoot,
       });
     }
 
     if (slot < block.slot) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_SLOT_BEFORE_BLOCK_SLOT,
+        code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT,
         slot,
         blockSlot: block.slot,
       });
@@ -122,7 +122,7 @@ export class StateRegenerator implements IStateRegenerator {
 
     if (!block) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_STATE_NOT_IN_FORKCHOICE,
+        code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE,
         stateRoot,
       });
     }
@@ -148,14 +148,14 @@ export class StateRegenerator implements IStateRegenerator {
 
     if (stateCtx === null) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_NO_SEED_STATE,
+        code: RegenErrorCode.NO_SEED_STATE,
       });
     }
 
     const MAX_EPOCH_TO_PROCESS = 5;
     if (blocksToReplay.length > MAX_EPOCH_TO_PROCESS * this.config.params.SLOTS_PER_EPOCH) {
       throw new RegenError({
-        code: RegenErrorCode.ERR_TOO_MANY_BLOCK_PROCESSED,
+        code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED,
         stateRoot,
       });
     }
@@ -164,7 +164,7 @@ export class StateRegenerator implements IStateRegenerator {
       const block = await this.db.block.get(b.blockRoot);
       if (!block) {
         throw new RegenError({
-          code: RegenErrorCode.ERR_BLOCK_NOT_IN_DB,
+          code: RegenErrorCode.BLOCK_NOT_IN_DB,
           blockRoot: b.blockRoot,
         });
       }
@@ -179,7 +179,7 @@ export class StateRegenerator implements IStateRegenerator {
         });
       } catch (e) {
         throw new RegenError({
-          code: RegenErrorCode.ERR_STATE_TRANSITION_ERROR,
+          code: RegenErrorCode.STATE_TRANSITION_ERROR,
           error: e,
         });
       }

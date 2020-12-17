@@ -18,6 +18,9 @@ import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
 import {ISlashingProtection} from "../slashingProtection";
 
+/**
+ * Service that sets up and handles validator block proposal duties.
+ */
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
@@ -50,6 +53,9 @@ export default class BlockProposingService {
     this.graffiti = graffiti;
   }
 
+  /**
+   * Starts the BlockService by updating the validator block proposal duties and turning on the relevant listeners for clock events.
+   */
   public start = async (): Promise<void> => {
     const currentEpoch = this.provider.clock.currentEpoch;
     // trigger getting duties for current epoch
@@ -60,14 +66,25 @@ export default class BlockProposingService {
     this.provider.on(BeaconEventType.HEAD, this.onHead);
   };
 
+  /**
+   * Stops the BlockService by turning off the relevant listeners for clock events.
+   */
   public stop = async (): Promise<void> => {
-    // nothing here yet, but if future cleanup needs to be done (for example, clearing timers), put it here
+    this.provider.off(ClockEventType.CLOCK_EPOCH, this.onClockEpoch);
+    this.provider.off(ClockEventType.CLOCK_SLOT, this.onClockSlot);
+    this.provider.off(BeaconEventType.HEAD, this.onHead);
   };
 
+  /**
+   * Update validator duties on each epoch.
+   */
   public onClockEpoch = async ({epoch}: {epoch: Epoch}): Promise<void> => {
     await this.updateDuties(epoch);
   };
 
+  /**
+   * Create and publish a block if the validator is a proposer for a given clock slot.
+   */
   public onClockSlot = async ({slot}: {slot: Slot}): Promise<void> => {
     const proposerPubKey = this.nextProposals.get(slot);
     if (proposerPubKey && slot !== 0) {
@@ -89,6 +106,9 @@ export default class BlockProposingService {
     }
   };
 
+  /**
+   * Update list of block proposal duties on head upate.
+   */
   public onHead = async ({slot, epochTransition}: {slot: Slot; epochTransition: boolean}): Promise<void> => {
     if (epochTransition) {
       // refetch this epoch's duties
@@ -96,6 +116,9 @@ export default class BlockProposingService {
     }
   };
 
+  /**
+   * Fetch validator block proposal duties from the validator api and update local list of block duties accordingly.
+   */
   public updateDuties = async (epoch: Epoch): Promise<void> => {
     this.logger.info("on new block epoch", {epoch, validator: toHexString(this.publicKeys[0])});
     const proposerDuties = await this.provider.validator.getProposerDuties(epoch, this.publicKeys).catch((e) => {
@@ -105,16 +128,16 @@ export default class BlockProposingService {
     if (!proposerDuties) {
       return;
     }
-    proposerDuties.forEach((duty) => {
+    for (const duty of proposerDuties) {
       if (!this.nextProposals.has(duty.slot) && this.getPubKeyIndex(duty.pubkey) !== -1) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
         this.nextProposals.set(duty.slot, duty.pubkey);
       }
-    });
+    }
   };
 
   /**
-   * IFF a validator is selected construct a block to propose.
+   * IFF a validator is selected, construct a block to propose.
    */
   public async createAndPublishBlock(
     proposerIndex: number,

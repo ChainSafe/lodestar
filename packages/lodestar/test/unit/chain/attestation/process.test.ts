@@ -41,7 +41,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_TARGET_STATE_MISSING);
+      expect(e.type.code).to.equal(AttestationErrorCode.TARGET_STATE_MISSING);
     }
   });
 
@@ -60,7 +60,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_NO_COMMITTEE_FOR_SLOT_AND_INDEX);
+      expect(e.type.code).to.equal(AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX);
     }
   });
 
@@ -80,7 +80,7 @@ describe("processAttestation", function () {
       });
       expect.fail("attestation should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(AttestationErrorCode.ERR_INVALID_SIGNATURE);
+      expect(e.type.code).to.equal(AttestationErrorCode.INVALID_SIGNATURE);
     }
   });
 

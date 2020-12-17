@@ -56,12 +56,12 @@ export function handleVoluntaryExitEvent(
   callback: (value: BeaconEvent) => void
 ): ChainEventListener<ChainEvent.block> {
   return (payload) => {
-    payload.message.body.voluntaryExits.forEach((exit) => {
+    for (const exit of payload.message.body.voluntaryExits) {
       callback({
         type: BeaconEventType.VOLUNTARY_EXIT,
         message: exit,
       });
-    });
+    }
   };
 }
 

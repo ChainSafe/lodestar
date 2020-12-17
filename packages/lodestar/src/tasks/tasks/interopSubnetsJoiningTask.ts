@@ -47,7 +47,11 @@ export class InteropSubnetsJoiningTask {
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
-    this.nextForkTimers.forEach(clearTimeout);
+
+    for (const timer of this.nextForkTimers) {
+      clearTimeout(timer);
+    }
+
     return this.cleanUpCurrentSubscriptions();
   }
 
@@ -109,12 +113,17 @@ export class InteropSubnetsJoiningTask {
    * Clean up subscription and timers of current fork.
    */
   private cleanUpCurrentSubscriptions = async (): Promise<void> => {
-    this.currentTimers.forEach(clearTimeout);
+    for (const timer of this.currentTimers) {
+      clearTimeout(timer);
+    }
+
     const attnets = this.network.metadata.attnets;
-    this.currentSubnets.forEach((subnet) => {
+
+    for (const subnet of this.currentSubnets) {
       this.network.gossip.unsubscribeFromAttestationSubnet(this.currentForkDigest, subnet, this.handleWireAttestation);
       attnets[subnet] = false;
-    });
+    }
+
     this.network.metadata.attnets = attnets;
     this.currentSubnets.clear();
   };

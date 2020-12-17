@@ -41,7 +41,7 @@ describe("rest - beacon - getStateValidators", function () {
     api.beacon.state.getStateValidators.withArgs("head").resolves([
       {
         index: 1,
-        pubkey: Buffer.alloc(48, 1),
+        balance: BigInt(3200000),
         status: ValidatorStatus.ACTIVE,
         validator: generateValidator(),
       },

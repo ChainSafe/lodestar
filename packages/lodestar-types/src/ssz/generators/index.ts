@@ -33,9 +33,9 @@ export function createIBeaconSSZTypes(params: IBeaconParams): IBeaconSSZTypes {
     types[type] = primitive[type];
   }
   // relies on list of typenames in dependency order
-  typeNames.forEach((type) => {
+  for (const type of typeNames) {
     // @ts-ignore
     types[type] = allGenerators[type](types, params);
-  });
+  }
   return types;
 }

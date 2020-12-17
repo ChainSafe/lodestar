@@ -45,7 +45,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_WOULD_REVERT_FINALIZED_SLOT);
+      expect(error.type).to.have.property("code", BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(chainStub.getGenesisTime.notCalled).to.be.true;
@@ -63,7 +63,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_KNOWN_BAD_BLOCK);
+      expect(error.type).to.have.property("code", BlockErrorCode.KNOWN_BAD_BLOCK);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -83,7 +83,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_REPEAT_PROPOSAL);
+      expect(error.type).to.have.property("code", BlockErrorCode.REPEAT_PROPOSAL);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -104,7 +104,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_PARENT_UNKNOWN);
+      expect(error.type).to.have.property("code", BlockErrorCode.PARENT_UNKNOWN);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -129,7 +129,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_PROPOSAL_SIGNATURE_INVALID);
+      expect(error.type).to.have.property("code", BlockErrorCode.PROPOSAL_SIGNATURE_INVALID);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;
@@ -158,7 +158,7 @@ describe("gossip block validation", function () {
     try {
       await validateGossipBlock(config, chainStub, dbStub, job);
     } catch (error) {
-      expect(error.type).to.have.property("code", BlockErrorCode.ERR_INCORRECT_PROPOSER);
+      expect(error.type).to.have.property("code", BlockErrorCode.INCORRECT_PROPOSER);
     }
     expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
     expect(dbStub.badBlock.has.withArgs(sinon.match.defined).calledOnce).to.be.true;

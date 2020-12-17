@@ -31,7 +31,7 @@ export async function processAttestation({
     targetState = await regen.getCheckpointState(target);
   } catch (e) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_TARGET_STATE_MISSING,
+      code: AttestationErrorCode.TARGET_STATE_MISSING,
       job,
     });
   }
@@ -41,7 +41,7 @@ export async function processAttestation({
     indexedAttestation = targetState.epochCtx.getIndexedAttestation(attestation);
   } catch (e) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_NO_COMMITTEE_FOR_SLOT_AND_INDEX,
+      code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
       slot: attestation.data.slot,
       index: attestation.data.index,
       job,
@@ -52,7 +52,7 @@ export async function processAttestation({
   // we need to check this again, because gossip validation might put it in pool before it validated signature
   if (!isValidIndexedAttestation(targetState.epochCtx, targetState.state, indexedAttestation, true)) {
     throw new AttestationError({
-      code: AttestationErrorCode.ERR_INVALID_SIGNATURE,
+      code: AttestationErrorCode.INVALID_SIGNATURE,
       job,
     });
   }

@@ -34,7 +34,7 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.ERR_SLASHING_ALREADY_EXISTS);
+        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.SLASHING_ALREADY_EXISTS);
       }
     });
 
@@ -47,7 +47,7 @@ describe("GossipMessageValidator", () => {
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       } catch (error) {
-        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.ERR_INVALID_SLASHING);
+        expect(error.type).to.have.property("code", AttesterSlashingErrorCode.INVALID_SLASHING);
       }
     });
 

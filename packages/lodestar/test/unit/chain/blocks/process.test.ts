@@ -31,7 +31,7 @@ describe("processBlock", function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
-    regen.getPreState.rejects(new RegenError({code: RegenErrorCode.ERR_STATE_TRANSITION_ERROR, error: new Error()}));
+    regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
       await processBlock({
         forkChoice,
@@ -42,7 +42,7 @@ describe("processBlock", function () {
       });
       expect.fail("block should throw");
     } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.ERR_PRESTATE_MISSING);
+      expect(e.type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);
     }
   });
 });

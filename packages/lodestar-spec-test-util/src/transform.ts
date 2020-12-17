@@ -23,9 +23,9 @@ export function safeType(type: Type<any>): Type<any> {
       }
     }
     if (props.fields) {
-      Object.keys(props.fields.value).forEach((fieldName) => {
+      for (const fieldName of Object.keys(props.fields.value)) {
         props.fields.value[fieldName] = safeType(props.fields.value[fieldName]);
-      });
+      }
     }
     const newtype = Object.create(Object.getPrototypeOf(type), props);
     newtype.structural._type = newtype;

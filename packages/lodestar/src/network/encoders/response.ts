@@ -1,6 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {P2pErrorMessage, ResponseBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {CompositeType} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import BufferList from "bl";
 import {decode, encode} from "varint";
@@ -130,7 +131,13 @@ export function eth2ResponseDecode(
 
         if (uncompressedData.length === sszLength) {
           try {
-            yield type.deserialize(uncompressedData.slice()) as ResponseBody;
+            if (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot) {
+              yield (((type as unknown) as CompositeType<Record<string, unknown>>).tree.deserialize(
+                uncompressedData.slice()
+              ) as unknown) as ResponseBody;
+            } else {
+              yield type.deserialize(uncompressedData.slice()) as ResponseBody;
+            }
             buffer = new BufferList();
             uncompressedData = new BufferList();
             decompressor.reset();
