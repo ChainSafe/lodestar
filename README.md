@@ -11,16 +11,8 @@
 
 [Lodestar](https://lodestar.chainsafe.io) is a Typescript implementation of the Ethereum 2.0 specification developed by [ChainSafe Systems](https://chainsafe.io).
 
-## Getting started
-
-- Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
-- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
-- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
-- If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [discord](https://discord.gg/yjyvFRP)!
-
 ## Index
 
-- [Tl;Dr](#tldr)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [Contributors](#contributors)
@@ -28,6 +20,24 @@
 - [Donations](#donations)
 - [Packages](#packages)
 - [Creating Release](#creating-release)
+
+## Getting started
+
+- Follow the [installation guide](https://chainsafe.github.io/lodestar/installation) to install Lodestar.
+- Run lodestar on the [eth2 mainnet or on a public testnet](https://chainsafe.github.io/lodestar/usage/testnet/)
+- Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage/local).
+- View the lodestar [cli commands and options](https://chainsafe.github.io/lodestar/reference/cli/)
+- View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
+- If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [discord](https://discord.gg/yjyvFRP)!
+
+## Prerequisites
+
+- [Lerna](https://github.com/lerna/lerna)
+- [Yarn](https://yarnpkg.com/)
+
+## Architecture Overview
+
+- See [architecure diagrams](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2FL5vwdaXGTH-IqYtv6fqVRA) for Lodestar
 
 ## Contributors
 
@@ -46,9 +56,9 @@ If you want to donate, you can send us ETH at the following address: **lodestar.
 
 This monorepo repository contains a suite of Ethereum 2.0 packages.
 
-| Package                                                                                                                                    | Version                                                                                                                                                       | License                                                                                                               | Docs                                                                                                                                                      | Description                                 |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar)                                                 | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)                                                 | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)                                              | Beacon chain client                         |
+| Package | Version | License | Docs | Description |
+|---|---|---|---|---|
+| [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar)| [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar)](https://www.npmjs.com/package/@chainsafe/lodestar)                                                 | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar)                                              | Beacon chain client                         |
 | [@chainsafe/lodestar-validator](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-validator)                             | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-validator)](https://www.npmjs.com/package/@chainsafe/lodestar-validator)                             | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-validator)                                    | Validator client                            |
 | [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli)                                         | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-cli)](https://www.npmjs.com/package/@chainsafe/lodestar-cli)                                         | [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0) | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-cli)                                          | Command line tool for lodestar              |
 | [@chainsafe/lodestar-beacon-state-transition](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-beacon-state-transition) | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-beacon-state-transition)](https://www.npmjs.com/package/@chainsafe/lodestar-beacon-state-transition) | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/readme-blue)](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-beacon-state-transition) | Eth2 beacon state transition                |
@@ -57,7 +67,8 @@ This monorepo repository contains a suite of Ethereum 2.0 packages.
 | [@chainsafe/lodestar-utils](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-utils)                                     | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-utils)](https://www.npmjs.com/package/@chainsafe/lodestar-utils)                                     | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-utils)                                        | Misc utility functions used across lodestar |
 | [@chainsafe/lodestar-config](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-config)                                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-config)](https://www.npmjs.com/package/@chainsafe/lodestar-config)                                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-config)                                       | Eth2 types and params bundled together      |
 | [@chainsafe/lodestar-spec-test-util](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-spec-test-util)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-spec-test-util)](https://www.npmjs.com/package/@chainsafe/lodestar-spec-test-util)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-spec-test-util)                               | Test harness for Eth2 spec tests            |
-
+| [@chainsafe/lodestar-db](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-db)](https://www.npmjs.com/package/@chainsafe/lodestar-db)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-db)                               | Read/write persistent Eth2 data            |
+| [@chainsafe/lodestar-fork-choice](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-fork-choice)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-fork-choice)](https://www.npmjs.com/package/@chainsafe/lodestar-fork-choice)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-fork-choice)                               | Beacon chain fork choice           |
 
 ### Creating Release
 - run `yarn run release` in project root directory
