@@ -32,7 +32,6 @@
 
 ## Prerequisites
 
-- [Lerna](https://github.com/lerna/lerna)
 - [Yarn](https://yarnpkg.com/)
 
 ## Architecture Overview
