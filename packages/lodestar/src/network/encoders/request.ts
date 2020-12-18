@@ -144,7 +144,7 @@ async function receiveAndDecodeRequest(
   throw new RequestDecodeError({code: RequestDecodeErrorCode.SOURCE_ABORTED});
 }
 
-enum RequestDecodeErrorCode {
+export enum RequestDecodeErrorCode {
   /** Invalid number of bytes for protobuf varint, expects exactly 10 */
   INVALID_VARINT_BYTES_COUNT = "REQUEST_DECODE_ERROR_INVALID_VARINT_BYTES_COUNT",
   /** Parsed sszDataLength is under the SSZ type min size */
@@ -160,7 +160,7 @@ enum RequestDecodeErrorCode {
   SOURCE_ABORTED = "REQUEST_DECODE_ERROR_SOURCE_ABORTED",
 }
 
-export type RequestDecodeErrorType =
+type RequestDecodeErrorType =
   | {code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT; bytes: number}
   | {code: RequestDecodeErrorCode.UNDER_SSZ_MIN_SIZE; minSize: number; sszDataLength: number}
   | {code: RequestDecodeErrorCode.OVER_SSZ_MAX_SIZE; maxSize: number; sszDataLength: number}

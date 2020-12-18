@@ -1,6 +1,11 @@
 import pipe from "it-pipe";
 import all from "it-all";
-import {eth2RequestDecode, eth2RequestEncode} from "../../../../src/network/encoders/request";
+import {
+  eth2RequestDecode,
+  eth2RequestEncode,
+  RequestDecodeError,
+  RequestDecodeErrorCode,
+} from "../../../../src/network/encoders/request";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../src/constants";
 import {ILogger, WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -127,8 +132,7 @@ describe("request encoders", function () {
       );
 
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid number of bytes for protobuf varint";
-      expect(loggerStub.error.calledOnceWith(err)).to.be.true;
+      assertLoggerError(RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT);
     });
 
     it("should yield {isValid: false} if failed ssz size bound validation", async function () {
@@ -139,8 +143,7 @@ describe("request encoders", function () {
       );
 
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: Invalid szzLength";
-      expect(loggerStub.error.calledOnceWith(err)).to.be.true;
+      assertLoggerError(RequestDecodeErrorCode.UNDER_SSZ_MIN_SIZE);
     });
 
     it("should yield {isValid: false} if it read more than maxEncodedLen", async function () {
@@ -151,8 +154,7 @@ describe("request encoders", function () {
       );
 
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "eth2RequestDecode: too much bytes read";
-      expect(loggerStub.error.calledOnceWith(err)).to.be.true;
+      assertLoggerError(RequestDecodeErrorCode.TOO_MUCH_BYTES_READ);
     });
 
     it("should yield {isValid: false} if failed ssz snappy input malformed", async function () {
@@ -163,8 +165,7 @@ describe("request encoders", function () {
       );
 
       expect(validatedRequestBody).to.be.deep.equal([{isValid: false}]);
-      const err = "Failed to decompress request data";
-      expect(loggerStub.error.calledOnceWith(err)).to.be.true;
+      assertLoggerError(RequestDecodeErrorCode.DECOMPRESSOR_ERROR);
     });
 
     it("should yield correct RequestBody if correct ssz", async function () {
@@ -178,5 +179,14 @@ describe("request encoders", function () {
 
       expect(validatedRequestBody).to.be.deep.equal([{isValid: true, body: status}]);
     });
+
+    function assertLoggerError(code: RequestDecodeErrorCode): void {
+      const errArg = loggerStub.error.firstCall.args[1];
+      if (errArg instanceof RequestDecodeError) {
+        expect(errArg.type.code).to.equal(code);
+      } else {
+        throw Error("loggerStub not called with proper error");
+      }
+    }
   });
 });
