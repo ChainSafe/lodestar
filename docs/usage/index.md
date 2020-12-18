@@ -9,4 +9,4 @@ To run any other command or explore Lodestar options run the help command.
 ./lodestar --help
 ```
 
-For an online reference, see [Command Line Reference](../../reference/cli/)
+For an online reference, see [Command Line Reference](../reference/cli.md)

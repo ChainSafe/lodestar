@@ -9,6 +9,7 @@
 - Follow the [installation guide](installation) to install Lodestar.
 - Run a node on [mainnet or a public testnet](usage/testnet).
 - Utilize the whole stack by [starting a local testnet](usage/local).
+- View the lodestar [cli commands and options](https://chainsafe.github.io/lodestar/reference/cli/)
 - View the [typedoc code docs](packages).
 - Prospective contributors can read the [contributing section](contributing) to understand how we develop and test on Lodestar.
 
