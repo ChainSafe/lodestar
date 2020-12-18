@@ -1,4 +1,8 @@
-import {NEXT_SYNC_COMMITTEE_INDEX, MAX_VALID_LIGHT_CLIENT_UPDATES, FINALIZED_ROOT_INDEX} from "@chainsafe/lodestar-params";
+import {
+  NEXT_SYNC_COMMITTEE_INDEX,
+  MAX_VALID_LIGHT_CLIENT_UPDATES,
+  FINALIZED_ROOT_INDEX,
+} from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, VectorType, ListType} from "@chainsafe/ssz";
 import * as t from "../../../types/lightclient/types";
 import {LightClientTypesGenerator} from "./interface";

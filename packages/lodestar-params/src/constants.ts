@@ -11,3 +11,6 @@ export const FINALIZED_ROOT_INDEX = 105;
 export const NEXT_SYNC_COMMITTEE_INDEX = 54;
 // BigInt(2 ** 64) - BigInt(1);
 export const MAX_VALID_LIGHT_CLIENT_UPDATES = Number.MAX_SAFE_INTEGER;
+export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
+//~27 hours
+export const LIGHT_CLIENT_UPDATE_TIMEOUT = 2 ** 13;
