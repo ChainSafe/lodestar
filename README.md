@@ -1,4 +1,4 @@
-![lodestar logo](/assets/300ppi/FullMark-BLACK.png)
+<p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="400" title="Lodestar" src='assets/300ppi/FullMark-BLACK-Stroke-WHITE.png' /></a></p>
 
 # Lodestar Monorepo
 
@@ -58,8 +58,8 @@ This monorepo repository contains a suite of Ethereum 2.0 packages.
 | [@chainsafe/lodestar-config](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-config)                                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-config)](https://www.npmjs.com/package/@chainsafe/lodestar-config)                                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-config)                                       | Eth2 types and params bundled together      |
 | [@chainsafe/lodestar-spec-test-util](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-spec-test-util)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-spec-test-util)](https://www.npmjs.com/package/@chainsafe/lodestar-spec-test-util)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-spec-test-util)                               | Test harness for Eth2 spec tests            |
 
-
 ### Creating Release
+
 - run `yarn run release` in project root directory
 - choose version increment
 - open PR to master
