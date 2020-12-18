@@ -90,8 +90,6 @@ async function receiveAndDecodeRequest(
       sszDataLength = decode(chunk.slice());
       if (decode.bytes > 10) {
         throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: decode.bytes});
-        // yield {isValid: false};
-        // break;
       }
 
       chunk = chunk.slice(decode.bytes);
@@ -131,9 +129,9 @@ async function receiveAndDecodeRequest(
       throw new RequestDecodeError({code: RequestDecodeErrorCode.TOO_MANY_BYTES, sszDataLength});
     }
 
-    // only one request body accepted
-
     // buffer.length === sszDataLength
+
+    // only one request body accepted, so return
     try {
       return type.deserialize(buffer.slice(0, sszDataLength));
     } catch (e) {
@@ -145,7 +143,7 @@ async function receiveAndDecodeRequest(
 }
 
 export enum RequestDecodeErrorCode {
-  /** Invalid number of bytes for protobuf varint, expects exactly 10 */
+  /** Invalid number of bytes for protobuf varint */
   INVALID_VARINT_BYTES_COUNT = "REQUEST_DECODE_ERROR_INVALID_VARINT_BYTES_COUNT",
   /** Parsed sszDataLength is under the SSZ type min size */
   UNDER_SSZ_MIN_SIZE = "REQUEST_DECODE_ERROR_UNDER_SSZ_MIN_SIZE",
