@@ -272,7 +272,7 @@ describe("[network] network", function () {
     // let discv5 of A know enr of B
     const discovery: Discv5Discovery = libP2pA._discovery.get("discv5") as Discv5Discovery;
     discovery.discv5.addEnr(enrB);
-    await netA.searchSubnetPeers(subnet.toString());
+    await netA.searchSubnetPeers([subnet.toString()]);
     await connected;
     expect(netA.getPeers({connected: true}).length).to.be.equal(1);
   });

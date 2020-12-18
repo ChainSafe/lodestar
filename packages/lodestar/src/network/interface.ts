@@ -80,7 +80,10 @@ export interface INetwork extends NetworkEventEmitter {
    * Disconnect from given peer.
    */
   disconnect(peerId: PeerId): Promise<void>;
-  searchSubnetPeers(subnet: string): Promise<void>;
+  /**
+   * Search peers joining subnets.
+   */
+  searchSubnetPeers(subnets: string[]): Promise<void>;
   // Service
   start(): Promise<void>;
   stop(): Promise<void>;
