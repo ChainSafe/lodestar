@@ -1,5 +1,5 @@
 import {Method, Methods, ReqRespEncoding} from "../../constants";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {decode, encode} from "varint";
 import BufferList from "bl";
@@ -53,76 +53,125 @@ export function eth2RequestDecode(
       return;
     }
 
-    let sszDataLength: number | null = null;
-    const decompressor = getDecompressor(encoding);
-    const buffer = new BufferList();
-
-    for await (let chunk of source) {
-      if (!chunk || chunk.length === 0) {
-        continue;
-      }
-
-      if (sszDataLength === null) {
-        sszDataLength = decode(chunk.slice());
-        if (decode.bytes > 10) {
-          logger.error("eth2RequestDecode: Invalid number of bytes for protobuf varint", {
-            bytes: decode.bytes,
-            method,
-          });
-          yield {isValid: false};
-          break;
-        }
-
-        chunk = chunk.slice(decode.bytes);
-        if (chunk.length === 0) {
-          continue;
-        }
-      }
-
-      if (sszDataLength < type.minSize() || sszDataLength > type.maxSize()) {
-        logger.error("eth2RequestDecode: Invalid szzLength", {sszDataLength, method});
-        yield {isValid: false};
-        break;
-      }
-
-      if (chunk.length > maxEncodedLen(sszDataLength, encoding)) {
-        logger.error("eth2RequestDecode: too much bytes read", {chunkLength: chunk.length, sszDataLength, method});
-        yield {isValid: false};
-        break;
-      }
-
-      let uncompressed: Buffer | null = null;
-      try {
-        uncompressed = decompressor.uncompress(chunk.slice());
-      } catch (e) {
-        logger.error("Failed to decompress request data", {error: e.message});
-        yield {isValid: false};
-        break;
-      }
-
-      if (uncompressed) {
-        buffer.append(uncompressed);
-      }
-
-      if (buffer.length < sszDataLength) {
-        continue;
-      }
-
-      if (buffer.length > sszDataLength) {
-        logger.error("Too long message received", {method});
-        yield {isValid: false};
-        break;
-      }
-
-      try {
-        yield {isValid: true, body: type.deserialize(buffer.slice(0, sszDataLength)) as RequestBody};
-      } catch (e) {
-        logger.error("Malformed input. Failed to deserialize request type", {method, error: e.message});
-        yield {isValid: false};
-        break;
-      }
-      // only one request body accepted
-      break;
+    try {
+      const body = await receiveAndDecodeRequest(source, encoding, type);
+      yield {isValid: true, body};
+    } catch (e) {
+      logger.error("eth2RequestDecode", e);
+      yield {isValid: false};
     }
   };
+}
+
+/**
+ * Buffers request body source in memory
+ * - Uncompress with `encoding`
+ * - Deserialize with `type`
+ * - Validate byte count is correct
+ */
+async function receiveAndDecodeRequest(
+  source: AsyncIterable<Buffer | BufferList>,
+  encoding: ReqRespEncoding,
+  type: Exclude<ReturnType<typeof Methods[Method]["requestSSZType"]>, null>
+): Promise<RequestBody> {
+  let sszDataLength: number | null = null;
+  const decompressor = getDecompressor(encoding);
+  const buffer = new BufferList();
+
+  const minSize = type.minSize();
+  const maxSize = type.maxSize();
+
+  for await (let chunk of source) {
+    if (!chunk || chunk.length === 0) {
+      continue;
+    }
+
+    if (sszDataLength === null) {
+      sszDataLength = decode(chunk.slice());
+      if (decode.bytes > 10) {
+        throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: decode.bytes});
+        // yield {isValid: false};
+        // break;
+      }
+
+      chunk = chunk.slice(decode.bytes);
+      if (chunk.length === 0) {
+        continue;
+      }
+    }
+
+    if (sszDataLength < minSize) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+    }
+    if (sszDataLength > maxSize) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+    }
+
+    const chunkLength = chunk.length;
+    if (chunkLength > maxEncodedLen(sszDataLength, encoding)) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.TOO_MUCH_BYTES_READ, chunkLength, sszDataLength});
+    }
+
+    let uncompressed: Buffer | null = null;
+    try {
+      uncompressed = decompressor.uncompress(chunk.slice());
+    } catch (e) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
+    }
+
+    if (uncompressed) {
+      buffer.append(uncompressed);
+    }
+
+    if (buffer.length < sszDataLength) {
+      continue;
+    }
+
+    if (buffer.length > sszDataLength) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.TOO_MANY_BYTES, sszDataLength});
+    }
+
+    // only one request body accepted
+
+    // buffer.length === sszDataLength
+    try {
+      return type.deserialize(buffer.slice(0, sszDataLength));
+    } catch (e) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.SSZ_DESERIALIZE_ERROR, sszError: e});
+    }
+  }
+
+  throw new RequestDecodeError({code: RequestDecodeErrorCode.SOURCE_ABORTED});
+}
+
+enum RequestDecodeErrorCode {
+  /** Invalid number of bytes for protobuf varint, expects exactly 10 */
+  INVALID_VARINT_BYTES_COUNT = "REQUEST_DECODE_ERROR_INVALID_VARINT_BYTES_COUNT",
+  /** Parsed sszDataLength is under the SSZ type min size */
+  UNDER_SSZ_MIN_SIZE = "REQUEST_DECODE_ERROR_UNDER_SSZ_MIN_SIZE",
+  /** Parsed sszDataLength is over the SSZ type max size */
+  OVER_SSZ_MAX_SIZE = "REQUEST_DECODE_ERROR_OVER_SSZ_MAX_SIZE",
+  TOO_MUCH_BYTES_READ = "REQUEST_DECODE_ERROR_TOO_MUCH_BYTES_READ",
+  DECOMPRESSOR_ERROR = "REQUEST_DECODE_ERROR_DECOMPRESSOR_ERROR",
+  /** Received more bytes than specified sszDataLength */
+  TOO_MANY_BYTES = "REQUEST_DECODE_ERROR_TOO_MANY_BYTES",
+  SSZ_DESERIALIZE_ERROR = "REQUEST_DECODE_ERROR_SSZ_DESERIALIZE_ERROR",
+  /** Source aborted before reading sszDataLength bytes */
+  SOURCE_ABORTED = "REQUEST_DECODE_ERROR_SOURCE_ABORTED",
+}
+
+export type RequestDecodeErrorType =
+  | {code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT; bytes: number}
+  | {code: RequestDecodeErrorCode.UNDER_SSZ_MIN_SIZE; minSize: number; sszDataLength: number}
+  | {code: RequestDecodeErrorCode.OVER_SSZ_MAX_SIZE; maxSize: number; sszDataLength: number}
+  | {code: RequestDecodeErrorCode.TOO_MUCH_BYTES_READ; chunkLength: number; sszDataLength: number}
+  | {code: RequestDecodeErrorCode.DECOMPRESSOR_ERROR; decompressorError: Error}
+  | {code: RequestDecodeErrorCode.TOO_MANY_BYTES; sszDataLength: number}
+  | {code: RequestDecodeErrorCode.SSZ_DESERIALIZE_ERROR; sszError: Error}
+  | {code: RequestDecodeErrorCode.SOURCE_ABORTED};
+
+export class RequestDecodeError extends LodestarError<RequestDecodeErrorType> {
+  constructor(type: RequestDecodeErrorType) {
+    super(type);
+  }
 }
