@@ -1,4 +1,4 @@
-![lodestar logo](/assets/300ppi/FullMark-BLACK.png)
+<p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="400" title="Lodestar" src='assets/300ppi/FullMark-BLACK-Stroke-WHITE.png' /></a></p>
 
 # Lodestar Monorepo
 
@@ -69,7 +69,9 @@ This monorepo repository contains a suite of Ethereum 2.0 packages.
 | [@chainsafe/lodestar-db](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-db)](https://www.npmjs.com/package/@chainsafe/lodestar-db)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-db)                               | Read/write persistent Eth2 data            |
 | [@chainsafe/lodestar-fork-choice](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-fork-choice)                   | [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-fork-choice)](https://www.npmjs.com/package/@chainsafe/lodestar-fork-choice)                   | [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  | [![documentation](https://img.shields.io/badge/typedoc-blue)](https://chainsafe.github.io/lodestar/lodestar-fork-choice)                               | Beacon chain fork choice           |
 
+
 ### Creating Release
+
 - run `yarn run release` in project root directory
 - choose version increment
 - open PR to master
