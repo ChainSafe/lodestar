@@ -45,26 +45,26 @@ See [packages/](https://github.com/ChainSafe/lodestar/tree/master/packages) for 
 
 - PRs should usually only update a single package (in our monorepo) at a time
 - Many module class constructors have the following signature: `(options, dependencies)`
-  - eg: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
+    - eg: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
 - Modules should be designed to "do one thing and do it well"
-  - Consider the interface of a module -- events included, and make sure it is coherent
+    - Consider the interface of a module -- events included, and make sure it is coherent
 - Make sure your code is properly linted
-  - use an IDE that will show linter errors/warnings
-  - run `yarn lint` from the command line
-  - common rules:
-    - Functions and variables should be [`camelCase`](https://en.wikipedia.org/wiki/Camel_case), classes should be [`PascalCase`](http://wiki.c2.com/?PascalCase), constants should be `UPPERCASE_WITH_UNDERSCORES`.
-    - Use `"` instead of `'`
-    - All functions should have types declared for all parameters and return value
-    - All interfaces should be prefixed with a `I`
-      - eg: `IMyInterface`
-    - You probably shouldn't be using Typescript's `any`
-    - Private class properties should not be prefixed with a `_`
-      - eg: `private dirty;`, not `private _dirty;`
+    - use an IDE that will show linter errors/warnings
+    - run `yarn lint` from the command line
+    - common rules:
+        - Functions and variables should be [`camelCase`](https://en.wikipedia.org/wiki/Camel_case), classes should be [`PascalCase`](http://wiki.c2.com/?PascalCase), constants should be `UPPERCASE_WITH_UNDERSCORES`.
+        - Use `"` instead of `'`
+        - All functions should have types declared for all parameters and return value
+        - All interfaces should be prefixed with a `I`
+            - eg: `IMyInterface`
+        - You probably shouldn't be using Typescript's `any`
+        - Private class properties should not be prefixed with a `_`
+            - eg: `private dirty;`, not `private _dirty;`
 - Make sure that your code is properly type checked: 
-  - use an IDE that will show type errors
-  - run `yarn check-types` from the command line
+    - use an IDE that will show type errors
+    - run `yarn check-types` from the command line
 - Make sure that the tests are still passing: 
-  - run `yarn test:unit` from the command line
+    - run `yarn test:unit` from the command line
 
 # Community
 
