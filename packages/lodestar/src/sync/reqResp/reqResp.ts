@@ -298,7 +298,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
         request.method,
         request.encoding,
         sink,
-        new RpcError(RpcResponseStatus.INVALID_REQ, "Invalid request")
+        new RpcError(RpcResponseStatus.INVALID_REQUEST, "Invalid request")
       );
       return;
     }

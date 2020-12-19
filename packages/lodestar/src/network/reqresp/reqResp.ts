@@ -154,7 +154,7 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             method,
             encoding,
             sink,
-            new RpcError(RpcResponseStatus.INVALID_REQ, "Invalid request")
+            new RpcError(RpcResponseStatus.INVALID_REQUEST, "Invalid request")
           );
         } else {
           emit(

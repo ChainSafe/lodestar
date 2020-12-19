@@ -207,7 +207,7 @@ describe("[sync] rpc", function () {
       for await (const val of source) {
         if (i === 0) {
           const status = val.slice()[0];
-          expect(status).to.be.equal(RpcResponseStatus.INVALID_REQ);
+          expect(status).to.be.equal(RpcResponseStatus.INVALID_REQUEST);
         } else {
           // i should be 1
           const errBuf = val.slice();

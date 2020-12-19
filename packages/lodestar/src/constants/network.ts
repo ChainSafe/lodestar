@@ -108,8 +108,18 @@ export enum ReqRespEncoding {
 }
 
 export enum RpcResponseStatus {
+  /**
+   * A normal response follows, with contents matching the expected message schema and encoding specified in the request
+   */
   SUCCESS = 0,
-  INVALID_REQ = 1,
+  /**
+   * The contents of the request are semantically invalid, or the payload is malformed,
+   * or could not be understood. The response payload adheres to the ErrorMessage schema
+   */
+  INVALID_REQUEST = 1,
+  /**
+   * The responder encountered an error while processing the request. The response payload adheres to the ErrorMessage schema
+   */
   SERVER_ERROR = 2,
 }
 

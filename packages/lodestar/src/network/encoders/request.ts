@@ -1,7 +1,7 @@
 import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
-import {decode, encode} from "varint";
+import varint from "varint";
 import BufferList from "bl";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getCompressor, getDecompressor, maxEncodedLen} from "./utils";
@@ -29,7 +29,7 @@ export function eth2RequestEncode(
         continue;
       }
 
-      yield Buffer.from(encode(serialized.length));
+      yield Buffer.from(varint.encode(serialized.length));
 
       yield* compressor(Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length));
 
@@ -57,11 +57,23 @@ export function eth2RequestDecode(
       const body = await receiveAndDecodeRequest(source, encoding, type);
       yield {isValid: true, body};
     } catch (e) {
+      // # TODO: Append method and requestId to error here
       logger.error("eth2RequestDecode", e);
       yield {isValid: false};
     }
   };
 }
+
+// The responder MUST:
+// 1. Use the encoding strategy to read the optional header.
+// 2. If there are any length assertions for length N, it should read
+//    exactly N bytes from the stream, at which point an EOF should arise
+//    (no more bytes). Error otherwise
+// 3. Deserialize the expected type, and process the request. Error otherwise
+// 4. Write the response which may consist of zero or more response_chunks
+//    (result, optional header, payload).
+// 5. Close their write side of the stream. At this point, the stream
+//    will be fully closed.
 
 /**
  * Buffers request body source in memory
@@ -87,12 +99,13 @@ async function receiveAndDecodeRequest(
     }
 
     if (sszDataLength === null) {
-      sszDataLength = decode(chunk.slice());
-      if (decode.bytes > 10) {
-        throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: decode.bytes});
+      sszDataLength = varint.decode(chunk.slice());
+      const varintBytes = varint.decode.bytes;
+      if (varintBytes > 10) {
+        throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
       }
 
-      chunk = chunk.slice(decode.bytes);
+      chunk = chunk.slice(varintBytes);
       if (chunk.length === 0) {
         continue;
       }

@@ -5,7 +5,8 @@ import pipe from "it-pipe";
 import {RpcResponseStatus} from "../../constants";
 import {Method, ReqRespEncoding} from "../../constants/network";
 import {IResponseChunk} from "../encoders/interface";
-import {encodeP2pErrorMessage, eth2ResponseEncode} from "../encoders/response";
+import {encodeP2pErrorMessage} from "../encoders/errorMessage";
+import {eth2ResponseEncode} from "../encoders/response";
 import {RpcError} from "../error";
 
 export async function sendResponse(

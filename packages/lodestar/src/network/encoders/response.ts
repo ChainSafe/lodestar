@@ -1,13 +1,21 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {P2pErrorMessage, ResponseBody} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {CompositeType} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import BufferList from "bl";
-import {decode, encode} from "varint";
+import varint from "varint";
 import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
 import {IResponseChunk} from "./interface";
+import {decodeP2pErrorMessage} from "./errorMessage";
 import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
+
+// request         ::= <encoding-dependent-header> | <encoded-payload>
+// response        ::= <response_chunk>*
+// response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
+// result          ::= “0” | “1” | “2” | [“128” ... ”255”]
+
+// `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
 
 export function eth2ResponseEncode(
   config: IBeaconConfig,
@@ -21,6 +29,10 @@ export function eth2ResponseEncode(
     if (!type) {
       return;
     }
+
+    // Must yield status and length separate so recipient knows how much frames
+    // it needs to decompress. With compression we are sending compressed data
+    // frame by frame
     for await (const chunk of source) {
       if (chunk.status !== RpcResponseStatus.SUCCESS) {
         yield encodeResponseStatus(chunk.status);
@@ -42,7 +54,7 @@ export function eth2ResponseEncode(
       }
 
       // yield encoded ssz length
-      yield Buffer.from(encode(serializedData!.length));
+      yield Buffer.from(varint.encode(serializedData!.length));
 
       // yield compressed or uncompressed data chunks
       yield* compressor(serializedData!);
@@ -84,7 +96,7 @@ export function eth2ResponseDecode(
       if (buffer.length === 0) continue;
       if (status && status !== RpcResponseStatus.SUCCESS) {
         try {
-          errorMessage = decodeP2pErrorMessage(config, buffer.slice());
+          errorMessage = decodeP2pErrorMessage(buffer.slice());
           buffer = new BufferList();
         } catch (e) {
           logger.warn("Failed to get error message from response", {method, requestId}, e);
@@ -95,13 +107,14 @@ export function eth2ResponseDecode(
       }
 
       if (sszLength === null) {
-        sszLength = decode(buffer.slice());
-        if (decode.bytes > 10) {
+        sszLength = varint.decode(buffer.slice());
+        const decodedBytes = varint.decode.bytes;
+        if (decodedBytes > 10) {
           throw new Error(
-            `eth2ResponseDecode: Invalid number of bytes for protobuf varint ${decode.bytes}` + `, method ${method}`
+            `eth2ResponseDecode: Invalid number of bytes for protobuf varint ${decodedBytes}` + `, method ${method}`
           );
         }
-        buffer.consume(decode.bytes);
+        buffer.consume(decodedBytes);
       }
 
       if (sszLength < type.minSize() || sszLength > type.maxSize()) {
@@ -159,20 +172,224 @@ export function eth2ResponseDecode(
   };
 }
 
-/**
- * Encodes error message per eth2 spec.
- * https://github.com/ethereum/eth2.0-specs/blob/v1.0.0-rc.0/specs/phase0/p2p-interface.md#responding-side
- */
-export function encodeP2pErrorMessage(config: IBeaconConfig, err: string): P2pErrorMessage {
-  const encoder = new TextEncoder();
-  return config.types.P2pErrorMessage.deserialize(encoder.encode(err).slice(0, 256));
+export function eth2ResponseDecode2(
+  config: IBeaconConfig,
+  logger: ILogger,
+  method: Method,
+  encoding: ReqRespEncoding,
+  requestId: RequestId,
+  controller: AbortController
+): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
+  return async function* (source) {
+    const type = Methods[method].responseSSZType(config);
+
+    try {
+      const responses = await receiveAndDecodeResponse(source, encoding, type, method);
+      for (const response of responses) {
+        yield response;
+      }
+    } catch (e) {
+      // # TODO: Append method and requestId to error here
+      logger.warn("eth2ResponseDecode", {method, requestId}, e);
+    } finally {
+      controller.abort();
+    }
+  };
 }
 
-/**
- * Decodes error message from network bytes and removes non printable, non ascii characters.
- */
-export function decodeP2pErrorMessage(config: IBeaconConfig, err: Uint8Array): string {
-  const encoder = new TextDecoder();
-  // remove non ascii characters from string
-  return encoder.decode(err).replace(/[^\x20-\x7F]/g, "");
+// A requester SHOULD read from the stream until either:
+// 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
+// 2. The responder closes the stream.
+// 3. Any part of the response_chunk fails validation.
+// 4. The maximum number of requested chunks are read.
+
+async function receiveAndDecodeResponse(
+  source: AsyncIterable<Buffer>,
+  encoding: ReqRespEncoding,
+  type: Exclude<ReturnType<typeof Methods[Method]["responseSSZType"]>, null>,
+  method: Method
+): Promise<ResponseBody[]> {
+  // floating buffer with current chunk
+  let buffer = new BufferList();
+
+  // holds uncompressed chunks
+  let uncompressedData = new BufferList();
+  let status: number | null = null;
+  let errorMessage: string | null = null;
+  let sszDataLength: number | null = null;
+  const responses: ResponseBody[] = [];
+
+  const decompressor = getDecompressor(encoding);
+
+  const minSize = type.minSize();
+  const maxSize = type.maxSize();
+
+  for await (const chunk of source) {
+    buffer.append(chunk);
+    if (status === null) {
+      status = buffer.get(0);
+      buffer.consume(1);
+    }
+
+    // If chunk only
+    if (buffer.length === 0) {
+      continue;
+    }
+
+    // For multiple chunks, only the last chunk is allowed to have a non-zero error
+    // code (i.e. The chunk stream is terminated once an error occurs
+    if (status && status !== RpcResponseStatus.SUCCESS) {
+      try {
+        errorMessage = decodeP2pErrorMessage(buffer.slice());
+        buffer = new BufferList();
+      } catch (e) {
+        throw new ResponseDecodeError({code: ResponseDecodeErrorCode.FAILED_DECODE_ERROR, status, error: e});
+      }
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS, status, errorMessage});
+      // logger.warn("eth2ResponseDecode: Received err status", {status, errorMessage, method, requestId});
+      // controller.abort();
+      // continue;
+    }
+
+    if (sszDataLength === null) {
+      sszDataLength = varint.decode(buffer.slice());
+      const varintBytes = varint.decode.bytes;
+      if (varintBytes > 10) {
+        throw new ResponseDecodeError({code: ResponseDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
+      }
+      buffer.consume(varintBytes);
+    }
+
+    if (sszDataLength < minSize) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+    }
+    if (sszDataLength > maxSize) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+    }
+
+    const chunkLength = chunk.length;
+    if (chunkLength > maxEncodedLen(sszDataLength, encoding)) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.TOO_MUCH_BYTES_READ, chunkLength, sszDataLength});
+    }
+
+    // If chunk only contains sszDataLength, fetch next
+    if (buffer.length === 0) {
+      continue;
+    }
+
+    let uncompressed: Buffer | null = null;
+    try {
+      uncompressed = decompressor.uncompress(buffer.slice());
+      buffer.consume(buffer.length);
+    } catch (e) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
+    }
+
+    if (uncompressed == null) {
+      continue;
+    }
+
+    uncompressedData.append(uncompressed);
+    // Keep uncompressing until it reaches sszDataLength
+    if (uncompressedData.length > sszDataLength) {
+      throw new Error(`Received too much data for method ${method}`);
+    }
+
+    if (uncompressedData.length !== sszDataLength) {
+      continue;
+    }
+
+    let body: ResponseBody;
+    try {
+      body = deserializeResponseBody(method, type, uncompressedData.slice());
+    } catch (e) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.SSZ_DESERIALIZE_ERROR, sszError: e});
+      // No throw
+    }
+
+    responses.push(body);
+
+    if (Methods[method].responseType === MethodResponseType.SingleResponse) {
+      break;
+      // controller.abort();
+      // continue;
+    } else {
+      // Q: what's the point to reuse buffer and every variable except for decompressor
+      //    instead of just declare them inside the for loop?
+      // A: I could call consume on buffer and uncompressData to remove all buffers
+      //    but I feel like this is faster as it will leave current data for gc to
+      //    clean while consume might be fiddling with existing arrays. Decompressor
+      //    has reset method to this cleanup. Once we deserialize data it means we
+      //    reached end of chunk, and next one will be exactly the same so we just reset
+      //    everything. I should add more code comments here
+      buffer = new BufferList();
+      uncompressedData = new BufferList();
+      decompressor.reset();
+      status = null;
+      sszDataLength = null;
+    }
+  }
+
+  if (buffer.length > 0) {
+    throw new Error(`There is remaining data not deserialized for method ${method}`);
+  }
+
+  return responses;
+}
+
+function deserializeResponseBody(
+  method: Method,
+  type: Exclude<ReturnType<typeof Methods[Method]["responseSSZType"]>, null>,
+  bytes: Buffer
+): ResponseBody {
+  if (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot) {
+    return (((type as unknown) as CompositeType<Record<string, unknown>>).tree.deserialize(
+      bytes
+    ) as unknown) as ResponseBody;
+  } else {
+    return type.deserialize(bytes);
+  }
+}
+
+export enum ResponseDecodeErrorCode {
+  /** Response had no status SUCCESS and error message was successfully decoded */
+  FAILED_DECODE_ERROR = "RESPONSE_DECODE_ERROR_FAILED_DECODE_ERROR",
+  /** Response had no status SUCCESS and error message was successfully decoded */
+  RECEIVED_ERROR_STATUS = "RESPONSE_DECODE_ERROR_RECEIVED_STATUS",
+
+  // Old
+
+  /** Invalid number of bytes for protobuf varint */
+  INVALID_VARINT_BYTES_COUNT = "RESPONSE_DECODE_ERROR_INVALID_VARINT_BYTES_COUNT",
+  /** Parsed sszDataLength is under the SSZ type min size */
+  UNDER_SSZ_MIN_SIZE = "RESPONSE_DECODE_ERROR_UNDER_SSZ_MIN_SIZE",
+  /** Parsed sszDataLength is over the SSZ type max size */
+  OVER_SSZ_MAX_SIZE = "RESPONSE_DECODE_ERROR_OVER_SSZ_MAX_SIZE",
+  TOO_MUCH_BYTES_READ = "RESPONSE_DECODE_ERROR_TOO_MUCH_BYTES_READ",
+  DECOMPRESSOR_ERROR = "RESPONSE_DECODE_ERROR_DECOMPRESSOR_ERROR",
+  /** Received more bytes than specified sszDataLength */
+  TOO_MANY_BYTES = "RESPONSE_DECODE_ERROR_TOO_MANY_BYTES",
+  SSZ_DESERIALIZE_ERROR = "RESPONSE_DECODE_ERROR_SSZ_DESERIALIZE_ERROR",
+  /** Source aborted before reading sszDataLength bytes */
+  SOURCE_ABORTED = "RESPONSE_DECODE_ERROR_SOURCE_ABORTED",
+}
+
+type ResponseDecodeErrorType =
+  | {code: ResponseDecodeErrorCode.FAILED_DECODE_ERROR; status: number; error: Error}
+  | {code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS; status: number; errorMessage: string}
+
+  // Old
+  | {code: ResponseDecodeErrorCode.INVALID_VARINT_BYTES_COUNT; bytes: number}
+  | {code: ResponseDecodeErrorCode.UNDER_SSZ_MIN_SIZE; minSize: number; sszDataLength: number}
+  | {code: ResponseDecodeErrorCode.OVER_SSZ_MAX_SIZE; maxSize: number; sszDataLength: number}
+  | {code: ResponseDecodeErrorCode.TOO_MUCH_BYTES_READ; chunkLength: number; sszDataLength: number}
+  | {code: ResponseDecodeErrorCode.DECOMPRESSOR_ERROR; decompressorError: Error}
+  | {code: ResponseDecodeErrorCode.TOO_MANY_BYTES; sszDataLength: number}
+  | {code: ResponseDecodeErrorCode.SSZ_DESERIALIZE_ERROR; sszError: Error}
+  | {code: ResponseDecodeErrorCode.SOURCE_ABORTED};
+
+export class ResponseDecodeError extends LodestarError<ResponseDecodeErrorType> {
+  constructor(type: ResponseDecodeErrorType) {
+    super(type);
+  }
 }
