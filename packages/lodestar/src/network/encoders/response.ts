@@ -5,7 +5,15 @@ import {CompositeType} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import BufferList from "bl";
 import varint from "varint";
-import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId, RpcResponseStatus} from "../../constants";
+import {
+  MAX_VARINT_BYTES,
+  Method,
+  MethodResponseType,
+  Methods,
+  ReqRespEncoding,
+  RequestId,
+  RpcResponseStatus,
+} from "../../constants";
 import {IResponseChunk} from "./interface";
 import {decodeP2pErrorMessage} from "./errorMessage";
 import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
@@ -224,21 +232,31 @@ async function receiveAndDecodeResponse(
   const minSize = type.minSize();
   const maxSize = type.maxSize();
 
+  // response        ::= <response_chunk>*
+  // response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
+  // result          ::= “0” | “1” | “2” | [“128” ... ”255”]
+
   for await (const chunk of source) {
     buffer.append(chunk);
+
     if (status === null) {
       status = buffer.get(0);
       buffer.consume(1);
+
+      // If first chunk had zero bytes status === null, get next
+      if (status === null) {
+        continue;
+      }
     }
 
-    // If chunk only
+    // No bytes left to consume, get next with either ErrorMessage or EncodingHeader
     if (buffer.length === 0) {
       continue;
     }
 
     // For multiple chunks, only the last chunk is allowed to have a non-zero error
     // code (i.e. The chunk stream is terminated once an error occurs
-    if (status && status !== RpcResponseStatus.SUCCESS) {
+    if (status !== RpcResponseStatus.SUCCESS) {
       try {
         errorMessage = decodeP2pErrorMessage(buffer.slice());
         buffer = new BufferList();
@@ -246,20 +264,20 @@ async function receiveAndDecodeResponse(
         throw new ResponseDecodeError({code: ResponseDecodeErrorCode.FAILED_DECODE_ERROR, status, error: e});
       }
       throw new ResponseDecodeError({code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS, status, errorMessage});
-      // logger.warn("eth2ResponseDecode: Received err status", {status, errorMessage, method, requestId});
-      // controller.abort();
-      // continue;
     }
 
+    // encoding-dependent-header for ssz_snappy
+    // Header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
     if (sszDataLength === null) {
       sszDataLength = varint.decode(buffer.slice());
       const varintBytes = varint.decode.bytes;
-      if (varintBytes > 10) {
+      if (varintBytes > MAX_VARINT_BYTES) {
         throw new ResponseDecodeError({code: ResponseDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
       }
       buffer.consume(varintBytes);
     }
 
+    // MUST validate that the length-prefix is within the expected size bounds derived from the payload SSZ type.
     if (sszDataLength < minSize) {
       throw new ResponseDecodeError({code: ResponseDecodeErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
     }
@@ -267,12 +285,13 @@ async function receiveAndDecodeResponse(
       throw new ResponseDecodeError({code: ResponseDecodeErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
     }
 
+    // SHOULD NOT read more than max_encoded_len(n) bytes after reading the SSZ length-prefix n from the header
     const chunkLength = chunk.length;
     if (chunkLength > maxEncodedLen(sszDataLength, encoding)) {
       throw new ResponseDecodeError({code: ResponseDecodeErrorCode.TOO_MUCH_BYTES_READ, chunkLength, sszDataLength});
     }
 
-    // If chunk only contains sszDataLength, fetch next
+    // No bytes left to consume, get next
     if (buffer.length === 0) {
       continue;
     }
@@ -285,17 +304,19 @@ async function receiveAndDecodeResponse(
       throw new ResponseDecodeError({code: ResponseDecodeErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
     }
 
-    if (uncompressed == null) {
+    if (uncompressed === null) {
       continue;
     }
 
     uncompressedData.append(uncompressed);
-    // Keep uncompressing until it reaches sszDataLength
+
+    // SHOULD consider invalid reading more bytes than `n` SSZ bytes
     if (uncompressedData.length > sszDataLength) {
-      throw new Error(`Received too much data for method ${method}`);
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.TOO_MANY_BYTES, sszDataLength});
     }
 
-    if (uncompressedData.length !== sszDataLength) {
+    // Keep reading chunks until `n` SSZ bytes
+    if (uncompressedData.length < sszDataLength) {
       continue;
     }
 

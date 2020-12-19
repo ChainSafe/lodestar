@@ -1,4 +1,4 @@
-import {Method, Methods, ReqRespEncoding} from "../../constants";
+import {MAX_VARINT_BYTES, Method, Methods, ReqRespEncoding} from "../../constants";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import varint from "varint";
@@ -101,7 +101,7 @@ async function receiveAndDecodeRequest(
     if (sszDataLength === null) {
       sszDataLength = varint.decode(chunk.slice());
       const varintBytes = varint.decode.bytes;
-      if (varintBytes > 10) {
+      if (varintBytes > MAX_VARINT_BYTES) {
         throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
       }
 
