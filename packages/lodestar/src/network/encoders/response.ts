@@ -17,6 +17,7 @@ import {
 import {IResponseChunk} from "./interface";
 import {decodeP2pErrorMessage} from "./errorMessage";
 import {encodeResponseStatus, getCompressor, getDecompressor, maxEncodedLen} from "./utils";
+import {SszSnappyRequestDecoder} from "./request";
 
 // request         ::= <encoding-dependent-header> | <encoded-payload>
 // response        ::= <response_chunk>*
@@ -356,6 +357,192 @@ async function receiveAndDecodeResponse(
   }
 
   return responses;
+}
+
+async function receiveAndDecodeResponseWithFn(
+  source: AsyncIterable<Buffer>,
+  encoding: ReqRespEncoding,
+  type: Exclude<ReturnType<typeof Methods[Method]["responseSSZType"]>, null>,
+  method: Method
+): Promise<ResponseBody[]> {
+  // floating buffer with current chunk
+  let buffer = new BufferList();
+
+  // holds uncompressed chunks
+  let uncompressedData = new BufferList();
+  let status: number | null = null;
+  let errorMessage: string | null = null;
+  let sszDataLength: number | null = null;
+  const responses: ResponseBody[] = [];
+
+  const decompressor = getDecompressor(encoding);
+
+  // response        ::= <response_chunk>*
+  // response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
+  // result          ::= “0” | “1” | “2” | [“128” ... ”255”]
+
+  const sszSnappyRequestDecoder = SszSnappyRequestDecoder(encoding, type);
+
+  for await (const chunk of source) {
+    buffer.append(chunk);
+
+    if (status === null) {
+      status = buffer.get(0);
+      buffer.consume(1);
+
+      // If first chunk had zero bytes status === null, get next
+      if (status === null) {
+        continue;
+      }
+    }
+
+    // No bytes left to consume, get next with either ErrorMessage or EncodingHeader
+    if (buffer.length === 0) {
+      continue;
+    }
+
+    // For multiple chunks, only the last chunk is allowed to have a non-zero error
+    // code (i.e. The chunk stream is terminated once an error occurs
+    if (status !== RpcResponseStatus.SUCCESS) {
+      try {
+        errorMessage = decodeP2pErrorMessage(buffer.slice());
+        buffer = new BufferList();
+      } catch (e) {
+        throw new ResponseDecodeError({code: ResponseDecodeErrorCode.FAILED_DECODE_ERROR, status, error: e});
+      }
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS, status, errorMessage});
+    }
+
+    const decodeRes = sszSnappyRequestDecoder(chunk);
+    if (decodeRes.status === "NEXT") {
+      continue;
+    } else {
+      yield decodeRes.body;
+    }
+
+    let body: ResponseBody;
+    try {
+      body = deserializeResponseBody(method, type, uncompressedData.slice());
+    } catch (e) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.SSZ_DESERIALIZE_ERROR, sszError: e});
+      // No throw
+    }
+
+    responses.push(body);
+
+    if (Methods[method].responseType === MethodResponseType.SingleResponse) {
+      break;
+      // controller.abort();
+      // continue;
+    } else {
+      // Q: what's the point to reuse buffer and every variable except for decompressor
+      //    instead of just declare them inside the for loop?
+      // A: I could call consume on buffer and uncompressData to remove all buffers
+      //    but I feel like this is faster as it will leave current data for gc to
+      //    clean while consume might be fiddling with existing arrays. Decompressor
+      //    has reset method to this cleanup. Once we deserialize data it means we
+      //    reached end of chunk, and next one will be exactly the same so we just reset
+      //    everything. I should add more code comments here
+      buffer = new BufferList();
+      uncompressedData = new BufferList();
+      decompressor.reset();
+      status = null;
+      sszDataLength = null;
+    }
+  }
+
+  if (buffer.length > 0) {
+    throw new Error(`There is remaining data not deserialized for method ${method}`);
+  }
+
+  return responses;
+}
+
+async function receiveAndDecodeResponse2(source: AsyncIterable<Buffer>) {
+  const bufferedSource = new BufferedSource(source);
+
+  for (let i = 0; i < maxItems; i++) {
+    await readResultHeader(bufferedSource);
+    const sszDataLength = await readSszSnappyHeader(bufferedSource);
+    const uncompressed = await decompressBytes(bufferedSource, sszDataLength);
+  }
+}
+
+async function readResultHeader(bufferedSource: BufferedSource) {
+  for await (const _ of bufferedSource) {
+    const status = bufferedSource.buffer.get(0);
+    bufferedSource.buffer.consume(1);
+
+    // If first chunk had zero bytes status === null, get next
+    if (status === null) {
+      continue;
+    }
+
+    // For multiple chunks, only the last chunk is allowed to have a non-zero error
+    // code (i.e. The chunk stream is terminated once an error occurs
+    if (status === RpcResponseStatus.SUCCESS) {
+      return;
+    }
+
+    // No bytes left to consume, get next bytes for ErrorMessage
+    if (bufferedSource.buffer.length === 0) {
+      continue;
+    }
+
+    try {
+      const errorMessage = decodeP2pErrorMessage(buffer.slice());
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS, status, errorMessage});
+    } catch (e) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.FAILED_DECODE_ERROR, status, error: e});
+    }
+  }
+}
+
+async function readSszSnappyHeader(bufferedSource: BufferedSource) {
+  for await (const _ of bufferedSource) {
+    // Get next bytes if empty
+    if (bufferedSource.buffer.length === 0) {
+      continue;
+    }
+
+    // encoding-dependent-header for ssz_snappy
+    // Header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
+    const sszDataLength = varint.decode(bufferedSource.buffer.slice());
+    const varintBytes = varint.decode.bytes;
+    if (varintBytes > MAX_VARINT_BYTES) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
+    }
+    bufferedSource.buffer.consume(varintBytes);
+
+    // MUST validate that the length-prefix is within the expected size bounds derived from the payload SSZ type.
+    if (sszDataLength < minSize) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+    }
+    if (sszDataLength > maxSize) {
+      throw new ResponseDecodeError({code: ResponseDecodeErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+    }
+
+    return sszDataLength;
+  }
+}
+
+class BufferedSource {
+  buffer: BufferList;
+  private source: AsyncGenerator<Buffer>;
+
+  constructor(source: AsyncGenerator<Buffer>) {
+    this.buffer = new BufferList();
+    this.source = source;
+  }
+
+  async next(): Promise<Buffer> {
+    const {done, value: chunk} = await this.source.next();
+    if (done) {
+      throw Error("DONE");
+    } else {
+      this.buffer.append(chunk);
+    }
+  }
 }
 
 function deserializeResponseBody(

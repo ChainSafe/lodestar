@@ -155,6 +155,85 @@ async function receiveAndDecodeRequest(
   throw new RequestDecodeError({code: RequestDecodeErrorCode.SOURCE_ABORTED});
 }
 
+/**
+ * Buffers request body source in memory
+ * - Uncompress with `encoding`
+ * - Deserialize with `type`
+ * - Validate byte count is correct
+ */
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export function SszSnappyRequestDecoder(
+  encoding: ReqRespEncoding,
+  type: Exclude<ReturnType<typeof Methods[Method]["requestSSZType"]>, null>
+): (chunk: Buffer) => {status: "DONE"; body: RequestBody} | {status: "NEXT"} {
+  let sszDataLength: number | null = null;
+  const decompressor = getDecompressor(encoding);
+  const buffer = new BufferList();
+
+  const minSize = type.minSize();
+  const maxSize = type.maxSize();
+
+  return function (chunk: Buffer) {
+    if (!chunk || chunk.length === 0) {
+      return {status: "NEXT"};
+    }
+
+    if (sszDataLength === null) {
+      sszDataLength = varint.decode(chunk.slice());
+      const varintBytes = varint.decode.bytes;
+      if (varintBytes > MAX_VARINT_BYTES) {
+        throw new RequestDecodeError({code: RequestDecodeErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
+      }
+
+      chunk = chunk.slice(varintBytes);
+      if (chunk.length === 0) {
+        return {status: "NEXT"};
+      }
+    }
+
+    if (sszDataLength < minSize) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+    }
+    if (sszDataLength > maxSize) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+    }
+
+    const chunkLength = chunk.length;
+    if (chunkLength > maxEncodedLen(sszDataLength, encoding)) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.TOO_MUCH_BYTES_READ, chunkLength, sszDataLength});
+    }
+
+    let uncompressed: Buffer | null = null;
+    try {
+      uncompressed = decompressor.uncompress(chunk.slice());
+    } catch (e) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
+    }
+
+    if (uncompressed) {
+      buffer.append(uncompressed);
+    }
+
+    if (buffer.length < sszDataLength) {
+      return {status: "NEXT"};
+    }
+
+    if (buffer.length > sszDataLength) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.TOO_MANY_BYTES, sszDataLength});
+    }
+
+    // buffer.length === sszDataLength
+
+    // only one request body accepted, so return
+    try {
+      const body = type.deserialize(buffer.slice(0, sszDataLength));
+      return {status: "DONE", body};
+    } catch (e) {
+      throw new RequestDecodeError({code: RequestDecodeErrorCode.SSZ_DESERIALIZE_ERROR, sszError: e});
+    }
+  };
+}
+
 export enum RequestDecodeErrorCode {
   /** Invalid number of bytes for protobuf varint */
   INVALID_VARINT_BYTES_COUNT = "REQUEST_DECODE_ERROR_INVALID_VARINT_BYTES_COUNT",
