@@ -1,9 +1,7 @@
 import BufferList from "bl";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, Methods, ReqRespEncoding} from "../../../constants";
-import {IValidatedRequestBody} from "../interface";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readChunk} from "../encodingStrategies";
 
@@ -18,28 +16,19 @@ import {readChunk} from "../encodingStrategies";
 // 5. Close their write side of the stream. At this point, the stream
 //    will be fully closed.
 
-export function eth2RequestDecode(
+export function requestDecode(
   config: IBeaconConfig,
-  logger: ILogger,
   method: Method,
   encoding: ReqRespEncoding
-): (source: AsyncIterable<Buffer | BufferList>) => AsyncGenerator<IValidatedRequestBody> {
-  return async function* (source) {
+): (source: AsyncIterable<Buffer | BufferList>) => Promise<null | RequestBody> {
+  return async function (source) {
     const type = Methods[method].requestSSZType(config);
     if (!type) {
-      // method has no body, emit null to trigger response
-      yield {isValid: true, body: null!};
-      return;
+      // method has no body
+      return null;
     }
 
-    try {
-      const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-      const requestBody: RequestBody = await readChunk(bufferedSource, encoding, type);
-      yield {isValid: true, body: requestBody};
-    } catch (e) {
-      // # TODO: Append method and requestId to error here
-      logger.error("eth2RequestDecode", {method}, e);
-      yield {isValid: false};
-    }
+    const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+    return await readChunk<RequestBody>(bufferedSource, encoding, type);
   };
 }

@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, Methods, ReqRespEncoding} from "../../../constants";
 import {writeChunk} from "../encodingStrategies";
 
-export function eth2RequestEncode(
+export function requestEncode(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding

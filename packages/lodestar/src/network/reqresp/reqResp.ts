@@ -15,21 +15,22 @@ import {
 } from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "abort-controller";
-import {pipe} from "it-pipe";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {IReqEventEmitterClass, IReqRespModules, sendRequest} from ".";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
-import {IValidatedRequestBody} from "../encoders/interface";
-import {eth2RequestDecode} from "../encoders/request";
-import {RpcError, updateRpcScore} from "../error";
+import {requestDecode} from "./encoders/requestDecode";
+import {updateRpcScore} from "../error";
 import {IReqResp} from "../interface";
 import {IPeerMetadataStore} from "../peers/interface";
 import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
 import {createRpcProtocol, randomRequestId} from "../util";
-import {ReqRespRequest} from "./interface";
-import {sendResponse} from "./respUtils";
 import {EventEmitter} from "events";
+import {responseEncodeError, responseEncodeSuccess} from "./encoders/responseEncode";
+
+type ReqRespHandler = (method: Method, requestBody: RequestBody, peerId: PeerId) => AsyncIterable<ResponseBody>;
+
+class InvalidRequestError extends Error {}
 
 /**
  * Implementation of eth2 p2p Req/Resp domain.
@@ -44,6 +45,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
 
+  private performRequestHandler: ReqRespHandler | null;
+
   public constructor({config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules) {
     super();
     this.config = config;
@@ -51,6 +54,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     this.peerMetadata = peerMetadata;
     this.logger = logger;
     this.blockProviderScores = blockProviderScores;
+
+    this.performRequestHandler = null;
   }
 
   public async start(): Promise<void> {
@@ -58,16 +63,76 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     for (const method of Object.values(Method)) {
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
+          // Re-declare to properly type
+          const streamSource = stream.source as AsyncIterable<Buffer>;
+          const streamSink = stream.sink as (source: AsyncIterable<Buffer>) => Promise<void>;
+
+          const requestId = randomRequestId();
           const peerId = connection.remotePeer;
-          pipe(
-            stream.source,
-            eth2RequestDecode(this.config, this.logger, method, encoding),
-            this.storePeerEncodingPreference(peerId, method, encoding),
-            this.handleRpcRequest(peerId, method, encoding, stream.sink)
-          );
+          this.storePeerEncodingPreference(peerId, method, encoding);
+
+          try {
+            const responseSource = this.handleRequest(streamSource, method, encoding, peerId, requestId);
+            await streamSink(responseSource);
+          } catch (e) {
+            // In case sending the error fails
+          } finally {
+            // Extra cleanup? Close connection?
+          }
         });
       }
     }
+  }
+
+  async *handleRequest(
+    streamSource: AsyncIterable<Buffer>,
+    method: Method,
+    encoding: ReqRespEncoding,
+    peerId: PeerId,
+    requestId: string
+  ): AsyncGenerator<Buffer, void, undefined> {
+    try {
+      const requestDecodeSink = requestDecode(this.config, method, encoding);
+      const requestBody = await requestDecodeSink(streamSource).catch((e) => {
+        throw new InvalidRequestError(e.message);
+      });
+
+      // This syntax allows to recycle the same streamSink to send success and error chunks
+      // in case request whose body is a List fails at chunk_i > 0
+
+      const responseBodySource = this.performRequest(method, requestBody, peerId);
+      yield* responseEncodeSuccess(this.config, method, encoding)(responseBodySource);
+    } catch (e) {
+      // Log: requestId failed
+
+      const status =
+        e instanceof InvalidRequestError ? RpcResponseStatus.INVALID_REQUEST : RpcResponseStatus.SERVER_ERROR;
+      yield* responseEncodeError(status, e.message);
+    } finally {
+      // Extra cleanup?
+    }
+  }
+
+  registerHandler(handler: ReqRespHandler): void {
+    this.performRequestHandler = handler;
+  }
+
+  /**
+   * Consumers could emit the handler function itself and this module will store them
+   * Then it will use the registry of stored handlers to serve requests
+   */
+  async *performRequest(method: Method, requestBody: RequestBody, peerId: PeerId): AsyncIterable<ResponseBody> {
+    if (!this.performRequestHandler) {
+      throw Error("performRequestHandler not registered");
+    }
+
+    yield* this.performRequestHandler(method, requestBody, peerId);
+    // this.emit(
+    //   "request",
+    //   {id: requestId, method, encoding, body: requestBody} as ReqRespRequest<RequestBody>,
+    //   peerId,
+    //   streamSink
+    // );
   }
 
   public async stop(): Promise<void> {
@@ -123,50 +188,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     }
   }
 
-  private storePeerEncodingPreference(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding
-  ): (source: AsyncIterable<IValidatedRequestBody>) => AsyncGenerator<IValidatedRequestBody> {
+  private storePeerEncodingPreference(peerId: PeerId, method: Method, encoding: ReqRespEncoding): void {
     const peerReputations = this.peerMetadata;
-    return async function* (source) {
-      if (method === Method.Status) {
-        peerReputations.setEncoding(peerId, encoding);
-      }
-      yield* source;
-    };
-  }
-
-  private handleRpcRequest(
-    peerId: PeerId,
-    method: Method,
-    encoding: ReqRespEncoding,
-    sink: Sink<unknown, unknown>
-  ): (source: AsyncIterable<IValidatedRequestBody>) => Promise<void> {
-    const {config, logger} = this;
-    const emit = this.emit.bind(this);
-    return async (source) => {
-      for await (const request of source) {
-        if (!request.isValid) {
-          await sendResponse(
-            {config, logger},
-            randomRequestId(),
-            method,
-            encoding,
-            sink,
-            new RpcError(RpcResponseStatus.INVALID_REQUEST, "Invalid request")
-          );
-        } else {
-          emit(
-            "request",
-            {id: randomRequestId(), method, encoding, body: request.body ?? null} as ReqRespRequest<RequestBody>,
-            peerId,
-            sink
-          );
-        }
-        return;
-      }
-    };
+    if (method === Method.Status) {
+      peerReputations.setEncoding(peerId, encoding);
+    }
   }
 
   // Helper to reduce code duplication

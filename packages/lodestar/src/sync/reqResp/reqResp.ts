@@ -76,6 +76,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.chain = chain;
     this.network = network;
     this.logger = logger;
+
+    this.network.reqResp.registerHandler(this.onRequest);
   }
 
   public async start(): Promise<void> {

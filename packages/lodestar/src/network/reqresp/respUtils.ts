@@ -4,14 +4,13 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import pipe from "it-pipe";
 import {RpcResponseStatus} from "../../constants";
 import {Method, ReqRespEncoding} from "../../constants/network";
-import {IResponseChunk} from "../encoders/interface";
-import {encodeP2pErrorMessage} from "../encoders/errorMessage";
-import {eth2ResponseEncode} from "../encoders/response";
+import {IResponseChunk} from "./interface";
+import {responseEncode} from "./encoders/responseEncode";
 import {RpcError} from "../error";
 
 export async function sendResponse(
   modules: {config: IBeaconConfig; logger: ILogger},
-  id: RequestId,
+  requestId: RequestId,
   method: Method,
   encoding: ReqRespEncoding,
   sink: Sink<unknown, unknown>,
@@ -24,12 +23,12 @@ export async function sendResponse(
     }
   }
 
-  return sendResponseStream(modules, id, method, encoding, sink, err, chunkIter());
+  return sendResponseStream(modules, requestId, method, encoding, sink, err, chunkIter());
 }
 
 export async function sendResponseStream(
   modules: {config: IBeaconConfig; logger: ILogger},
-  id: RequestId,
+  requestId: RequestId,
   method: Method,
   encoding: ReqRespEncoding,
   sink: Sink<unknown, unknown>,
@@ -41,17 +40,16 @@ export async function sendResponseStream(
   async function* respSource(): AsyncIterable<IResponseChunk> {
     if (err) {
       yield {
-        requestId: id,
         status: err.status,
-        body: encodeP2pErrorMessage(config, err.message || ""),
+        errorMessage: err.message || "",
       };
     } else {
       for await (const chunk of chunkIter) {
-        yield {status: RpcResponseStatus.SUCCESS, requestId: id, body: chunk};
+        yield {status: RpcResponseStatus.SUCCESS, body: chunk};
       }
     }
   }
 
-  await pipe(respSource(), eth2ResponseEncode(config, logger, method, encoding), sink);
-  logger.verbose("Sent reqresp response", {requestId: id, method, encoding, error: err?.message ?? "false"});
+  await pipe(respSource(), responseEncode(config, method, encoding), sink);
+  logger.verbose("Sent reqresp response", {requestId, method, encoding, error: err?.message ?? "false"});
 }

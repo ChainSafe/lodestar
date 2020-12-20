@@ -24,11 +24,9 @@ export type ReqRespRequest<Body extends RequestBody | null = null> = {
   encoding: ReqRespEncoding;
 };
 
-export interface IResponseChunk {
-  requestId: RequestId;
-  status: RpcResponseStatus;
-  body: ResponseBody;
-}
+export type IResponseChunk =
+  | {status: RpcResponseStatus.SUCCESS; body: ResponseBody}
+  | {status: RpcResponseStatus.INVALID_REQUEST | RpcResponseStatus.SERVER_ERROR; errorMessage: string};
 
 export interface IValidatedRequestBody {
   isValid: boolean;

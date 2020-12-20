@@ -42,16 +42,6 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
   throw Error("Stream ended early");
 }
 
-export async function* writeResultHeader(status: RpcResponseStatus, errorMessage: string): AsyncGenerator<Buffer> {
-  yield Buffer.from([status]);
-
-  if (status !== RpcResponseStatus.SUCCESS) {
-    if (errorMessage) {
-      yield Buffer.from(errorMessage);
-    }
-  }
-}
-
 export enum ResponseDecodeErrorCode {
   /** Response had no status SUCCESS and error message was successfully decoded */
   FAILED_DECODE_ERROR = "RESPONSE_DECODE_ERROR_FAILED_DECODE_ERROR",

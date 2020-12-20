@@ -1,6 +1,6 @@
 import {IBeaconSSZTypes, RequestBody, RequestId, ResponseBody} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
-import AbortController, {AbortSignal} from "abort-controller";
+import {AbortController, AbortSignal} from "abort-controller";
 import {duplex as abortDuplex} from "abortable-iterator";
 import all from "it-all";
 import pipe from "it-pipe";
@@ -16,8 +16,8 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
-import {eth2RequestEncode} from "../encoders/request";
-import {eth2ResponseDecode} from "../encoders/response";
+import {requestEncode} from "./encoders/requestEncode";
+import {responseDecode} from "./encoders/responseDecode";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
@@ -73,7 +73,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
       logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
-      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      await pipe(body != null ? [body] : [null], requestEncode(config, method, encoding), conn.stream);
     })(),
     new Promise((_, reject) => {
       requestTimer = setTimeout(() => {
@@ -89,7 +89,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   yield* pipe(
     abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
     eth2ResponseTimer(controller),
-    eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
+    responseDecode(config, logger, method, encoding, requestId, controller)
   );
 }
 

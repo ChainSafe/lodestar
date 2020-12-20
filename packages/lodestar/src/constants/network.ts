@@ -132,3 +132,25 @@ export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 /** The maximum time for complete response transfer. */
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
 export const REQUEST_TIMEOUT = 5 * 1000; // 5 sec
+
+export enum GoodByeReasonCode {
+  CLIENT_SHUTDOWN = 1,
+  IRRELEVANT_NETWORK = 2,
+  ERROR = 3,
+}
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const goodbyeReasonCodeDescriptions: Record<string, string> = {
+  // spec-defined codes
+  1: "Client shutdown",
+  2: "Irrelevant network",
+  3: "Internal fault/error",
+
+  // Teku-defined codes
+  128: "Unable to verify network",
+
+  // Lighthouse-defined codes
+  129: "Client has too many peers",
+  250: "Peer score too low",
+  251: "Peer banned this node",
+};

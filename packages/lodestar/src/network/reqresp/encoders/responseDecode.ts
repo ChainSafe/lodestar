@@ -14,7 +14,7 @@ import {readResultHeader} from "./resultHeader";
 
 // `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
 
-export function eth2ResponseDecode(
+export function responseDecode(
   config: IBeaconConfig,
   logger: ILogger,
   method: Method,
