@@ -10,15 +10,18 @@ export type RequestOrResponseType = Exclude<
   null
 >;
 
+interface IOptions {
+  isSszTree?: boolean;
+}
+
 export async function readChunk<T extends ResponseBody | RequestBody>(
   bufferedSource: BufferedSource,
   encoding: ReqRespEncoding,
   type: RequestOrResponseType,
-  method: Method,
-  direction: Direction
+  options?: IOptions
 ): Promise<T> {
   const bodyBytes = await readChunkAndDecode(bufferedSource, encoding, type);
-  return deserializeBody<T>(bodyBytes, method, direction, type);
+  return deserializeBody<T>(bodyBytes, type, options);
 }
 
 async function readChunkAndDecode(
@@ -40,11 +43,10 @@ async function readChunkAndDecode(
 
 function deserializeBody<T extends ResponseBody | RequestBody>(
   bytes: Buffer,
-  method: Method,
-  direction: Direction,
-  type: RequestOrResponseType
+  type: RequestOrResponseType,
+  options?: IOptions
 ): T {
-  if (direction === "response" && (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot)) {
+  if (options?.isSszTree) {
     return (((type as unknown) as CompositeType<Record<string, unknown>>).tree.deserialize(bytes) as unknown) as T;
   } else {
     return type.deserialize(bytes) as T;

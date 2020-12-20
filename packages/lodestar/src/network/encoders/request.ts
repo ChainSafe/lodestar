@@ -68,7 +68,7 @@ export function eth2RequestDecode(
 
     try {
       const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-      const requestBody: RequestBody = await readChunk(bufferedSource, encoding, type, method, "request");
+      const requestBody: RequestBody = await readChunk(bufferedSource, encoding, type);
       yield {isValid: true, body: requestBody};
     } catch (e) {
       // # TODO: Append method and requestId to error here

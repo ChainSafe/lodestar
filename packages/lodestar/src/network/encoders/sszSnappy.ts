@@ -2,7 +2,8 @@ import {LodestarError} from "@chainsafe/lodestar-utils";
 import BufferList from "bl";
 import varint from "varint";
 import {MAX_VARINT_BYTES, ReqRespEncoding} from "../../constants";
-import {getDecompressor, maxEncodedLen} from "./utils";
+import {maxEncodedLen} from "./utils";
+import {SnappyFramesUncompress} from "./snappy-frames/uncompress";
 import {BufferedSource} from "./bufferedSource";
 
 export interface ISszSizeBounds {
@@ -52,7 +53,7 @@ function validateSszSizeBounds(sszDataLength: number, {minSize, maxSize}: ISszSi
 }
 
 async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
-  const decompressor = getDecompressor(ReqRespEncoding.SSZ_SNAPPY);
+  const decompressor = new SnappyFramesUncompress();
   const uncompressedData = new BufferList();
   let readBytes = 0;
 

@@ -75,6 +75,7 @@ export function eth2ResponseDecode(
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return async function* (source) {
     const type = Methods[method].responseSSZType(config);
+    const isSszTree = method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot;
 
     // A requester SHOULD read from the stream until either:
     // 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
@@ -84,13 +85,11 @@ export function eth2ResponseDecode(
 
     try {
       const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-
       const maxItems = Methods[method].responseType === MethodResponseType.SingleResponse ? 1 : Infinity;
 
       for (let i = 0; i < maxItems && !bufferedSource.isDone; i++) {
         await readResultHeader(bufferedSource);
-
-        yield await readChunk(bufferedSource, encoding, type, method, "response");
+        yield await readChunk(bufferedSource, encoding, type, {isSszTree});
       }
 
       await bufferedSource.return();
