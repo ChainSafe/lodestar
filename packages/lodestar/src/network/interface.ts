@@ -9,6 +9,7 @@ import {
   Metadata,
   Ping,
   RequestBody,
+  ResponseBody,
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
@@ -17,6 +18,7 @@ import LibP2p from "libp2p";
 import Multiaddr from "multiaddr";
 import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
+import {Method} from "../constants";
 import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers/interface";
@@ -29,6 +31,8 @@ export interface IReqEvents {
 
 export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
 
+export type ReqRespHandler = (method: Method, requestBody: RequestBody, peerId: PeerId) => AsyncIterable<ResponseBody>;
+
 export interface IReqResp extends ReqEventEmitter {
   status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
@@ -36,6 +40,8 @@ export interface IReqResp extends ReqEventEmitter {
   metadata(peerId: PeerId): Promise<Metadata | null>;
   beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
+  registerHandler(handler: ReqRespHandler): void;
+  unregisterHandler(): void;
 }
 
 export interface INetworkEvents {

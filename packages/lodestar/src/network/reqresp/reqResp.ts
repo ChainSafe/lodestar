@@ -21,14 +21,12 @@ import {IReqEventEmitterClass, IReqRespModules, sendRequest} from ".";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
 import {requestDecode} from "./encoders/requestDecode";
 import {updateRpcScore} from "../error";
-import {IReqResp} from "../interface";
+import {IReqResp, ReqRespHandler} from "../interface";
 import {IPeerMetadataStore} from "../peers/interface";
 import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
 import {createRpcProtocol, randomRequestId} from "../util";
 import {EventEmitter} from "events";
 import {responseEncodeError, responseEncodeSuccess} from "./encoders/responseEncode";
-
-type ReqRespHandler = (method: Method, requestBody: RequestBody, peerId: PeerId) => AsyncIterable<ResponseBody>;
 
 class InvalidRequestError extends Error {}
 
@@ -114,7 +112,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   }
 
   registerHandler(handler: ReqRespHandler): void {
+    if (this.performRequestHandler) {
+      throw new Error("Already registered handler");
+    }
     this.performRequestHandler = handler;
+  }
+
+  unregisterHandler(): void {
+    this.performRequestHandler = null;
   }
 
   /**
