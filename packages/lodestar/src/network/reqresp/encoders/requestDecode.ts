@@ -1,45 +1,11 @@
-import {Method, Methods, ReqRespEncoding} from "../../constants";
+import BufferList from "bl";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {RequestBody} from "@chainsafe/lodestar-types";
-import varint from "varint";
-import BufferList from "bl";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {getCompressor} from "./utils";
-import {IValidatedRequestBody} from "./interface";
-import {BufferedSource} from "./bufferedSource";
-import {readChunk} from "./encoding";
-
-export function eth2RequestEncode(
-  config: IBeaconConfig,
-  logger: ILogger,
-  method: Method,
-  encoding: ReqRespEncoding
-): (source: AsyncIterable<RequestBody | null>) => AsyncGenerator<Buffer> {
-  return async function* (source) {
-    const type = Methods[method].requestSSZType(config);
-    let compressor = getCompressor(encoding);
-
-    for await (const request of source) {
-      if (!type || request === null) continue;
-
-      let serialized: Uint8Array;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        serialized = type.serialize(request as any);
-      } catch (e) {
-        logger.warn("Malformed input. Failed to serialize request", {method}, e);
-        continue;
-      }
-
-      yield Buffer.from(varint.encode(serialized.length));
-
-      yield* compressor(Buffer.from(serialized.buffer, serialized.byteOffset, serialized.length));
-
-      // reset compressor
-      compressor = getCompressor(encoding);
-    }
-  };
-}
+import {Method, Methods, ReqRespEncoding} from "../../../constants";
+import {IValidatedRequestBody} from "../interface";
+import {BufferedSource} from "../utils/bufferedSource";
+import {readChunk} from "../encodingStrategies";
 
 // The responder MUST:
 // 1. Use the encoding strategy to read the optional header.

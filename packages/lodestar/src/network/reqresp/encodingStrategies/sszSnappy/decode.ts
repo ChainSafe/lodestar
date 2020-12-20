@@ -1,23 +1,27 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import BufferList from "bl";
 import varint from "varint";
-import {MAX_VARINT_BYTES, ReqRespEncoding} from "../../constants";
+import {CompositeType} from "@chainsafe/ssz";
+import {MAX_VARINT_BYTES} from "../../../../constants";
+import {BufferedSource} from "../../utils/bufferedSource";
+import {RequestOrResponseType, RequestOrResponseBody} from "../../interface";
 import {maxEncodedLen} from "./utils";
-import {SnappyFramesUncompress} from "./snappy-frames/uncompress";
-import {BufferedSource} from "./bufferedSource";
+import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
-export interface ISszSizeBounds {
-  minSize: number;
-  maxSize: number;
+export interface ISszSnappyOptions {
+  isSszTree?: boolean;
 }
 
-export async function readSszSnappyChunk(
+export async function readSszSnappyChunk<T extends RequestOrResponseBody>(
   bufferedSource: BufferedSource,
-  sszSizeBounds: ISszSizeBounds
-): Promise<Buffer> {
+  type: RequestOrResponseType,
+  options?: ISszSnappyOptions
+): Promise<T> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource);
-  validateSszSizeBounds(sszDataLength, sszSizeBounds);
-  return await readSszSnappyPayload(bufferedSource, sszDataLength);
+  validateSszSizeBounds(sszDataLength, type);
+
+  const bytes = await readSszSnappyPayload(bufferedSource, sszDataLength);
+  return deserializeBody<T>(bytes, type, options);
 }
 
 async function readSszSnappyHeader(bufferedSource: BufferedSource): Promise<number> {
@@ -42,7 +46,10 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource): Promise<numb
   throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
 }
 
-function validateSszSizeBounds(sszDataLength: number, {minSize, maxSize}: ISszSizeBounds): void {
+function validateSszSizeBounds(sszDataLength: number, type: RequestOrResponseType): void {
+  const minSize = type.minSize();
+  const maxSize = type.maxSize();
+
   // MUST validate that the length-prefix is within the expected size bounds derived from the payload SSZ type.
   if (sszDataLength < minSize) {
     throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
@@ -60,7 +67,7 @@ async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLengt
   for await (const buffer of bufferedSource) {
     // SHOULD NOT read more than max_encoded_len(n) bytes after reading the SSZ length-prefix n from the header
     readBytes += buffer.length;
-    if (readBytes > maxEncodedLen(sszDataLength, ReqRespEncoding.SSZ_SNAPPY)) {
+    if (readBytes > maxEncodedLen(sszDataLength)) {
       throw new SszSnappyError({code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ, readBytes, sszDataLength});
     }
 
@@ -101,32 +108,18 @@ async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLengt
   throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
 }
 
-export enum SszSnappyErrorCode {
-  /** Invalid number of bytes for protobuf varint */
-  INVALID_VARINT_BYTES_COUNT = "SSZ_SNAPPY_ERROR_INVALID_VARINT_BYTES_COUNT",
-  /** Parsed sszDataLength is under the SSZ type min size */
-  UNDER_SSZ_MIN_SIZE = "SSZ_SNAPPY_ERROR_UNDER_SSZ_MIN_SIZE",
-  /** Parsed sszDataLength is over the SSZ type max size */
-  OVER_SSZ_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
-  TOO_MUCH_BYTES_READ = "SSZ_SNAPPY_ERROR_TOO_MUCH_BYTES_READ",
-  DECOMPRESSOR_ERROR = "SSZ_SNAPPY_ERROR_DECOMPRESSOR_ERROR",
-  /** Received more bytes than specified sszDataLength */
-  TOO_MANY_BYTES = "SSZ_SNAPPY_ERROR_TOO_MANY_BYTES",
-  /** Source aborted before reading sszDataLength bytes */
-  SOURCE_ABORTED = "SSZ_SNAPPY_ERROR_SOURCE_ABORTED",
-}
-
-type SszSnappyErrorType =
-  | {code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT; bytes: number}
-  | {code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE; minSize: number; sszDataLength: number}
-  | {code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE; maxSize: number; sszDataLength: number}
-  | {code: SszSnappyErrorCode.TOO_MUCH_BYTES_READ; readBytes: number; sszDataLength: number}
-  | {code: SszSnappyErrorCode.DECOMPRESSOR_ERROR; decompressorError: Error}
-  | {code: SszSnappyErrorCode.TOO_MANY_BYTES; sszDataLength: number}
-  | {code: SszSnappyErrorCode.SOURCE_ABORTED};
-
-export class SszSnappyError extends LodestarError<SszSnappyErrorType> {
-  constructor(type: SszSnappyErrorType) {
-    super(type);
+function deserializeBody<T extends RequestOrResponseBody>(
+  bytes: Buffer,
+  type: RequestOrResponseType,
+  options?: ISszSnappyOptions
+): T {
+  try {
+    if (options?.isSszTree) {
+      return (((type as unknown) as CompositeType<Record<string, unknown>>).tree.deserialize(bytes) as unknown) as T;
+    } else {
+      return type.deserialize(bytes) as T;
+    }
+  } catch (e) {
+    throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e});
   }
 }
