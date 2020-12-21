@@ -21,7 +21,7 @@ import {DiversifyPeersBySubnetTask} from "./tasks/diversifyPeersBySubnetTask";
 import {CheckPeerAliveTask} from "./tasks/checkPeerAliveTask";
 import {IPeerMetadataStore} from "./peers/interface";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
-import {getPeersWithSubnet} from "./peers/utils";
+import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
 
 interface ILibp2pModules {
@@ -177,21 +177,21 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     }
   }
 
-  public async searchSubnetPeers(subnet: string): Promise<void> {
-    const peerIds = getPeersWithSubnet(
-      this.getPeers({connected: true}).map((peer) => peer.id),
-      this.peerMetadata,
-      subnet
-    );
+  public async searchSubnetPeers(subnets: string[]): Promise<void> {
+    const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id);
+    const connectedPeers = knownPeers.filter((peerId) => !!this.getPeerConnection(peerId));
 
-    if (peerIds.length === 0) {
-      // the validator must discover new peers on this topic
-      this.logger.verbose("Finding new peers", {subnet});
-      const found = await this.connectToNewPeersBySubnet(parseInt(subnet));
-      if (found) {
-        this.logger.verbose("Found new peer", {subnet});
-      } else {
-        this.logger.verbose("Not found any peers", {subnet});
+    const peerCountBySubnet = getPeerCountBySubnet(connectedPeers, this.peerMetadata, subnets);
+    for (const [subnetStr, count] of peerCountBySubnet) {
+      if (count === 0) {
+        // the validator must discover new peers on this topic
+        this.logger.verbose("Finding new peers", {subnet: subnetStr});
+        const found = await this.connectToNewPeersBySubnet(parseInt(subnetStr), knownPeers);
+        if (found) {
+          this.logger.verbose("Found new peer", {subnet: subnetStr});
+        } else {
+          this.logger.verbose("Not found any peers", {subnet: subnetStr});
+        }
       }
     }
   }
@@ -199,10 +199,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   /**
    * Connect to 1 new peer given a subnet.
    * @param subnet the subnet calculated from committee index
+   * @param knownPeerIds all peer ids in libp2p store
    */
-  private async connectToNewPeersBySubnet(subnet: number): Promise<boolean> {
+  private async connectToNewPeersBySubnet(subnet: number, knownPeerIds: PeerId[]): Promise<boolean> {
+    const knownPeers = knownPeerIds.map((peerId) => peerId.toB58String());
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
-    const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id.toB58String());
     const candidatePeers = discv5Peers.filter((peer) => !knownPeers.includes(peer.peerId.toB58String()));
 
     let found = false;

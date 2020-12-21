@@ -199,6 +199,6 @@ export class ValidatorApi implements IValidatorApi {
       await this.sync.collectAttestations(slot, committeeIndex);
     }
     const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
-    await this.network.searchSubnetPeers(String(subnet));
+    await this.network.searchSubnetPeers([String(subnet)]);
   }
 }
