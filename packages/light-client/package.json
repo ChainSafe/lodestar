@@ -31,12 +31,17 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/e2e/**/*.test.ts'",
+    "test:unit": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:e2e": "mocha 'test/e2e/**/*.test.ts'"
   },
   "dependencies": {
-  },
-  "devDependencies": {
+    "@chainsafe/bls": "^5.1.1",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.12.0",
+    "@chainsafe/lodestar-config": "^0.12.0",
+    "@chainsafe/lodestar-params": "^0.12.0",
+    "@chainsafe/lodestar-types": "^0.12.0",
+    "@chainsafe/lodestar-utils": "^0.12.0",
+    "@chainsafe/ssz": "^0.6.13"
   },
   "keywords": [
     "ethereum",

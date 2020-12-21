@@ -1,17 +1,19 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Lightclient} from "@chainsafe/lodestar-types";
 import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot} from "../..";
 import {
   FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_INDEX,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
 } from "@chainsafe/lodestar-params";
-import {ZERO_HASH} from "../../constants";
-import {computeDomain} from "../../util/domain";
-import {computeSigningRoot} from "../../util/signingRoot";
 import {verifyAggregate} from "@chainsafe/bls";
 import {notNullish} from "@chainsafe/lodestar-utils";
+import {
+  computeEpochAtSlot,
+  ZERO_HASH,
+  computeDomain,
+  computeSigningRoot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function isValidLightclientUpdate(
   config: IBeaconConfig,
