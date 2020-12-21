@@ -1,5 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
+import {Method, Methods, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../constants";
 import {IResponseChunk} from "../interface";
 import {writeChunk} from "../encodingStrategies";
 import {ResponseBody} from "@chainsafe/lodestar-types";
@@ -61,7 +61,7 @@ export function responseEncodeSuccess(
 }
 
 export async function* responseEncodeError(
-  status: Exclude<RpcResponseStatus, RpcResponseStatus.SUCCESS>,
+  status: RpcResponseStatusError,
   errorMessage: string
 ): AsyncGenerator<Buffer> {
   yield Buffer.from([status]);

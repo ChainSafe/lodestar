@@ -1,11 +1,18 @@
 import {AbortSignal} from "abort-controller";
+import {LodestarError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ResponseBody} from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT} from "../../../constants";
+import {
+  Method,
+  Methods,
+  ReqRespEncoding,
+  RESP_TIMEOUT,
+  RpcResponseStatus,
+  RpcResponseStatusError,
+} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readChunk} from "../encodingStrategies";
-import {readResultHeader} from "./resultHeader";
-import {withTimeout} from "@chainsafe/lodestar-utils";
+import {readErrorMessage, readResultHeader} from "./resultHeader";
 
 // request         ::= <encoding-dependent-header> | <encoded-payload>
 // response        ::= <response_chunk>*
@@ -40,7 +47,19 @@ export function responseDecode(
       while (true) {
         yield await withTimeout(
           async () => {
-            await readResultHeader(bufferedSource);
+            const status = await readResultHeader(bufferedSource);
+
+            // For multiple chunks, only the last chunk is allowed to have a non-zero error
+            // code (i.e. The chunk stream is terminated once an error occurs
+            if (status !== RpcResponseStatus.SUCCESS) {
+              const errorMessage = await readErrorMessage(bufferedSource);
+              throw new ResponseDecodeError({
+                code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS,
+                status,
+                errorMessage,
+              });
+            }
+
             return await readChunk(bufferedSource, encoding, type, {isSszTree});
           },
           RESP_TIMEOUT,
@@ -54,4 +73,21 @@ export function responseDecode(
       await bufferedSource.return();
     }
   };
+}
+
+export enum ResponseDecodeErrorCode {
+  /** Response had status !== SUCCESS */
+  RECEIVED_ERROR_STATUS = "RESPONSE_DECODE_ERROR_RECEIVED_STATUS",
+}
+
+type ResponseDecodeErrorType = {
+  code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS;
+  status: RpcResponseStatusError;
+  errorMessage: string;
+};
+
+export class ResponseDecodeError extends LodestarError<ResponseDecodeErrorType> {
+  constructor(type: ResponseDecodeErrorType) {
+    super(type);
+  }
 }

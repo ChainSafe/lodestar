@@ -123,6 +123,8 @@ export enum RpcResponseStatus {
   SERVER_ERROR = 2,
 }
 
+export type RpcResponseStatusError = Exclude<RpcResponseStatus, RpcResponseStatus.SUCCESS>;
+
 /** The maximum allowed size of uncompressed gossip messages. */
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 /** The maximum allowed size of uncompressed req/resp chunked responses. */
