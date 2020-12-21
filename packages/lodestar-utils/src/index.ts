@@ -9,6 +9,7 @@ export * from "./misc";
 export * from "./objects";
 export * from "./sleep";
 export * from "./sort";
+export * from "./timeout";
 export * from "./verifyMerkleBranch";
 export * from "./json";
 export * from "./interop";
