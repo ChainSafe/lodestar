@@ -131,7 +131,10 @@ export const MAX_CHUNK_SIZE = 2 ** 20;
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 /** The maximum time for complete response transfer. */
 export const RESP_TIMEOUT = 10 * 1000; // 10 sec
+/** Non-spec timeout from sending request until write stream closed by responder */
 export const REQUEST_TIMEOUT = 5 * 1000; // 5 sec
+/** Non-spec timeout from dialing protocol until stream opened */
+export const DIAL_TIMEOUT = 5 * 1000; // 5 sec
 
 export enum GoodByeReasonCode {
   CLIENT_SHUTDOWN = 1,

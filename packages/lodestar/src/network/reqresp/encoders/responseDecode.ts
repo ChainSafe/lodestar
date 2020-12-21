@@ -1,11 +1,11 @@
+import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ResponseBody} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {AbortController} from "abort-controller";
-import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from "../../../constants";
+import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readChunk} from "../encodingStrategies";
 import {readResultHeader} from "./resultHeader";
+import {withTimeout} from "@chainsafe/lodestar-utils";
 
 // request         ::= <encoding-dependent-header> | <encoded-payload>
 // response        ::= <response_chunk>*
@@ -16,11 +16,9 @@ import {readResultHeader} from "./resultHeader";
 
 export function responseDecode(
   config: IBeaconConfig,
-  logger: ILogger,
   method: Method,
   encoding: ReqRespEncoding,
-  requestId: RequestId,
-  controller: AbortController
+  signal?: AbortSignal
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return async function* (source) {
     const type = Methods[method].responseSSZType(config);
@@ -33,25 +31,27 @@ export function responseDecode(
     // 4. The maximum number of requested chunks are read.
 
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-    const maxItems = Methods[method].responseType === MethodResponseType.SingleResponse ? 1 : Infinity;
 
     try {
-      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive (time to first byte—or TTFB—timeout)
-      // On that happening, the requester allows a further RESP_TIMEOUT for each subsequent response_chunk received.
+      // After the first byte, the requester allows a further RESP_TIMEOUT for each subsequent response_chunk received
       // If any of these timeouts fire, the requester SHOULD reset the stream and deem the req/resp operation to have failed.
 
-      for (let i = 0; i < maxItems && !bufferedSource.isDone; i++) {
-        await readResultHeader(bufferedSource);
-        yield await readChunk(bufferedSource, encoding, type, {isSszTree});
+      // collectResponses limits the number or response chunks
+      while (true) {
+        yield await withTimeout(
+          async () => {
+            await readResultHeader(bufferedSource);
+            return await readChunk(bufferedSource, encoding, type, {isSszTree});
+          },
+          RESP_TIMEOUT,
+          signal
+        );
       }
-
-      await bufferedSource.return();
     } catch (e) {
-      // # TODO: Append method and requestId to error here
-      logger.warn("eth2ResponseDecode", {method, requestId}, e);
+      e.message = `eth2ResponseDecode error: ${e.message}`;
+      throw e;
     } finally {
-      // # TODO: Clean bufferedSource: await bufferedSource.return();
-      controller.abort();
+      await bufferedSource.return();
     }
   };
 }

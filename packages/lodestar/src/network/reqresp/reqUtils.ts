@@ -1,136 +1,139 @@
-import {IBeaconSSZTypes, RequestBody, RequestId, ResponseBody} from "@chainsafe/lodestar-types";
-import {Type} from "@chainsafe/ssz";
-import {AbortController, AbortSignal} from "abort-controller";
+import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
+import {AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
-import all from "it-all";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
-import {
-  createRpcProtocol,
-  dialProtocolWithTimeout,
-  timeToFirstByteTimeout,
-  isRequestOnly,
-  isRequestSingleChunk,
-  randomRequestId,
-} from "..";
+import {createRpcProtocol, isRequestOnly, isRequestSingleChunk, randomRequestId} from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
-import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
-import {requestEncode, requestEncodeOne} from "./encoders/requestEncode";
+import {ErrorAborted, ILogger, withTimeout} from "@chainsafe/lodestar-utils";
+import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../constants";
+import {ttfbTimeoutController} from "./utils/ttfbTimeoutController";
+import {requestEncodeOne} from "./encoders/requestEncode";
 import {responseDecode} from "./encoders/responseDecode";
-import {REQUEST_TIMEOUT_ERR} from "../error";
+
+// Stream types from libp2p.dialProtocol are too vage and cause compilation type issues
+// These source and sink types are more precise to our usage
+type LibP2pConnection = {
+  stream: {
+    source: AsyncIterable<Buffer>;
+    sink: (source: AsyncIterable<Buffer>) => Promise<void>;
+    close: () => void;
+    reset: () => void;
+  };
+};
 
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
-  modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
+  {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
   method: Method,
   encoding: ReqRespEncoding,
-  body: RequestBody,
+  requestBody: RequestBody,
+  maxResponses?: number,
   signal?: AbortSignal
 ): Promise<T | null> {
+  const logCtx = {method, encoding, peer: peerId.toB58String(), requestId: randomRequestId()};
+  const protocol = createRpcProtocol(method, encoding);
+
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
   }
 
-  const requestOnly = isRequestOnly(method);
-  const requestSingleChunk = isRequestSingleChunk(method);
-  const requestId = randomRequestId();
+  logger.verbose("ReqResp dialing peer", logCtx);
 
-  try {
-    return await pipe(
-      sendRequestStream(modules, peerId, method, encoding, requestId, body, signal),
-      handleResponses<T>(modules, peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
-    );
-  } catch (e) {
-    modules.logger.warn("failed to send request", {requestId, peerId: peerId.toB58String(), method}, e);
+  // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
+  // this function wraps the dialProtocol promise with an extra timeout
+  //
+  // > The issue might be: you add the peer's addresses to the AddressBook,
+  //   which will result in autoDial to kick in and dial your peer. In parallel,
+  //   you do a manual dial and it will wait for the previous one without using
+  //   the abort signal:
+  //
+  // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
+
+  // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
+  const connection = await withTimeout(
+    async (timeoutAndParentSignal) => {
+      const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
+      if (!conn) throw Error("dialProtocol timeout");
+      return conn as LibP2pConnection;
+    },
+    DIAL_TIMEOUT,
+    signal
+  ).catch((e) => {
+    e.message = `Failed to dial peer: ${e.message}`;
     throw e;
-  }
-}
-
-export async function* sendRequestStream(
-  modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
-  peerId: PeerId,
-  method: Method,
-  encoding: ReqRespEncoding,
-  requestId: RequestId,
-  requestBody: RequestBody,
-  signal?: AbortSignal
-): AsyncIterable<ResponseBody> {
-  const {libp2p, config, logger} = modules;
-
-  logger.verbose("sending request to peer", {peer: peerId.toB58String(), method, requestId, encoding});
-
-  const controller = new AbortController();
-
-  const protocol = createRpcProtocol(method, encoding);
-  const connection = await dialProtocolWithTimeout(libp2p, peerId, protocol, TTFB_TIMEOUT, signal).catch((e) => {
-    throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
   });
 
-  // Re-declare to properly type
-  const streamSource = connection.stream.source as AsyncIterable<Buffer>;
-  const streamSink = connection.stream.sink as (source: AsyncIterable<Buffer>) => Promise<void>;
+  logger.verbose("ReqResp sending request", {...logCtx, requestBody});
 
   // Send request with non-speced REQ_TIMEOUT
   // The requester MUST close the write side of the stream once it finishes writing the request message
+  // connection.stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
 
   try {
-    // Additional non-spec request timeout
-    await withTimeout(() => {
-      const requestSource = requestEncodeOne(config, method, encoding, requestBody);
-      // Sink should be closed automatically by js-libp2p-mplex when piped source ends
-      await streamSink(requestSource);
-    }, REQUEST_TIMEOUT);
+    const requestSource = requestEncodeOne(config, method, encoding, requestBody);
 
-    logger.verbose("sent request", {peer: peerId.toB58String(), method});
+    // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
+    await withTimeout(
+      async (timeoutAndParentSignal) =>
+        await pipe(abortSource(requestSource, timeoutAndParentSignal), connection.stream.sink),
+      REQUEST_TIMEOUT,
+      signal
+    );
+
+    logger.verbose("ReqResp request sent", logCtx);
 
     // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
 
-    yield* pipe(
-      abortSource(streamSource, controller.signal, {returnOnAbort: true}),
-      timeToFirstByteTimeout(controller),
-      responseDecode(config, logger, method, encoding, requestId, controller)
+    const responses = await pipe(
+      abortSource(connection.stream.source, signal),
+      ttfbTimeoutController(TTFB_TIMEOUT, signal),
+      responseDecode(config, method, encoding, signal),
+      collectResponses(method, maxResponses)
     );
+
+    logger.verbose("ReqResp received response", {...logCtx, responses, chunks: responses.length});
+
+    return responses as T;
   } catch (e) {
-    // # TODO: Should it be logged here?
-    logger.verbose("sent request", {peer: peerId.toB58String(), method});
+    // TODO: Should it be logged here?
+    logger.verbose("ReqResp error", logCtx, e);
     throw e;
   } finally {
     connection.stream.close();
   }
 }
 
-export function handleResponses<T extends ResponseBody | ResponseBody[]>(
-  modules: {config: IBeaconConfig; logger: ILogger},
-  peerId: PeerId,
+export function collectResponses<T extends ResponseBody | ResponseBody[]>(
   method: Method,
-  encoding: ReqRespEncoding,
-  requestId: RequestId,
-  requestSingleChunk: boolean,
-  requestOnly: boolean,
-  body?: RequestBody
-): (source: AsyncIterable<T>) => Promise<T | null> {
+  maxResponses?: number
+): (source: AsyncIterable<ResponseBody>) => Promise<T | null> {
   return async (source) => {
-    const {logger, config} = modules;
-    const responses = await all(source);
-    if (requestSingleChunk && responses.length === 0) {
-      // allow empty response for beacon blocks by range/root
-      logger.verbose("No response returned", {method, requestId, peer: peerId.toB58String()});
+    if (isRequestOnly(method)) {
+      // Immediatelly exhaust source if any
+      // TODO: use `await source.return()`
+      for await (const _ of source) {
+        return null;
+      }
       return null;
     }
 
-    const finalResponse = requestSingleChunk ? responses[0] : responses;
-    logger.verbose("received response chunks", {
-      peer: peerId.toB58String(),
-      method,
-      chunks: responses.length,
-      requestId,
-      encoding,
-      body:
-        body != null &&
-        (config.types[MethodRequestType[method] as keyof IBeaconSSZTypes] as Type<unknown>).toJson(body),
-    });
+    if (isRequestSingleChunk(method)) {
+      for await (const response of source) {
+        return response as T;
+      }
+      return null;
+    }
 
-    return requestOnly ? null : (finalResponse as T);
+    // else: zero or more responses
+    const responses: ResponseBody[] = [];
+    for await (const response of source) {
+      responses.push(response);
+
+      if (maxResponses && responses.length >= maxResponses) {
+        break;
+      }
+    }
+    return responses as T;
   };
 }

@@ -4,14 +4,10 @@
  */
 
 import PeerId from "peer-id";
-import {AbortController, AbortSignal} from "abort-controller";
-import {Method, MethodResponseType, Methods, RequestId, RESP_TIMEOUT, TTFB_TIMEOUT} from "../constants";
-import {source as abortSource} from "abortable-iterator";
+import {Method, MethodResponseType, Methods, RequestId} from "../constants";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
-import {RESPONSE_TIMEOUT_ERR} from "./error";
-import {anySignal} from "any-signal";
 
 // req/resp
 
@@ -98,82 +94,4 @@ export function clearMultiaddrUDP(enr: ENR): void {
   enr.delete("udp");
   enr.delete("ip6");
   enr.delete("udp6");
-}
-
-export function timeToFirstByteTimeout<T>(
-  streamAbortController: AbortController
-): (source: AsyncIterable<T>) => AsyncGenerator<T> {
-  const controller = new AbortController();
-
-  let responseTimer = setTimeout(() => {
-    controller.abort();
-  }, TTFB_TIMEOUT);
-
-  controller.signal.addEventListener("abort", () => streamAbortController.abort());
-
-  const renewTimer = (): void => {
-    clearTimeout(responseTimer);
-    responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
-  };
-
-  return async function* (source) {
-    try {
-      for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
-        renewTimer();
-        yield item;
-      }
-    } finally {
-      clearTimeout(responseTimer);
-    }
-  };
-}
-
-type DialProtocolReturnType = {
-  stream: Stream<unknown, unknown>;
-  protocol: string;
-};
-
-/**
- * As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
- * this function wraps the dialProtocol promise with an extra timeout
- *
- * > The issue might be: you add the peer's addresses to the AddressBook,
- *   which will result in autoDial to kick in and dial your peer. In parallel,
- *   you do a manual dial and it will wait for the previous one without using
- *   the abort signal:
- *
- * https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
- */
-export async function dialProtocolWithTimeout(
-  libp2p: LibP2p,
-  peerId: PeerId,
-  protocol: string,
-  timeout: number,
-  signal?: AbortSignal
-): Promise<DialProtocolReturnType> {
-  const abortController = new AbortController();
-
-  const timer = setTimeout(() => {
-    abortController.abort();
-  }, timeout);
-
-  const signals = [abortController.signal];
-  if (signal) {
-    signals.push(signal);
-  }
-
-  const abortSignal = anySignal(signals);
-
-  try {
-    const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortSignal});
-    if (!conn) {
-      throw new Error("timeout");
-    }
-    return conn as DialProtocolReturnType;
-  } catch (e) {
-    const err = new Error(e.code || e.message);
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
 }
