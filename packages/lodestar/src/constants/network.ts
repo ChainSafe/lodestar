@@ -144,6 +144,8 @@ export enum GoodByeReasonCode {
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const goodbyeReasonCodeDescriptions: Record<string, string> = {
+  0: "Unknown",
+
   // spec-defined codes
   1: "Client shutdown",
   2: "Irrelevant network",
