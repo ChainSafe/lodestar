@@ -23,9 +23,9 @@ import {IReqEventEmitterClass, IReqRespModules, ReqRespHandler, ILibP2pStream} f
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {Method, ReqRespEncoding} from "../../constants";
-import {updateRpcScore} from "../error";
+import {errorToScoreEvent, successToScoreEvent} from "./score";
 import {IPeerMetadataStore} from "../peers/interface";
-import {IRpcScoreTracker, RpcScoreEvent} from "../peers/score";
+import {IRpcScoreTracker} from "../peers/score";
 import {createRpcProtocol} from "../util";
 
 /**
@@ -63,7 +63,11 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
-          this.storePeerEncodingPreference(peerId, method, encoding);
+
+          // Store peer encoding preference for this.sendRequest
+          if (method === Method.Status) {
+            this.peerMetadata.setEncoding(peerId, encoding);
+          }
 
           try {
             if (!this.performRequestHandler) {
@@ -134,45 +138,14 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     peerId: PeerId,
     request: BeaconBlocksByRangeRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(
-        peerId,
-        Method.BeaconBlocksByRange,
-        request,
-        request.count
-      );
-      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_RANGE);
-      return result;
-    } catch (e) {
-      updateRpcScore(this.blockProviderScores, peerId, e);
-      throw e;
-    }
+    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRange, request, request.count);
   }
 
   public async beaconBlocksByRoot(
     peerId: PeerId,
     request: BeaconBlocksByRootRequest
   ): Promise<SignedBeaconBlock[] | null> {
-    try {
-      const result = await this.sendRequest<SignedBeaconBlock[]>(
-        peerId,
-        Method.BeaconBlocksByRoot,
-        request,
-        request.length
-      );
-      this.blockProviderScores.update(peerId, RpcScoreEvent.SUCCESS_BLOCK_ROOT);
-      return result;
-    } catch (e) {
-      updateRpcScore(this.blockProviderScores, peerId, e);
-      throw e;
-    }
-  }
-
-  private storePeerEncodingPreference(peerId: PeerId, method: Method, encoding: ReqRespEncoding): void {
-    const peerReputations = this.peerMetadata;
-    if (method === Method.Status) {
-      peerReputations.setEncoding(peerId, encoding);
-    }
+    return await this.sendRequest<SignedBeaconBlock[]>(peerId, Method.BeaconBlocksByRoot, request, request.length);
   }
 
   // Helper to reduce code duplication
@@ -182,14 +155,25 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     body: RequestBody,
     maxResponses?: number
   ): Promise<T | null> {
-    return await sendRequest<T>(
-      {libp2p: this.libp2p, logger: this.logger, config: this.config},
-      peerId,
-      method,
-      this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY,
-      body,
-      maxResponses,
-      this.controller?.signal
-    );
+    try {
+      const encoding = this.peerMetadata.getEncoding(peerId) ?? ReqRespEncoding.SSZ_SNAPPY;
+      const result = await sendRequest<T>(
+        {libp2p: this.libp2p, logger: this.logger, config: this.config},
+        peerId,
+        method,
+        encoding,
+        body,
+        maxResponses,
+        this.controller?.signal
+      );
+
+      this.blockProviderScores.update(peerId, successToScoreEvent(method));
+
+      return result;
+    } catch (e) {
+      this.blockProviderScores.update(peerId, errorToScoreEvent(e, method));
+
+      throw e;
+    }
   }
 }

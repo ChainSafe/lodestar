@@ -4,8 +4,7 @@ import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
 import {requestDecode} from "./encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "./encoders/responseEncode";
 import {ILibP2pStream, ReqRespHandler} from "./interface";
-
-class InvalidRequestError extends Error {}
+import {ReqRespError} from "./errors";
 
 export async function handleRequest(
   config: IBeaconConfig,
@@ -48,14 +47,13 @@ async function* handleRequestAsStream(
   try {
     const requestDecodeSink = requestDecode(config, method, encoding);
     const requestBody = await requestDecodeSink(streamSource).catch((e) => {
-      throw new InvalidRequestError(e.message);
+      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, e.message);
     });
 
     const responseBodySource = performRequestHandler(method, requestBody, peerId);
     yield* responseEncodeSuccess(config, method, encoding)(responseBodySource);
   } catch (e) {
-    const status =
-      e instanceof InvalidRequestError ? RpcResponseStatus.INVALID_REQUEST : RpcResponseStatus.SERVER_ERROR;
+    const status = e instanceof ReqRespError ? e.status : RpcResponseStatus.SERVER_ERROR;
     yield* responseEncodeError(status, e.message);
 
     // TODO: Re-throw the error?

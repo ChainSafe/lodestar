@@ -24,7 +24,7 @@ import {GENESIS_EPOCH, Method, RpcResponseStatus, ZERO_HASH} from "../../constan
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork} from "../../network";
-import {RpcError} from "../../network/error";
+import {ReqRespError} from "../../network/reqresp";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {createStatus, syncPeersStatus} from "../utils/sync";
 import {IReqRespHandler} from "./interface";
@@ -238,8 +238,14 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async *onBeaconBlocksByRange(requestBody: BeaconBlocksByRangeRequest): AsyncIterable<SignedBeaconBlock> {
-    if (requestBody.step < 1 || requestBody.startSlot < GENESIS_SLOT || requestBody.count < 1) {
-      throw new RpcError(RpcResponseStatus.INVALID_REQUEST, "Invalid request");
+    if (requestBody.step < 1) {
+      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
+    }
+    if (requestBody.count < 1) {
+      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "count < 1");
+    }
+    if (requestBody.startSlot < GENESIS_SLOT) {
+      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "startSlot < genesis");
     }
 
     if (requestBody.count > MAX_REQUEST_BLOCKS) {

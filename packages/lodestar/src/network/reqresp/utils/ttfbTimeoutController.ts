@@ -1,6 +1,8 @@
 import {AbortController} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
-import {RESPONSE_TIMEOUT_ERR} from "./error";
+import {TtfbTimeoutError} from "../errors";
+
+const abortMessage = "TTFB_TIMEOUT_ERROR_MESSAGE";
 
 export function ttfbTimeoutController(
   ttfbTimeout: number,
@@ -17,7 +19,7 @@ export function ttfbTimeoutController(
 
   return async function* (source) {
     try {
-      for await (const chunk of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
+      for await (const chunk of abortSource(source, controller.signal, {abortMessage})) {
         // Ignore null and empty chunks
         if (responseTimer && chunk && chunk.length > 0) {
           clearTimeout(responseTimer);
@@ -25,6 +27,13 @@ export function ttfbTimeoutController(
         }
 
         yield chunk;
+      }
+    } catch (e) {
+      // Rethrow error properly typed so the peer score can pick it up
+      if (e.message === abortMessage) {
+        throw new TtfbTimeoutError();
+      } else {
+        throw e;
       }
     } finally {
       if (responseTimer) clearTimeout(responseTimer);
