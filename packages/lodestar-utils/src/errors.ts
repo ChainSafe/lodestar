@@ -34,3 +34,12 @@ export class ErrorAborted extends Error {
     super(`Aborted ${message || ""}`);
   }
 }
+
+/**
+ * Throw this error when wrapped timeout expires
+ */
+export class TimeoutError extends Error {
+  constructor(message?: string) {
+    super(`Timeout ${message || ""}`);
+  }
+}
