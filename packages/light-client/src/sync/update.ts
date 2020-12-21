@@ -4,7 +4,7 @@ import {Lightclient, Slot} from "@chainsafe/lodestar-types";
 import {assert, intDiv} from "@chainsafe/lodestar-utils";
 import {ArrayLike, List} from "@chainsafe/ssz";
 import {isValidLightclientUpdate} from "./validation";
-import { computeEpochAtSlot } from '@chainsafe/lodestar-beacon-state-transition';
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function applyLightClientUpdate(
   config: IBeaconConfig,
