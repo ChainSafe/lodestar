@@ -1,4 +1,9 @@
-import {BitVectorType, ContainerType, VectorType} from "@chainsafe/ssz";
+import {
+  NEXT_SYNC_COMMITTEE_INDEX,
+  MAX_VALID_LIGHT_CLIENT_UPDATES,
+  FINALIZED_ROOT_INDEX,
+} from "@chainsafe/lodestar-params";
+import {BitVectorType, ContainerType, VectorType, ListType} from "@chainsafe/ssz";
 import * as t from "../../../types/lightclient/types";
 import {LightClientTypesGenerator} from "./interface";
 
@@ -52,6 +57,58 @@ export const BeaconState: LightClientTypesGenerator<ContainerType<t.BeaconState>
       ...phase0Types.BeaconState.fields,
       currentSyncCommittee: lightclientTypes.SyncCommittee,
       nextSyncCommittee: lightclientTypes.SyncCommittee,
+    },
+  });
+};
+
+export const LightclientSnapshot: LightClientTypesGenerator<
+  ContainerType<t.LightclientSnapshot>,
+  "SyncCommittee" | "BeaconBlockHeader"
+> = (params, phase0Types, lightclientTypes) => {
+  return new ContainerType({
+    fields: {
+      header: lightclientTypes.BeaconBlockHeader,
+      nextSyncCommittee: lightclientTypes.SyncCommittee,
+      currentSyncCommittee: lightclientTypes.SyncCommittee,
+    },
+  });
+};
+
+export const LightclientUpdate: LightClientTypesGenerator<
+  ContainerType<t.LightclientUpdate>,
+  "SyncCommittee" | "BeaconBlockHeader"
+> = (params, phase0Types, lightclientTypes) => {
+  return new ContainerType({
+    fields: {
+      header: lightclientTypes.BeaconBlockHeader,
+      nextSyncCommittee: lightclientTypes.SyncCommittee,
+      nextSyncCommitteeBranch: new VectorType({
+        elementType: phase0Types.Bytes32,
+        length: Math.log2(NEXT_SYNC_COMMITTEE_INDEX),
+      }),
+      finalityHeader: lightclientTypes.BeaconBlockHeader,
+      finalityBranch: new VectorType({
+        elementType: phase0Types.Bytes32,
+        length: Math.log2(FINALIZED_ROOT_INDEX),
+      }),
+      syncCommitteeBits: new BitVectorType({length: params.lightclient.SYNC_COMMITTEE_SIZE}),
+      syncCommitteeSignature: phase0Types.BLSSignature,
+      forkVersion: phase0Types.Version,
+    },
+  });
+};
+
+export const LightclientStore: LightClientTypesGenerator<
+  ContainerType<t.LightclientStore>,
+  "LightclientSnapshot" | "LightclientUpdate"
+> = (params, phase0Types, lightclientTypes) => {
+  return new ContainerType({
+    fields: {
+      snapshot: lightclientTypes.LightclientSnapshot,
+      validUpdates: new ListType({
+        elementType: lightclientTypes.LightclientUpdate,
+        limit: MAX_VALID_LIGHT_CLIENT_UPDATES,
+      }),
     },
   });
 };
