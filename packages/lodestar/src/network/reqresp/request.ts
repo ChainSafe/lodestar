@@ -10,17 +10,7 @@ import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} fr
 import {ttfbTimeoutController} from "./utils/ttfbTimeoutController";
 import {requestEncodeOne} from "./encoders/requestEncode";
 import {responseDecode} from "./encoders/responseDecode";
-
-// Stream types from libp2p.dialProtocol are too vage and cause compilation type issues
-// These source and sink types are more precise to our usage
-type LibP2pConnection = {
-  stream: {
-    source: AsyncIterable<Buffer>;
-    sink: (source: AsyncIterable<Buffer>) => Promise<void>;
-    close: () => void;
-    reset: () => void;
-  };
-};
+import {ILibP2pStream} from "./interface";
 
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
@@ -51,11 +41,11 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
 
   // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
-  const connection = await withTimeout(
+  const stream = await withTimeout(
     async (timeoutAndParentSignal) => {
       const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
       if (!conn) throw Error("dialProtocol timeout");
-      return conn as LibP2pConnection;
+      return (conn as {stream: ILibP2pStream}).stream;
     },
     DIAL_TIMEOUT,
     signal
@@ -68,15 +58,14 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
   // Send request with non-speced REQ_TIMEOUT
   // The requester MUST close the write side of the stream once it finishes writing the request message
-  // connection.stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
+  // stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
 
   try {
     const requestSource = requestEncodeOne(config, method, encoding, requestBody);
 
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     await withTimeout(
-      async (timeoutAndParentSignal) =>
-        await pipe(abortSource(requestSource, timeoutAndParentSignal), connection.stream.sink),
+      async (timeoutAndParentSignal) => await pipe(abortSource(requestSource, timeoutAndParentSignal), stream.sink),
       REQUEST_TIMEOUT,
       signal
     );
@@ -86,7 +75,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
 
     const responses = await pipe(
-      abortSource(connection.stream.source, signal),
+      abortSource(stream.source, signal),
       ttfbTimeoutController(TTFB_TIMEOUT, signal),
       responseDecode(config, method, encoding, signal),
       collectResponses(method, maxResponses)
@@ -100,7 +89,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     logger.verbose("ReqResp error", logCtx, e);
     throw e;
   } finally {
-    connection.stream.close();
+    stream.close();
   }
 }
 

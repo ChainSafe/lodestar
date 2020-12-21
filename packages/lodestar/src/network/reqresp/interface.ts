@@ -1,3 +1,4 @@
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RequestId, RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -40,3 +41,16 @@ export type RequestOrResponseType = Exclude<
 >;
 
 export type RequestOrResponseBody = ResponseBody | RequestBody;
+
+export type ReqRespHandler = (method: Method, requestBody: RequestBody, peerId: PeerId) => AsyncIterable<ResponseBody>;
+
+/**
+ * Stream types from libp2p.dialProtocol are too vage and cause compilation type issues
+ * These source and sink types are more precise to our usage
+ */
+export interface ILibP2pStream {
+  source: AsyncIterable<Buffer>;
+  sink: (source: AsyncIterable<Buffer>) => Promise<void>;
+  close: () => void;
+  reset: () => void;
+}

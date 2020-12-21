@@ -9,7 +9,6 @@ import {
   Metadata,
   Ping,
   RequestBody,
-  ResponseBody,
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
@@ -18,20 +17,17 @@ import LibP2p from "libp2p";
 import Multiaddr from "multiaddr";
 import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {Method} from "../constants";
 import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers/interface";
 import {IRpcScoreTracker} from "./peers/score";
-import {ReqRespRequest} from "./reqresp";
+import {ReqRespHandler, ReqRespRequest} from "./reqresp";
 
 export interface IReqEvents {
   request: (request: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => void;
 }
 
 export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
-
-export type ReqRespHandler = (method: Method, requestBody: RequestBody, peerId: PeerId) => AsyncIterable<ResponseBody>;
 
 export interface IReqResp extends ReqEventEmitter {
   status(peerId: PeerId, request: Status): Promise<Status | null>;
