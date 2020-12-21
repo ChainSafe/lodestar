@@ -29,6 +29,10 @@ export function requestDecode(
     }
 
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-    return await readChunk<RequestBody>(bufferedSource, encoding, type);
+    try {
+      return await readChunk<RequestBody>(bufferedSource, encoding, type);
+    } finally {
+      await bufferedSource.return();
+    }
   };
 }
