@@ -5,7 +5,7 @@ import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {createRpcProtocol, isRequestOnly, isRequestSingleChunk, randomRequestId} from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ErrorAborted, ILogger, withTimeout} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, Context, withTimeout} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../constants";
 import {ttfbTimeoutController} from "./utils/ttfbTimeoutController";
 import {requestEncodeOne} from "./encoders/requestEncode";
@@ -54,7 +54,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     throw e;
   });
 
-  logger.verbose("ReqResp sending request", {...logCtx, requestBody});
+  logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
 
   // Send request with non-speced REQ_TIMEOUT
   // The requester MUST close the write side of the stream once it finishes writing the request message
@@ -81,7 +81,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       collectResponses(method, maxResponses)
     );
 
-    logger.verbose("ReqResp received response", {...logCtx, responses, chunks: responses.length});
+    logger.verbose("ReqResp received response", {...logCtx, responses} as Context);
 
     return responses as T;
   } catch (e) {
