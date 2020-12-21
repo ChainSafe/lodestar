@@ -15,7 +15,7 @@ export interface ReqRespTypes {
   BeaconBlocksByRoot: {request: BeaconBlocksByRootRequest; response: SignedBeaconBlock};
 }
 
-export type RequestBody = ReqRespTypes[keyof ReqRespTypes]["request"];
+export type RequestBody = ReqRespTypes[keyof ReqRespTypes]["request"] | null;
 export type ResponseBody = ReqRespTypes[keyof ReqRespTypes]["response"] | P2pErrorMessage;
 
 export interface Status {

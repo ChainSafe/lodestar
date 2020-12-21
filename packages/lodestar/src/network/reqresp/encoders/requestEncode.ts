@@ -11,9 +11,23 @@ export function requestEncode(
   return async function* (source) {
     const type = Methods[method].requestSSZType(config);
 
-    for await (const request of source) {
-      if (!type || request === null) continue;
-      yield* writeChunk(request, encoding, type);
+    for await (const requestBody of source) {
+      if (type && requestBody !== null) {
+        yield* writeChunk(requestBody, encoding, type);
+      }
     }
   };
+}
+
+export async function* requestEncodeOne(
+  config: IBeaconConfig,
+  method: Method,
+  encoding: ReqRespEncoding,
+  requestBody: RequestBody
+): AsyncGenerator<Buffer> {
+  const type = Methods[method].requestSSZType(config);
+
+  if (type && requestBody !== null) {
+    yield* writeChunk(requestBody, encoding, type);
+  }
 }

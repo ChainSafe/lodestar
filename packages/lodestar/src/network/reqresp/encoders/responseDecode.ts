@@ -32,9 +32,13 @@ export function responseDecode(
     // 3. Any part of the response_chunk fails validation.
     // 4. The maximum number of requested chunks are read.
 
+    const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
+    const maxItems = Methods[method].responseType === MethodResponseType.SingleResponse ? 1 : Infinity;
+
     try {
-      const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
-      const maxItems = Methods[method].responseType === MethodResponseType.SingleResponse ? 1 : Infinity;
+      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive (time to first byte—or TTFB—timeout)
+      // On that happening, the requester allows a further RESP_TIMEOUT for each subsequent response_chunk received.
+      // If any of these timeouts fire, the requester SHOULD reset the stream and deem the req/resp operation to have failed.
 
       for (let i = 0; i < maxItems && !bufferedSource.isDone; i++) {
         await readResultHeader(bufferedSource);
@@ -46,6 +50,7 @@ export function responseDecode(
       // # TODO: Append method and requestId to error here
       logger.warn("eth2ResponseDecode", {method, requestId}, e);
     } finally {
+      // # TODO: Clean bufferedSource: await bufferedSource.return();
       controller.abort();
     }
   };

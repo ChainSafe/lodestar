@@ -100,7 +100,7 @@ export function clearMultiaddrUDP(enr: ENR): void {
   enr.delete("udp6");
 }
 
-export function eth2ResponseTimer<T>(
+export function timeToFirstByteTimeout<T>(
   streamAbortController: AbortController
 ): (source: AsyncIterable<T>) => AsyncGenerator<T> {
   const controller = new AbortController();
@@ -116,26 +116,41 @@ export function eth2ResponseTimer<T>(
     responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
   };
 
-  const cancelTimer = (): void => {
-    clearTimeout(responseTimer);
-  };
-
   return async function* (source) {
-    for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
-      renewTimer();
-      yield item;
+    try {
+      for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
+        renewTimer();
+        yield item;
+      }
+    } finally {
+      clearTimeout(responseTimer);
     }
-    cancelTimer();
   };
 }
 
-export async function dialProtocol(
+type DialProtocolReturnType = {
+  stream: Stream<unknown, unknown>;
+  protocol: string;
+};
+
+/**
+ * As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
+ * this function wraps the dialProtocol promise with an extra timeout
+ *
+ * > The issue might be: you add the peer's addresses to the AddressBook,
+ *   which will result in autoDial to kick in and dial your peer. In parallel,
+ *   you do a manual dial and it will wait for the previous one without using
+ *   the abort signal:
+ *
+ * https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
+ */
+export async function dialProtocolWithTimeout(
   libp2p: LibP2p,
   peerId: PeerId,
   protocol: string,
   timeout: number,
   signal?: AbortSignal
-): ReturnType<LibP2p["dialProtocol"]> {
+): Promise<DialProtocolReturnType> {
   const abortController = new AbortController();
 
   const timer = setTimeout(() => {
@@ -154,7 +169,7 @@ export async function dialProtocol(
     if (!conn) {
       throw new Error("timeout");
     }
-    return conn;
+    return conn as DialProtocolReturnType;
   } catch (e) {
     const err = new Error(e.code || e.message);
     throw err;

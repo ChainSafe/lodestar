@@ -1,14 +1,14 @@
 import {IBeaconSSZTypes, RequestBody, RequestId, ResponseBody} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
-import {duplex as abortDuplex} from "abortable-iterator";
+import {source as abortSource} from "abortable-iterator";
 import all from "it-all";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {
   createRpcProtocol,
-  dialProtocol,
-  eth2ResponseTimer,
+  dialProtocolWithTimeout,
+  timeToFirstByteTimeout,
   isRequestOnly,
   isRequestSingleChunk,
   randomRequestId,
@@ -16,7 +16,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, MethodRequestType, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT} from "../../constants";
-import {requestEncode} from "./encoders/requestEncode";
+import {requestEncode, requestEncodeOne} from "./encoders/requestEncode";
 import {responseDecode} from "./encoders/responseDecode";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
@@ -25,7 +25,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   peerId: PeerId,
   method: Method,
   encoding: ReqRespEncoding,
-  body?: RequestBody,
+  body: RequestBody,
   signal?: AbortSignal
 ): Promise<T | null> {
   if (signal?.aborted) {
@@ -47,50 +47,57 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   }
 }
 
-export async function* sendRequestStream<T extends ResponseBody>(
+export async function* sendRequestStream(
   modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
   method: Method,
   encoding: ReqRespEncoding,
   requestId: RequestId,
-  body?: RequestBody,
+  requestBody: RequestBody,
   signal?: AbortSignal
-): AsyncIterable<T> {
+): AsyncIterable<ResponseBody> {
   const {libp2p, config, logger} = modules;
 
-  const protocol = createRpcProtocol(method, encoding);
   logger.verbose("sending request to peer", {peer: peerId.toB58String(), method, requestId, encoding});
-  let conn: {stream: Stream} | undefined;
+
   const controller = new AbortController();
-  let requestTimer: NodeJS.Timeout | null = null;
 
-  // write
-  await Promise.race([
-    (async function () {
-      try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
-      } catch (e) {
-        throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
-      }
-      logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
-      await pipe(body != null ? [body] : [null], requestEncode(config, method, encoding), conn.stream);
-    })(),
-    new Promise((_, reject) => {
-      requestTimer = setTimeout(() => {
-        conn?.stream?.close();
-        reject(new Error(REQUEST_TIMEOUT_ERR));
-      }, REQUEST_TIMEOUT);
-    }),
-  ]);
+  const protocol = createRpcProtocol(method, encoding);
+  const connection = await dialProtocolWithTimeout(libp2p, peerId, protocol, TTFB_TIMEOUT, signal).catch((e) => {
+    throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
+  });
 
-  if (requestTimer) clearTimeout(requestTimer);
-  logger.verbose("sent request", {peer: peerId.toB58String(), method});
+  // Re-declare to properly type
+  const streamSource = connection.stream.source as AsyncIterable<Buffer>;
+  const streamSink = connection.stream.sink as (source: AsyncIterable<Buffer>) => Promise<void>;
 
-  yield* pipe(
-    abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
-    eth2ResponseTimer(controller),
-    responseDecode(config, logger, method, encoding, requestId, controller)
-  );
+  // Send request with non-speced REQ_TIMEOUT
+  // The requester MUST close the write side of the stream once it finishes writing the request message
+
+  try {
+    // Additional non-spec request timeout
+    await withTimeout(() => {
+      const requestSource = requestEncodeOne(config, method, encoding, requestBody);
+      // Sink should be closed automatically by js-libp2p-mplex when piped source ends
+      await streamSink(requestSource);
+    }, REQUEST_TIMEOUT);
+
+    logger.verbose("sent request", {peer: peerId.toB58String(), method});
+
+    // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
+
+    yield* pipe(
+      abortSource(streamSource, controller.signal, {returnOnAbort: true}),
+      timeToFirstByteTimeout(controller),
+      responseDecode(config, logger, method, encoding, requestId, controller)
+    );
+  } catch (e) {
+    // # TODO: Should it be logged here?
+    logger.verbose("sent request", {peer: peerId.toB58String(), method});
+    throw e;
+  } finally {
+    connection.stream.close();
+  }
 }
 
 export function handleResponses<T extends ResponseBody | ResponseBody[]>(
