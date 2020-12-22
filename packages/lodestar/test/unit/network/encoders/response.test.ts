@@ -48,7 +48,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single error - ssz", async function () {
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 1}],
       eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
@@ -59,7 +60,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single error - ssz_snappy", async function () {
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 1}],
       eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
@@ -70,7 +72,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single response simple- ssz", async function () {
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 0, body: BigInt(1)}],
       eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
@@ -78,11 +81,12 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0] as bigint)).to.be.true;
   });
 
   it("should work - single response simple - ssz_snappy", async function () {
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 0, body: BigInt(1)}],
       eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
@@ -90,13 +94,15 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0] as bigint)).to.be.true;
   });
 
   it("should work - single response simple (sent multiple)- ssz", async function () {
     const controller = new AbortController();
 
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
+      // @ts-ignore
       abortSource(
         [
           {status: 0, body: BigInt(1)},
@@ -111,13 +117,15 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0] as bigint)).to.be.true;
   });
 
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
     const controller = new AbortController();
 
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
+      // @ts-ignore
       abortSource(
         [
           {status: 0, body: BigInt(1)},
@@ -132,13 +140,14 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Ping.equals(BigInt(1), responses[0])).to.be.true;
+    expect(config.types.Ping.equals(BigInt(1), responses[0] as bigint)).to.be.true;
   });
 
   it("should work - single response complex- ssz", async function () {
     const status = createStatus();
 
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 0, body: status}],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, "abc", fakeController),
@@ -146,13 +155,14 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Status.equals(status, responses[0])).to.be.true;
+    expect(config.types.Status.equals(status, responses[0] as Status)).to.be.true;
   });
 
   it("should work - single response complex - ssz_snappy", async function () {
     const status = createStatus();
 
-    const responses = await pipe(
+    // @ts-ignore
+    const responses: ResponseBody[] = await pipe(
       [{status: 0, body: status}],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
@@ -160,7 +170,7 @@ describe("response decoders", function () {
     );
 
     expect(responses.length).to.be.equal(1);
-    expect(config.types.Status.equals(status, responses[0])).to.be.true;
+    expect(config.types.Status.equals(status, responses[0] as Status)).to.be.true;
   });
 
   it("should work - response stream- ssz", async function () {

@@ -201,7 +201,7 @@ describe("[sync] rpc", function () {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: Stream};
-    await pipe([Buffer.from(encode(99999999999999999999999))], stream, async (source: AsyncIterable<Buffer>) => {
+    await pipe([Buffer.from(encode(99999999999999999999999))], stream as any, async (source: AsyncIterable<Buffer>) => {
       let i = 0;
       // 1 chunk of status and 1 chunk of error
       for await (const val of source) {

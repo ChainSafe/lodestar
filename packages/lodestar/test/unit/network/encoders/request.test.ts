@@ -33,7 +33,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body as bigint, BigInt(0))).to.be.true;
   });
 
   it("should work - basic request - ssz_snappy", async function () {
@@ -45,7 +45,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(0))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body as bigint, BigInt(0))).to.be.true;
   });
 
   it("should work - container request - ssz", async function () {
@@ -58,7 +58,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
+    expect(config.types.Status.equals(requests[0].body as Status, status)).to.be.true;
   });
 
   it("should work - container request - ssz", async function () {
@@ -71,7 +71,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Status.equals(requests[0].body, status)).to.be.true;
+    expect(config.types.Status.equals(requests[0].body as Status, status)).to.be.true;
   });
 
   it("should work - multiple request - ssz", async function () {
@@ -83,7 +83,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body as bigint, BigInt(1))).to.be.true;
   });
 
   it("should work - multiple request - ssz_snappy", async function () {
@@ -95,7 +95,7 @@ describe("request encoders", function () {
     );
 
     expect(requests.length).to.be.equal(1);
-    expect(config.types.Uint64.equals(requests[0].body, BigInt(1))).to.be.true;
+    expect(config.types.Uint64.equals(requests[0].body as bigint, BigInt(1))).to.be.true;
   });
 
   it("should work - no request body - ssz", async function () {
@@ -171,6 +171,7 @@ describe("request encoders", function () {
     it("should yield correct RequestBody if correct ssz", async function () {
       const status: Status = config.types.Status.defaultValue();
       status.finalizedEpoch = 100;
+      // @ts-ignore
       const validatedRequestBody: unknown[] = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), config.types.Status.serialize(status)],
         eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
