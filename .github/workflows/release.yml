@@ -77,8 +77,9 @@ jobs:
           compareLink: "true"
           filterByMilestone: "false"
           unreleased: "false"
-          since-tag: "${{ needs.tag.outputs.previous_tag }}"
-          max-issues: "0"
+          sinceTag: "${{ needs.tag.outputs.previous_tag }}"
+          maxIssues: "0"
+          stripGeneratorNotice: "true"
 
       - name: Create Release
         id: create_release
