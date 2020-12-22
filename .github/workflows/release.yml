@@ -62,26 +62,23 @@ jobs:
       - name: Build
         if: steps.cache-deps.outputs.cache-hit == 'true'
         run: yarn run build
-      
-      - name: Publish to npm registry
-        run: yarn run publish 
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate changelog
         id: changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issues: false
-          issuesWoLabels: false
-          pullRequests: true
-          prWoLabels: true
-          author: true
-          usernamesAsGithubLogins: true
-          compareLink: true
-          filterByMilestone: false
-          unreleased: false
+          token: ${{ secrets.GH_PAGES_TOKEN }}
+          issues: "false"
+          issuesWoLabels: "false"
+          pullRequests: "true"
+          prWoLabels: "true"
+          author: "true"
+          usernamesAsGithubLogins: "true"
+          compareLink: "true"
+          filterByMilestone: "false"
+          unreleased: "false"
+          since-tag: "${{ needs.tag.outputs.previous_tag }}"
+          max-issues: "0"
 
       - name: Create Release
         id: create_release
@@ -92,8 +89,13 @@ jobs:
           tag_name: ${{ needs.tag.outputs.tag }}
           body_path: "CHANGELOG.md"
           release_name: Release ${{ needs.tag.outputs.tag }}
-          prerelease: true # we can promote to in github
+          prerelease: true # we can promote to release trough github
 
+      - name: Publish to npm registry
+        run: yarn run publish 
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      
       #in case of failure
       - name: Rollback on failure
         if: failure()
