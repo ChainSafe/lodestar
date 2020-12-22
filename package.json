@@ -24,7 +24,7 @@
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
     "cli": "node --trace-deprecation ./packages/lodestar-cli/bin/lodestar",
-    "publish": "lerna publish from-git --yes",
+    "publish": "lerna publish from-package --yes",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)"
   },
