@@ -38,7 +38,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
   try {
     return await pipe(
-      sendRequestStream(modules, peerId, method, encoding, requestId, body, signal),
+      sendRequestStream(modules, peerId, method, encoding, requestId, body, signal) as AsyncIterable<T>,
       handleResponses<T>(modules, peerId, method, encoding, requestId, requestSingleChunk, requestOnly, body)
     );
   } catch (e) {
@@ -73,7 +73,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
       logger.verbose("got stream to peer", {peer: peerId.toB58String(), requestId, encoding});
-      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream);
+      await pipe(body != null ? [body] : [null], eth2RequestEncode(config, logger, method, encoding), conn.stream.sink);
     })(),
     new Promise((_, reject) => {
       requestTimer = setTimeout(() => {
@@ -87,10 +87,10 @@ export async function* sendRequestStream<T extends ResponseBody>(
   logger.verbose("sent request", {peer: peerId.toB58String(), method});
 
   yield* pipe(
-    abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
+    (abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}) as unknown) as AsyncIterable<Buffer>,
     eth2ResponseTimer(controller),
     eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
-  );
+  ) as AsyncIterable<T>;
 }
 
 export function handleResponses<T extends ResponseBody | ResponseBody[]>(

@@ -59,8 +59,9 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
       for (const encoding of Object.values(ReqRespEncoding)) {
         this.libp2p.handle(createRpcProtocol(method, encoding), async ({connection, stream}) => {
           const peerId = connection.remotePeer;
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           pipe(
-            stream.source,
+            stream.source as AsyncIterable<Buffer>,
             eth2RequestDecode(this.config, this.logger, method, encoding),
             this.storePeerEncodingPreference(peerId, method, encoding),
             this.handleRpcRequest(peerId, method, encoding, stream.sink)
