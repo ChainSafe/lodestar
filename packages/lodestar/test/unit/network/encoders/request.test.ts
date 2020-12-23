@@ -125,7 +125,7 @@ describe("request encoders", function () {
 
   describe("eth2RequestDecode - request validation", () => {
     it("should yield {isValid: false} if it takes more than 10 bytes for varint", async function () {
-      const validatedRequestBody: unknown[] = await pipe(
+      const validatedRequestBody = await pipe(
         [Buffer.from(encode(99999999999999999999999))],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
@@ -136,7 +136,7 @@ describe("request encoders", function () {
     });
 
     it("should yield {isValid: false} if failed ssz size bound validation", async function () {
-      const validatedRequestBody: unknown[] = await pipe(
+      const validatedRequestBody = await pipe(
         [Buffer.alloc(12, 0)],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
@@ -147,7 +147,7 @@ describe("request encoders", function () {
     });
 
     it("should yield {isValid: false} if it read more than maxEncodedLen", async function () {
-      const validatedRequestBody: unknown[] = await pipe(
+      const validatedRequestBody = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), Buffer.alloc(config.types.Status.minSize() + 10)],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ),
         all
@@ -158,7 +158,7 @@ describe("request encoders", function () {
     });
 
     it("should yield {isValid: false} if failed ssz snappy input malformed", async function () {
-      const validatedRequestBody: unknown[] = await pipe(
+      const validatedRequestBody = await pipe(
         [Buffer.from(encode(config.types.Status.minSize())), Buffer.from("wrong snappy data")],
         eth2RequestDecode(config, loggerStub, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
         all
@@ -171,9 +171,10 @@ describe("request encoders", function () {
     it("should yield correct RequestBody if correct ssz", async function () {
       const status: Status = config.types.Status.defaultValue();
       status.finalizedEpoch = 100;
-      // @ts-ignore
-      const validatedRequestBody: unknown[] = await pipe(
-        [Buffer.from(encode(config.types.Status.minSize())), config.types.Status.serialize(status)],
+      const length = Buffer.from(encode(config.types.Status.minSize()));
+      const statusSerialized = Buffer.from(config.types.Status.serialize(status));
+      const validatedRequestBody = await pipe(
+        [length, statusSerialized],
         eth2RequestDecode(config, logger, Method.Status, ReqRespEncoding.SSZ),
         all
       );

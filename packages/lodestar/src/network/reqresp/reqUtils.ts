@@ -20,7 +20,7 @@ import {eth2RequestEncode} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
-interface ILibp2pConn {
+export interface ILibp2pConn {
   stream: {
     source: AsyncIterable<Buffer>;
     sink: (source: AsyncIterable<Buffer>) => void;

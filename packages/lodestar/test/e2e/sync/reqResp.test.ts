@@ -15,7 +15,7 @@ import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
-import {ReqRespRequest} from "../../../src/network/reqresp";
+import {ILibp2pConn, ReqRespRequest} from "../../../src/network/reqresp";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
@@ -200,7 +200,7 @@ describe("[sync] rpc", function () {
   it("should return invalid request status code", async () => {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
-    const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: Stream};
+    const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as ILibp2pConn;
     await pipe([Buffer.from(encode(99999999999999999999999))], stream as any, async (source: AsyncIterable<Buffer>) => {
       let i = 0;
       // 1 chunk of status and 1 chunk of error
