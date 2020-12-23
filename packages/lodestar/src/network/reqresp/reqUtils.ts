@@ -20,6 +20,15 @@ import {eth2RequestEncode} from "../encoders/request";
 import {eth2ResponseDecode} from "../encoders/response";
 import {REQUEST_TIMEOUT_ERR} from "../error";
 
+interface ILibp2pConn {
+  stream: {
+    source: AsyncIterable<Buffer>;
+    sink: (source: AsyncIterable<Buffer>) => void;
+    close: () => void;
+    reset: () => void;
+  };
+}
+
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   modules: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
@@ -60,7 +69,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
 
   const protocol = createRpcProtocol(method, encoding);
   logger.verbose("sending request to peer", {peer: peerId.toB58String(), method, requestId, encoding});
-  let conn: {stream: Stream} | undefined;
+  let conn: ILibp2pConn | undefined;
   const controller = new AbortController();
   let requestTimer: NodeJS.Timeout | null = null;
 
@@ -68,7 +77,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   await Promise.race([
     (async function () {
       try {
-        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as {stream: Stream};
+        conn = (await dialProtocol(libp2p, peerId, protocol, TTFB_TIMEOUT, signal)) as ILibp2pConn;
       } catch (e) {
         throw new Error("Failed to dial peer " + peerId.toB58String() + " (" + e.message + ") protocol: " + protocol);
       }
@@ -87,7 +96,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   logger.verbose("sent request", {peer: peerId.toB58String(), method});
 
   yield* pipe(
-    (abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}) as unknown) as AsyncIterable<Buffer>,
+    abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
     eth2ResponseTimer(controller),
     eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
   ) as AsyncIterable<T>;
