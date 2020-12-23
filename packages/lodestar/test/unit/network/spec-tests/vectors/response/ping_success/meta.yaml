@@ -1,0 +1,7 @@
+protocol: /eth2/beacon_chain/req/ping/1/ssz_snappy
+result: 0
+chunks:
+- '0x00'
+- '0x08'
+- '0xff060000734e61507059'
+- '0x010c0000a37f4b221800000000000000'

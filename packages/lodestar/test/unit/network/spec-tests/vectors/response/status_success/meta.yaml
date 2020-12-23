@@ -1,0 +1,7 @@
+protocol: /eth2/beacon_chain/req/metadata/1/ssz_snappy
+result: 0
+chunks:
+- '0x00'
+- '0x10'
+- '0xff060000734e61507059'
+- '0x011400002cd5733804000000000000000e00000000000000'
