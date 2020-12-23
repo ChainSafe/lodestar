@@ -96,7 +96,7 @@ export async function* sendRequestStream<T extends ResponseBody>(
   logger.verbose("sent request", {peer: peerId.toB58String(), method});
 
   yield* pipe(
-    abortDuplex(conn!.stream, controller.signal, {returnOnAbort: true}),
+    abortDuplex<Buffer, void>(conn!.stream, controller.signal, {returnOnAbort: true}).source,
     eth2ResponseTimer(controller),
     eth2ResponseDecode(config, logger, method, encoding, requestId, controller)
   ) as AsyncIterable<T>;
