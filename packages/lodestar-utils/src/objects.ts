@@ -1,3 +1,5 @@
+import {toExpectedCase} from "@chainsafe/ssz/lib/backings/utils";
+
 /**
  * @module objects
  */
@@ -33,4 +35,32 @@ export function mapValues<T, R>(obj: {[key: string]: T}, iteratee: (value: T, ke
     output[key] = iteratee(value, key);
   }
   return output;
+}
+
+export function objectToExpectedCase(
+  obj: Record<string, unknown>,
+  expectedCase: "snake" | "camel" = "camel"
+): Record<string, unknown> {
+  if (Array.isArray(obj)) {
+    const newArr: unknown[] = [];
+    for (let i = 0; i < obj.length; i++) {
+      newArr[i] = objectToExpectedCase(obj[i], expectedCase);
+    }
+    return (newArr as unknown) as Record<string, unknown>;
+  }
+
+  if (Object(obj) === obj) {
+    const newObj: Record<string, unknown> = {};
+    for (const name of Object.getOwnPropertyNames(obj)) {
+      const newName = toExpectedCase(name, expectedCase);
+      if (newName !== name && obj.hasOwnProperty(newName)) {
+        throw new Error(`object already has a ${newName} property`);
+      }
+
+      newObj[newName] = objectToExpectedCase(obj[name] as Record<string, unknown>, expectedCase);
+    }
+    return newObj;
+  }
+
+  return obj;
 }
