@@ -13,6 +13,7 @@ declare module "abortable-iterator" {
     returnOnAbort?: boolean;
   };
 
+  function source<T>(source: T[], signal?: AbortSignal, options?: Options<T>): AsyncIterable<T>;
   function source<T>(source: Source<T>, signal?: AbortSignal, options?: Options<T>): AsyncIterable<T>;
 
   function duplex<TSource = unknown, TReturn = unknown>(

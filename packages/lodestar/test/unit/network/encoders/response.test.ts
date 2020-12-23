@@ -48,9 +48,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single error - ssz", async function () {
-    // @ts-ignore
-    const responses: ResponseBody[] = await pipe(
-      [{status: 1}],
+    const responses = await pipe(
+      [{status: 1} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ, "abc", fakeController),
       all
@@ -60,9 +59,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single error - ssz_snappy", async function () {
-    // @ts-ignore
-    const responses: ResponseBody[] = await pipe(
-      [{status: 1}],
+    const responses = await pipe(
+      [{status: 1} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
@@ -72,9 +70,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single response simple- ssz", async function () {
-    // @ts-ignore
-    const responses: ResponseBody[] = await pipe(
-      [{status: 0, body: BigInt(1)}],
+    const responses = await pipe(
+      [{status: 0, body: BigInt(1)} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ, "abc", fakeController),
       all
@@ -85,9 +82,8 @@ describe("response decoders", function () {
   });
 
   it("should work - single response simple - ssz_snappy", async function () {
-    // @ts-ignore
-    const responses: ResponseBody[] = await pipe(
-      [{status: 0, body: BigInt(1)}],
+    const responses = await pipe(
+      [{status: 0, body: BigInt(1)} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Ping, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
@@ -100,14 +96,9 @@ describe("response decoders", function () {
   it("should work - single response simple (sent multiple)- ssz", async function () {
     const controller = new AbortController();
 
-    // @ts-ignore
-    const responses: ResponseBody[] = await pipe(
-      // @ts-ignore
+    const responses = await pipe(
       abortSource(
-        [
-          {status: 0, body: BigInt(1)},
-          {status: 0, body: BigInt(1)},
-        ],
+        [{status: 0, body: BigInt(1)} as IResponseChunk, {status: 0, body: BigInt(1)} as IResponseChunk],
         controller.signal,
         {returnOnAbort: true}
       ),
@@ -123,14 +114,9 @@ describe("response decoders", function () {
   it("should work - single response simple (sent multiple) - ssz_snappy", async function () {
     const controller = new AbortController();
 
-    // @ts-ignore
     const responses: ResponseBody[] = await pipe(
-      // @ts-ignore
       abortSource(
-        [
-          {status: 0, body: BigInt(1)},
-          {status: 0, body: BigInt(1)},
-        ],
+        [{status: 0, body: BigInt(1)} as IResponseChunk, {status: 0, body: BigInt(1)} as IResponseChunk],
         controller.signal,
         {returnOnAbort: true}
       ),
@@ -146,9 +132,8 @@ describe("response decoders", function () {
   it("should work - single response complex- ssz", async function () {
     const status = createStatus();
 
-    // @ts-ignore
     const responses: ResponseBody[] = await pipe(
-      [{status: 0, body: status}],
+      [{status: 0, body: status} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ, "abc", fakeController),
       all
@@ -161,9 +146,8 @@ describe("response decoders", function () {
   it("should work - single response complex - ssz_snappy", async function () {
     const status = createStatus();
 
-    // @ts-ignore
     const responses: ResponseBody[] = await pipe(
-      [{status: 0, body: status}],
+      [{status: 0, body: status} as IResponseChunk],
       eth2ResponseEncode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY),
       eth2ResponseDecode(config, logger, Method.Status, ReqRespEncoding.SSZ_SNAPPY, "abc", fakeController),
       all
