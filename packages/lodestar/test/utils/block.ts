@@ -11,25 +11,23 @@ import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
-
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {IBlockJob} from "../../src/chain";
 
-export function generateEmptyBlock(): BeaconBlock {
+export function generateEmptyBlock(fill = 0): BeaconBlock {
   return {
     slot: 0,
     proposerIndex: 0,
-    parentRoot: Buffer.alloc(32),
-    stateRoot: ZERO_HASH,
+    parentRoot: Buffer.alloc(32, fill),
+    stateRoot: Buffer.alloc(32, fill),
     body: {
-      randaoReveal: Buffer.alloc(96),
+      randaoReveal: Buffer.alloc(96, fill),
       eth1Data: {
-        depositRoot: Buffer.alloc(32),
-        blockHash: Buffer.alloc(32),
+        depositRoot: Buffer.alloc(32, fill),
+        blockHash: Buffer.alloc(32, fill),
         depositCount: 0,
       },
-      graffiti: Buffer.alloc(32),
+      graffiti: Buffer.alloc(32, fill),
       proposerSlashings: ([] as ProposerSlashing[]) as List<ProposerSlashing>,
       attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
       attestations: ([] as Attestation[]) as List<Attestation>,
@@ -39,15 +37,15 @@ export function generateEmptyBlock(): BeaconBlock {
   };
 }
 
-export function generateEmptySignedBlock(): SignedBeaconBlock {
+export function generateEmptySignedBlock(fill = 0): SignedBeaconBlock {
   return {
-    message: generateEmptyBlock(),
-    signature: EMPTY_SIGNATURE,
+    message: generateEmptyBlock(fill),
+    signature: Buffer.alloc(96, fill),
   };
 }
 
-export function generateSignedBlock(override: RecursivePartial<SignedBeaconBlock> = {}): SignedBeaconBlock {
-  return deepmerge<SignedBeaconBlock, RecursivePartial<SignedBeaconBlock>>(generateEmptySignedBlock(), override, {
+export function generateSignedBlock(override: RecursivePartial<SignedBeaconBlock> = {}, fill = 0): SignedBeaconBlock {
+  return deepmerge<SignedBeaconBlock, RecursivePartial<SignedBeaconBlock>>(generateEmptySignedBlock(fill), override, {
     isMergeableObject: isPlainObject,
   });
 }
