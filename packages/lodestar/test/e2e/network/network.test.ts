@@ -1,22 +1,21 @@
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Attestation, RequestBody, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../src/chain";
+import {Method} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, Libp2pNetwork} from "../../../src/network";
 import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
-import {ReqRespRequest, sendResponse} from "../../../src/network/reqresp";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {silentLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
@@ -158,20 +157,14 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
-    netB.reqResp.once(
-      "request",
-      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
-        await sendResponse(
-          {config, logger: silentLogger},
-          req.id,
-          req.method,
-          req.encoding,
-          sink,
-          null,
-          netB.metadata.seqNumber
-        );
+    netB.reqResp.registerHandler(async function* (method) {
+      if (method === Method.Ping) {
+        yield netB.metadata.seqNumber;
+      } else {
+        throw Error(`${method} not implemented`);
       }
-    );
+    });
+
     const seqNumber = await netA.reqResp.ping(netB.peerId, netA.metadata.seqNumber);
     expect(seqNumber!.toString()).to.equal(netB.metadata.seqNumber.toString());
   });
@@ -183,12 +176,14 @@ describe("[network] network", function () {
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
 
-    netB.reqResp.once(
-      "request",
-      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
-        await sendResponse({config, logger: silentLogger}, req.id, req.method, req.encoding, sink, null, netB.metadata);
+    netB.reqResp.registerHandler(async function* (method) {
+      if (method === Method.Metadata) {
+        yield netB.metadata;
+      } else {
+        throw Error(`${method} not implemented`);
       }
-    );
+    });
+
     const metadata = await netA.reqResp.metadata(netB.peerId);
     expect(metadata).to.deep.equal(netB.metadata.metadata);
   });
