@@ -20,6 +20,15 @@ import {fail} from "assert";
 import {randomRequestId} from "../../../../src/network";
 import {silentLogger} from "../../../utils/logger";
 
+interface ResponseTypes {
+  [Method.Status]: Status;
+  [Method.Goodbye]: Goodbye;
+  [Method.Ping]: Ping;
+  [Method.Metadata]: Metadata;
+  [Method.BeaconBlocksByRange]: SignedBeaconBlock;
+  [Method.BeaconBlocksByRoot]: SignedBeaconBlock;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const fakeController = {abort: () => {}} as AbortController;
 describe("response decoders", function () {

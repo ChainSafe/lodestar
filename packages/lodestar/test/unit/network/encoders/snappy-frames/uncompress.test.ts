@@ -1,5 +1,5 @@
 import {createCompressStream} from "@chainsafe/snappy-stream";
-import {SnappyFramesUncompress} from "../../../../../src/network/encoders/snappy-frames/uncompress";
+import {SnappyFramesUncompress} from "../../../../../src/network/encoders/snappyFrames/uncompress";
 import {expect} from "chai";
 
 describe("snappy frames uncompress", function () {
