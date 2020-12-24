@@ -13,5 +13,6 @@ export type NodePeer = {
   enr: string;
   lastSeenP2pAddress: string;
   state: "disconnected" | "connecting" | "connected" | "disconnecting";
-  direction: "inbound" | "outbound" | "NA";
+  // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
+  direction: "inbound" | "outbound" | null;
 };

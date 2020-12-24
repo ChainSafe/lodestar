@@ -7,7 +7,7 @@ import {IBeaconSync} from "../../../sync";
 
 import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
-import {filterByDirection, filterByState, getPeerState} from "./utils";
+import {filterByStateAndDirection, getPeerState} from "./utils";
 import {INodeApi} from "./interface";
 
 export class NodeApi implements INodeApi {
@@ -54,8 +54,7 @@ export class NodeApi implements INodeApi {
       (state.length === 1 && state[0] === "connected") || direction.length > 0
         ? this.network.getPeers()
         : this.network.getAllPeers();
-    peers = filterByState(peers, this.network, state);
-    peers = filterByDirection(peers, this.network, direction);
+    peers = filterByStateAndDirection(peers, this.network, state, direction);
     for (const peer of peers) {
       const conn = this.network.getPeerConnection(peer.id);
       nodePeers.push({
@@ -63,7 +62,7 @@ export class NodeApi implements INodeApi {
         //TODO: figure out how to get enr of peer
         enr: "",
         lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
-        direction: conn ? conn.stat.direction : "NA",
+        direction: conn ? conn.stat.direction : null,
         state: conn ? getPeerState(conn.stat.status) : "disconnected",
       });
     }

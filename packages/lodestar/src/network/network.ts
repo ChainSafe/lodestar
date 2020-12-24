@@ -23,7 +23,6 @@ import {IPeerMetadataStore} from "./peers/interface";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
-import {notNullish} from "../util/notNullish";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -118,28 +117,30 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
    * @param opts PeerSearchOptions
    */
   public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
-    let peers: LibP2p.Peer[];
     const peerIdStrs = Array.from(this.libp2p.connectionManager.connections.keys());
     const peerIds = peerIdStrs
       .map((peerIdStr) => createFromCID(peerIdStr))
       .filter((peerId) => this.getPeerConnection(peerId));
-    peers = peerIds.map((peerId) => this.libp2p.peerStore.get(peerId)).filter(notNullish);
-
-    if (opts?.supportsProtocols) {
-      const supportsProtocols = opts.supportsProtocols;
-      peers = peers.filter((peer) => {
-        this.logger.debug("Peer supported protocols", {
-          id: peer.id.toB58String(),
-          protocols: peer.protocols,
-        });
-        for (const protocol of supportsProtocols) {
-          if (!peer.protocols.includes(protocol)) {
-            return false;
+    const peers = peerIds
+      .map((peerId) => this.libp2p.peerStore.get(peerId))
+      .filter((peer) => {
+        if (!peer) return false;
+        if (opts?.supportsProtocols) {
+          const supportsProtocols = opts.supportsProtocols;
+          this.logger.debug("Peer supported protocols", {
+            id: peer.id.toB58String(),
+            protocols: peer.protocols,
+          });
+          for (const protocol of supportsProtocols) {
+            if (!peer.protocols.includes(protocol)) {
+              return false;
+            }
           }
+          return true;
         }
         return true;
-      });
-    }
+      }) as LibP2p.Peer[];
+
     return peers.slice(0, opts?.count ?? peers.length) || [];
   }
 
