@@ -42,7 +42,7 @@ export class CheckPeerAliveTask {
   public run = async (): Promise<void> => {
     this.logger.info("Running CheckPeerAliveTask");
     this.logger.profile("CheckPeerAliveTask");
-    const peers = this.network.getPeers({connected: true}).map((peer) => peer.id);
+    const peers = this.network.getPeers().map((peer) => peer.id);
     const seq = this.network.metadata.seqNumber;
     await Promise.all(
       peers.map(async (peer) => {

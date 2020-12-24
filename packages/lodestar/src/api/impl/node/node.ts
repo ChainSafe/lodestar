@@ -7,7 +7,7 @@ import {IBeaconSync} from "../../../sync";
 
 import {IApiOptions} from "../../options";
 import {ApiNamespace, IApiModules} from "../interface";
-import {getPeerState} from "./utils";
+import {filterByDirection, filterByState, getPeerState} from "./utils";
 import {INodeApi} from "./interface";
 
 export class NodeApi implements INodeApi {
@@ -47,22 +47,27 @@ export class NodeApi implements INodeApi {
     return (await this.getPeers()).find((peer) => peer.peerId === peerId) || null;
   }
 
-  public async getPeers(): Promise<NodePeer[]> {
-    const peers: NodePeer[] = [];
-    for (const peer of this.network.getPeers({connected: true})) {
+  public async getPeers(state: string[] = [], direction: string[] = []): Promise<NodePeer[]> {
+    const nodePeers: NodePeer[] = [];
+    // if direction includes "inbound" or "outbound", it means we want connected peers
+    let peers =
+      (state.length === 1 && state[0] === "connected") || direction.length > 0
+        ? this.network.getPeers()
+        : this.network.getAllPeers();
+    peers = filterByState(peers, this.network, state);
+    peers = filterByDirection(peers, this.network, direction);
+    for (const peer of peers) {
       const conn = this.network.getPeerConnection(peer.id);
-      if (conn) {
-        peers.push({
-          peerId: peer.id.toB58String(),
-          //TODO: figure out how to get enr of peer
-          enr: "",
-          address: conn.remoteAddr.toString(),
-          direction: conn.stat.direction,
-          state: getPeerState(conn.stat.status),
-        });
-      }
+      nodePeers.push({
+        peerId: peer.id.toB58String(),
+        //TODO: figure out how to get enr of peer
+        enr: "",
+        lastSeenP2pAddress: conn ? conn.remoteAddr.toString() : "",
+        direction: conn ? conn.stat.direction : "NA",
+        state: conn ? getPeerState(conn.stat.status) : "disconnected",
+      });
     }
-    return peers;
+    return nodePeers;
   }
 
   public async getSyncingStatus(): Promise<SyncingStatus> {

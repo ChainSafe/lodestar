@@ -101,8 +101,8 @@ describe("[network] network", function () {
     ]);
     expect(connectACount).to.be.equal(1);
     expect(connectBCount).to.be.equal(1);
-    expect(netA.getPeers({connected: true}).length).to.equal(1);
-    expect(netB.getPeers({connected: true}).length).to.equal(1);
+    expect(netA.getPeers().length).to.equal(1);
+    expect(netB.getPeers().length).to.equal(1);
   });
   it("should delete a peer on disconnect", async function () {
     const connected = Promise.all([
@@ -120,8 +120,8 @@ describe("[network] network", function () {
     await netA.disconnect(netB.peerId);
     await disconnection;
     await sleep(200);
-    expect(netA.getPeers({connected: true}).length).to.equal(0);
-    expect(netB.getPeers({connected: true}).length).to.equal(0);
+    expect(netA.getPeers().length).to.equal(0);
+    expect(netB.getPeers().length).to.equal(0);
   });
   it("should not receive duplicate block", async function () {
     const connected = Promise.all([
@@ -274,6 +274,6 @@ describe("[network] network", function () {
     discovery.discv5.addEnr(enrB);
     await netA.searchSubnetPeers([subnet.toString()]);
     await connected;
-    expect(netA.getPeers({connected: true}).length).to.be.equal(1);
+    expect(netA.getPeers().length).to.be.equal(1);
   });
 });

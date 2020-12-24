@@ -8160,7 +8160,7 @@ libp2p-tcp@^0.15.0, libp2p-tcp@^0.15.1:
 
 "libp2p-ts@https://github.com/ChainSafe/libp2p-ts.git":
   version "0.1.0"
-  resolved "https://github.com/ChainSafe/libp2p-ts.git#6df33647430d0bb296c6f2b4ab4228d661b381cc"
+  resolved "https://github.com/ChainSafe/libp2p-ts.git#86c1d9eca212194c8a5ce1ea6572a3bd694103e5"
   dependencies:
     "@chainsafe/discv5" "^0.5.0"
     "@types/node" "^13.7.0"

@@ -45,7 +45,6 @@ export interface INetworkEvents {
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
 export type PeerSearchOptions = {
-  connected: boolean;
   supportsProtocols: string[];
   count?: number;
 };
@@ -63,6 +62,7 @@ export interface INetwork extends NetworkEventEmitter {
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
+  getAllPeers(): LibP2p.Peer[];
   getMaxPeer(): number;
   /**
    * Get the instance of a connection with a given peer.

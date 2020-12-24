@@ -4,7 +4,7 @@
 
 import {EventEmitter} from "events";
 import LibP2p from "libp2p";
-import PeerId from "peer-id";
+import PeerId, {createFromCID} from "peer-id";
 import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -23,6 +23,7 @@ import {IPeerMetadataStore} from "./peers/interface";
 import {Libp2pPeerMetadataStore} from "./peers/metastore";
 import {getPeerCountBySubnet} from "./peers/utils";
 import {IRpcScoreTracker, SimpleRpcScoreTracker} from "./peers/score";
+import {notNullish} from "../util/notNullish";
 
 interface ILibp2pModules {
   config: IBeaconConfig;
@@ -112,29 +113,42 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     return discv5Discovery?.discv5?.enr ?? undefined;
   }
 
+  /**
+   * Get connected peers.
+   * @param opts PeerSearchOptions
+   */
   public getPeers(opts: Partial<PeerSearchOptions> = {}): LibP2p.Peer[] {
-    const peers = Array.from(this.libp2p.peerStore.peers.values()).filter((peer) => {
-      if (opts?.connected && !this.getPeerConnection(peer.id)) {
-        return false;
-      }
+    let peers: LibP2p.Peer[];
+    const peerIdStrs = Array.from(this.libp2p.connectionManager.connections.keys());
+    const peerIds = peerIdStrs
+      .map((peerIdStr) => createFromCID(peerIdStr))
+      .filter((peerId) => this.getPeerConnection(peerId));
+    peers = peerIds.map((peerId) => this.libp2p.peerStore.get(peerId)).filter(notNullish);
 
-      this.logger.debug("Peer supported protocols", {
-        id: peer.id.toB58String(),
-        protocols: peer.protocols,
-      });
-
-      if (opts?.supportsProtocols) {
-        for (const protocol of opts.supportsProtocols) {
+    if (opts?.supportsProtocols) {
+      const supportsProtocols = opts.supportsProtocols;
+      peers = peers.filter((peer) => {
+        this.logger.debug("Peer supported protocols", {
+          id: peer.id.toB58String(),
+          protocols: peer.protocols,
+        });
+        for (const protocol of supportsProtocols) {
           if (!peer.protocols.includes(protocol)) {
             return false;
           }
         }
-      }
-
-      return true;
-    });
-
+        return true;
+      });
+    }
     return peers.slice(0, opts?.count ?? peers.length) || [];
+  }
+
+  /**
+   * Get all peers including disconnected ones.
+   * There are probably more than 10k peers, only the api uses this.
+   */
+  public getAllPeers(): LibP2p.Peer[] {
+    return Array.from(this.libp2p.peerStore.peers.values());
   }
 
   public getMaxPeer(): number {
@@ -178,15 +192,14 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async searchSubnetPeers(subnets: string[]): Promise<void> {
-    const knownPeers = Array.from(await this.libp2p.peerStore.peers.values()).map((peer) => peer.id);
-    const connectedPeers = knownPeers.filter((peerId) => !!this.getPeerConnection(peerId));
+    const connectedPeerIds = this.getPeers().map((peer) => peer.id);
 
-    const peerCountBySubnet = getPeerCountBySubnet(connectedPeers, this.peerMetadata, subnets);
+    const peerCountBySubnet = getPeerCountBySubnet(connectedPeerIds, this.peerMetadata, subnets);
     for (const [subnetStr, count] of peerCountBySubnet) {
       if (count === 0) {
         // the validator must discover new peers on this topic
         this.logger.verbose("Finding new peers", {subnet: subnetStr});
-        const found = await this.connectToNewPeersBySubnet(parseInt(subnetStr), knownPeers);
+        const found = await this.connectToNewPeersBySubnet(parseInt(subnetStr));
         if (found) {
           this.logger.verbose("Found new peer", {subnet: subnetStr});
         } else {
@@ -199,12 +212,13 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   /**
    * Connect to 1 new peer given a subnet.
    * @param subnet the subnet calculated from committee index
-   * @param knownPeerIds all peer ids in libp2p store
    */
-  private async connectToNewPeersBySubnet(subnet: number, knownPeerIds: PeerId[]): Promise<boolean> {
-    const knownPeers = knownPeerIds.map((peerId) => peerId.toB58String());
+  private async connectToNewPeersBySubnet(subnet: number): Promise<boolean> {
     const discv5Peers = (await this.searchDiscv5Peers(subnet)) || [];
-    const candidatePeers = discv5Peers.filter((peer) => !knownPeers.includes(peer.peerId.toB58String()));
+    // we don't want to connect to known peers
+    const candidatePeers = discv5Peers.filter(
+      (peer) => !this.libp2p.peerStore.addressBook.getMultiaddrsForPeer(peer.peerId)
+    );
 
     let found = false;
     for (const peer of candidatePeers) {

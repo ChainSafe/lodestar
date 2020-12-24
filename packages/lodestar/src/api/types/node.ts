@@ -11,7 +11,7 @@ export type NodeIdentity = {
 export type NodePeer = {
   peerId: string;
   enr: string;
-  address: string;
+  lastSeenP2pAddress: string;
   state: "disconnected" | "connecting" | "connected" | "disconnecting";
-  direction: "inbound" | "outbound";
+  direction: "inbound" | "outbound" | "NA";
 };

@@ -36,9 +36,9 @@ describe("rest - node - getPeers", function () {
   });
 
   it("should succeed", async function () {
-    api.node.getPeers.resolves([
+    api.node.getPeers.withArgs(["connected"], undefined).resolves([
       {
-        address: "/ip4/127.0.0.1/tcp/36000",
+        lastSeenP2pAddress: "/ip4/127.0.0.1/tcp/36000",
         direction: "inbound",
         enr: "enr-",
         peerId: "16",
@@ -47,6 +47,7 @@ describe("rest - node - getPeers", function () {
     ]);
     const response = await supertest(restApi.server.server)
       .get(urlJoin(NODE_PREFIX, getPeers.url))
+      .query({state: "connected"})
       .expect(200)
       .expect("Content-Type", "application/json; charset=utf-8");
     expect(response.body.data).to.not.be.undefined;
