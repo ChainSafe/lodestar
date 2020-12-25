@@ -4,7 +4,7 @@
  */
 
 import PeerId from "peer-id";
-import {Method, MethodResponseType, Methods, RequestId} from "../constants";
+import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from "../constants";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
@@ -23,9 +23,23 @@ export function createResponseEvent(id: RequestId): string {
   return `response ${id}`;
 }
 
-const REQ_PROTOCOL = "/eth2/beacon_chain/req/{method}/{version}/{encoding}";
-export function createRpcProtocol(method: Method, encoding: "ssz" | "ssz_snappy", version = 1): string {
-  return REQ_PROTOCOL.replace("{method}", method).replace("{encoding}", encoding).replace("{version}", String(version));
+/**
+ * Render protocol ID
+ */
+export function createRpcProtocol(method: Method, encoding: ReqRespEncoding, version = 1): string {
+  return `/eth2/beacon_chain/req/${method}/${version}/${encoding}`;
+}
+
+export function parseProtocolId(protocolId: string): {method: Method; encoding: ReqRespEncoding; version: number} {
+  const suffix = protocolId.split("eth2/beacon_chain/req/")[1];
+  if (!suffix) throw Error(`Invalid protocolId: ${protocolId}`);
+
+  const [method, version, encoding] = suffix.split("/");
+  return {
+    method: method as Method,
+    version: parseInt(version),
+    encoding: encoding as ReqRespEncoding,
+  };
 }
 
 // peers
@@ -46,15 +60,15 @@ export function isRequestSingleChunk(method: Method): boolean {
 }
 
 export function getStatusProtocols(): string[] {
-  return [createRpcProtocol(Method.Status, "ssz_snappy")];
+  return [createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY)];
 }
 
 export function getSyncProtocols(): string[] {
-  return [createRpcProtocol(Method.BeaconBlocksByRange, "ssz_snappy")];
+  return [createRpcProtocol(Method.BeaconBlocksByRange, ReqRespEncoding.SSZ_SNAPPY)];
 }
 
 export function getUnknownRootProtocols(): string[] {
-  return [createRpcProtocol(Method.BeaconBlocksByRoot, "ssz_snappy")];
+  return [createRpcProtocol(Method.BeaconBlocksByRoot, ReqRespEncoding.SSZ_SNAPPY)];
 }
 
 /**

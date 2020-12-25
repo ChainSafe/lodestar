@@ -20,7 +20,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
-import {GENESIS_EPOCH, Method, RpcResponseStatus, ZERO_HASH} from "../../constants";
+import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork} from "../../network";
@@ -89,7 +89,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.removeListener("peer:connect", this.handshake);
     await Promise.all(
       this.network
-        .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, "ssz_snappy")]})
+        .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
         .map(async (peer) => {
           try {
             await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));
