@@ -153,13 +153,13 @@ describe("sync utils", function () {
     it("no peers", async function () {
       getPeersStub.resolves([]);
       getBlockRangeStub.resolves([generateEmptySignedBlock()]);
-      let result = pipe(
+      const resultPromise = pipe(
         [{start: 0, end: 10}],
         fetchBlockChunks(logger, sinon.createStubInstance(ReqResp), getPeersStub),
         all
       );
       await sandbox.clock.tickAsync(30000);
-      result = await result;
+      const result = await resultPromise;
       expect(result.length).to.be.equal(1);
       expect(result[0]).to.be.null;
     });
