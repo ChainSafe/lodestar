@@ -18,3 +18,10 @@ export function generateRoots(count: number, offset = 0): List<Root> {
   }
   return roots as List<Root>;
 }
+
+/**
+ * Helper to type calling `type.equals` with a union of SSZ types
+ */
+export function isEqualSszType<T>(type: {equals: (a: any, b: any) => boolean}, a: T, b: T): boolean {
+  return type.equals(a, b);
+}

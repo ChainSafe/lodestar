@@ -19,7 +19,7 @@ import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStr
 
 chai.use(chaiAsPromised);
 
-describe("network reqresp encode decode - success", () => {
+describe("network reqresp request - encode decode success", () => {
   interface IRequestTypes {
     [Method.Status]: Status;
     [Method.Goodbye]: Goodbye;
@@ -55,7 +55,7 @@ describe("network reqresp encode decode - success", () => {
           const type = Methods[method].requestSSZType(config);
           if (!type) throw Error("no type");
 
-          expect(type.equals(returnedRequest, request as any)).to.equal(
+          expect(type.equals(returnedRequest as any, request as any)).to.equal(
             true,
             "decoded request does not match encoded request"
           );
@@ -65,7 +65,7 @@ describe("network reqresp encode decode - success", () => {
   }
 });
 
-describe("network reqresp encode - errors", () => {
+describe("network reqresp request - encode errors", () => {
   const testCases: {
     id: string;
     method: Method;
@@ -91,7 +91,7 @@ describe("network reqresp encode - errors", () => {
   }
 });
 
-describe("network reqresp decode - errors", () => {
+describe("network reqresp request - decode errors", () => {
   const testCases: {
     id: string;
     method: Method;
