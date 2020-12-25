@@ -23,7 +23,7 @@ export function responseEncode(
     // it needs to decompress. With compression we are sending compressed data
     // frame by frame
     for await (const chunk of source) {
-      yield Buffer.from([status]);
+      yield Buffer.from([chunk.status]);
 
       if (chunk.status !== RpcResponseStatus.SUCCESS) {
         if (chunk.errorMessage) {
