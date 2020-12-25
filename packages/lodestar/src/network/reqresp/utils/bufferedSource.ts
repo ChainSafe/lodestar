@@ -10,35 +10,31 @@ import BufferList from "bl";
  * when switching consumers
  */
 export class BufferedSource {
-  isDone: boolean;
   private buffer: BufferList;
   private source: AsyncGenerator<Buffer>;
 
   constructor(source: AsyncGenerator<Buffer>) {
     this.buffer = new BufferList();
     this.source = source;
-    this.isDone = false;
   }
 
   [Symbol.asyncIterator](): AsyncIterator<BufferList> {
-    const source = this.source;
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
 
-    let firstNext = false;
+    let firstNext = true;
 
     return {
       async next() {
         // Prevent fetching a new chunk if there are pending bytes
         // not processed by a previous consumer of this BufferedSource
-        if (!that.isDone && firstNext && that.buffer.length > 0) {
-          firstNext = true;
+        if (firstNext && that.buffer.length > 0) {
+          firstNext = false;
           return {done: false, value: that.buffer};
         }
 
-        const {done, value: chunk} = await source.next();
+        const {done, value: chunk} = await that.source.next();
         if (done === true) {
-          that.isDone = done;
           return {done: true, value: undefined};
         } else {
           // Concat new chunk and return a reference to this instance
@@ -57,5 +53,16 @@ export class BufferedSource {
 
   async return(): Promise<void> {
     await this.source.return(undefined);
+  }
+
+  /**
+   * Waits for the stream to yield one or more bytes
+   * Return false if the stream has returned, contains no data or all bytes have been consumed
+   */
+  async hasData(): Promise<boolean> {
+    for await (const buffer of this) {
+      if (buffer.length > 0) break;
+    }
+    return this.buffer.length > 0;
   }
 }
