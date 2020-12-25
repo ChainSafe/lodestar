@@ -44,7 +44,7 @@ export function responseDecode(
       // If any of these timeouts fire, the requester SHOULD reset the stream and deem the req/resp operation to have failed.
 
       // collectResponses limits the number or response chunks
-      while (true) {
+      while (!bufferedSource.isDone) {
         yield await withTimeout(
           async () => {
             const status = await readResultHeader(bufferedSource);
@@ -65,10 +65,19 @@ export function responseDecode(
           RESP_TIMEOUT,
           signal
         );
+
+        // Stream is allowed to end here. Make sure the stream continues before looping the while
+        for await (const buffer of bufferedSource) {
+          if (buffer.length > 0) break;
+        }
       }
     } catch (e) {
-      e.message = `eth2ResponseDecode error: ${e.message}`;
-      throw e;
+      if (e instanceof ResponseDecodeError) {
+        throw e;
+      } else {
+        e.message = `eth2ResponseDecode error: ${e.message}`;
+        throw e;
+      }
     } finally {
       await bufferedSource.return();
     }
