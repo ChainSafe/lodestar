@@ -26,5 +26,5 @@ export function encodeP2pErrorMessage(config: IBeaconConfig, err: string): P2pEr
 export function decodeP2pErrorMessage(err: Uint8Array): string {
   const encoder = new TextDecoder();
   // remove non ascii characters from string
-  return encoder.decode(err).replace(/[^\x20-\x7F]/g, "");
+  return encoder.decode(err.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
 }
