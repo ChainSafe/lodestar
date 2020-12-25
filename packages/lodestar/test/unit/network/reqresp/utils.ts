@@ -25,3 +25,13 @@ export function generateRoots(count: number, offset = 0): List<Root> {
 export function isEqualSszType<T>(type: {equals: (a: any, b: any) => boolean}, a: T, b: T): boolean {
   return type.equals(a, b);
 }
+
+/**
+ * Helper for it-pipe when first argument is an array
+ * it-pipe does not convert the chunks array to a generator and BufferedSource breaks
+ */
+export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
+  for (const item of arr) {
+    yield item;
+  }
+}

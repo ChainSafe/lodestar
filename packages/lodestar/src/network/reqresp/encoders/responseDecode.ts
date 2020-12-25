@@ -53,11 +53,7 @@ export function responseDecode(
             // code (i.e. The chunk stream is terminated once an error occurs
             if (status !== RpcResponseStatus.SUCCESS) {
               const errorMessage = await readErrorMessage(bufferedSource);
-              throw new ResponseDecodeError({
-                code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS,
-                status,
-                errorMessage,
-              });
+              throw new ResponseStatusError({code: "RESPONSE_STATUS_ERROR", status, errorMessage});
             }
 
             return await readChunk(bufferedSource, encoding, type, {isSszTree});
@@ -72,11 +68,19 @@ export function responseDecode(
         }
       }
     } catch (e) {
-      if (e instanceof ResponseDecodeError) {
-        throw e;
+      const metadata = {method, encoding};
+      if (e instanceof ResponseStatusError) {
+        const {status, errorMessage} = e.type;
+        switch (status) {
+          case RpcResponseStatus.INVALID_REQUEST:
+            throw new ResponseError({code: ResponseErrorCode.INVALID_REQUEST, errorMessage, ...metadata});
+          case RpcResponseStatus.SERVER_ERROR:
+            throw new ResponseError({code: ResponseErrorCode.SERVER_ERROR, errorMessage, ...metadata});
+          default:
+            throw new ResponseError({code: ResponseErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status, ...metadata});
+        }
       } else {
-        e.message = `eth2ResponseDecode error: ${e.message}`;
-        throw e;
+        throw new ResponseError({code: ResponseErrorCode.OTHER_ERROR, error: e, ...metadata});
       }
     } finally {
       await bufferedSource.return();
@@ -84,19 +88,44 @@ export function responseDecode(
   };
 }
 
-export enum ResponseDecodeErrorCode {
-  /** Response had status !== SUCCESS */
-  RECEIVED_ERROR_STATUS = "RESPONSE_DECODE_ERROR_RECEIVED_STATUS",
+/**
+ * Intermediate error exclusively used for flow control in responseDecode fn
+ * It must be re-thrown as a ResponseError
+ */
+class ResponseStatusError extends LodestarError<ResponseStatusErrorType> {
+  constructor(type: ResponseStatusErrorType) {
+    super(type);
+  }
 }
 
-type ResponseDecodeErrorType = {
-  code: ResponseDecodeErrorCode.RECEIVED_ERROR_STATUS;
+type ResponseStatusErrorType = {
+  code: "RESPONSE_STATUS_ERROR";
   status: RpcResponseStatusError;
   errorMessage: string;
 };
 
-export class ResponseDecodeError extends LodestarError<ResponseDecodeErrorType> {
-  constructor(type: ResponseDecodeErrorType) {
+export enum ResponseErrorCode {
+  // Declaring specific values of RpcResponseStatusError for error clarity downstream
+  /** Response had status !== SUCCESS */
+  INVALID_REQUEST = "RESPONSE_ERROR_INVALID_REQUEST",
+  SERVER_ERROR = "RESPONSE_ERROR_SERVER_ERROR",
+  UNKNOWN_ERROR_STATUS = "RESPONSE_ERROR_UNKNOWN_ERROR_STATUS",
+  OTHER_ERROR = "RESPONSE_ERROR",
+}
+
+type ResponseErrorType =
+  | {code: ResponseErrorCode.INVALID_REQUEST; errorMessage: string}
+  | {code: ResponseErrorCode.SERVER_ERROR; errorMessage: string}
+  | {code: ResponseErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
+  | {code: ResponseErrorCode.OTHER_ERROR; error: Error};
+
+interface IResponseMetadata {
+  method: Method;
+  encoding: ReqRespEncoding;
+}
+
+export class ResponseError extends LodestarError<ResponseErrorType & IResponseMetadata> {
+  constructor(type: ResponseErrorType & IResponseMetadata) {
     super(type);
   }
 }

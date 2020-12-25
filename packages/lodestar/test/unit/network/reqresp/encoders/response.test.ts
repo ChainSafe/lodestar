@@ -1,15 +1,27 @@
-import {expect} from "chai";
-import {encode} from "varint";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
+import varint from "varint";
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Goodbye, Metadata, Ping, ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
-import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
+import {
+  responseDecode,
+  ResponseError,
+  ResponseErrorCode,
+} from "../../../../../src/network/reqresp/encoders/responseDecode";
+import {IResponseChunk} from "../../../../../src/network";
+import {
+  SszSnappyError,
+  SszSnappyErrorCode,
+} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
 import {responseEncode, responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {generateEmptySignedBlock} from "../../../../utils/block";
-import {createStatus, isEqualSszType} from "./utils";
-import {IResponseChunk} from "../../../../../src/network";
+import {arrToSource, createStatus, isEqualSszType} from "../utils";
+
+chai.use(chaiAsPromised);
 
 describe("network reqresp response - encode decode success", () => {
   interface IResponseTypes {
@@ -60,7 +72,7 @@ describe("network reqresp response - encode decode success", () => {
   }
 });
 
-describe("network reqresp response - encode errors", () => {
+describe.only("network reqresp response - encode errors", () => {
   const testCases: {
     id: string;
     method?: Method;
@@ -112,58 +124,91 @@ describe("network reqresp response - encode errors", () => {
   }
 });
 
-describe("network reqresp response - decode errors", () => {
+describe("network reqresp response - decode error", () => {
+  const metadata = {
+    method: Method.Status,
+    encoding: ReqRespEncoding.SSZ_SNAPPY,
+  };
+
   const testCases: {
     id: string;
-    method?: Method;
-    encoding?: ReqRespEncoding;
     chunks: Buffer[];
-    error: string;
+    error: ResponseError;
   }[] = [
     {
-      id: "Unexpected remaining data",
-      chunks: [
-        Buffer.from([RpcResponseStatus.SUCCESS]),
-        Buffer.from(encode(config.types.Status.minSize())),
-        Buffer.alloc(config.types.Status.minSize()),
-      ],
-      error: "There is remaining data not deserialized for method status",
+      id: "No chunks",
+      chunks: [],
+      error: new ResponseError({
+        code: ResponseErrorCode.OTHER_ERROR,
+        error: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
+        ...metadata,
+      }),
     },
     {
-      id: "Regular error encoded",
-      chunks: [
-        //
-        Buffer.from([RpcResponseStatus.INVALID_REQUEST]),
-        Buffer.from("TEST_ERROR"),
-      ],
-      error: "TEST_ERROR",
+      id: "Empty payload",
+      chunks: [Buffer.from([RpcResponseStatus.SUCCESS])],
+      error: new ResponseError({
+        code: ResponseErrorCode.OTHER_ERROR,
+        error: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),
+        ...metadata,
+      }),
+    },
+    {
+      id: "Regular error INVALID_REQUEST",
+      chunks: [Buffer.from([RpcResponseStatus.INVALID_REQUEST]), Buffer.from("TEST_ERROR")],
+      error: new ResponseError({
+        code: ResponseErrorCode.INVALID_REQUEST,
+        errorMessage: "TEST_ERROR",
+        ...metadata,
+      }),
+    },
+    {
+      id: "Regular error SERVER_ERROR",
+      chunks: [Buffer.from([RpcResponseStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR")],
+      error: new ResponseError({
+        code: ResponseErrorCode.SERVER_ERROR,
+        errorMessage: "TEST_ERROR",
+        ...metadata,
+      }),
     },
     {
       id: "Slice long error message",
-      chunks: [
-        //
-        Buffer.from([RpcResponseStatus.INVALID_REQUEST]),
-        Buffer.from("TEST_ERROR".repeat(1000)),
-      ],
-      error: "TEST_ERROR",
+      chunks: [Buffer.from([RpcResponseStatus.INVALID_REQUEST]), Buffer.from("TEST_ERROR".repeat(1000))],
+      error: new ResponseError({
+        code: ResponseErrorCode.INVALID_REQUEST,
+        errorMessage: "TEST_ERROR".repeat(1000).slice(0, 256),
+        ...metadata,
+      }),
     },
     {
       id: "Remove non-ascii characters from error message",
-      chunks: [
-        //
-        Buffer.from([RpcResponseStatus.INVALID_REQUEST]),
-        Buffer.from("TEST_ERROR\u03A9"),
-      ],
-      error: "TEST_ERROR",
+      chunks: [Buffer.from([RpcResponseStatus.INVALID_REQUEST]), Buffer.from("TEST_ERROR\u03A9")],
+      error: new ResponseError({
+        code: ResponseErrorCode.INVALID_REQUEST,
+        errorMessage: "TEST_ERROR",
+        ...metadata,
+      }),
     },
   ];
 
-  for (const {id, method = Method.Status, encoding = ReqRespEncoding.SSZ_SNAPPY, error, chunks} of testCases) {
+  for (const {id, error, chunks} of testCases) {
     it(id, async () => {
-      await expect(pipe(chunks, responseDecode(config, method, encoding), all)).to.be.rejectedWith(error);
+      try {
+        await pipe(arrToSource(chunks), responseDecode(config, metadata.method, metadata.encoding), all);
+        throw Error("did not throw");
+      } catch (e) {
+        expectLodestarError(e, error);
+      }
     });
   }
 });
+
+function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {
+  if (!(err1 instanceof LodestarError)) throw Error(`err1 not instanceof LodestarError: ${(err1 as Error).stack}`);
+  if (!(err2 instanceof LodestarError)) throw Error(`err2 not instanceof LodestarError: ${(err2 as Error).stack}`);
+
+  expect(err1.getMetadata()).to.deep.equal(err2.getMetadata(), "Wrong LodestarError metadata");
+}
 
 function generateEmptySignedBlocks(n = 3): SignedBeaconBlock[] {
   return Array.from({length: n}).map(() => generateEmptySignedBlock());
