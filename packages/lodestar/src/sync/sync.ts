@@ -15,6 +15,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
+import {notNullish} from "../util/notNullish";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -41,7 +42,8 @@ export class BeaconSync implements IBeaconSync {
   private statusSyncTimer?: NodeJS.Timeout;
   private peerCountTimer?: NodeJS.Timeout;
   // avoid finding same root at the same time
-  private processingRoots: Set<string>;
+  // key as root hex and value as timestamp
+  private processingRoots: Map<string, number>;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -56,7 +58,7 @@ export class BeaconSync implements IBeaconSync {
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
-    this.processingRoots = new Set();
+    this.processingRoots = new Map();
   }
 
   public async start(): Promise<void> {
@@ -212,10 +214,13 @@ export class BeaconSync implements IBeaconSync {
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
     const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const missingRootHex = toHexString(unknownAncestorRoot);
-    if (this.processingRoots.has(missingRootHex)) {
+    const MAX_TIME_IN_CACHE = 60 * 1000;
+    const lastTimeInCache = this.processingRoots.get(missingRootHex);
+    // in case beaconBlocksByRoot timeout, we can retry after 1 minute
+    if (notNullish(lastTimeInCache) && Date.now() - lastTimeInCache < MAX_TIME_IN_CACHE) {
       return;
     } else {
-      this.processingRoots.add(missingRootHex);
+      this.processingRoots.set(missingRootHex, Date.now());
       this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
     }
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
