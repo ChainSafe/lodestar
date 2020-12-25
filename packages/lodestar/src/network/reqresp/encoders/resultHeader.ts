@@ -38,5 +38,6 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
     }
   }
 
-  throw Error("Stream ended early");
+  // Error message is optional and may not be included in the response stream
+  return "";
 }
