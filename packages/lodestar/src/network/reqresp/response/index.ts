@@ -30,41 +30,46 @@ export async function handleRequest(
 ): Promise<void> {
   const logCtx = {method, encoding, peer: peerId.toB58String(), requestId: randomRequestId()};
 
-  try {
-    await pipe(
-      // Yields success chunks and error chunks in the same generator
-      // This syntax allows to recycle stream.sink to send success and error chunks without returning
-      // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
-      (async function* () {
-        try {
-          logger.verbose("Resp decoding request", logCtx);
+  let responseError: Error | null = null;
+  await pipe(
+    // Yields success chunks and error chunks in the same generator
+    // This syntax allows to recycle stream.sink to send success and error chunks without returning
+    // in case request whose body is a List fails at chunk_i > 0, without breaking out of the for..await..of
+    (async function* () {
+      try {
+        const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e) => {
+          throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, e.message);
+        });
 
-          const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e) => {
-            throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, e.message);
-          });
+        logger.verbose("Resp received request", {...logCtx, requestBody} as Context);
 
-          logger.verbose("Resp received request", {...logCtx, requestBody} as Context);
+        yield* pipe(
+          performRequestHandler(method, requestBody, peerId),
+          onReponseChunk((chunk) => logger.verbose("Resp sending chunk", {...logCtx, chunk} as Context)),
+          responseEncodeSuccess(config, method, encoding)
+        );
+      } catch (e) {
+        const status = e instanceof ReqRespError ? e.status : RpcResponseStatus.SERVER_ERROR;
+        yield* responseEncodeError(status, e.message);
 
-          yield* pipe(
-            performRequestHandler(method, requestBody, peerId),
-            onReponseChunk((chunk) => logger.verbose("Resp sending chunk", {...logCtx, chunk} as Context)),
-            responseEncodeSuccess(config, method, encoding)
-          );
-        } catch (e) {
-          const status = e instanceof ReqRespError ? e.status : RpcResponseStatus.SERVER_ERROR;
-          yield* responseEncodeError(status, e.message);
+        // Should not throw an error here or libp2p-mplex throws with 'AbortError: stream reset'
+        // throw e;
+        responseError = e;
+      }
+    })(),
+    stream.sink
+  );
 
-          throw e;
-        }
-      })(),
-      stream.sink
-    );
-
+  if (responseError) {
+    logger.verbose("Resp error", logCtx, responseError);
+    throw responseError;
+  } else {
     logger.verbose("Resp done", logCtx);
-  } catch (e) {
-    logger.verbose("Resp error", logCtx, e);
-    throw e;
-  } finally {
-    stream.close();
   }
+
+  // Not necessary to call `stream.close()` since libp2p-mplex will do the same
+  // when either the source is exhausted or the sink returns
+  // } finally {
+  //   stream.close();
+  // }
 }
