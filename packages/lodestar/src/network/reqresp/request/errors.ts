@@ -11,8 +11,6 @@ export enum ResponseErrorCode {
   UNKNOWN_ERROR_STATUS = "RESPONSE_ERROR_UNKNOWN_ERROR_STATUS",
   /** Stream ended expecting to read <result> spec */
   ENDED_ON_RESULT = "RESPONSE_ERROR_ENDED_ON_RESULT",
-  /** Time to first byte timeout */
-  TTFB_TIMEOUT = "RESPONSE_ERROR_TTFB_TIMEOUT",
   /** Could not open a stream with peer before DIAL_TIMEOUT */
   DIAL_TIMEOUT = "RESPONSE_ERROR_DIAL_TIMEOUT",
   /** Error opening a stream with peer */
@@ -21,6 +19,10 @@ export enum ResponseErrorCode {
   REQUEST_TIMEOUT = "RESPONSE_ERROR_REQUEST_TIMEOUT",
   /** Error when sending request to responder */
   REQUEST_ERROR = "RESPONSE_ERROR_REQUEST_ERROR",
+  /** Time to first byte timeout */
+  TTFB_TIMEOUT = "RESPONSE_ERROR_TTFB_TIMEOUT",
+  /** Timeout between <response_chunks> exceed */
+  RESP_TIMEOUT = "RESPONSE_ERROR_RESP_TIMEOUT",
   /** Any other error */
   OTHER_ERROR = "RESPONSE_ERROR",
 }
@@ -30,11 +32,12 @@ type ResponseErrorType =
   | {code: ResponseErrorCode.SERVER_ERROR; errorMessage: string}
   | {code: ResponseErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
   | {code: ResponseErrorCode.ENDED_ON_RESULT}
-  | {code: ResponseErrorCode.TTFB_TIMEOUT}
   | {code: ResponseErrorCode.DIAL_TIMEOUT}
   | {code: ResponseErrorCode.DIAL_ERROR; error: Error}
   | {code: ResponseErrorCode.REQUEST_TIMEOUT}
   | {code: ResponseErrorCode.REQUEST_ERROR; error: Error}
+  | {code: ResponseErrorCode.TTFB_TIMEOUT}
+  | {code: ResponseErrorCode.RESP_TIMEOUT}
   | {code: ResponseErrorCode.OTHER_ERROR; error: Error};
 
 interface IResponseMetadata {

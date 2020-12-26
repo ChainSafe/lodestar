@@ -1,5 +1,5 @@
 import {AbortSignal} from "abort-controller";
-import {withTimeout} from "@chainsafe/lodestar-utils";
+import {TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT, RpcResponseStatus} from "../../../constants";
@@ -53,11 +53,17 @@ export function responseDecode(
               }
             }
 
-            return await readEncodedPayload(bufferedSource, encoding, type, {isSszTree});
+            return await readEncodedPayload<ResponseBody>(bufferedSource, encoding, type, {isSszTree});
           },
           RESP_TIMEOUT,
           signal
-        );
+        ).catch((e) => {
+          if (e instanceof TimeoutError) {
+            throw new ResponseInternalError({code: ResponseErrorCode.RESP_TIMEOUT});
+          } else {
+            throw e;
+          }
+        });
       }
     } finally {
       await bufferedSource.return();
