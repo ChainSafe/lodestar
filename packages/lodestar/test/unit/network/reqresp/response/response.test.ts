@@ -4,7 +4,6 @@ import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Goodbye, Metadata, Ping, ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
 import {
@@ -19,58 +18,9 @@ import {
 } from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
 import {responseEncode, responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {generateEmptySignedBlock} from "../../../../utils/block";
-import {arrToSource, createStatus, isEqualSszType} from "../utils";
+import {arrToSource, createStatus, expectLodestarError, isEqualSszType} from "../utils";
 
 chai.use(chaiAsPromised);
-
-describe("network reqresp response - encode decode success", () => {
-  interface IResponseTypes {
-    [Method.Status]: Status;
-    [Method.Goodbye]: Goodbye;
-    [Method.Ping]: Ping;
-    [Method.Metadata]: Metadata;
-    [Method.BeaconBlocksByRange]: SignedBeaconBlock;
-    [Method.BeaconBlocksByRoot]: SignedBeaconBlock;
-  }
-
-  const testCases: {[P in keyof IResponseTypes]: IResponseTypes[P][][]} = {
-    [Method.Status]: [[createStatus()]],
-    [Method.Goodbye]: [[BigInt(0)], [BigInt(1)]],
-    [Method.Ping]: [[BigInt(0)], [BigInt(1)]],
-    [Method.Metadata]: [],
-    [Method.BeaconBlocksByRange]: [generateEmptySignedBlocks(10)],
-    [Method.BeaconBlocksByRoot]: [generateEmptySignedBlocks(10)],
-  };
-
-  const encodings: ReqRespEncoding[] = [ReqRespEncoding.SSZ_SNAPPY];
-
-  for (const encoding of encodings) {
-    for (const [_method, responsesChunks] of Object.entries(testCases)) {
-      let i = 0;
-      const method = _method as keyof typeof testCases;
-      for (const responseChunks of responsesChunks) {
-        it(`${encoding} ${method} - resp ${i++}`, async () => {
-          const returnedResponses = await pipe(
-            responseChunks as ResponseBody[],
-            responseEncodeSuccess(config, method, encoding),
-            responseDecode(config, method, encoding),
-            all
-          );
-
-          const type = Methods[method].responseSSZType(config);
-          if (!type) throw Error("no type");
-
-          returnedResponses.forEach((returnedResponse, i) => {
-            expect(isEqualSszType(type, returnedResponse, responseChunks[i])).to.equal(
-              true,
-              "decoded response does not match encoded response"
-            );
-          });
-        });
-      }
-    }
-  }
-});
 
 describe.only("network reqresp response - encode from raw chunks", () => {
   const defaultMetadata = {
@@ -383,14 +333,3 @@ describe("network reqresp response - decode error", () => {
     });
   }
 });
-
-function expectLodestarError<T extends {code: string}>(err1: LodestarError<T>, err2: LodestarError<T>): void {
-  if (!(err1 instanceof LodestarError)) throw Error(`err1 not instanceof LodestarError: ${(err1 as Error).stack}`);
-  if (!(err2 instanceof LodestarError)) throw Error(`err2 not instanceof LodestarError: ${(err2 as Error).stack}`);
-
-  expect(err1.getMetadata()).to.deep.equal(err2.getMetadata(), "Wrong LodestarError metadata");
-}
-
-function generateEmptySignedBlocks(n = 3): SignedBeaconBlock[] {
-  return Array.from({length: n}).map(() => generateEmptySignedBlock());
-}
