@@ -1,16 +1,20 @@
-import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
+import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout} from "@chainsafe/lodestar-utils";
-import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../constants";
-import {createRpcProtocol, isRequestSingleChunk, randomRequestId} from "../util";
-import {ttfbTimeoutController} from "./utils/ttfbTimeoutController";
-import {requestEncode} from "./encoders/requestEncode";
-import {responseDecode} from "./encoders/responseDecode";
-import {ILibP2pStream} from "./interface";
+import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../../constants";
+import {createRpcProtocol, randomRequestId} from "../../util";
+import {ResponseError, ResponseErrorCode, ResponseInternalError} from "./errors";
+import {ttfbTimeoutController} from "./ttfbTimeoutController";
+import {collectResponses} from "./collectResponses";
+import {requestEncode} from "./requestEncode";
+import {responseDecode} from "./responseDecode";
+import {ILibP2pStream} from "../interface";
+
+export {ResponseError, ResponseErrorCode};
 
 // A requester SHOULD read from the stream until either:
 // 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
@@ -92,39 +96,14 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
     return responses as T;
   } catch (e) {
-    // TODO: Should it be logged here?
     logger.verbose("ReqResp error", logCtx, e);
-    throw e;
+
+    if (e instanceof ResponseInternalError) {
+      throw new ResponseError({...e.type, method, encoding});
+    } else {
+      throw e;
+    }
   } finally {
     stream.close();
   }
-}
-
-/**
- * Sink for <response_chunk>*
- * `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
- */
-export function collectResponses<T extends ResponseBody | ResponseBody[]>(
-  method: Method,
-  maxResponses?: number
-): (source: AsyncIterable<ResponseBody>) => Promise<T | null> {
-  return async (source) => {
-    if (isRequestSingleChunk(method)) {
-      for await (const response of source) {
-        return response as T;
-      }
-      return null;
-    }
-
-    // else: zero or more responses
-    const responses: ResponseBody[] = [];
-    for await (const response of source) {
-      responses.push(response);
-
-      if (maxResponses && responses.length >= maxResponses) {
-        break;
-      }
-    }
-    return responses as T;
-  };
 }

@@ -1,6 +1,7 @@
 import {RpcResponseStatus} from "../../../constants";
 import {decodeP2pErrorMessage} from "../utils/errorMessage";
 import {BufferedSource} from "../utils/bufferedSource";
+import {ResponseInternalError, ResponseErrorCode} from "./errors";
 
 /**
  * Consumes a stream source to read a <result>
@@ -20,7 +21,7 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
     }
   }
 
-  throw Error("Stream ended early - result header");
+  throw new ResponseInternalError({code: ResponseErrorCode.ENDED_ON_RESULT});
 }
 
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {

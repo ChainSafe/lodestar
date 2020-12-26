@@ -1,11 +1,11 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Method, ReqRespEncoding, RpcResponseStatus} from "../../constants";
-import {ILibP2pStream, ReqRespHandler} from "./interface";
-import {ReqRespError} from "./errors";
-import {requestDecode} from "./encoders/requestDecode";
-import {responseEncodeError, responseEncodeSuccess} from "./encoders/responseEncode";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
+import {ILibP2pStream, ReqRespHandler} from "../interface";
+import {ReqRespError} from "../errors";
+import {requestDecode} from "./requestDecode";
+import {responseEncodeError, responseEncodeSuccess} from "./responseEncode";
 
 // The responder MUST:
 // 1. Use the encoding strategy to read the optional header.

@@ -12,9 +12,3 @@ export class ReqRespError extends Error {
     this.status = status;
   }
 }
-
-export class TtfbTimeoutError extends Error {
-  constructor() {
-    super("TTFB_TIMEOUT_ERROR");
-  }
-}
