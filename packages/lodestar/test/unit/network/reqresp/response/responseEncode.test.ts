@@ -7,10 +7,7 @@ import {ResponseBody} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../../../src/constants";
 import {responseEncodeError, responseEncodeSuccess} from "../../../../../src/network/reqresp/response/responseEncode";
-import {
-  SszSnappyError,
-  SszSnappyErrorCode,
-} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
+import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {expectLodestarError} from "../utils";
 
 describe("network / reqresp / response / responseEncode", () => {

@@ -4,7 +4,7 @@ import {encode} from "varint";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/bufferedSource";
 import {readSszSnappyChunk} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/decode";
-import {SszSnappyErrorCode} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
+import {SszSnappyErrorCode} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {Method, Methods} from "../../../../../../src/constants";
 
 chai.use(chaiAsPromised);

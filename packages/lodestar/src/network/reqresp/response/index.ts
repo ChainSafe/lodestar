@@ -63,6 +63,7 @@ export async function handleRequest(
     logger.verbose("Resp done", logCtx);
   } catch (e) {
     logger.verbose("Resp error", logCtx, e);
+    throw e;
   } finally {
     stream.close();
   }

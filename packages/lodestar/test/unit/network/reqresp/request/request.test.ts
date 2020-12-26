@@ -5,7 +5,7 @@ import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
-import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
+import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {requestEncode} from "../../../../../src/network/reqresp/request/requestEncode";
 import {requestDecode} from "../../../../../src/network/reqresp/response/requestDecode";
 import {arrToSource} from "../utils";

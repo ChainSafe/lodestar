@@ -7,10 +7,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT} from "../../../../../src/constants";
-import {
-  SszSnappyError,
-  SszSnappyErrorCode,
-} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/errors";
+import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {responseDecode} from "../../../../../src/network/reqresp/request/responseDecode";
 import {ResponseErrorCode, ResponseInternalError} from "../../../../../src/network/reqresp/request/errors";
 import {arrToSource, expectLodestarError, isEqualSszType} from "../utils";

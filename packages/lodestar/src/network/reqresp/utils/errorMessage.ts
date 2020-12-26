@@ -14,7 +14,7 @@
  */
 export function encodeErrorMessage(errorMessage: string): Buffer {
   const encoder = new TextEncoder();
-  return encoder.encode(errorMessage).slice(0, 256) as Buffer;
+  return Buffer.from(encoder.encode(errorMessage).slice(0, 256));
 }
 
 /**
