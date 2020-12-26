@@ -4,7 +4,7 @@ import {Method, Methods, ReqRespEncoding} from "../../../constants";
 import {writeEncodedPayload} from "../encodingStrategies";
 
 /**
- * Yields byte chunks for a <request>
+ * Yields byte chunks for a `<request>`
  * ```bnf
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```

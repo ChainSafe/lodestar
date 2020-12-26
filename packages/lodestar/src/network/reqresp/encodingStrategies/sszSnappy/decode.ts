@@ -13,9 +13,9 @@ export interface ISszSnappyOptions {
 }
 
 /**
- * ssz_snappy encoding strategy reader
- * Consumes a stream source to read encoding-dependent-header and encoded-payload as defined in the spec
- * ```
+ * ssz_snappy encoding strategy reader.
+ * Consumes a stream source to read encoded header and payload as defined in the spec:
+ * ```bnf
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
@@ -31,7 +31,7 @@ export async function readSszSnappyPayload<T extends RequestOrResponseBody>(
 }
 
 /**
- * Reads <encoding-dependent-header> for ssz-snappy
+ * Reads `<encoding-dependent-header>` for ssz-snappy.
  * encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
  */
 async function readSszSnappyHeader(bufferedSource: BufferedSource, type: RequestOrResponseType): Promise<number> {
@@ -67,7 +67,8 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
 }
 
 /**
- * Reads <encoded-payload> for ssz-snappy and decompress. The returned bytes can be SSZ deseralized
+ * Reads `<encoded-payload>` for ssz-snappy and decompress.
+ * The returned bytes can be SSZ deseralized
  */
 async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
   const decompressor = new SnappyFramesUncompress();

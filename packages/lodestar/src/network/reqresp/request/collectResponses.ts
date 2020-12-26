@@ -3,8 +3,11 @@ import {Method} from "../../../constants";
 import {isRequestSingleChunk} from "../../util";
 
 /**
- * Sink for <response_chunk>*
- * `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
+ * Sink for `<response_chunk>*`, from
+ * ```bnf
+ * response ::= <response_chunk>*
+ * ```
+ * Note: `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
  */
 export function collectResponses<T extends ResponseBody | ResponseBody[]>(
   method: Method,

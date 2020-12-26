@@ -10,7 +10,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode";
 // - ssz_snappy
 
 /**
- * Consumes a stream source to read encoding-dependent-header and encoded-payload as defined in the spec
+ * Consumes a stream source to read encoded header and payload as defined in the spec:
  * ```
  * <encoding-dependent-header> | <encoded-payload>
  * ```
@@ -31,7 +31,7 @@ export async function readEncodedPayload<T extends RequestOrResponseBody>(
 }
 
 /**
- * Yields byte chunks for encoding-dependent-header and encoded-payload as defined in the spec
+ * Yields byte chunks for encoded header and payload as defined in the spec:
  * ```
  * <encoding-dependent-header> | <encoded-payload>
  * ```

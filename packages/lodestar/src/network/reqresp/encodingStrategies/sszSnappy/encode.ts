@@ -5,8 +5,8 @@ import {RequestOrResponseBody, RequestOrResponseType} from "../../interface";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 /**
- * ssz_snappy encoding strategy writer
- * Yields byte chunks for encoding-dependent-header and encoded-payload as defined in the spec
+ * ssz_snappy encoding strategy writer.
+ * Yields byte chunks for encoded header and payload as defined in the spec:
  * ```
  * <encoding-dependent-header> | <encoded-payload>
  * ```

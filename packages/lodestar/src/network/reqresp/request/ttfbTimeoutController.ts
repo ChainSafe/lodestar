@@ -4,8 +4,14 @@ import {ResponseErrorCode, ResponseInternalError} from "./errors";
 
 const abortMessage = "TTFB_TIMEOUT_ERROR_MESSAGE";
 
+/**
+ * Throws a TTFB_TIMEOUT error if it does not receive any chunk containing
+ * one or more bytes after TTFB_TIMEOUT ms from calling this function.
+ * Does not transform the byte chunks in any way.
+ */
 export function ttfbTimeoutController(
-  ttfbTimeout: number,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  TTFB_TIMEOUT: number,
   signal?: AbortSignal
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<Buffer> {
   const controller = new AbortController();
@@ -15,7 +21,7 @@ export function ttfbTimeoutController(
 
   let responseTimer: NodeJS.Timeout | null = setTimeout(() => {
     controller.abort();
-  }, ttfbTimeout);
+  }, TTFB_TIMEOUT);
 
   return async function* (source) {
     try {

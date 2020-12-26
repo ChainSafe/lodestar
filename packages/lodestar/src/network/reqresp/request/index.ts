@@ -5,7 +5,7 @@ import PeerId from "peer-id";
 import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
-import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../../constants";
+import {Method, ReqRespEncoding, TTFB_TIMEOUT, RESP_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../../constants";
 import {createRpcProtocol, randomRequestId} from "../../util";
 import {ResponseError, ResponseErrorCode, ResponseInternalError} from "./errors";
 import {ttfbTimeoutController} from "./ttfbTimeoutController";
@@ -16,12 +16,17 @@ import {ILibP2pStream} from "../interface";
 
 export {ResponseError, ResponseErrorCode};
 
-// A requester SHOULD read from the stream until either:
-// 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
-// 2. The responder closes the stream.
-// 3. Any part of the response_chunk fails validation.
-// 4. The maximum number of requested chunks are read.
-
+/**
+ * Sends ReqResp request to a peer:
+ * 1. Dial peer, establish duplex stream
+ * 2. Encoded and write request to peer. Expect the responder to close the stream's write side
+ * 3. Read and decode reponse(s) from peer. Close stream read side once done
+ *    A requester SHOULD read from the stream until either:
+ *    1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
+ *    2. The responder closes the stream.
+ *    3. Any part of the response_chunk fails validation.
+ *    4. The maximum number of requested chunks are read.
+ */
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
   peerId: PeerId,
@@ -68,13 +73,12 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       }
     });
 
-    logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
-
-    // Send request with non-speced REQ_TIMEOUT
-    // The requester MUST close the write side of the stream once it finishes writing the request message
-    // stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
-
     try {
+      logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
+
+      // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
+      // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
+
       // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
       await withTimeout(
         async (timeoutAndParentSignal) =>
@@ -98,7 +102,8 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
         abortSource(stream.source, signal),
         // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
         ttfbTimeoutController(TTFB_TIMEOUT, signal),
-        responseDecode(config, method, encoding, signal),
+        // Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
+        responseDecode(config, method, encoding, RESP_TIMEOUT, signal),
         collectResponses(method, maxResponses)
       );
 

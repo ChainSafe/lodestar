@@ -6,7 +6,7 @@ import {BufferedSource} from "../utils/bufferedSource";
 import {readEncodedPayload} from "../encodingStrategies";
 
 /**
- * Consumes a stream source to read a <request>
+ * Consumes a stream source to read a `<request>`
  * ```bnf
  * request  ::= <encoding-dependent-header> | <encoded-payload>
  * ```

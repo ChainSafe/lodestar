@@ -2,24 +2,27 @@ import {AbortSignal} from "abort-controller";
 import {TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ResponseBody} from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT, RpcResponseStatus} from "../../../constants";
+import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readEncodedPayload} from "../encodingStrategies";
 import {readErrorMessage, readResultHeader} from "./resultHeader";
 import {ResponseInternalError, ResponseErrorCode} from "./errors";
 
 /**
- * Consumes a stream source to read a <response>
+ * Consumes a stream source to read a `<response>`
  * ```bnf
  * response        ::= <response_chunk>*
  * response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
+ * Enforces RESP_TIMEOUT on each `<response_chunk>`
  */
 export function responseDecode(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  RESP_TIMEOUT: number,
   signal?: AbortSignal
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
   return async function* (source) {
