@@ -4,7 +4,7 @@ import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ErrorAborted, ILogger, Context, withTimeout} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../../constants";
 import {createRpcProtocol, randomRequestId} from "../../util";
 import {ResponseError, ResponseErrorCode, ResponseInternalError} from "./errors";
@@ -40,70 +40,81 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
   logger.verbose("ReqResp dialing peer", logCtx);
 
-  // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
-  // this function wraps the dialProtocol promise with an extra timeout
-  //
-  // > The issue might be: you add the peer's addresses to the AddressBook,
-  //   which will result in autoDial to kick in and dial your peer. In parallel,
-  //   you do a manual dial and it will wait for the previous one without using
-  //   the abort signal:
-  //
-  // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
-
-  // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
-  const stream = await withTimeout(
-    async (timeoutAndParentSignal) => {
-      const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
-      if (!conn) throw Error("dialProtocol timeout");
-      return (conn as {stream: ILibP2pStream}).stream;
-    },
-    DIAL_TIMEOUT,
-    signal
-  ).catch((e) => {
-    e.message = `Failed to dial peer: ${e.message}`;
-    throw e;
-  });
-
-  logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
-
-  // Send request with non-speced REQ_TIMEOUT
-  // The requester MUST close the write side of the stream once it finishes writing the request message
-  // stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
-
   try {
-    // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
-    await withTimeout(
-      async (timeoutAndParentSignal) =>
-        await pipe(
-          abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
-          stream.sink
-        ),
-      REQUEST_TIMEOUT,
+    // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
+    // this function wraps the dialProtocol promise with an extra timeout
+    //
+    // > The issue might be: you add the peer's addresses to the AddressBook,
+    //   which will result in autoDial to kick in and dial your peer. In parallel,
+    //   you do a manual dial and it will wait for the previous one without using
+    //   the abort signal:
+    //
+    // https://github.com/ChainSafe/lodestar/issues/1597#issuecomment-703394386
+
+    // DIAL_TIMEOUT: Non-spec timeout from dialing protocol until stream opened
+    const stream = await withTimeout(
+      async (timeoutAndParentSignal) => {
+        const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
+        if (!conn) throw Error("dialProtocol timeout");
+        return (conn as {stream: ILibP2pStream}).stream;
+      },
+      DIAL_TIMEOUT,
       signal
-    );
+    ).catch((e) => {
+      if (e instanceof TimeoutError) {
+        throw new ResponseInternalError({code: ResponseErrorCode.DIAL_TIMEOUT});
+      } else {
+        throw new ResponseInternalError({code: ResponseErrorCode.DIAL_ERROR, error: e});
+      }
+    });
 
-    logger.verbose("ReqResp request sent", logCtx);
+    logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
 
-    const responses = await pipe(
-      abortSource(stream.source, signal),
-      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
-      ttfbTimeoutController(TTFB_TIMEOUT, signal),
-      responseDecode(config, method, encoding, signal),
-      collectResponses(method, maxResponses)
-    );
+    // Send request with non-speced REQ_TIMEOUT
+    // The requester MUST close the write side of the stream once it finishes writing the request message
+    // stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
 
-    logger.verbose("ReqResp received response", {...logCtx, responses} as Context);
+    try {
+      // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
+      await withTimeout(
+        async (timeoutAndParentSignal) =>
+          await pipe(
+            abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
+            stream.sink
+          ),
+        REQUEST_TIMEOUT,
+        signal
+      ).catch((e) => {
+        if (e instanceof TimeoutError) {
+          throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_TIMEOUT});
+        } else {
+          throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_ERROR, error: e});
+        }
+      });
 
-    return responses as T;
+      logger.verbose("ReqResp request sent", logCtx);
+
+      const responses = await pipe(
+        abortSource(stream.source, signal),
+        // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
+        ttfbTimeoutController(TTFB_TIMEOUT, signal),
+        responseDecode(config, method, encoding, signal),
+        collectResponses(method, maxResponses)
+      );
+
+      logger.verbose("ReqResp received response", {...logCtx, responses} as Context);
+
+      return responses as T;
+    } finally {
+      stream.close();
+    }
   } catch (e) {
     logger.verbose("ReqResp error", logCtx, e);
 
     if (e instanceof ResponseInternalError) {
-      throw new ResponseError({...e.type, method, encoding});
+      throw new ResponseError({...e.type, ...logCtx});
     } else {
       throw e;
     }
-  } finally {
-    stream.close();
   }
 }

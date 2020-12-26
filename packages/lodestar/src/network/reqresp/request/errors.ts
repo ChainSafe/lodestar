@@ -13,6 +13,14 @@ export enum ResponseErrorCode {
   ENDED_ON_RESULT = "RESPONSE_ERROR_ENDED_ON_RESULT",
   /** Time to first byte timeout */
   TTFB_TIMEOUT = "RESPONSE_ERROR_TTFB_TIMEOUT",
+  /** Could not open a stream with peer before DIAL_TIMEOUT */
+  DIAL_TIMEOUT = "RESPONSE_ERROR_DIAL_TIMEOUT",
+  /** Error opening a stream with peer */
+  DIAL_ERROR = "RESPONSE_ERROR_DIAL_ERROR",
+  /** Reponder did not close write stream before REQUEST_TIMEOUT */
+  REQUEST_TIMEOUT = "RESPONSE_ERROR_REQUEST_TIMEOUT",
+  /** Error when sending request to responder */
+  REQUEST_ERROR = "RESPONSE_ERROR_REQUEST_ERROR",
   /** Any other error */
   OTHER_ERROR = "RESPONSE_ERROR",
 }
@@ -23,11 +31,17 @@ type ResponseErrorType =
   | {code: ResponseErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
   | {code: ResponseErrorCode.ENDED_ON_RESULT}
   | {code: ResponseErrorCode.TTFB_TIMEOUT}
+  | {code: ResponseErrorCode.DIAL_TIMEOUT}
+  | {code: ResponseErrorCode.DIAL_ERROR; error: Error}
+  | {code: ResponseErrorCode.REQUEST_TIMEOUT}
+  | {code: ResponseErrorCode.REQUEST_ERROR; error: Error}
   | {code: ResponseErrorCode.OTHER_ERROR; error: Error};
 
 interface IResponseMetadata {
   method: Method;
   encoding: ReqRespEncoding;
+  peer: string;
+  requestId: string;
 }
 
 /**
