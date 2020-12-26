@@ -2,11 +2,12 @@ import {AbortSignal} from "abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 
 import {IBeaconClock} from "./interface";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 
 /**
  * A local clock, the clock time is assumed to be trusted
@@ -41,6 +42,17 @@ export class LocalClock implements IBeaconClock {
 
   public get currentSlot(): Slot {
     return getCurrentSlot(this.config, this.genesisTime);
+  }
+
+  /**
+   * Maximum currentSlot of peers.
+   * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
+   * Otherwise return currentSlot
+   */
+  public get maxPeerCurrentSlot(): Slot {
+    const currentSlot = this.currentSlot;
+    const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
+    return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
   }
 
   public get currentEpoch(): Epoch {

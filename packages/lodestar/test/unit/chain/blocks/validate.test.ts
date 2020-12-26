@@ -66,7 +66,7 @@ describe("validateBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlot").get(() => 0);
+    sinon.stub(clock, "maxPeerCurrentSlot").get(() => 0);
     try {
       await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
@@ -81,7 +81,7 @@ describe("validateBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlot").get(() => 1);
+    sinon.stub(clock, "maxPeerCurrentSlot").get(() => 1);
     forkChoice.hasBlock.returns(false);
     try {
       await validateBlock({config, forkChoice, clock, job});

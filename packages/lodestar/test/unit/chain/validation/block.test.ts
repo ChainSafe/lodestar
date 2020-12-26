@@ -52,7 +52,7 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - bad block", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -71,7 +71,7 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - already proposed", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -91,7 +91,7 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - missing parent", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -112,7 +112,7 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - invalid signature", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -139,7 +139,7 @@ describe("gossip block validation", function () {
   });
 
   it("should throw error - wrong proposer", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({
@@ -169,7 +169,7 @@ describe("gossip block validation", function () {
   });
 
   it("should accept - valid block", async function () {
-    sinon.stub(chainStub.clock, "currentSlot").get(() => 1);
+    sinon.stub(chainStub.clock, "maxPeerCurrentSlot").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
     chainStub.getFinalizedCheckpoint.resolves({

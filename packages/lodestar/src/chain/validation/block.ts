@@ -27,11 +27,11 @@ export async function validateGossipBlock(
     });
   }
 
-  const currentSlot = chain.clock.currentSlot;
-  if (currentSlot < blockSlot) {
+  const maxPeerCurrentSlot = chain.clock.maxPeerCurrentSlot;
+  if (maxPeerCurrentSlot < blockSlot) {
     throw new BlockError({
       code: BlockErrorCode.FUTURE_SLOT,
-      currentSlot,
+      currentSlot: maxPeerCurrentSlot,
       blockSlot,
       job: blockJob,
     });

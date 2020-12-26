@@ -121,8 +121,12 @@ export class BlockPool {
   }
 
   public getBySlot(slot: Slot): Uint8Array[] {
-    const hexArr = Array.from(this.blocksBySlot.get(slot)?.values() ?? []);
-    return hexArr.map((hex) => fromHexString(hex));
+    const slots = Array.from(this.blocksBySlot.keys()).filter((cachedSlot) => cachedSlot <= slot);
+    const hexArr: string[] = [];
+    for (const cachedSlot of slots) {
+      hexArr.push(...Array.from(this.blocksBySlot.get(cachedSlot)?.values() ?? []));
+    }
+    return Array.from(new Set(hexArr)).map((hex) => fromHexString(hex));
   }
 
   private getParentKey(block: SignedBeaconBlock): string {
