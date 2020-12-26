@@ -1,14 +1,21 @@
-import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {ReqRespEncoding} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
-import {RequestOrResponseType} from "../interface";
-import {readSszSnappyChunk, ISszSnappyOptions} from "./sszSnappy/decode";
-import {writeChunkSszSnappy} from "./sszSnappy/encode";
+import {RequestOrResponseBody, RequestOrResponseType} from "../interface";
+import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
+import {writeSszSnappyPayload} from "./sszSnappy/encode";
 
 // For more info about eth2 request/response encoding strategies, see:
 // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#encoding-strategies
+// Supported encoding strategies:
+// - ssz_snappy
 
-export async function readChunk<T extends ResponseBody | RequestBody>(
+/**
+ * Consumes a stream source to read encoding-dependent-header and encoded-payload as defined in the spec
+ * ```
+ * <encoding-dependent-header> | <encoded-payload>
+ * ```
+ */
+export async function readEncodedPayload<T extends RequestOrResponseBody>(
   bufferedSource: BufferedSource,
   encoding: ReqRespEncoding,
   type: RequestOrResponseType,
@@ -16,21 +23,27 @@ export async function readChunk<T extends ResponseBody | RequestBody>(
 ): Promise<T> {
   switch (encoding) {
     case ReqRespEncoding.SSZ_SNAPPY:
-      return await readSszSnappyChunk(bufferedSource, type, options);
+      return await readSszSnappyPayload(bufferedSource, type, options);
 
     default:
       throw Error("Unsupported encoding");
   }
 }
 
-export async function* writeChunk<T extends ResponseBody | RequestBody>(
+/**
+ * Yields byte chunks for encoding-dependent-header and encoded-payload as defined in the spec
+ * ```
+ * <encoding-dependent-header> | <encoded-payload>
+ * ```
+ */
+export async function* writeEncodedPayload<T extends RequestOrResponseBody>(
   body: T,
   encoding: ReqRespEncoding,
   type: RequestOrResponseType
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
     case ReqRespEncoding.SSZ_SNAPPY:
-      yield* writeChunkSszSnappy(body, type);
+      yield* writeSszSnappyPayload(body, type);
       break;
 
     default:

@@ -12,33 +12,53 @@ export interface ISszSnappyOptions {
   isSszTree?: boolean;
 }
 
-export async function readSszSnappyChunk<T extends RequestOrResponseBody>(
+/**
+ * ssz_snappy encoding strategy reader
+ * Consumes a stream source to read encoding-dependent-header and encoded-payload as defined in the spec
+ * ```
+ * <encoding-dependent-header> | <encoded-payload>
+ * ```
+ */
+export async function readSszSnappyPayload<T extends RequestOrResponseBody>(
   bufferedSource: BufferedSource,
   type: RequestOrResponseType,
   options?: ISszSnappyOptions
 ): Promise<T> {
-  const sszDataLength = await readSszSnappyHeader(bufferedSource);
-  validateSszSizeBounds(sszDataLength, type);
+  const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
-  const bytes = await readSszSnappyPayload(bufferedSource, sszDataLength);
-  return deserializeBody<T>(bytes, type, options);
+  const bytes = await readSszSnappyBody(bufferedSource, sszDataLength);
+  return deserializeSszBody<T>(bytes, type, options);
 }
 
-async function readSszSnappyHeader(bufferedSource: BufferedSource): Promise<number> {
+/**
+ * Reads <encoding-dependent-header> for ssz-snappy
+ * encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
+ */
+async function readSszSnappyHeader(bufferedSource: BufferedSource, type: RequestOrResponseType): Promise<number> {
   for await (const buffer of bufferedSource) {
     // Get next bytes if empty
     if (buffer.length === 0) {
       continue;
     }
 
-    // encoding-dependent-header for ssz_snappy
-    // Header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
     const sszDataLength = varint.decode(buffer.slice());
+
+    // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
     const varintBytes = varint.decode.bytes;
     if (varintBytes > MAX_VARINT_BYTES) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
     }
     buffer.consume(varintBytes);
+
+    // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
+    const minSize = type.minSize();
+    const maxSize = type.maxSize();
+    if (sszDataLength < minSize) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
+    }
+    if (sszDataLength > maxSize) {
+      throw new SszSnappyError({code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
+    }
 
     return sszDataLength;
   }
@@ -46,20 +66,10 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource): Promise<numb
   throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
 }
 
-function validateSszSizeBounds(sszDataLength: number, type: RequestOrResponseType): void {
-  const minSize = type.minSize();
-  const maxSize = type.maxSize();
-
-  // MUST validate that the length-prefix is within the expected size bounds derived from the payload SSZ type.
-  if (sszDataLength < minSize) {
-    throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
-  }
-  if (sszDataLength > maxSize) {
-    throw new SszSnappyError({code: SszSnappyErrorCode.OVER_SSZ_MAX_SIZE, maxSize, sszDataLength});
-  }
-}
-
-async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
+/**
+ * Reads <encoded-payload> for ssz-snappy and decompress. The returned bytes can be SSZ deseralized
+ */
+async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: number): Promise<Buffer> {
   const decompressor = new SnappyFramesUncompress();
   const uncompressedData = new BufferList();
   let readBytes = 0;
@@ -76,19 +86,16 @@ async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLengt
       continue;
     }
 
-    let uncompressed: Buffer | null = null;
+    // stream contents can be passed through a buffered Snappy reader to decompress frame by frame
     try {
-      uncompressed = decompressor.uncompress(buffer.slice());
+      const uncompressed = decompressor.uncompress(buffer.slice());
       buffer.consume(buffer.length);
+      if (uncompressed !== null) {
+        uncompressedData.append(uncompressed);
+      }
     } catch (e) {
       throw new SszSnappyError({code: SszSnappyErrorCode.DECOMPRESSOR_ERROR, decompressorError: e});
     }
-
-    if (uncompressed === null) {
-      continue;
-    }
-
-    uncompressedData.append(uncompressed);
 
     // SHOULD consider invalid reading more bytes than `n` SSZ bytes
     if (uncompressedData.length > sszDataLength) {
@@ -101,14 +108,18 @@ async function readSszSnappyPayload(bufferedSource: BufferedSource, sszDataLengt
     }
 
     // buffer.length === n
-
     return uncompressedData.slice(0, sszDataLength);
   }
 
+  // SHOULD consider invalid: An early EOF before fully reading the declared length-prefix worth of SSZ bytes
   throw new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED});
 }
 
-function deserializeBody<T extends RequestOrResponseBody>(
+/**
+ * Deseralizes SSZ body.
+ * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
+ */
+function deserializeSszBody<T extends RequestOrResponseBody>(
   bytes: Buffer,
   type: RequestOrResponseType,
   options?: ISszSnappyOptions

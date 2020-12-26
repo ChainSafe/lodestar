@@ -3,14 +3,20 @@ import {AbortSignal} from "abort-controller";
 import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
-import {createRpcProtocol, isRequestOnly, isRequestSingleChunk, randomRequestId} from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, TTFB_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} from "../../constants";
+import {createRpcProtocol, isRequestSingleChunk, randomRequestId} from "../util";
 import {ttfbTimeoutController} from "./utils/ttfbTimeoutController";
-import {requestEncodeOne} from "./encoders/requestEncode";
+import {requestEncode} from "./encoders/requestEncode";
 import {responseDecode} from "./encoders/responseDecode";
 import {ILibP2pStream} from "./interface";
+
+// A requester SHOULD read from the stream until either:
+// 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
+// 2. The responder closes the stream.
+// 3. Any part of the response_chunk fails validation.
+// 4. The maximum number of requested chunks are read.
 
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
@@ -61,21 +67,22 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   // stream.sink should be closed automatically by js-libp2p-mplex when piped source ends
 
   try {
-    const requestSource = requestEncodeOne(config, method, encoding, requestBody);
-
     // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
     await withTimeout(
-      async (timeoutAndParentSignal) => await pipe(abortSource(requestSource, timeoutAndParentSignal), stream.sink),
+      async (timeoutAndParentSignal) =>
+        await pipe(
+          abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
+          stream.sink
+        ),
       REQUEST_TIMEOUT,
       signal
     );
 
     logger.verbose("ReqResp request sent", logCtx);
 
-    // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
-
     const responses = await pipe(
       abortSource(stream.source, signal),
+      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
       ttfbTimeoutController(TTFB_TIMEOUT, signal),
       responseDecode(config, method, encoding, signal),
       collectResponses(method, maxResponses)
@@ -93,20 +100,15 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   }
 }
 
+/**
+ * Sink for <response_chunk>*
+ * `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
+ */
 export function collectResponses<T extends ResponseBody | ResponseBody[]>(
   method: Method,
   maxResponses?: number
 ): (source: AsyncIterable<ResponseBody>) => Promise<T | null> {
   return async (source) => {
-    if (isRequestOnly(method)) {
-      // Immediatelly exhaust source if any
-      // TODO: use `await source.return()`
-      for await (const _ of source) {
-        return null;
-      }
-      return null;
-    }
-
     if (isRequestSingleChunk(method)) {
       for await (const response of source) {
         return response as T;

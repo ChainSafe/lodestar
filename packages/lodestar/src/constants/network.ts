@@ -54,7 +54,6 @@ export enum MethodRequestType {
 
 export enum MethodResponseType {
   SingleResponse = "SingleResponse",
-  NoResponse = "NoResponse",
   Stream = "Stream",
 }
 

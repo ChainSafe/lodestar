@@ -1,25 +1,17 @@
 import {RequestBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Method, Methods, ReqRespEncoding} from "../../../constants";
-import {writeChunk} from "../encodingStrategies";
+import {writeEncodedPayload} from "../encodingStrategies";
 
-export function requestEncode(
-  config: IBeaconConfig,
-  method: Method,
-  encoding: ReqRespEncoding
-): (source: AsyncIterable<RequestBody | null>) => AsyncGenerator<Buffer> {
-  return async function* (source) {
-    const type = Methods[method].requestSSZType(config);
-
-    for await (const requestBody of source) {
-      if (type && requestBody !== null) {
-        yield* writeChunk(requestBody, encoding, type);
-      }
-    }
-  };
-}
-
-export async function* requestEncodeOne(
+/**
+ * Yields byte chunks for a <request>
+ * ```bnf
+ * request  ::= <encoding-dependent-header> | <encoded-payload>
+ * ```
+ * Requests may contain no payload (e.g. /eth2/beacon_chain/req/metadata/1/)
+ * if so, it would yield no byte chunks
+ */
+export async function* requestEncode(
   config: IBeaconConfig,
   method: Method,
   encoding: ReqRespEncoding,
@@ -28,6 +20,6 @@ export async function* requestEncodeOne(
   const type = Methods[method].requestSSZType(config);
 
   if (type && requestBody !== null) {
-    yield* writeChunk(requestBody, encoding, type);
+    yield* writeEncodedPayload(requestBody, encoding, type);
   }
 }

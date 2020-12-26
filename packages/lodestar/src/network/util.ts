@@ -51,10 +51,6 @@ export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
 }
 
-export function isRequestOnly(method: Method): boolean {
-  return Methods[method].responseType === MethodResponseType.NoResponse;
-}
-
 export function isRequestSingleChunk(method: Method): boolean {
   return Methods[method].responseType === MethodResponseType.SingleResponse;
 }

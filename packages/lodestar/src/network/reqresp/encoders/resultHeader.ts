@@ -2,13 +2,13 @@ import {RpcResponseStatus} from "../../../constants";
 import {decodeP2pErrorMessage} from "../utils/errorMessage";
 import {BufferedSource} from "../utils/bufferedSource";
 
-// request         ::= <encoding-dependent-header> | <encoded-payload>
-// response        ::= <response_chunk>*
-// response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
-// result          ::= “0” | “1” | “2” | [“128” ... ”255”]
-
-// `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
-
+/**
+ * Consumes a stream source to read a <result>
+ * ```bnf
+ * result  ::= "0" | "1" | "2" | ["128" ... "255"]
+ * ```
+ * <response_chunk> start with a single-byte response code which determines the contents of the response_chunk
+ */
 export async function readResultHeader(bufferedSource: BufferedSource): Promise<RpcResponseStatus> {
   for await (const buffer of bufferedSource) {
     const status = buffer.get(0);
@@ -20,7 +20,7 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
     }
   }
 
-  throw Error("Stream ended early");
+  throw Error("Stream ended early - result header");
 }
 
 export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {

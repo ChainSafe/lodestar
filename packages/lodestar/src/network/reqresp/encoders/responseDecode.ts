@@ -11,16 +11,17 @@ import {
   RpcResponseStatusError,
 } from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
-import {readChunk} from "../encodingStrategies";
+import {readEncodedPayload} from "../encodingStrategies";
 import {readErrorMessage, readResultHeader} from "./resultHeader";
 
-// request         ::= <encoding-dependent-header> | <encoded-payload>
-// response        ::= <response_chunk>*
-// response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
-// result          ::= “0” | “1” | “2” | [“128” ... ”255”]
-
-// `response` has zero or more chunks for SSZ-list responses or exactly one chunk for non-list
-
+/**
+ * Consumes a stream source to read a <response>
+ * ```bnf
+ * response        ::= <response_chunk>*
+ * response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
+ * result          ::= "0" | "1" | "2" | ["128" ... "255"]
+ * ```
+ */
 export function responseDecode(
   config: IBeaconConfig,
   method: Method,
@@ -31,21 +32,15 @@ export function responseDecode(
     const type = Methods[method].responseSSZType(config);
     const isSszTree = method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot;
 
-    // A requester SHOULD read from the stream until either:
-    // 1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
-    // 2. The responder closes the stream.
-    // 3. Any part of the response_chunk fails validation.
-    // 4. The maximum number of requested chunks are read.
-
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
 
     try {
-      // After the first byte, the requester allows a further RESP_TIMEOUT for each subsequent response_chunk received
-      // If any of these timeouts fire, the requester SHOULD reset the stream and deem the req/resp operation to have failed.
-
-      // collectResponses limits the number or response chunks
-      // Stream is only allowed to end here. Make sure the stream has data before looping again
+      // > Consumers of `responseDecode()` may limit the number of <response_chunk> and break out of the while loop
+      // > Stream is only allowed to end at the start of the stream of after reading a <response_chunk> in full
+      //   Make sure the stream has data before attempting to decode the <encoding-dependent-header>
       while (await bufferedSource.hasData()) {
+        // After the first byte, the requester allows a further RESP_TIMEOUT for each subsequent response_chunk received
+        // If any of these timeouts fire, the requester SHOULD reset the stream and deem the req/resp operation to have failed.
         yield await withTimeout(
           async () => {
             const status = await readResultHeader(bufferedSource);
@@ -57,7 +52,7 @@ export function responseDecode(
               throw new ResponseStatusError({code: "RESPONSE_STATUS_ERROR", status, errorMessage});
             }
 
-            return await readChunk(bufferedSource, encoding, type, {isSszTree});
+            return await readEncodedPayload(bufferedSource, encoding, type, {isSszTree});
           },
           RESP_TIMEOUT,
           signal
@@ -76,7 +71,9 @@ export function responseDecode(
             throw new ResponseError({code: ResponseErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status, ...metadata});
         }
       } else {
-        throw new ResponseError({code: ResponseErrorCode.OTHER_ERROR, error: e, ...metadata});
+        throw e;
+        // ### TODO: What's the best error strategy here? Wrap or not
+        // throw new ResponseError({code: ResponseErrorCode.OTHER_ERROR, error: e, ...metadata});
       }
     } finally {
       await bufferedSource.return();
@@ -85,7 +82,7 @@ export function responseDecode(
 }
 
 /**
- * Intermediate error exclusively used for flow control in responseDecode fn
+ * Intermediate error exclusively used for flow control in `responseDecode()` fn
  * It must be re-thrown as a ResponseError
  */
 class ResponseStatusError extends LodestarError<ResponseStatusErrorType> {
@@ -102,10 +99,15 @@ type ResponseStatusErrorType = {
 
 export enum ResponseErrorCode {
   // Declaring specific values of RpcResponseStatusError for error clarity downstream
-  /** Response had status !== SUCCESS */
+  /** <response_chunk> had <result> === INVALID_REQUEST */
   INVALID_REQUEST = "RESPONSE_ERROR_INVALID_REQUEST",
+  /** <response_chunk> had <result> === SERVER_ERROR */
   SERVER_ERROR = "RESPONSE_ERROR_SERVER_ERROR",
+  /** <response_chunk> had a <result> not known in the current spec */
   UNKNOWN_ERROR_STATUS = "RESPONSE_ERROR_UNKNOWN_ERROR_STATUS",
+  /** Stream ended expecting to read <result> spec */
+  ENDED_ON_RESULT = "RESPONSE_ERROR_ENDED_ON_RESULT",
+  /** Any other error */
   OTHER_ERROR = "RESPONSE_ERROR",
 }
 
