@@ -113,6 +113,10 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     } finally {
       stream.close();
     }
+    // No need to call `stream.close()` here on finally {} to handle stream.source
+    // libp2p-mplex will .end() the source (it's an it-pushable) for errors and returns
+    // TODO: Should the stream.close() be called to end the source if there's an error
+    //       before starting the pipe(stream.source, ...) statement?
   } catch (e) {
     logger.verbose("Req error", logCtx, e);
 
