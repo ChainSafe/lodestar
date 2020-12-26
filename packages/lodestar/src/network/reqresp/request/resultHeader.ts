@@ -1,5 +1,5 @@
 import {RpcResponseStatus} from "../../../constants";
-import {decodeP2pErrorMessage} from "../utils/errorMessage";
+import {decodeErrorMessage} from "../utils/errorMessage";
 import {BufferedSource} from "../utils/bufferedSource";
 import {ResponseInternalError, ResponseErrorCode} from "./errors";
 
@@ -41,7 +41,7 @@ export async function readErrorMessage(bufferedSource: BufferedSource): Promise<
 
     const bytes = buffer.slice();
     try {
-      return decodeP2pErrorMessage(bytes);
+      return decodeErrorMessage(bytes);
     } catch (e) {
       return bytes.toString("hex");
     }

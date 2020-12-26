@@ -1,6 +1,3 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {P2pErrorMessage} from "@chainsafe/lodestar-types";
-
 // ErrorMessage schema:
 //
 // (
@@ -15,16 +12,16 @@ import {P2pErrorMessage} from "@chainsafe/lodestar-types";
 /**
  * Encodes a UTF-8 string to 256 bytes max
  */
-export function encodeP2pErrorMessage(config: IBeaconConfig, err: string): P2pErrorMessage {
+export function encodeErrorMessage(errorMessage: string): Buffer {
   const encoder = new TextEncoder();
-  return config.types.P2pErrorMessage.deserialize(encoder.encode(err).slice(0, 256));
+  return encoder.encode(errorMessage).slice(0, 256) as Buffer;
 }
 
 /**
  * Decodes error message from network bytes and removes non printable, non ascii characters.
  */
-export function decodeP2pErrorMessage(err: Uint8Array): string {
+export function decodeErrorMessage(errorMessage: Buffer): string {
   const encoder = new TextDecoder();
   // remove non ascii characters from string
-  return encoder.decode(err.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
+  return encoder.decode(errorMessage.slice(0, 256)).replace(/[^\x20-\x7F]/g, "");
 }

@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
-import {List} from "@chainsafe/ssz";
+import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
+import {Json, List} from "@chainsafe/ssz";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
 export function createStatus(): Status {
@@ -43,7 +43,17 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
   if (!(err1 instanceof LodestarError)) throw Error(`err1 not instanceof LodestarError: ${(err1 as Error).stack}`);
   if (!(err2 instanceof LodestarError)) throw Error(`err2 not instanceof LodestarError: ${(err2 as Error).stack}`);
 
-  expect(err1.getMetadata()).to.deep.equal(err2.getMetadata(), "Wrong LodestarError metadata");
+  expect(getErrorMetadata(err1)).to.deep.equal(getErrorMetadata(err2), "Wrong LodestarError metadata");
+}
+
+export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | Json): Json {
+  if (err instanceof LodestarError) {
+    return mapValues(err.getMetadata(), (value) => getErrorMetadata(value));
+  } else if (err instanceof Error) {
+    return err.message;
+  } else {
+    return err;
+  }
 }
 
 export function generateEmptySignedBlocks(n = 3): SignedBeaconBlock[] {

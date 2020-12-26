@@ -2,6 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../constants";
 import {writeEncodedPayload} from "../encodingStrategies";
+import {encodeErrorMessage} from "../utils/errorMessage";
 
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`
@@ -45,6 +46,6 @@ export async function* responseEncodeError(
 
   // errorMessage is optional
   if (errorMessage) {
-    yield Buffer.from(errorMessage);
+    yield encodeErrorMessage(errorMessage);
   }
 }
