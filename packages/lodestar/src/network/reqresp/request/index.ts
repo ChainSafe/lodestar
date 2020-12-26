@@ -17,15 +17,15 @@ import {ILibP2pStream} from "../interface";
 export {ResponseError, ResponseErrorCode};
 
 /**
- * Sends ReqResp request to a peer:
+ * Sends ReqResp request to a peer. Throws on error. Logs each step of the request lifecycle.
+ *
  * 1. Dial peer, establish duplex stream
  * 2. Encoded and write request to peer. Expect the responder to close the stream's write side
- * 3. Read and decode reponse(s) from peer. Close stream read side once done
- *    A requester SHOULD read from the stream until either:
- *    1. An error result is received in one of the chunks (the error payload MAY be read before stopping).
- *    2. The responder closes the stream.
- *    3. Any part of the response_chunk fails validation.
- *    4. The maximum number of requested chunks are read.
+ * 3. Read and decode reponse(s) from peer. Will close the read stream if:
+ *    - An error result is received in one of the chunks. Reads the error_message and throws.
+ *    - The responder closes the stream. If at the end or start of a <response_chunk>, return. Otherwise throws
+ *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
+ *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   {libp2p, config, logger}: {libp2p: LibP2p; config: IBeaconConfig; logger: ILogger},
@@ -43,7 +43,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     throw new ErrorAborted("sendRequest");
   }
 
-  logger.verbose("ReqResp dialing peer", logCtx);
+  logger.verbose("Req dialing peer", logCtx);
 
   try {
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
@@ -74,7 +74,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     });
 
     try {
-      logger.verbose("ReqResp sending request", {...logCtx, requestBody} as Context);
+      logger.verbose("Req sending request", {...logCtx, requestBody} as Context);
 
       // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
       // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
@@ -96,7 +96,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
         }
       });
 
-      logger.verbose("ReqResp request sent", logCtx);
+      logger.verbose("Req request sent", logCtx);
 
       const responses = await pipe(
         abortSource(stream.source, signal),
@@ -107,14 +107,14 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
         collectResponses(method, maxResponses)
       );
 
-      logger.verbose("ReqResp received response", {...logCtx, responses} as Context);
+      logger.verbose("Req received response", {...logCtx, responses} as Context);
 
       return responses as T;
     } finally {
       stream.close();
     }
   } catch (e) {
-    logger.verbose("ReqResp error", logCtx, e);
+    logger.verbose("Req error", logCtx, e);
 
     if (e instanceof ResponseInternalError) {
       throw new ResponseError({...e.type, ...logCtx});

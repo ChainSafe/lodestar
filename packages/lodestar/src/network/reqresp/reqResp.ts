@@ -69,25 +69,24 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
             this.peerMetadata.setEncoding(peerId, encoding);
           }
 
-          try {
-            if (!this.performRequestHandler) {
-              throw Error("performRequestHandler not registered");
-            }
+          if (!this.performRequestHandler) {
+            stream.close();
+            throw Error("performRequestHandler not registered");
+          }
 
+          try {
             await handleRequest(
-              this.config,
+              {config: this.config, logger: this.logger},
               this.performRequestHandler,
               stream as ILibP2pStream,
               peerId,
               method,
               encoding
             );
+            // TODO: Do success peer scoring here
           } catch (e) {
-            // Catch for: If yielding an error response fails
-            // Catch for: If performRequestHandler is not registered
-            stream.close();
-          } finally {
-            // TODO: Extra cleanup? Close connection?
+            // TODO: Do error peer scoring here
+            // Must not throw since this is an event handler
           }
         });
       }
