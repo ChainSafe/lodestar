@@ -67,9 +67,6 @@ export async function handleRequest(
     logger.verbose("Resp done", logCtx);
   }
 
-  // Not necessary to call `stream.close()` since libp2p-mplex will do the same
+  // Not necessary to call `stream.close()` in finally {}, libp2p-mplex do
   // when either the source is exhausted or the sink returns
-  // } finally {
-  //   stream.close();
-  // }
 }

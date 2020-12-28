@@ -73,50 +73,48 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       }
     });
 
-    try {
-      logger.verbose("Req sending request", {...logCtx, requestBody} as Context);
+    logger.verbose("Req sending request", {...logCtx, requestBody} as Context);
 
-      // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
-      // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
+    // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
+    // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
 
-      // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
-      await withTimeout(
-        async (timeoutAndParentSignal) =>
-          await pipe(
-            abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
-            stream.sink
-          ),
-        REQUEST_TIMEOUT,
-        signal
-      ).catch((e) => {
-        if (e instanceof TimeoutError) {
-          throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_TIMEOUT});
-        } else {
-          throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_ERROR, error: e});
-        }
-      });
-
-      logger.verbose("Req request sent", logCtx);
-
-      const responses = await pipe(
-        abortSource(stream.source, signal),
-        // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
-        ttfbTimeoutController(TTFB_TIMEOUT, signal),
-        // Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
-        responseDecode(config, method, encoding, RESP_TIMEOUT, signal),
-        collectResponses(method, maxResponses)
-      );
-
-      logger.verbose("Req received response", {...logCtx, responses} as Context);
-
-      return responses as T;
-    } finally {
+    // REQUEST_TIMEOUT: Non-spec timeout from sending request until write stream closed by responder
+    await withTimeout(
+      async (timeoutAndParentSignal) =>
+        await pipe(
+          abortSource(requestEncode(config, method, encoding, requestBody), timeoutAndParentSignal),
+          stream.sink
+        ),
+      REQUEST_TIMEOUT,
+      signal
+    ).catch((e) => {
+      // Must close the stream read side (stream.source) manually
       stream.close();
-    }
-    // No need to call `stream.close()` here on finally {} to handle stream.source
-    // libp2p-mplex will .end() the source (it's an it-pushable) for errors and returns
-    // TODO: Should the stream.close() be called to end the source if there's an error
-    //       before starting the pipe(stream.source, ...) statement?
+
+      if (e instanceof TimeoutError) {
+        throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_TIMEOUT});
+      } else {
+        throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_ERROR, error: e});
+      }
+    });
+
+    logger.verbose("Req request sent", logCtx);
+
+    const responses = await pipe(
+      abortSource(stream.source, signal),
+      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
+      ttfbTimeoutController(TTFB_TIMEOUT, signal),
+      // Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
+      responseDecode(config, method, encoding, RESP_TIMEOUT, signal),
+      collectResponses(method, maxResponses)
+    );
+
+    logger.verbose("Req received response", {...logCtx, responses} as Context);
+
+    return responses as T;
+
+    // No need to call `stream.close()` here on finally {} to handle stream.source,
+    // libp2p-mplex will .end() the source (it-pushable instance) for errors and returns
   } catch (e) {
     logger.verbose("Req error", logCtx, e);
 
