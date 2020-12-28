@@ -59,6 +59,17 @@ export class ResponseInternalError extends LodestarError<ResponseErrorType> {
 
 export class ResponseError extends LodestarError<ResponseErrorType & IResponseMetadata> {
   constructor(type: ResponseErrorType & IResponseMetadata) {
-    super(type);
+    super(type, renderErrorMessage(type));
+  }
+}
+
+function renderErrorMessage(type: ResponseErrorType): string {
+  switch (type.code) {
+    case ResponseErrorCode.INVALID_REQUEST:
+    case ResponseErrorCode.SERVER_ERROR:
+      return `${type.code}: ${type.errorMessage}`;
+
+    default:
+      return type.code;
   }
 }
