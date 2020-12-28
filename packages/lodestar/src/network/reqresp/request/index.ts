@@ -122,7 +122,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     logger.verbose("Req error", logCtx, e);
 
     if (e instanceof ResponseInternalError) {
-      throw new ResponseError({...e.type, ...logCtx});
+      throw new ResponseError({...e.type, method, encoding, peer});
     } else {
       throw e;
     }

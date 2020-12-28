@@ -44,7 +44,7 @@ interface IResponseMetadata {
   method: Method;
   encoding: ReqRespEncoding;
   peer: string;
-  requestId: string;
+  // Do not include requestId in error metadata to make the errors deterministic for tests
 }
 
 /**
@@ -53,7 +53,7 @@ interface IResponseMetadata {
  */
 export class ResponseInternalError extends LodestarError<ResponseErrorType> {
   constructor(type: ResponseErrorType) {
-    super(type);
+    super(type, renderErrorMessage(type));
   }
 }
 

@@ -57,7 +57,9 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
   if (!(err1 instanceof LodestarError)) throw Error(`err1 not instanceof LodestarError: ${(err1 as Error).stack}`);
   if (!(err2 instanceof LodestarError)) throw Error(`err2 not instanceof LodestarError: ${(err2 as Error).stack}`);
 
-  expect(getErrorMetadata(err1)).to.deep.equal(getErrorMetadata(err2), "Wrong LodestarError metadata");
+  const errMeta1 = getErrorMetadata(err1);
+  const errMeta2 = getErrorMetadata(err2);
+  expect(errMeta1).to.deep.equal(errMeta2, "Wrong LodestarError metadata");
 }
 
 export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | Json): Json {
