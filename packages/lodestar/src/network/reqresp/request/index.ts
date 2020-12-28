@@ -8,11 +8,11 @@ import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chains
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
 import {createRpcProtocol, randomRequestId} from "../../util";
 import {ResponseError, ResponseErrorCode, ResponseInternalError} from "./errors";
-import {ttfbTimeoutController} from "./ttfbTimeoutController";
 import {collectResponses} from "./collectResponses";
 import {requestEncode} from "./requestEncode";
 import {responseDecode} from "./responseDecode";
 import {ILibP2pStream} from "../interface";
+import {responseTimeoutsHandler} from "./timeoutHandler";
 
 export {ResponseError, ResponseErrorCode};
 
@@ -37,7 +37,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>
 ): Promise<T | null> {
-  const {TTFB_TIMEOUT, RESP_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
+  const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = peerId.toB58String();
   const logCtx = {method, encoding, peer, requestId: randomRequestId()};
   const protocol = createRpcProtocol(method, encoding);
@@ -105,10 +105,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
 
     const responses = await pipe(
       abortSource(stream.source, signal),
-      // The requester MUST wait a maximum of TTFB_TIMEOUT for the first response byte to arrive
-      ttfbTimeoutController(TTFB_TIMEOUT, signal),
-      // Requester allows a further RESP_TIMEOUT for each subsequent response_chunk
-      responseDecode(config, method, encoding, RESP_TIMEOUT, signal),
+      responseTimeoutsHandler(responseDecode(config, method, encoding), options),
       collectResponses(method, maxResponses)
     );
 

@@ -1,7 +1,10 @@
 import {RpcResponseStatus} from "../../../constants";
 import {decodeErrorMessage} from "../utils/errorMessage";
 import {BufferedSource} from "../utils/bufferedSource";
-import {ResponseInternalError, ResponseErrorCode} from "./errors";
+
+export enum StreamStatus {
+  Ended = "STREAM_ENDED",
+}
 
 /**
  * Consumes a stream source to read a `<result>`
@@ -10,7 +13,7 @@ import {ResponseInternalError, ResponseErrorCode} from "./errors";
  * ```
  * `<response_chunk>` starts with a single-byte response code which determines the contents of the response_chunk
  */
-export async function readResultHeader(bufferedSource: BufferedSource): Promise<RpcResponseStatus> {
+export async function readResultHeader(bufferedSource: BufferedSource): Promise<RpcResponseStatus | StreamStatus> {
   for await (const buffer of bufferedSource) {
     const status = buffer.get(0);
     buffer.consume(1);
@@ -21,7 +24,7 @@ export async function readResultHeader(bufferedSource: BufferedSource): Promise<
     }
   }
 
-  throw new ResponseInternalError({code: ResponseErrorCode.ENDED_ON_RESULT});
+  return StreamStatus.Ended;
 }
 
 /**

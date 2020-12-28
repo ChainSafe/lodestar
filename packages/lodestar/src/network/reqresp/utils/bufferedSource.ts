@@ -10,6 +10,7 @@ import BufferList from "bl";
  * when switching consumers
  */
 export class BufferedSource {
+  isDone = false;
   private buffer: BufferList;
   private source: AsyncGenerator<Buffer>;
 
@@ -35,6 +36,7 @@ export class BufferedSource {
 
         const {done, value: chunk} = await that.source.next();
         if (done === true) {
+          that.isDone = true;
           return {done: true, value: undefined};
         } else {
           // Concat new chunk and return a reference to this instance
@@ -53,16 +55,5 @@ export class BufferedSource {
 
   async return(): Promise<void> {
     await this.source.return(undefined);
-  }
-
-  /**
-   * Waits for the stream to yield one or more bytes
-   * Return false if the stream has returned, contains no data or all bytes have been consumed
-   */
-  async hasData(): Promise<boolean> {
-    for await (const buffer of this) {
-      if (buffer.length > 0) break;
-    }
-    return this.buffer.length > 0;
   }
 }

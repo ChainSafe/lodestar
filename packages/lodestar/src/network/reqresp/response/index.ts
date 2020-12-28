@@ -4,9 +4,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {randomRequestId} from "../../util";
+import {onChunk} from "../utils/onChunk";
 import {ILibP2pStream, ReqRespHandler} from "../interface";
 import {ReqRespError} from "../errors";
-import {onReponseChunk} from "./onReponseChunk";
 import {requestDecode} from "./requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "./responseEncode";
 
@@ -45,7 +45,7 @@ export async function handleRequest(
 
         yield* pipe(
           performRequestHandler(method, requestBody, peerId),
-          onReponseChunk((chunk) => logger.verbose("Resp sending chunk", {...logCtx, chunk} as Context)),
+          onChunk((chunk) => logger.verbose("Resp sending chunk", {...logCtx, chunk} as Context)),
           responseEncodeSuccess(config, method, encoding)
         );
       } catch (e) {
