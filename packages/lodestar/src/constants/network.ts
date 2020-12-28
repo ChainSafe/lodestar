@@ -128,6 +128,7 @@ export type RpcResponseStatusError = Exclude<RpcResponseStatus, RpcResponseStatu
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 /** The maximum allowed size of uncompressed req/resp chunked responses. */
 export const MAX_CHUNK_SIZE = 2 ** 20;
+
 /** The maximum time to wait for first byte of request response (time-to-first-byte). */
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 /** The maximum time for complete response transfer. */
@@ -136,6 +137,8 @@ export const RESP_TIMEOUT = 10 * 1000; // 10 sec
 export const REQUEST_TIMEOUT = 5 * 1000; // 5 sec
 /** Non-spec timeout from dialing protocol until stream opened */
 export const DIAL_TIMEOUT = 5 * 1000; // 5 sec
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const timeoutOptions = {TTFB_TIMEOUT, RESP_TIMEOUT, REQUEST_TIMEOUT, DIAL_TIMEOUT};
 
 export enum GoodByeReasonCode {
   CLIENT_SHUTDOWN = 1,

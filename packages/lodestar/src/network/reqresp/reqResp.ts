@@ -22,11 +22,13 @@ import {IReqResp} from "../interface";
 import {IReqEventEmitterClass, IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
-import {Method, ReqRespEncoding} from "../../constants";
+import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
 import {errorToScoreEvent, successToScoreEvent} from "./score";
 import {IPeerMetadataStore} from "../peers/interface";
 import {IRpcScoreTracker} from "../peers/score";
 import {createRpcProtocol} from "../util";
+
+export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
 /**
  * Implementation of eth2 p2p Req/Resp domain.
@@ -40,19 +42,24 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
   private peerMetadata: IPeerMetadataStore;
   private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
+  private options?: IReqRespOptions;
 
   /**
    * @see this.registerHandler
    */
   private performRequestHandler: ReqRespHandler | null;
 
-  public constructor({config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules) {
+  public constructor(
+    {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules,
+    options?: IReqRespOptions
+  ) {
     super();
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;
     this.logger = logger;
     this.blockProviderScores = blockProviderScores;
+    this.options = options;
 
     this.performRequestHandler = null;
   }
@@ -163,7 +170,8 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
         encoding,
         body,
         maxResponses,
-        this.controller?.signal
+        this.controller?.signal,
+        this.options
       );
 
       this.blockProviderScores.update(peerId, successToScoreEvent(method));
