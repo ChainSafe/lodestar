@@ -1,5 +1,5 @@
 import {AbortController} from "abort-controller";
-import {source as abortSource, Signals} from "abortable-iterator";
+import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
 import {onChunk} from "../utils/onChunk";
@@ -22,27 +22,33 @@ export function responseTimeoutsHandler<T>(
 
     const timeoutTTFB = setTimeout(() => ttfbTimeoutController.abort(), TTFB_TIMEOUT);
     let timeoutRESP: NodeJS.Timeout | null = null;
+    let isFirstByte = true;
+
+    const restartRespTimeout = (): void => {
+      if (timeoutRESP) clearTimeout(timeoutRESP);
+      timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
+    };
 
     try {
       yield* pipe(
         abortSource(source, [
-          {abortMessage: ResponseErrorCode.TTFB_TIMEOUT, signal: ttfbTimeoutController.signal},
-          {abortMessage: ResponseErrorCode.RESP_TIMEOUT, signal: respTimeoutController.signal},
-        ] as Signals<Buffer>),
+          {signal: ttfbTimeoutController.signal, options: {abortMessage: ResponseErrorCode.TTFB_TIMEOUT}},
+          {signal: respTimeoutController.signal, options: {abortMessage: ResponseErrorCode.RESP_TIMEOUT}},
+        ]),
         onChunk((bytesChunk) => {
           // Ignore null and empty chunks
-          if (bytesChunk.length === 0) return;
-          // On first byte, cancel the single use TTFB_TIMEOUT
-          clearTimeout(timeoutTTFB);
-          // Start the RESP_TIMEOUT at the begining of a <response_chunk>
-          if (!timeoutRESP) timeoutRESP = setTimeout(() => respTimeoutController.abort(), RESP_TIMEOUT);
+          if (isFirstByte && bytesChunk.length > 0) {
+            isFirstByte = false;
+            // On first byte, cancel the single use TTFB_TIMEOUT, and start RESP_TIMEOUT
+            clearTimeout(timeoutTTFB);
+            restartRespTimeout();
+          }
         }),
 
         responseDecoder,
         onChunk(() => {
-          // On <response_chunk>, cancel this chunk's RESP_TIMEOUT
-          if (timeoutRESP) clearTimeout(timeoutRESP);
-          timeoutRESP = null;
+          // On <response_chunk>, cancel this chunk's RESP_TIMEOUT and start next's
+          restartRespTimeout();
         })
       );
     } catch (e) {
