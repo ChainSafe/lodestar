@@ -9,15 +9,8 @@ import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
 describe("network / reqresp / request / responseTimeoutsHandler", () => {
   let controller: AbortController;
-
-  beforeEach(() => {
-    controller = new AbortController();
-  });
-
-  afterEach(() => {
-    controller.abort();
-  });
-
+  beforeEach(() => (controller = new AbortController()));
+  afterEach(() => controller.abort());
   async function sleep(ms: number): Promise<void> {
     await _sleep(ms, controller.signal);
   }
