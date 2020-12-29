@@ -3,7 +3,7 @@ import {source as abortSource} from "abortable-iterator";
 import pipe from "it-pipe";
 import {timeoutOptions} from "../../../constants";
 import {onChunk} from "../utils/onChunk";
-import {ResponseErrorCode, ResponseInternalError} from "./errors";
+import {RequestErrorCode, RequestInternalError} from "./errors";
 
 /**
  * Wraps responseDecoder to isolate the logic that handles response timeouts.
@@ -32,8 +32,8 @@ export function responseTimeoutsHandler<T>(
     try {
       yield* pipe(
         abortSource(source, [
-          {signal: ttfbTimeoutController.signal, options: {abortMessage: ResponseErrorCode.TTFB_TIMEOUT}},
-          {signal: respTimeoutController.signal, options: {abortMessage: ResponseErrorCode.RESP_TIMEOUT}},
+          {signal: ttfbTimeoutController.signal, options: {abortMessage: RequestErrorCode.TTFB_TIMEOUT}},
+          {signal: respTimeoutController.signal, options: {abortMessage: RequestErrorCode.RESP_TIMEOUT}},
         ]),
         onChunk((bytesChunk) => {
           // Ignore null and empty chunks
@@ -54,10 +54,10 @@ export function responseTimeoutsHandler<T>(
     } catch (e) {
       // Rethrow error properly typed so the peer score can pick it up
       switch (e.message) {
-        case ResponseErrorCode.TTFB_TIMEOUT:
-          throw new ResponseInternalError({code: ResponseErrorCode.TTFB_TIMEOUT});
-        case ResponseErrorCode.RESP_TIMEOUT:
-          throw new ResponseInternalError({code: ResponseErrorCode.RESP_TIMEOUT});
+        case RequestErrorCode.TTFB_TIMEOUT:
+          throw new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT});
+        case RequestErrorCode.RESP_TIMEOUT:
+          throw new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT});
         default:
           throw e;
       }

@@ -9,7 +9,7 @@ import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT} from "../../../../../src/constants";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {responseDecode} from "../../../../../src/network/reqresp/request/responseDecode";
-import {ResponseErrorCode, ResponseInternalError} from "../../../../../src/network/reqresp/request/errors";
+import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
 import {arrToSource, expectLodestarError, isEqualSszType} from "../utils";
 
 chai.use(chaiAsPromised);
@@ -63,8 +63,8 @@ describe("network / reqresp / request / responseDecode", () => {
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       testResult: TestResult.ERROR,
-      error: new ResponseInternalError({
-        code: ResponseErrorCode.SERVER_ERROR,
+      error: new RequestInternalError({
+        code: RequestErrorCode.SERVER_ERROR,
         errorMessage: "",
       }),
       chunks: [
@@ -108,8 +108,8 @@ describe("network / reqresp / request / responseDecode", () => {
     {
       id: "Single chunk with INVALID_REQUEST",
       testResult: TestResult.ERROR,
-      error: new ResponseInternalError({
-        code: ResponseErrorCode.INVALID_REQUEST,
+      error: new RequestInternalError({
+        code: RequestErrorCode.INVALID_REQUEST,
         errorMessage: "TEST_ERROR",
       }),
       chunks: ["0x01", toHexString(Buffer.from("TEST_ERROR"))],
@@ -117,8 +117,8 @@ describe("network / reqresp / request / responseDecode", () => {
     {
       id: "Single chunk with SERVER_ERROR",
       testResult: TestResult.ERROR,
-      error: new ResponseInternalError({
-        code: ResponseErrorCode.SERVER_ERROR,
+      error: new RequestInternalError({
+        code: RequestErrorCode.SERVER_ERROR,
         errorMessage: "TEST_ERROR",
       }),
       chunks: ["0x02", toHexString(Buffer.from("TEST_ERROR"))],
@@ -126,8 +126,8 @@ describe("network / reqresp / request / responseDecode", () => {
     {
       id: "Slice long error message",
       testResult: TestResult.ERROR,
-      error: new ResponseInternalError({
-        code: ResponseErrorCode.INVALID_REQUEST,
+      error: new RequestInternalError({
+        code: RequestErrorCode.INVALID_REQUEST,
         errorMessage: "TEST_ERROR".repeat(1000).slice(0, 256),
       }),
       chunks: ["0x01", toHexString(Buffer.from("TEST_ERROR".repeat(1000)))],
@@ -135,8 +135,8 @@ describe("network / reqresp / request / responseDecode", () => {
     {
       id: "Remove non-ascii characters from error message",
       testResult: TestResult.ERROR,
-      error: new ResponseInternalError({
-        code: ResponseErrorCode.INVALID_REQUEST,
+      error: new RequestInternalError({
+        code: RequestErrorCode.INVALID_REQUEST,
         errorMessage: "TEST_ERROR",
       }),
       chunks: ["0x01", toHexString(Buffer.from("TEST_ERROR\u03A9"))],

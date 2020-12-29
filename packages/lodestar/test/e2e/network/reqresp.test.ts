@@ -9,7 +9,7 @@ import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, IReqRespOptions, Libp2pNetwork} from "../../../src/network";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
-import {ResponseError, ResponseErrorCode} from "../../../src/network/reqresp/request";
+import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
 import {silentLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
@@ -161,8 +161,8 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.metadata(netB.peerId),
-      new ResponseError({
-        code: ResponseErrorCode.SERVER_ERROR,
+      new RequestError({
+        code: RequestErrorCode.SERVER_ERROR,
         errorMessage: testErrorMessage,
         method: Method.Metadata,
         encoding: ReqRespEncoding.SSZ_SNAPPY,
@@ -187,8 +187,8 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
-      new ResponseError({
-        code: ResponseErrorCode.SERVER_ERROR,
+      new RequestError({
+        code: RequestErrorCode.SERVER_ERROR,
         errorMessage: testErrorMessage,
         method: Method.BeaconBlocksByRange,
         encoding: ReqRespEncoding.SSZ_SNAPPY,
@@ -217,8 +217,8 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
-      new ResponseError({
-        code: ResponseErrorCode.TTFB_TIMEOUT,
+      new RequestError({
+        code: RequestErrorCode.TTFB_TIMEOUT,
         method: Method.BeaconBlocksByRange,
         encoding: ReqRespEncoding.SSZ_SNAPPY,
         peer: netB.peerId.toB58String(),
@@ -247,8 +247,8 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
-      new ResponseError({
-        code: ResponseErrorCode.RESP_TIMEOUT,
+      new RequestError({
+        code: RequestErrorCode.RESP_TIMEOUT,
         method: Method.BeaconBlocksByRange,
         encoding: ReqRespEncoding.SSZ_SNAPPY,
         peer: netB.peerId.toB58String(),

@@ -1,6 +1,6 @@
 import {Method} from "../../constants";
 import {RpcScoreEvent} from "../peers/score";
-import {ResponseError, ResponseErrorCode} from "./request";
+import {RequestError, RequestErrorCode} from "./request";
 
 /**
  * libp2p-ts does not include types for the error codes.
@@ -30,9 +30,9 @@ export function errorToScoreEvent(e: Error, method: Method): RpcScoreEvent {
   }
 
   if (method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot) {
-    if (e instanceof ResponseError) {
+    if (e instanceof RequestError) {
       switch (e.type.code) {
-        case ResponseErrorCode.TTFB_TIMEOUT:
+        case RequestErrorCode.TTFB_TIMEOUT:
           return RpcScoreEvent.RESPONSE_TIMEOUT;
       }
     }

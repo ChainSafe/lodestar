@@ -7,14 +7,14 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
 import {createRpcProtocol, randomRequestId} from "../../util";
-import {ResponseError, ResponseErrorCode, ResponseInternalError} from "./errors";
+import {RequestError, RequestErrorCode, RequestInternalError} from "./errors";
 import {collectResponses} from "./collectResponses";
 import {requestEncode} from "./requestEncode";
 import {responseDecode} from "./responseDecode";
 import {ILibP2pStream} from "../interface";
 import {responseTimeoutsHandler} from "./timeoutHandler";
 
-export {ResponseError, ResponseErrorCode};
+export {RequestError, RequestErrorCode};
 
 /**
  * Sends ReqResp request to a peer. Throws on error. Logs each step of the request lifecycle.
@@ -70,9 +70,9 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       signal
     ).catch((e) => {
       if (e instanceof TimeoutError) {
-        throw new ResponseInternalError({code: ResponseErrorCode.DIAL_TIMEOUT});
+        throw new RequestInternalError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
-        throw new ResponseInternalError({code: ResponseErrorCode.DIAL_ERROR, error: e});
+        throw new RequestInternalError({code: RequestErrorCode.DIAL_ERROR, error: e});
       }
     });
 
@@ -95,9 +95,9 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       stream.close();
 
       if (e instanceof TimeoutError) {
-        throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_TIMEOUT});
+        throw new RequestInternalError({code: RequestErrorCode.REQUEST_TIMEOUT});
       } else {
-        throw new ResponseInternalError({code: ResponseErrorCode.REQUEST_ERROR, error: e});
+        throw new RequestInternalError({code: RequestErrorCode.REQUEST_ERROR, error: e});
       }
     });
 
@@ -118,8 +118,8 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   } catch (e) {
     logger.verbose("Req error", logCtx, e);
 
-    if (e instanceof ResponseInternalError) {
-      throw new ResponseError({...e.type, method, encoding, peer});
+    if (e instanceof RequestInternalError) {
+      throw new RequestError({...e.type, method, encoding, peer});
     } else {
       throw e;
     }

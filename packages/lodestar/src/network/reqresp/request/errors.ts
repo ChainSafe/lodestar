@@ -1,46 +1,46 @@
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatusError} from "../../../constants";
 
-export enum ResponseErrorCode {
+export enum RequestErrorCode {
   // Declaring specific values of RpcResponseStatusError for error clarity downstream
   /** `<response_chunk>` had `<result>` === INVALID_REQUEST */
-  INVALID_REQUEST = "RESPONSE_ERROR_INVALID_REQUEST",
+  INVALID_REQUEST = "REQUEST_ERROR_INVALID_REQUEST",
   /** `<response_chunk>` had `<result>` === SERVER_ERROR */
-  SERVER_ERROR = "RESPONSE_ERROR_SERVER_ERROR",
+  SERVER_ERROR = "REQUEST_ERROR_SERVER_ERROR",
   /** `<response_chunk>` had a `<result>` not known in the current spec */
-  UNKNOWN_ERROR_STATUS = "RESPONSE_ERROR_UNKNOWN_ERROR_STATUS",
+  UNKNOWN_ERROR_STATUS = "REQUEST_ERROR_UNKNOWN_ERROR_STATUS",
   /** Stream ended expecting to read `<result>` spec */
-  ENDED_ON_RESULT = "RESPONSE_ERROR_ENDED_ON_RESULT",
+  ENDED_ON_RESULT = "REQUEST_ERROR_ENDED_ON_RESULT",
   /** Could not open a stream with peer before DIAL_TIMEOUT */
-  DIAL_TIMEOUT = "RESPONSE_ERROR_DIAL_TIMEOUT",
+  DIAL_TIMEOUT = "REQUEST_ERROR_DIAL_TIMEOUT",
   /** Error opening a stream with peer */
-  DIAL_ERROR = "RESPONSE_ERROR_DIAL_ERROR",
+  DIAL_ERROR = "REQUEST_ERROR_DIAL_ERROR",
   /** Reponder did not close write stream before REQUEST_TIMEOUT */
-  REQUEST_TIMEOUT = "RESPONSE_ERROR_REQUEST_TIMEOUT",
+  REQUEST_TIMEOUT = "REQUEST_ERROR_REQUEST_TIMEOUT",
   /** Error when sending request to responder */
-  REQUEST_ERROR = "RESPONSE_ERROR_REQUEST_ERROR",
+  REQUEST_ERROR = "REQUEST_ERROR_REQUEST_ERROR",
   /** Time to first byte timeout */
-  TTFB_TIMEOUT = "RESPONSE_ERROR_TTFB_TIMEOUT",
+  TTFB_TIMEOUT = "REQUEST_ERROR_TTFB_TIMEOUT",
   /** Timeout between `<response_chunk>` exceed */
-  RESP_TIMEOUT = "RESPONSE_ERROR_RESP_TIMEOUT",
+  RESP_TIMEOUT = "REQUEST_ERROR_RESP_TIMEOUT",
   /** Any other error */
-  OTHER_ERROR = "RESPONSE_ERROR",
+  OTHER_ERROR = "REQUEST_ERROR",
 }
 
-type ResponseErrorType =
-  | {code: ResponseErrorCode.INVALID_REQUEST; errorMessage: string}
-  | {code: ResponseErrorCode.SERVER_ERROR; errorMessage: string}
-  | {code: ResponseErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
-  | {code: ResponseErrorCode.ENDED_ON_RESULT}
-  | {code: ResponseErrorCode.DIAL_TIMEOUT}
-  | {code: ResponseErrorCode.DIAL_ERROR; error: Error}
-  | {code: ResponseErrorCode.REQUEST_TIMEOUT}
-  | {code: ResponseErrorCode.REQUEST_ERROR; error: Error}
-  | {code: ResponseErrorCode.TTFB_TIMEOUT}
-  | {code: ResponseErrorCode.RESP_TIMEOUT}
-  | {code: ResponseErrorCode.OTHER_ERROR; error: Error};
+type RequestErrorType =
+  | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
+  | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
+  | {code: RequestErrorCode.UNKNOWN_ERROR_STATUS; status: RpcResponseStatusError; errorMessage: string}
+  | {code: RequestErrorCode.ENDED_ON_RESULT}
+  | {code: RequestErrorCode.DIAL_TIMEOUT}
+  | {code: RequestErrorCode.DIAL_ERROR; error: Error}
+  | {code: RequestErrorCode.REQUEST_TIMEOUT}
+  | {code: RequestErrorCode.REQUEST_ERROR; error: Error}
+  | {code: RequestErrorCode.TTFB_TIMEOUT}
+  | {code: RequestErrorCode.RESP_TIMEOUT}
+  | {code: RequestErrorCode.OTHER_ERROR; error: Error};
 
-interface IResponseMetadata {
+interface IRequestMetadata {
   method: Method;
   encoding: ReqRespEncoding;
   peer: string;
@@ -48,25 +48,25 @@ interface IResponseMetadata {
 }
 
 /**
- * Same error types as ResponseError but without metadata.
- * Top level function sendRequest() must rethrow ResponseInternalError with metadata
+ * Same error types as RequestError but without metadata.
+ * Top level function sendRequest() must rethrow RequestInternalError with metadata
  */
-export class ResponseInternalError extends LodestarError<ResponseErrorType> {
-  constructor(type: ResponseErrorType) {
+export class RequestInternalError extends LodestarError<RequestErrorType> {
+  constructor(type: RequestErrorType) {
     super(type, renderErrorMessage(type));
   }
 }
 
-export class ResponseError extends LodestarError<ResponseErrorType & IResponseMetadata> {
-  constructor(type: ResponseErrorType & IResponseMetadata) {
+export class RequestError extends LodestarError<RequestErrorType & IRequestMetadata> {
+  constructor(type: RequestErrorType & IRequestMetadata) {
     super(type, renderErrorMessage(type));
   }
 }
 
-function renderErrorMessage(type: ResponseErrorType): string {
+function renderErrorMessage(type: RequestErrorType): string {
   switch (type.code) {
-    case ResponseErrorCode.INVALID_REQUEST:
-    case ResponseErrorCode.SERVER_ERROR:
+    case RequestErrorCode.INVALID_REQUEST:
+    case RequestErrorCode.SERVER_ERROR:
       return `${type.code}: ${type.errorMessage}`;
 
     default:

@@ -4,7 +4,7 @@ import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../cons
 import {BufferedSource} from "../utils/bufferedSource";
 import {readEncodedPayload} from "../encodingStrategies";
 import {readErrorMessage, readResultHeader, StreamStatus} from "./resultHeader";
-import {ResponseInternalError, ResponseErrorCode} from "./errors";
+import {RequestInternalError, RequestErrorCode} from "./errors";
 
 /**
  * Consumes a stream source to read a `<response>`
@@ -43,11 +43,11 @@ export function responseDecode(
           const errorMessage = await readErrorMessage(bufferedSource);
           switch (status) {
             case RpcResponseStatus.INVALID_REQUEST:
-              throw new ResponseInternalError({code: ResponseErrorCode.INVALID_REQUEST, errorMessage});
+              throw new RequestInternalError({code: RequestErrorCode.INVALID_REQUEST, errorMessage});
             case RpcResponseStatus.SERVER_ERROR:
-              throw new ResponseInternalError({code: ResponseErrorCode.SERVER_ERROR, errorMessage});
+              throw new RequestInternalError({code: RequestErrorCode.SERVER_ERROR, errorMessage});
             default:
-              throw new ResponseInternalError({code: ResponseErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status});
+              throw new RequestInternalError({code: RequestErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status});
           }
         }
 

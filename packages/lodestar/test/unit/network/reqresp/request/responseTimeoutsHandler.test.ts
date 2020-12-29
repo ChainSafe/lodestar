@@ -4,7 +4,7 @@ import pipe from "it-pipe";
 import {LodestarError, sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../../../src/constants";
 import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/timeoutHandler";
-import {ResponseErrorCode, ResponseInternalError} from "../../../../../src/network/reqresp/request/errors";
+import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
 describe("network / reqresp / request / responseTimeoutsHandler", () => {
@@ -52,7 +52,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       responseDecoder: async function* (source) {
         yield* source;
       },
-      error: new ResponseInternalError({code: ResponseErrorCode.TTFB_TIMEOUT}),
+      error: new RequestInternalError({code: RequestErrorCode.TTFB_TIMEOUT}),
     },
     {
       id: "trigger a RESP_TIMEOUT",
@@ -65,7 +65,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       responseDecoder: async function* (source) {
         yield* source;
       },
-      error: new ResponseInternalError({code: ResponseErrorCode.RESP_TIMEOUT}),
+      error: new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
     },
     {
       // A slow loris attack yields bytes slowly to not trigger inter-byte timeouts
@@ -84,7 +84,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
           // Never yield a response_chunk
         }
       },
-      error: new ResponseInternalError({code: ResponseErrorCode.RESP_TIMEOUT}),
+      error: new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
     },
   ];
   /* eslint-enable @typescript-eslint/naming-convention */
