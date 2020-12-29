@@ -1,26 +1,19 @@
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  BeaconBlocksByRangeRequest,
-  BeaconState,
-  Goodbye,
-  ResponseBody,
-  SignedBeaconBlock,
-  Status,
-} from "@chainsafe/lodestar-types";
-import {expect} from "chai";
+import {BeaconBlocksByRangeRequest, BeaconState, Goodbye, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
+import all from "it-all";
 import PeerId from "peer-id";
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain} from "../../../src/chain";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
-import {ReqRespEncoding} from "../../../src/constants/network";
 import {IBeaconDb} from "../../../src/db/api";
 import {Libp2pNetwork} from "../../../src/network";
 import {IPeerMetadataStore} from "../../../src/network/peers/interface";
 import {Libp2pPeerMetadataStore} from "../../../src/network/peers/metastore";
 import {ReqResp} from "../../../src/network/reqresp/reqResp";
-import * as respUtils from "../../../src/network/reqresp/respUtils";
 import {BeaconReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
@@ -29,7 +22,10 @@ import {generatePeer} from "../../utils/peer";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 
+chai.use(chaiAsPromised);
+
 describe("sync req resp", function () {
+  const peerId = new PeerId(Buffer.from("lodestar"));
   const logger = silentLogger;
   const sandbox = sinon.createSandbox();
   let syncRpc: BeaconReqRespHandler;
@@ -39,8 +35,6 @@ describe("sync req resp", function () {
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
-  let sendResponseStub: SinonStub;
-  let sendResponseStreamStub: SinonStub;
 
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain);
@@ -58,8 +52,6 @@ describe("sync req resp", function () {
     metaStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
     networkStub.peerMetadata = metaStub;
     dbStub = new StubbedBeaconDb(sandbox);
-    sendResponseStub = sandbox.stub(respUtils, "sendResponse");
-    sendResponseStreamStub = sandbox.stub(respUtils, "sendResponseStream");
 
     syncRpc = new BeaconReqRespHandler({
       config,
@@ -83,8 +75,7 @@ describe("sync req resp", function () {
     await syncRpc.stop();
   });
 
-  it("should handle request  - onStatus(success)", async function () {
-    const peerId = new PeerId(Buffer.from("lodestar"));
+  it("should handle request - onStatus", async function () {
     const body: Status = {
       forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
@@ -92,47 +83,11 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    sendResponseStub.resolves(0);
     dbStub.stateCache.get.resolves(generateState() as any);
 
-    await syncRpc.onRequest(
-      {
-        body,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        id: "abc",
-        method: Method.Status,
-      },
-      peerId,
-      (null as unknown) as Sink<unknown, unknown>
-    );
-    expect(sendResponseStub.calledOnce).to.be.true;
+    const res = await all(syncRpc.onRequest(Method.Status, body, peerId));
+    expect(res).have.length(1, "Wrong number of chunks responded");
     expect(reqRespStub.goodbye.called).to.be.false;
-  });
-
-  it("should handle request  - onStatus(error)", async function () {
-    const peerId = new PeerId(Buffer.from("lodestar"));
-    const body: Status = {
-      forkDigest: Buffer.alloc(4),
-      finalizedRoot: Buffer.alloc(32),
-      finalizedEpoch: 1,
-      headRoot: Buffer.alloc(32),
-      headSlot: 1,
-    };
-    try {
-      sendResponseStub.throws(new Error("server error"));
-      await syncRpc.onRequest(
-        {
-          body,
-          encoding: ReqRespEncoding.SSZ_SNAPPY,
-          id: "abc",
-          method: Method.Status,
-        },
-        peerId,
-        (null as unknown) as Sink<unknown, unknown>
-      );
-    } catch (e) {
-      expect(sendResponseStub.called).to.be.true;
-    }
   });
 
   it("should disconnect on status - incorrect headForkVersion", async function () {
@@ -200,45 +155,30 @@ describe("sync req resp", function () {
   });
 
   it("should handle request - onGoodbye", async function () {
-    const peerId = new PeerId(Buffer.from("lodestar"));
     const goodbye: Goodbye = BigInt(1);
     networkStub.disconnect.resolves();
 
-    await syncRpc.onRequest(
-      {
-        body: goodbye,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        id: "abc",
-        method: Method.Goodbye,
-      },
-      peerId,
-      (null as unknown) as Sink<unknown, unknown>
-    );
+    await all(syncRpc.onRequest(Method.Goodbye, goodbye, peerId));
+
     // expect(networkStub.disconnect.calledOnce).to.be.true;
   });
 
-  it("should fail to handle request ", async function () {
+  it("Throw if BeaconBlocksByRangeRequest is invalid", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
+    const requestBody: BeaconBlocksByRangeRequest = {
+      step: 0,
+      startSlot: 0,
+      count: 10,
+    };
 
-    await syncRpc.onRequest(
-      {
-        body: {
-          step: 0,
-          startSlot: 0,
-          count: 10,
-        },
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        method: Method.BeaconBlocksByRange,
-        id: "random",
-      },
-      peerId,
-      null!
+    await expect(all(syncRpc.onRequest(Method.BeaconBlocksByRange, requestBody, peerId))).to.be.rejectedWith(
+      "step < 1"
     );
   });
 
   it("should handle request - onBeaconBlocksByRange", async function () {
     const peerId = new PeerId(Buffer.from("lodestar"));
-    const body: BeaconBlocksByRangeRequest = {
+    const requestBody: BeaconBlocksByRangeRequest = {
       startSlot: 2,
       count: 4,
       step: 2,
@@ -256,24 +196,17 @@ describe("sync req resp", function () {
     block8.message.slot = 8;
     // block 6 does not exist
     chainStub.getUnfinalizedBlocksAtSlots.resolves([null!, block8]);
-    let blockStream: AsyncIterable<ResponseBody>;
-    sendResponseStreamStub.callsFake((modules, id, method, encoding, sink, err, chunkIter) => {
-      blockStream = chunkIter;
-    });
-    await syncRpc.onRequest(
-      {
-        body,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        id: "abc",
-        method: Method.BeaconBlocksByRange,
-      },
-      peerId,
-      (null as unknown) as Sink<unknown, unknown>
-    );
+
     const slots: number[] = [];
-    for await (const body of blockStream!) {
-      slots.push((body as SignedBeaconBlock).message.slot);
+    try {
+      for await (const chunk of syncRpc.onRequest(Method.BeaconBlocksByRange, requestBody, peerId)) {
+        slots.push((chunk as SignedBeaconBlock).message.slot);
+      }
+    } catch (e) {
+      console.log({e});
+      //
     }
+
     // count is 4 but it returns only 3 blocks because block 6 does not exist
     expect(slots).to.be.deep.equal([2, 4, 8]);
   });

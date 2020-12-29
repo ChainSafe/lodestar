@@ -7,7 +7,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
 import {ReqRespHandler} from "../../../../../src/network";
 import {handleRequest} from "../../../../../src/network/reqresp/response";
-import {expectRejectedWithLodestarError, MockLibP2pStream} from "../utils";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors";
+import {MockLibP2pStream} from "../utils";
 
 chai.use(chaiAsPromised);
 
@@ -79,7 +80,6 @@ describe("network / reqresp / response / handleRequest", () => {
         await expect(resultPromise).to.not.rejectedWith();
       }
 
-      expect(stream.isClosed).to.equal(true, "Stream was not closed");
       expect(stream.resultChunks.map(toHexString)).to.deep.equal(expectedResponseChunks, "Wrong response chunks");
     });
   }

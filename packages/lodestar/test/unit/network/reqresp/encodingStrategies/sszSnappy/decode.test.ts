@@ -3,9 +3,11 @@ import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/bufferedSource";
-import {readSszSnappyChunk} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/decode";
-import {SszSnappyErrorCode} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {Method, Methods} from "../../../../../../src/constants";
+import {
+  SszSnappyErrorCode,
+  readSszSnappyPayload,
+} from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {arrToSource} from "../../utils";
 
 chai.use(chaiAsPromised);
@@ -31,12 +33,9 @@ describe("sszSnappy decode - error", function () {
     },
     {
       id: "if it read more than maxEncodedLen",
-      method: Method.Status,
+      method: Method.Ping,
       error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-      chunks: [
-        Buffer.from(varint.encode(config.types.Status.minSize())),
-        Buffer.alloc(config.types.Status.minSize() + 10),
-      ],
+      chunks: [Buffer.from(varint.encode(config.types.Ping.minSize())), Buffer.alloc(100)],
     },
     {
       id: "if failed ssz snappy input malformed",
@@ -52,7 +51,7 @@ describe("sszSnappy decode - error", function () {
       if (!type) throw Error("no type");
 
       const bufferedSource = new BufferedSource(arrToSource(chunks));
-      await expect(readSszSnappyChunk(bufferedSource, type)).to.be.rejectedWith(error);
+      await expect(readSszSnappyPayload(bufferedSource, type)).to.be.rejectedWith(error);
     });
   }
 });

@@ -1,4 +1,4 @@
-import chai, {expect} from "chai";
+import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
@@ -7,7 +7,8 @@ import {Goodbye, Metadata, Ping, ResponseBody, SignedBeaconBlock, Status} from "
 import {Method, Methods, ReqRespEncoding} from "../../../../src/constants";
 import {responseDecode} from "../../../../src/network/reqresp/request/responseDecode";
 import {responseEncodeSuccess} from "../../../../src/network/reqresp/response/responseEncode";
-import {arrToSource, createStatus, generateEmptySignedBlocks, isEqualSszType} from "./utils";
+import {arrToSource, createStatus, generateEmptySignedBlocks} from "./utils";
+import {expectIsEqualSszTypeArr} from "../../../utils/ssz";
 
 chai.use(chaiAsPromised);
 
@@ -43,19 +44,14 @@ describe("network / reqresp / encode decode / response body", () => {
           const returnedResponses = await pipe(
             arrToSource(responseChunks),
             responseEncodeSuccess(config, method, encoding),
-            responseDecode(config, method, encoding, this.timeout()),
+            responseDecode(config, method, encoding),
             all
           );
 
           const type = Methods[method].responseSSZType(config);
           if (!type) throw Error("no type");
 
-          returnedResponses.forEach((returnedResponse, j) => {
-            expect(isEqualSszType(type, returnedResponse, responseChunks[j] as ResponseBody)).to.equal(
-              true,
-              "decoded response does not match encoded response"
-            );
-          });
+          expectIsEqualSszTypeArr(type, returnedResponses, responseChunks, "Response chunks");
         });
       });
     }

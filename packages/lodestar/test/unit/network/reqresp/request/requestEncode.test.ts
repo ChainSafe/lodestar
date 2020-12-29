@@ -7,8 +7,8 @@ import {RequestBody} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
 import {requestEncode} from "../../../../../src/network/reqresp/request/requestEncode";
-import {expectLodestarError} from "../utils";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
 describe("network / reqresp / response / requestEncode", () => {
   const testCases: {
@@ -57,12 +57,7 @@ describe("network / reqresp / response / requestEncode", () => {
         const encodedChunks = await resultPromise;
         expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
       } else if (error) {
-        try {
-          await resultPromise;
-          throw Error("did not throw");
-        } catch (e) {
-          expectLodestarError(e, error);
-        }
+        await expectRejectedWithLodestarError(resultPromise, error);
       } else {
         throw Error("Bad error data");
       }

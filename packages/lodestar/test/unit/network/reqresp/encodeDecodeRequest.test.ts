@@ -13,7 +13,8 @@ import {
 import {Method, Methods, ReqRespEncoding} from "../../../../src/constants";
 import {requestEncode} from "../../../../src/network/reqresp/request/requestEncode";
 import {requestDecode} from "../../../../src/network/reqresp/response/requestDecode";
-import {createStatus, generateRoots, isEqualSszType} from "./utils";
+import {isEqualSszType} from "../../../utils/ssz";
+import {createStatus, generateRoots} from "./utils";
 
 chai.use(chaiAsPromised);
 

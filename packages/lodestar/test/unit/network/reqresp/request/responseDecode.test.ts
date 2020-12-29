@@ -1,4 +1,4 @@
-import chai, {expect} from "chai";
+import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
@@ -6,11 +6,13 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {ResponseBody} from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding, RESP_TIMEOUT} from "../../../../../src/constants";
+import {Method, Methods, ReqRespEncoding} from "../../../../../src/constants";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {responseDecode} from "../../../../../src/network/reqresp/request/responseDecode";
 import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
-import {arrToSource, expectLodestarError, isEqualSszType} from "../utils";
+import {arrToSource} from "../utils";
+import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
+import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
 chai.use(chaiAsPromised);
 
@@ -148,18 +150,13 @@ describe("network / reqresp / request / responseDecode", () => {
     it(id, async () => {
       const responseDecodePromise = pipe(
         arrToSource(chunks.map((chunk) => Buffer.from(fromHexString(chunk)))),
-        responseDecode(config, method, encoding, RESP_TIMEOUT),
+        responseDecode(config, method, encoding),
         all
       );
 
       switch (testData.testResult) {
         case TestResult.ERROR: {
-          try {
-            await responseDecodePromise;
-            throw Error("did not throw");
-          } catch (e) {
-            expectLodestarError(e, testData.error);
-          }
+          await expectRejectedWithLodestarError(responseDecodePromise, testData.error);
           break;
         }
 
@@ -168,15 +165,7 @@ describe("network / reqresp / request / responseDecode", () => {
           if (!type) throw Error("no type");
 
           const responses = await responseDecodePromise;
-
-          responses.forEach((response, i) => {
-            const expectedResponse = testData.responseChunks[i];
-            if (expectedResponse === undefined) throw Error(`No expectedResponse at index ${i}`);
-            expect(isEqualSszType(type, response, expectedResponse)).to.equal(
-              true,
-              "decoded response does not match encoded response"
-            );
-          });
+          expectIsEqualSszTypeArr(type, responses, testData.responseChunks, "Response chunks");
           break;
         }
 

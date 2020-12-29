@@ -126,24 +126,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     }
   }
 
-  private async *onStatus(requestBody: Status, peerId: PeerId): AsyncIterable<Status> {
-    if (await this.shouldDisconnectOnStatus(requestBody)) {
-      try {
-        await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
-      } catch {
-        // ignore error
-        return;
-      }
-    }
-
-    // set status on peer
-    this.network.peerMetadata.setStatus(peerId, requestBody);
-
-    // send status response
-    yield await createStatus(this.chain);
-  }
-
-  private async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
+  // Must be public for testing
+  async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = await this.chain.getForkDigest();
     if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
       this.logger.verbose("Fork digest mismatch", {
@@ -208,6 +192,23 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       }
     }
     return false;
+  }
+
+  private async *onStatus(requestBody: Status, peerId: PeerId): AsyncIterable<Status> {
+    if (await this.shouldDisconnectOnStatus(requestBody)) {
+      try {
+        await this.network.reqResp.goodbye(peerId, BigInt(GoodByeReasonCode.IRRELEVANT_NETWORK));
+      } catch {
+        // ignore error
+        return;
+      }
+    }
+
+    // set status on peer
+    this.network.peerMetadata.setStatus(peerId, requestBody);
+
+    // send status response
+    yield await createStatus(this.chain);
   }
 
   private async *onGoodbye(requestBody: Goodbye, peerId: PeerId): AsyncIterable<bigint> {
