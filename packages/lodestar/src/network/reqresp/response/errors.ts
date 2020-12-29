@@ -1,11 +1,11 @@
-import {RpcResponseStatus} from "../../constants";
+import {RpcResponseStatus} from "../../../constants";
 
 type RpcResponseStatusNotSuccess = Exclude<RpcResponseStatus, RpcResponseStatus.SUCCESS>;
 
 /**
- * Error of network req/resp
+ * ReqResp response error, necessary to internally signal that a request is invalid
  */
-export class ReqRespError extends Error {
+export class ResponseError extends Error {
   public status: RpcResponseStatusNotSuccess;
   constructor(status: RpcResponseStatusNotSuccess, message?: string) {
     super(message);

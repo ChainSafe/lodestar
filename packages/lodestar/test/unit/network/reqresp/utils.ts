@@ -1,7 +1,5 @@
-import {expect} from "chai";
 import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
-import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
-import {fromHexString, Json, List} from "@chainsafe/ssz";
+import {fromHexString, List} from "@chainsafe/ssz";
 import {ILibP2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
 

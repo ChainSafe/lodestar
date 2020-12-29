@@ -33,6 +33,7 @@ export function errorToScoreEvent(e: Error, method: Method): RpcScoreEvent {
     if (e instanceof RequestError) {
       switch (e.type.code) {
         case RequestErrorCode.TTFB_TIMEOUT:
+        case RequestErrorCode.RESP_TIMEOUT:
           return RpcScoreEvent.RESPONSE_TIMEOUT;
       }
     }

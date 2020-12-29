@@ -109,7 +109,8 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       collectResponses(method, maxResponses)
     );
 
-    logger.verbose("Req received response", {...logCtx, responses} as Context);
+    // TODO: Should log the response? Logs get extremely cluttered
+    logger.verbose("Req received response", logCtx);
 
     return responses as T;
 

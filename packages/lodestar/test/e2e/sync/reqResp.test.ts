@@ -12,10 +12,10 @@ import {encode} from "varint";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
-import {decodeP2pErrorMessage} from "../../../src/network/encoders/response";
+import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
-import {ILibp2pConn, ReqRespRequest} from "../../../src/network/reqresp";
+import {ILibP2pStream, ReqRespRequest} from "../../../src/network/reqresp";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
@@ -200,7 +200,7 @@ describe("[sync] rpc", function () {
   it("should return invalid request status code", async () => {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
-    const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as ILibp2pConn;
+    const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: ILibP2pStream};
     await pipe([Buffer.from(encode(99999999999999999999999))], stream as any, async (source: AsyncIterable<Buffer>) => {
       let i = 0;
       // 1 chunk of status and 1 chunk of error
@@ -212,7 +212,7 @@ describe("[sync] rpc", function () {
           // i should be 1
           const errBuf = val.slice();
           // message from the server side
-          expect(decodeP2pErrorMessage(config, errBuf)).to.be.equal("Invalid request");
+          expect(decodeErrorMessage(errBuf)).to.be.equal("Invalid request");
         }
         i++;
       }

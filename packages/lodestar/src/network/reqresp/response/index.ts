@@ -6,9 +6,11 @@ import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {randomRequestId} from "../../util";
 import {onChunk} from "../utils/onChunk";
 import {ILibP2pStream, ReqRespHandler} from "../interface";
-import {ReqRespError} from "../errors";
+import {ResponseError} from "./errors";
 import {requestDecode} from "./requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "./responseEncode";
+
+export {ResponseError};
 
 /**
  * Handles a ReqResp request from a peer. Throws on error. Logs each step of the response lifecycle.
@@ -38,18 +40,19 @@ export async function handleRequest(
     (async function* () {
       try {
         const requestBody = await pipe(stream.source, requestDecode(config, method, encoding)).catch((e) => {
-          throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, e.message);
+          throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, e.message);
         });
 
         logger.verbose("Resp received request", {...logCtx, requestBody} as Context);
 
         yield* pipe(
           performRequestHandler(method, requestBody, peerId),
-          onChunk((chunk) => logger.verbose("Resp sending chunk", {...logCtx, chunk} as Context)),
+          // TODO: Should log the resp chunk? Logs get extremely cluttered
+          onChunk(() => logger.verbose("Resp sending chunk", logCtx)),
           responseEncodeSuccess(config, method, encoding)
         );
       } catch (e) {
-        const status = e instanceof ReqRespError ? e.status : RpcResponseStatus.SERVER_ERROR;
+        const status = e instanceof ResponseError ? e.status : RpcResponseStatus.SERVER_ERROR;
         yield* responseEncodeError(status, e.message);
 
         // Should not throw an error here or libp2p-mplex throws with 'AbortError: stream reset'

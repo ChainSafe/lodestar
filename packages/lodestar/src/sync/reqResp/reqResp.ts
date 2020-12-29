@@ -24,7 +24,7 @@ import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} fr
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork} from "../../network";
-import {ReqRespError} from "../../network/reqresp";
+import {ResponseError} from "../../network/reqresp/response";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {createStatus, syncPeersStatus} from "../utils/sync";
 import {IReqRespHandler} from "./interface";
@@ -143,20 +143,20 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     yield await createStatus(this.chain);
   }
 
-  private async shouldDisconnectOnStatus(status: Status): Promise<boolean> {
+  private async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
     const currentForkDigest = await this.chain.getForkDigest();
-    if (!this.config.types.ForkDigest.equals(currentForkDigest, status.forkDigest)) {
+    if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
       this.logger.verbose("Fork digest mismatch", {
         expected: toHexString(currentForkDigest),
-        received: toHexString(status.forkDigest),
+        received: toHexString(request.forkDigest),
       });
       return true;
     }
-    if (status.finalizedEpoch === GENESIS_EPOCH) {
-      if (!this.config.types.Root.equals(status.finalizedRoot, ZERO_HASH)) {
+    if (request.finalizedEpoch === GENESIS_EPOCH) {
+      if (!this.config.types.Root.equals(request.finalizedRoot, ZERO_HASH)) {
         this.logger.verbose("Genesis finalized root must be zeroed", {
           expected: toHexString(ZERO_HASH),
-          received: toHexString(status.finalizedRoot),
+          received: toHexString(request.finalizedRoot),
         });
         return true;
       }
@@ -165,27 +165,27 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       // but the peer's block root at that epoch may not match match ours
       const headSummary = this.chain.forkChoice.getHead();
       const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, status.finalizedEpoch);
+      const requestFinalizedSlot = computeStartSlotAtEpoch(this.config, request.finalizedEpoch);
 
-      if (status.finalizedEpoch === finalizedCheckpoint.epoch) {
-        if (!this.config.types.Root.equals(status.finalizedRoot, finalizedCheckpoint.root)) {
+      if (request.finalizedEpoch === finalizedCheckpoint.epoch) {
+        if (!this.config.types.Root.equals(request.finalizedRoot, finalizedCheckpoint.root)) {
           this.logger.verbose("Status with same finalized epoch has different root", {
             expected: toHexString(finalizedCheckpoint.root),
-            received: toHexString(status.finalizedRoot),
+            received: toHexString(request.finalizedRoot),
           });
           return true;
         }
-      } else if (status.finalizedEpoch < finalizedCheckpoint.epoch) {
+      } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
         // If it is within recent history, we can directly check against the block roots in the state
         if (headSummary.slot - requestFinalizedSlot < this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
           const headState = await this.chain.getHeadState();
           // This will get the latest known block at the start of the epoch.
           const expected = getBlockRootAtSlot(this.config, headState, requestFinalizedSlot);
-          if (!this.config.types.Root.equals(status.finalizedRoot, expected)) {
+          if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {
             this.logger.verbose("Status with different finalized root", {
-              received: toHexString(status.finalizedRoot),
+              received: toHexString(request.finalizedRoot),
               epected: toHexString(expected),
-              epoch: status.finalizedEpoch,
+              epoch: request.finalizedEpoch,
             });
             return true;
           }
@@ -202,8 +202,8 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       } else {
         // request status finalized checkpoint is in the future, we do not know if it is a true finalized root
         this.logger.verbose("Status with future finalized epoch", {
-          finalizedEpoch: status.finalizedEpoch,
-          finalizedRoot: toHexString(status.finalizedRoot),
+          finalizedEpoch: request.finalizedEpoch,
+          finalizedRoot: toHexString(request.finalizedRoot),
         });
       }
     }
@@ -239,13 +239,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   private async *onBeaconBlocksByRange(requestBody: BeaconBlocksByRangeRequest): AsyncIterable<SignedBeaconBlock> {
     if (requestBody.step < 1) {
-      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
+      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "step < 1");
     }
     if (requestBody.count < 1) {
-      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "count < 1");
+      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "count < 1");
     }
     if (requestBody.startSlot < GENESIS_SLOT) {
-      throw new ReqRespError(RpcResponseStatus.INVALID_REQUEST, "startSlot < genesis");
+      throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, "startSlot < genesis");
     }
 
     if (requestBody.count > MAX_REQUEST_BLOCKS) {

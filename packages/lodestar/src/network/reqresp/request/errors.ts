@@ -63,13 +63,13 @@ export class RequestError extends LodestarError<RequestErrorType & IRequestMetad
   }
 }
 
-function renderErrorMessage(type: RequestErrorType): string {
+/**
+ * Render responder's errorMessage directly in main's error.message for better debuggability
+ */
+function renderErrorMessage(type: RequestErrorType): string | undefined {
   switch (type.code) {
     case RequestErrorCode.INVALID_REQUEST:
     case RequestErrorCode.SERVER_ERROR:
       return `${type.code}: ${type.errorMessage}`;
-
-    default:
-      return type.code;
   }
 }

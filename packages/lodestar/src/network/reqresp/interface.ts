@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RequestId, RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ReqEventEmitter} from "..";
-import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../constants";
+import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {IPeerMetadataStore, IRpcScoreTracker} from "../peers";
 
 export interface IReqEventEmitterClass {
@@ -24,16 +24,6 @@ export type ReqRespRequest<Body extends RequestBody | null = null> = {
   body: Body;
   encoding: ReqRespEncoding;
 };
-
-export type IResponseChunk =
-  | {status: RpcResponseStatus.SUCCESS; body: ResponseBody}
-  | {status: RpcResponseStatus.INVALID_REQUEST | RpcResponseStatus.SERVER_ERROR; errorMessage: string};
-
-export interface IValidatedRequestBody {
-  isValid: boolean;
-  // missing body if isValid=false
-  body?: RequestBody;
-}
 
 export type RequestOrResponseType = Exclude<
   ReturnType<typeof Methods[Method]["responseSSZType"]> | ReturnType<typeof Methods[Method]["requestSSZType"]>,

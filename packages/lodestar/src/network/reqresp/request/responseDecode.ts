@@ -13,7 +13,6 @@ import {RequestInternalError, RequestErrorCode} from "./errors";
  * response_chunk  ::= <result> | <encoding-dependent-header> | <encoded-payload>
  * result          ::= "0" | "1" | "2" | ["128" ... "255"]
  * ```
- * Enforces RESP_TIMEOUT on each `<response_chunk>`
  */
 export function responseDecode(
   config: IBeaconConfig,
