@@ -91,7 +91,7 @@ export function prepareEpochProcessState(
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  state.flatValidators().forEach((v, i) => {
+  state.flatValidators().readOnlyForEach((v, i) => {
     const status = createIAttesterStatus(v);
 
     if (v.slashed) {

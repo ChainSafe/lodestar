@@ -1,9 +1,9 @@
 import {IReadonlyEpochShuffling} from ".";
 import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-types";
-import {List} from "immutable";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
 import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
+import {Vector} from "./persistentVector";
 
 /**
  * Readonly interface for EpochContext.
@@ -25,7 +25,7 @@ export type ReadonlyEpochContext = {
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export interface CachedValidatorsBeaconState extends BeaconState {
-  flatValidators(): List<IFlatValidator>;
+  flatValidators(): Vector<IFlatValidator>;
   setValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
   addValidator(validator: Validator): void;
   getOriginalState(): BeaconState;
@@ -40,9 +40,9 @@ export interface CachedValidatorsBeaconState extends BeaconState {
  */
 export class CachedValidatorsBeaconState {
   public _state: BeaconState;
-  private _cachedValidators: List<IFlatValidator>;
+  private _cachedValidators: Vector<IFlatValidator>;
 
-  constructor(state: BeaconState, cachedValidators: List<IFlatValidator>) {
+  constructor(state: BeaconState, cachedValidators: Vector<IFlatValidator>) {
     this._state = state;
     this._cachedValidators = cachedValidators;
   }
@@ -73,14 +73,14 @@ export class CachedValidatorsBeaconState {
    * Add validator to both the cache and BeaconState
    */
   public addValidator(validator: Validator): void {
-    this._cachedValidators = this._cachedValidators.push(createIFlatValidator(validator));
+    this._cachedValidators = this._cachedValidators.append(createIFlatValidator(validator));
     this._state.validators.push(validator);
   }
 
   /**
    * Loop through the cached validators, not the TreeBacked validators inside BeaconState.
    */
-  public flatValidators(): List<IFlatValidator> {
+  public flatValidators(): Vector<IFlatValidator> {
     return this._cachedValidators;
   }
 
@@ -92,7 +92,6 @@ export class CachedValidatorsBeaconState {
   public getOriginalState(): BeaconState {
     return this._state;
   }
-
 }
 
 export function createCachedValidatorsBeaconState(state: BeaconState): CachedValidatorsBeaconState {
@@ -100,12 +99,12 @@ export function createCachedValidatorsBeaconState(state: BeaconState): CachedVal
   readOnlyForEach(state.validators, (validator) => {
     tmpValidators.push(createIFlatValidator(validator));
   });
-  return new CachedValidatorsBeaconState(state, List(tmpValidators)).createProxy();
+  return new CachedValidatorsBeaconState(state, Vector.of(...tmpValidators)).createProxy();
 }
 
 function cloneCachedValidatorsBeaconState(
   state: BeaconState,
-  cachedValidators: List<IFlatValidator>
+  cachedValidators: Vector<IFlatValidator>
 ): CachedValidatorsBeaconState {
   return new CachedValidatorsBeaconState(state, cachedValidators).createProxy();
 }

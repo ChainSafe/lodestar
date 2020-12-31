@@ -21,11 +21,11 @@ export function initiateValidatorExit(
   const currentEpoch = epochCtx.currentShuffling.epoch;
 
   // compute exit queue epoch
-  const validatorExitEpochs = state.flatValidators().map((v) => v.exitEpoch);
+  const validatorExitEpochs = state.flatValidators().readOnlyMap((v) => v.exitEpoch);
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
   exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
   let exitQueueEpoch = Math.max(...exitEpochs);
-  const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).size;
+  const exitQueueChurn = validatorExitEpochs.filter((exitEpoch) => exitEpoch === exitQueueEpoch).length;
   if (exitQueueChurn >= getChurnLimit(config, epochCtx.currentShuffling.activeIndices.length)) {
     exitQueueEpoch += 1;
   }
