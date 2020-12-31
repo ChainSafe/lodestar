@@ -128,7 +128,7 @@ describe("[sync] rpc", function () {
 
   it("hello handshake on peer connect with correct encoding", async function () {
     // A sends status request to B with ssz encoding
-    netA.peerMetadata.setEncoding(netB.peerId, ReqRespEncoding.SSZ);
+    netA.peerMetadata.setEncoding(netB.peerId, ReqRespEncoding.SSZ_SNAPPY);
     expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null);
     const connected = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
@@ -153,8 +153,8 @@ describe("[sync] rpc", function () {
     expect(netA.peerMetadata.getStatus(netB.peerId)).to.not.equal(null);
     expect(netB.peerMetadata.getStatus(netA.peerId)).to.not.equal(null);
     // B should store A with ssz as preferred encoding
-    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(ReqRespEncoding.SSZ);
-    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(ReqRespEncoding.SSZ);
+    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(ReqRespEncoding.SSZ_SNAPPY);
+    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(ReqRespEncoding.SSZ_SNAPPY);
   });
 
   it("goodbye on rpc stop", async function () {
