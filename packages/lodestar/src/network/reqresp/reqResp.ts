@@ -76,7 +76,8 @@ export class ReqResp implements IReqResp {
 
           if (!this.performRequestHandler) {
             stream.close();
-            throw Error("performRequestHandler not registered");
+            this.logger.error("performRequestHandler not registered", {method, peer: peerId.toB58String()});
+            return;
           }
 
           try {
