@@ -30,7 +30,7 @@ export interface IReqResp {
   beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
   registerHandler(handler: ReqRespHandler): void;
-  unregisterHandler(): void;
+  unregisterHandler(): ReqRespHandler | null;
 }
 
 export interface INetworkEvents {

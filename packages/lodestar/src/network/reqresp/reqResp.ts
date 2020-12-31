@@ -110,8 +110,10 @@ export class ReqResp implements IReqResp {
     this.performRequestHandler = handler;
   }
 
-  unregisterHandler(): void {
+  unregisterHandler(): ReqRespHandler | null {
+    const handler = this.performRequestHandler;
     this.performRequestHandler = null;
+    return handler;
   }
 
   public async stop(): Promise<void> {
