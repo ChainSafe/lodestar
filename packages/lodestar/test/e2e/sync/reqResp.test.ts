@@ -4,13 +4,14 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import pipe from "it-pipe";
 import Libp2p from "libp2p";
 import PeerId from "peer-id";
 import sinon from "sinon";
 import {encode} from "varint";
+import all from "it-all";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
+import {SszSnappyErrorCode} from "../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
@@ -23,6 +24,8 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {arrToSource} from "../../unit/network/reqresp/utils";
+import {silentLogger} from "../../utils/logger";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 const opts: INetworkOptions = {
@@ -44,8 +47,10 @@ block2.message.slot = BLOCK_SLOT + 1;
 describe("[sync] rpc", function () {
   this.timeout(20000);
   const sandbox = sinon.createSandbox();
-  const logger = new WinstonLogger({level: LogLevel.debug});
-  logger.silent = false;
+
+  // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
+  const debugMode = process.env.DEBUG;
+  const logger = debugMode ? new WinstonLogger({level: LogLevel.debug}) : silentLogger;
   const metrics = new BeaconMetrics({enabled: false, timeout: 5000, pushGateway: false}, {logger});
 
   let rpcA: IReqRespHandler, netA: Libp2pNetwork;
@@ -118,7 +123,6 @@ describe("[sync] rpc", function () {
   afterEach(async () => {
     await chain.close();
     await Promise.all([rpcA.stop(), rpcB.stop()]);
-    console.error("stopped rpc");
     await Promise.all([netA.stop(), netB.stop()]);
   });
 
@@ -201,21 +205,27 @@ describe("[sync] rpc", function () {
     const protocol = createRpcProtocol(Method.Status, ReqRespEncoding.SSZ_SNAPPY);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     const {stream} = (await libP2pA.dialProtocol(netB.peerId, protocol)) as {stream: ILibP2pStream};
-    await pipe([Buffer.from(encode(99999999999999999999999))], stream as any, async (source: AsyncIterable<Buffer>) => {
-      let i = 0;
-      // 1 chunk of status and 1 chunk of error
-      for await (const val of source) {
-        if (i === 0) {
-          const status = val.slice()[0];
-          expect(status).to.be.equal(RpcResponseStatus.INVALID_REQUEST);
-        } else {
-          // i should be 1
-          const errBuf = val.slice();
-          // message from the server side
-          expect(decodeErrorMessage(errBuf)).to.be.equal("Invalid request");
-        }
-        i++;
-      }
-    });
+
+    // Bad encoding, 9e23 exceeds the max 10 varint bytes
+    const requestBytes = [Buffer.from(encode(99999999999999999999999))];
+
+    const [responseBytes] = await Promise.all([
+      // Capture response
+      all(stream.source),
+      // Send bad request
+      stream.sink(arrToSource(requestBytes)),
+    ]);
+
+    expect(responseBytes[0].slice()[0]).to.equal(
+      RpcResponseStatus.INVALID_REQUEST,
+      "First chunk should be: result = INVALID_REQUEST"
+    );
+
+    expect(decodeErrorMessage(responseBytes[1].slice())).to.equal(
+      SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
+      "Second chunk should be: expected error message"
+    );
+
+    expect(responseBytes).to.have.length(2, "responseBytes should contain only two chunks");
   });
 });
