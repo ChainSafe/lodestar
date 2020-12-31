@@ -14,12 +14,11 @@ import {
   Status,
 } from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {EventEmitter} from "events";
 import {AbortController} from "abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {IReqResp} from "../interface";
-import {IReqEventEmitterClass, IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
+import {IReqRespModules, ReqRespHandler, ILibP2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../constants";
@@ -35,7 +34,7 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
  */
-export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements IReqResp {
+export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
@@ -53,7 +52,6 @@ export class ReqResp extends (EventEmitter as IReqEventEmitterClass) implements 
     {config, libp2p, peerMetadata, blockProviderScores, logger}: IReqRespModules,
     options?: IReqRespOptions
   ) {
-    super();
     this.config = config;
     this.libp2p = libp2p;
     this.peerMetadata = peerMetadata;

@@ -2,13 +2,8 @@ import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {RequestId, RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {ReqEventEmitter} from "..";
 import {Method, Methods, ReqRespEncoding} from "../../constants";
 import {IPeerMetadataStore, IRpcScoreTracker} from "../peers";
-
-export interface IReqEventEmitterClass {
-  new (): ReqEventEmitter;
-}
 
 export interface IReqRespModules {
   config: IBeaconConfig;
