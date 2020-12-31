@@ -1,11 +1,10 @@
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest, RequestBody} from "@chainsafe/lodestar-types";
+import {BeaconBlocksByRangeRequest, BeaconBlocksByRootRequest} from "@chainsafe/lodestar-types";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
-import PeerId from "peer-id";
 import sinon from "sinon";
 import {encode} from "varint";
 import all from "it-all";
@@ -16,7 +15,7 @@ import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
-import {ILibP2pStream, ReqRespRequest} from "../../../src/network/reqresp";
+import {ILibP2pStream} from "../../../src/network/reqresp";
 import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {generateEmptySignedBlock} from "../../utils/block";
 import {getBlockSummary} from "../../utils/headBlockInfo";
@@ -129,49 +128,67 @@ describe("[sync] rpc", function () {
   it("hello handshake on peer connect with correct encoding", async function () {
     // A sends status request to B with ssz encoding
     netA.peerMetadata.setEncoding(netB.peerId, ReqRespEncoding.SSZ_SNAPPY);
-    expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null);
-    const connected = Promise.all([
+    expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null, "peer B should not have peer A status");
+
+    const peersConnectedPromise = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
-    await connected;
-    expect(netA.hasPeer(netB.peerId)).to.equal(true);
-    expect(netB.hasPeer(netA.peerId)).to.equal(true);
-    await new Promise((resolve) => {
-      netB.reqResp.once("request", resolve);
-    });
-    await new Promise((resolve, reject) => {
-      // if there is goodbye request from B
-      netA.reqResp.once("request", (request: ReqRespRequest<RequestBody>, peer: PeerId) => {
-        if (peer.toB58String() === netB.peerId.toB58String() && request.method === Method.Goodbye) {
-          reject();
-        }
-      });
-      setTimeout(resolve, 2000);
-    });
-    expect(netA.peerMetadata.getStatus(netB.peerId)).to.not.equal(null);
-    expect(netB.peerMetadata.getStatus(netA.peerId)).to.not.equal(null);
+    await peersConnectedPromise;
+
+    expect(netA.hasPeer(netB.peerId)).to.equal(true, "peer A should have peer B");
+    expect(netB.hasPeer(netA.peerId)).to.equal(true, "peer B should have peer A");
+
+    // Wait for peers to send each other a status request
+    while (netA.peerMetadata.getStatus(netB.peerId) === null || netB.peerMetadata.getStatus(netA.peerId) === null) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    expect(netA.peerMetadata.getStatus(netB.peerId)).to.not.equal(null, "peer A should have peer B status");
+    expect(netB.peerMetadata.getStatus(netA.peerId)).to.not.equal(null, "peer B should have peer A status");
+
     // B should store A with ssz as preferred encoding
-    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(ReqRespEncoding.SSZ_SNAPPY);
-    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(ReqRespEncoding.SSZ_SNAPPY);
+    expect(netA.peerMetadata.getEncoding(netB.peerId)).to.be.equal(
+      ReqRespEncoding.SSZ_SNAPPY,
+      "peer A should store peer B preferred encoding"
+    );
+    expect(netB.peerMetadata.getEncoding(netA.peerId)).to.be.equal(
+      ReqRespEncoding.SSZ_SNAPPY,
+      "peer B should store peer A preferred encoding"
+    );
   });
 
   it("goodbye on rpc stop", async function () {
-    const connected = Promise.all([
+    const peersConnectedPromise = Promise.all([
       new Promise((resolve) => netA.once("peer:connect", resolve)),
       new Promise((resolve) => netB.once("peer:connect", resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
-    await connected;
-    await new Promise((resolve) => {
-      netA.reqResp.once("request", resolve);
-      netB.reqResp.once("request", resolve);
-    });
+    await peersConnectedPromise;
+
+    // Wait for peers to send each other a status request
+    while (netA.peerMetadata.getStatus(netB.peerId) === null || netB.peerMetadata.getStatus(netA.peerId) === null) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
+    // Wait a few ms more?
     await new Promise((resolve) => setTimeout(resolve, 200));
-    const goodbyeEvent = new Promise((resolve) => netB.reqResp.once("request", (req) => resolve(req.method)));
-    const [goodbye] = await Promise.all([goodbyeEvent, rpcA.stop()]);
-    expect(goodbye).to.equal(Method.Goodbye);
+
+    const requestPeerBPromise = new Promise((resolve) => {
+      // Replace the handler with a spy and restore it afterwards
+      const handler = netB.reqResp.unregisterHandler();
+      // eslint-disable-next-line require-yield
+      netB.reqResp.registerHandler(async function* (method) {
+        resolve(method);
+        netB.reqResp.unregisterHandler();
+        if (handler) netB.reqResp.registerHandler(handler);
+      });
+    });
+
+    const [requestedMethodOnPeerB] = await Promise.all([requestPeerBPromise, rpcA.stop()]);
+
+    expect(requestedMethodOnPeerB).to.equal(Method.Goodbye);
   });
 
   it("beacon block by root", async function () {
