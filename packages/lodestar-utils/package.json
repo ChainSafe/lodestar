@@ -39,6 +39,7 @@
     "@chainsafe/bls": "5.1.0",
     "@chainsafe/ssz": "^0.6.13",
     "abort-controller": "^3.0.0",
+    "any-signal": "2.1.1",
     "bigint-buffer": "^1.1.5",
     "chalk": "^2.4.2",
     "event-iterator": "^2.0.0",

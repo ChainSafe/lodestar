@@ -18,8 +18,8 @@ import {source as abortSource} from "abortable-iterator";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
+import {withTimeout} from "@chainsafe/lodestar-utils";
 import {RESPONSE_TIMEOUT_ERR} from "./error";
-import {anySignal} from "any-signal";
 
 // req/resp
 
@@ -158,29 +158,15 @@ export async function dialProtocol(
   timeout: number,
   signal?: AbortSignal
 ): ReturnType<LibP2p["dialProtocol"]> {
-  const abortController = new AbortController();
-
-  const timer = setTimeout(() => {
-    abortController.abort();
-  }, timeout);
-
-  const signals = [abortController.signal];
-  if (signal) {
-    signals.push(signal);
-  }
-
-  const abortSignal = anySignal(signals);
-
-  try {
-    const conn = await libp2p.dialProtocol(peerId, protocol, {signal: abortSignal});
-    if (!conn) {
-      throw new Error("timeout");
-    }
-    return conn;
-  } catch (e) {
-    const err = new Error(e.code || e.message);
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return await withTimeout(
+    async (timeoutAndParentSignal) => {
+      const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
+      if (!conn) {
+        throw new Error("timeout");
+      }
+      return conn;
+    },
+    timeout,
+    signal
+  );
 }
