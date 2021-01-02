@@ -72,7 +72,9 @@ describe("produce block", function () {
     sinon.stub(epochCtx, "getBeaconProposer").returns(20);
     const slotState = state.clone();
     slotState.slot = 1;
-    regenStub.getBlockSlotState.withArgs(sinon.match.any, 1).resolves({state: createCachedValidatorsBeaconState(slotState), epochCtx});
+    regenStub.getBlockSlotState
+      .withArgs(sinon.match.any, 1)
+      .resolves({state: createCachedValidatorsBeaconState(slotState), epochCtx});
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
