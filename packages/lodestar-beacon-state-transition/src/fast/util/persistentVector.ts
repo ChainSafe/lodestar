@@ -315,6 +315,13 @@ export class Vector<T> implements Iterable<T> {
     return this.readOnlyMap<T>((v) => v);
   }
 
+  /**
+   * Clone to a new vector.
+   */
+  public clone(): Vector<T> {
+    return new Vector(this._root, this._levelShift, this._tail, this.length);
+  }
+
   private getTailLength(): number {
     return this.length - this.getTailOffset();
   }
