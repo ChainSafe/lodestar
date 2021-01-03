@@ -25,7 +25,7 @@ describe("network / reqresp / response / requestDecode", () => {
       chunks: [Buffer.from("4")],
     },
     {
-      id: "No body",
+      id: "No body, should be ok",
       method: Method.Status,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       error: SszSnappyErrorCode.SOURCE_ABORTED,

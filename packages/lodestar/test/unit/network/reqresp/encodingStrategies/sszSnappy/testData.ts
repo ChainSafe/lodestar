@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {List} from "@chainsafe/ssz";
+import {fromHexString, List} from "@chainsafe/ssz";
 import {
   Ping,
   SignedBeaconBlock,
@@ -19,7 +19,7 @@ export interface ISszSnappyTestData<T extends RequestOrResponseBody> {
   id: string;
   type: RequestOrResponseType;
   body: T;
-  chunks: string[];
+  chunks: Buffer[];
 }
 
 export const sszSnappyPing: ISszSnappyTestData<Ping> = {
@@ -30,7 +30,7 @@ export const sszSnappyPing: ISszSnappyTestData<Ping> = {
     "0x08", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x010c00000175de410100000000000000", // snappy frames content
-  ],
+  ].map(fromHexString) as Buffer[],
 };
 
 export const sszSnappyStatus: ISszSnappyTestData<Status> = {
@@ -47,7 +47,7 @@ export const sszSnappyStatus: ISszSnappyTestData<Status> = {
     "0x54", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
-  ],
+  ].map(fromHexString) as Buffer[],
 };
 
 export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
@@ -80,5 +80,5 @@ export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
     "0x9403",
     "0xff060000734e61507059",
     "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
-  ],
+  ].map(fromHexString) as Buffer[],
 };

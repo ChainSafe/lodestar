@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {fromHexString} from "@chainsafe/ssz";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
@@ -16,12 +15,6 @@ import {arrToSource} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 
 chai.use(chaiAsPromised);
-
-// Ping, SSZ_SNAPPY
-const samplePayload = {
-  payload: sszSnappyPing.body,
-  chunks: sszSnappyPing.chunks.map(fromHexString) as Buffer[],
-};
 
 describe("network / reqresp / request / responseDecode", () => {
   const methodDefault = Method.Status;
@@ -36,7 +29,7 @@ describe("network / reqresp / request / responseDecode", () => {
     responseChunks?: ResponseBody[];
   }[] = [
     {
-      id: "No chunks",
+      id: "No chunks should be ok",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       responseChunks: [],
@@ -46,18 +39,18 @@ describe("network / reqresp / request / responseDecode", () => {
       id: "Multiple chunks with success",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
-      responseChunks: [samplePayload.payload, samplePayload.payload],
+      responseChunks: [sszSnappyPing.body, sszSnappyPing.body],
       chunks: [
         // Chunk 0 - success
         Buffer.from([RpcResponseStatus.SUCCESS]),
-        ...samplePayload.chunks,
+        ...sszSnappyPing.chunks,
         // Chunk 1 - success
         Buffer.from([RpcResponseStatus.SUCCESS]),
-        ...samplePayload.chunks,
+        ...sszSnappyPing.chunks,
       ],
     },
     {
-      id: "Multiple chunks with final error",
+      id: "Multiple chunks with final error, should error",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       error: new RequestInternalError({
@@ -67,28 +60,28 @@ describe("network / reqresp / request / responseDecode", () => {
       chunks: [
         // Chunk 0 - success
         Buffer.from([RpcResponseStatus.SUCCESS]),
-        ...samplePayload.chunks,
+        ...sszSnappyPing.chunks,
         // Chunk 1 - success
         Buffer.from([RpcResponseStatus.SUCCESS]),
-        ...samplePayload.chunks,
+        ...sszSnappyPing.chunks,
         // Chunk 2 - error
         Buffer.from([RpcResponseStatus.SERVER_ERROR]),
       ],
     },
     {
-      id: "Each chunk data is concated",
+      id: "Decode successfully response_chunk as a single concated chunk",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       responseChunks: [BigInt(1), BigInt(1)],
       chunks: [
         // success, Ping payload = BigInt(1)
-        Buffer.concat([Buffer.from([RpcResponseStatus.SUCCESS]), ...samplePayload.chunks]),
-        Buffer.concat([Buffer.from([RpcResponseStatus.SUCCESS]), ...samplePayload.chunks]),
+        Buffer.concat([Buffer.from([RpcResponseStatus.SUCCESS]), ...sszSnappyPing.chunks]),
+        Buffer.concat([Buffer.from([RpcResponseStatus.SUCCESS]), ...sszSnappyPing.chunks]),
       ],
     },
 
     {
-      id: "Empty payload",
+      id: "Empty payload, should error",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       error: new SszSnappyError({code: SszSnappyErrorCode.SOURCE_ABORTED}),

@@ -4,7 +4,7 @@ import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {Method, ReqRespEncoding} from "../../../../../src/constants";
+import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
 import {ReqRespHandler} from "../../../../../src/network";
 import {handleRequest} from "../../../../../src/network/reqresp/response";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
@@ -22,9 +22,9 @@ describe("network / reqresp / response / handleRequest", () => {
     id: string;
     method: Method;
     encoding: ReqRespEncoding;
-    requestChunks: string[];
+    requestChunks: Buffer[];
     performRequestHandler: ReqRespHandler;
-    expectedResponseChunks: string[];
+    expectedResponseChunks: Buffer[];
     expectedError?: LodestarError<any>;
   }[] = [
     {
@@ -39,15 +39,15 @@ describe("network / reqresp / response / handleRequest", () => {
       },
       expectedError: new LodestarError({code: "TEST_ERROR"}),
       expectedResponseChunks: [
-        // Chunk 0 - success
-        "0x00", // status: success
-        ...sszSnappyPing.chunks, // Response Ping: BigInt(1)
-        // Chunk 1 - success
-        "0x00",
-        ...sszSnappyPing.chunks, // Response Ping: BigInt(1)
-        // Error
-        "0x02",
-        "0x544553545f4552524f52", // "TEST_ERROR" encoded
+        // Chunk 0 - success, Ping, BigInt(1)
+        Buffer.from([RpcResponseStatus.SUCCESS]),
+        ...sszSnappyPing.chunks,
+        // Chunk 1 - success, Ping, BigInt(1)
+        Buffer.from([RpcResponseStatus.SUCCESS]),
+        ...sszSnappyPing.chunks,
+        // Chunk 2 - error, with errorMessage
+        Buffer.from([RpcResponseStatus.SERVER_ERROR]),
+        Buffer.from("TEST_ERROR"),
       ],
     },
   ];
@@ -73,7 +73,10 @@ describe("network / reqresp / response / handleRequest", () => {
         await expect(resultPromise).to.not.rejectedWith();
       }
 
-      expect(stream.resultChunks.map(toHexString)).to.deep.equal(expectedResponseChunks, "Wrong response chunks");
+      expect(stream.resultChunks.map(toHexString)).to.deep.equal(
+        expectedResponseChunks.map(toHexString),
+        "Wrong response chunks"
+      );
     });
   }
 });

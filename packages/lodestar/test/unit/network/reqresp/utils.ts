@@ -1,5 +1,5 @@
 import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
-import {fromHexString, List} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {ILibP2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
@@ -43,8 +43,8 @@ export class MockLibP2pStream implements ILibP2pStream {
   source: ILibP2pStream["source"];
   resultChunks: Buffer[] = [];
 
-  constructor(requestChunks: string[]) {
-    this.source = arrToSource(requestChunks.map((hex) => Buffer.from(fromHexString(hex))));
+  constructor(requestChunks: Buffer[]) {
+    this.source = arrToSource(requestChunks);
   }
 
   sink: ILibP2pStream["sink"] = async (source) => {

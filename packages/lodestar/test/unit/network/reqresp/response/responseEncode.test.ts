@@ -19,7 +19,7 @@ describe("network / reqresp / response / responseEncode", () => {
       encoding: ReqRespEncoding;
       responseChunks: ResponseBody[];
       error?: LodestarError<any>;
-      chunks?: string[];
+      chunks?: Buffer[];
     }[] = [
       {
         id: "Zero chunks",
@@ -45,10 +45,10 @@ describe("network / reqresp / response / responseEncode", () => {
         responseChunks: [sszSnappyPing.body, sszSnappyPing.body],
         chunks: [
           // Chunk 0 - success
-          "0x00", // status: success
+          Buffer.from([RpcResponseStatus.SUCCESS]),
           ...sszSnappyPing.chunks,
           // Chunk 1 - success
-          "0x00",
+          Buffer.from([RpcResponseStatus.SUCCESS]),
           ...sszSnappyPing.chunks,
         ],
       },
@@ -60,7 +60,7 @@ describe("network / reqresp / response / responseEncode", () => {
 
         if (chunks) {
           const encodedChunks = await resultPromise;
-          expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
+          expect(encodedChunks.map(toHexString)).to.deep.equal(chunks.map(toHexString));
         } else if (error) {
           await expectRejectedWithLodestarError(resultPromise, error);
         } else {
@@ -75,32 +75,32 @@ describe("network / reqresp / response / responseEncode", () => {
       id: string;
       status: RpcResponseStatusError;
       errorMessage: string;
-      chunks: string[];
+      chunks: Buffer[];
     }[] = [
       {
         id: "INVALID_REQUEST no error message",
         status: RpcResponseStatus.INVALID_REQUEST,
         errorMessage: "",
-        chunks: ["0x01"],
+        chunks: [Buffer.from([RpcResponseStatus.INVALID_REQUEST])],
       },
       {
         id: "SERVER_ERROR no error message",
         status: RpcResponseStatus.SERVER_ERROR,
         errorMessage: "",
-        chunks: ["0x02"],
+        chunks: [Buffer.from([RpcResponseStatus.SERVER_ERROR])],
       },
       {
         id: "INVALID_REQUEST with error message",
         status: RpcResponseStatus.SERVER_ERROR,
-        errorMessage: "SOME_ERROR",
-        chunks: ["0x02", "0x534f4d455f4552524f52"],
+        errorMessage: "TEST_ERROR",
+        chunks: [Buffer.from([RpcResponseStatus.SERVER_ERROR]), Buffer.from("TEST_ERROR")],
       },
     ];
 
     for (const {id, status, errorMessage, chunks} of testCases) {
       it(id, async () => {
         const encodedChunks = await pipe(responseEncodeError(status, errorMessage), all);
-        expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
+        expect(encodedChunks.map(toHexString)).to.deep.equal(chunks.map(toHexString));
       });
     }
   });

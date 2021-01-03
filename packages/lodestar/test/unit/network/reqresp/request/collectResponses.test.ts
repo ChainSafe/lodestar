@@ -15,13 +15,13 @@ describe("network / reqresp / request / collectResponses", () => {
     expectedReturn: ResponseBody | ResponseBody[];
   }[] = [
     {
-      id: "Single chunk",
+      id: "Return first chunk only for a single-chunk method",
       method: Method.Ping,
       sourceChunks: [chunk, chunk],
       expectedReturn: chunk,
     },
     {
-      id: "Limit to maxResponses",
+      id: "Return up to maxResponses for a multi-chunk method",
       method: Method.BeaconBlocksByRange,
       sourceChunks: [chunk, chunk, chunk],
       maxResponses: 2,

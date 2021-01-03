@@ -14,10 +14,10 @@ describe("network / reqresp / request / requestEncode", () => {
     method: Method;
     encoding: ReqRespEncoding;
     requestBody: RequestBody;
-    chunks?: string[];
+    chunks: Buffer[];
   }[] = [
     {
-      id: "No body",
+      id: "No body, should be ok",
       method: Method.Metadata,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
       requestBody: null,
@@ -35,7 +35,7 @@ describe("network / reqresp / request / requestEncode", () => {
   for (const {id, method, encoding, requestBody, chunks} of testCases) {
     it(id, async () => {
       const encodedChunks = await pipe(requestEncode(config, method, encoding, requestBody), all);
-      expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
+      expect(encodedChunks.map(toHexString)).to.deep.equal(chunks.map(toHexString));
     });
   }
 });
