@@ -41,7 +41,7 @@ describe("Epoch Processing Performance Tests", function () {
     process = prepareEpochProcessState(epochCtx, state);
     logger.profile("prepareEpochProcessState");
     // not stable, sometimes < 1400, sometimes > 2000
-    expect(Date.now() - start).lt(1500);
+    expect(Date.now() - start).lt(100);
   });
 
   it("processJustificationAndFinalization", async () => {

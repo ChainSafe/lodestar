@@ -28,7 +28,7 @@ describe("Process Blocks Performance Test", function () {
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    expect(Date.now() - start).lt(25);
+    expect(Date.now() - start).lte(25);
     logger.profile(`Process block ${signedBlock.message.slot}`);
   });
 
@@ -51,7 +51,7 @@ describe("Process Blocks Performance Test", function () {
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    expect(Date.now() - start).lt(1400);
+    expect(Date.now() - start).lt(200);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
 });
