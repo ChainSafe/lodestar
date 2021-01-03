@@ -1,57 +1,72 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
+import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {RequestOrResponseType} from "../../../../../../src/network";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/bufferedSource";
-import {Method, Methods} from "../../../../../../src/constants";
 import {
   SszSnappyErrorCode,
   readSszSnappyPayload,
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
+import {isEqualSszType} from "../../../../../utils/ssz";
 import {arrToSource} from "../../utils";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock} from "./testData";
 
 chai.use(chaiAsPromised);
 
-describe("network / reqresp / sszSnappy / decode - error", function () {
-  const testCases: {
-    id: string;
-    method: Method;
-    error: SszSnappyErrorCode;
-    chunks: Buffer[];
-  }[] = [
-    {
-      id: "if it takes more than 10 bytes for varint",
-      method: Method.Status,
-      error: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
-      chunks: [Buffer.from(varint.encode(99999999999999999999999))],
-    },
-    {
-      id: "if failed ssz size bound validation",
-      method: Method.Status,
-      error: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE,
-      chunks: [Buffer.alloc(12, 0)],
-    },
-    {
-      id: "if it read more than maxEncodedLen",
-      method: Method.Ping,
-      error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-      chunks: [Buffer.from(varint.encode(config.types.Ping.minSize())), Buffer.alloc(100)],
-    },
-    {
-      id: "if failed ssz snappy input malformed",
-      method: Method.Status,
-      error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
-      chunks: [Buffer.from(varint.encode(config.types.Status.minSize())), Buffer.from("wrong snappy data")],
-    },
-  ];
+describe("network / reqresp / sszSnappy / decode", () => {
+  describe("Test data vectors (generated in a previous version)", () => {
+    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock];
 
-  for (const {id, method, error, chunks} of testCases) {
-    it(id, async () => {
-      const type = Methods[method].requestSSZType(config);
-      if (!type) throw Error("no type");
+    for (const {id, type, body, chunks} of testCases) {
+      it(id, async () => {
+        const byteChunks = chunks.map(fromHexString) as Buffer[];
+        const bufferedSource = new BufferedSource(arrToSource(byteChunks));
+        const bodyResult = await readSszSnappyPayload(bufferedSource, type);
+        expect(isEqualSszType(type, bodyResult, body)).to.equal(true, "Wrong decoded body");
+      });
+    }
+  });
 
-      const bufferedSource = new BufferedSource(arrToSource(chunks));
-      await expect(readSszSnappyPayload(bufferedSource, type)).to.be.rejectedWith(error);
-    });
-  }
+  describe("Error cases", () => {
+    const testCases: {
+      id: string;
+      type: RequestOrResponseType;
+      error: SszSnappyErrorCode;
+      chunks: Buffer[];
+    }[] = [
+      {
+        id: "if it takes more than 10 bytes for varint",
+        type: config.types.Status,
+        error: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
+        chunks: [Buffer.from(varint.encode(99999999999999999999999))],
+      },
+      {
+        id: "if failed ssz size bound validation",
+        type: config.types.Status,
+        error: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE,
+        chunks: [Buffer.alloc(12, 0)],
+      },
+      {
+        id: "if it read more than maxEncodedLen",
+        type: config.types.Ping,
+        error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
+        chunks: [Buffer.from(varint.encode(config.types.Ping.minSize())), Buffer.alloc(100)],
+      },
+      {
+        id: "if failed ssz snappy input malformed",
+        type: config.types.Status,
+        error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
+        chunks: [Buffer.from(varint.encode(config.types.Status.minSize())), Buffer.from("wrong snappy data")],
+      },
+    ];
+
+    for (const {id, type, error, chunks} of testCases) {
+      it(id, async () => {
+        const bufferedSource = new BufferedSource(arrToSource(chunks));
+        await expect(readSszSnappyPayload(bufferedSource, type)).to.be.rejectedWith(error);
+      });
+    }
+  });
 });

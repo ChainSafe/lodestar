@@ -14,39 +14,39 @@ import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock} from "./testData";
 
 describe("network / reqresp / sszSnappy / encode", () => {
-  const testCases: {
-    id: string;
-    type: RequestOrResponseType;
-    body: RequestOrResponseBody;
-    error?: LodestarError<any>;
-    chunks?: string[];
-  }[] = [
-    {
-      id: "Bad body",
-      type: config.types.Status,
-      body: BigInt(1),
-      error: new SszSnappyError({
-        code: SszSnappyErrorCode.SERIALIZE_ERROR,
-        serializeError: new TypeError("Cannot convert undefined or null to object"),
-      }),
-    },
-    {id: "Uint8 type", ...sszSnappyPing},
-    {id: "Struct type", ...sszSnappyStatus},
-    {id: "Complex big type", ...sszSnappySignedBlock},
-  ];
+  describe("Test data vectors (generated in a previous version)", () => {
+    const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock];
 
-  for (const {id, type, body, error, chunks} of testCases) {
-    it(id, async () => {
-      const resultPromise = pipe(writeSszSnappyPayload(body, type), all);
-
-      if (chunks) {
-        const encodedChunks = await resultPromise;
+    for (const {id, type, body, chunks} of testCases) {
+      it(id, async () => {
+        const encodedChunks = await pipe(writeSszSnappyPayload(body, type), all);
         expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
-      } else if (error) {
-        await expectRejectedWithLodestarError(resultPromise, error);
-      } else {
-        throw Error("Bad test data");
-      }
-    });
-  }
+      });
+    }
+  });
+
+  describe("Error cases", () => {
+    const testCases: {
+      id: string;
+      type: RequestOrResponseType;
+      body: RequestOrResponseBody;
+      error: LodestarError<any>;
+    }[] = [
+      {
+        id: "Bad body",
+        type: config.types.Status,
+        body: BigInt(1),
+        error: new SszSnappyError({
+          code: SszSnappyErrorCode.SERIALIZE_ERROR,
+          serializeError: new TypeError("Cannot convert undefined or null to object"),
+        }),
+      },
+    ];
+
+    for (const {id, type, body, error} of testCases) {
+      it(id, async () => {
+        await expectRejectedWithLodestarError(pipe(writeSszSnappyPayload(body, type), all), error);
+      });
+    }
+  });
 });

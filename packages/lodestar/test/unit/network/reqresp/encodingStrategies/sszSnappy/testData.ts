@@ -12,13 +12,18 @@ import {
 } from "@chainsafe/lodestar-types";
 import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network";
 
-interface ISszSnappyTestData<T extends RequestOrResponseBody> {
+// This test data generated with code from 'master' at Jan 1st 2021
+// commit: ea3ffab1ffb8093b61a8ebfa4b4432c604c10819
+
+export interface ISszSnappyTestData<T extends RequestOrResponseBody> {
+  id: string;
   type: RequestOrResponseType;
   body: T;
   chunks: string[];
 }
 
 export const sszSnappyPing: ISszSnappyTestData<Ping> = {
+  id: "Ping type",
   type: config.types.Ping,
   body: BigInt(1),
   chunks: [
@@ -29,6 +34,7 @@ export const sszSnappyPing: ISszSnappyTestData<Ping> = {
 };
 
 export const sszSnappyStatus: ISszSnappyTestData<Status> = {
+  id: "Status type",
   type: config.types.Status,
   body: {
     forkDigest: Buffer.alloc(4, 0xda),
@@ -37,11 +43,16 @@ export const sszSnappyStatus: ISszSnappyTestData<Status> = {
     headRoot: Buffer.alloc(32, 0xda),
     headSlot: 9,
   },
-  chunks: [],
+  chunks: [
+    "0x54", // length prefix
+    "0xff060000734e61507059", // snappy frames header
+    "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
+  ],
 };
 
 export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
-  type: config.types.Status,
+  id: "SignedBeaconBlock type",
+  type: config.types.SignedBeaconBlock,
   body: {
     message: {
       slot: 9,
@@ -60,20 +71,14 @@ export const sszSnappySignedBlock: ISszSnappyTestData<SignedBeaconBlock> = {
         attesterSlashings: ([] as AttesterSlashing[]) as List<AttesterSlashing>,
         attestations: ([] as Attestation[]) as List<Attestation>,
         deposits: ([] as Deposit[]) as List<Deposit>,
-        voluntaryExits: listOf<SignedVoluntaryExit>(10, {
-          message: {
-            epoch: 9,
-            validatorIndex: 9,
-          },
-          signature: Buffer.alloc(96, 0xda),
-        }),
+        voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
       },
     },
     signature: Buffer.alloc(96, 0xda),
   },
-  chunks: [],
+  chunks: [
+    "0x9403",
+    "0xff060000734e61507059",
+    "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
+  ],
 };
-
-function listOf<T>(num: number, item: T): List<T> {
-  return Array(num).fill(item);
-}
