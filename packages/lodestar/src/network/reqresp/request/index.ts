@@ -12,7 +12,7 @@ import {collectResponses} from "./collectResponses";
 import {requestEncode} from "./requestEncode";
 import {responseDecode} from "./responseDecode";
 import {ILibP2pStream} from "../interface";
-import {responseTimeoutsHandler} from "./timeoutHandler";
+import {responseTimeoutsHandler} from "./responseTimeoutsHandler";
 
 export {RequestError, RequestErrorCode};
 

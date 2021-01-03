@@ -12,7 +12,7 @@ import {arrToSource} from "../../utils";
 
 chai.use(chaiAsPromised);
 
-describe("sszSnappy decode - error", function () {
+describe("network / reqresp / sszSnappy / decode - error", function () {
   const testCases: {
     id: string;
     method: Method;

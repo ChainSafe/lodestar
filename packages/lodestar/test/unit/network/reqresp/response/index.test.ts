@@ -9,6 +9,7 @@ import {ReqRespHandler} from "../../../../../src/network";
 import {handleRequest} from "../../../../../src/network/reqresp/response";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {MockLibP2pStream} from "../utils";
+import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 
 chai.use(chaiAsPromised);
 
@@ -30,31 +31,23 @@ describe("network / reqresp / response / handleRequest", () => {
       id: "Yield two chunks, then throw",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
-      requestChunks: [
-        "0x08", // length prefix
-        "0xff060000734e61507059", // snappy frames header
-        "0x010c00000175de410100000000000000", // snappy frames content
-      ],
+      requestChunks: sszSnappyPing.chunks, // Request Ping: BigInt(1)
       performRequestHandler: async function* () {
-        yield BigInt(1);
-        yield BigInt(1);
+        yield sszSnappyPing.body;
+        yield sszSnappyPing.body;
         throw new LodestarError({code: "TEST_ERROR"});
       },
       expectedError: new LodestarError({code: "TEST_ERROR"}),
       expectedResponseChunks: [
         // Chunk 0 - success
         "0x00", // status: success
-        "0x08", // length prefix
-        "0xff060000734e61507059", // snappy frames header
-        "0x010c00000175de410100000000000000", // snappy frames content
+        ...sszSnappyPing.chunks, // Response Ping: BigInt(1)
         // Chunk 1 - success
         "0x00",
-        "0x08",
-        "0xff060000734e61507059",
-        "0x010c00000175de410100000000000000",
+        ...sszSnappyPing.chunks, // Response Ping: BigInt(1)
         // Error
         "0x02",
-        "0x544553545f4552524f52",
+        "0x544553545f4552524f52", // "TEST_ERROR" encoded
       ],
     },
   ];

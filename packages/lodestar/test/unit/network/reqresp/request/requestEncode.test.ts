@@ -4,19 +4,16 @@ import pipe from "it-pipe";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {RequestBody} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
 import {requestEncode} from "../../../../../src/network/reqresp/request/requestEncode";
-import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {expectRejectedWithLodestarError} from "../../../../utils/errors";
+import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 
-describe("network / reqresp / response / requestEncode", () => {
+describe("network / reqresp / request / requestEncode", () => {
   const testCases: {
     id: string;
     method: Method;
     encoding: ReqRespEncoding;
     requestBody: RequestBody;
-    error?: LodestarError<any>;
     chunks?: string[];
   }[] = [
     {
@@ -27,40 +24,18 @@ describe("network / reqresp / response / requestEncode", () => {
       chunks: [],
     },
     {
-      id: "Bad body",
-      method: Method.Ping,
-      encoding: ReqRespEncoding.SSZ_SNAPPY,
-      requestBody: {startSlot: 0, step: 0, headSlot: 0, count: 0},
-      error: new SszSnappyError({
-        code: SszSnappyErrorCode.SERIALIZE_ERROR,
-        serializeError: new TypeError("Cannot mix BigInt and other types, use explicit conversions"),
-      }),
-    },
-    {
       id: "Regular request",
       method: Method.Ping,
       encoding: ReqRespEncoding.SSZ_SNAPPY,
-      requestBody: BigInt(1),
-      chunks: [
-        "0x08", // length prefix
-        "0xff060000734e61507059", // snappy frames header
-        "0x010c00000175de410100000000000000", // snappy frames content
-      ],
+      requestBody: sszSnappyPing.body,
+      chunks: sszSnappyPing.chunks,
     },
   ];
 
-  for (const {id, method, encoding, requestBody, error, chunks} of testCases) {
+  for (const {id, method, encoding, requestBody, chunks} of testCases) {
     it(id, async () => {
-      const resultPromise = pipe(requestEncode(config, method, encoding, requestBody), all);
-
-      if (chunks) {
-        const encodedChunks = await resultPromise;
-        expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
-      } else if (error) {
-        await expectRejectedWithLodestarError(resultPromise, error);
-      } else {
-        throw Error("Bad error data");
-      }
+      const encodedChunks = await pipe(requestEncode(config, method, encoding, requestBody), all);
+      expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
     });
   }
 });

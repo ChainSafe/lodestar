@@ -9,6 +9,7 @@ import {Method, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from
 import {responseEncodeError, responseEncodeSuccess} from "../../../../../src/network/reqresp/response/responseEncode";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
+import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 
 describe("network / reqresp / response / responseEncode", () => {
   describe("responseEncodeSuccess", () => {
@@ -41,18 +42,14 @@ describe("network / reqresp / response / responseEncode", () => {
         id: "Multiple chunks",
         method: Method.Ping,
         encoding: ReqRespEncoding.SSZ_SNAPPY,
-        responseChunks: [BigInt(1), BigInt(1)],
+        responseChunks: [sszSnappyPing.body, sszSnappyPing.body],
         chunks: [
           // Chunk 0 - success
           "0x00", // status: success
-          "0x08", // length prefix
-          "0xff060000734e61507059", // snappy frames header
-          "0x010c00000175de410100000000000000", // snappy frames content
+          ...sszSnappyPing.chunks,
           // Chunk 1 - success
           "0x00",
-          "0x08",
-          "0xff060000734e61507059",
-          "0x010c00000175de410100000000000000",
+          ...sszSnappyPing.chunks,
         ],
       },
     ];
@@ -67,7 +64,7 @@ describe("network / reqresp / response / responseEncode", () => {
         } else if (error) {
           await expectRejectedWithLodestarError(resultPromise, error);
         } else {
-          throw Error("Bad error data");
+          throw Error("Bad testCase");
         }
       });
     }

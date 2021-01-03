@@ -3,7 +3,7 @@ import all from "it-all";
 import pipe from "it-pipe";
 import {LodestarError, sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../../../src/constants";
-import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/timeoutHandler";
+import {responseTimeoutsHandler} from "../../../../../src/network/reqresp/request/responseTimeoutsHandler";
 import {RequestErrorCode, RequestInternalError} from "../../../../../src/network/reqresp/request/errors";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 
@@ -14,14 +14,6 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
   async function sleep(ms: number): Promise<void> {
     await _sleep(ms, controller.signal);
   }
-
-  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
-  afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
 
   /* eslint-disable @typescript-eslint/naming-convention */
   const testCases: {
@@ -46,7 +38,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       id: "trigger a TTFB_TIMEOUT",
       timeouts: {TTFB_TIMEOUT: 0},
       source: async function* () {
-        await sleep(30);
+        await sleep(30); // Pause for too long before first byte
         yield Buffer.from([0]);
       },
       responseDecoder: async function* (source) {
@@ -59,7 +51,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       timeouts: {RESP_TIMEOUT: 0},
       source: async function* () {
         yield Buffer.from([0]);
-        await sleep(30);
+        await sleep(30); // Pause for too long after first byte
         yield Buffer.from([0]);
       },
       responseDecoder: async function* (source) {
@@ -86,6 +78,7 @@ describe("network / reqresp / request / responseTimeoutsHandler", () => {
       },
       error: new RequestInternalError({code: RequestErrorCode.RESP_TIMEOUT}),
     },
+    // TODO: Test a `sleep(100000)`
   ];
   /* eslint-enable @typescript-eslint/naming-convention */
 
