@@ -11,7 +11,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconMetrics} from "../metrics";
 import {ReqResp} from "./reqresp/reqResp";
 import {INetworkOptions} from "./options";
-import {INetwork, NetworkEventEmitter, PeerSearchOptions} from "./interface";
+import {INetwork, NetworkEvent, NetworkEventEmitter, PeerSearchOptions} from "./interface";
 import {Gossip} from "./gossip/gossip";
 import {IGossip, IGossipMessageValidator} from "./gossip/interface";
 import {IBeaconChain} from "../chain";
@@ -80,8 +80,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async start(): Promise<void> {
-    this.libp2p.connectionManager.on("peer:connect", this.emitPeerConnect);
-    this.libp2p.connectionManager.on("peer:disconnect", this.emitPeerDisconnect);
+    this.libp2p.connectionManager.on(NetworkEvent.peerConnect, this.emitPeerConnect);
+    this.libp2p.connectionManager.on(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await this.libp2p.start();
     this.localMultiaddrs = this.libp2p.multiaddrs;
     await this.reqResp.start();
@@ -94,8 +94,8 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   }
 
   public async stop(): Promise<void> {
-    this.libp2p.connectionManager.removeListener("peer:connect", this.emitPeerConnect);
-    this.libp2p.connectionManager.removeListener("peer:disconnect", this.emitPeerDisconnect);
+    this.libp2p.connectionManager.removeListener(NetworkEvent.peerConnect, this.emitPeerConnect);
+    this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
     await this.metadata.stop();
     await this.gossip.stop();
     await this.reqResp.stop();
@@ -251,12 +251,12 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
 
     // tmp fix, we will just do double status exchange but nothing major
     // TODO: fix it?
-    this.emit("peer:connect", conn.remotePeer, conn.stat.direction);
+    this.emit(NetworkEvent.peerConnect, conn.remotePeer, conn.stat.direction);
   };
 
   private emitPeerDisconnect = (conn: LibP2pConnection): void => {
     this.logger.verbose("peer disconnected", {peerId: conn.remotePeer.toB58String()});
     this.metrics.peers.dec();
-    this.emit("peer:disconnect", conn.remotePeer);
+    this.emit(NetworkEvent.peerDisconnect, conn.remotePeer);
   };
 }

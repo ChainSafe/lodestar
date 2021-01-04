@@ -38,9 +38,14 @@ export interface IReqResp extends ReqEventEmitter {
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
 }
 
+export enum NetworkEvent {
+  peerConnect = "peer:connect",
+  peerDisconnect = "peer:disconnect",
+}
+
 export interface INetworkEvents {
-  ["peer:connect"]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
-  ["peer:disconnect"]: (peerId: PeerId) => void;
+  [NetworkEvent.peerConnect]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
+  [NetworkEvent.peerDisconnect]: (peerId: PeerId) => void;
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 

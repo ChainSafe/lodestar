@@ -21,7 +21,7 @@ import {IBeaconChain} from "../../chain";
 import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
-import {createRpcProtocol, INetwork} from "../../network";
+import {createRpcProtocol, INetwork, NetworkEvent} from "../../network";
 import {RpcError} from "../../network/error";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {ReqRespRequest} from "../../network/reqresp";
@@ -80,13 +80,13 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   public async start(): Promise<void> {
     this.network.reqResp.on("request", this.onRequest);
-    this.network.on("peer:connect", this.handshake);
+    this.network.on(NetworkEvent.peerConnect, this.handshake);
     const myStatus = await createStatus(this.chain);
     await syncPeersStatus(this.network, myStatus);
   }
 
   public async stop(): Promise<void> {
-    this.network.removeListener("peer:connect", this.handshake);
+    this.network.removeListener(NetworkEvent.peerConnect, this.handshake);
     await Promise.all(
       this.network
         .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
