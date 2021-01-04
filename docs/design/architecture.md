@@ -46,7 +46,7 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
 
 ### Beacon Node Data Flow
 ```mermaid
-graph LR
+graph TD
     validator(lodestar-validator)
     validator-->|block data|api
 
