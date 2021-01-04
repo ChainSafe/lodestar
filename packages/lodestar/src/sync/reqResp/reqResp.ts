@@ -89,7 +89,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
     this.network.removeListener("peer:connect", this.handshake);
     await Promise.all(
       this.network
-        .getPeers({connected: true, supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
+        .getPeers({supportsProtocols: [createRpcProtocol(Method.Goodbye, ReqRespEncoding.SSZ_SNAPPY)]})
         .map(async (peer) => {
           try {
             await this.network.reqResp.goodbye(peer.id, BigInt(GoodByeReasonCode.CLIENT_SHUTDOWN));

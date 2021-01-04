@@ -164,7 +164,7 @@ describe("network peer utils", function () {
     });
 
     it("should return all non sync peers", async () => {
-      networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
 
       // so none of them are good score sync peers
       getSyncPeersStub.returns([]);
