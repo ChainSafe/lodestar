@@ -3,7 +3,7 @@ import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
 import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
-import {Vector} from "./persistentVector";
+import {Vector} from "@chainsafe/persistent-ts";
 
 /**
  * Readonly interface for EpochContext.
@@ -20,14 +20,14 @@ export type ReadonlyEpochContext = {
  * Cache validators of state using a persistent vector to improve the loop performance.
  * Instead of accessing `validators` array directly inside BeaconState, use:
  * + flatValidators() for the loop
- * + setValidator() for an update
+ * + updateValidator() for an update
  * + addValidator() for a creation
  * that'd update both the cached validators and the one in the original state.
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export interface CachedValidatorsBeaconState extends BeaconState {
   flatValidators(): Vector<IFlatValidator>;
-  setValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
+  updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
   addValidator(validator: Validator): void;
   getOriginalState(): BeaconState;
   clone(): CachedValidatorsBeaconState;
@@ -40,8 +40,8 @@ export interface CachedValidatorsBeaconState extends BeaconState {
  * When read, just return the cache.
  */
 export class CachedValidatorsBeaconState {
-  // this is for the proxy handler, not for the external use
-  public _state: BeaconState;
+  // the original BeaconState
+  private _state: BeaconState;
   // this is immutable and shared across BeaconStates for most of the validators
   private _cachedValidators: Vector<IFlatValidator>;
 
@@ -58,19 +58,13 @@ export class CachedValidatorsBeaconState {
    * Write to both the cached validator and BeaconState.
    * _cachedValidators refers to a new instance
    */
-  public setValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void {
+  public updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void {
     if (this._cachedValidators) {
       const validator = this._cachedValidators.get(i);
       this._cachedValidators = this._cachedValidators.set(i, {...validator!, ...value});
     }
     const validator = this._state.validators[i];
-    if (value.activationEligibilityEpoch !== undefined)
-      validator.activationEligibilityEpoch = value.activationEligibilityEpoch;
-    if (value.activationEpoch !== undefined) validator.activationEpoch = value.activationEpoch;
-    if (value.effectiveBalance !== undefined) validator.effectiveBalance = value.effectiveBalance;
-    if (value.exitEpoch !== undefined) validator.exitEpoch = value.exitEpoch;
-    if (value.slashed !== undefined) validator.slashed = value.slashed;
-    if (value.withdrawableEpoch !== undefined) validator.withdrawableEpoch = value.withdrawableEpoch;
+    Object.assign(validator, value);
   }
 
   /**
@@ -124,7 +118,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
     if (target[p] !== undefined) {
       return target[p];
     }
-    return target._state[p];
+    return target.getOriginalState()[p];
   }
 
   /**
@@ -135,7 +129,7 @@ class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedVali
     if (target[p] !== undefined) {
       target[p] = value;
     } else {
-      target._state[p] = value;
+      target.getOriginalState()[p] = value;
     }
     return true;
   }

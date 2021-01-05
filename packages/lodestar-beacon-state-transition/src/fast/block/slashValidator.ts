@@ -19,7 +19,7 @@ export function slashValidator(
   const epoch = epochCtx.currentShuffling.epoch;
   initiateValidatorExit(epochCtx, state, slashedIndex);
   const validator = state.validators[slashedIndex];
-  state.setValidator(slashedIndex, {
+  state.updateValidator(slashedIndex, {
     slashed: true,
     withdrawableEpoch: Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR),
   });

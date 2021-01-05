@@ -42,9 +42,25 @@ describe("StateTransitionBeaconState", function () {
   });
 
   it("should modify both state and wrappedState", () => {
-    wrappedState.setValidator(1000, {activationEpoch: 2020});
+    const oldFlatValidator = wrappedState.flatValidators().get(1000);
+    wrappedState.updateValidator(1000, {activationEpoch: 2020, exitEpoch: 2030});
     expect(wrappedState.flatValidators().get(1000)!.activationEpoch).to.be.equal(2020);
+    expect(wrappedState.flatValidators().get(1000)!.exitEpoch).to.be.equal(2030);
+    // other property is the same
+    expect(wrappedState.flatValidators().get(1000)!.effectiveBalance).to.be.equal(oldFlatValidator?.effectiveBalance);
+    expect(wrappedState.flatValidators().get(1000)!.slashed).to.be.equal(oldFlatValidator?.slashed);
+    expect(wrappedState.flatValidators().get(1000)!.activationEligibilityEpoch).to.be.equal(
+      oldFlatValidator?.activationEligibilityEpoch
+    );
+    expect(wrappedState.flatValidators().get(1000)!.withdrawableEpoch).to.be.equal(oldFlatValidator?.withdrawableEpoch);
+
     expect(state.validators[1000].activationEpoch).to.be.equal(2020);
+    expect(state.validators[1000].exitEpoch).to.be.equal(2030);
+    // other property is the same
+    expect(state.validators[1000].effectiveBalance).to.be.equal(oldFlatValidator?.effectiveBalance);
+    expect(state.validators[1000].slashed).to.be.equal(oldFlatValidator?.slashed);
+    expect(state.validators[1000].activationEligibilityEpoch).to.be.equal(oldFlatValidator?.activationEligibilityEpoch);
+    expect(state.validators[1000].withdrawableEpoch).to.be.equal(oldFlatValidator?.withdrawableEpoch);
   });
 
   it("should add validator to both state and wrappedState", () => {

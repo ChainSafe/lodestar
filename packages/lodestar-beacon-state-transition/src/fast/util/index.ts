@@ -10,7 +10,6 @@ export * from "./epochShuffling";
 export * from "./epochStakeSummary";
 export * from "./flatValidator";
 export * from "./interface";
-export * from "./persistentVector";
 
 /**
  * Exchange Interface of StateContext

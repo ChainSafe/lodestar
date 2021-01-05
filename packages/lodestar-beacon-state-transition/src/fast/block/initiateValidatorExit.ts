@@ -31,7 +31,7 @@ export function initiateValidatorExit(
   }
 
   // set validator exit epoch and withdrawable epoch
-  state.setValidator(index, {
+  state.updateValidator(index, {
     exitEpoch: exitQueueEpoch,
     withdrawableEpoch: exitQueueEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
   });

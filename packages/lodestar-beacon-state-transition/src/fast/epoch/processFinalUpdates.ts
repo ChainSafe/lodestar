@@ -41,7 +41,7 @@ export function processFinalUpdates(
     const balance = balances[i];
     const effectiveBalance = status.validator.effectiveBalance;
     if (balance + DOWNWARD_THRESHOLD < effectiveBalance || effectiveBalance + UPWARD_THRESHOLD < balance) {
-      state.setValidator(i, {
+      state.updateValidator(i, {
         effectiveBalance: bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
       });
     }

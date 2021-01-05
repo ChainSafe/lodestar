@@ -13,7 +13,7 @@ export function processRegistryUpdates(
   // process ejections
   for (const index of process.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
-    state.setValidator(index, {
+    state.updateValidator(index, {
       exitEpoch: exitEnd,
       withdrawableEpoch: exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
     });
@@ -27,7 +27,7 @@ export function processRegistryUpdates(
 
   // set new activation eligibilities
   for (const index of process.indicesToSetActivationEligibility) {
-    state.setValidator(index, {
+    state.updateValidator(index, {
       activationEligibilityEpoch: epochCtx.currentShuffling.epoch + 1,
     });
   }
@@ -39,7 +39,7 @@ export function processRegistryUpdates(
     if (process.statuses[index].validator.activationEligibilityEpoch > finalityEpoch) {
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
     }
-    state.setValidator(index, {
+    state.updateValidator(index, {
       activationEpoch: computeActivationExitEpoch(config, process.currentEpoch),
     });
   }
