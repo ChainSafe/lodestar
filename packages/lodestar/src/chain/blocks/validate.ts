@@ -45,12 +45,12 @@ export async function validateBlock({
       });
     }
 
-    const maxPeerCurrentSlot = clock.maxPeerCurrentSlot;
-    if (blockSlot > maxPeerCurrentSlot) {
+    const currentSlotWithGossipDisparity = clock.currentSlotWithGossipDisparity;
+    if (blockSlot > currentSlotWithGossipDisparity) {
       throw new BlockError({
         code: BlockErrorCode.FUTURE_SLOT,
         blockSlot,
-        currentSlot: maxPeerCurrentSlot,
+        currentSlot: currentSlotWithGossipDisparity,
         job,
       });
     }

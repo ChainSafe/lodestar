@@ -46,14 +46,14 @@ describe("LocalClock", function () {
     expect(spy.calledWith(clock.currentEpoch)).to.be.true;
   });
 
-  describe("maxPeerCurrentSlot", () => {
+  describe("currentSlotWithGossipDisparity", () => {
     it("should be next slot", () => {
       sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000 - (MAXIMUM_GOSSIP_CLOCK_DISPARITY - 50));
-      expect(clock.maxPeerCurrentSlot).to.be.equal(clock.currentSlot + 1);
+      expect(clock.currentSlotWithGossipDisparity).to.be.equal(clock.currentSlot + 1);
     });
 
     it("should be current slot", () => {
-      expect(clock.maxPeerCurrentSlot).to.be.equal(clock.currentSlot);
+      expect(clock.currentSlotWithGossipDisparity).to.be.equal(clock.currentSlot);
     });
   });
 });

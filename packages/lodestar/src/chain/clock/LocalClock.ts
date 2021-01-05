@@ -45,11 +45,10 @@ export class LocalClock implements IBeaconClock {
   }
 
   /**
-   * Maximum currentSlot of peers.
    * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
    * Otherwise return currentSlot
    */
-  public get maxPeerCurrentSlot(): Slot {
+  public get currentSlotWithGossipDisparity(): Slot {
     const currentSlot = this.currentSlot;
     const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
     return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
