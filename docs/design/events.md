@@ -43,6 +43,7 @@ see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9da
 | Event | Listener |
 |---|---|
 | "peer:connect" |  `BeaconReqRespHandler->handshake` |
+| "peer:disconnect" | none |
 
 ### network.gossip
 

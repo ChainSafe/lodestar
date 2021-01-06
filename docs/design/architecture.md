@@ -44,7 +44,7 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
   - various utility functions used by all of the above
 
 
-### Beacon Node Data Flow
+## Beacon Node Data Flow
 ```mermaid
 graph TD
     lodestar-validator(lodestar-validator)
@@ -82,13 +82,13 @@ graph TD
     
     style peers fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5
     
-    style lodestar-fork-choice fill:#FFF566;
-    style lodestar-validator fill:#FFF566;
-    style lodestar-db fill:#FFF566;
-    
+    style lodestar-fork-choice color:black, fill:#FFF566;
+    style lodestar-validator color:black, fill:#FFF566;
+    style lodestar-db color:black, fill:#FFF566;    
 ```
 
-### Entry Paths for Data
+
+## Entry Paths for Data
 There are a few paths that data can be brought into the beacon chain via outside sources:
 - via `api`
     - a validator can be proposing a new block
