@@ -4,12 +4,12 @@ import pipe from "it-pipe";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Method, ReqRespEncoding} from "../../../../../src/constants";
 import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {requestDecode} from "../../../../../src/network/reqresp/response/requestDecode";
+import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode";
 import {arrToSource} from "../utils";
 
 chai.use(chaiAsPromised);
 
-describe("network / reqresp / response / requestDecode", () => {
+describe("network / reqresp / encoders / requestDecode", () => {
   const testCases: {
     id: string;
     method: Method;

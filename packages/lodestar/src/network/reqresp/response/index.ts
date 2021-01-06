@@ -6,9 +6,9 @@ import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {randomRequestId} from "../../util";
 import {onChunk} from "../utils/onChunk";
 import {ILibP2pStream, ReqRespHandler} from "../interface";
+import {requestDecode} from "../encoders/requestDecode";
+import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
-import {requestDecode} from "./requestDecode";
-import {responseEncodeError, responseEncodeSuccess} from "./responseEncode";
 
 export {ResponseError};
 

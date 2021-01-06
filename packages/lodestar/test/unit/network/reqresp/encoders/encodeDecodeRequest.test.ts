@@ -10,15 +10,15 @@ import {
   RequestBody,
   Status,
 } from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding} from "../../../../src/constants";
-import {requestEncode} from "../../../../src/network/reqresp/request/requestEncode";
-import {requestDecode} from "../../../../src/network/reqresp/response/requestDecode";
-import {isEqualSszType} from "../../../utils/ssz";
-import {createStatus, generateRoots} from "./utils";
+import {Method, Methods, ReqRespEncoding} from "../../../../../src/constants";
+import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";
+import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode";
+import {isEqualSszType} from "../../../../utils/ssz";
+import {createStatus, generateRoots} from "../utils";
 
 chai.use(chaiAsPromised);
 
-describe("network / reqresp / encode decode / request body", () => {
+describe("network / reqresp / encoders / encodeDecodeRequest", () => {
   interface IRequestTypes {
     [Method.Status]: Status;
     [Method.Goodbye]: Goodbye;

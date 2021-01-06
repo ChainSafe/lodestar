@@ -1,7 +1,6 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
-import {fromHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {RequestOrResponseType} from "../../../../../../src/network";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils/bufferedSource";
@@ -21,8 +20,7 @@ describe("network / reqresp / sszSnappy / decode", () => {
 
     for (const {id, type, body, chunks} of testCases) {
       it(id, async () => {
-        const byteChunks = chunks.map(fromHexString) as Buffer[];
-        const bufferedSource = new BufferedSource(arrToSource(byteChunks));
+        const bufferedSource = new BufferedSource(arrToSource(chunks));
         const bodyResult = await readSszSnappyPayload(bufferedSource, type);
         expect(isEqualSszType(type, bodyResult, body)).to.equal(true, "Wrong decoded body");
       });

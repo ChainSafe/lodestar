@@ -1,6 +1,6 @@
-import {createCompressStream} from "@chainsafe/snappy-stream";
-import {SnappyFramesUncompress} from "../../../../../src/network/encoders/snappyFrames/uncompress";
 import {expect} from "chai";
+import {createCompressStream} from "@chainsafe/snappy-stream";
+import {SnappyFramesUncompress} from "../../../../../../../src/network/reqresp/encodingStrategies/sszSnappy/snappyFrames/uncompress";
 
 describe("snappy frames uncompress", function () {
   it("should work with short input", function (done) {

@@ -4,15 +4,15 @@ import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Goodbye, Metadata, Ping, ResponseBody, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
-import {Method, Methods, ReqRespEncoding} from "../../../../src/constants";
-import {responseDecode} from "../../../../src/network/reqresp/request/responseDecode";
-import {responseEncodeSuccess} from "../../../../src/network/reqresp/response/responseEncode";
-import {arrToSource, createStatus, generateEmptySignedBlocks} from "./utils";
-import {expectIsEqualSszTypeArr} from "../../../utils/ssz";
+import {Method, Methods, ReqRespEncoding} from "../../../../../src/constants";
+import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
+import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
+import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils";
+import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
 
 chai.use(chaiAsPromised);
 
-describe("network / reqresp / encode decode / response body", () => {
+describe("network / reqresp / encoders / encodeDecodeResponse", () => {
   interface IResponseTypes {
     [Method.Status]: Status;
     [Method.Goodbye]: Goodbye;

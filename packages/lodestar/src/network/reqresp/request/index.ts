@@ -7,12 +7,19 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
 import {createRpcProtocol, randomRequestId} from "../../util";
-import {RequestError, RequestErrorCode, RequestInternalError} from "./errors";
-import {collectResponses} from "./collectResponses";
-import {requestEncode} from "./requestEncode";
-import {responseDecode} from "./responseDecode";
+import {ResponseError} from "../response";
+import {requestEncode} from "../encoders/requestEncode";
+import {responseDecode} from "../encoders/responseDecode";
 import {ILibP2pStream} from "../interface";
+import {collectResponses} from "./collectResponses";
 import {responseTimeoutsHandler} from "./responseTimeoutsHandler";
+import {
+  RequestError,
+  RequestErrorCode,
+  RequestInternalError,
+  IRequestErrorMetadata,
+  responseStatusErrorToRequestError,
+} from "./errors";
 
 export {RequestError, RequestErrorCode};
 
@@ -119,8 +126,12 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   } catch (e) {
     logger.verbose("Req error", logCtx, e);
 
-    if (e instanceof RequestInternalError) {
-      throw new RequestError({...e.type, method, encoding, peer});
+    const metadata: IRequestErrorMetadata = {method, encoding, peer};
+
+    if (e instanceof ResponseError) {
+      throw new RequestError(responseStatusErrorToRequestError(e), metadata);
+    } else if (e instanceof RequestInternalError) {
+      throw new RequestError(e.type, metadata);
     } else {
       throw e;
     }

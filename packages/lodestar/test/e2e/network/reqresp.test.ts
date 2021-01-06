@@ -161,13 +161,10 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.metadata(netB.peerId),
-      new RequestError({
-        code: RequestErrorCode.SERVER_ERROR,
-        errorMessage: testErrorMessage,
-        method: Method.Metadata,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        peer: netB.peerId.toB58String(),
-      })
+      new RequestError(
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {method: Method.Metadata, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+      )
     );
   });
 
@@ -187,13 +184,10 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 3}),
-      new RequestError({
-        code: RequestErrorCode.SERVER_ERROR,
-        errorMessage: testErrorMessage,
-        method: Method.BeaconBlocksByRange,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        peer: netB.peerId.toB58String(),
-      })
+      new RequestError(
+        {code: RequestErrorCode.SERVER_ERROR, errorMessage: testErrorMessage},
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+      )
     );
   });
 
@@ -217,12 +211,10 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 1}),
-      new RequestError({
-        code: RequestErrorCode.TTFB_TIMEOUT,
-        method: Method.BeaconBlocksByRange,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        peer: netB.peerId.toB58String(),
-      })
+      new RequestError(
+        {code: RequestErrorCode.TTFB_TIMEOUT},
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+      )
     );
   });
 
@@ -247,12 +239,10 @@ describe("[network] network", function () {
 
     await expectRejectedWithLodestarError(
       netA.reqResp.beaconBlocksByRange(netB.peerId, {startSlot: 0, step: 1, count: 2}),
-      new RequestError({
-        code: RequestErrorCode.RESP_TIMEOUT,
-        method: Method.BeaconBlocksByRange,
-        encoding: ReqRespEncoding.SSZ_SNAPPY,
-        peer: netB.peerId.toB58String(),
-      })
+      new RequestError(
+        {code: RequestErrorCode.RESP_TIMEOUT},
+        {method: Method.BeaconBlocksByRange, encoding: ReqRespEncoding.SSZ_SNAPPY, peer: netB.peerId.toB58String()}
+      )
     );
   });
 });

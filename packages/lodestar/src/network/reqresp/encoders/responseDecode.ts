@@ -3,8 +3,15 @@ import {ResponseBody} from "@chainsafe/lodestar-types";
 import {Method, Methods, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
 import {BufferedSource} from "../utils/bufferedSource";
 import {readEncodedPayload} from "../encodingStrategies";
-import {readErrorMessage, readResultHeader, StreamStatus} from "./resultHeader";
-import {RequestInternalError, RequestErrorCode} from "./errors";
+import {decodeErrorMessage} from "../utils/errorMessage";
+import {ResponseError} from "../response";
+
+/**
+ * Internal helper type to signal stream ended early
+ */
+enum StreamStatus {
+  Ended = "STREAM_ENDED",
+}
 
 /**
  * Consumes a stream source to read a `<response>`
@@ -40,14 +47,7 @@ export function responseDecode(
         // code (i.e. The chunk stream is terminated once an error occurs
         if (status !== RpcResponseStatus.SUCCESS) {
           const errorMessage = await readErrorMessage(bufferedSource);
-          switch (status) {
-            case RpcResponseStatus.INVALID_REQUEST:
-              throw new RequestInternalError({code: RequestErrorCode.INVALID_REQUEST, errorMessage});
-            case RpcResponseStatus.SERVER_ERROR:
-              throw new RequestInternalError({code: RequestErrorCode.SERVER_ERROR, errorMessage});
-            default:
-              throw new RequestInternalError({code: RequestErrorCode.UNKNOWN_ERROR_STATUS, errorMessage, status});
-          }
+          throw new ResponseError(status, errorMessage);
         }
 
         yield await readEncodedPayload<ResponseBody>(bufferedSource, encoding, type, {isSszTree});
@@ -56,4 +56,52 @@ export function responseDecode(
       await bufferedSource.return();
     }
   };
+}
+
+/**
+ * Consumes a stream source to read a `<result>`
+ * ```bnf
+ * result  ::= "0" | "1" | "2" | ["128" ... "255"]
+ * ```
+ * `<response_chunk>` starts with a single-byte response code which determines the contents of the response_chunk
+ */
+export async function readResultHeader(bufferedSource: BufferedSource): Promise<RpcResponseStatus | StreamStatus> {
+  for await (const buffer of bufferedSource) {
+    const status = buffer.get(0);
+    buffer.consume(1);
+
+    // If first chunk had zero bytes status === null, get next
+    if (status !== null) {
+      return status;
+    }
+  }
+
+  return StreamStatus.Ended;
+}
+
+/**
+ * Consumes a stream source to read an optional `<error_response>?`
+ * ```bnf
+ * error_response  ::= <result> | <error_message>?
+ * result          ::= "1" | "2" | ["128" ... "255"]
+ * ```
+ */
+export async function readErrorMessage(bufferedSource: BufferedSource): Promise<string> {
+  for await (const buffer of bufferedSource) {
+    // Wait for next chunk with bytes or for the stream to end
+    // Note: The entire <error_message> is expected to be in the same chunk
+    if (buffer.length === 0) {
+      continue;
+    }
+
+    const bytes = buffer.slice();
+    try {
+      return decodeErrorMessage(bytes);
+    } catch (e) {
+      return bytes.toString("hex");
+    }
+  }
+
+  // Error message is optional and may not be included in the response stream
+  return "";
 }

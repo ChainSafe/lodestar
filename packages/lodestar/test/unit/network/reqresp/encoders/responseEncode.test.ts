@@ -1,17 +1,16 @@
-import {expect} from "chai";
 import pipe from "it-pipe";
 import all from "it-all";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {toHexString} from "@chainsafe/ssz";
 import {ResponseBody} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus, RpcResponseStatusError} from "../../../../../src/constants";
-import {responseEncodeError, responseEncodeSuccess} from "../../../../../src/network/reqresp/response/responseEncode";
+import {responseEncodeError, responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
+import {expectEqualByteChunks} from "../utils";
 
-describe("network / reqresp / response / responseEncode", () => {
+describe("network / reqresp / encoders / responseEncode", () => {
   describe("responseEncodeSuccess", () => {
     const testCases: {
       id: string;
@@ -60,7 +59,7 @@ describe("network / reqresp / response / responseEncode", () => {
 
         if (chunks) {
           const encodedChunks = await resultPromise;
-          expect(encodedChunks.map(toHexString)).to.deep.equal(chunks.map(toHexString));
+          expectEqualByteChunks(encodedChunks, chunks);
         } else if (error) {
           await expectRejectedWithLodestarError(resultPromise, error);
         } else {
@@ -100,7 +99,7 @@ describe("network / reqresp / response / responseEncode", () => {
     for (const {id, status, errorMessage, chunks} of testCases) {
       it(id, async () => {
         const encodedChunks = await pipe(responseEncodeError(status, errorMessage), all);
-        expect(encodedChunks.map(toHexString)).to.deep.equal(chunks.map(toHexString));
+        expectEqualByteChunks(encodedChunks, chunks);
       });
     }
   });

@@ -3,12 +3,11 @@ import chaiAsPromised from "chai-as-promised";
 import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../../../src/constants";
 import {ReqRespHandler} from "../../../../../src/network";
 import {handleRequest} from "../../../../../src/network/reqresp/response";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
-import {MockLibP2pStream} from "../utils";
+import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 
 chai.use(chaiAsPromised);
@@ -73,10 +72,7 @@ describe("network / reqresp / response / handleRequest", () => {
         await expect(resultPromise).to.not.rejectedWith();
       }
 
-      expect(stream.resultChunks.map(toHexString)).to.deep.equal(
-        expectedResponseChunks.map(toHexString),
-        "Wrong response chunks"
-      );
+      expectEqualByteChunks(stream.resultChunks, expectedResponseChunks, "Wrong response chunks");
     });
   }
 });

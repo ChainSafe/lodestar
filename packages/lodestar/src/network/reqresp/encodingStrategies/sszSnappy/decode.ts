@@ -2,7 +2,7 @@ import BufferList from "bl";
 import varint from "varint";
 import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
-import {SnappyFramesUncompress} from "../../../encoders/snappyFrames/uncompress";
+import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
 import {BufferedSource} from "../../utils/bufferedSource";
 import {RequestOrResponseType, RequestOrResponseBody} from "../../interface";
 import {maxEncodedLen} from "./utils";

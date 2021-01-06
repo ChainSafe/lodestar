@@ -238,7 +238,7 @@ describe("[sync] rpc", function () {
       "First chunk should be: result = INVALID_REQUEST"
     );
 
-    expect(decodeErrorMessage(responseBytes[1].slice())).to.equal(
+    expect(decodeErrorMessage(responseBytes[1].slice())).to.include(
       SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
       "Second chunk should be: expected error message"
     );

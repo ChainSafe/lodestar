@@ -1,7 +1,5 @@
-import {expect} from "chai";
 import all from "it-all";
 import pipe from "it-pipe";
-import {toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network";
@@ -11,6 +9,7 @@ import {
   writeSszSnappyPayload,
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
+import {expectEqualByteChunks} from "../../utils";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBlock} from "./testData";
 
 describe("network / reqresp / sszSnappy / encode", () => {
@@ -20,7 +19,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     for (const {id, type, body, chunks} of testCases) {
       it(id, async () => {
         const encodedChunks = await pipe(writeSszSnappyPayload(body, type), all);
-        expect(encodedChunks.map(toHexString)).to.deep.equal(chunks);
+        expectEqualByteChunks(encodedChunks, chunks);
       });
     }
   });

@@ -1,5 +1,6 @@
 import {Root, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {List, toHexString} from "@chainsafe/ssz";
+import {expect} from "chai";
 import {ILibP2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
 
@@ -33,6 +34,13 @@ export async function* arrToSource<T>(arr: T[]): AsyncGenerator<T> {
 
 export function generateEmptySignedBlocks(n = 3): SignedBeaconBlock[] {
   return Array.from({length: n}).map(() => generateEmptySignedBlock());
+}
+
+/**
+ * Wrapper for type-safety to ensure and array of Buffers is equal with a diff in hex
+ */
+export function expectEqualByteChunks(chunks: Buffer[], expectedChunks: Buffer[], message?: string): void {
+  expect(chunks.map(toHexString)).to.deep.equal(expectedChunks.map(toHexString), message);
 }
 
 /**
