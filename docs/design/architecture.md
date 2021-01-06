@@ -2,15 +2,14 @@
 
 ## Lodestar Beacon Node Modules
 
-when `lodestar beacon --testnet TESTNET_NAME` is ran, [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli) does the following:
-    - gathers data required to run the beacon node based on local configurations and CLI options
-    - bootstraps the `BeaconNode` (in the `node` module) in [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar)
+When `lodestar beacon --testnet TESTNET_NAME` (as described in [CLI Reference](../reference/cli)) is ran, [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli) does the following:
+  
+  - gathers data required to run the beacon node based on local configurations and CLI options
+  - bootstraps the [`BeaconNode`](https://github.com/ChainSafe/lodestar/blob/54e13c9908054b99f68e420ee7c0273fba9db3f9/packages/lodestar/src/node/nodejs.ts#L66) (in the `node` module) in [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar)
 
-The `node` then bootstraps the `BeaconNode` modules:
+The `node` then bootstraps the other modules.  Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are several modules that are started by the `node` process that bootstraps the beacon node:
 
-Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are several modules that are started by the `node` process that bootstraps the beacon node:
-
-### api
+### [api](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/api)
   - various REST API calls that can be made for:
     - beacon
         - get data about the beacon state and publish new data
@@ -20,27 +19,27 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
         - get data about the node process that is running Lodestar
     - validator
         - perform (and get relevant data for) validator duties
-### chain
+### [chain](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/chain)
   - processing block and attestation data to/from the beacon chain
-### db
+### [db](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/db)
   - handles all persistent data stored to the local leveldb while running the beacon chain.  uses [@chainsafe/lodestar-db](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db) under the hood.
-### eth1
+### [eth1](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/eth1)
   - handles all interactions with the eth1 blockchain (e.g. deposit data)
-### metrics
+### [metrics](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/metrics)
   - exposes Lodestar metrics data that can be read using clients such as [Prometheus & Grafana](https://chainsafe.github.io/lodestar/usage/prometheus-grafana/)
-### network
+### [network](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/ntwork)
   - eth2 network implementation as defined by the [Eth2 Networking Spec](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md)
-### node
+### [node](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/node)
   - contains the nodeJS process that bootstraps and runs Lodestar
   - contains the entrypoint that [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli/) calls to start the beacon node
-### sync
+### [sync](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/sync)
   - "syncing" is the process by which the beacon node stays updated with new data published on eth2.  there are two such processes in Lodestar:
       - initial sync
         - sync new data until we reach the head of the chain
       - regular sync
         - once we have finished initial sync (i.e. reached the head of the chain), regular sync keeps us updated in realtime as the chain head moves forward
-### tasks
-### util
+### [tasks](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/tasks)
+### [util](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/util)
   - various utility functions used by all of the above
 
 
