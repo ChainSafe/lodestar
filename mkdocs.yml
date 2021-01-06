@@ -56,7 +56,8 @@ nav:
   - Getting started: index.md
   - Installation: installation.md
   - Design:
-      - Beacon Node Architecture: design/architecture.md
+      - Beacon node architecture: design/architecture.md
+      - Beacon node events: design/events.md
       - Lodestar packages dependency graph: design/depgraph.md
   - Usage:
       - Mainnet or public testnet: usage/testnet.md
