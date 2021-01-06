@@ -209,7 +209,6 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
   private getPeerStatuses(): Status[] {
     return this.network
       .getPeers({
-        connected: true,
         supportsProtocols: getSyncProtocols(),
       })
       .map((peer) => this.network.peerMetadata.getStatus(peer.id))

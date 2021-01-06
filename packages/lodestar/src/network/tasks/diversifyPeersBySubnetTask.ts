@@ -50,7 +50,7 @@ export class DiversifyPeersBySubnetTask {
     this.logger.info("Running DiversifyPeersBySubnetTask");
     this.logger.profile("DiversifyPeersBySubnetTask");
     // network getPeers() is expensive, we don't want to call it multiple times
-    const connectedPeers = this.network.getPeers({connected: true});
+    const connectedPeers = this.network.getPeers();
     const connectedPeerIds = connectedPeers.map((peer) => peer.id);
     const missingSubnets = this.isSynced ? findMissingSubnets(connectedPeerIds, this.network) : [];
     if (missingSubnets.length > 0) {

@@ -12,7 +12,6 @@ export function getSyncPeers(
   return (
     network
       .getPeers({
-        connected: true,
         supportsProtocols: getSyncProtocols(),
       })
       .map((peer) => peer.id)

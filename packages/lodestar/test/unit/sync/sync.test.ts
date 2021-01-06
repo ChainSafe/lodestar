@@ -4,7 +4,7 @@ import {BeaconReqRespHandler, IReqRespHandler} from "../../../src/sync/reqResp";
 import {AttestationCollector} from "../../../src/sync/utils";
 import {BeaconGossipHandler, IGossipHandler} from "../../../src/sync/gossip";
 import {INetwork, Libp2pNetwork} from "../../../src/network";
-import {IRegularSync, NaiveRegularSync} from "../../../src/sync/regular";
+import {IRegularSync} from "../../../src/sync/regular";
 import {FastSync, InitialSync} from "../../../src/sync/initial";
 import {BeaconSync, SyncMode} from "../../../src/sync";
 import {config} from "@chainsafe/lodestar-config/minimal";
@@ -16,6 +16,7 @@ import {IBeaconSync} from "../../../src/sync";
 import {silentLogger} from "../../utils/logger";
 import {ForkChoice, IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ORARegularSync} from "../../../src/sync/regular/oneRangeAhead/oneRangeAhead";
 
 describe("sync", function () {
   let chainStub: SinonStubbedInstance<IBeaconChain>;
@@ -52,7 +53,7 @@ describe("sync", function () {
     gossipStub = sandbox.createStubInstance(BeaconGossipHandler);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     initialSyncStub = sandbox.createStubInstance(FastSync);
-    regularSync = new NaiveRegularSync(
+    regularSync = new ORARegularSync(
       {},
       {
         config,
