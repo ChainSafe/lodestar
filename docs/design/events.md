@@ -1,126 +1,77 @@
 ## Beacon Chain Events
 
-|chain
-|---
-| see [IChainEvents](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/chain/emitter.ts#L107)
+Much of the design of Lodestar is based around events being emitted which are listened by various modules across the code. Below are the events (categorized according to which submodule the events are emitted from) and how they are listened for across the codebase.
 
-|network
-|---
-| see [INetworkEvents](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/interface.ts#L41)
+### Chain
 
-|network.gossip
-|---
-|see [IGossipEvents](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/gossip/interface.ts#L24)
+#### Event Descriptions
+see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/chain/emitter.ts#L10) for list of chain events
 
-|network.reqResp
-|---
-|`"request", ReqRespRequest<RequestBody>`
+#### Who's listening?
+| Event | Listener |
+|---|---|
+| "attestation" | `EventsApi->handleBeaconAttestationEvent` |
+| "block" | `BeaconApi->push` |
+| "block" | `EventsApi->handleBeaconBlockEvent` |
+| "block" | `EventsApi->handleVoluntaryExitEvent` |
+| "block" | `FastSync->checkSyncProgress` |
+| "block" | `NaiveRegularSync->onProcessedBlock` |
+| "block" | `ORARegularSync->onProcessedBlock` |
+| "block" | `BlockRangeProcessor->onProcessedBlock` |
+| "block" | `SyncStats->onBlockProcessed` |
+| "checkpoint" | `FastSync->checkSyncCompleted` |
+| "checkpoint" | `TasksService->onCheckpoint` |
+| "clock:slot" | `AttestationCollector->checkDuties` |
+| "clock:slot" | `LocalClock->onSlot` |
+| "error:block" | `BeaconSync->onUnknownBlockRoot` |
+| "error:block" | `NaiveRegularSync->onErrorBlock` |
+| "error:block" | `BlockRangeProcessor->onErrorBlock` |
+| "forkChoice:finalized" | `TasksService->onFinalizedCheckpoint` |
+| "forkChoice:reorg" | `EventsApi->handleChainReorgEvent` |
+| "forkChoice:head" | `EventsApi->handleBeaconHeadEvent` |
+| "forkVersion" | `Gossip->handleForkVersion` |
+| "forkVersion" | `Metadata->handleForkVersion` |
+| "forkVersion" | `BeaconGossipHandler->handleForkVersion` |
+| "forkVersion" | `InteropSubnetsJoiningTask->handleForkVersion` |
 
-|sync
-|---
-|`"syncCompleted"`
+### network
 
-## Event Emitter
-```mermaid
-classDiagram
+#### Event Descriptions
+see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/interface.ts#L41) for list of network events
 
-    LibP2pNetwork-->BeaconReqRespHandler:"peer:connect":handhake
-    
-    Chain-->api:attestation": handleBeaconAttestationEvent
-    Chain-->BeaconSync:"error:block":onUnknownBlockRoot
-    Chain-->NaiveRegularSync:"error:block":onErrorBlock
-    Chain-->BlockRangeProcessor:"error:block":onErrorBlock
-    Chain-->TasksService:"forkChoice:finalized":onFinalizedCheckpoint
-    Chain-->api:"forkChoice:reorg":handleChainReorgEvent
-    Chain-->api:"forkChoice:head":handleBeaconHeadEvent
-    Chain-->LocalClock:"clock:slot":onSlot
-    Chain-->Gossip:"forkVersion":handleForkVersion
-    Chain-->Metadata:"forkVersion":handleForkVersion
-    Chain-->BeaconGossipHandler:"forkVersion":handleForkVersion
-    Chain-->FastSync:"checkpoint":checkSyncCompleted
-    Chain-->TasksService:"checkpoint":onCheckpoint
-    
-    Chain-->BeaconApi:"block":push
-    Chain-->EventsApi:"block":handleBeaconBlockEvent
-    Chain-->EventsApi:"block":handleVoluntaryExitEvent
-    Chain-->FastSync:"block":checkSyncProgress
-    Chain-->NaiveRegularSync:"block":onProcessedBlock
-    Chain-->ORARegularSync:"block":onProcessedBlock
-    Chain-->BlockRangeProcessor:"block":onProcessedBlock
-    Chain-->SyncStats:"block":onBlockProcessed
-    
-    Chain-->InteropSubnetsJoiningTask:"forkVersion":handleForkVersion
-    Chain-->AttestationCollector:"clock:slot":checkDuties
-    
-    ReqResp-->BeaconReqRespHandler:"request"->onRequest
-    
-    NaiveRegularSync-->BeaconSync:"syncCompleted":syncCompleted
-    
-    Gossip-->TasksService:"gossip:start":handleGossipStart
-    Gossip-->TasksService:"gossip:stop":handleGossipStop
-    
-    class Chain {
-        "attestation",
-        "block",
-        "checkpoint",
-        "justified",
-        "finalized",
-        "forkVersion",
-        "clock:slot",
-        "clock:epoch",
-        "forkChoice:head",
-        "forkChoice:reorg",
-        "forkChoice:justified",
-        "forkChoice:finalized",
-        "error:attestation",
-        "error:block",
-    }
-    
-    class AttestationCollector {
-    
-    }
-    
-    class Metadata {
-    
-    }
-    
-    class LocalClock {
-    
-    }
-    
-    class api {
-        +handleBeaconAttestationEvent
-    }
-    
-    class ReqResp {
-        "request"
-    }
- 
-    class BeaconReqRespHandler {
-        +this.onRequest()
-        +this.handshake()
-    }
-      
-    class LibP2pNetwork {
-        +"peer:connect"
-        +"peer:disconnect"
-    }
-    
-    class TasksService {
-    
-    }
+#### Who's listening?
+| Event | Listener |
+|---|---|
+| "peer:connect" |  `BeaconReqRespHandler->handshake` |
 
-    class Gossip {
+### network.gossip
 
-    }
-    
-    class NaiveRegularSync {
-        (and ORARegularSync)
-    }
-    
-    class BeaconSync {
-        +this.syncCompleted()
-    }
-    
-      
-```
+see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/gossip/interface.ts#L24) for a list of gossip events
+
+#### Who's listening?
+| Event | Listener |
+|---|---|
+| "gossip:start" | `TasksService->handleGossipStart` |
+| "gossip:stop" | `TasksService->handleGossipStop` |
+
+### network.reqResp
+
+| Event | Description |
+|---|---|
+| "request" | emitted when an RPC request comes from the network |
+
+#### Who's listening?
+| Event | Listener |
+|---|---|---|
+| "request" | `BeaconReqRespHandler->onRequest` |
+
+### sync
+
+| Event | Description |
+|---|---|
+| "syncCompleted" | emitted when regular sync is complete  |
+
+#### Who's listening?
+| Event | Listener |
+|---|---|
+| "syncCompleted" | `BeaconSync->syncCompleted` |

@@ -1,5 +1,6 @@
 ## Lodestar monorepo dependency graph
 
+## @chainsafe/lodestar-* dep graph
 ```mermaid
 graph LR
     lodestar["lodestar"]
@@ -50,4 +51,15 @@ graph LR
     
     config-->state-trans
     utils-->state-trans
+    
+    click cli "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli"
+    click lodestar "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar"
+    click validator "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-validator"
+    click db "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db"
+    click params "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-params"
+    click state-trans "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-beacon-state-transition"
+    click fork-choice "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-fork-choice"
+    click types "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-types"
+    click utils "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-utils"
+    click config "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-config"
 ```

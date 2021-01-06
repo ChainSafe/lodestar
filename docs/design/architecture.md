@@ -47,48 +47,51 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
 ### Beacon Node Data Flow
 ```mermaid
 graph TD
-    BD["BD = Block Data"]
-    validator(lodestar-validator)
-    validator-->|BD|api
+    lodestar-validator(lodestar-validator)
+    click lodestar-validator "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-validator"
+    lodestar-validator-->|block data|api
 
-    api-->db
-    api-->|BD|chain
-    api-->|BD|validator
-    api-->|BD|network
+    api-->|block data|db
+    api-->|block data|lodestar-validator
+    api-->|block data|network
+    api-->|block data|chain
     api-->|attestation subnet subscription|sync
     
-    chain-->db
-    fork(lodestar-fork-choice)
-    chain-->|get/set DAG|fork
-    chain-->|BD|api
+    lodestar-fork-choice(lodestar-fork-choice)
+    click lodestar-fork-choice "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-fork-choice"
+    chain-->|get/set DAG|lodestar-fork-choice
+    chain-->|block data|api
       
     eth1-->|eth1 deposit data|chain
     
+    sync-->|block data|db
     sync-->|sync status & attestation subnet subscription|network
-    sync-->db
-    sync-->|BD|chain
+    sync-->|block data|chain
     sync-->|sync status|api
     
+    chain-->|block data|db
     chain-->|checkpoint/block|sync
-    chain-->db
     
     peers([gossip peers])
-    network-->|BD|peers
-    peers-->|BD|network
     network-->|peer data|sync
+    network-->|block data|peers
+    peers-->|block data|network
     
     db-->lodestar-db[(lodestar-db)]
+    click lodestar-db "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db"
     
     style peers fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5
     
-    style BD color:black, stroke:red
+    style lodestar-fork-choice fill:#FFF566;
+    style lodestar-validator fill:#FFF566;
+    style lodestar-db fill:#FFF566;
     
 ```
 
 ### Entry Paths for Data
-* via `api`
-    * a validator can be proposing a new block
-* via `network`
-    * req/resp - we can be explicitly requesting a block
-    * gossip - we receive a block propagating across the network
-  
+There are a few paths that data can be brought into the beacon chain via outside sources:
+- via `api`
+    - a validator can be proposing a new block
+- via `network`
+    - req/resp - we can be explicitly requesting a block
+    - gossip - we receive a block propagating across the network
