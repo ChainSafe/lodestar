@@ -45,6 +45,9 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
 
 
 ## Beacon Node Data Flow
+
+Here's a diagram of how data flows across the modules of the beacon node.  Click on a module or package in the diagram to see where it exists in the lodestar repo.
+
 ```mermaid
 graph TD
     lodestar-validator(lodestar-validator)
@@ -80,16 +83,23 @@ graph TD
     db-->lodestar-db[(lodestar-db)]
     click lodestar-db "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db"
     
-    style peers fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5
+    click api "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/api"
+    click chain "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/chain"
+    click db "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/db"
+    click eth1 "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/eth1"
+    click network "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/network"
+    click sync "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/sync"
     
+    style peers color: black, fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5
     style lodestar-fork-choice color:black, fill:#FFF566;
     style lodestar-validator color:black, fill:#FFF566;
-    style lodestar-db color:black, fill:#FFF566;    
+    style lodestar-db color:black, fill:#FFF566;
+    
 ```
-
 
 ## Entry Paths for Data
 There are a few paths that data can be brought into the beacon chain via outside sources:
+
 - via `api`
     - a validator can be proposing a new block
 - via `network`
