@@ -47,6 +47,8 @@ see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9da
 
 ### network.gossip
 
+#### Event Descriptions
+
 see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/gossip/interface.ts#L24) for a list of gossip events
 
 #### Who's listening?
@@ -57,16 +59,20 @@ see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9da
 
 ### network.reqResp
 
+#### Event Descriptions
+
 | Event | Description |
 |---|---|
 | "request" | emitted when an RPC request comes from the network |
 
 #### Who's listening?
 | Event | Listener |
-|---|---|---|
+|---|---|
 | "request" | `BeaconReqRespHandler->onRequest` |
 
 ### sync
+
+#### Event Descriptions
 
 | Event | Description |
 |---|---|

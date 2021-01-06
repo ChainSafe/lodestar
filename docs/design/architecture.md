@@ -1,6 +1,6 @@
 # Beacon Node Module Architecture
 
-## lodestar beacon node modules
+## Lodestar Beacon Node Modules
 
 when `lodestar beacon --testnet TESTNET_NAME` is ran, [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli) does the following:
     - gathers data required to run the beacon node based on local configurations and CLI options
@@ -46,18 +46,28 @@ Within [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar), there are s
 
 ## Beacon Node Data Flow
 
+### Entry Paths for Data
+There are a few paths that data can be brought into the beacon chain via outside sources:
+
+- via `api`
+    - a validator can be proposing a new block
+- via `network`
+    - req/resp - we can be explicitly requesting a block
+    - gossip - we receive a block propagating across the network
+
+### Data Flow Diagram
 Here's a diagram of how data flows across the modules of the beacon node.  Click on a module or package in the diagram to see where it exists in the lodestar repo.
 
 ```mermaid
 graph TD
     lodestar-validator(lodestar-validator)
     click lodestar-validator "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-validator"
-    lodestar-validator-->|block data|api
+    lodestar-validator-->|proposes block|api
 
     api-->|block data|db
     api-->|block data|lodestar-validator
-    api-->|block data|network
-    api-->|block data|chain
+    api-->|proposed block|network
+    api-->|proposed block|chain
     api-->|attestation subnet subscription|sync
     
     lodestar-fork-choice(lodestar-fork-choice)
@@ -77,8 +87,8 @@ graph TD
     
     peers([gossip peers])
     network-->|peer data|sync
-    network-->|block data|peers
-    peers-->|block data|network
+    network-->|proposed block|peers
+    peers-->|incoming block|network
     
     db-->lodestar-db[(lodestar-db)]
     click lodestar-db "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-db"
@@ -96,12 +106,3 @@ graph TD
     style lodestar-db color:black, fill:#FFF566;
     
 ```
-
-## Entry Paths for Data
-There are a few paths that data can be brought into the beacon chain via outside sources:
-
-- via `api`
-    - a validator can be proposing a new block
-- via `network`
-    - req/resp - we can be explicitly requesting a block
-    - gossip - we receive a block propagating across the network
