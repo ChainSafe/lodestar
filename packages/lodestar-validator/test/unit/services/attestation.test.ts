@@ -81,12 +81,13 @@ describe("validator attestation service", function () {
     await service.onClockSlot({slot: 0});
   });
 
-  it("on  new slot - with duty - not aggregator", async function () {
+  it("on new slot - with duty - not aggregator", async function () {
     const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
     const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
+    const pubkey = secretKey.toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 1,
       committeeIndex: 2,
@@ -94,9 +95,9 @@ describe("validator attestation service", function () {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       validatorIndex: 0,
-      pubkey: secretKey.toPublicKey().toBytes(),
+      pubkey,
     };
-    service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(1, new Map([[pubkey, {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
     rpcClientStub.beacon.pool.submitAttestation.resolves();
@@ -109,12 +110,13 @@ describe("validator attestation service", function () {
     expect(slashingProtectionStub.checkAndInsertAttestation.calledOnce).to.be.true;
   });
 
-  it("on  new slot - with duty - conflicting attestation", async function () {
+  it("on new slot - with duty - conflicting attestation", async function () {
     const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
     const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
+    const pubkey = secretKey.toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 1,
       committeeIndex: 3,
@@ -122,9 +124,9 @@ describe("validator attestation service", function () {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       validatorIndex: 0,
-      pubkey: secretKey.toPublicKey().toBytes(),
+      pubkey,
     };
-    service["nextAttesterDuties"].set(1, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(1, new Map([[pubkey, {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
 
     // Simulate double vote detection
@@ -148,6 +150,7 @@ describe("validator attestation service", function () {
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
+    const pubkey = secretKey.toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 10,
       committeeIndex: 1,
@@ -155,9 +158,9 @@ describe("validator attestation service", function () {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       validatorIndex: 0,
-      pubkey: secretKey.toPublicKey().toBytes(),
+      pubkey,
     };
-    service["nextAttesterDuties"].set(10, new Map([[0, {...duty, attesterIndex: 0, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(10, new Map([[pubkey, {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
     rpcClientStub.beacon.pool.submitAttestation.resolves();
