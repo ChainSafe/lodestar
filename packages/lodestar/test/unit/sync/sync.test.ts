@@ -182,7 +182,6 @@ describe("sync", function () {
       // to bypass initial sync
       networkStub.getPeers
         .withArgs({
-          connected: true,
           supportsProtocols: getSyncProtocols(),
         })
         .returns([]);
@@ -196,16 +195,11 @@ describe("sync", function () {
       const peerId = await PeerId.create();
       networkStub.getPeers
         .withArgs({
-          connected: true,
           supportsProtocols: getUnknownRootProtocols(),
         })
         .returns([{id: peerId} as LibP2p.Peer]);
       // for logPeerCount
-      networkStub.getPeers
-        .withArgs({
-          connected: true,
-        })
-        .returns([{id: peerId} as LibP2p.Peer]);
+      networkStub.getPeers.returns([{id: peerId} as LibP2p.Peer]);
       peerMetadataStoreStub.getStatus.withArgs(peerId).returns({} as Status);
       peerRpcScoresStub.getScore.withArgs(peerId).returns(99);
       const blockError = new BlockError({
