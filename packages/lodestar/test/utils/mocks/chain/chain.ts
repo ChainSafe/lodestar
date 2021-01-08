@@ -26,6 +26,7 @@ import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -82,21 +83,21 @@ export class MockBeaconChain implements IBeaconChain {
 
   public async getHeadStateContext(): Promise<ITreeStateContext> {
     return {
-      state: this.state!,
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
     return {
-      state: this.state!,
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
     return {
-      state: this.state!,
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new EpochContext(this.config),
     };
   }
@@ -112,7 +113,7 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
-    return (await this.getHeadStateContext()).state;
+    return (await this.getHeadStateContext()).state.getOriginalState() as TreeBacked<BeaconState>;
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {

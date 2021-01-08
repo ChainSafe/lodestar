@@ -1,20 +1,22 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
-
 import {computeActivationExitEpoch} from "../../util";
-import {EpochContext, IEpochProcess} from "../util";
+import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
 
-export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
+export function processRegistryUpdates(
+  epochCtx: EpochContext,
+  process: IEpochProcess,
+  state: CachedValidatorsBeaconState
+): void {
   const config = epochCtx.config;
   let exitEnd = process.exitQueueEnd;
   let endChurn = process.exitQueueEndChurn;
   const {MIN_VALIDATOR_WITHDRAWABILITY_DELAY} = epochCtx.config.params;
   // process ejections
   for (const index of process.indicesToEject) {
-    const validator = state.validators[index];
-
     // set validator exit epoch and withdrawable epoch
-    validator.exitEpoch = exitEnd;
-    validator.withdrawableEpoch = exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+    state.updateValidator(index, {
+      exitEpoch: exitEnd,
+      withdrawableEpoch: exitEnd + MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+    });
 
     endChurn += 1;
     if (endChurn >= process.churnLimit) {
@@ -25,7 +27,9 @@ export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochPr
 
   // set new activation eligibilities
   for (const index of process.indicesToSetActivationEligibility) {
-    state.validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
+    state.updateValidator(index, {
+      activationEligibilityEpoch: epochCtx.currentShuffling.epoch + 1,
+    });
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
@@ -35,6 +39,8 @@ export function processRegistryUpdates(epochCtx: EpochContext, process: IEpochPr
     if (process.statuses[index].validator.activationEligibilityEpoch > finalityEpoch) {
       break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
     }
-    state.validators[index].activationEpoch = computeActivationExitEpoch(config, process.currentEpoch);
+    state.updateValidator(index, {
+      activationEpoch: computeActivationExitEpoch(config, process.currentEpoch),
+    });
   }
 }

@@ -11,7 +11,7 @@ import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
 import {generateSignedBlock, getNewBlockJob} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 
 describe("gossip block validation", function () {
@@ -122,7 +122,7 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     });
     verifySignatureStub.returns(false);
@@ -150,7 +150,7 @@ describe("gossip block validation", function () {
     dbStub.block.get.resolves(null);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: (epochCtxStub as unknown) as EpochContext,
     });
     verifySignatureStub.returns(true);
@@ -181,7 +181,7 @@ describe("gossip block validation", function () {
     forkChoiceStub.isDescendantOfFinalized.returns(true);
     const epochCtxStub = sinon.createStubInstance(EpochContext);
     regenStub.getBlockSlotState.resolves({
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: (epochCtxStub as unknown) as EpochContext,
     });
     verifySignatureStub.returns(true);

@@ -1,7 +1,11 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {BeaconState} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {IEpochProcess, prepareEpochProcessState} from "../../src/fast/util";
+import {
+  CachedValidatorsBeaconState,
+  createCachedValidatorsBeaconState,
+  IEpochProcess,
+  prepareEpochProcessState,
+} from "../../src/fast/util";
 import {EpochContext, StateTransitionEpochContext} from "../../src/fast/util/epochContext";
 import {
   processFinalUpdates,
@@ -15,7 +19,7 @@ import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
 
 describe("Epoch Processing Performance Tests", function () {
-  let state: BeaconState;
+  let state: CachedValidatorsBeaconState;
   let epochCtx: StateTransitionEpochContext;
   let process: IEpochProcess;
   const logger = new WinstonLogger();
@@ -23,11 +27,12 @@ describe("Epoch Processing Performance Tests", function () {
   before(async function () {
     this.timeout(0);
     await initBLS();
-    state = await generatePerformanceState();
+    const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
-    state.slot -= 1;
+    origState.slot -= 1;
     epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
+    epochCtx.loadState(origState);
+    state = createCachedValidatorsBeaconState(origState);
   });
 
   it("prepareEpochProcessState", async () => {
@@ -36,7 +41,7 @@ describe("Epoch Processing Performance Tests", function () {
     process = prepareEpochProcessState(epochCtx, state);
     logger.profile("prepareEpochProcessState");
     // not stable, sometimes < 1400, sometimes > 2000
-    expect(Date.now() - start).lt(1500);
+    expect(Date.now() - start).lt(100);
   });
 
   it("processJustificationAndFinalization", async () => {

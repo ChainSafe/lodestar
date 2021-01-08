@@ -4,6 +4,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processVoluntaryExit} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessVoluntaryExitTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -15,7 +16,8 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
     const state = testcase.pre;
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    processVoluntaryExit(epochCtx, state, testcase.voluntary_exit);
+    const wrappedState = createCachedValidatorsBeaconState(state);
+    processVoluntaryExit(epochCtx, wrappedState, testcase.voluntary_exit);
     return state;
   },
   {

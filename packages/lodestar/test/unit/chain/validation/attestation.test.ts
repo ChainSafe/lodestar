@@ -16,7 +16,7 @@ import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../../../src/constants";
 import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {generateAttestation} from "../../../utils/attestation";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {LocalClock} from "../../../../src/chain/clock";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
@@ -235,7 +235,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     regen.getCheckpointState.resolves(attestationPreState);
@@ -265,7 +265,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.getIndexedAttestation = () => toIndexedAttestation(attestation);
@@ -300,7 +300,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -338,7 +338,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -379,7 +379,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -423,7 +423,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -485,7 +485,7 @@ describe("gossip attestation validation", function () {
     db.seenAttestationCache.hasCommitteeAttestation.resolves(false);
     forkChoice.hasBlock.returns(true);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -525,7 +525,7 @@ describe("gossip attestation validation", function () {
     forkChoice.isDescendant.returns(true);
     forkChoice.isDescendantOfFinalized.returns(false);
     const attestationPreState = {
-      state: generateState(),
+      state: generateCachedState(),
       epochCtx: new EpochContext(config),
     };
     attestationPreState.epochCtx.previousShuffling = {
@@ -557,7 +557,7 @@ describe("gossip attestation validation", function () {
     const attestation = generateAttestation({
       aggregationBits: [true] as BitList,
     });
-    const state = generateState();
+    const state = generateCachedState();
     const attestationPreState = {
       state,
       epochCtx: new EpochContext(config),

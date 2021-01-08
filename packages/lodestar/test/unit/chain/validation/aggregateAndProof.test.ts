@@ -16,7 +16,7 @@ import {validateGossipAggregateAndProof} from "../../../../src/chain/validation"
 import {ATTESTATION_PROPAGATION_SLOT_RANGE, MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../../../src/constants";
 import * as validationUtils from "../../../../src/chain/validation/utils";
 import {generateSignedAggregateAndProof} from "../../../utils/aggregateAndProof";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 
@@ -196,7 +196,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     regen.getBlockSlotState.resolves({
       state,
@@ -226,7 +226,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     regen.getBlockSlotState.resolves({
       state,
@@ -254,7 +254,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
@@ -286,7 +286,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
@@ -327,7 +327,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
@@ -361,7 +361,7 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.index2pubkey = [];
     const privateKey = bls.SecretKey.fromKeygen();

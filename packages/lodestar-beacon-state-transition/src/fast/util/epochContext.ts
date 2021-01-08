@@ -26,6 +26,7 @@ import {
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {IEpochProcess} from "./epochProcess";
+import {CachedValidatorsBeaconState} from "./interface";
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
@@ -138,15 +139,13 @@ export class EpochContext {
    * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
    * new epoch.
    */
-  public rotateEpochs(state: BeaconState): void {
+  public rotateEpochs(state: CachedValidatorsBeaconState): void {
     this.previousShuffling = this.currentShuffling;
     this.currentShuffling = this.nextShuffling;
     const nextEpoch = this.currentShuffling.epoch + 1;
-    const indicesBounded: [ValidatorIndex, Epoch, Epoch][] = readOnlyMap(state.validators, (v, i) => [
-      i,
-      v.activationEpoch,
-      v.exitEpoch,
-    ]);
+    const indicesBounded = state
+      .flatValidators()
+      .readOnlyMap<[number, Epoch, Epoch]>((v, i) => [i, v.activationEpoch, v.exitEpoch]);
     this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
     this._resetProposers(state);
   }
