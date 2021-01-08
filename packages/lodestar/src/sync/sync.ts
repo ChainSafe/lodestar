@@ -58,7 +58,7 @@ export class BeaconSync implements IBeaconSync {
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
     // time to live is 30s by default
-    this.processingRoots = new TimeCache(); // {defaultTtl: 60 * 1000}
+    this.processingRoots = new TimeCache();
   }
 
   public async start(): Promise<void> {
