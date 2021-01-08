@@ -7,6 +7,7 @@ import {
   generateAttestationData,
   generateEmptyAttestation,
 } from "@chainsafe/lodestar/test/utils/attestation";
+import {toHexString} from "@chainsafe/ssz";
 import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
@@ -97,7 +98,7 @@ describe("validator attestation service", function () {
       validatorIndex: 0,
       pubkey,
     };
-    service["nextAttesterDuties"].set(1, new Map([[pubkey, {...duty, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(1, new Map([[toHexString(pubkey), {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
     rpcClientStub.beacon.pool.submitAttestation.resolves();
@@ -126,7 +127,7 @@ describe("validator attestation service", function () {
       validatorIndex: 0,
       pubkey,
     };
-    service["nextAttesterDuties"].set(1, new Map([[pubkey, {...duty, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(1, new Map([[toHexString(pubkey), {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
 
     // Simulate double vote detection
@@ -160,7 +161,7 @@ describe("validator attestation service", function () {
       validatorIndex: 0,
       pubkey,
     };
-    service["nextAttesterDuties"].set(10, new Map([[pubkey, {...duty, isAggregator: false}]]));
+    service["nextAttesterDuties"].set(10, new Map([[toHexString(pubkey), {...duty, isAggregator: false}]]));
     rpcClientStub.beacon.state.getFork.resolves(generateFork());
     rpcClientStub.validator.produceAttestationData.resolves(generateEmptyAttestation().data);
     rpcClientStub.beacon.pool.submitAttestation.resolves();
