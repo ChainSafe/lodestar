@@ -15,7 +15,6 @@ import {
   AttestationData,
   AttesterDuty,
   BeaconState,
-  BLSPubkey,
   BLSSignature,
   Epoch,
   Fork,
@@ -46,7 +45,7 @@ export class AttestationService {
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
-  private nextAttesterDuties: Map<Slot, Map<BLSPubkey, IAttesterDuty>> = new Map();
+  private nextAttesterDuties: Map<Slot, Map<string, IAttesterDuty>> = new Map();
   private controller: AbortController | undefined;
 
   public constructor(
@@ -162,7 +161,7 @@ export class AttestationService {
         attesterDuties = new Map();
         this.nextAttesterDuties.set(duty.slot, attesterDuties);
       }
-      attesterDuties.set(duty.pubkey, nextDuty);
+      attesterDuties.set(toHexString(duty.pubkey), nextDuty);
       try {
         await this.provider.validator.prepareBeaconCommitteeSubnet(
           nextDuty.validatorIndex,
