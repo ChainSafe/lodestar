@@ -401,7 +401,7 @@ export class AttestationService {
    * Update the local list of validators based on the current head state.
    */
   private async updateValidators(): Promise<void> {
-    this.validators.forEach(async (v, pk) => {
+    for await (const [pk, v] of this.validators) {
       if (!v.validator) {
         try {
           v.validator = await this.provider.beacon.state.getStateValidator("head", fromHexString(pk));
@@ -410,6 +410,6 @@ export class AttestationService {
           v.validator = null;
         }
       }
-    });
+    }
   }
 }
