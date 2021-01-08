@@ -5,8 +5,8 @@ import {Json} from "@chainsafe/ssz";
  */
 export class LodestarError<T extends {code: string}> extends Error {
   type: T;
-  constructor(type: T) {
-    super(type.code);
+  constructor(type: T, message?: string) {
+    super(message || type.code);
     this.type = type;
   }
 

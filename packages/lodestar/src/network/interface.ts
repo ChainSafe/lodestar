@@ -8,7 +8,6 @@ import {
   Goodbye,
   Metadata,
   Ping,
-  RequestBody,
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
@@ -21,21 +20,17 @@ import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers/interface";
 import {IRpcScoreTracker} from "./peers/score";
-import {ReqRespRequest} from "./reqresp";
+import {ReqRespHandler} from "./reqresp";
 
-export interface IReqEvents {
-  request: (request: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => void;
-}
-
-export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
-
-export interface IReqResp extends ReqEventEmitter {
+export interface IReqResp {
   status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
   ping(peerId: PeerId, request: Ping): Promise<Ping | null>;
   metadata(peerId: PeerId): Promise<Metadata | null>;
   beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
+  registerHandler(handler: ReqRespHandler): void;
+  unregisterHandler(): ReqRespHandler | null;
 }
 
 export interface INetworkEvents {

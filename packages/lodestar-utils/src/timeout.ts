@@ -4,7 +4,7 @@ import {TimeoutError} from "./errors";
 import {sleep} from "./sleep";
 
 export async function withTimeout<T>(
-  asyncFn: (timeoutAndParentSignal: AbortSignal) => Promise<T>,
+  asyncFn: (timeoutAndParentSignal?: AbortSignal) => Promise<T>,
   timeoutMs: number,
   signal?: AbortSignal
 ): Promise<T> {

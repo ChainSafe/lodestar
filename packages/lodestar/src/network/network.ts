@@ -9,7 +9,7 @@ import Multiaddr from "multiaddr";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconMetrics} from "../metrics";
-import {ReqResp} from "./reqresp/reqResp";
+import {ReqResp, IReqRespOptions} from "./reqresp/reqResp";
 import {INetworkOptions} from "./options";
 import {INetwork, NetworkEventEmitter, PeerSearchOptions} from "./interface";
 import {Gossip} from "./gossip/gossip";
@@ -50,7 +50,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   private diversifyPeersTask: DiversifyPeersBySubnetTask;
   private checkPeerAliveTask: CheckPeerAliveTask;
 
-  public constructor(opts: INetworkOptions, {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules) {
+  public constructor(
+    opts: INetworkOptions & IReqRespOptions,
+    {config, libp2p, logger, metrics, validator, chain}: ILibp2pModules
+  ) {
     super();
     this.opts = opts;
     this.config = config;
@@ -60,13 +63,10 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     this.libp2p = libp2p;
     this.peerMetadata = new Libp2pPeerMetadataStore(this.config, this.libp2p.peerStore.metadataBook);
     this.peerRpcScores = new SimpleRpcScoreTracker(this.peerMetadata);
-    this.reqResp = new ReqResp({
-      config,
-      libp2p,
-      peerMetadata: this.peerMetadata,
-      blockProviderScores: this.peerRpcScores,
-      logger,
-    });
+    this.reqResp = new ReqResp(
+      {config, libp2p, peerMetadata: this.peerMetadata, blockProviderScores: this.peerRpcScores, logger},
+      opts
+    );
     this.metadata = new MetadataController({}, {config, chain, logger});
     this.gossip = (new Gossip(opts, {config, libp2p, logger, validator, chain}) as unknown) as IGossip;
     this.diversifyPeersTask = new DiversifyPeersBySubnetTask(this.config, {

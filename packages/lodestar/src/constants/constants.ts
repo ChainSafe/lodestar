@@ -10,6 +10,7 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const GRAFFITI_SIZE = 32;
+export const MAX_VARINT_BYTES = 10;
 
 // Domain Types
 export enum DomainType {
