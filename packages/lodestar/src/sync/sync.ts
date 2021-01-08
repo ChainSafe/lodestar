@@ -1,4 +1,5 @@
 import PeerId from "peer-id";
+import TimeCache from "time-cache";
 import {IBeaconSync, ISyncModules} from "./interface";
 import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
@@ -15,7 +16,6 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
-import {notNullish} from "../util/notNullish";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -42,8 +42,7 @@ export class BeaconSync implements IBeaconSync {
   private statusSyncTimer?: NodeJS.Timeout;
   private peerCountTimer?: NodeJS.Timeout;
   // avoid finding same root at the same time
-  // key as root hex and value as timestamp
-  private processingRoots: Map<string, number>;
+  private processingRoots: TimeCache;
 
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     this.opts = opts;
@@ -58,7 +57,8 @@ export class BeaconSync implements IBeaconSync {
       modules.gossipHandler || new BeaconGossipHandler(modules.chain, modules.network, modules.db, this.logger);
     this.attestationCollector = modules.attestationCollector || new AttestationCollector(modules.config, modules);
     this.mode = SyncMode.STOPPED;
-    this.processingRoots = new Map();
+    // time to live is 30s by default
+    this.processingRoots = new TimeCache(); // {defaultTtl: 60 * 1000}
   }
 
   public async start(): Promise<void> {
@@ -214,15 +214,11 @@ export class BeaconSync implements IBeaconSync {
     const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
     const unknownAncestorRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
     const missingRootHex = toHexString(unknownAncestorRoot);
-    const MAX_TIME_IN_CACHE = 60 * 1000;
-    const lastTimeInCache = this.processingRoots.get(missingRootHex);
-    // in case beaconBlocksByRoot timeout, we can retry after 1 minute
-    if (notNullish(lastTimeInCache) && Date.now() - lastTimeInCache < MAX_TIME_IN_CACHE) {
+    if (!this.shouldProcessRoot(missingRootHex)) {
       return;
-    } else {
-      this.processingRoots.set(missingRootHex, Date.now());
-      this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
     }
+    this.processingRoots.put(missingRootHex);
+    this.logger.verbose("Finding block for unknown ancestor root", {blockRoot: missingRootHex});
     const peerBalancer = new RoundRobinArray(this.getUnknownRootPeers());
     let retry = 0;
     const maxRetry = this.getUnknownRootPeers().length;
@@ -251,7 +247,22 @@ export class BeaconSync implements IBeaconSync {
       }
       retry++;
     } // end while
-    this.processingRoots.delete(missingRootHex);
     if (!found) this.logger.error("Failed to get unknown ancestor root", {blockRoot: missingRootHex});
   };
+
+  /**
+   * Check if we should process a missing root.
+   * Time-cache does not do the sweep() automatically,
+   * it only does that per put() call.
+   */
+  private shouldProcessRoot(missingRootHex: string): boolean {
+    if (this.processingRoots.has(missingRootHex)) {
+      // time-cache only do sweep() in this case
+      this.processingRoots.put(missingRootHex);
+      // check again to see if the item is there after the sweep()
+      return !this.processingRoots.has(missingRootHex);
+    } else {
+      return true;
+    }
+  }
 }

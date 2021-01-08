@@ -60,6 +60,7 @@
     "abort-controller": "^3.0.0",
     "abortable-iterator": "^3.0.0",
     "bl": "^4.0.2",
+    "time-cache": "^0.3.0",
     "cross-fetch": "^3.0.6",
     "datastore-level": "^2.0.0",
     "deepmerge": "^3.2.0",
