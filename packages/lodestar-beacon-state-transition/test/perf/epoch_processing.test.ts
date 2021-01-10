@@ -81,7 +81,7 @@ describe("Epoch Processing Performance Tests", function () {
     logger.profile("processFinalUpdates");
     processFinalUpdates(epochCtx, process, state);
     logger.profile("processFinalUpdates");
-    expect(Date.now() - start).lt(250);
+    expect(Date.now() - start).lte(30);
   });
 
   it("processForkChanged", async () => {
