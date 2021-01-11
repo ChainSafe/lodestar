@@ -20,8 +20,7 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 
-export interface IBlockJob {
-  signedBlock: SignedBeaconBlock;
+interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
@@ -39,6 +38,14 @@ export interface IBlockJob {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures: boolean;
+}
+
+export interface IChainSegmentJob extends IProcessBlock {
+  signedBlocks: SignedBeaconBlock[];
+}
+
+export interface IBlockJob extends IProcessBlock {
+  signedBlock: SignedBeaconBlock;
 }
 
 export interface IAttestationJob {
@@ -105,4 +112,8 @@ export interface IBeaconChain {
    * Pre-process and run the per slot state transition function
    */
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
+  /**
+   * Process a chain of blocks until complete.
+   */
+  processChainSegment(signedBlocks: SignedBeaconBlock[], trusted?: boolean): Promise<void>;
 }

@@ -6,7 +6,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockErrorCode} from "../../../../src/chain/errors";
-import {processBlock} from "../../../../src/chain/blocks/process";
+import {processBlocks} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {getNewBlockJob} from "../../../utils/block";
@@ -33,12 +33,12 @@ describe("processBlock", function () {
     const job = getNewBlockJob(signedBlock);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
-      await processBlock({
+      await processBlocks({
         forkChoice,
         db: dbStub,
         regen,
         emitter,
-        job,
+        jobs: [job],
       });
       expect.fail("block should throw");
     } catch (e) {

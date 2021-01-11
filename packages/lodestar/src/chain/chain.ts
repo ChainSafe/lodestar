@@ -235,6 +235,16 @@ export class BeaconChain implements IBeaconChain {
       .catch(() => /* unreachable */ ({}));
   }
 
+  public async processChainSegment(signedBlocks: SignedBeaconBlock[], trusted = false): Promise<void> {
+    return this.blockProcessor.processChainSegment({
+      signedBlocks,
+      reprocess: false,
+      prefinalized: trusted,
+      validSignatures: trusted,
+      validProposerSignature: trusted,
+    });
+  }
+
   public async getForkDigest(): Promise<ForkDigest> {
     const {state} = await this.getHeadStateContext();
     return computeForkDigest(this.config, state.fork.currentVersion, state.genesisValidatorsRoot);
