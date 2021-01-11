@@ -218,7 +218,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {
     const handlers = new Map();
-    handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    handlers.set(NetworkEvent.gossipHeartbeat, this.emitGossipHeartbeat);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
     for (const encoding of this.supportedEncodings) {
