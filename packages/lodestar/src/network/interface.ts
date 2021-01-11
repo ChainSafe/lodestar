@@ -36,6 +36,9 @@ export interface IReqResp {
 export enum NetworkEvent {
   peerConnect = "peer:connect",
   peerDisconnect = "peer:disconnect",
+  gossipStart = "gossip:start",
+  gossipStop = "gossip:stop",
+  gossipHeartbeat = "gossipsub:heartbeat",
 }
 
 export interface INetworkEvents {

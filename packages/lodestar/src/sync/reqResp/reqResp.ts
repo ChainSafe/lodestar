@@ -23,13 +23,8 @@ import {IBeaconChain} from "../../chain";
 import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
 import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
-<<<<<<< HEAD
 import {createRpcProtocol, INetwork, NetworkEvent} from "../../network";
-import {RpcError} from "../../network/error";
-=======
-import {createRpcProtocol, INetwork} from "../../network";
 import {ResponseError} from "../../network/reqresp/response";
->>>>>>> master
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {createStatus, syncPeersStatus} from "../utils/sync";
 import {IReqRespHandler} from "./interface";
