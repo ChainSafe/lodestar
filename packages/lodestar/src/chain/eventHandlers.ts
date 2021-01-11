@@ -219,7 +219,7 @@ export async function onBlock(
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-  this.logger.debug("Block processed", {
+  this.logger.info("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
@@ -309,7 +309,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     return;
   }
 
-  this.logger.debug("Block error", {}, err);
+  this.logger.error("Block error", {}, err);
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {

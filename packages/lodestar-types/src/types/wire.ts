@@ -6,9 +6,17 @@ import {AttestationSubnets} from "./misc";
 
 export type RequestId = string;
 
-export type RequestBody = Status | Goodbye | Ping | BeaconBlocksByRangeRequest | BeaconBlocksByRootRequest;
+export interface ReqRespTypes {
+  Status: {request: Status; response: Status};
+  Goodbye: {request: Goodbye; response: Goodbye};
+  Ping: {request: Ping; response: Ping};
+  Metadata: {request: null; response: Metadata};
+  BeaconBlocksByRange: {request: BeaconBlocksByRangeRequest; response: SignedBeaconBlock};
+  BeaconBlocksByRoot: {request: BeaconBlocksByRootRequest; response: SignedBeaconBlock};
+}
 
-export type ResponseBody = Status | Goodbye | Ping | Metadata | SignedBeaconBlock | P2pErrorMessage;
+export type RequestBody = ReqRespTypes[keyof ReqRespTypes]["request"] | null;
+export type ResponseBody = ReqRespTypes[keyof ReqRespTypes]["response"] | P2pErrorMessage;
 
 export interface Status {
   forkDigest: ForkDigest;

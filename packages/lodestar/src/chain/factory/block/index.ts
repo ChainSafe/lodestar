@@ -4,7 +4,8 @@
 
 import {processBlock} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {BeaconBlock, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlock, BeaconState, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
+import {TreeBacked} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db/api";
 import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
@@ -29,7 +30,14 @@ export async function assembleBlock(
     proposerIndex: stateContext.epochCtx.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(config, db, eth1, stateContext.state, randaoReveal, graffiti),
+    body: await assembleBody(
+      config,
+      db,
+      eth1,
+      stateContext.state.getOriginalState() as TreeBacked<BeaconState>,
+      randaoReveal,
+      graffiti
+    ),
   };
   block.stateRoot = computeNewStateRoot(config, stateContext, block);
 

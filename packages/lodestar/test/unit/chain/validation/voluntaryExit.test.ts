@@ -15,6 +15,7 @@ import {generateState} from "../../../utils/state";
 import {generateEmptySignedVoluntaryExit} from "../../../utils/attestation";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -48,7 +49,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state, epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
@@ -69,7 +70,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state, epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     isValidIncomingVoluntaryExitStub.returns(false);
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
@@ -91,7 +92,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state, epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     isValidIncomingVoluntaryExitStub.returns(true);
     const validationTest = await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     expect(validationTest).to.not.throw;

@@ -13,7 +13,7 @@ import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body"
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
-import {generateState} from "../../../../utils/state";
+import {generateCachedState, generateState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 
 describe("block assembly", function () {
@@ -48,7 +48,7 @@ describe("block assembly", function () {
     const epochCtx = new EpochContext(config);
     sinon.stub(epochCtx).getBeaconProposer.returns(2);
     regenStub.getBlockSlotState.resolves({
-      state: generateState({slot: 1}),
+      state: generateCachedState({slot: 1}),
       epochCtx: epochCtx,
     });
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());

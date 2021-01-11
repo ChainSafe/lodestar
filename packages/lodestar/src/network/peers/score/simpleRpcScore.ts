@@ -3,6 +3,7 @@ import {IPeerMetadataStore} from "../interface";
 import PeerId from "peer-id";
 
 const scoreConstants: Record<RpcScoreEvent, number> = {
+  [RpcScoreEvent.NONE]: 0,
   [RpcScoreEvent.SUCCESS_BLOCK_RANGE]: 10,
   [RpcScoreEvent.SUCCESS_BLOCK_ROOT]: 5,
   [RpcScoreEvent.RESPONSE_TIMEOUT]: -20,

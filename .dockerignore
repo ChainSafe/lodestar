@@ -24,14 +24,16 @@ Dockerfile
 docker-compose.yml
 
 # Tests
-packages/**/test
+/packages/**/test
 .__testdb
+/packages/spec-test-runner/spec-tests
 
 # Lodestar artifacts
 **/*-db
 .lodestar
 .medalla
 .spadina
+.pyrmont
 
 # Other / artifacts
 **/.nyc_output

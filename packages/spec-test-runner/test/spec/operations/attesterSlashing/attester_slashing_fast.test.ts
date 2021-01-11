@@ -4,6 +4,7 @@ import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -16,7 +17,8 @@ describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
     const epochCtx = new EpochContext(config);
     epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    processAttesterSlashing(epochCtx, state, testcase.attester_slashing, verify);
+    const wrappedState = createCachedValidatorsBeaconState(state);
+    processAttesterSlashing(epochCtx, wrappedState, testcase.attester_slashing, verify);
     return state;
   },
   {

@@ -1,6 +1,6 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "./epochContext";
 import {IEpochProcess} from "./epochProcess";
+import {CachedValidatorsBeaconState} from "./interface";
 
 export * from "./block";
 export * from "./attesterStatus";
@@ -15,7 +15,7 @@ export * from "./interface";
  * Exchange Interface of StateContext
  */
 export interface IStateContext {
-  state: BeaconState;
+  state: CachedValidatorsBeaconState;
   epochCtx: EpochContext;
   epochProcess?: IEpochProcess;
 }

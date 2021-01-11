@@ -1,6 +1,6 @@
 import {Discv5Discovery, ENR} from "@chainsafe/discv5";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {Attestation, RequestBody, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import Libp2p from "libp2p";
@@ -13,10 +13,8 @@ import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
-import {ReqRespRequest, sendResponse} from "../../../src/network/reqresp";
 import {generateEmptyAttestation, generateEmptySignedAggregateAndProof} from "../../utils/attestation";
 import {generateEmptySignedBlock} from "../../utils/block";
-import {silentLogger} from "../../utils/logger";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
@@ -76,22 +74,24 @@ describe("[network] network", function () {
     netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
   });
+
   afterEach(async () => {
     await chain.close();
     await Promise.all([netA.stop(), netB.stop()]);
     sinon.restore();
   });
+
   it("should create a peer on connect", async function () {
     let connectACount = 0;
     let connectBCount = 0;
     await Promise.all([
-      new Promise((resolve) =>
+      new Promise<void>((resolve) =>
         netA.on("peer:connect", () => {
           connectACount++;
           resolve();
         })
       ),
-      new Promise((resolve) =>
+      new Promise<void>((resolve) =>
         netB.on("peer:connect", () => {
           connectBCount++;
           resolve();
@@ -101,9 +101,10 @@ describe("[network] network", function () {
     ]);
     expect(connectACount).to.be.equal(1);
     expect(connectBCount).to.be.equal(1);
-    expect(netA.getPeers({connected: true}).length).to.equal(1);
-    expect(netB.getPeers({connected: true}).length).to.equal(1);
+    expect(netA.getPeers().length).to.equal(1);
+    expect(netB.getPeers().length).to.equal(1);
   });
+
   it("should delete a peer on disconnect", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -120,9 +121,10 @@ describe("[network] network", function () {
     await netA.disconnect(netB.peerId);
     await disconnection;
     await sleep(200);
-    expect(netA.getPeers({connected: true}).length).to.equal(0);
-    expect(netB.getPeers({connected: true}).length).to.equal(0);
+    expect(netA.getPeers().length).to.equal(0);
+    expect(netB.getPeers().length).to.equal(0);
   });
+
   it("should not receive duplicate block", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -130,7 +132,7 @@ describe("[network] network", function () {
     ]);
     const spy = sinon.spy();
     const forkDigest = await chain.getForkDigest();
-    const received = new Promise((resolve) => {
+    const received = new Promise<void>((resolve) => {
       netA.gossip.subscribeToBlock(forkDigest, () => {
         spy();
         resolve();
@@ -150,48 +152,7 @@ describe("[network] network", function () {
     await received;
     expect(spy.callCount).to.be.equal(1);
   });
-  it("should send/receive ping messages", async function () {
-    const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
-    ]);
-    await netA.connect(netB.peerId, netB.localMultiaddrs);
-    await connected;
 
-    netB.reqResp.once(
-      "request",
-      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
-        await sendResponse(
-          {config, logger: silentLogger},
-          req.id,
-          req.method,
-          req.encoding,
-          sink,
-          null,
-          netB.metadata.seqNumber
-        );
-      }
-    );
-    const seqNumber = await netA.reqResp.ping(netB.peerId, netA.metadata.seqNumber);
-    expect(seqNumber!.toString()).to.equal(netB.metadata.seqNumber.toString());
-  });
-  it("should send/receive metadata messages", async function () {
-    const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
-    ]);
-    await netA.connect(netB.peerId, netB.localMultiaddrs);
-    await connected;
-
-    netB.reqResp.once(
-      "request",
-      async (req: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => {
-        await sendResponse({config, logger: silentLogger}, req.id, req.method, req.encoding, sink, null, netB.metadata);
-      }
-    );
-    const metadata = await netA.reqResp.metadata(netB.peerId);
-    expect(metadata).to.deep.equal(netB.metadata.metadata);
-  });
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -215,6 +176,7 @@ describe("[network] network", function () {
     const receivedBlock = await received;
     expect(config.types.SignedBeaconBlock.equals(receivedBlock as SignedBeaconBlock, block)).to.be.true;
   });
+
   it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -233,6 +195,7 @@ describe("[network] network", function () {
     await netB.gossip.publishAggregatedAttestation(generateEmptySignedAggregateAndProof());
     await received;
   });
+
   it("should receive committee attestations on subscription", async function () {
     const connected = Promise.all([
       new Promise((resolve) => netA.on("peer:connect", resolve)),
@@ -258,6 +221,7 @@ describe("[network] network", function () {
     netA.gossip.unsubscribeFromAttestationSubnet(forkDigest, "0", callback!);
     expect(netA.gossip.listenerCount(getAttestationSubnetEvent(0))).to.be.equal(0);
   });
+
   it("should connect to new peer by subnet", async function () {
     const subnet = 10;
     netB.metadata.attnets[subnet] = true;
@@ -274,6 +238,6 @@ describe("[network] network", function () {
     discovery.discv5.addEnr(enrB);
     await netA.searchSubnetPeers([subnet.toString()]);
     await connected;
-    expect(netA.getPeers({connected: true}).length).to.be.equal(1);
+    expect(netA.getPeers().length).to.be.equal(1);
   });
 });

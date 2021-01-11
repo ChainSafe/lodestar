@@ -148,8 +148,8 @@ export class BeaconChain implements IBeaconChain {
     return headStateRoot;
   }
   public async getHeadState(): Promise<TreeBacked<BeaconState>> {
-    // head state should always have epoch ctx
-    return (await this.getHeadStateContext()).state;
+    //head state should always have epoch ctx
+    return (await this.getHeadStateContext()).state.getOriginalState() as TreeBacked<BeaconState>;
   }
   public async getHeadEpochContext(): Promise<EpochContext> {
     // head should always have epoch ctx

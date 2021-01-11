@@ -37,7 +37,7 @@ describe("rest - node - getPeer", function () {
 
   it("should succeed", async function () {
     api.node.getPeer.resolves({
-      address: "/ip4/127.0.0.1/tcp/36000",
+      lastSeenP2pAddress: "/ip4/127.0.0.1/tcp/36000",
       direction: "inbound",
       enr: "enr-",
       peerId: "16",

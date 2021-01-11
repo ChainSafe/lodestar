@@ -1,0 +1,54 @@
+{
+  "name": "@chainsafe/persistent-ts",
+  "version": "0.13.0",
+  "description": "Persistent data structures for TypeScript.",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "build": "concurrently \"yarn build:lib\" \"yarn build:types\"",
+    "build:lib": "babel src -x .ts -d lib --source-maps",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:release": "yarn clean && yarn build",
+    "build:types": "tsc --incremental --declaration --outDir lib --project tsconfig.build.json --emitDeclarationOnly",
+    "build:types:watch": "yarn run build:types --watch --preserveWatchOutput",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf lib && rm -f tsconfig.tsbuildinfo && rm -f tsconfig.build.tsbuildinfo",
+    "lint": "eslint --color --ext .ts src/ test/",
+    "lint:fix": "yarn run lint --fix",
+    "prepublishOnly": "yarn build",
+    "test:unit": "mocha 'test/unit/**/*.test.ts'",
+    "test:perf": "mocha 'test/perf/**/*.test.ts'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cronokirby/persistent-ts.git"
+  },
+  "keywords": [
+    "persistent",
+    "functional",
+    "typescript"
+  ],
+  "author": "Lúcás Meier",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cronokirby/persistent-ts/issues"
+  },
+  "homepage": "https://github.com/cronokirby/persistent-ts#readme",
+  "devDependencies": {
+    "fast-check": "^1.15.1"
+  },
+  "jest": {
+    "transform": {
+      ".ts": "ts-jest"
+    },
+    "testRegex": "\\.test.ts$",
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ]
+  }
+}

@@ -4,22 +4,10 @@
  */
 
 import PeerId from "peer-id";
-import {AbortController, AbortSignal} from "abort-controller";
-import {
-  Method,
-  MethodResponseType,
-  Methods,
-  ReqRespEncoding,
-  RequestId,
-  RESP_TIMEOUT,
-  TTFB_TIMEOUT,
-} from "../constants";
-import {source as abortSource} from "abortable-iterator";
+import {Method, MethodResponseType, Methods, ReqRespEncoding, RequestId} from "../constants";
 import Multiaddr from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
-import {withTimeout} from "@chainsafe/lodestar-utils";
-import {RESPONSE_TIMEOUT_ERR} from "./error";
 
 // req/resp
 
@@ -61,10 +49,6 @@ export function parseProtocolId(protocolId: string): {method: Method; encoding: 
  */
 export async function createPeerId(): Promise<PeerId> {
   return await PeerId.create({bits: 256, keyType: "secp256k1"});
-}
-
-export function isRequestOnly(method: Method): boolean {
-  return Methods[method].responseType === MethodResponseType.NoResponse;
 }
 
 export function isRequestSingleChunk(method: Method): boolean {
@@ -120,53 +104,4 @@ export function clearMultiaddrUDP(enr: ENR): void {
   enr.delete("udp");
   enr.delete("ip6");
   enr.delete("udp6");
-}
-
-export function eth2ResponseTimer<T>(
-  streamAbortController: AbortController
-): (source: AsyncIterable<T>) => AsyncGenerator<T> {
-  const controller = new AbortController();
-
-  let responseTimer = setTimeout(() => {
-    controller.abort();
-  }, TTFB_TIMEOUT);
-
-  controller.signal.addEventListener("abort", () => streamAbortController.abort());
-
-  const renewTimer = (): void => {
-    clearTimeout(responseTimer);
-    responseTimer = setTimeout(() => controller.abort(), RESP_TIMEOUT);
-  };
-
-  const cancelTimer = (): void => {
-    clearTimeout(responseTimer);
-  };
-
-  return async function* (source) {
-    for await (const item of abortSource(source, controller.signal, {abortMessage: RESPONSE_TIMEOUT_ERR})) {
-      renewTimer();
-      yield item;
-    }
-    cancelTimer();
-  };
-}
-
-export async function dialProtocol(
-  libp2p: LibP2p,
-  peerId: PeerId,
-  protocol: string,
-  timeout: number,
-  signal?: AbortSignal
-): ReturnType<LibP2p["dialProtocol"]> {
-  return await withTimeout(
-    async (timeoutAndParentSignal) => {
-      const conn = await libp2p.dialProtocol(peerId, protocol, {signal: timeoutAndParentSignal});
-      if (!conn) {
-        throw new Error("timeout");
-      }
-      return conn;
-    },
-    timeout,
-    signal
-  );
 }

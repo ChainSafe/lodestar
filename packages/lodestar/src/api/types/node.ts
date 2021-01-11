@@ -11,7 +11,8 @@ export type NodeIdentity = {
 export type NodePeer = {
   peerId: string;
   enr: string;
-  address: string;
+  lastSeenP2pAddress: string;
   state: "disconnected" | "connecting" | "connected" | "disconnecting";
-  direction: "inbound" | "outbound";
+  // the spec does not specify direction for a disconnected peer, lodestar uses null in that case
+  direction: "inbound" | "outbound" | null;
 };
