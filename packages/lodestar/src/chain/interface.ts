@@ -97,11 +97,6 @@ export interface IBeaconChain {
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
 
   /**
-   * Add attestation to the fork-choice rule
-   */
-  receiveAttestation(attestation: Attestation): Promise<void>;
-
-  /**
    * Pre-process and run the per slot state transition function
    */
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;

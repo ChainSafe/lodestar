@@ -143,10 +143,6 @@ export class MockBeaconChain implements IBeaconChain {
     return Math.floor(Date.now() / 1000);
   }
 
-  async receiveAttestation(): Promise<void> {
-    return;
-  }
-
   async receiveBlock(): Promise<void> {
     return;
   }

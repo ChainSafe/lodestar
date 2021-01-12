@@ -134,8 +134,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
         case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
         case AttestationErrorCode.MISSING_ATTESTATION_PRESTATE:
-          // attestation might be valid after we receive block
-          await this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip attestation", logContext, e);
           return ExtendedValidatorResult.ignore;
 
@@ -191,7 +189,6 @@ export class GossipMessageValidator implements IGossipMessageValidator {
           return ExtendedValidatorResult.reject;
 
         case AttestationErrorCode.FUTURE_SLOT:
-          await this.chain.receiveAttestation(attestation);
           this.logger.warn("Ignoring gossip aggregate and proof", logContext, e);
           return ExtendedValidatorResult.ignore;
 

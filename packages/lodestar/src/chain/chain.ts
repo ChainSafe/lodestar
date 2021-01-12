@@ -11,7 +11,6 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
-  Attestation,
   BeaconState,
   Checkpoint,
   ENRForkID,
@@ -215,12 +214,6 @@ export class BeaconChain implements IBeaconChain {
 
   public async getFinalizedCheckpoint(): Promise<Checkpoint> {
     return this.forkChoice.getFinalizedCheckpoint();
-  }
-
-  public async receiveAttestation(attestation: Attestation): Promise<void> {
-    this.attestationProcessor
-      .processAttestationJob({attestation, validSignature: false})
-      .catch(() => /* unreachable */ ({}));
   }
 
   public async receiveBlock(signedBlock: SignedBeaconBlock, trusted = false): Promise<void> {
