@@ -86,5 +86,6 @@ export async function processChainSegmentJob(
   } catch (e) {
     // above functions only throw BlockError
     modules.emitter.emit(ChainEvent.errorBlock, e);
+    throw e;
   }
 }

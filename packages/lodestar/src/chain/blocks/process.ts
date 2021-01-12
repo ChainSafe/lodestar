@@ -30,6 +30,7 @@ export async function processBlocks({
       job: jobs[0],
     });
   }
+
   for (const job of jobs) {
     try {
       preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, job);
