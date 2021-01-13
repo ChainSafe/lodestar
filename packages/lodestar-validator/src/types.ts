@@ -13,6 +13,6 @@ export interface IAttesterDuty extends AttesterDuty {
 }
 
 export type ValidatorAndSecret = {
-  validator: ValidatorResponse | null;
+  validator: ValidatorResponse;
   secretKey: SecretKey;
 };
