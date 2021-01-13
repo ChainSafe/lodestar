@@ -22,3 +22,8 @@ export enum DomainType {
   SELECTION_PROOF = 5,
   AGGREGATE_AND_PROOF = 6,
 }
+
+/**
+ * The maximum milliseconds of clock disparity assumed between honest nodes.
+ */
+export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;

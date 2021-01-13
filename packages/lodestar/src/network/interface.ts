@@ -33,9 +33,17 @@ export interface IReqResp {
   unregisterHandler(): ReqRespHandler | null;
 }
 
+export enum NetworkEvent {
+  peerConnect = "peer:connect",
+  peerDisconnect = "peer:disconnect",
+  gossipStart = "gossip:start",
+  gossipStop = "gossip:stop",
+  gossipHeartbeat = "gossipsub:heartbeat",
+}
+
 export interface INetworkEvents {
-  ["peer:connect"]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
-  ["peer:disconnect"]: (peerId: PeerId) => void;
+  [NetworkEvent.peerConnect]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
+  [NetworkEvent.peerDisconnect]: (peerId: PeerId) => void;
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 

@@ -33,6 +33,7 @@ import {ChainEvent, IBeaconChain} from "../../chain";
 import {computeEpochAtSlot, computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipEncoding} from "./encoding";
 import {toHexString} from "@chainsafe/ssz";
+import {NetworkEvent} from "../interface";
 
 export type GossipHandlerFn = (this: Gossip, obj: GossipObject) => void;
 
@@ -69,13 +70,13 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.registerHandlers(forkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
-    this.emit("gossip:start");
+    this.emit(NetworkEvent.gossipStart);
     this.logger.verbose("Gossip is started");
     this.statusInterval = setInterval(this.logSubscriptions, 60000);
   }
 
   public async stop(): Promise<void> {
-    this.emit("gossip:stop");
+    this.emit(NetworkEvent.gossipStop);
     this.unregisterHandlers();
     this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
     await this.pubsub.stop();
@@ -217,7 +218,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private createHandlers(forkDigest: ForkDigest): Map<string, GossipHandlerFn> {
     const handlers = new Map();
-    handlers.set("gossipsub:heartbeat", this.emitGossipHeartbeat);
+    handlers.set(NetworkEvent.gossipHeartbeat, this.emitGossipHeartbeat);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const that = this;
     for (const encoding of this.supportedEncodings) {
@@ -251,7 +252,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   }
 
   private emitGossipHeartbeat = (): void => {
-    this.emit("gossipsub:heartbeat");
+    this.emit(NetworkEvent.gossipHeartbeat);
   };
 
   private logSubscriptions = (): void => {

@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../src/chain";
 import {BeaconMetrics} from "../../../src/metrics";
-import {createPeerId, Libp2pNetwork} from "../../../src/network";
+import {createPeerId, Libp2pNetwork, NetworkEvent} from "../../../src/network";
 import {ExtendedValidatorResult} from "../../../src/network/gossip/constants";
 import {getAttestationSubnetEvent} from "../../../src/network/gossip/utils";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
@@ -86,13 +86,13 @@ describe("[network] network", function () {
     let connectBCount = 0;
     await Promise.all([
       new Promise<void>((resolve) =>
-        netA.on("peer:connect", () => {
+        netA.on(NetworkEvent.peerConnect, () => {
           connectACount++;
           resolve();
         })
       ),
       new Promise<void>((resolve) =>
-        netB.on("peer:connect", () => {
+        netB.on(NetworkEvent.peerConnect, () => {
           connectBCount++;
           resolve();
         })
@@ -107,14 +107,14 @@ describe("[network] network", function () {
 
   it("should delete a peer on disconnect", async function () {
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
     const disconnection = Promise.all([
-      new Promise((resolve) => netA.on("peer:disconnect", resolve)),
-      new Promise((resolve) => netB.on("peer:disconnect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerDisconnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerDisconnect, resolve)),
     ]);
     await sleep(100);
 
@@ -127,8 +127,8 @@ describe("[network] network", function () {
 
   it("should not receive duplicate block", async function () {
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     const spy = sinon.spy();
     const forkDigest = await chain.getForkDigest();
@@ -155,8 +155,8 @@ describe("[network] network", function () {
 
   it("should receive blocks on subscription", async function () {
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
@@ -179,8 +179,8 @@ describe("[network] network", function () {
 
   it("should receive aggregate on subscription", async function () {
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
@@ -198,8 +198,8 @@ describe("[network] network", function () {
 
   it("should receive committee attestations on subscription", async function () {
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;
@@ -226,8 +226,8 @@ describe("[network] network", function () {
     const subnet = 10;
     netB.metadata.attnets[subnet] = true;
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     const enrB = ENR.createFromPeerId(peerIdB);
     enrB.set("attnets", Buffer.from(config.types.AttestationSubnets.serialize(netB.metadata.attnets)));

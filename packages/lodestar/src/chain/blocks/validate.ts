@@ -49,12 +49,12 @@ export async function validateBlocks({
         });
       }
 
-      const currentSlot = clock.currentSlot;
-      if (blockSlot > currentSlot) {
+      const currentSlotWithGossipDisparity = clock.currentSlotWithGossipDisparity;
+      if (blockSlot > currentSlotWithGossipDisparity) {
         throw new BlockError({
           code: BlockErrorCode.FUTURE_SLOT,
           blockSlot,
-          currentSlot,
+          currentSlot: currentSlotWithGossipDisparity,
           job,
         });
       }

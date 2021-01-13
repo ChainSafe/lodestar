@@ -22,11 +22,6 @@ export const ATTESTATION_SUBNET_COUNT = 64;
 export const ATTESTATION_PROPAGATION_SLOT_RANGE = 23;
 
 /**
- * The maximum milliseconds of clock disparity assumed between honest nodes.
- */
-export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;
-
-/**
  *
  * Request/Response constants
  *

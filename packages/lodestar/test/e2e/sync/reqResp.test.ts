@@ -11,7 +11,7 @@ import all from "it-all";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {SszSnappyErrorCode} from "../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {createRpcProtocol, Libp2pNetwork} from "../../../src/network";
+import {createRpcProtocol, Libp2pNetwork, NetworkEvent} from "../../../src/network";
 import {decodeErrorMessage} from "../../../src/network/reqresp/utils/errorMessage";
 import {IGossipMessageValidator} from "../../../src/network/gossip/interface";
 import {INetworkOptions} from "../../../src/network/options";
@@ -131,8 +131,8 @@ describe("[sync] rpc", function () {
     expect(netB.peerMetadata.getStatus(netA.peerId)).to.be.equal(null, "peer B should not have peer A status");
 
     const peersConnectedPromise = Promise.all([
-      new Promise((resolve) => netA.once("peer:connect", resolve)),
-      new Promise((resolve) => netB.once("peer:connect", resolve)),
+      new Promise((resolve) => netA.once(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.once(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await peersConnectedPromise;
@@ -161,8 +161,8 @@ describe("[sync] rpc", function () {
 
   it("goodbye on rpc stop", async function () {
     const peersConnectedPromise = Promise.all([
-      new Promise((resolve) => netA.once("peer:connect", resolve)),
-      new Promise((resolve) => netB.once("peer:connect", resolve)),
+      new Promise((resolve) => netA.once(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.once(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await peersConnectedPromise;
