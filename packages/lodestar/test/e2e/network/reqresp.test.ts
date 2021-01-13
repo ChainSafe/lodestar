@@ -6,7 +6,7 @@ import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import Libp2p from "libp2p";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
-import {createPeerId, IReqRespOptions, Libp2pNetwork} from "../../../src/network";
+import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../../src/network";
 import {GossipMessageValidator} from "../../../src/network/gossip/validator";
 import {INetworkOptions} from "../../../src/network/options";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
@@ -66,8 +66,8 @@ describe("[network] network", function () {
     await Promise.all([netA.start(), netB.start()]);
 
     const connected = Promise.all([
-      new Promise((resolve) => netA.on("peer:connect", resolve)),
-      new Promise((resolve) => netB.on("peer:connect", resolve)),
+      new Promise((resolve) => netA.on(NetworkEvent.peerConnect, resolve)),
+      new Promise((resolve) => netB.on(NetworkEvent.peerConnect, resolve)),
     ]);
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     await connected;

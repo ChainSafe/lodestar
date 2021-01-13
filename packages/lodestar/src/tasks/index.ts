@@ -13,7 +13,7 @@ import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
-import {INetwork} from "../network";
+import {INetwork, NetworkEvent} from "../network";
 
 export interface ITasksModules {
   db: IBeaconDb;
@@ -54,15 +54,15 @@ export class TasksService implements IService {
   public async start(): Promise<void> {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.on("gossip:start", this.handleGossipStart);
-    this.network.gossip.on("gossip:stop", this.handleGossipStop);
+    this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
+    this.network.gossip.on(NetworkEvent.gossipStop, this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
     this.chain.emitter.removeListener(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.removeListener(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
-    this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
+    this.network.gossip.removeListener(NetworkEvent.gossipStart, this.handleGossipStart);
+    this.network.gossip.removeListener(NetworkEvent.gossipStop, this.handleGossipStop);
     await this.interopSubnetsTask.stop();
   }
 

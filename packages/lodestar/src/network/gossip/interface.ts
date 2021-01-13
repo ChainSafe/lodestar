@@ -20,6 +20,7 @@ import {IService} from "../../node";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
+import {NetworkEvent} from "../interface";
 
 export interface IGossipEvents {
   // attestation subnet event is dynamic following this signature
@@ -29,9 +30,9 @@ export interface IGossipEvents {
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
-  ["gossipsub:heartbeat"]: () => void;
-  ["gossip:start"]: () => void;
-  ["gossip:stop"]: () => void;
+  [NetworkEvent.gossipHeartbeat]: () => void;
+  [NetworkEvent.gossipStart]: () => void;
+  [NetworkEvent.gossipStop]: () => void;
 }
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
 
