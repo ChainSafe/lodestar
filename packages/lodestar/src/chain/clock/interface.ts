@@ -10,6 +10,10 @@ import {Epoch, Slot} from "@chainsafe/lodestar-types";
  */
 export interface IBeaconClock {
   readonly currentSlot: Slot;
+  /**
+   * If it's too close to next slot, maxCurrentSlot = currentSlot + 1
+   */
+  readonly currentSlotWithGossipDisparity: Slot;
   readonly currentEpoch: Epoch;
   /**
    * Returns a promise that waits until at least `slot` is reached
