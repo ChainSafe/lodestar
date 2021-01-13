@@ -39,7 +39,6 @@
   "dependencies": {
     "@chainsafe/lodestar-beacon-state-transition": "^0.13.0",
     "@chainsafe/lodestar-config": "^0.13.0",
-    "@chainsafe/lodestar-params": "^0.13.0",
     "@chainsafe/lodestar-types": "^0.13.0",
     "@chainsafe/lodestar-utils": "^0.13.0",
     "@chainsafe/ssz": "^0.6.13"
