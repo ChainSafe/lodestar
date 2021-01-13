@@ -19,7 +19,7 @@ The `node` then bootstraps the other modules.  Within [@chainsafe/lodestar](http
         - get data about the node process that is running Lodestar
     - validator
         - perform (and get relevant data for) validator duties
-  - based on https://github.com/ethereum/eth2.0-apis
+  - based on [https://github.com/ethereum/eth2.0-apis](https://github.com/ethereum/eth2.0-apis)
 ### [chain](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/chain)
   - processing block and attestation data to/from the beacon chain
 ### [db](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/db)
