@@ -2,16 +2,15 @@ import {AbortSignal} from "abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {IBlockJob} from "../interface";
+import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
 
-import {processBlock} from "./process";
-import {validateBlock} from "./validate";
+import {processBlocks} from "./process";
+import {validateBlocks} from "./validate";
 import {IBeaconDb} from "../../db";
-import {isTreeBacked} from "@chainsafe/ssz";
 
 type BlockProcessorModules = {
   config: IBeaconConfig;
@@ -44,6 +43,10 @@ export class BlockProcessor {
   public async processBlockJob(job: IBlockJob): Promise<void> {
     return this.jobQueue.enqueueJob(async () => await processBlockJob(this.modules, job));
   }
+
+  public async processChainSegment(job: IChainSegmentJob): Promise<void> {
+    return this.jobQueue.enqueueJob(async () => await processChainSegmentJob(this.modules, job));
+  }
 }
 
 /**
@@ -58,16 +61,31 @@ export class BlockProcessor {
  */
 export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
   try {
-    // First convert incoming blocks to TreeBacked backing (for efficiency reasons) if it's a regular block
-    // The root is computed multiple times, the contents are hash-tree-rooted multiple times,
-    // and some of the contents end up in the state as tree-form.
-    if (!isTreeBacked(job.signedBlock)) {
-      job.signedBlock = modules.config.types.SignedBeaconBlock.tree.createValue(job.signedBlock);
-    }
-    await validateBlock({...modules, job});
-    await processBlock({...modules, job});
+    await validateBlocks({...modules, jobs: [job]});
+    await processBlocks({...modules, jobs: [job]});
   } catch (e) {
     // above functions only throw BlockError
     modules.emitter.emit(ChainEvent.errorBlock, e);
+  }
+}
+
+/**
+ * Similar to processBlockJob but this process a chain segment
+ */
+export async function processChainSegmentJob(
+  modules: BlockProcessorModules,
+  chainSegmentJob: IChainSegmentJob
+): Promise<void> {
+  try {
+    const blockJobs: IBlockJob[] = chainSegmentJob.signedBlocks.map((signedBlock) => ({
+      signedBlock,
+      ...chainSegmentJob,
+    }));
+    await validateBlocks({...modules, jobs: blockJobs});
+    await processBlocks({...modules, jobs: blockJobs});
+  } catch (e) {
+    // above functions only throw BlockError
+    modules.emitter.emit(ChainEvent.errorBlock, e);
+    throw e;
   }
 }
