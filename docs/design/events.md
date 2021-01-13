@@ -10,65 +10,38 @@ see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9da
 #### Who's listening?
 | Event | Listener |
 |---|---|
-| "attestation" | `EventsApi->handleBeaconAttestationEvent` |
-| "block" | `BeaconApi->push` |
-| "block" | `EventsApi->handleBeaconBlockEvent` |
-| "block" | `EventsApi->handleVoluntaryExitEvent` |
-| "block" | `FastSync->checkSyncProgress` |
-| "block" | `NaiveRegularSync->onProcessedBlock` |
-| "block" | `ORARegularSync->onProcessedBlock` |
-| "block" | `BlockRangeProcessor->onProcessedBlock` |
-| "block" | `SyncStats->onBlockProcessed` |
-| "checkpoint" | `FastSync->checkSyncCompleted` |
-| "checkpoint" | `TasksService->onCheckpoint` |
-| "clock:slot" | `AttestationCollector->checkDuties` |
-| "clock:slot" | `LocalClock->onSlot` |
-| "error:block" | `BeaconSync->onUnknownBlockRoot` |
-| "error:block" | `NaiveRegularSync->onErrorBlock` |
-| "error:block" | `BlockRangeProcessor->onErrorBlock` |
-| "forkChoice:finalized" | `TasksService->onFinalizedCheckpoint` |
-| "forkChoice:reorg" | `EventsApi->handleChainReorgEvent` |
-| "forkChoice:head" | `EventsApi->handleBeaconHeadEvent` |
-| "forkVersion" | `Gossip->handleForkVersion` |
-| "forkVersion" | `Metadata->handleForkVersion` |
-| "forkVersion" | `BeaconGossipHandler->handleForkVersion` |
-| "forkVersion" | `InteropSubnetsJoiningTask->handleForkVersion` |
+| "attestation" | `EventsApi->getEventStream` |
+| "block" | `BeaconApi->getBlockStream` |
+| "block" | `EventsApi->getEventStream` |
+| "block" | `EventsApi->getEventStream` |
+| "block" | `FastSync->start` |
+| "block" | `ORARegularSync->start` |
+| "block" | `SyncStats->start` |
+| "checkpoint" | `FastSync->start` |
+| "checkpoint" | `TasksService->start` |
+| "clock:slot" | `AttestationCollector->start` |
+| "clock:slot" | `LocalClock->waitForSlot` |
+| "error:block" | `BeaconSync->startRegularSync` |
+| "forkChoice:finalized" | `TasksService->start` |
+| "forkChoice:reorg" | `EventsApi->getEventStream` |
+| "forkChoice:head" | `EventsApi->getEventStream` |
+| "forkVersion" | `Gossip->start` |
+| "forkVersion" | `Metadata->start` |
+| "forkVersion" | `BeaconGossipHandler->start` |
+| "forkVersion" | `InteropSubnetsJoiningTask->start` |
 
 ### network
 
 #### Event Descriptions
-see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/interface.ts#L41) for list of network events
+see [here](https://github.com/ChainSafe/lodestar/blob/8bd9cc4bcd1526363cb9646a0633e9a782287b2f/packages/lodestar/src/network/interface.ts#L36) for list of network events
 
 #### Who's listening?
 | Event | Listener |
 |---|---|
-| "peer:connect" |  `BeaconReqRespHandler->handshake` |
+| "peer:connect" |  `BeaconReqRespHandler->start` |
 | "peer:disconnect" | none |
-
-### network.gossip
-
-#### Event Descriptions
-
-see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9dad003f995e622f9/packages/lodestar/src/network/gossip/interface.ts#L24) for a list of gossip events
-
-#### Who's listening?
-| Event | Listener |
-|---|---|
-| "gossip:start" | `TasksService->handleGossipStart` |
-| "gossip:stop" | `TasksService->handleGossipStop` |
-
-### network.reqResp
-
-#### Event Descriptions
-
-| Event | Description |
-|---|---|
-| "request" | emitted when an RPC request comes from the network |
-
-#### Who's listening?
-| Event | Listener |
-|---|---|
-| "request" | `BeaconReqRespHandler->onRequest` |
+| "gossip:start" | `TasksService->start` |
+| "gossip:stop" | `TasksService->start` |
 
 ### sync
 
@@ -81,4 +54,4 @@ see [here](https://github.com/ChainSafe/lodestar/blob/a6ed7cce230e77cecc9b1fb9da
 #### Who's listening?
 | Event | Listener |
 |---|---|
-| "syncCompleted" | `BeaconSync->syncCompleted` |
+| "syncCompleted" | `BeaconSync->startRegularSync` |
