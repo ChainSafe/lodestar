@@ -1,8 +1,9 @@
+import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
-import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {uniqueVectorArr, blsPubkeyLen} from "../utils";
+import {DB_PREFIX_LENGTH, FORK_VERSION_STUB} from "..";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 export class AttestationByTargetRepository {
   protected type: Type<SlashingProtectionAttestation>;
@@ -43,13 +44,20 @@ export class AttestationByTargetRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
+    return encodeKey(
+      this.bucket,
+      FORK_VERSION_STUB,
+      Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")])
+    );
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {
     return {
-      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
-      targetEpoch: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+      pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
+      targetEpoch: bytesToInt(
+        key.slice(DB_PREFIX_LENGTH + blsPubkeyLen, DB_PREFIX_LENGTH + blsPubkeyLen + uintLen),
+        "be"
+      ),
     };
   }
 }

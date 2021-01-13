@@ -1,8 +1,9 @@
+import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen} from "@chainsafe/lodestar-db";
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
-import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {uniqueVectorArr, blsPubkeyLen} from "../utils";
+import {DB_PREFIX_LENGTH, FORK_VERSION_STUB} from "../const";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
@@ -48,13 +49,17 @@ export class BlockBySlotRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Buffer {
-    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")]));
+    return encodeKey(
+      this.bucket,
+      FORK_VERSION_STUB,
+      Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")])
+    );
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {
     return {
-      pubkey: key.slice(bucketLen, bucketLen + blsPubkeyLen),
-      slot: bytesToInt(key.slice(bucketLen + blsPubkeyLen, bucketLen + blsPubkeyLen + uintLen), "be"),
+      pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
+      slot: bytesToInt(key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + uintLen), "be"),
     };
   }
 }

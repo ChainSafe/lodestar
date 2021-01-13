@@ -3,6 +3,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
+import {Version} from "@chainsafe/lodestar-types";
+import { BUCKET_LENGTH } from "./const";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -23,11 +25,20 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, bucket: Bucket, type: Type<T>) {
+  protected forkVersion: Version;
+
+  protected constructor(
+    config: IBeaconConfig,
+    db: IDatabaseController<Buffer, Buffer>,
+    bucket: Bucket,
+    type: Type<T>,
+    forkVersion?: Version
+  ) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
     this.type = type;
+    this.forkVersion = forkVersion ?? this.config.params.GENESIS_FORK_VERSION;
   }
 
   public encodeValue(value: T): Buffer {
@@ -39,11 +50,11 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public encodeKey(id: I): Buffer {
-    return _encodeKey(this.bucket, id);
+    return _encodeKey(this.bucket, this.forkVersion, id);
   }
 
   public decodeKey(key: Buffer): I {
-    return (key.slice(1) as Uint8Array) as I;
+    return (key.slice(BUCKET_LENGTH + this.forkVersion.length) as Uint8Array) as I;
   }
 
   public async get(id: I): Promise<T | null> {
@@ -225,8 +236,8 @@ export abstract class Repository<I extends Id, T> {
    */
   protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Buffer> {
     const _opts: IFilterOptions<Buffer> = {
-      gte: _encodeKey(this.bucket, Buffer.alloc(0)),
-      lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
+      gte: _encodeKey(this.bucket, this.forkVersion, Buffer.alloc(0)),
+      lt: _encodeKey(this.bucket + 1, this.forkVersion, Buffer.alloc(0)),
     };
     if (opts) {
       if (opts.lt || opts.lt === 0) {

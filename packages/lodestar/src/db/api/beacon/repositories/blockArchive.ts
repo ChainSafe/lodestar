@@ -147,10 +147,10 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   private getParentRootIndexKey(parentRoot: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
+    return encodeKey(Bucket.blockArchiveParentRootIndex, this.forkVersion, parentRoot.valueOf() as Uint8Array);
   }
 
   private getRootIndexKey(root: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveRootIndex, root.valueOf() as Uint8Array);
+    return encodeKey(Bucket.blockArchiveRootIndex, this.forkVersion, root.valueOf() as Uint8Array);
   }
 }

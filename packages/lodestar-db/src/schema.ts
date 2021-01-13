@@ -2,6 +2,8 @@
  * @module db/schema
  */
 import {intToBytes} from "@chainsafe/lodestar-utils";
+import {Version} from "@chainsafe/lodestar-types";
+import { BUCKET_LENGTH } from "./const";
 
 // Buckets are separate database namespaces
 export enum Bucket {
@@ -55,24 +57,29 @@ export enum Key {
   justifiedBlock = 5,
 }
 
-export const bucketLen = 1;
 export const uintLen = 8;
 
 /**
  * Prepend a bucket to a key
  */
-export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint): Buffer {
+export function encodeKey(bucket: Bucket, fork: Version, key: Uint8Array | string | number | bigint): Buffer {
   let buf;
+  const prefixLength = BUCKET_LENGTH + fork.length;
+  //all keys are writen with prefixLength offet
   if (typeof key === "string") {
-    buf = Buffer.alloc(key.length + bucketLen);
-    buf.write(key, bucketLen);
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.write(key, prefixLength);
   } else if (typeof key === "number" || typeof key === "bigint") {
-    buf = Buffer.alloc(uintLen + bucketLen);
-    intToBytes(BigInt(key), uintLen, "be").copy(buf, bucketLen);
+    buf = Buffer.alloc(uintLen + prefixLength);
+    intToBytes(BigInt(key), uintLen, "be").copy(buf, prefixLength);
   } else {
-    buf = Buffer.alloc(key.length + bucketLen);
-    buf.set(key, bucketLen);
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.set(key, prefixLength);
   }
+  //bucket prefix on position 0
   buf.writeUInt8(bucket, 0);
+
+  //fork prefix after bucket
+  buf.set(fork, BUCKET_LENGTH);
   return buf;
 }
