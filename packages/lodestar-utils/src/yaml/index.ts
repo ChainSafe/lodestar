@@ -1,6 +1,6 @@
 import {load, dump} from "js-yaml";
 import {schema} from "./schema";
-import {objectToExpectedCase} from "../misc";
+import {objectToExpectedCase} from "../objects";
 
 export function loadYaml(yaml: string): Record<string, unknown> {
   return objectToExpectedCase(load(yaml, {schema}));

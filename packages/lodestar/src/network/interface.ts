@@ -8,7 +8,6 @@ import {
   Goodbye,
   Metadata,
   Ping,
-  RequestBody,
   SignedBeaconBlock,
   Status,
 } from "@chainsafe/lodestar-types";
@@ -21,31 +20,34 @@ import {IGossip} from "./gossip/interface";
 import {MetadataController} from "./metadata";
 import {IPeerMetadataStore} from "./peers/interface";
 import {IRpcScoreTracker} from "./peers/score";
-import {ReqRespRequest} from "./reqresp";
+import {ReqRespHandler} from "./reqresp";
 
-export interface IReqEvents {
-  request: (request: ReqRespRequest<RequestBody>, peerId: PeerId, sink: Sink<unknown, unknown>) => void;
-}
-
-export type ReqEventEmitter = StrictEventEmitter<EventEmitter, IReqEvents>;
-
-export interface IReqResp extends ReqEventEmitter {
+export interface IReqResp {
   status(peerId: PeerId, request: Status): Promise<Status | null>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
   ping(peerId: PeerId, request: Ping): Promise<Ping | null>;
   metadata(peerId: PeerId): Promise<Metadata | null>;
   beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
   beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
+  registerHandler(handler: ReqRespHandler): void;
+  unregisterHandler(): ReqRespHandler | null;
+}
+
+export enum NetworkEvent {
+  peerConnect = "peer:connect",
+  peerDisconnect = "peer:disconnect",
+  gossipStart = "gossip:start",
+  gossipStop = "gossip:stop",
+  gossipHeartbeat = "gossipsub:heartbeat",
 }
 
 export interface INetworkEvents {
-  ["peer:connect"]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
-  ["peer:disconnect"]: (peerId: PeerId) => void;
+  [NetworkEvent.peerConnect]: (peerId: PeerId, direction: "inbound" | "outbound") => void;
+  [NetworkEvent.peerDisconnect]: (peerId: PeerId) => void;
 }
 export type NetworkEventEmitter = StrictEventEmitter<EventEmitter, INetworkEvents>;
 
 export type PeerSearchOptions = {
-  connected: boolean;
   supportsProtocols: string[];
   count?: number;
 };
@@ -63,6 +65,7 @@ export interface INetwork extends NetworkEventEmitter {
   localMultiaddrs: Multiaddr[];
   getEnr(): ENR | undefined;
   getPeers(opts?: Partial<PeerSearchOptions>): LibP2p.Peer[];
+  getAllPeers(): LibP2p.Peer[];
   getMaxPeer(): number;
   /**
    * Get the instance of a connection with a given peer.

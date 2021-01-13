@@ -13,7 +13,12 @@ import {ArchiveBlocksTask} from "./tasks/archiveBlocks";
 import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
-import {INetwork} from "../network";
+import {INetwork, NetworkEvent} from "../network";
+
+/**
+ * Minimum number of epochs between archived states
+ */
+export const MIN_EPOCHS_PER_DB_STATE = 1024;
 
 export interface ITasksModules {
   db: IBeaconDb;
@@ -54,16 +59,22 @@ export class TasksService implements IService {
   public async start(): Promise<void> {
     this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.on("gossip:start", this.handleGossipStart);
-    this.network.gossip.on("gossip:stop", this.handleGossipStop);
+    this.network.gossip.on(NetworkEvent.gossipStart, this.handleGossipStart);
+    this.network.gossip.on(NetworkEvent.gossipStop, this.handleGossipStop);
   }
 
   public async stop(): Promise<void> {
     this.chain.emitter.removeListener(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
     this.chain.emitter.removeListener(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.removeListener("gossip:start", this.handleGossipStart);
-    this.network.gossip.removeListener("gossip:stop", this.handleGossipStop);
+    this.network.gossip.removeListener(NetworkEvent.gossipStart, this.handleGossipStart);
+    this.network.gossip.removeListener(NetworkEvent.gossipStop, this.handleGossipStop);
     await this.interopSubnetsTask.stop();
+    // Archive latest finalized state
+    await new ArchiveStatesTask(
+      this.config,
+      {db: this.db, logger: this.logger},
+      await this.chain.getFinalizedCheckpoint()
+    ).run();
   }
 
   private handleGossipStart = async (): Promise<void> => {
@@ -82,7 +93,10 @@ export class TasksService implements IService {
         finalized
       ).run();
       // should be after ArchiveBlocksTask to handle restart cleanly
-      await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
+      const lastStoredEpoch = (await this.db.stateArchive.lastKey()) as number;
+      if (finalized.epoch - lastStoredEpoch > MIN_EPOCHS_PER_DB_STATE) {
+        await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
+      }
       await Promise.all([
         this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
         this.db.attestation.pruneFinalized(finalized.epoch),

@@ -1,25 +1,27 @@
-import {readOnlyMap} from "@chainsafe/ssz";
-import {BeaconState, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {FAR_FUTURE_EPOCH} from "../../constants";
 import {computeActivationExitEpoch, getChurnLimit} from "../../util";
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 
 /**
  * Initiate the exit of the validator with index ``index``.
  */
-export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState, index: ValidatorIndex): void {
+export function initiateValidatorExit(
+  epochCtx: EpochContext,
+  state: CachedValidatorsBeaconState,
+  index: ValidatorIndex
+): void {
   const config = epochCtx.config;
   // return if validator already initiated exit
-  const validator = state.validators[index];
-  if (validator.exitEpoch !== FAR_FUTURE_EPOCH) {
+  if (state.validators[index].exitEpoch !== FAR_FUTURE_EPOCH) {
     return;
   }
 
   const currentEpoch = epochCtx.currentShuffling.epoch;
 
   // compute exit queue epoch
-  const validatorExitEpochs = readOnlyMap(state.validators, (v) => v.exitEpoch);
+  const validatorExitEpochs = state.flatValidators().readOnlyMap((v) => v.exitEpoch);
   const exitEpochs = validatorExitEpochs.filter((exitEpoch) => exitEpoch !== FAR_FUTURE_EPOCH);
   exitEpochs.push(computeActivationExitEpoch(config, currentEpoch));
   let exitQueueEpoch = Math.max(...exitEpochs);
@@ -29,6 +31,8 @@ export function initiateValidatorExit(epochCtx: EpochContext, state: BeaconState
   }
 
   // set validator exit epoch and withdrawable epoch
-  validator.exitEpoch = exitQueueEpoch;
-  validator.withdrawableEpoch = validator.exitEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY;
+  state.updateValidator(index, {
+    exitEpoch: exitQueueEpoch,
+    withdrawableEpoch: exitQueueEpoch + config.params.MIN_VALIDATOR_WITHDRAWABILITY_DELAY,
+  });
 }

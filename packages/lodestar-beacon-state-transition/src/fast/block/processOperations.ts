@@ -3,13 +3,12 @@ import {
   Attestation,
   AttesterSlashing,
   BeaconBlockBody,
-  BeaconState,
   Deposit,
   ProposerSlashing,
   VoluntaryExit,
 } from "@chainsafe/lodestar-types";
 
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
@@ -17,11 +16,16 @@ import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
 type Operation = ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit;
-type OperationFunction = (epochCtx: EpochContext, state: BeaconState, op: Operation, verify: boolean) => void;
+type OperationFunction = (
+  epochCtx: EpochContext,
+  state: CachedValidatorsBeaconState,
+  op: Operation,
+  verify: boolean
+) => void;
 
 export function processOperations(
   epochCtx: EpochContext,
-  state: BeaconState,
+  state: CachedValidatorsBeaconState,
   body: BeaconBlockBody,
   verifySignatures = true
 ): void {

@@ -3,42 +3,47 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
-import {IStateRegenerator, RegenError} from "../regen";
+import {IStateRegenerator} from "../regen";
 import {BlockError, BlockErrorCode} from "../errors";
 import {IBeaconDb} from "../../db";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 
-export async function processBlock({
+export async function processBlocks({
   forkChoice,
   regen,
   emitter,
   db,
-  job,
+  jobs,
 }: {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   db: IBeaconDb;
-  job: IBlockJob;
+  jobs: IBlockJob[];
 }): Promise<void> {
+  let preStateContext: ITreeStateContext;
   try {
-    const preStateContext = await regen.getPreState(job.signedBlock.message);
-    await runStateTransition(emitter, forkChoice, db, preStateContext, job);
+    preStateContext = await regen.getPreState(jobs[0].signedBlock.message);
   } catch (e) {
-    if (e instanceof RegenError) {
+    throw new BlockError({
+      code: BlockErrorCode.PRESTATE_MISSING,
+      job: jobs[0],
+    });
+  }
+
+  for (const job of jobs) {
+    try {
+      preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, job);
+    } catch (e) {
+      if (e instanceof BlockError) {
+        throw e;
+      }
+
       throw new BlockError({
-        code: BlockErrorCode.PRESTATE_MISSING,
+        code: BlockErrorCode.BEACON_CHAIN_ERROR,
+        error: e,
         job,
       });
     }
-
-    if (e instanceof BlockError) {
-      throw e;
-    }
-
-    throw new BlockError({
-      code: BlockErrorCode.BEACON_CHAIN_ERROR,
-      error: e,
-      job,
-    });
   }
 }

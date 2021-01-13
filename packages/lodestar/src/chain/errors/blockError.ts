@@ -98,7 +98,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposer: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE}
   | {code: BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT; blockSlot: Slot; stateSlot: Slot}
-  | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
+  | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS; blockSlot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
