@@ -95,7 +95,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     "abort",
     () => {
       handlers.forEach((handler, event) => {
-        this.internalEmitter.removeListener(event, handler);
+        this.internalEmitter.off(event, handler);
       });
     },
     {once: true}

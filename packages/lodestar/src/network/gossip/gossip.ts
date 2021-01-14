@@ -78,7 +78,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   public async stop(): Promise<void> {
     this.emit(NetworkEvent.gossipStop);
     this.unregisterHandlers();
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
     await this.pubsub.stop();
     if (this.statusInterval) {
       clearInterval(this.statusInterval);
@@ -162,7 +162,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
       }
     }
     if (listener) {
-      this.removeListener(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
+      this.off(event as keyof IGossipEvents, listener as (...args: unknown[]) => void);
     }
   }
 
@@ -211,7 +211,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   private unregisterHandlers(): void {
     if (this.handlers) {
       this.handlers.forEach((handler, topic) => {
-        this.pubsub.removeListener(topic, handler);
+        this.pubsub.off(topic, handler);
       });
     }
   }

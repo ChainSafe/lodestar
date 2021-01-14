@@ -64,10 +64,10 @@ export class TasksService implements IService {
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-    this.chain.emitter.removeListener(ChainEvent.checkpoint, this.onCheckpoint);
-    this.network.gossip.removeListener(NetworkEvent.gossipStart, this.handleGossipStart);
-    this.network.gossip.removeListener(NetworkEvent.gossipStop, this.handleGossipStop);
+    this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+    this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
+    this.network.gossip.off(NetworkEvent.gossipStart, this.handleGossipStart);
+    this.network.gossip.off(NetworkEvent.gossipStop, this.handleGossipStop);
     await this.interopSubnetsTask.stop();
     // Archive latest finalized state
     await new ArchiveStatesTask(

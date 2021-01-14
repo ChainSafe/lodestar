@@ -81,8 +81,8 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.syncCompleted);
+    this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.regularSync.off("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();

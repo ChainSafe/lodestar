@@ -44,7 +44,7 @@ export class MetadataController {
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   get seqNumber(): bigint {

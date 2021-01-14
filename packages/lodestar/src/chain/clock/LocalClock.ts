@@ -75,13 +75,13 @@ export class LocalClock implements IBeaconClock {
       };
 
       const onDone = (): void => {
-        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
+        this.emitter.off(ChainEvent.clockSlot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
 
       const onAbort = (): void => {
-        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
+        this.emitter.off(ChainEvent.clockSlot, onSlot);
         reject(new ErrorAborted());
       };
 
