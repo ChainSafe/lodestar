@@ -5,6 +5,9 @@ import {SignedVoluntaryExit} from "../../../../../../lodestar-types/lib/types/op
 import {IAttestationJob, IBeaconChain} from "../../../../chain";
 import {AttestationError, AttestationErrorCode} from "../../../../chain/errors";
 import {validateGossipAttestation} from "../../../../chain/validation";
+import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
+import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
+import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
 import {IBeaconDb} from "../../../../db/api";
 import {INetwork} from "../../../../network";
 import {IBeaconSync} from "../../../../sync";
@@ -71,7 +74,8 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   }
 
   public async submitAttesterSlashing(slashing: AttesterSlashing): Promise<void> {
-    await this.db.attesterSlashing.add(slashing);
+    await validateGossipAttesterSlashing(this.config, this.chain, this.db, slashing);
+    await Promise.all([this.network.gossip.publishAttesterSlashing(slashing), this.db.attesterSlashing.add(slashing)]);
   }
 
   public async getProposerSlashings(): Promise<ProposerSlashing[]> {
@@ -79,7 +83,8 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   }
 
   public async submitProposerSlashing(slashing: ProposerSlashing): Promise<void> {
-    await this.db.proposerSlashing.add(slashing);
+    await validateGossipProposerSlashing(this.config, this.chain, this.db, slashing);
+    await Promise.all([this.network.gossip.publishProposerSlashing(slashing), this.db.proposerSlashing.add(slashing)]);
   }
 
   public async getVoluntaryExits(): Promise<SignedVoluntaryExit[]> {
@@ -87,6 +92,7 @@ export class BeaconPoolApi implements IBeaconPoolApi {
   }
 
   public async submitVoluntaryExit(exit: SignedVoluntaryExit): Promise<void> {
-    await this.db.voluntaryExit.add(exit);
+    await validateGossipVoluntaryExit(this.config, this.chain, this.db, exit);
+    await Promise.all([this.network.gossip.publishVoluntaryExit(exit), this.db.voluntaryExit.add(exit)]);
   }
 }
