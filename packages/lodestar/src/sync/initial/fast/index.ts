@@ -91,8 +91,8 @@ export class FastSync extends (EventEmitter as {new (): InitialSyncEventEmitter}
     this.logger.info("initial sync stop");
     await this.stats.stop();
     this.syncTriggerSource.end();
-    this.chain.emitter.removeListener(ChainEvent.block, this.checkSyncProgress);
-    this.chain.emitter.removeListener(ChainEvent.checkpoint, this.checkSyncCompleted);
+    this.chain.emitter.off(ChainEvent.block, this.checkSyncProgress);
+    this.chain.emitter.off(ChainEvent.checkpoint, this.checkSyncCompleted);
   }
 
   public getHighestBlock(): Slot {

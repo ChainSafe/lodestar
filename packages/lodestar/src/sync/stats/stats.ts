@@ -18,7 +18,7 @@ export class SyncStats implements ISyncStats {
   }
 
   public async stop(): Promise<void> {
-    this.chainEvents.removeListener(ChainEvent.block, this.onBlockProcessed);
+    this.chainEvents.off(ChainEvent.block, this.onBlockProcessed);
     await this.rateCounter.stop();
   }
 
