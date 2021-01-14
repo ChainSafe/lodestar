@@ -26,7 +26,7 @@ describe("validate voluntary exit", () => {
 
   beforeEach(() => {
     isValidIncomingVoluntaryExitStub = sandbox.stub(validatorStatusUtils, "isValidVoluntaryExit");
-    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
+    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
     dbStub = new StubbedBeaconDb(sandbox);

@@ -18,7 +18,7 @@ describe("GossipMessageValidator", () => {
 
   beforeEach(() => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
-    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
+    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     dbStub = new StubbedBeaconDb(sandbox);
   });
