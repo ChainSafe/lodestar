@@ -235,7 +235,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async *onMetadata(): AsyncIterable<Metadata> {
-    yield this.network.metadata.metadata;
+    yield this.network.metadata.all;
   }
 
   private async *onBeaconBlocksByRange(requestBody: BeaconBlocksByRangeRequest): AsyncIterable<SignedBeaconBlock> {
