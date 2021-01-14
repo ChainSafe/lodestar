@@ -14,6 +14,10 @@ export interface BeaconBlock extends phase0.BeaconBlock {
   syncCommitteeSignature: phase0.BLSSignature;
 }
 
+export interface SignedBeaconBlock extends phase0.SignedBeaconBlock {
+  message: BeaconBlock;
+}
+
 export interface BeaconBlockHeader extends phase0.BeaconBlockHeader {
   // Sync committee aggregate signature
   syncCommitteeBits: BitVector;
