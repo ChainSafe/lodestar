@@ -1,8 +1,9 @@
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
 import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 import {uniqueVectorArr, blsPubkeyLen} from "../utils";
+import {LodestarValidatorDatabaseController} from "../../types";
 
 /**
  * Manages validator db storage of blocks.
@@ -11,7 +12,7 @@ import {uniqueVectorArr, blsPubkeyLen} from "../utils";
  */
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionBlockBySlot;
 
   constructor(opts: IDatabaseApiOptions) {

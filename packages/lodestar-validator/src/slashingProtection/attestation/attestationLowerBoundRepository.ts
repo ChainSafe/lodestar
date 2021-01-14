@@ -1,6 +1,7 @@
 import {BLSPubkey, SlashingProtectionAttestationLowerBound} from "@chainsafe/lodestar-types";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
+import {LodestarValidatorDatabaseController} from "../../types";
 
 /**
  * Manages validator db storage of the minimum source and target epochs required of a validator
@@ -8,7 +9,7 @@ import {Type} from "@chainsafe/ssz";
  */
 export class AttestationLowerBoundRepository {
   protected type: Type<SlashingProtectionAttestationLowerBound>;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionAttestationLowerBound;
 
   constructor(opts: IDatabaseApiOptions) {

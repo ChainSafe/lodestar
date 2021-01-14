@@ -1,8 +1,9 @@
 import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
+import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 import {IDistanceEntry, IDistanceStore} from "./interface";
+import {LodestarValidatorDatabaseController} from "../../types";
 
 /**
  * Manages validator db storage of min/max ranges for min/max surround vote slashing protection.
@@ -19,7 +20,7 @@ export class DistanceStoreRepository implements IDistanceStore {
 
 class SpanDistanceRepository {
   protected type: Type<Epoch>;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: LodestarValidatorDatabaseController;
   protected bucket: Bucket;
 
   constructor(opts: IDatabaseApiOptions, bucket: Bucket) {
