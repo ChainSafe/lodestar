@@ -16,3 +16,5 @@ export type ValidatorAndSecret = {
   validator: ValidatorResponse | null;
   secretKey: SecretKey;
 };
+
+export type PublicKeyHex = string;

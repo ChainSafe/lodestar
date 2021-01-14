@@ -30,7 +30,7 @@ import {IApiClient} from "../api";
 import {ClockEventType} from "../api/interface/clock";
 import {BeaconEventType} from "../api/interface/events";
 import {ISlashingProtection} from "../slashingProtection";
-import {IAttesterDuty, ValidatorAndSecret} from "../types";
+import {IAttesterDuty, PublicKeyHex, ValidatorAndSecret} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
 import {getAggregationBits, getAggregatorModulo} from "./utils";
@@ -41,11 +41,11 @@ import {getAggregationBits, getAggregatorModulo} from "./utils";
 export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  private readonly validators: Map<string, ValidatorAndSecret> = new Map();
+  private readonly validators: Map<PublicKeyHex, ValidatorAndSecret> = new Map();
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
-  private nextAttesterDuties: Map<Slot, Map<string, IAttesterDuty>> = new Map();
+  private nextAttesterDuties: Map<Slot, Map<PublicKeyHex, IAttesterDuty>> = new Map();
   private controller: AbortController | undefined;
 
   public constructor(
@@ -58,7 +58,7 @@ export class AttestationService {
     this.config = config;
     this.provider = rpcClient;
     for (const secretKey of secretKeys) {
-      this.validators.set(toHexString(secretKey.toPublicKey().toBytes()), {validator: null, secretKey});
+      this.validators.set(secretKey.toPublicKey().toHex(), {validator: null, secretKey});
     }
     this.slashingProtection = slashingProtection;
     this.logger = logger;
