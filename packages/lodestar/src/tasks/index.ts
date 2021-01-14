@@ -14,6 +14,7 @@ import {ArchiveStatesTask} from "./tasks/archiveStates";
 import {IBeaconSync} from "../sync";
 import {InteropSubnetsJoiningTask} from "./tasks/interopSubnetsJoiningTask";
 import {INetwork, NetworkEvent} from "../network";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Minimum number of epochs between archived states
@@ -93,7 +94,8 @@ export class TasksService implements IService {
         finalized
       ).run();
       // should be after ArchiveBlocksTask to handle restart cleanly
-      const lastStoredEpoch = (await this.db.stateArchive.lastKey()) as number;
+      const lastStoredSlot = (await this.db.stateArchive.lastKey()) as number;
+      const lastStoredEpoch = computeEpochAtSlot(this.config, lastStoredSlot);
       if (finalized.epoch - lastStoredEpoch > MIN_EPOCHS_PER_DB_STATE) {
         await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
       }
