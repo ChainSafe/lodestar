@@ -1,4 +1,11 @@
-import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen, DB_PREFIX_LENGTH} from "@chainsafe/lodestar-db";
+import {
+  Bucket,
+  encodeKey,
+  IDatabaseApiOptions,
+  IDatabaseController,
+  uintLen,
+  DB_PREFIX_LENGTH,
+} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";

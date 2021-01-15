@@ -1,6 +1,6 @@
 import {Version, Root, ForkData, ForkDigest, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import { intToBytes } from '@chainsafe/lodestar-utils';
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.

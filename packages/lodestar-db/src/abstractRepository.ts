@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
 import {Version} from "@chainsafe/lodestar-types";
-import { BUCKET_LENGTH } from ".";
+import {BUCKET_LENGTH} from ".";
 
 export type Id = Uint8Array | string | number | bigint;
 
