@@ -19,8 +19,8 @@ describe("paths / global", () => {
       },
     },
     {
-      id: "Testnet paths",
-      args: {testnet: "pyrmont"},
+      id: "Network paths",
+      args: {network: "pyrmont"},
       globalPaths: {
         rootDir: "/my-root-dir/lodestar/pyrmont",
         paramsFile: "/my-root-dir/lodestar/pyrmont/config.yaml",
@@ -28,10 +28,10 @@ describe("paths / global", () => {
     },
     {
       id: "Custom rootDir",
-      args: {rootDir: "./attack-testnet"},
+      args: {rootDir: "./attack-network"},
       globalPaths: {
-        rootDir: "./attack-testnet",
-        paramsFile: "attack-testnet/config.yaml",
+        rootDir: "./attack-network",
+        paramsFile: "attack-network/config.yaml",
       },
     },
     {

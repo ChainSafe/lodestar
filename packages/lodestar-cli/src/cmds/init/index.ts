@@ -15,7 +15,7 @@ export const init: ICliCommand<IBeaconArgs, IGlobalArgs, ReturnType> = {
 This step is not required, and should only be used to prepare special configurations",
   examples: [
     {
-      command: "init --testnet medalla",
+      command: "init --network medalla",
       description:
         "Initialize a configuration for the Medalla testnet. " +
         `Then, you can edit the config file ${defaultBeaconPathsMedalla.configFile} to customize your beacon node settings`,

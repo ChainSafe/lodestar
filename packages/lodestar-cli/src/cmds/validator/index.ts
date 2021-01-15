@@ -9,7 +9,7 @@ export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   describe: "Run one or multiple validator clients",
   examples: [
     {
-      command: "validator --testnet medalla",
+      command: "validator --network medalla",
       description:
         "Run one validator client with all the keystores available in the directory" +
         ` ${getAccountPaths({rootDir: ".medalla"}).keystoresDir}`,

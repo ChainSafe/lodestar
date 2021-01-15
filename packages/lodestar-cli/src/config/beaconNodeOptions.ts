@@ -3,28 +3,28 @@ import {Json} from "@chainsafe/ssz";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {writeFile, RecursivePartial, readFileIfExists} from "../util";
-import {getTestnetBeaconNodeOptions, TestnetName} from "../testnets";
+import {getNetworkBeaconNodeOptions, NetworkName} from "../networks";
 
 export class BeaconNodeOptions {
   private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;
 
   /**
    * Reads, parses and merges BeaconNodeOptions from (in order)
-   * - Testnet options (diff)
+   * - Network options (diff)
    * - existing options file
    * - CLI flags
    */
   constructor({
-    testnet,
+    network,
     configFile,
     beaconNodeOptionsCli,
   }: {
-    testnet?: TestnetName;
+    network?: NetworkName;
     configFile?: string;
     beaconNodeOptionsCli: RecursivePartial<IBeaconNodeOptions>;
   }) {
     this.beaconNodeOptions = mergeBeaconNodeOptions(
-      testnet ? getTestnetBeaconNodeOptions(testnet) : {},
+      network ? getNetworkBeaconNodeOptions(network) : {},
       configFile ? readBeaconNodeOptionsIfExists(configFile) : {},
       beaconNodeOptionsCli
     );

@@ -8,7 +8,7 @@ export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   describe: "Run a beacon chain node",
   examples: [
     {
-      command: "beacon --testnet medalla",
+      command: "beacon --network medalla",
       description: "Run a beacon chain node and connect to the Medalla testnet",
     },
   ],
