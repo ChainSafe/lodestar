@@ -1,7 +1,7 @@
 import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
-import {IBlockJob} from "../interface";
+import {IBlockJob, IChainSegmentJob} from "../interface";
 
 export enum BlockErrorCode {
   /**
@@ -98,21 +98,40 @@ export type BlockErrorType =
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposer: ValidatorIndex}
   | {code: BlockErrorCode.INVALID_SIGNATURE}
   | {code: BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT; blockSlot: Slot; stateSlot: Slot}
-  | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS; blockSlot: Slot}
+  | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK};
 
-type JobObject = {
+type BlockJobObject = {
   job: IBlockJob;
 };
 
 export class BlockError extends LodestarError<BlockErrorType> {
   public job: IBlockJob;
 
-  constructor({job, ...type}: BlockErrorType & JobObject) {
+  constructor({job, ...type}: BlockErrorType & BlockJobObject) {
     super(type);
     this.job = job;
+  }
+}
+
+type ChainSegmentJobObject = {
+  job: IChainSegmentJob;
+  importedBlocks: number;
+};
+
+export class ChainSegmentError extends LodestarError<BlockErrorType> {
+  public job: IChainSegmentJob;
+  /**
+   * Number of blocks successfully imported before the error
+   */
+  public importedBlocks: number;
+
+  constructor({job, importedBlocks, ...type}: BlockErrorType & ChainSegmentJobObject) {
+    super(type);
+    this.job = job;
+    this.importedBlocks = importedBlocks;
   }
 }
