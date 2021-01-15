@@ -1,7 +1,6 @@
 import {BLSPubkey, SlashingProtectionAttestationLowerBound} from "@chainsafe/lodestar-types";
 import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
-import {FORK_VERSION_STUB} from "../const";
 
 export class AttestationLowerBoundRepository {
   protected type: Type<SlashingProtectionAttestationLowerBound>;
@@ -23,6 +22,6 @@ export class AttestationLowerBoundRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey): Buffer {
-    return encodeKey(this.bucket, FORK_VERSION_STUB, Buffer.from(pubkey));
+    return encodeKey(this.bucket, Buffer.from(pubkey));
   }
 }

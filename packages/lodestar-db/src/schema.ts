@@ -2,8 +2,7 @@
  * @module db/schema
  */
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {Version} from "@chainsafe/lodestar-types";
-import { BUCKET_LENGTH } from "./const";
+import {BUCKET_LENGTH} from "./const";
 
 // Buckets are separate database namespaces
 export enum Bucket {
@@ -11,7 +10,8 @@ export enum Bucket {
   // every state
   state = 0, // Root -> BeaconState
   // unfinalized blocks
-  block = 1, // Root -> SignedBeaconBlock
+  // deprecated
+  // block = 1, // Root -> SignedBeaconBlock
   // finalized blocks
   blockArchive = 2, // Slot -> SignedBeaconBlock
   blockArchiveParentRootIndex = 3, // parent Root -> Slot
@@ -44,6 +44,9 @@ export enum Bucket {
   slashingProtectionMinSpanDistance = 23,
   slashingProtectionMaxSpanDistance = 24,
   pendingBlock = 25, // Root -> SignedBeaconBlock
+
+  phase0Block = 26,
+  lightclientBlock = 27,
 }
 
 export enum Key {
@@ -62,9 +65,9 @@ export const uintLen = 8;
 /**
  * Prepend a bucket to a key
  */
-export function encodeKey(bucket: Bucket, fork: Version, key: Uint8Array | string | number | bigint): Buffer {
+export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint): Buffer {
   let buf;
-  const prefixLength = BUCKET_LENGTH + fork.length;
+  const prefixLength = BUCKET_LENGTH;
   //all keys are writen with prefixLength offet
   if (typeof key === "string") {
     buf = Buffer.alloc(key.length + prefixLength);
@@ -77,9 +80,6 @@ export function encodeKey(bucket: Bucket, fork: Version, key: Uint8Array | strin
     buf.set(key, prefixLength);
   }
   //bucket prefix on position 0
-  buf.writeUInt8(bucket, 0);
-
-  //fork prefix after bucket
-  buf.set(fork, BUCKET_LENGTH);
+  buf.set(intToBytes(bucket, BUCKET_LENGTH, "le"), 0);
   return buf;
 }

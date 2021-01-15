@@ -21,7 +21,6 @@ export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestatio
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";
 export {InterchangeError, InterchangeErrorErrorCode} from "./interchange";
 export {ISlashingProtection};
-export * from "./const";
 
 export class SlashingProtection extends DatabaseService implements ISlashingProtection {
   private blockService: SlashingProtectionBlockService;

@@ -9,7 +9,7 @@ import {Lightclient} from "@chainsafe/lodestar-types";
  */
 export class LightClientBlockRepository extends Repository<Uint8Array, Lightclient.SignedBeaconBlock> {
   public constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>) {
-    super(config, db, Bucket.block, config.types.lightclient.SignedBeaconBlock);
+    super(config, db, Bucket.lightclientBlock, config.types.lightclient.SignedBeaconBlock);
   }
 
   /**

@@ -1,8 +1,7 @@
-import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen} from "@chainsafe/lodestar-db";
+import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen, DB_PREFIX_LENGTH} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {DB_PREFIX_LENGTH, FORK_VERSION_STUB} from "..";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 export class AttestationByTargetRepository {
@@ -44,11 +43,7 @@ export class AttestationByTargetRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
-    return encodeKey(
-      this.bucket,
-      FORK_VERSION_STUB,
-      Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")])
-    );
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(targetEpoch), uintLen, "be")]));
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {

@@ -1,10 +1,10 @@
-import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {Bucket, encodeKey, IDatabaseController, IFilterOptions, IKeyValue, Repository} from "@chainsafe/lodestar-db";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, Repository, IFilterOptions, IKeyValue, encodeKey} from "@chainsafe/lodestar-db";
 import {ArrayLike} from "@chainsafe/ssz";
 import all from "it-all";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
@@ -147,10 +147,10 @@ export class BlockArchiveRepository extends Repository<Slot, SignedBeaconBlock> 
   }
 
   private getParentRootIndexKey(parentRoot: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveParentRootIndex, this.forkVersion, parentRoot.valueOf() as Uint8Array);
+    return encodeKey(Bucket.blockArchiveParentRootIndex, parentRoot.valueOf() as Uint8Array);
   }
 
   private getRootIndexKey(root: Root): Buffer {
-    return encodeKey(Bucket.blockArchiveRootIndex, this.forkVersion, root.valueOf() as Uint8Array);
+    return encodeKey(Bucket.blockArchiveRootIndex, root.valueOf() as Uint8Array);
   }
 }

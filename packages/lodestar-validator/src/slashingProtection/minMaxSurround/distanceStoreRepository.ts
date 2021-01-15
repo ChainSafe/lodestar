@@ -1,9 +1,8 @@
+import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 import {IDistanceEntry, IDistanceStore} from "./interface";
-import {FORK_VERSION_STUB} from "../const";
 
 export class DistanceStoreRepository implements IDistanceStore {
   minSpan: SpanDistanceRepository;
@@ -41,10 +40,6 @@ class SpanDistanceRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, epoch: Epoch): Buffer {
-    return encodeKey(
-      this.bucket,
-      FORK_VERSION_STUB,
-      Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(epoch), 8, "be")])
-    );
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(epoch), 8, "be")]));
   }
 }

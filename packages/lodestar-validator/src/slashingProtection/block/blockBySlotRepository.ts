@@ -1,8 +1,14 @@
-import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController, uintLen} from "@chainsafe/lodestar-db";
+import {
+  Bucket,
+  encodeKey,
+  IDatabaseApiOptions,
+  IDatabaseController,
+  uintLen,
+  DB_PREFIX_LENGTH,
+} from "@chainsafe/lodestar-db";
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
 import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {DB_PREFIX_LENGTH, FORK_VERSION_STUB} from "../const";
 import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 export class BlockBySlotRepository {
@@ -49,11 +55,7 @@ export class BlockBySlotRepository {
   }
 
   private encodeKey(pubkey: BLSPubkey, slot: Slot): Buffer {
-    return encodeKey(
-      this.bucket,
-      FORK_VERSION_STUB,
-      Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")])
-    );
+    return encodeKey(this.bucket, Buffer.concat([Buffer.from(pubkey), intToBytes(BigInt(slot), uintLen, "be")]));
   }
 
   private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {

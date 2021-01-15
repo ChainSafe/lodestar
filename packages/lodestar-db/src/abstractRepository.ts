@@ -1,10 +1,9 @@
 import {ArrayLike, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
 import {Version} from "@chainsafe/lodestar-types";
-import { BUCKET_LENGTH } from "./const";
+import { BUCKET_LENGTH } from ".";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -50,11 +49,11 @@ export abstract class Repository<I extends Id, T> {
   }
 
   public encodeKey(id: I): Buffer {
-    return _encodeKey(this.bucket, this.forkVersion, id);
+    return _encodeKey(this.bucket, id);
   }
 
   public decodeKey(key: Buffer): I {
-    return (key.slice(BUCKET_LENGTH + this.forkVersion.length) as Uint8Array) as I;
+    return (key.slice(BUCKET_LENGTH) as Uint8Array) as I;
   }
 
   public async get(id: I): Promise<T | null> {
@@ -236,8 +235,8 @@ export abstract class Repository<I extends Id, T> {
    */
   protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Buffer> {
     const _opts: IFilterOptions<Buffer> = {
-      gte: _encodeKey(this.bucket, this.forkVersion, Buffer.alloc(0)),
-      lt: _encodeKey(this.bucket + 1, this.forkVersion, Buffer.alloc(0)),
+      gte: _encodeKey(this.bucket, Buffer.alloc(0)),
+      lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
     };
     if (opts) {
       if (opts.lt || opts.lt === 0) {
