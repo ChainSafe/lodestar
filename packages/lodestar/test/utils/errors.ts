@@ -2,6 +2,16 @@ import {expect} from "chai";
 import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
+export function expectThrowsLodestarError(fn: () => any, expectedErr: LodestarError<any>): void {
+  try {
+    const value = fn();
+    const json = JSON.stringify(value, null, 2);
+    throw Error(`Expected promise to reject but returned value: \n\n\t${json}`);
+  } catch (e) {
+    expectLodestarError(e, expectedErr);
+  }
+}
+
 export async function expectRejectedWithLodestarError(
   promise: Promise<any>,
   expectedErr: LodestarError<any>
