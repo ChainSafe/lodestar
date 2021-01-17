@@ -4,6 +4,11 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
+export type BatchOpts = {
+  epochsPerBatch: Epoch;
+  logAfterAttempts?: number;
+};
+
 /** log.error after trying for N times */
 const LOG_AFTER_ATTEMPTS = 3;
 
@@ -67,10 +72,11 @@ export class Batch {
   /** The number of download retries this batch has undergone due to a failed request. */
   private failedDownloadAttempts: PeerId[] = [];
   private logger: ILogger;
+  private opts: Pick<Required<BatchOpts>, "logAfterAttempts">;
 
-  constructor(startEpoch: Epoch, numOfEpochs: number, config: IBeaconConfig, logger: ILogger) {
+  constructor(startEpoch: Epoch, config: IBeaconConfig, logger: ILogger, opts: BatchOpts) {
     const startSlot = computeStartSlotAtEpoch(config, startEpoch) + 1;
-    const endSlot = startSlot + numOfEpochs * config.params.SLOTS_PER_EPOCH;
+    const endSlot = startSlot + opts.epochsPerBatch * config.params.SLOTS_PER_EPOCH;
 
     this.startEpoch = startEpoch;
     this.request = {
@@ -80,6 +86,7 @@ export class Batch {
     };
 
     this.logger = logger;
+    this.opts = {logAfterAttempts: opts?.logAfterAttempts ?? LOG_AFTER_ATTEMPTS};
   }
 
   /**
@@ -127,7 +134,7 @@ export class Batch {
       this.logger.error("downloadingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Downloading)));
     }
 
-    if (this.failedDownloadAttempts.length > LOG_AFTER_ATTEMPTS) {
+    if (this.failedDownloadAttempts.length > this.opts.logAfterAttempts) {
       this.logger.error("Batch downloadingError", this.getMetadata(), e);
     } else {
       this.logger.debug("Batch downloadingError", this.getMetadata(), e);
@@ -175,7 +182,7 @@ export class Batch {
       this.logger.error("processingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Processing)));
     }
 
-    if (this.failedProcessingAttempts.length > LOG_AFTER_ATTEMPTS) {
+    if (this.failedProcessingAttempts.length > this.opts.logAfterAttempts) {
       this.logger.error("Batch processingError", this.getMetadata(), e);
     } else {
       this.logger.debug("Batch processingError", this.getMetadata(), e);
@@ -194,7 +201,7 @@ export class Batch {
       this.logger.error("validationError", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingValidation)));
     }
 
-    if (this.failedProcessingAttempts.length > LOG_AFTER_ATTEMPTS) {
+    if (this.failedProcessingAttempts.length > this.opts.logAfterAttempts) {
       this.logger.error("Batch validationError", this.getMetadata());
     } else {
       this.logger.debug("Batch validationError", this.getMetadata());

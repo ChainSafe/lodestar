@@ -5,12 +5,12 @@ import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {silentLogger} from "../../../utils/logger";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {expectThrowsLodestarError} from "../../../utils/errors";
-import {Batch, BatchStatus, WrongStateError, BatchErrorCode} from "../../../../src/sync/range/batch";
+import {Batch, BatchOpts, BatchStatus, WrongStateError, BatchErrorCode} from "../../../../src/sync/range/batch";
 
 const debugMode = process.env.DEBUG;
 
 describe("sync / range / batch", () => {
-  const EPOCHS_PER_BATCH = 2;
+  const opts: BatchOpts = {epochsPerBatch: 2};
   const logger = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "SYNC"}) : silentLogger;
 
   // Common mock data
@@ -20,16 +20,16 @@ describe("sync / range / batch", () => {
   const error = Error("TEST_ERROR");
 
   it("Should return correct blockByRangeRequest", () => {
-    const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
+    const batch = new Batch(startEpoch, config, logger, opts);
     expect(batch.request).to.deep.equal({
       startSlot: 1,
-      count: config.params.SLOTS_PER_EPOCH * EPOCHS_PER_BATCH,
+      count: config.params.SLOTS_PER_EPOCH * opts.epochsPerBatch,
       step: 1,
     });
   });
 
   it("Complete state flow", () => {
-    const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
+    const batch = new Batch(startEpoch, config, logger, opts);
 
     // Instantion: AwaitingDownload
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on instantiation");
@@ -80,7 +80,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - downloadingSuccess", () => {
-    const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
+    const batch = new Batch(startEpoch, config, logger, opts);
 
     expectThrowsLodestarError(
       () => batch.downloadingSuccess(blocksDownloaded),
@@ -94,7 +94,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - startProcessing", () => {
-    const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
+    const batch = new Batch(startEpoch, config, logger, opts);
 
     expectThrowsLodestarError(
       () => batch.startProcessing(),
@@ -108,7 +108,7 @@ describe("sync / range / batch", () => {
   });
 
   it("Should throw on inconsistent state - processingSuccess", () => {
-    const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
+    const batch = new Batch(startEpoch, config, logger, opts);
 
     expectThrowsLodestarError(
       () => batch.processingSuccess(),

@@ -3,13 +3,13 @@ import PeerId from "peer-id";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {silentLogger} from "../../../utils/logger";
-import {Batch} from "../../../../src/sync/range/batch";
+import {Batch, BatchOpts} from "../../../../src/sync/range/batch";
 import {ChainPeersBalancer} from "../../../../src/sync/range/peerBalancer";
 
 const debugMode = process.env.DEBUG;
 
 describe("sync / range / peerBalancer", () => {
-  const EPOCHS_PER_BATCH = 1;
+  const opts: BatchOpts = {epochsPerBatch: 1};
   const logger = debugMode ? new WinstonLogger({level: LogLevel.verbose, module: "SYNC"}) : silentLogger;
   const error = Error("TEST_ERROR");
 
@@ -19,8 +19,8 @@ describe("sync / range / peerBalancer", () => {
       const peer1 = new PeerId(Buffer.from([0])); // Offset by one, PeerId encodes to B58String 0 as "1"
       const peer2 = new PeerId(Buffer.from([1]));
       const peer3 = new PeerId(Buffer.from([2]));
-      const batch0 = new Batch(0, EPOCHS_PER_BATCH, config, logger);
-      const batch1 = new Batch(1, EPOCHS_PER_BATCH, config, logger);
+      const batch0 = new Batch(0, config, logger, opts);
+      const batch1 = new Batch(1, config, logger, opts);
 
       // Batch zero has a failedDownloadAttempt with peer0
       batch0.startDownloading(peer1);
@@ -52,8 +52,8 @@ describe("sync / range / peerBalancer", () => {
       const peer2 = new PeerId(Buffer.from([1]));
       const peer3 = new PeerId(Buffer.from([2]));
       const peer4 = new PeerId(Buffer.from([3]));
-      const batch0 = new Batch(0, EPOCHS_PER_BATCH, config, logger);
-      const batch1 = new Batch(1, EPOCHS_PER_BATCH, config, logger);
+      const batch0 = new Batch(0, config, logger, opts);
+      const batch1 = new Batch(1, config, logger, opts);
 
       // peer1 and peer2 are busy downloading
       batch0.startDownloading(peer1);
