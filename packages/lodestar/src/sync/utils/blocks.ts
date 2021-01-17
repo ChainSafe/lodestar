@@ -1,9 +1,8 @@
 import PeerId from "peer-id";
-import {BeaconBlockHeader, BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
+import {BeaconBlocksByRangeRequest, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
 import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {notNullish} from "../../util/notNullish";
 
@@ -93,21 +92,6 @@ export async function getBlockRange(
 
 export function sortBlocks(blocks: SignedBeaconBlock[]): SignedBeaconBlock[] {
   return blocks.sort((b1, b2) => b1.message.slot - b2.message.slot);
-}
-
-export function isValidChainOfBlocks(
-  config: IBeaconConfig,
-  start: BeaconBlockHeader,
-  signedBlocks: SignedBeaconBlock[]
-): boolean {
-  let parentRoot = config.types.BeaconBlockHeader.hashTreeRoot(start);
-  for (const signedBlock of signedBlocks) {
-    if (!config.types.Root.equals(parentRoot, signedBlock.message.parentRoot)) {
-      return false;
-    }
-    parentRoot = config.types.BeaconBlock.hashTreeRoot(signedBlock.message);
-  }
-  return true;
 }
 
 /**

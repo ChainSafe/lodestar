@@ -2,7 +2,6 @@ import {IService} from "../node";
 import {INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CommitteeIndex, Slot, SyncingStatus} from "@chainsafe/lodestar-types";
-import {InitialSync} from "./initial";
 import {IRegularSync} from "./regular";
 import {IGossipHandler} from "./gossip";
 import {IReqRespHandler} from "./reqResp";
@@ -32,7 +31,6 @@ export interface ISyncModules {
   db: IBeaconDb;
   logger: ILogger;
   chain: IBeaconChain;
-  initialSync?: InitialSync;
   regularSync?: IRegularSync;
   reqRespHandler?: IReqRespHandler;
   gossipHandler?: IGossipHandler;
