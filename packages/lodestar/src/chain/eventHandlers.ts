@@ -219,7 +219,7 @@ export async function onBlock(
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-  this.logger.info("Block processed", {
+  this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
