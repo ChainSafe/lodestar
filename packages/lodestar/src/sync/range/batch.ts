@@ -4,6 +4,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger, LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
+/** log.error after trying for N times */
+const LOG_AFTER_ATTEMPTS = 3;
+
 /**
  * Current state of a batch
  */
@@ -95,9 +98,10 @@ export class Batch {
    */
   startDownloading(peer: PeerId): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
-      this.logger.warn("startDownloading", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingDownload)));
+      this.logger.error("startDownloading", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingDownload)));
     }
 
+    this.logger.debug("Batch startDownloading", this.getMetadata());
     this.state = {status: BatchStatus.Downloading, peer, blocks: []};
   }
 
@@ -109,17 +113,24 @@ export class Batch {
       throw new WrongStateError(this.getErrorType(BatchStatus.Downloading));
     }
 
+    this.logger.debug("Batch downloadingSuccess", {...this.getMetadata(), blocks: blocks.length});
     this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
   }
 
   /**
    * Downloading -> AwaitingDownload
    */
-  downloadingError(): void {
+  downloadingError(e: Error): void {
     if (this.state.status === BatchStatus.Downloading) {
       this.failedDownloadAttempts.push(this.state.peer);
     } else {
-      this.logger.warn("downloadingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Downloading)));
+      this.logger.error("downloadingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Downloading)));
+    }
+
+    if (this.failedDownloadAttempts.length > LOG_AFTER_ATTEMPTS) {
+      this.logger.error("Batch downloadingError", this.getMetadata(), e);
+    } else {
+      this.logger.debug("Batch downloadingError", this.getMetadata(), e);
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};
@@ -133,6 +144,7 @@ export class Batch {
       throw new WrongStateError(this.getErrorType(BatchStatus.AwaitingProcessing));
     }
 
+    this.logger.debug("Batch startProcessing", this.getMetadata());
     const blocks = this.state.blocks;
     this.state = {
       status: BatchStatus.Processing,
@@ -149,17 +161,24 @@ export class Batch {
       throw new WrongStateError(this.getErrorType(BatchStatus.Processing));
     }
 
+    this.logger.debug("Batch processingSuccess", this.getMetadata());
     this.state = {status: BatchStatus.AwaitingValidation, attempt: this.state.attempt};
   }
 
   /**
    * Processing -> AwaitingDownload
    */
-  processingError(): void {
+  processingError(e: Error): void {
     if (this.state.status === BatchStatus.Processing) {
       this.failedProcessingAttempts.push(this.state.attempt);
     } else {
-      this.logger.warn("processingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Processing)));
+      this.logger.error("processingError", {}, new WrongStateError(this.getErrorType(BatchStatus.Processing)));
+    }
+
+    if (this.failedProcessingAttempts.length > LOG_AFTER_ATTEMPTS) {
+      this.logger.error("Batch processingError", this.getMetadata(), e);
+    } else {
+      this.logger.debug("Batch processingError", this.getMetadata(), e);
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};
@@ -172,7 +191,13 @@ export class Batch {
     if (this.state.status === BatchStatus.AwaitingValidation) {
       this.failedProcessingAttempts.push(this.state.attempt);
     } else {
-      this.logger.warn("validationError", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingValidation)));
+      this.logger.error("validationError", {}, new WrongStateError(this.getErrorType(BatchStatus.AwaitingValidation)));
+    }
+
+    if (this.failedProcessingAttempts.length > LOG_AFTER_ATTEMPTS) {
+      this.logger.error("Batch validationError", this.getMetadata());
+    } else {
+      this.logger.debug("Batch validationError", this.getMetadata());
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};

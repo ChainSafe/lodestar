@@ -17,6 +17,7 @@ describe("sync / range / batch", () => {
   const startEpoch = 0;
   const peer = new PeerId(Buffer.from("lodestar"));
   const blocksDownloaded = [generateEmptySignedBlock()];
+  const error = Error("TEST_ERROR");
 
   it("Should return correct blockByRangeRequest", () => {
     const batch = new Batch(startEpoch, EPOCHS_PER_BATCH, config, logger);
@@ -38,7 +39,7 @@ describe("sync / range / batch", () => {
     expect(batch.state.status).to.equal(BatchStatus.Downloading, "Wrong status on startDownloading");
 
     // downloadingError: Downloading -> AwaitingDownload
-    batch.downloadingError();
+    batch.downloadingError(error);
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on downloadingError");
     expect(batch.getFailedPeers()[0]).to.equal(peer, "getFailedPeers must returned peer from previous request");
 
@@ -54,7 +55,7 @@ describe("sync / range / batch", () => {
     expect(blocksToProcess).to.equal(blocksDownloaded, "Blocks to process should be the same downloaded");
 
     // processingError: Processing -> AwaitingDownload
-    batch.processingError();
+    batch.processingError(error);
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on processingError");
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
