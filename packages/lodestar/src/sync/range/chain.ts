@@ -4,6 +4,7 @@ import {BeaconBlocksByRangeRequest, Epoch, SignedBeaconBlock} from "@chainsafe/l
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ItTrigger} from "../../util/itTrigger";
+import {prettyTimeDiff} from "../../util/time";
 import {TimeSeries} from "../stats/timeSeries";
 import {ChainPeersBalancer} from "./peerBalancer";
 import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
@@ -333,12 +334,10 @@ export class SyncChain {
     this.timeSeries.addPoint(epoch);
 
     const epochsPerSecond = this.timeSeries.computeLinearSpeed();
-    const slotsPerSecond = epochsPerSecond * this.config.params.SLOTS_PER_EPOCH;
-    const hoursToGo = (targetEpoch - epoch) / (epochsPerSecond * 3600);
-    this.logger.info(`Sync progress ${epoch}/${targetEpoch}`, {
-      slotsPerSecond: slotsPerSecond.toPrecision(3),
-      hoursLeft: hoursToGo.toPrecision(3),
-    });
+    const secondsLeft = (targetEpoch - epoch) / epochsPerSecond;
+    const slotsPerSecond = (epochsPerSecond * this.config.params.SLOTS_PER_EPOCH).toPrecision(3);
+    const timeLeft = isFinite(secondsLeft) ? prettyTimeDiff(1000 * secondsLeft) : "unknown";
+    this.logger.info(`Sync progress ${epoch}/${targetEpoch} - ${timeLeft} left - ${slotsPerSecond} slots/s`);
   }
 
   /**
