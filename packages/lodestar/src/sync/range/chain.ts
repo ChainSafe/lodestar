@@ -250,9 +250,6 @@ export class SyncChain {
       const blocks = await this.downloadBeaconBlocksByRange(peer, batch.request);
       batch.downloadingSuccess(blocks || []);
 
-      // TODO: verify that blocks are in range
-      // TODO: verify that blocks are sequential
-
       this.triggerBatchProcessor();
     } catch (e) {
       batch.downloadingError(e);

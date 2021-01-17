@@ -8,7 +8,6 @@ import {CommitteeIndex, Root, Slot, SyncingStatus} from "@chainsafe/lodestar-typ
 import {IRegularSync} from "./regular";
 import {BeaconReqRespHandler, IReqRespHandler} from "./reqResp";
 import {BeaconGossipHandler, IGossipHandler} from "./gossip";
-import {AttestationCollector, createStatus, RoundRobinArray, syncPeersStatus} from "./utils";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {List, toHexString} from "@chainsafe/ssz";
@@ -16,6 +15,13 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {getPeersInitialSync} from "./utils/bestPeers";
 import {ORARegularSync} from "./regular/oneRangeAhead/oneRangeAhead";
 import {SyncChain, ProcessChainSegment, DownloadBeaconBlocksByRange, GetPeersAndTargetEpoch} from "./range/chain";
+import {
+  assertSequentialBlocksInRange,
+  AttestationCollector,
+  createStatus,
+  RoundRobinArray,
+  syncPeersStatus,
+} from "./utils";
 
 export enum SyncMode {
   WAITING_PEERS,
@@ -166,6 +172,7 @@ export class BeaconSync implements IBeaconSync {
 
   private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
     const blocks = await this.network.reqResp.beaconBlocksByRange(peerId, request);
+    assertSequentialBlocksInRange(blocks || [], request);
     return blocks || [];
   };
 
