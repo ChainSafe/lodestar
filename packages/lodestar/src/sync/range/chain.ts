@@ -91,6 +91,7 @@ export class SyncChain {
     signal: AbortSignal,
     opts?: SyncChainOpts
   ) {
+    this.startEpoch = localFinalizedEpoch;
     this.processChainSegment = processChainSegment;
     this.downloadBeaconBlocksByRange = downloadBeaconBlocksByRange;
     this.getPeersAndTargetEpoch = getPeersAndTargetEpoch;
@@ -106,11 +107,6 @@ export class SyncChain {
       clearTimeout(this.maybeStuckTimeout);
       this.batchProcessor.end(new ErrorAborted("SyncChain"));
     });
-
-    // Get the *aligned* epoch that produces a batch containing the `localFinalizedEpoch`
-    this.startEpoch =
-      localFinalizedEpoch +
-      Math.floor((localFinalizedEpoch - localFinalizedEpoch) / this.opts.epochsPerBatch) * this.opts.epochsPerBatch;
   }
 
   /**
