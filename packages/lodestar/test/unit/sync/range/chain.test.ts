@@ -44,6 +44,11 @@ describe("sync / range / chain", () => {
       badBlocks: new Set(linspace(3 * SLOTS_PER_EPOCH, 10 * SLOTS_PER_EPOCH)),
     },
     {
+      id: "Simulate sync when right on genesis epoch",
+      startEpoch: 0,
+      targetEpoch: 0,
+    },
+    {
       id: "Simulate sync that must be completed immediatelly",
       startEpoch: 20,
       targetEpoch: 16,

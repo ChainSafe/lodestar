@@ -3,7 +3,7 @@ import {Checkpoint, Status} from "@chainsafe/lodestar-types";
 import {getSyncProtocols, INetwork} from "../../network";
 import {toHexString} from "@chainsafe/ssz";
 
-interface IPeerWithMetadata {
+export interface IPeerWithMetadata {
   peerId: PeerId;
   status: Status;
   score: number;
@@ -43,7 +43,9 @@ function getPeersThatSupportSync(network: INetwork): IPeerWithMetadata[] {
  *
  * Returns both the most common finalized checkpoint and the group or peers who agree on it
  */
-function getPeersByMostCommonFinalizedCheckpoint(peers: IPeerWithMetadata[]): IPeersByCheckpoint<Checkpoint> | null {
+export function getPeersByMostCommonFinalizedCheckpoint(
+  peers: IPeerWithMetadata[]
+): IPeersByCheckpoint<Checkpoint> | null {
   const peersByCheckpoint = groupPeersByCheckpoint(
     peers,
     (peer) => ({epoch: peer.status.finalizedEpoch, root: peer.status.finalizedRoot}),
