@@ -125,27 +125,26 @@ export class SyncChain {
     this.triggerBatchProcessor();
 
     // Start processing batches on demand in strict sequence
-    // TODO: Use abortableSource
     for await (const _ of this.batchProcessor) {
       clearTimeout(this.maybeStuckTimeout);
-      this.maybeStuckTimeout = setTimeout(this.syncMaybeStuck, this.opts.maybeStuckTimeoutMs);
 
       // Pull the current targetEpoch
       const {targetEpoch} = this.getPeersAndTargetEpoch() || {};
-      if (targetEpoch === undefined) {
-        this.logger.verbose("No targetEpoch available");
-        continue;
+      if (targetEpoch !== undefined) {
+        // TODO: Consider running this check less often after the sync is well tested
+        validateBatchesStatus(toArr(this.batches));
+
+        // If startEpoch of the next batch to be processed > targetEpoch -> Done
+        if (toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts) >= targetEpoch) {
+          break;
+        }
+
+        // Processes the next batch if ready
+        const batch = getNextBatchToProcess(toArr(this.batches));
+        if (batch) await this.processBatch(batch, targetEpoch);
       }
 
-      // TEMP
-      validateBatchesStatus(toArr(this.batches));
-
-      // If startEpoch of the next batch to be processed > targetEpoch -> Done
-      if (toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts) >= targetEpoch) {
-        break;
-      }
-
-      await this.processCompletedBatches(targetEpoch);
+      this.maybeStuckTimeout = setTimeout(this.syncMaybeStuck, this.opts.maybeStuckTimeoutMs);
     }
 
     clearTimeout(this.maybeStuckTimeout);
@@ -254,15 +253,6 @@ export class SyncChain {
       // Pre-emptively request more blocks from peers whilst we process current blocks
       this.triggerBatchDownloader();
     }
-  }
-
-  /**
-   * Processes the next ready batch if any
-   */
-  private async processCompletedBatches(targetEpoch: Epoch): Promise<void> {
-    // ES6 Map guarantees insertion order so older batches are processed first
-    const batch = getNextBatchToProcess(toArr(this.batches));
-    if (batch) await this.processBatch(batch, targetEpoch);
   }
 
   /**
