@@ -3,3 +3,4 @@ mkdocs-material>=5.0
 Pygments>=2.4
 markdown>=3.2
 pymdown-extensions>=7.0
+mkdocs-mermaid2-plugin>=0.4
