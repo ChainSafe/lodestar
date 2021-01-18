@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {LogLevel, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
-import Libp2p from "libp2p";
 import {Method, ReqRespEncoding} from "../../../src/constants";
 import {BeaconMetrics} from "../../../src/metrics";
 import {createPeerId, IReqRespOptions, Libp2pNetwork, NetworkEvent} from "../../../src/network";
@@ -50,10 +49,7 @@ describe("[network] network", function () {
 
   async function createAndConnectPeers(reqRespOpts?: IReqRespOptions): Promise<[Libp2pNetwork, Libp2pNetwork]> {
     const peerIdB = await createPeerId();
-    const [libP2pA, libP2pB] = await Promise.all([
-      (createNode(multiaddr) as unknown) as Libp2p,
-      (createNode(multiaddr, peerIdB) as unknown) as Libp2p,
-    ]);
+    const [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
 
     // Run tests with `DEBUG=true mocha ...` to get detailed logs of ReqResp exchanges
     const debugMode = process.env.DEBUG;

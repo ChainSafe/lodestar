@@ -18,7 +18,7 @@ describe("validate proposer slashing", () => {
 
   beforeEach(() => {
     isValidIncomingProposerSlashingStub = sandbox.stub(validatorStatusUtils, "isValidProposerSlashing");
-    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
+    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     dbStub = new StubbedBeaconDb(sandbox);
   });

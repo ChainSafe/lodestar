@@ -3,7 +3,6 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Attestation, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger, sleep, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import Libp2p from "libp2p";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../src/chain";
@@ -66,10 +65,7 @@ describe("[network] network", function () {
       config,
     });
     peerIdB = await createPeerId();
-    [libP2pA, libP2pB] = await Promise.all([
-      (createNode(multiaddr) as unknown) as Libp2p,
-      (createNode(multiaddr, peerIdB) as unknown) as Libp2p,
-    ]);
+    [libP2pA, libP2pB] = await Promise.all([createNode(multiaddr), createNode(multiaddr, peerIdB)]);
     netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
     netB = new Libp2pNetwork(opts, {config, libp2p: libP2pB, logger, metrics, validator, chain});
     await Promise.all([netA.start(), netB.start()]);
