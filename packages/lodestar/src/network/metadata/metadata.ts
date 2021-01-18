@@ -63,7 +63,7 @@ export class MetadataController {
     this._metadata.attnets = attnets;
   }
 
-  get metadata(): Metadata {
+  get all(): Metadata {
     return this._metadata;
   }
 

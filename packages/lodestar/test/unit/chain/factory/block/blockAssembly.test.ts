@@ -30,7 +30,7 @@ describe("block assembly", function () {
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     processBlockStub = sandbox.stub(processBlock, "processBlock");
 
-    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
+    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     forkChoiceStub = chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.clock = sandbox.createStubInstance(LocalClock);
     regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);

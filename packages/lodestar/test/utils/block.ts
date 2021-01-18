@@ -6,6 +6,7 @@ import {
   Attestation,
   Deposit,
   SignedVoluntaryExit,
+  SignedBeaconBlockHeader,
 } from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
@@ -42,6 +43,19 @@ export function generateEmptyBlock(): BeaconBlock {
 export function generateEmptySignedBlock(): SignedBeaconBlock {
   return {
     message: generateEmptyBlock(),
+    signature: EMPTY_SIGNATURE,
+  };
+}
+
+export function generateEmptySignedBlockHeader(): SignedBeaconBlockHeader {
+  return {
+    message: {
+      slot: 0,
+      proposerIndex: 0,
+      parentRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      bodyRoot: Buffer.alloc(32),
+    },
     signature: EMPTY_SIGNATURE,
   };
 }

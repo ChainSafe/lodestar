@@ -48,7 +48,7 @@ describe("sync req resp", function () {
     chainStub.getForkDigest.resolves(Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
-    networkStub.reqResp = (reqRespStub as unknown) as ReqResp & SinonStubbedInstance<ReqResp>;
+    networkStub.reqResp = reqRespStub as ReqResp & SinonStubbedInstance<ReqResp>;
     metaStub = sandbox.createStubInstance(Libp2pPeerMetadataStore);
     networkStub.peerMetadata = metaStub;
     dbStub = new StubbedBeaconDb(sandbox);

@@ -55,7 +55,7 @@ describe("[sync] rpc", function () {
   let rpcA: IReqRespHandler, netA: Libp2pNetwork;
   let rpcB: IReqRespHandler, netB: Libp2pNetwork;
   let libP2pA: Libp2p;
-  const validator: IGossipMessageValidator = ({} as unknown) as IGossipMessageValidator;
+  const validator: IGossipMessageValidator = {} as IGossipMessageValidator;
   let chain: MockBeaconChain;
 
   beforeEach(async () => {
@@ -79,11 +79,11 @@ describe("[sync] rpc", function () {
       epoch: computeEpochAtSlot(config, block.message.slot),
       root: config.types.BeaconBlock.hashTreeRoot(block.message),
     });
-    libP2pA = ((await createNode(multiaddr)) as unknown) as Libp2p;
+    libP2pA = await createNode(multiaddr);
     netA = new Libp2pNetwork(opts, {config, libp2p: libP2pA, logger, metrics, validator, chain});
     netB = new Libp2pNetwork(opts, {
       config,
-      libp2p: ((await createNode(multiaddr)) as unknown) as Libp2p,
+      libp2p: await createNode(multiaddr),
       logger,
       metrics,
       validator,
