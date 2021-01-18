@@ -58,7 +58,7 @@ export function getNextBatchToProcess(batches: Batch[]): Batch | undefined {
  */
 export function toBeProcessedStartEpoch(batches: Batch[], startEpoch: Epoch, opts: BatchOpts): Epoch {
   const startEpochs = batches
-    .filter((batch) => batch.state.status === BatchStatus.AwaitingProcessing)
+    .filter((batch) => batch.state.status === BatchStatus.AwaitingValidation)
     .map((batch) => batch.startEpoch);
   return startEpochs.length > 0 ? Math.max(...startEpochs) + opts.epochsPerBatch : startEpoch;
 }
