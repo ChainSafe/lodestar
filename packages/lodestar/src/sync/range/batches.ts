@@ -11,13 +11,15 @@ export function validateBatchesStatus(batches: Batch[]): void {
   let processing = 0;
   let preProcessing = 0;
   for (const batch of batches) {
-    switch (batch.state.status) {
+    const status = batch.state.status;
+    switch (status) {
       case BatchStatus.AwaitingValidation:
         if (processing > 0) throw Error("AwaitingValidation state found after Processing");
+        if (preProcessing > 0) throw Error("AwaitingValidation state found after PreProcessing");
         break;
 
       case BatchStatus.Processing:
-        if (preProcessing > 0) throw Error("AwaitingValidation state found after PreProcessing");
+        if (preProcessing > 0) throw Error("Processing state found after PreProcessing");
         if (processing > 0) throw Error("More than one Processing state found");
         processing++;
         break;
@@ -26,6 +28,10 @@ export function validateBatchesStatus(batches: Batch[]): void {
       case BatchStatus.Downloading:
       case BatchStatus.AwaitingProcessing:
         preProcessing++;
+        break;
+
+      default:
+        throw Error(`Unknown status: ${status}`);
     }
   }
 }
