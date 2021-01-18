@@ -63,7 +63,7 @@ export class BlockProcessor {
  */
 export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
   try {
-    await validateBlock({...modules, job});
+    validateBlock({...modules, job});
     await processBlock({...modules, job});
   } catch (e) {
     // above functions only throw BlockError
@@ -110,7 +110,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     }
 
     try {
-      await validateBlock({...modules, job: {...job, signedBlock: block}});
+      validateBlock({...modules, job: {...job, signedBlock: block}});
       // If the block is relevant, add it to the filtered chain segment.
       filteredChainSegment.push(block);
     } catch (e) {
