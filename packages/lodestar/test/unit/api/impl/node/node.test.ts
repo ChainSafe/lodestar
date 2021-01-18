@@ -48,7 +48,7 @@ describe("node api implementation", function () {
       networkStub.getEnr.returns(enr);
       networkStub.peerId = peerId;
       networkStub.metadata = {
-        get metadata(): Metadata {
+        get all(): Metadata {
           return {
             attnets: [true],
             seqNumber: BigInt(1),
