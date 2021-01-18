@@ -79,7 +79,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
 
   // Validate and filter out irrelevant blocks
   const filteredChainSegment: SignedBeaconBlock[] = [];
-  blocks.forEach(async (block, i) => {
+  for (const [i, block] of blocks.entries()) {
     const child = blocks[i + 1];
     if (child) {
       // If this block has a child in this chain segment, ensure that its parent root matches
@@ -117,10 +117,10 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
       switch ((e as BlockError).type.code) {
         // If the block is already known, simply ignore this block.
         case BlockErrorCode.BLOCK_IS_ALREADY_KNOWN:
-          return;
+          continue;
         // If the block is the genesis block, simply ignore this block.
         case BlockErrorCode.GENESIS_BLOCK:
-          return;
+          continue;
         // If the block is is for a finalized slot, simply ignore this block.
         //
         // The block is either:
@@ -135,7 +135,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
         // However, we will potentially get a `ParentUnknown` on a later block. The sync
         // protocol will need to ensure this is handled gracefully.
         case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
-          return;
+          continue;
         // Any other error whilst determining if the block was invalid, return that
         // error.
         default:
@@ -146,7 +146,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
           });
       }
     }
-  });
+  }
 
   await processChainSegment({
     ...modules,
