@@ -14,6 +14,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBeaconDb} from "../../db";
 import {verifySignatureSetsBatch} from "../bls";
+import {findLastIndex} from "../../util/array";
 
 export async function processBlock({
   forkChoice,
@@ -109,15 +110,6 @@ export async function processChainSegment({
     }
     const startEpoch = computeEpochAtSlot(config, firstBlock.message.slot);
 
-    const findLastIndex = <T>(array: T[], predicate: (value: T) => boolean): number => {
-      let i = array.length;
-      while (i--) {
-        if (predicate(array[i])) {
-          return i;
-        }
-      }
-      return -1;
-    };
     // The `lastIndex` indicates the position of the last block that is in the current
     // epoch of `startEpoch`.
     const lastIndex = findLastIndex(blocks, (block) => computeEpochAtSlot(config, block.message.slot) === startEpoch);
