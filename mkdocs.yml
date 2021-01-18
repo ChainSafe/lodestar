@@ -15,6 +15,14 @@ theme:
     accent: black
   nav_style: dark
 
+plugins:
+  - search
+  - mermaid2:
+      version: 8.6.4
+      arguments:
+          theme: |
+            ^(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'
+
 markdown_extensions:
   - meta
   - codehilite:
@@ -22,6 +30,12 @@ markdown_extensions:
   - admonition
   - toc:
       permalink: true
+  - pymdownx.superfences:
+      # make exceptions to highlighting of code (for mermaid):
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
 extra_css:
   - stylesheets/extras.css
 
@@ -41,6 +55,10 @@ extra:
 nav:
   - Getting started: index.md
   - Installation: installation.md
+  - Design:
+      - Beacon node architecture: design/architecture.md
+      - Beacon node events: design/events.md
+      - Lodestar packages dependency graph: design/depgraph.md
   - Usage:
       - Mainnet or public testnet: usage/testnet.md
       - Local testnet: usage/local.md
