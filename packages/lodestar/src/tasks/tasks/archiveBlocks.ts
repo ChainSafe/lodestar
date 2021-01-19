@@ -2,13 +2,13 @@
  * @module tasks
  */
 
-import {ITask} from "../interface";
-import {IBeaconDb} from "../../db/api";
-import {Checkpoint} from "@chainsafe/lodestar-types";
+import {computeEpochAtSlot, epochToCurrentForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-
+import {Checkpoint} from "@chainsafe/lodestar-types";
+import {ILogger, toHex, fromHex} from "@chainsafe/lodestar-utils";
+import {IBeaconDb} from "../../db/api";
+import {ITask} from "../interface";
 export interface IArchiveBlockModules {
   db: IBeaconDb;
   forkChoice: IForkChoice;
@@ -74,14 +74,27 @@ export class ArchiveBlocksTask implements ITask {
           return {
             key: summary.slot,
             value: blockBuffer,
+            fork: epochToCurrentForkVersion(this.config, computeEpochAtSlot(this.config, summary.slot)),
             summary,
           };
         })
       )
-    ).filter((kv) => kv.value);
+    ).filter((kv) => kv.value && kv.fork);
+    //group block summaries by fork
+    const blocksByFork: Map<string, typeof canonicalBlockEntries> = canonicalBlockEntries.reduce((agg, current) => {
+      const arr = agg.get(toHex(current.fork!));
+      if (!arr) {
+        agg.set(toHex(current.fork!), [current]);
+      } else {
+        arr.push(current);
+      }
+      return agg;
+    }, new Map());
     // put to blockArchive db and delete block db
     await Promise.all([
-      this.db.blockArchive.batchPutBinary(canonicalBlockEntries),
+      ...Array.from(blocksByFork.entries()).map(([fork, blockSummaries]) =>
+        this.db.blockArchive.batchPutBinary(blockSummaries, fromHex(fork))
+      ),
       this.db.block.batchDelete(canonicalSummaries.map((summary) => summary.blockRoot)),
     ]);
   }

@@ -96,5 +96,13 @@ export const BeaconParams = new ContainerType<IBeaconParams>({
     DOMAIN_VOLUNTARY_EXIT: ByteVector4,
     DOMAIN_SELECTION_PROOF: ByteVector4,
     DOMAIN_AGGREGATE_AND_PROOF: ByteVector4,
+
+    ALL_FORKS: new ContainerType({
+      fields: {
+        previousVersion: Number64,
+        currentVersion: Number64,
+        epoch: Number64,
+      },
+    }),
   },
 });

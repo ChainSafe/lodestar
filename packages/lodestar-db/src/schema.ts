@@ -10,10 +10,11 @@ export enum Bucket {
   // every state
   state = 0, // Root -> BeaconState
   // unfinalized blocks
-  // deprecated
+  // @deprecate
   // block = 1, // Root -> SignedBeaconBlock
   // finalized blocks
-  blockArchive = 2, // Slot -> SignedBeaconBlock
+  // @deprecate
+  //blockArchive = 2, // Slot -> SignedBeaconBlock
   blockArchiveParentRootIndex = 3, // parent Root -> Slot
   blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
@@ -47,6 +48,8 @@ export enum Bucket {
 
   phase0Block = 26,
   lightclientBlock = 27,
+  phase0BlockArchive = 28,
+  lightclientBlockArchive = 29,
 }
 
 export enum Key {

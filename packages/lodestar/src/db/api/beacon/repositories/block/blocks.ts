@@ -3,11 +3,13 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {Lightclient, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {InitialBlockRepository} from "./initial";
+import {lightClientForkVersionStub} from "../../const";
 import {LightClientBlockRepository} from "./ligthclient";
+import {toHex} from "@chainsafe/lodestar-utils";
 
 type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
 
-const lightClientForkVersionStub = Buffer.alloc(8, 1);
+type ForkHex = string;
 
 /**
  * Blocks by root
@@ -18,25 +20,25 @@ export class BlockRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected blockRepositories: Map<Version, Repository<Uint8Array, BlockType>>;
+  protected blockRepositories: Map<ForkHex, Repository<Uint8Array, BlockType>>;
 
   public constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
-    forkVersionBlockRepositories: Map<Version, Repository<Uint8Array, BlockType>> = new Map()
+    forkVersionBlockRepositories: Map<ForkHex, Repository<Uint8Array, BlockType>> = new Map()
   ) {
     this.config = config;
     this.db = db;
     this.blockRepositories = new Map([
-      [config.params.GENESIS_FORK_VERSION, new InitialBlockRepository(config, db)],
-      [lightClientForkVersionStub, new LightClientBlockRepository(config, db)],
+      [toHex(config.params.GENESIS_FORK_VERSION), new InitialBlockRepository(config, db)],
+      [toHex(lightClientForkVersionStub), new LightClientBlockRepository(config, db)],
       ...forkVersionBlockRepositories.entries(),
     ]);
   }
 
   public async get(id: Uint8Array, fork?: Version): Promise<BlockType | null> {
     if (fork) {
-      return (await this.blockRepositories.get(fork)?.get(id)) ?? null;
+      return (await this.blockRepositories.get(toHex(fork))?.get(id)) ?? null;
     } else {
       return await this.tryAllRepositories("get", id);
     }
@@ -44,7 +46,7 @@ export class BlockRepository {
 
   public async getBinary(id: Uint8Array, fork?: Version): Promise<Buffer | null> {
     if (fork) {
-      return this.blockRepositories.get(fork)?.getBinary(id) ?? null;
+      return (await this.blockRepositories.get(toHex(fork))?.getBinary(id)) ?? null;
     } else {
       return await this.tryAllRepositories("getBinary", id);
     }
@@ -60,7 +62,7 @@ export class BlockRepository {
 
   public async batchDelete(ids: Uint8Array[], fork?: Version): Promise<void> {
     if (fork) {
-      await this.blockRepositories.get(fork)?.batchDelete(ids);
+      await this.blockRepositories.get(toHex(fork))?.batchDelete(ids);
     } else {
       await Promise.all(Array.from(this.blockRepositories.values()).map((repo) => repo.batchDelete(ids)));
     }
@@ -88,7 +90,7 @@ export class BlockRepository {
     if (!fork) {
       throw new Error("Not supported fork. " + JSON.stringify({currentFork: fork, slot}));
     }
-    const repo = this.blockRepositories.get(fork);
+    const repo = this.blockRepositories.get(toHex(fork));
     if (!repo) {
       throw new Error("No supported block repositories for fork. " + JSON.stringify({currentFork: fork, slot}));
     }

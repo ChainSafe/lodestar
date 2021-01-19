@@ -23,10 +23,12 @@ export function computeForkDigest(
 }
 
 export function epochToCurrentForkVersion(config: IBeaconConfig, epoch: Epoch): Version | null {
-  for (const fork of config.params.ALL_FORKS) {
-    if (config.types.Epoch.equals(fork.epoch, epoch)) {
-      return intToBytes(fork.currentVersion, 8, "le");
+  const forks = config.params.ALL_FORKS;
+  for (const fork of forks) {
+    if (epoch < fork.epoch) {
+      return intToBytes(fork.previousVersion, 4, "le");
     }
   }
-  return null;
+  //epoch is beyond last known fork checkpoint, take current version of last fork
+  return intToBytes(forks[forks.length - 1].currentVersion, 4, "le");
 }

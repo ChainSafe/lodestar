@@ -20,7 +20,6 @@ import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GENESIS_EPOCH, Method, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
-import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork} from "../../network";
 import {RpcError} from "../../network/error";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
@@ -28,6 +27,7 @@ import {ReqRespRequest} from "../../network/reqresp";
 import {sendResponse, sendResponseStream} from "../../network/reqresp/respUtils";
 import {createStatus, syncPeersStatus} from "../utils/sync";
 import {IReqRespHandler} from "./interface";
+import {IBlockFilterOptions} from "../../db/api/beacon/repositories/blockArchive/abstract";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;

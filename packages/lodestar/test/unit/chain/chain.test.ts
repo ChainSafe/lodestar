@@ -47,6 +47,7 @@ describe("BeaconChain", function () {
     });
 
     it("should get enr fork id if found next fork", async () => {
+      const backup = config.params.ALL_FORKS;
       config.params.ALL_FORKS = [
         {
           currentVersion: 2,
@@ -60,7 +61,7 @@ describe("BeaconChain", function () {
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id
       config.types.ENRForkID.hashTreeRoot(enrForkID);
-      config.params.ALL_FORKS = undefined!;
+      config.params.ALL_FORKS = backup;
     });
   });
 });
