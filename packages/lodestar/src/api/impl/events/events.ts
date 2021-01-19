@@ -41,7 +41,7 @@ export class EventsApi implements IEventsApi {
       return () => {
         for (const topic of topics) {
           const eventHandler = eventHandlerMapping[topic];
-          this.chain.emitter.removeListener(eventHandler.chainEvent, eventHandler.handler);
+          this.chain.emitter.off(eventHandler.chainEvent, eventHandler.handler as (...args: unknown[]) => void);
         }
       };
     });

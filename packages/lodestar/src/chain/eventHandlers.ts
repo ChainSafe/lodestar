@@ -95,7 +95,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     "abort",
     () => {
       handlers.forEach((handler, event) => {
-        this.internalEmitter.removeListener(event, handler);
+        this.internalEmitter.off(event, handler);
       });
     },
     {once: true}
@@ -219,7 +219,7 @@ export async function onBlock(
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-  this.logger.debug("Block processed", {
+  this.logger.info("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
@@ -309,7 +309,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     return;
   }
 
-  this.logger.debug("Block error", {}, err);
+  this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
@@ -318,8 +318,8 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      await this.db.pendingBlock.add(err.job.signedBlock);
       this.pendingBlocks.addBySlot(err.job.signedBlock);
+      await this.db.pendingBlock.add(err.job.signedBlock);
       break;
 
     case BlockErrorCode.PARENT_UNKNOWN:

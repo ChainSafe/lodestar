@@ -27,10 +27,24 @@ describe("processBlock", function () {
     sinon.restore();
   });
 
+  it("should throw on unknown parent", async function () {
+    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
+    signedBlock.message.slot = 1;
+    const job = getNewBlockJob(signedBlock);
+    forkChoice.hasBlock.returns(false);
+    try {
+      await processBlock({forkChoice, db: dbStub, regen, emitter, job});
+      expect.fail("block should throw");
+    } catch (e) {
+      expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
+    }
+  });
+
   it("should throw on missing prestate", async function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
+    forkChoice.hasBlock.returns(true);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
       await processBlock({

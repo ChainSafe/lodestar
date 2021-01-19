@@ -12,7 +12,7 @@ import {getEpochBeaconCommittees, resolveStateId} from "../../../../../../src/ap
 import {BeaconChain, IBeaconChain} from "../../../../../../src/chain";
 import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
 import {generateBlockSummary} from "../../../../../utils/block";
-import {generateState} from "../../../../../utils/state";
+import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateValidator} from "../../../../../utils/validator";
 
@@ -30,7 +30,7 @@ describe("beacon state api utils", function () {
 
     it("resolve head state id - success", async function () {
       forkChoiceStub.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "head");
       expect(state).to.not.be.null;
       expect(forkChoiceStub.getHead.calledOnce).to.be.true;
@@ -46,7 +46,7 @@ describe("beacon state api utils", function () {
 
     it("resolve finalized state id - success", async function () {
       forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
       expect(state).to.not.be.null;
       expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
@@ -64,7 +64,7 @@ describe("beacon state api utils", function () {
 
     it("resolve justified state id - success", async function () {
       forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
       expect(state).to.not.be.null;
       expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;
@@ -81,14 +81,14 @@ describe("beacon state api utils", function () {
     });
 
     it("resolve state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
       expect(dbStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
       expect(dbStub.stateCache.get.calledOnce).to.be.true;
@@ -103,7 +103,7 @@ describe("beacon state api utils", function () {
       forkChoiceStub.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateState(), epochCtx: null!});
+      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
       const state = await resolveStateId(config, dbStub, forkChoiceStub, "123");
       expect(state).to.not.be.null;
       expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
@@ -165,7 +165,7 @@ describe("beacon state api utils", function () {
 
     function getApiContext(): ApiStateContext {
       return {
-        state: generateState(),
+        state: generateCachedState(),
         epochCtx: {
           currentShuffling: {
             committees: [

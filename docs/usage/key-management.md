@@ -52,8 +52,8 @@ This command will:
 
 - Derive a new BLS keypair from the wallet `primary`.
 - Create a new directory in `.lodestar/keystores` containing:
-  - An encrypted Keystore with the validator voting keypair.
-  - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
+      - An encrypted Keystore with the validator voting keypair.
+      - An eth1_deposit_data.rlp file with the precomputed Eth1 deposit transaction data ready to be submitted to the deposit contract.
 - Store the validator voting Keystore password in `.lodestar/secrets`.
 - Print the validator public key to the terminal
 

@@ -79,9 +79,6 @@ describe.skip("Run multi node single thread interop validators (no eth1) until c
       // Start all validators at once.
       await Promise.all(validators.map((validator) => validator.start()));
 
-      // Uncomment this to visualize validator dutties and attestations
-      // printBeaconCliMetrics(nodes[0]);
-
       // Wait for justified checkpoint on all nodes
       await Promise.all(nodes.map((node) => waitForEvent<Checkpoint>(node.chain.emitter, checkpointEvent, 240000)));
       logger.info("All nodes reached justified checkpoint");

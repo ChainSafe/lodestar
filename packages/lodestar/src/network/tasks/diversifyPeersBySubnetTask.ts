@@ -49,8 +49,10 @@ export class DiversifyPeersBySubnetTask {
   public run = async (): Promise<void> => {
     this.logger.info("Running DiversifyPeersBySubnetTask");
     this.logger.profile("DiversifyPeersBySubnetTask");
-
-    const missingSubnets = this.isSynced ? findMissingSubnets(this.network) : [];
+    // network getPeers() is expensive, we don't want to call it multiple times
+    const connectedPeers = this.network.getPeers();
+    const connectedPeerIds = connectedPeers.map((peer) => peer.id);
+    const missingSubnets = this.isSynced ? findMissingSubnets(connectedPeerIds, this.network) : [];
     if (missingSubnets.length > 0) {
       this.logger.verbose("Searching peers for missing subnets", {missingSubnets});
     } else {
@@ -62,8 +64,8 @@ export class DiversifyPeersBySubnetTask {
     }
 
     const toDiscPeers: PeerId[] = this.isSynced
-      ? gossipPeersToDisconnect(this.network, missingSubnets.length, this.network.getMaxPeer()) || []
-      : syncPeersToDisconnect(this.network) || [];
+      ? gossipPeersToDisconnect(connectedPeers, this.network, missingSubnets.length, this.network.getMaxPeer()) || []
+      : syncPeersToDisconnect(connectedPeers, this.network) || [];
 
     if (toDiscPeers.length > 0) {
       this.logger.verbose("Disconnecting peers to find new peers", {
@@ -77,15 +79,11 @@ export class DiversifyPeersBySubnetTask {
       }
     }
 
-    await Promise.all(
-      missingSubnets.map(async (subnet) => {
-        try {
-          await this.network.searchSubnetPeers(String(subnet));
-        } catch (e) {
-          this.logger.warn("Cannot connect to peers on subnet", {subnet, error: e.message});
-        }
-      })
-    );
+    try {
+      await this.network.searchSubnetPeers(missingSubnets.map((subnet) => String(subnet)));
+    } catch (e) {
+      this.logger.warn("Cannot connect to peers on subnet", {subnet: missingSubnets, error: e.message});
+    }
 
     this.logger.profile("DiversifyPeersBySubnetTask");
   };

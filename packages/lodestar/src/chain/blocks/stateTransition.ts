@@ -1,5 +1,5 @@
-import {byteArrayEquals, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Slot} from "@chainsafe/lodestar-types";
+import {byteArrayEquals} from "@chainsafe/ssz";
+import {Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   ZERO_HASH,
@@ -10,10 +10,6 @@ import {
   toIStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {
-  getAllBlockSignatureSets,
-  getAllBlockSignatureSetsExceptProposer,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";
@@ -21,8 +17,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
-import {BlockError, BlockErrorCode} from "../errors";
-import {verifySignatureSetsBatch} from "../bls";
+import {StateTransitionEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -65,26 +60,30 @@ export async function processSlotsToNearestCheckpoint(
   emitter: ChainEventEmitter,
   stateCtx: ITreeStateContext,
   slot: Slot
-): Promise<ITreeStateContext> {
+): Promise<IStateContext> {
   const config = stateCtx.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = stateCtx.state.slot;
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
-  let postCtx = cloneStateCtx(stateCtx);
+  const postCtx = cloneStateCtx(stateCtx);
+  const stateTransitionState = postCtx.state;
+  const stateTranstionEpochContext = new StateTransitionEpochContext(undefined, postCtx.epochCtx);
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
-    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
-    emitCheckpointEvent(emitter, postCtx);
-    postCtx = cloneStateCtx(postCtx);
+    processSlots(stateTranstionEpochContext, stateTransitionState, nextEpochSlot);
+    const checkpointCtx = toTreeStateContext(toIStateContext(stateTranstionEpochContext, stateTransitionState));
+    emitCheckpointEvent(emitter, cloneStateCtx(checkpointCtx));
     // this avoids keeping our node busy processing blocks
     await sleep(0);
   }
-  return postCtx;
+  return {
+    epochCtx: stateTranstionEpochContext,
+    state: stateTransitionState,
+  };
 }
 
 /**
@@ -97,12 +96,11 @@ export async function processSlotsByCheckpoint(
   stateCtx: ITreeStateContext,
   slot: Slot
 ): Promise<ITreeStateContext> {
-  let postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
+  const postCtx = await processSlotsToNearestCheckpoint(emitter, stateCtx, slot);
   if (postCtx.state.slot < slot) {
     processSlots(postCtx.epochCtx, postCtx.state, slot);
-    postCtx = toTreeStateContext(toIStateContext(postCtx.epochCtx, postCtx.state));
   }
-  return postCtx;
+  return toTreeStateContext(postCtx);
 }
 
 export function emitForkChoiceHeadEvents(
@@ -141,28 +139,10 @@ export async function runStateTransition(
   const config = stateContext.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
-  const checkpointStateContext = await processSlotsToNearestCheckpoint(emitter, stateContext, postSlot - 1);
-
-  if (!job.validSignatures) {
-    const {epochCtx, state} = checkpointStateContext;
-    const signatureSets = job.validProposerSignature
-      ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-      : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
-
-    if (!verifySignatureSetsBatch(signatureSets)) {
-      throw new BlockError({
-        code: BlockErrorCode.INVALID_SIGNATURE,
-        job,
-      });
-    }
-
-    job.validProposerSignature = true;
-    job.validSignatures = true;
-  }
 
   // if block is trusted don't verify proposer or op signature
   const postStateContext = toTreeStateContext(
-    fastStateTransition(checkpointStateContext, job.signedBlock, {
+    fastStateTransition(stateContext, job.signedBlock, {
       verifyStateRoot: true,
       verifyProposer: !job.validSignatures && !job.validProposerSignature,
       verifySignatures: !job.validSignatures,
@@ -175,7 +155,7 @@ export async function runStateTransition(
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
     ?.epochCtx.epochBalances;
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, justifiedBalances);
+  forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
 
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
@@ -196,7 +176,7 @@ export async function runStateTransition(
  */
 function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
   const treeStateCtx: ITreeStateContext = {
-    state: stateCtx.state as TreeBacked<BeaconState>,
+    state: stateCtx.state,
     epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
   };
 

@@ -11,7 +11,7 @@ import {ChainEvent, ChainEventEmitter} from "../../../../src/chain";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {generateAttestation} from "../../../utils/attestation";
-import {generateState} from "../../../utils/state";
+import {generateCachedState} from "../../../utils/state";
 
 describe("processAttestation", function () {
   const emitter = new ChainEventEmitter();
@@ -47,7 +47,7 @@ describe("processAttestation", function () {
 
   it("should throw on errored getIndexedAttestation", async function () {
     const attestation = generateAttestation();
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.getIndexedAttestation.throws();
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
@@ -66,7 +66,7 @@ describe("processAttestation", function () {
 
   it("should throw on invalid indexed attestation", async function () {
     const attestation = generateAttestation();
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
@@ -86,7 +86,7 @@ describe("processAttestation", function () {
 
   it("should emit 'attestation' event on processed attestation", async function () {
     const attestation = generateAttestation();
-    const state = generateState();
+    const state = generateCachedState();
     const epochCtx = sinon.createStubInstance(EpochContext);
     epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
     regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});

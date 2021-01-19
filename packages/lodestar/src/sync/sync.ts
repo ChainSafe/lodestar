@@ -81,8 +81,8 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
     this.mode = SyncMode.STOPPED;
-    this.chain.emitter.removeListener(ChainEvent.errorBlock, this.onUnknownBlockRoot);
-    this.regularSync.removeListener("syncCompleted", this.syncCompleted);
+    this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
+    this.regularSync.off("syncCompleted", this.syncCompleted);
     this.stopSyncTimer();
     await this.initialSync.stop();
     await this.regularSync.stop();
@@ -171,7 +171,7 @@ export class BeaconSync implements IBeaconSync {
 
   private logPeerCount = (): void => {
     this.logger.info("Peer status", {
-      activePeers: this.network.getPeers({connected: true}).length,
+      activePeers: this.network.getPeers().length,
       syncPeers: this.getSyncPeers().length,
       unknownRootPeers: this.getUnknownRootPeers().length,
     });
@@ -200,7 +200,7 @@ export class BeaconSync implements IBeaconSync {
 
   private getPeers(protocols: string[]): PeerId[] {
     return this.network
-      .getPeers({connected: true, supportsProtocols: protocols})
+      .getPeers({supportsProtocols: protocols})
       .filter((peer) => {
         return !!this.network.peerMetadata.getStatus(peer.id) && this.network.peerRpcScores.getScore(peer.id) > 50;
       })

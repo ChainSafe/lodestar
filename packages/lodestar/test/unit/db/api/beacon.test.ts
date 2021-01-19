@@ -25,10 +25,10 @@ describe("beacon db - post block processing", function () {
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
-    dbStub = (new BeaconDb({
+    dbStub = new BeaconDb({
       config,
       controller: sandbox.createStubInstance(LevelDbController),
-    }) as unknown) as StubbedBeaconDb;
+    }) as StubbedBeaconDb;
     dbStub.depositEvent = sandbox.createStubInstance(DepositEventRepository) as any;
     dbStub.voluntaryExit = sandbox.createStubInstance(VoluntaryExitRepository) as any;
     dbStub.proposerSlashing = sandbox.createStubInstance(ProposerSlashingRepository) as any;

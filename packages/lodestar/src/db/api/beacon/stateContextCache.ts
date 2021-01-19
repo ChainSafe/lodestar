@@ -1,10 +1,11 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {
-  state: TreeBacked<BeaconState>;
+  state: CachedValidatorsBeaconState; // TreeBacked<BeaconState>
   epochCtx: LodestarEpochContext;
 }
 
@@ -40,7 +41,9 @@ export class StateContextCache {
   }
 
   public async add(item: ITreeStateContext): Promise<void> {
-    this.cache[toHexString(item.state.hashTreeRoot())] = this.clone(item);
+    this.cache[toHexString((item.state.getOriginalState() as TreeBacked<BeaconState>).hashTreeRoot())] = this.clone(
+      item
+    );
   }
 
   public async delete(root: ByteVector): Promise<void> {
@@ -67,9 +70,10 @@ export class StateContextCache {
     const MAX_STATES = 96;
     const keys = Object.keys(this.cache);
     if (keys.length > MAX_STATES) {
+      const headStateRootHex = toHexString(headStateRoot);
       // object keys are stored in insertion order, delete keys starting from the front
       for (const key of keys.slice(0, keys.length - MAX_STATES)) {
-        if (key !== toHexString(headStateRoot)) {
+        if (key !== headStateRootHex) {
           delete this.cache[key];
         }
       }

@@ -1,13 +1,13 @@
 import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
-import {EpochContext} from "../util";
+import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
 
 export function processProposerSlashing(
   epochCtx: EpochContext,
-  state: BeaconState,
+  state: CachedValidatorsBeaconState,
   proposerSlashing: ProposerSlashing,
   verifySignatures = true
 ): void {

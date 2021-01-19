@@ -1,6 +1,6 @@
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {verifyBlockSignature} from "./util";
+import {CachedValidatorsBeaconState, verifyBlockSignature} from "./util";
 import {IStateContext} from "./util";
 import {StateTransitionEpochContext} from "./util/epochContext";
 import {EpochContext} from "./util/epochContext";
@@ -22,7 +22,7 @@ export function fastStateTransition(
   const types = epochCtx.config.types;
 
   const block = signedBlock.message;
-  const postState = types.BeaconState.clone(state);
+  const postState = state.clone();
   // process slots (including those with no blocks) since block
   processSlots(epochCtx, postState, block.slot);
 
@@ -46,7 +46,10 @@ export function fastStateTransition(
 /**
  * Trim epochProcess in epochCtx, and insert the standard/exchange interface epochProcess to the final IStateContext
  */
-export function toIStateContext(epochCtx: StateTransitionEpochContext, state: BeaconState): IStateContext {
+export function toIStateContext(
+  epochCtx: StateTransitionEpochContext,
+  state: CachedValidatorsBeaconState
+): IStateContext {
   const epochProcess = epochCtx.epochProcess;
   epochCtx.epochProcess = undefined;
   return {

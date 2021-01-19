@@ -27,11 +27,11 @@ export async function validateGossipBlock(
     });
   }
 
-  const currentSlot = chain.clock.currentSlot;
-  if (currentSlot < blockSlot) {
+  const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
+  if (currentSlotWithGossipDisparity < blockSlot) {
     throw new BlockError({
       code: BlockErrorCode.FUTURE_SLOT,
-      currentSlot,
+      currentSlot: currentSlotWithGossipDisparity,
       blockSlot,
       job: blockJob,
     });

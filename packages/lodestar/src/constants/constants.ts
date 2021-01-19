@@ -10,6 +10,7 @@ export const FAR_FUTURE_EPOCH = Infinity;
 export const ZERO_HASH = Buffer.alloc(32, 0);
 export const EMPTY_SIGNATURE = Buffer.alloc(96, 0);
 export const GRAFFITI_SIZE = 32;
+export const MAX_VARINT_BYTES = 10;
 
 // Domain Types
 export enum DomainType {
@@ -21,3 +22,8 @@ export enum DomainType {
   SELECTION_PROOF = 5,
   AGGREGATE_AND_PROOF = 6,
 }
+
+/**
+ * The maximum milliseconds of clock disparity assumed between honest nodes.
+ */
+export const MAXIMUM_GOSSIP_CLOCK_DISPARITY = 500;

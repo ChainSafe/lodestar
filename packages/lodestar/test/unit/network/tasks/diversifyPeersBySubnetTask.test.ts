@@ -35,8 +35,8 @@ describe("DiversifyPeersBySubnetTask", function () {
     networkStub.getPeers.returns([]);
     await task.handleSyncCompleted();
     await task.run();
-
-    expect(networkStub.searchSubnetPeers.callCount).to.be.equal(64);
+    const allSubnets = Array.from({length: 64}, (_, i) => String(i));
+    expect(networkStub.searchSubnetPeers.calledOnceWithExactly(allSubnets)).to.be.true;
   });
 
   it("should not search subnets", async () => {
@@ -74,7 +74,8 @@ describe("DiversifyPeersBySubnetTask", function () {
 
     await task.handleSyncCompleted();
     await task.run();
-
-    expect(networkStub.searchSubnetPeers.callCount).to.be.equal(61);
+    // subnet 0,1,2 are connected
+    const missingSubnets = Array.from({length: 61}, (_, i) => String(i + 3));
+    expect(networkStub.searchSubnetPeers.calledOnceWithExactly(missingSubnets)).to.be.true;
   });
 });

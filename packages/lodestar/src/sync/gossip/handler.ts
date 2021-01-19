@@ -36,7 +36,7 @@ export class BeaconGossipHandler implements IGossipHandler {
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public handleSyncCompleted(): void {

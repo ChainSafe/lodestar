@@ -74,20 +74,4 @@ describe("validateBlock", function () {
       expect(e.type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
     }
   });
-
-  it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
-    signedBlock.message.slot = 1;
-    const job = getNewBlockJob(signedBlock);
-    forkChoice.hasBlock.returns(false);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlot").get(() => 1);
-    forkChoice.hasBlock.returns(false);
-    try {
-      await validateBlock({config, forkChoice, clock, job});
-      expect.fail("block should throw");
-    } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
-    }
-  });
 });
