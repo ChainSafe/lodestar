@@ -179,7 +179,10 @@ export class BeaconSync implements IBeaconSync {
   private getPeersAndTargetEpoch: GetPeersAndTargetEpoch = () => {
     const minPeers = this.opts.minPeers ?? defaultSyncOptions.minPeers;
     const peerSet = getPeersInitialSync(this.network);
-    if (!peerSet || peerSet.peers.length < minPeers) {
+    if (!peerSet && minPeers === 0) {
+      this.logger.info("minPeers=0, skipping initial sync");
+      return {peers: [], targetEpoch: this.chain.forkChoice.getFinalizedBlock().finalizedEpoch};
+    } else if (!peerSet || peerSet.peers.length < minPeers) {
       this.logger.info(`Waiting for minPeers: ${peerSet?.peers?.length ?? 0}/${minPeers}`);
       return null;
     } else {
