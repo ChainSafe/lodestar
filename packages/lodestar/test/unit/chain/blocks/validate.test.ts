@@ -4,7 +4,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {validateBlocks} from "../../../../src/chain/blocks/validate";
+import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {getNewBlockJob} from "../../../utils/block";
@@ -26,7 +26,7 @@ describe("validateBlock", function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
     try {
-      await validateBlocks({config, forkChoice, clock, jobs: [job]});
+      await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
@@ -39,7 +39,7 @@ describe("validateBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);
     try {
-      await validateBlocks({config, forkChoice, clock, jobs: [job]});
+      await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
@@ -53,7 +53,7 @@ describe("validateBlock", function () {
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32)});
     try {
-      await validateBlocks({config, forkChoice, clock, jobs: [job]});
+      await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
@@ -66,28 +66,12 @@ describe("validateBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlotWithGossipDisparity").get(() => 0);
+    sinon.stub(clock, "currentSlot").get(() => 0);
     try {
-      await validateBlocks({config, forkChoice, clock, jobs: [job]});
+      await validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
-    }
-  });
-
-  it("should throw on unknown parent", async function () {
-    const signedBlock = config.types.SignedBeaconBlock.defaultValue();
-    signedBlock.message.slot = 1;
-    const job = getNewBlockJob(signedBlock);
-    forkChoice.hasBlock.returns(false);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
-    sinon.stub(clock, "currentSlotWithGossipDisparity").get(() => 1);
-    forkChoice.hasBlock.returns(false);
-    try {
-      await validateBlocks({config, forkChoice, clock, jobs: [job]});
-      expect.fail("block should throw");
-    } catch (e) {
-      expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
     }
   });
 });

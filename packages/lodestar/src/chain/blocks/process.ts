@@ -1,48 +1,181 @@
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {
+  getAllBlockSignatureSets,
+  getAllBlockSignatureSetsExceptProposer,
+  ISignatureSet,
+} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
 
 import {ChainEventEmitter} from "../emitter";
-import {IBlockJob} from "../interface";
+import {IBlockJob, IChainSegmentJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
-import {IStateRegenerator} from "../regen";
-import {BlockError, BlockErrorCode} from "../errors";
+import {IStateRegenerator, RegenError} from "../regen";
+import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBeaconDb} from "../../db";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {verifySignatureSetsBatch} from "../bls";
+import {findLastIndex} from "../../util/array";
 
-export async function processBlocks({
+export async function processBlock({
   forkChoice,
   regen,
   emitter,
   db,
-  jobs,
+  job,
 }: {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   db: IBeaconDb;
-  jobs: IBlockJob[];
+  job: IBlockJob;
 }): Promise<void> {
-  let preStateContext: ITreeStateContext;
-  try {
-    preStateContext = await regen.getPreState(jobs[0].signedBlock.message);
-  } catch (e) {
+  if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
     throw new BlockError({
-      code: BlockErrorCode.PRESTATE_MISSING,
-      job: jobs[0],
+      code: BlockErrorCode.PARENT_UNKNOWN,
+      parentRoot: job.signedBlock.message.parentRoot.valueOf() as Uint8Array,
+      job,
     });
   }
 
-  for (const job of jobs) {
-    try {
-      preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, job);
-    } catch (e) {
-      if (e instanceof BlockError) {
-        throw e;
+  try {
+    const preStateContext = await regen.getPreState(job.signedBlock.message);
+
+    if (!job.validSignatures) {
+      const {epochCtx, state} = preStateContext;
+      const signatureSets = job.validProposerSignature
+        ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
+        : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
+
+      if (!verifySignatureSetsBatch(signatureSets)) {
+        throw new BlockError({
+          code: BlockErrorCode.INVALID_SIGNATURE,
+          job,
+        });
       }
 
+      job.validProposerSignature = true;
+      job.validSignatures = true;
+    }
+
+    await runStateTransition(emitter, forkChoice, db, preStateContext, job);
+  } catch (e) {
+    if (e instanceof RegenError) {
       throw new BlockError({
+        code: BlockErrorCode.PRESTATE_MISSING,
+        job,
+      });
+    }
+
+    if (e instanceof BlockError) {
+      throw e;
+    }
+
+    throw new BlockError({
+      code: BlockErrorCode.BEACON_CHAIN_ERROR,
+      error: e,
+      job,
+    });
+  }
+}
+
+export async function processChainSegment({
+  config,
+  forkChoice,
+  regen,
+  emitter,
+  db,
+  job,
+}: {
+  config: IBeaconConfig;
+  forkChoice: IForkChoice;
+  regen: IStateRegenerator;
+  emitter: ChainEventEmitter;
+  db: IBeaconDb;
+  job: IChainSegmentJob;
+}): Promise<void> {
+  let importedBlocks = 0;
+  let blocks = job.signedBlocks;
+
+  // Process segment epoch by epoch
+  while (blocks.length) {
+    const firstBlock = blocks[0];
+    // First ensure that the segment's parent has been processed
+    if (!forkChoice.hasBlock(firstBlock.message.parentRoot)) {
+      throw new ChainSegmentError({
+        code: BlockErrorCode.PARENT_UNKNOWN,
+        parentRoot: firstBlock.message.parentRoot.valueOf() as Uint8Array,
+        job,
+        importedBlocks,
+      });
+    }
+    const startEpoch = computeEpochAtSlot(config, firstBlock.message.slot);
+
+    // The `lastIndex` indicates the position of the last block that is in the current
+    // epoch of `startEpoch`.
+    const lastIndex = findLastIndex(blocks, (block) => computeEpochAtSlot(config, block.message.slot) === startEpoch);
+
+    // Split off the first section blocks that are all either within the current epoch of
+    // the first block. These blocks can all be signature-verified with the same
+    // `BeaconState`.
+    const blocksInEpoch = blocks.slice(0, lastIndex);
+    blocks = blocks.slice(lastIndex);
+
+    try {
+      let preStateContext = await regen.getPreState(firstBlock.message);
+
+      // Verify the signature of the blocks, returning early if the signature is invalid.
+      if (!job.validSignatures) {
+        const signatureSets: ISignatureSet[] = [];
+        for (const block of blocksInEpoch) {
+          const {epochCtx, state} = preStateContext;
+          signatureSets.push(
+            ...(job.validProposerSignature
+              ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, block)
+              : getAllBlockSignatureSets(epochCtx, state, block))
+          );
+        }
+
+        if (!verifySignatureSetsBatch(signatureSets)) {
+          throw new ChainSegmentError({
+            code: BlockErrorCode.INVALID_SIGNATURE,
+            job,
+            importedBlocks,
+          });
+        }
+      }
+
+      for (const block of blocksInEpoch) {
+        preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, {
+          reprocess: job.reprocess,
+          prefinalized: job.prefinalized,
+          signedBlock: block,
+          validProposerSignature: true,
+          validSignatures: true,
+        });
+        importedBlocks++;
+      }
+    } catch (e) {
+      if (e instanceof RegenError) {
+        throw new ChainSegmentError({
+          code: BlockErrorCode.PRESTATE_MISSING,
+          job,
+          importedBlocks,
+        });
+      }
+
+      if (e instanceof BlockError) {
+        throw new ChainSegmentError({
+          ...e.type,
+          job,
+          importedBlocks,
+        });
+      }
+
+      throw new ChainSegmentError({
         code: BlockErrorCode.BEACON_CHAIN_ERROR,
         error: e,
         job,
+        importedBlocks,
       });
     }
   }

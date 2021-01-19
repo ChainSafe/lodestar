@@ -10,10 +10,6 @@ import {
   toIStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
-import {
-  getAllBlockSignatureSets,
-  getAllBlockSignatureSetsExceptProposer,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";
@@ -21,8 +17,6 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
-import {BlockError, BlockErrorCode} from "../errors";
-import {verifySignatureSetsBatch} from "../bls";
 import {StateTransitionEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
 
 /**
@@ -145,28 +139,10 @@ export async function runStateTransition(
   const config = stateContext.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
-  const checkpointStateContext = await processSlotsToNearestCheckpoint(emitter, stateContext, postSlot - 1);
-
-  if (!job.validSignatures) {
-    const {epochCtx, state} = checkpointStateContext;
-    const signatureSets = job.validProposerSignature
-      ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-      : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
-
-    if (!verifySignatureSetsBatch(signatureSets)) {
-      throw new BlockError({
-        code: BlockErrorCode.INVALID_SIGNATURE,
-        job,
-      });
-    }
-
-    job.validProposerSignature = true;
-    job.validSignatures = true;
-  }
 
   // if block is trusted don't verify proposer or op signature
   const postStateContext = toTreeStateContext(
-    fastStateTransition(checkpointStateContext, job.signedBlock, {
+    fastStateTransition(stateContext, job.signedBlock, {
       verifyStateRoot: true,
       verifyProposer: !job.validSignatures && !job.validProposerSignature,
       verifySignatures: !job.validSignatures,
