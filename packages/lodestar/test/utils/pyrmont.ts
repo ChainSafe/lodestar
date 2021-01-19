@@ -3,28 +3,29 @@ import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/mainnet";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
+import * as pyrmontTestnet from "@chainsafe/lodestar-cli/src/networks/pyrmont"
 
-export const medalla = {
+export const pyrmont = {
   providerUrl: goerliRpcUrl,
-  depositBlock: 3085928,
-  // Medalla optimized blocks for quick testing
+  depositBlock: pyrmontTestnet.depositContractDeployBlock,
+  // Pyrmont optimized blocks for quick testing
   blockWithDepositActivity: 3124889,
 };
 
 /**
- * Medalla specs
+ * Pyrmont specs
  */
-export function getMedallaConfig(): IBeaconConfig {
+export function getPyrmontConfig(): IBeaconConfig {
   const config = createIBeaconConfig(params);
   config.params.DEPOSIT_NETWORK_ID = 5;
-  config.params.DEPOSIT_CONTRACT_ADDRESS = Buffer.from("07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", "hex");
-  config.params.MIN_GENESIS_TIME = 1596546000;
-  config.params.GENESIS_DELAY = 172800;
-  config.params.GENESIS_FORK_VERSION = Buffer.from("00000001", "hex");
+  config.params.DEPOSIT_CONTRACT_ADDRESS = Buffer.from(pyrmontTestnet.beaconParams.DEPOSIT_CONTRACT_ADDRESS as string);
+  config.params.MIN_GENESIS_TIME = pyrmontTestnet.beaconParams.MIN_GENESIS_TIME as number;
+  config.params.GENESIS_DELAY = pyrmontTestnet.beaconParams.GENESIS_DELAY as number;
+  config.params.GENESIS_FORK_VERSION = Buffer.from(pyrmontTestnet.beaconParams.GENESIS_FORK_VERSION as string, "hex");
   return config;
 }
 
-export const goerliMedallaLogs = [
+export const goerliPyrmontLogs = [
   {
     // Raw unparsed log index 6833
     blockNumber: 3124930,
@@ -35,7 +36,7 @@ export const goerliMedallaLogs = [
   },
 ];
 
-export const goerliMedallaDepositEvents: DepositEvent[] = [
+export const goerliPyrmontDepositEvents: DepositEvent[] = [
   {
     blockNumber: 3124930,
     index: 6833,

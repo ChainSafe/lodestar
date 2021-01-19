@@ -4,7 +4,7 @@ import {IBeaconArgs, beaconOptions} from "../beacon/options";
 import {getBeaconPaths} from "../beacon/paths";
 import {initHandler, ReturnType} from "./handler";
 
-const defaultBeaconPathsMedalla = getBeaconPaths({rootDir: ".medalla"});
+const defaultBeaconPathsPyrmont = getBeaconPaths({rootDir: ".pyrmont"});
 
 export {ReturnType};
 
@@ -15,10 +15,10 @@ export const init: ICliCommand<IBeaconArgs, IGlobalArgs, ReturnType> = {
 This step is not required, and should only be used to prepare special configurations",
   examples: [
     {
-      command: "init --network medalla",
+      command: "init --network pyrmont",
       description:
-        "Initialize a configuration for the Medalla testnet. " +
-        `Then, you can edit the config file ${defaultBeaconPathsMedalla.configFile} to customize your beacon node settings`,
+        "Initialize a configuration for the Pyrmont testnet. " +
+        `Then, you can edit the config file ${defaultBeaconPathsPyrmont.configFile} to customize your beacon node settings`,
     },
   ],
   options: beaconOptions as ICliCommandOptions<IBeaconArgs>,
