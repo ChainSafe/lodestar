@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ReturnType as InitReturnType} from "../../../src/cmds/init";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
-import {depositContractDeployBlock} from "../../../src/testnets/pyrmont";
+import {depositContractDeployBlock} from "../../../src/networks/pyrmont";
 import {testFilesDir} from "../../utils";
 import {getLodestarCliTestRunner} from "../commandRunner";
 
@@ -11,14 +11,14 @@ describe("cmds / init", function () {
   const lodestar = getLodestarCliTestRunner();
 
   const rootDir = testFilesDir;
-  const testnetName = "pyrmont";
+  const networkName = "pyrmont";
   const beaconPaths = getBeaconPaths({rootDir});
 
-  it("should init beacon configuration with --testnet option", async function () {
+  it("should init beacon configuration with --network option", async function () {
     await lodestar<InitReturnType>([
       //
       "init",
-      `--testnet ${testnetName}`,
+      `--network ${networkName}`,
       `--rootDir ${rootDir}`,
     ]);
 
@@ -27,7 +27,7 @@ describe("cmds / init", function () {
 
     expect(beaconConfig.eth1.depositContractDeployBlock).to.equal(
       depositContractDeployBlock,
-      "Wrong depositContractDeployBlock for --testnet pyrmont setting"
+      "Wrong depositContractDeployBlock for --network pyrmont setting"
     );
   });
 });
