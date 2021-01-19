@@ -50,5 +50,8 @@
       "ts",
       "js"
     ]
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
