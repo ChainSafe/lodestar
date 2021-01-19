@@ -18,7 +18,7 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   },
 
   network: {
-    description: "Use a network configuration",
+    description: "Name of the Eth2 chain network to join",
     type: "string",
     choices: networkNames,
   },
