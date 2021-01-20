@@ -37,7 +37,7 @@
     "lint:fix": "yarn run lint --fix",
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
-    "test:unit": "TS_NODE_FAST=true TS_NODE_FILES=true TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
+    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
     "test:e2e": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/**/*.test.ts'",
     "test:sim:singleThread": "TS_NODE_PROJECT=tsconfig.test.json mocha 'test/sim/multiNodeMultiThread.test.ts'",

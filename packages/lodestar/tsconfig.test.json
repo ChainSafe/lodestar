@@ -11,5 +11,9 @@
     "declarationMap": false,     
     "pretty": false,
     "strict": false
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true
   }
 }
