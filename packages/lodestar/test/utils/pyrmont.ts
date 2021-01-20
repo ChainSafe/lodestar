@@ -3,7 +3,7 @@ import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {params} from "@chainsafe/lodestar-params/mainnet";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
-import * as pyrmontTestnet from "@chainsafe/lodestar-cli/src/networks/pyrmont"
+import * as pyrmontTestnet from "@chainsafe/lodestar-cli/src/networks/pyrmont";
 
 export const pyrmont = {
   providerUrl: goerliRpcUrl,
