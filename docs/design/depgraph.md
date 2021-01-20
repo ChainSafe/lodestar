@@ -3,16 +3,16 @@
 ## @chainsafe/lodestar-* dep graph
 ```mermaid
 graph LR
-    lodestar["lodestar"]
-    cli["lodestar-cli"]
-    config["lodestar-config"]
-    db["lodestar-db"]
-    fork-choice["lodestar-fork-choice"]
-    params["lodestar-params"]
-    types["lodestar-types"]
-    utils["lodestar-utils"]
-    validator["lodestar-validator"]
-    state-trans["lodestar-beacon-state-transition"]
+    lodestar["lodestar"]:::nodemodule
+    cli["lodestar-cli"]:::nodemodule
+    config["lodestar-config"]:::nodemodule
+    db["lodestar-db"]:::nodemodule
+    fork-choice["lodestar-fork-choice"]:::nodemodule
+    params["lodestar-params"]:::nodemodule
+    types["lodestar-types"]:::nodemodule
+    utils["lodestar-utils"]:::nodemodule
+    validator["lodestar-validator"]:::nodemodule
+    state-trans["lodestar-beacon-state-transition"]:::nodemodule
     
     state-trans-->lodestar
     config-->lodestar
@@ -62,4 +62,7 @@ graph LR
     click types "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-types"
     click utils "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-utils"
     click config "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-config"
+
+    classDef nodemodule fill:grey,stroke-width:2px,stroke:black,color:white;
+    linkStyle default stroke:grey, fill:none,stroke-width:1.5px;
 ```
