@@ -16,8 +16,8 @@ export interface IGlobalPaths {
  * ```
  */
 export function getGlobalPaths(args: Partial<IGlobalArgs>): IGlobalPaths {
-  // Set rootDir to testnet name iff rootDir is not set explicitly
-  const rootDir = args.rootDir || getDefaultRootDir(args.testnet);
+  // Set rootDir to network name iff rootDir is not set explicitly
+  const rootDir = args.rootDir || getDefaultRootDir(args.network);
   const paramsFile = joinIfRelative(rootDir, args.paramsFile || "config.yaml");
   return {
     rootDir,

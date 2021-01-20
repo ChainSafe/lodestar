@@ -10,9 +10,9 @@ Make sure lodestar is installed in your local environment. The following command
 
 For a complete list of beacon node CLI commands and options, see the [Command Line Reference](../../reference/cli/)
 
-For a list of available testnets to use for the `--testnet` flag (as shown anywhere below where `--testnet $TESTNET_NAME` is shown), look for the `testnet` option as listed with the `--help` flag above.  You should see something like this:
+For a list of available testnets to use for the `--network` flag (as shown anywhere below where `--network $NETWORK_NAME` is shown), look for the `testnet` option as listed with the `--help` flag above.  You should see something like this:
 
-> --testnet                    Use a testnet configuration [string] [choices: "pyrmont", "mainnet"]
+> --network                    Use a network configuration [string] [choices: "pyrmont", "mainnet"]
 
 In this case, the two networks that are available are the pyrmont multiclient testnet, and the eth2 mainnet.
 
@@ -26,7 +26,7 @@ Only use `mainnet` if you wish to interact with data on the live eth2 beacon cha
 If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (e.g. perhaps you want a basic configuration setup that you would like to then configure yourself), you can run the following command:
 
 ```bash
-./lodestar beacon --testnet $TESTNET_NAME
+./lodestar beacon --network $NETWORK_NAME
 ```
 
 ## Run a beacon node
@@ -34,12 +34,12 @@ If you would like to initialize your beacon node with the basic files required t
 To start a Lodestar beacon run the command:
 
 ```bash
-./lodestar beacon --testnet $TESTNET_NAME
+./lodestar beacon --network $NETWORK_NAME
 ```
 
 <!-- prettier-ignore-start -->
 !!! info
-    Until genesis for the given testnet, the node will stay idle waiting for all genesis conditions to pass.  In the case of mainnet, this condition should not happen since genesis has already begun since Dec 1, 2020.
+    Until genesis for the given network, the node will stay idle waiting for all genesis conditions to pass.  In the case of mainnet, this condition should not happen since genesis has already begun since Dec 1, 2020.
 <!-- prettier-ignore-end -->
 
 Immediately you should see confirmation that the different modules have started
@@ -71,18 +71,18 @@ After finding some peers the chain should start processing blocks up to the curr
 
 A young testnet (i.e. one whose genesis time was relatively recently) should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!
 
-The `--testnet $TESTNET_NAME` flag automatically sets the following configuration options. You may overwrite them with flags if necessary:
+The `--network $NETWORK_NAME` flag automatically sets the following configuration options. You may overwrite them with flags if necessary:
 
 - Use a genesis state file from [eth2-clients/eth2-testnets](https://github.com/eth2-clients/eth2-testnets/) since Eth1 genesis state processing is slow.
 - Set `eth1.enabled` to false.
-- Set the root directory to `.$TESTNET_NAME`.
+- Set the root directory to `.$NETWORK_NAME`.
 
 ## Run a validator
 
 To start a Lodestar validator run the command:
 
 ```bash
-./lodestar validator --testnet $TESTNET_NAME
+./lodestar validator --network $NETWORK_NAME
 ```
 
 You should see confirmation that modules have started. 

@@ -2,7 +2,7 @@
 
 ## Lodestar Beacon Node Modules
 
-When `lodestar beacon --testnet TESTNET_NAME` (as described in [CLI Reference](../reference/cli)) is ran, [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli) does the following:
+When `lodestar beacon --network NETWORK_NAME` (as described in [CLI Reference](../reference/cli)) is ran, [@chainsafe/lodestar-cli](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-cli) does the following:
   
   - gathers data required to run the beacon node based on local configurations and CLI options
   - bootstraps the [`BeaconNode`](https://github.com/ChainSafe/lodestar/blob/54e13c9908054b99f68e420ee7c0273fba9db3f9/packages/lodestar/src/node/nodejs.ts#L66) (in the `node` module) in [@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar)

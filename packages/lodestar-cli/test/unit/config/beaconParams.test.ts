@@ -11,7 +11,7 @@ describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
   const presetName = "mainnet";
-  const testnetName = "pyrmont";
+  const networkName = "pyrmont";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
@@ -31,10 +31,10 @@ describe("config / beaconParams", () => {
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_MAINNET,
     },
     {
-      id: "Params from preset & testnet > returns testnet",
+      id: "Params from preset & network > returns network",
       kwargs: {
         preset: presetName,
-        testnet: testnetName,
+        network: networkName,
         paramsFile: "./no/file",
         additionalParamsCli: {},
       },
@@ -42,10 +42,10 @@ describe("config / beaconParams", () => {
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PYRMONT,
     },
     {
-      id: "Params from preset & testnet & file > returns file",
+      id: "Params from preset & network & file > returns file",
       kwargs: {
         preset: presetName,
-        testnet: testnetName,
+        network: networkName,
         paramsFile: paramsFilepath,
         additionalParamsCli: {},
       },
@@ -53,10 +53,10 @@ describe("config / beaconParams", () => {
       GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_FILE,
     },
     {
-      id: "Params from preset & testnet & file & CLI > returns CLI",
+      id: "Params from preset & network & file & CLI > returns CLI",
       kwargs: {
         preset: presetName,
-        testnet: testnetName,
+        network: networkName,
         paramsFile: paramsFilepath,
         // eslint-disable-next-line @typescript-eslint/naming-convention
         additionalParamsCli: {GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_CLI},
