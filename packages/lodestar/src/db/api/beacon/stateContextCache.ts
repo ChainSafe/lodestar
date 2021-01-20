@@ -1,24 +1,12 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
+import {BeaconState} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {
-  state: CachedValidatorsBeaconState; // TreeBacked<BeaconState>
-  epochCtx: LodestarEpochContext;
-}
-
-// Lodestar specific epoch context
-export class LodestarEpochContext extends EpochContext {
-  public epochBalances?: Gwei[];
-
-  // need to be return EpochContext in order to override
-  public copy(): EpochContext {
-    const ctx = new LodestarEpochContext(undefined, this);
-    ctx.epochBalances = this.epochBalances;
-    return ctx;
-  }
+  state: CachedValidatorsBeaconState;
+  epochCtx: EpochContext;
 }
 
 /**
@@ -91,7 +79,7 @@ export class StateContextCache {
   private clone(item: ITreeStateContext): ITreeStateContext {
     return {
       state: item.state.clone(),
-      epochCtx: item.epochCtx.copy() as LodestarEpochContext,
+      epochCtx: item.epochCtx.copy(),
     };
   }
 }

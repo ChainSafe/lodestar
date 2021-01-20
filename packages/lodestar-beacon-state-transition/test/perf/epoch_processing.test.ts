@@ -6,7 +6,7 @@ import {
   IEpochProcess,
   prepareEpochProcessState,
 } from "../../src/fast/util";
-import {EpochContext, StateTransitionEpochContext} from "../../src/fast/util/epochContext";
+import {EpochContext} from "../../src/fast/util/epochContext";
 import {
   processFinalUpdates,
   processJustificationAndFinalization,
@@ -20,7 +20,7 @@ import {expect} from "chai";
 
 describe("Epoch Processing Performance Tests", function () {
   let state: CachedValidatorsBeaconState;
-  let epochCtx: StateTransitionEpochContext;
+  let epochCtx: EpochContext;
   let process: IEpochProcess;
   const logger = new WinstonLogger();
 

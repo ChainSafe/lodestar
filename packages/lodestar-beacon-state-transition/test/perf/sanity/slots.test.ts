@@ -3,7 +3,6 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {EpochContext} from "../../../src/fast";
 import {processSlots} from "../../../src/fast/slot";
-import {StateTransitionEpochContext} from "../../../src/fast/util/epochContext";
 import {CachedValidatorsBeaconState, createCachedValidatorsBeaconState} from "../../../src/fast/util";
 import {generatePerformanceState, initBLS} from "../util";
 
@@ -11,7 +10,7 @@ describe("Process Slots Performance Test", function () {
   this.timeout(0);
   const logger = new WinstonLogger();
   let state: CachedValidatorsBeaconState;
-  let epochCtx: StateTransitionEpochContext;
+  let epochCtx: EpochContext;
 
   before(async () => {
     await initBLS();

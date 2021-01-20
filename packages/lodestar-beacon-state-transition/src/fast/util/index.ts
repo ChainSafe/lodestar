@@ -1,5 +1,4 @@
 import {EpochContext} from "./epochContext";
-import {IEpochProcess} from "./epochProcess";
 import {CachedValidatorsBeaconState} from "./interface";
 
 export * from "./block";
@@ -17,5 +16,4 @@ export * from "./interface";
 export interface IStateContext {
   state: CachedValidatorsBeaconState;
   epochCtx: EpochContext;
-  epochProcess?: IEpochProcess;
 }

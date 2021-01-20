@@ -1,5 +1,5 @@
 import {CachedValidatorsBeaconState, prepareEpochProcessState} from "../util";
-import {StateTransitionEpochContext} from "../util/epochContext";
+import {EpochContext} from "../util/epochContext";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";
@@ -18,9 +18,8 @@ export {
   getAttestationDeltas,
 };
 
-export function processEpoch(epochCtx: StateTransitionEpochContext, state: CachedValidatorsBeaconState): void {
+export function processEpoch(epochCtx: EpochContext, state: CachedValidatorsBeaconState): void {
   const process = prepareEpochProcessState(epochCtx, state);
-  epochCtx.epochProcess = process;
   processJustificationAndFinalization(epochCtx, process, state);
   processRewardsAndPenalties(epochCtx, process, state);
   processRegistryUpdates(epochCtx, process, state);
