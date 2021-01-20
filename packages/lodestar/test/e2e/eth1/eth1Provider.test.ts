@@ -2,21 +2,21 @@ import "mocha";
 import {expect} from "chai";
 import {Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getPyrmontConfig, pyrmont} from "../../utils/pyrmont";
+import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
 import {Eth1Block} from "@chainsafe/lodestar-types";
-import {goerliPyrmontDepositEvents} from "../../utils/pyrmont";
+import {goerliTestnetDepositEvents} from "../../utils/testnet";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
   const eth1Options: IEth1Options = {
     enabled: true,
-    providerUrl: pyrmont.providerUrl,
+    providerUrl: testnet.providerUrl,
     depositContractDeployBlock: 0,
   };
 
-  const config = getPyrmontConfig();
+  const config = getTestnetConfig();
   const eth1Provider = new Eth1Provider(config, eth1Options);
 
   it("Should validate contract", async function () {
@@ -39,10 +39,10 @@ describe("eth1 / Eth1Provider", function () {
   });
 
   it("Should get deposits events for a block range", async function () {
-    const blockNumbers = goerliPyrmontDepositEvents.map((log) => log.blockNumber);
+    const blockNumbers = goerliTestnetDepositEvents.map((log) => log.blockNumber);
     const fromBlock = Math.min(...blockNumbers);
     const toBlock = Math.min(...blockNumbers);
     const depositEvents = await eth1Provider.getDepositEvents(fromBlock, toBlock);
-    expect(depositEvents).to.deep.equal(goerliPyrmontDepositEvents);
+    expect(depositEvents).to.deep.equal(goerliTestnetDepositEvents);
   });
 });

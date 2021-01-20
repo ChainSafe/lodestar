@@ -9,7 +9,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getPyrmontConfig, pyrmont} from "../../utils/pyrmont";
+import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
@@ -30,12 +30,12 @@ describe("eth1 / Eth1Provider", function () {
 
   const eth1Options: IEth1Options = {
     enabled: true,
-    providerUrl: pyrmont.providerUrl,
-    depositContractDeployBlock: pyrmont.depositBlock,
+    providerUrl: testnet.providerUrl,
+    depositContractDeployBlock: testnet.depositBlock,
   };
   const controller = new AbortController();
 
-  const config = getPyrmontConfig();
+  const config = getTestnetConfig();
   const logger = new WinstonLogger({level: LogLevel.verbose});
   const eth1Provider = new Eth1Provider(config, eth1Options);
 
