@@ -14,10 +14,12 @@ const phase0Params = createParams<IBeaconParams>(phase0Yaml, BeaconParams);
 
 export const params: IBeaconParams = {
   ...phase0Params,
+  //TODO: remove once eth2 spec config contains that
   // eslint-disable-next-line @typescript-eslint/naming-convention
   ALL_FORKS: [
     {
       epoch: 0,
+      // manually converted fork version to number to avoid adding lodestar-utils dep
       currentVersion: 16777216,
       previousVersion: 16777216,
     },
