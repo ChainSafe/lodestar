@@ -1,4 +1,4 @@
-import {ICliCommand, YargsError} from "../../../../util";
+import {ICliCommand, initBLS, YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -39,6 +39,8 @@ export const voluntaryExit: ICliCommand<IValidatorVoluntaryExitArgs, IGlobalArgs
   },
 
   handler: async (args) => {
+    await initBLS();
+
     const force = args.force;
     const server = args.server;
     const publicKey = args.publicKey;
