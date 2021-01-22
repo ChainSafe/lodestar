@@ -8,6 +8,8 @@ import {getAccountPaths} from "../../paths";
 import {computeDomain, computeSigningRoot, DomainType} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBeaconConfigFromArgs} from "../../../../config";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
+import inquirer from "inquirer";
+import {readdirSync} from "fs";
 
 export type IValidatorVoluntaryExitArgs = Pick<IValidatorCliArgs, "server" | "force"> & {
   publicKey: string;
@@ -43,10 +45,24 @@ export const voluntaryExit: ICliCommand<IValidatorVoluntaryExitArgs, IGlobalArgs
 
     const force = args.force;
     const server = args.server;
-    const publicKey = args.publicKey;
+    let publicKey = args.publicKey;
     const logger = new WinstonLogger();
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
+
+    if (!publicKey) {
+      const publicKeys = readdirSync(accountPaths.keystoresDir);
+
+      const validator = await inquirer.prompt([
+        {
+          name: "publicKey",
+          type: "list",
+          message: "Which validator do you want to voluntarily exit from the network?",
+          choices: [...publicKeys],
+        },
+      ]);
+      publicKey = validator.publicKey;
+    }
 
     const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
     if (!secretKey) throw new YargsError("No validator keystores found");
