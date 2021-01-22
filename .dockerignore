@@ -31,8 +31,6 @@ docker-compose.yml
 # Lodestar artifacts
 **/*-db
 .lodestar
-.medalla
-.spadina
 .pyrmont
 
 # Other / artifacts
