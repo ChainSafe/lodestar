@@ -27,7 +27,7 @@ like to choose for the voluntary exit.",
 
   examples: [
     {
-      command: "account validator voluntaryExit --publicKey 0xF00",
+      command: "account validator voluntary-exit --publicKey 0xF00",
       description: "Perform a voluntary exit for the validator who has a public key 0xF00",
     },
   ],
