@@ -21,7 +21,9 @@ export const voluntaryExit: ICliCommand<IValidatorVoluntaryExitArgs, IGlobalArgs
   command: "voluntary-exit",
 
   describe:
-    "Performs a voluntary exit for a given validator (as identified via `publicKey`.  If no `publicKey` is provided, a prompt will ask the user which validator they would like to choose for the voluntary exit.",
+    "Performs a voluntary exit for a given validator (as identified via `publicKey`.  \
+If no `publicKey` is provided, a prompt will ask the user which validator they would \
+like to choose for the voluntary exit.",
 
   examples: [
     {
