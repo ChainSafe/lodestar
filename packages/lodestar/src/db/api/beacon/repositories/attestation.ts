@@ -30,9 +30,13 @@ export class AttestationRepository extends Repository<Uint8Array, Attestation> {
     const attestations = await this.values();
     //TODO: add secondary index slot => root => AttestationData
     return attestations.filter((attestation) => {
-      return this.config.types.Root.equals(
-        attestationDataRoot,
-        this.config.types.AttestationData.hashTreeRoot(attestation.data)
+      const attestationData = attestation.data;
+      return (
+        attestationData.slot === slot &&
+        this.config.types.Root.equals(
+          attestationDataRoot,
+          this.config.types.AttestationData.hashTreeRoot(attestationData)
+        )
       );
     });
   }

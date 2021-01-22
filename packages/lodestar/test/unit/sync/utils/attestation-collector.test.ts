@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {AbortController} from "abort-controller";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/attestation";
+import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 
 import {AttestationCollector} from "../../../../src/sync/utils";
 import {LocalClock} from "../../../../src/chain/clock/LocalClock";
@@ -11,6 +11,7 @@ import {Gossip} from "../../../../src/network/gossip/gossip";
 import {BeaconDb} from "../../../../src/db";
 import {generateState} from "../../../utils/state";
 import {silentLogger} from "../../../utils/logger";
+import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("Attestation collector", function () {
   const sandbox = sinon.createSandbox();
@@ -39,6 +40,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateState(),
+        getHeadEpochContext: () => (new EpochContext(config)),
         getForkDigest: () => Buffer.alloc(4),
         emitter,
       },

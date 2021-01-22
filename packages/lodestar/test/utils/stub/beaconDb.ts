@@ -20,6 +20,7 @@ import {
 import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
+import {ActiveValidatorCache} from "../../../src/db/api/beacon/activeValidatorCache";
 
 export class StubbedBeaconDb extends BeaconDb {
   public db!: SinonStubbedInstance<LevelDbController>;
@@ -41,6 +42,7 @@ export class StubbedBeaconDb extends BeaconDb {
   public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
+  public activeValidatorCache: SinonStubbedInstance<ActiveValidatorCache> & ActiveValidatorCache;
 
   public processBlockOperations: SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>> &
     ((signedBlock: SignedBeaconBlock) => Promise<void>);
@@ -64,6 +66,7 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
     this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
+    this.activeValidatorCache = sinon.createStubInstance(ActiveValidatorCache) as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
   }
 }

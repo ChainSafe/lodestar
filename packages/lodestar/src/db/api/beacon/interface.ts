@@ -20,6 +20,7 @@ import {
 } from "./repositories";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
+import {ActiveValidatorCache} from "./activeValidatorCache";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -38,6 +39,9 @@ export interface IBeaconDb {
 
   // cache for attestations that have already been seen via gossip or other sources
   seenAttestationCache: SeenAttestationCache;
+
+  // active validators connected to this node
+  activeValidatorCache: ActiveValidatorCache;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;

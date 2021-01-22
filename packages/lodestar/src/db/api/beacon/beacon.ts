@@ -21,12 +21,14 @@ import {
 } from "./repositories";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
+import {ActiveValidatorCache} from "./activeValidatorCache";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   public badBlock: BadBlockRepository;
   public block: BlockRepository;
   public pendingBlock: PendingBlockRepository;
   public seenAttestationCache: SeenAttestationCache;
+  public activeValidatorCache: ActiveValidatorCache;
   public blockArchive: BlockArchiveRepository;
   public stateArchive: StateArchiveRepository;
 
@@ -46,6 +48,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.block = new BlockRepository(this.config, this.db);
     this.pendingBlock = new PendingBlockRepository(this.config, this.db);
     this.seenAttestationCache = new SeenAttestationCache(5000);
+    this.activeValidatorCache = new ActiveValidatorCache();
     this.blockArchive = new BlockArchiveRepository(this.config, this.db);
     this.stateArchive = new StateArchiveRepository(this.config, this.db);
     this.attestation = new AttestationRepository(this.config, this.db);

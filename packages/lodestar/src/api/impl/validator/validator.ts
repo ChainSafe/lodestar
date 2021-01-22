@@ -3,6 +3,7 @@
  */
 
 import bls, {Signature} from "@chainsafe/bls";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {computeStartSlotAtEpoch, computeSubnetForCommitteesAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -119,6 +120,7 @@ export class ValidatorApi implements IValidatorApi {
     if (validatorIndices.length === 0) throw new ApiError(400, "No validator to get attester duties");
     if (epoch > this.chain.clock.currentEpoch + 1)
       throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
+    if (epoch < this.chain.clock.currentEpoch) throw new ApiError(400, "Not support getting duties for old epochs");
     const {epochCtx, state} = await this.chain.getHeadStateContextAtCurrentEpoch();
     return validatorIndices
       .map((validatorIndex) => {
@@ -202,6 +204,20 @@ export class ValidatorApi implements IValidatorApi {
     isAggregator: boolean
   ): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
+    const currentSlot = this.chain.clock.currentSlot;
+    const epoch = computeEpochAtSlot(this.config, slot);
+    const currentEpoch = this.chain.clock.currentEpoch;
+    if (slot <= currentSlot) {
+      throw new ApiError(400, `Cannot prepare subnet for invalid slot ${slot}, current slot: ${currentSlot}`);
+    }
+    if (epoch > currentEpoch + 1) {
+      throw new ApiError(400, `Cannot prepare subnet for future epoch ${epoch}, current epoch: ${currentEpoch}`);
+    }
+    const headEpochCtx = await this.chain.getHeadEpochContext();
+    if (headEpochCtx.getCommitteeCountAtSlot(slot) !== committeesAtSlot) {
+      throw new ApiError(400, `Incorrect committee count ${committeesAtSlot} at slot ${slot}`);
+    }
+    await this.db.activeValidatorCache.add(validatorIndex, epoch);
     if (isAggregator) {
       await this.sync.collectAttestations(slot, committeeIndex);
     }

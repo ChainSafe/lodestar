@@ -52,6 +52,7 @@ export class TasksService implements IService {
     this.network = modules.network;
     this.interopSubnetsTask = new InteropSubnetsJoiningTask(this.config, {
       chain: this.chain,
+      db: this.db,
       network: this.network,
       logger: this.logger,
     });
@@ -107,6 +108,7 @@ export class TasksService implements IService {
         this.chain.checkpointStateCache.pruneFinalized(finalized.epoch),
         this.db.attestation.pruneFinalized(finalized.epoch),
         this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
+        this.db.activeValidatorCache.pruneFinalized(finalized.epoch),
       ]);
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.root);

@@ -4,7 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, CommitteeIndex, ForkDigest, Slot} from "@chainsafe/lodestar-types";
 import {IService} from "../../node";
 import {INetwork} from "../../network";
-import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export interface IAttestationCollectorModules {
@@ -42,8 +42,8 @@ export class AttestationCollector implements IService {
 
   public async subscribeToCommitteeAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
     const forkDigest = this.chain.getForkDigest();
-    const headState = this.chain.getHeadState();
-    const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+    const headEpochContext = this.chain.getHeadEpochContext();
+    const subnet = computeSubnetForSlot(this.config, headEpochContext, slot, committeeIndex);
     try {
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet);
       if (this.aggregationDuties.has(slot)) {
@@ -59,10 +59,10 @@ export class AttestationCollector implements IService {
   private checkDuties = async (slot: Slot): Promise<void> => {
     const committees = this.aggregationDuties.get(slot) || new Set();
     const forkDigest = this.chain.getForkDigest();
-    const headState = this.chain.getHeadState();
+    const headEpochContext = this.chain.getHeadEpochContext();
     this.timers = [];
     for (const committeeIndex of committees) {
-      const subnet = computeSubnetForSlot(this.config, headState, slot, committeeIndex);
+      const subnet = computeSubnetForSlot(this.config, headEpochContext, slot, committeeIndex);
       this.network.gossip.subscribeToAttestationSubnet(forkDigest, subnet, this.handleCommitteeAttestation);
       this.timers.push(
         setTimeout(() => {
