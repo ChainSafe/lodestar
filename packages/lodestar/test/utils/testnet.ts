@@ -12,9 +12,7 @@ export const testnet = {
   blockWithDepositActivity: 3124889,
 };
 
-/**
- * Testnet specs
- */
+/** Testnet specs for the Medalla testnet */
 export function getTestnetConfig(): IBeaconConfig {
   const config = createIBeaconConfig(params);
   config.params.DEPOSIT_NETWORK_ID = 5;
@@ -25,6 +23,7 @@ export function getTestnetConfig(): IBeaconConfig {
   return config;
 }
 
+/** Goerli deposit log for the Medalla testnet */
 export const goerliTestnetLogs = [
   {
     // Raw unparsed log index 6833
@@ -36,6 +35,7 @@ export const goerliTestnetLogs = [
   },
 ];
 
+/** Goerli parsed deposit event for the Medalla testnet */
 export const goerliTestnetDepositEvents: DepositEvent[] = [
   {
     blockNumber: 3124930,
