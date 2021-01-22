@@ -2,8 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, Lightclient, PendingAttestation} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {getCurrentEpoch} from "..";
-
-export const LIGHTCLIENT_PATCH_FORK_VERSION = Buffer.from("0x01000000", "hex");
+import {LIGHTCLIENT_PATCH_FORK_VERSION} from ".";
 
 export function upgrade(config: IBeaconConfig, pre: BeaconState): Lightclient.BeaconState {
   const epoch = getCurrentEpoch(config, pre);

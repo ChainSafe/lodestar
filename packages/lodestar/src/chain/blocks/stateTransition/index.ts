@@ -10,10 +10,16 @@ import {
 import {verifySignatureSetsBatch} from "../../bls";
 import {BlockError} from "../../errors";
 import {BlockErrorCode} from "../../errors/blockError";
-import {fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  fastStateTransition,
+  IStateContext,
+  epochToCurrentForkVersion,
+  computeEpochAtSlot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./events";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {toTreeStateContext} from "./utils";
+import {LIGHTCLIENT_PATCH_FORK_VERSION} from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
 
 export * from "./utils";
 export * from "./events";
@@ -47,14 +53,7 @@ export async function runStateTransition(
     job.validSignatures = true;
   }
 
-  // if block is trusted don't verify proposer or op signature
-  const postStateContext = toTreeStateContext(
-    fastStateTransition(checkpointStateContext, job.signedBlock, {
-      verifyStateRoot: true,
-      verifyProposer: !job.validSignatures && !job.validProposerSignature,
-      verifySignatures: !job.validSignatures,
-    })
-  );
+  const postStateContext = executeStateTransition(checkpointStateContext, job);
 
   const oldHead = forkChoice.getHead();
 
@@ -74,4 +73,37 @@ export async function runStateTransition(
   // this avoids keeping our node busy processing blocks
   await sleep(0);
   return postStateContext;
+}
+
+function executeStateTransition(stateCtx: ITreeStateContext, job: IBlockJob): ITreeStateContext {
+  let result: IStateContext;
+  const config = stateCtx.epochCtx.config;
+  const slot = job.signedBlock.message.slot;
+  const fork = epochToCurrentForkVersion(config, computeEpochAtSlot(config, slot));
+  if (!fork) {
+    throw new Error(`Missing fork definition for slot ${slot}`);
+  }
+  switch (toHex(fork)) {
+    case toHex(config.params.GENESIS_FORK_VERSION):
+      {
+        result = fastStateTransition(stateCtx, job.signedBlock, {
+          verifyStateRoot: true,
+          verifyProposer: !job.validSignatures && !job.validProposerSignature,
+          verifySignatures: !job.validSignatures,
+        });
+      }
+      break;
+    case toHex(LIGHTCLIENT_PATCH_FORK_VERSION):
+      {
+        result = fastStateTransition(stateCtx, job.signedBlock, {
+          verifyStateRoot: true,
+          verifyProposer: !job.validSignatures && !job.validProposerSignature,
+          verifySignatures: !job.validSignatures,
+        });
+      }
+      break;
+    default:
+      throw new Error("State transition doesn't support fork");
+  }
+  return toTreeStateContext(result);
 }

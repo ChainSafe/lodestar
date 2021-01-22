@@ -6,8 +6,9 @@ import {processSyncCommittee} from ".";
 export function processBlock(
   config: IBeaconConfig,
   state: Lightclient.BeaconState,
-  block: Lightclient.BeaconBlock
+  block: Lightclient.BeaconBlock,
+  verifySignatures = true
 ): void {
-  phase0Block.processBlock(config, state, block);
+  phase0Block.processBlock(config, state, block, verifySignatures);
   processSyncCommittee(config, state, block);
 }

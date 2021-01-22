@@ -3,13 +3,13 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {Lightclient, SignedBeaconBlock, Slot, Version, Root} from "@chainsafe/lodestar-types";
-import {lightClientForkVersionStub} from "../../const";
 import {IKeyValueSummary, IBlockFilterOptions} from "./abstract";
 import {InitialBlockArchiveRepository} from "./initial";
 import {LightclientBlockArchiveRepository} from "./lightclient";
 import {getRootIndexKey, getParentRootIndexKey} from "./db-index";
 import {bytesToInt, toHex} from "@chainsafe/lodestar-utils";
 import all from "it-all";
+import {LIGHTCLIENT_PATCH_FORK_VERSION} from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
 
 type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
 
@@ -33,7 +33,7 @@ export class BlockArchiveRepository {
     this.db = db;
     this.blockArchiveRepositories = new Map([
       [toHex(config.params.GENESIS_FORK_VERSION), new InitialBlockArchiveRepository(config, db)],
-      [toHex(lightClientForkVersionStub), new LightclientBlockArchiveRepository(config, db)],
+      [toHex(LIGHTCLIENT_PATCH_FORK_VERSION), new LightclientBlockArchiveRepository(config, db)],
       ...forkVersionBlockRepositories.entries(),
     ]);
   }
