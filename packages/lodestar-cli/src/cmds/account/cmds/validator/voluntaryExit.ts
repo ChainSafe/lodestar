@@ -78,9 +78,7 @@ like to choose for the voluntary exit.",
 
     const voluntaryExit = {
       // Minimum epoch for processing exit
-      epoch: 0,
-      // Index of the exiting validator
-      //TODO: placeholder, find the real value
+      epoch: 0, // TODO: what value really goes here?
       validatorIndex: validator?.index,
     };
     const domain = computeDomain(config, DomainType.VOLUNTARY_EXIT);
