@@ -2,6 +2,8 @@ import {expect} from "chai";
 import {TimeSeries} from "../../../../src/sync/stats/timeSeries";
 
 describe("sync / stats / TimeSeries", () => {
+  const decimals = 3;
+
   it("Should correctly compute a linear sequence", () => {
     const timeSeries = new TimeSeries();
 
@@ -11,8 +13,8 @@ describe("sync / stats / TimeSeries", () => {
     }
 
     const valuePerSec = timeSeries.computeLinearSpeed();
-    // Fixed point math in Javascript is inexact, use .toPrecision to prevent this test from randomly failing
-    expect(+valuePerSec.toPrecision(4)).to.equal(1, "Wrong valuePerSec");
+
+    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
   });
 
   it("Should correctly do a linear regression", () => {
@@ -25,6 +27,17 @@ describe("sync / stats / TimeSeries", () => {
     }
 
     const valuePerSec = timeSeries.computeLinearSpeed();
-    expect(+valuePerSec.toPrecision(4)).to.equal(1, "Wrong valuePerSec");
+    expectEqualPrecision(valuePerSec, 1, decimals, "Wrong valuePerSec");
   });
+
+  /**
+   * Fixed point math in Javascript is inexact, round results to prevent this test from randomly failing
+   */
+  function expectEqualPrecision(value: number, expected: number, decimals: number, message?: string): void {
+    expect(roundExp(value, decimals)).to.equals(roundExp(expected, decimals), message);
+  }
+
+  function roundExp(value: number, decimals: number): number {
+    return Math.round(value * Math.pow(10, decimals));
+  }
 });
