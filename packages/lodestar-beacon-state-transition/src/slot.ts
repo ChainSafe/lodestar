@@ -12,7 +12,8 @@ import {LIGHTCLIENT_PATCH_FORK_SLOT, upgrade as lightclientUpgrade} from "./ligh
 export function processSlots<TState extends BeaconState = BeaconState>(
   config: IBeaconConfig,
   state: TState,
-  slot: Slot
+  slot: Slot,
+  ignoreFork = false
 ): TState {
   assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);
 
@@ -23,8 +24,8 @@ export function processSlots<TState extends BeaconState = BeaconState>(
       processEpoch(config, state);
     }
     state.slot++;
-    if (state.slot >= LIGHTCLIENT_PATCH_FORK_SLOT) {
-      return (lightclientUpgrade(config, state) as unknown) as TState;
+    if (!ignoreFork && state.slot >= LIGHTCLIENT_PATCH_FORK_SLOT) {
+      state = (lightclientUpgrade(config, state) as unknown) as TState;
     }
   }
   return state;

@@ -19,7 +19,7 @@ import {
 import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./events";
 import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {toTreeStateContext} from "./utils";
-import {LIGHTCLIENT_PATCH_FORK_VERSION} from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
+import {LIGHTCLIENT_PATCH_FORK_VERSION, } from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
 
 export * from "./utils";
 export * from "./events";

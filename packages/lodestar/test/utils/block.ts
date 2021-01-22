@@ -6,8 +6,9 @@ import {
   Attestation,
   Deposit,
   SignedVoluntaryExit,
+  Lightclient,
 } from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {List, BitVector} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
@@ -15,6 +16,8 @@ import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
 import {IBlockJob} from "../../src/chain";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/minimal";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {
@@ -36,6 +39,21 @@ export function generateEmptyBlock(): BeaconBlock {
       deposits: ([] as Deposit[]) as List<Deposit>,
       voluntaryExits: ([] as SignedVoluntaryExit[]) as List<SignedVoluntaryExit>,
     },
+  };
+}
+
+export function generateEmptyLightclientBlock(cfg: IBeaconConfig = config): Lightclient.BeaconBlock {
+  return {
+    ...generateEmptyBlock(),
+    syncCommitteeBits: Array.from({length: cfg.params.lightclient.SYNC_COMMITTEE_SIZE}, () => false) as List<boolean>,
+    syncCommitteeSignature: EMPTY_SIGNATURE,
+  };
+}
+
+export function generateEmptyLightclientSignedBlock(cfg: IBeaconConfig = config): Lightclient.SignedBeaconBlock {
+  return {
+    message: generateEmptyLightclientBlock(cfg),
+    signature: EMPTY_SIGNATURE,
   };
 }
 
