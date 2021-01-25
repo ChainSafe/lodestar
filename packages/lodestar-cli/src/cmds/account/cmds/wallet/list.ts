@@ -13,8 +13,8 @@ export const list: ICliCommand<Record<never, never>, IAccountWalletArgs & IGloba
 
   examples: [
     {
-      command: "account wallet list --walletsDir .testnet/wallets",
-      description: "List all wallets in .testnet/wallets",
+      command: "account wallet list --walletsDir .network/wallets",
+      description: "List all wallets in .network/wallets",
     },
   ],
 

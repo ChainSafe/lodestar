@@ -9,7 +9,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
 import {IEth1Options} from "../../../src/eth1/options";
-import {getMedallaConfig, medalla} from "../../utils/medalla";
+import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
@@ -17,8 +17,8 @@ import {Root} from "@chainsafe/lodestar-types";
 
 const dbLocation = "./.__testdb";
 
-// First Medalla deposits deposit_data_root field
-const medallaDepositsDataRoot = [
+// First Pyrmont deposits deposit_data_root field
+const pyrmontDepositsDataRoot = [
   // https://goerli.etherscan.io/tx/0x342d3551439a13555c62f95d27b2fbabc816e4c23a6e58c28e69af6fae6d0159
   "0x8976a7deec59f3ebcdcbd67f512fdd07a9a7cab72b63e85bc7a22bb689c2a40c",
   // https://goerli.etherscan.io/tx/0x6bab2263e1801ae3ffd14a31c08602c17f0e105e8ab849855adbd661d8b87bfd
@@ -30,12 +30,12 @@ describe("eth1 / Eth1Provider", function () {
 
   const eth1Options: IEth1Options = {
     enabled: true,
-    providerUrl: medalla.providerUrl,
-    depositContractDeployBlock: medalla.depositBlock,
+    providerUrl: testnet.providerUrl,
+    depositContractDeployBlock: testnet.depositBlock,
   };
   const controller = new AbortController();
 
-  const config = getMedallaConfig();
+  const config = getTestnetConfig();
   const logger = new WinstonLogger({level: LogLevel.verbose});
   const eth1Provider = new Eth1Provider(config, eth1Options);
 
@@ -63,7 +63,7 @@ describe("eth1 / Eth1Provider", function () {
     await promisify<void, string>(leveldown.destroy)(dbLocation);
   });
 
-  it("Should fetch real Medalla eth1 data for block proposing", async function () {
+  it("Should fetch real Pyrmont eth1 data for block proposing", async function () {
     const eth1ForBlockProduction = new Eth1ForBlockProduction({
       config,
       db,
@@ -97,7 +97,7 @@ describe("eth1 / Eth1Provider", function () {
 
     // Compute correct deposit root tree
     const depositRootTree = config.types.DepositDataRootList.tree.createValue(
-      medallaDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
+      pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
     );
 
     const state = generateState({
@@ -119,6 +119,6 @@ describe("eth1 / Eth1Provider", function () {
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");
     expect(
       result.deposits.map((deposit) => toHexString(config.types.DepositData.hashTreeRoot(deposit.data)))
-    ).to.deep.equal(medallaDepositsDataRoot, "Wrong deposits for for block production");
+    ).to.deep.equal(pyrmontDepositsDataRoot, "Wrong deposits for for block production");
   });
 });

@@ -12,7 +12,7 @@ import {IBeaconNodeOptions} from "@chainsafe/lodestar/lib/node";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {IGlobalArgs} from "../../options/globalOptions";
-import {getGenesisFileUrl} from "../../testnets";
+import {getGenesisFileUrl} from "../../networks";
 
 /**
  * Initialize a beacon state, picking the strategy based on the `IBeaconArgs`
@@ -32,8 +32,8 @@ export async function initBeaconState(
 ): Promise<TreeBacked<BeaconState>> {
   const shouldInitFromDb = (await db.stateArchive.lastKey()) != null;
 
-  if (args.testnet && !args.genesisStateFile && !shouldInitFromDb) {
-    args.genesisStateFile = getGenesisFileUrl(args.testnet) ?? undefined;
+  if (args.network && !args.genesisStateFile && !shouldInitFromDb) {
+    args.genesisStateFile = getGenesisFileUrl(args.network) ?? undefined;
   }
 
   const shouldInitFromFile = Boolean(args.weakSubjectivityStateFile || (!args.forceGenesis && args.genesisStateFile));

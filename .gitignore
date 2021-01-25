@@ -35,15 +35,7 @@ docs/reference/cli.md
 
 # Testnet artifacts
 .lodestar
-.witti
 genesis.ssz
-witti.json
-altona.json
-medalla.json
-.altona
-.medalla
-.spadina
-.zinken
 .pyrmont
 packages/lodestar/.tmpdb/
 

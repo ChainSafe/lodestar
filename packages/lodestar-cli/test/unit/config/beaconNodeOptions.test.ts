@@ -1,12 +1,12 @@
 import {expect} from "chai";
 import {defaultOptions} from "@chainsafe/lodestar";
 import {BeaconNodeOptions} from "../../../src/config";
-import {bootEnrs as pyrmontBootEnrs} from "../../../src/testnets/pyrmont";
+import {bootEnrs as pyrmontBootEnrs} from "../../../src/networks/pyrmont";
 
 describe("config / beaconNodeOptions", () => {
   it("Should return pyrmont options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
-      testnet: "pyrmont",
+      network: "pyrmont",
       configFile: "./no/file",
       beaconNodeOptionsCli: {},
     });

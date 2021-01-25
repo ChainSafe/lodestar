@@ -5,7 +5,7 @@ services:
     restart: always
     volumes:
       - lodestar:/root/.local/share/lodestar
-    command: beacon --testnet ${TESTNET:-pyrmont}
+    command: beacon --network ${NETWORK:-pyrmont}
 
   prometheus:
     build: docker/prometheus

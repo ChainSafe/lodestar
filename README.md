@@ -36,7 +36,7 @@
 
 ## Architecture Overview
 
-- See [architecure diagrams](https://hackmd.io/@wemeetagain/rJTEOdqPS/%2FL5vwdaXGTH-IqYtv6fqVRA) for Lodestar
+- See [architecure docs](https://chainsafe.github.io/lodestar/design/architecture/) for Lodestar
 
 ## Contributors
 

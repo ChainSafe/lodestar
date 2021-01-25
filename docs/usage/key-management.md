@@ -8,7 +8,7 @@ The 12-word string is randomly generated during wallet creation and printed out 
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a wallet for a testnet, you need to add `--testnet $TESTNET_NAME` to the following command
+    If you want to create a wallet for a testnet, you need to add `--network $TESTNET_NAME` to the following command
 <!-- prettier-ignore-end -->
 
 ### Create a wallet
@@ -37,7 +37,7 @@ Validators are represented by a BLS keypair. It is recommended to generate valid
 
 <!-- prettier-ignore-start -->
 !!! warning
-    If you want to create a validator for a testnet, you need to add `--testnet $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
+    If you want to create a validator for a testnet, you need to add `--network $TESTNET_NAME` to all of the following commands and will use the `.$TESTNET_NAME` directory instead of `.lodestar`
 <!-- prettier-ignore-end -->
 
 ### Create validator keypair
@@ -67,7 +67,7 @@ This command will:
 To import a keystore that was created via the ETH2.0 Deposit Launch Pad:
 
 ```bash
-./lodestar account validator import --testnet $TESTNET_NAME --directory <path to your launchpad keys>
+./lodestar account validator import --network $TESTNET_NAME --directory <path to your launchpad keys>
 ```
 
 You will be prompted to enter a password. Use the same one you used to create the keys initially.
@@ -75,7 +75,7 @@ You will be prompted to enter a password. Use the same one you used to create th
 To confirm your keys have been imported run:
 
 ```bash
-./lodestar account validator list --testnet $TESTNET_NAME
+./lodestar account validator list --network $TESTNET_NAME
 ```
 
 This command will print the public address of every active keystore.
@@ -83,4 +83,4 @@ This command will print the public address of every active keystore.
 
 ### Submit a validator deposit
 
-DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://medalla.launchpad.ethereum.org
+DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://pyrmont.launchpad.ethereum.org
