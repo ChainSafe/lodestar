@@ -24,6 +24,7 @@ export function processRewardsAndPenalties(epochCtx: EpochContext, process: IEpo
       newBalances[i] -= penalty;
     }
   });
+  process.balances = newBalances;
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
   state.balances = newBalances as List<bigint>;
