@@ -18,9 +18,9 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {StateTransitionEpochContext} from "./epochContext";
 import {isActiveIFlatValidator} from "./flatValidator";
 import {CachedValidatorsBeaconState} from "./interface";
+import {EpochContext} from "./epochContext";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -68,10 +68,7 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState(
-  epochCtx: StateTransitionEpochContext,
-  state: CachedValidatorsBeaconState
-): IEpochProcess {
+export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedValidatorsBeaconState): IEpochProcess {
   const out = createIEpochProcess();
 
   const config = epochCtx.config;

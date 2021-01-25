@@ -1,17 +1,13 @@
 import {Slot} from "@chainsafe/lodestar-types";
 
-import {StateTransitionEpochContext} from "../util/epochContext";
 import {processEpoch} from "../epoch";
 import {processSlot} from "./processSlot";
 import {CachedValidatorsBeaconState} from "../util/interface";
+import {EpochContext} from "../util";
 
 export {processSlot};
 
-export function processSlots(
-  epochCtx: StateTransitionEpochContext,
-  state: CachedValidatorsBeaconState,
-  slot: Slot
-): void {
+export function processSlots(epochCtx: EpochContext, state: CachedValidatorsBeaconState, slot: Slot): void {
   if (!(state.slot < slot)) {
     throw new Error("State slot must transition to a future slot: " + `stateSlot=${state.slot} slot=${slot}`);
   }

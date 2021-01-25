@@ -1,5 +1,5 @@
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {Slot} from "@chainsafe/lodestar-types";
+import {Gwei, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   ZERO_HASH,
@@ -7,17 +7,16 @@ import {
   computeStartSlotAtEpoch,
   fastStateTransition,
   IStateContext,
-  toIStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {LodestarEpochContext, ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
-import {StateTransitionEpochContext} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
+import {isActiveIFlatValidator} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -67,23 +66,17 @@ export async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(config, preSlot);
   const postCtx = cloneStateCtx(stateCtx);
-  const stateTransitionState = postCtx.state;
-  const stateTranstionEpochContext = new StateTransitionEpochContext(undefined, postCtx.epochCtx);
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(config, preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    processSlots(stateTranstionEpochContext, stateTransitionState, nextEpochSlot);
-    const checkpointCtx = toTreeStateContext(toIStateContext(stateTranstionEpochContext, stateTransitionState));
-    emitCheckpointEvent(emitter, cloneStateCtx(checkpointCtx));
+    processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
+    emitCheckpointEvent(emitter, cloneStateCtx(postCtx));
     // this avoids keeping our node busy processing blocks
     await sleep(0);
   }
-  return {
-    epochCtx: stateTranstionEpochContext,
-    state: stateTransitionState,
-  };
+  return postCtx;
 }
 
 /**
@@ -100,7 +93,7 @@ export async function processSlotsByCheckpoint(
   if (postCtx.state.slot < slot) {
     processSlots(postCtx.epochCtx, postCtx.state, slot);
   }
-  return toTreeStateContext(postCtx);
+  return postCtx;
 }
 
 export function emitForkChoiceHeadEvents(
@@ -141,20 +134,24 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postStateContext = toTreeStateContext(
-    fastStateTransition(stateContext, job.signedBlock, {
-      verifyStateRoot: true,
-      verifyProposer: !job.validSignatures && !job.validProposerSignature,
-      verifySignatures: !job.validSignatures,
-    })
-  );
+  const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
+    verifyStateRoot: true,
+    verifyProposer: !job.validSignatures && !job.validProposerSignature,
+    verifySignatures: !job.validSignatures,
+  });
 
   const oldHead = forkChoice.getHead();
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
-    ?.epochCtx.epochBalances;
+  const justifiedBalances: Gwei[] = [];
+  if (postStateContext.state.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
+    const justifiedStateContext = await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
+    const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
+    justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
+      justifiedBalances.push(isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+    });
+  }
   forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
 
   if (postSlot % SLOTS_PER_EPOCH === 0) {
@@ -167,24 +164,4 @@ export async function runStateTransition(
   // this avoids keeping our node busy processing blocks
   await sleep(0);
   return postStateContext;
-}
-
-/**
- * Pull necessary data from epochProcess of exchange interface IStateContext
- * and transform to lodestar ITreeStateContext.
- * Make sure no epochProcess stays in ITreeStateContext.
- */
-function toTreeStateContext(stateCtx: IStateContext): ITreeStateContext {
-  const treeStateCtx: ITreeStateContext = {
-    state: stateCtx.state,
-    epochCtx: new LodestarEpochContext(undefined, stateCtx.epochCtx),
-  };
-
-  if (stateCtx.epochProcess) {
-    treeStateCtx.epochCtx.epochBalances = stateCtx.epochProcess.statuses.map((s) =>
-      s.active ? s.validator.effectiveBalance : BigInt(0)
-    );
-  }
-
-  return treeStateCtx;
 }

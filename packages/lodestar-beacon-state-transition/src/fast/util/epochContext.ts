@@ -25,7 +25,6 @@ import {
   isAggregatorFromCommitteeLength,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {IEpochProcess} from "./epochProcess";
 import {CachedValidatorsBeaconState} from "./interface";
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
@@ -58,16 +57,11 @@ export class EpochContext {
   public nextShuffling!: IEpochShuffling;
   public config: IBeaconConfig;
 
-  constructor(config?: IBeaconConfig, epochCtx?: EpochContext) {
-    this.config = (epochCtx?.config || config)!;
-    this.pubkey2index = epochCtx?.pubkey2index || new PubkeyIndexMap();
-    this.index2pubkey = epochCtx?.index2pubkey || [];
-    this.proposers = epochCtx?.proposers || [];
-    if (epochCtx) {
-      this.previousShuffling = epochCtx.previousShuffling;
-      this.currentShuffling = epochCtx.currentShuffling;
-      this.nextShuffling = epochCtx.nextShuffling;
-    }
+  constructor(config: IBeaconConfig) {
+    this.config = config;
+    this.pubkey2index = new PubkeyIndexMap();
+    this.index2pubkey = [];
+    this.proposers = [];
   }
 
   /**
@@ -264,20 +258,5 @@ export class EpochContext {
     } else {
       throw new Error(`crosslink committee retrieval: out of range epoch: ${epoch}`);
     }
-  }
-}
-
-/**
- * State Transition specific version of EpochContext.
- * This is internal/private at the module level.
- */
-export class StateTransitionEpochContext extends EpochContext {
-  public epochProcess?: IEpochProcess;
-
-  // need to return EpochContext in order to override
-  public copy(): EpochContext {
-    const ctx = new StateTransitionEpochContext(undefined, this);
-    ctx.epochProcess = this.epochProcess;
-    return ctx;
   }
 }

@@ -1,8 +1,7 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
-import {CachedValidatorsBeaconState, verifyBlockSignature} from "./util";
+import {verifyBlockSignature} from "./util";
 import {IStateContext} from "./util";
-import {StateTransitionEpochContext} from "./util/epochContext";
 import {EpochContext} from "./util/epochContext";
 import {processSlots} from "./slot";
 import {processBlock} from "./block";
@@ -13,11 +12,10 @@ export {IStateContext, EpochContext};
  * Implementation of protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function fastStateTransition(
-  {state, epochCtx: eiEpochCtx}: IStateContext,
+  {state, epochCtx}: IStateContext,
   signedBlock: SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
-  const epochCtx = new StateTransitionEpochContext(undefined, eiEpochCtx);
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;
 
@@ -40,21 +38,8 @@ export function fastStateTransition(
       throw new Error("Invalid state root");
     }
   }
-  return toIStateContext(epochCtx, postState);
-}
-
-/**
- * Trim epochProcess in epochCtx, and insert the standard/exchange interface epochProcess to the final IStateContext
- */
-export function toIStateContext(
-  epochCtx: StateTransitionEpochContext,
-  state: CachedValidatorsBeaconState
-): IStateContext {
-  const epochProcess = epochCtx.epochProcess;
-  epochCtx.epochProcess = undefined;
   return {
-    state: state,
-    epochCtx: new EpochContext(undefined, epochCtx),
-    epochProcess,
+    state: postState,
+    epochCtx,
   };
 }
