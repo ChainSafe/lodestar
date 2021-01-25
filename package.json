@@ -18,7 +18,7 @@
     "lint:fix": "lerna run --no-bail lint -- --fix",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
-    "test:unit": "lerna run --parallel test:unit",
+    "test:unit": "lerna run --parallel --ignore @chainsafe/lodestar test:unit && lerna run test:unit --scope @chainsafe/lodestar",
     "test:e2e": "lerna run test:e2e",
     "test:e2e:sim": "lerna run test:e2e:sim",
     "test:spec-min": "lerna run test:spec-min",
