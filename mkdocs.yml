@@ -58,7 +58,7 @@ nav:
   - Design:
       - Beacon node architecture: design/architecture.md
       - Beacon node events: design/events.md
-      - Lodestar packages dependency graph: design/depgraph.md
+      - Lodestar package structure: design/depgraph.md
   - Usage:
       - Mainnet or public testnet: usage/testnet.md
       - Local testnet: usage/local.md
