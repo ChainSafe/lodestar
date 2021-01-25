@@ -8,7 +8,7 @@ import {
   SignedVoluntaryExit,
   Lightclient,
 } from "@chainsafe/lodestar-types";
-import {List, BitVector} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";

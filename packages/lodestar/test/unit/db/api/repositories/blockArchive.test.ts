@@ -8,7 +8,7 @@ import {generateEmptySignedBlock, generateEmptyLightclientSignedBlock} from "../
 import {BlockArchiveRepository} from "../../../../../src/db/api/beacon/repositories";
 import sinon from "sinon";
 import {silentLogger} from "../../../../utils/logger";
-import {SignedBeaconBlock, Lightclient} from "@chainsafe/lodestar-types";
+import {Lightclient} from "@chainsafe/lodestar-types";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";

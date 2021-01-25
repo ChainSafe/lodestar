@@ -2,10 +2,10 @@ import {Lightclient} from "@chainsafe/lodestar-types";
 import {IStateContext, toIStateContext} from "../..";
 import {StateTransitionEpochContext} from "../../fast/util/epochContext";
 import {processSlots} from "../../fast/slot";
-import { verifyBlockSignature } from "../../fast/util";
-import { processBlock } from "../block";
+import {verifyBlockSignature} from "../../fast/util";
+import {processBlock} from "../block";
 
-export function fastStateTransition(
+export function stateTransition(
   {state, epochCtx: eiEpochCtx}: IStateContext<Lightclient.BeaconState>,
   signedBlock: Lightclient.SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}

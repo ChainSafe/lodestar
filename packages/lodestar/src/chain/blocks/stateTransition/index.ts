@@ -15,11 +15,12 @@ import {
   IStateContext,
   epochToCurrentForkVersion,
   computeEpochAtSlot,
+  lightclient,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./events";
 import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {toTreeStateContext} from "./utils";
-import {LIGHTCLIENT_PATCH_FORK_VERSION, } from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
+import {BeaconState, Lightclient, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 
 export * from "./utils";
 export * from "./events";
@@ -75,7 +76,10 @@ export async function runStateTransition(
   return postStateContext;
 }
 
-function executeStateTransition(stateCtx: ITreeStateContext, job: IBlockJob): ITreeStateContext {
+function executeStateTransition(
+  stateCtx: ITreeStateContext<BeaconState | Lightclient.BeaconState>,
+  job: IBlockJob<SignedBeaconBlock | Lightclient.SignedBeaconBlock>
+): ITreeStateContext {
   let result: IStateContext;
   const config = stateCtx.epochCtx.config;
   const slot = job.signedBlock.message.slot;
@@ -86,14 +90,18 @@ function executeStateTransition(stateCtx: ITreeStateContext, job: IBlockJob): IT
   switch (toHex(fork)) {
     case toHex(config.params.GENESIS_FORK_VERSION):
       {
-        result = fastStateTransition(stateCtx, job.signedBlock, {
-          verifyStateRoot: true,
-          verifyProposer: !job.validSignatures && !job.validProposerSignature,
-          verifySignatures: !job.validSignatures,
-        });
+        result = lightclient.fast.stateTransition(
+          stateCtx as ITreeStateContext<Lightclient.BeaconState>,
+          job.signedBlock as Lightclient.SignedBeaconBlock,
+          {
+            verifyStateRoot: true,
+            verifyProposer: !job.validSignatures && !job.validProposerSignature,
+            verifySignatures: !job.validSignatures,
+          }
+        );
       }
       break;
-    case toHex(LIGHTCLIENT_PATCH_FORK_VERSION):
+    case toHex(lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
       {
         result = fastStateTransition(stateCtx, job.signedBlock, {
           verifyStateRoot: true,

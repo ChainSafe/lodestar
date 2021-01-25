@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkData, ForkDigest, Root, Slot, Version} from "@chainsafe/lodestar-types";
-import { LIGHTCLIENT_PATCH_FORK_SLOT, LIGHTCLIENT_PATCH_FORK_VERSION } from "../lightclient";
+import {LIGHTCLIENT_PATCH_FORK_SLOT, LIGHTCLIENT_PATCH_FORK_VERSION} from "../lightclient";
 
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.

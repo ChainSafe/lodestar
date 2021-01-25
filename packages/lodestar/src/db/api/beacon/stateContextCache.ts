@@ -3,8 +3,8 @@ import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 
 // Lodestar specifc state context
-export interface ITreeStateContext {
-  state: TreeBacked<BeaconState>;
+export interface ITreeStateContext<TState extends BeaconState = BeaconState> {
+  state: TreeBacked<TState>;
   epochCtx: LodestarEpochContext;
 }
 

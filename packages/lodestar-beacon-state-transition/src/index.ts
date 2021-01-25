@@ -18,6 +18,8 @@ export * from "./slot";
 
 export * from "./fast";
 
+export * as lightclient from "./lightclient";
+
 /**
  * The ETH2.0 Beacon Chain state transition function
  * @param config Beacon Chain configuration

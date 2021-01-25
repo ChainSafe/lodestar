@@ -20,8 +20,8 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
 
-export interface IBlockJob {
-  signedBlock: SignedBeaconBlock;
+export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock> {
+  signedBlock: TBlock;
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
