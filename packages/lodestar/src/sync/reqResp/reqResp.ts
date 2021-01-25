@@ -212,7 +212,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
   }
 
   private async *onGoodbye(requestBody: Goodbye, peerId: PeerId): AsyncIterable<bigint> {
-    this.logger.info("Received goodbye request", {
+    this.logger.verbose("Received goodbye request", {
       peer: peerId.toB58String(),
       reason: requestBody,
       description: GoodbyeReasonCodeDescriptions[requestBody.toString()],

@@ -38,7 +38,6 @@ export class ArchiveBlocksTask implements ITask {
    * Only archive blocks on the same chain to the finalized checkpoint.
    */
   public async run(): Promise<void> {
-    this.logger.profile("Archive Blocks epoch #" + this.finalized.epoch);
     // Use fork choice to determine the blocks to archive and delete
     const allCanonicalSummaries = this.forkChoice.iterateBlockSummaries(this.finalized.root);
     let i = 0;
@@ -57,8 +56,7 @@ export class ArchiveBlocksTask implements ITask {
       i = upperBound;
     }
     await this.deleteNonCanonicalBlocks();
-    this.logger.profile("Archive Blocks epoch #" + this.finalized.epoch);
-    this.logger.info("Archiving of finalized blocks complete", {
+    this.logger.verbose("Archiving of finalized blocks complete", {
       totalArchived: allCanonicalSummaries.length,
       finalizedEpoch: this.finalized.epoch,
     });

@@ -61,7 +61,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip block validation", logContext);
       await validateGossipBlock(this.config, this.chain, this.db, blockJob);
-      this.logger.info("Received valid gossip block", logContext);
+      this.logger.verbose("Received valid gossip block", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {
@@ -171,7 +171,7 @@ export class GossipMessageValidator implements IGossipMessageValidator {
 
       this.logger.verbose("Started gossip aggregate and proof validation", logContext);
       await validateGossipAggregateAndProof(this.config, this.chain, this.db, signedAggregateAndProof, attestationJob);
-      this.logger.info("Received valid gossip aggregate and proof", logContext);
+      this.logger.verbose("Received valid gossip aggregate and proof", logContext);
 
       return ExtendedValidatorResult.accept;
     } catch (e) {

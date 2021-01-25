@@ -431,7 +431,7 @@
       "pluginVersion": "6.7.4",
       "targets": [
         {
-          "expr": "beaconchain_head_slot",
+          "expr": "beacon_head_slot",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -477,7 +477,7 @@
       "pluginVersion": "6.7.4",
       "targets": [
         {
-          "expr": "beaconchain_finalized_epoch",
+          "expr": "beacon_finalized_epoch",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -575,7 +575,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "beaconchain_head_slot",
+          "expr": "beacon_head_slot",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
