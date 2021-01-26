@@ -117,8 +117,8 @@ export async function processChainSegment({
     // Split off the first section blocks that are all either within the current epoch of
     // the first block. These blocks can all be signature-verified with the same
     // `BeaconState`.
-    const blocksInEpoch = blocks.slice(0, lastIndex);
-    blocks = blocks.slice(lastIndex);
+    const blocksInEpoch = blocks.slice(0, lastIndex + 1);
+    blocks = blocks.slice(lastIndex + 1);
 
     try {
       let preStateContext = await regen.getPreState(firstBlock.message);
