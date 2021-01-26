@@ -34,7 +34,8 @@ describe("block archive repository", function () {
           key: slot,
           value: block,
         };
-      })
+      }),
+      config.params.GENESIS_FORK_VERSION
     );
     // test keys
     let lastSlot = 0;
@@ -128,7 +129,10 @@ describe("block archive repository", function () {
   it("should store indexes when block batch", async function () {
     const spy = sinon.spy(controller, "put");
     const blocks = [generateEmptySignedBlock(), generateEmptySignedBlock()];
-    await blockArchive.batchAdd(blocks);
+    await blockArchive.batchPut(
+      blocks.map((block) => ({key: block.message.slot, value: block})),
+      config.params.GENESIS_FORK_VERSION
+    );
     expect(
       spy.withArgs(
         encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(blocks[0].message)),

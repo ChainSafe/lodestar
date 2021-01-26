@@ -49,19 +49,25 @@ describe("BlockArchiveRepository", function () {
   it("batchPutBinary should result in the same to batchPut", async () => {
     const signedBlock2 = sampleBlock;
     signedBlock2.message.slot = 3000;
-    await db.blockArchive.batchPut([
-      {
-        key: sampleBlock.message.slot,
-        value: sampleBlock,
-      },
-    ]);
-    await db.blockArchive.batchPutBinary([
-      {
-        key: signedBlock2.message.slot,
-        value: config.types.SignedBeaconBlock.serialize(signedBlock2) as Buffer,
-        summary: toBlockSummary(signedBlock2),
-      },
-    ]);
+    await db.blockArchive.batchPut(
+      [
+        {
+          key: sampleBlock.message.slot,
+          value: sampleBlock,
+        },
+      ],
+      config.params.GENESIS_FORK_VERSION
+    );
+    await db.blockArchive.batchPutBinary(
+      [
+        {
+          key: signedBlock2.message.slot,
+          value: config.types.SignedBeaconBlock.serialize(signedBlock2) as Buffer,
+          summary: toBlockSummary(signedBlock2),
+        },
+      ],
+      config.params.GENESIS_FORK_VERSION
+    );
     const savedBlock1 = await db.blockArchive.get(sampleBlock.message.slot);
     const savedBlock2 = await db.blockArchive.get(signedBlock2.message.slot);
     // make sure they are the same except for slot
@@ -82,7 +88,10 @@ describe("BlockArchiveRepository", function () {
     // old way
     logger.profile("batchPut");
     const savedBlocks = await Promise.all(blockSummaries.map((summary) => db.block.get(summary.blockRoot)));
-    await db.blockArchive.batchPut(savedBlocks.map((block) => ({key: block!.message.slot, value: block!})));
+    await db.blockArchive.batchPut(
+      savedBlocks.map((block) => ({key: block!.message.slot, value: block!})),
+      config.params.GENESIS_FORK_VERSION
+    );
     logger.profile("batchPut");
     logger.profile("batchPutBinary");
     const blockBinaries = await Promise.all(blockSummaries.map((summary) => db.block.getBinary(summary.blockRoot)));
@@ -91,7 +100,8 @@ describe("BlockArchiveRepository", function () {
         key: summary!.slot,
         value: blockBinaries[i]!,
         summary: summary!,
-      }))
+      })),
+      config.params.GENESIS_FORK_VERSION
     );
     logger.profile("batchPutBinary");
   });

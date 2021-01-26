@@ -34,6 +34,19 @@ export const BeaconBlock: LightClientTypesGenerator<ContainerType<t.BeaconBlock>
   });
 };
 
+export const SignedBeaconBlock: LightClientTypesGenerator<ContainerType<t.SignedBeaconBlock>, "BeaconBlock"> = (
+  params,
+  phase0Types,
+  lightclientTypes
+) => {
+  return new ContainerType({
+    fields: {
+      ...phase0Types.SignedBeaconBlock.fields,
+      message: lightclientTypes.BeaconBlock,
+    },
+  });
+};
+
 export const BeaconBlockHeader: LightClientTypesGenerator<ContainerType<t.BeaconBlockHeader>> = (
   params,
   phase0Types

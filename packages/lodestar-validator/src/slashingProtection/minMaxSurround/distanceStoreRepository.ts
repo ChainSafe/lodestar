@@ -1,6 +1,6 @@
+import {Bucket, encodeKey, IDatabaseApiOptions, IDatabaseController} from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 import {IDistanceEntry, IDistanceStore} from "./interface";
 

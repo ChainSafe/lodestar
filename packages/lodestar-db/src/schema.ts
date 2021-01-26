@@ -2,6 +2,7 @@
  * @module db/schema
  */
 import {intToBytes} from "@chainsafe/lodestar-utils";
+import {BUCKET_LENGTH} from "./const";
 
 // Buckets are separate database namespaces
 export enum Bucket {
@@ -9,9 +10,11 @@ export enum Bucket {
   // every state
   state = 0, // Root -> BeaconState
   // unfinalized blocks
-  block = 1, // Root -> SignedBeaconBlock
+  // @deprecate
+  // block = 1, // Root -> SignedBeaconBlock
   // finalized blocks
-  blockArchive = 2, // Slot -> SignedBeaconBlock
+  // @deprecate
+  //blockArchive = 2, // Slot -> SignedBeaconBlock
   blockArchiveParentRootIndex = 3, // parent Root -> Slot
   blockArchiveRootIndex = 4, // Root -> Slot
   // known bad block
@@ -42,6 +45,11 @@ export enum Bucket {
   slashingProtectionMinSpanDistance = 23,
   slashingProtectionMaxSpanDistance = 24,
   pendingBlock = 25, // Root -> SignedBeaconBlock
+
+  phase0Block = 26,
+  lightclientBlock = 27,
+  phase0BlockArchive = 28,
+  lightclientBlockArchive = 29,
 }
 
 export enum Key {
@@ -55,7 +63,6 @@ export enum Key {
   justifiedBlock = 5,
 }
 
-export const bucketLen = 1;
 export const uintLen = 8;
 
 /**
@@ -63,16 +70,19 @@ export const uintLen = 8;
  */
 export function encodeKey(bucket: Bucket, key: Uint8Array | string | number | bigint): Buffer {
   let buf;
+  const prefixLength = BUCKET_LENGTH;
+  //all keys are writen with prefixLength offet
   if (typeof key === "string") {
-    buf = Buffer.alloc(key.length + bucketLen);
-    buf.write(key, bucketLen);
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.write(key, prefixLength);
   } else if (typeof key === "number" || typeof key === "bigint") {
-    buf = Buffer.alloc(uintLen + bucketLen);
-    intToBytes(BigInt(key), uintLen, "be").copy(buf, bucketLen);
+    buf = Buffer.alloc(uintLen + prefixLength);
+    intToBytes(BigInt(key), uintLen, "be").copy(buf, prefixLength);
   } else {
-    buf = Buffer.alloc(key.length + bucketLen);
-    buf.set(key, bucketLen);
+    buf = Buffer.alloc(key.length + prefixLength);
+    buf.set(key, prefixLength);
   }
-  buf.writeUInt8(bucket, 0);
+  //bucket prefix on position 0
+  buf.set(intToBytes(bucket, BUCKET_LENGTH, "le"), 0);
   return buf;
 }
