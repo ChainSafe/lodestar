@@ -1,4 +1,3 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
@@ -14,7 +13,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBeaconDb} from "../../db";
 import {verifySignatureSetsBatch} from "../bls";
-import {findLastIndex} from "../../util/array";
+import {groupBlocksByEpoch} from "./util";
 
 export async function processBlock({
   forkChoice,
@@ -94,31 +93,32 @@ export async function processChainSegment({
   job: IChainSegmentJob;
 }): Promise<void> {
   let importedBlocks = 0;
-  let blocks = job.signedBlocks;
+  const blocks = job.signedBlocks;
 
-  // Process segment epoch by epoch
-  while (blocks.length) {
-    const firstBlock = blocks[0];
+  const firstSegBlock = blocks[0];
+  if (firstSegBlock) {
     // First ensure that the segment's parent has been processed
-    if (!forkChoice.hasBlock(firstBlock.message.parentRoot)) {
+    if (!forkChoice.hasBlock(firstSegBlock.message.parentRoot)) {
       throw new ChainSegmentError({
         code: BlockErrorCode.PARENT_UNKNOWN,
-        parentRoot: firstBlock.message.parentRoot.valueOf() as Uint8Array,
+        parentRoot: firstSegBlock.message.parentRoot.valueOf() as Uint8Array,
         job,
         importedBlocks,
       });
     }
-    const startEpoch = computeEpochAtSlot(config, firstBlock.message.slot);
+  }
 
-    // The `lastIndex` indicates the position of the last block that is in the current
-    // epoch of `startEpoch`.
-    const lastIndex = findLastIndex(blocks, (block) => computeEpochAtSlot(config, block.message.slot) === startEpoch);
+  // Split off the first section blocks that are all either within the current epoch of
+  // the first block. These blocks can all be signature-verified with the same
+  // `BeaconState`.
+  const blocksByEpoch = groupBlocksByEpoch(config, blocks);
 
-    // Split off the first section blocks that are all either within the current epoch of
-    // the first block. These blocks can all be signature-verified with the same
-    // `BeaconState`.
-    const blocksInEpoch = blocks.slice(0, lastIndex + 1);
-    blocks = blocks.slice(lastIndex + 1);
+  // Process segment epoch by epoch
+  for (const blocksInEpoch of blocksByEpoch) {
+    const firstBlock = blocksInEpoch[0];
+    if (!firstBlock) {
+      continue;
+    }
 
     try {
       let preStateContext = await regen.getPreState(firstBlock.message);
