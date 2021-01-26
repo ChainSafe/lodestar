@@ -1,9 +1,8 @@
-import {BeaconState, Gwei} from "@chainsafe/lodestar-types";
+import {Gwei} from "@chainsafe/lodestar-types";
 import {bigIntSqrt, bigIntMax} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 
 import {
-  EpochContext,
   IEpochProcess,
   hasMarkers,
   FLAG_ELIGIBLE_ATTESTER,
@@ -12,16 +11,13 @@ import {
   FLAG_PREV_TARGET_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER,
 } from "../util";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
 /**
  * Return attestation reward/penalty deltas for each validator.
  */
-export function getAttestationDeltas(
-  epochCtx: EpochContext,
-  process: IEpochProcess,
-  state: BeaconState
-): [Gwei[], Gwei[]] {
-  const params = epochCtx.config.params;
+export function getAttestationDeltas(cachedState: CachedBeaconState, process: IEpochProcess): [Gwei[], Gwei[]] {
+  const params = cachedState.config.params;
   const validatorCount = process.statuses.length;
   const rewards = Array.from({length: validatorCount}, () => BigInt(0));
   const penalties = Array.from({length: validatorCount}, () => BigInt(0));
@@ -36,7 +32,7 @@ export function getAttestationDeltas(
 
   // sqrt first, before factoring out the increment for later usage
   const balanceSqRoot = bigIntSqrt(totalBalance);
-  const finalityDelay = BigInt(process.prevEpoch - state.finalizedCheckpoint.epoch);
+  const finalityDelay = BigInt(process.prevEpoch - cachedState.finalizedCheckpoint.epoch);
 
   totalBalance = totalBalance / increment;
 

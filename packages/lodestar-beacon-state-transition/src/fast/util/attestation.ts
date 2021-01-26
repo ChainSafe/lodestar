@@ -1,7 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-types";
 import {computeSlotsSinceEpochStart} from "../../util";
-import {EpochContext} from "../index";
+import {EpochContext} from "./epochContext";
 
 /**
  * Compute the correct subnet for an attestation for Phase 0.

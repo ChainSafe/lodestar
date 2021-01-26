@@ -1,37 +1,27 @@
-import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-
-// Lodestar specifc state context
-export interface ITreeStateContext {
-  state: CachedValidatorsBeaconState;
-  epochCtx: EpochContext;
-}
+import {ByteVector, toHexString} from "@chainsafe/ssz";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
- * In memory cache of BeaconState and connected EpochContext
+ * In memory cache of CachedBeaconState
  *
  * Similar API to Repository
  */
 export class StateContextCache {
-  private cache: Record<string, ITreeStateContext>;
+  private cache: Record<string, CachedBeaconState>;
   constructor() {
     this.cache = {};
   }
 
-  public async get(root: ByteVector): Promise<ITreeStateContext | null> {
+  public async get(root: ByteVector): Promise<CachedBeaconState | null> {
     const item = this.cache[toHexString(root)];
     if (!item) {
       return null;
     }
-    return this.clone(item);
+    return item.clone();
   }
 
-  public async add(item: ITreeStateContext): Promise<void> {
-    this.cache[toHexString((item.state.getOriginalState() as TreeBacked<BeaconState>).hashTreeRoot())] = this.clone(
-      item
-    );
+  public async add(item: CachedBeaconState): Promise<void> {
+    this.cache[toHexString(item.getTreeBackedState().hashTreeRoot())] = item.clone();
   }
 
   public async delete(root: ByteVector): Promise<void> {
@@ -72,14 +62,7 @@ export class StateContextCache {
    * Should only use this with care as this is expensive.
    * @param epoch
    */
-  public async valuesUnsafe(): Promise<ITreeStateContext[]> {
-    return Object.values(this.cache).map((item) => this.clone(item));
-  }
-
-  private clone(item: ITreeStateContext): ITreeStateContext {
-    return {
-      state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
-    };
+  public async valuesUnsafe(): Promise<CachedBeaconState[]> {
+    return Object.values(this.cache).map((item) => item.clone());
   }
 }

@@ -1,12 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {
-  CachedValidatorsBeaconState,
-  createCachedValidatorsBeaconState,
-  IEpochProcess,
-  prepareEpochProcessState,
-} from "../../src/fast/util";
-import {EpochContext} from "../../src/fast/util/epochContext";
+import {CachedBeaconState, createCachedBeaconState, IEpochProcess, prepareEpochProcessState} from "../../src/fast/util";
 import {
   processFinalUpdates,
   processJustificationAndFinalization,
@@ -19,8 +13,7 @@ import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
 
 describe("Epoch Processing Performance Tests", function () {
-  let state: CachedValidatorsBeaconState;
-  let epochCtx: EpochContext;
+  let cachedState: CachedBeaconState;
   let process: IEpochProcess;
   const logger = new WinstonLogger();
 
@@ -30,65 +23,62 @@ describe("Epoch Processing Performance Tests", function () {
     const origState = await generatePerformanceState();
     // go back 1 slot to process epoch
     origState.slot -= 1;
-    epochCtx = new EpochContext(config);
-    epochCtx.loadState(origState);
-    state = createCachedValidatorsBeaconState(origState);
+    cachedState = createCachedBeaconState(config, origState);
   });
 
   it("prepareEpochProcessState", async () => {
     const start = Date.now();
     logger.profile("prepareEpochProcessState");
-    process = prepareEpochProcessState(epochCtx, state);
+    process = prepareEpochProcessState(cachedState);
     logger.profile("prepareEpochProcessState");
-    // not stable, sometimes < 1400, sometimes > 2000
-    expect(Date.now() - start).lt(100);
+    expect(Date.now() - start).lte(60, "preparing EpochProcess takes longer than expected");
   });
 
   it("processJustificationAndFinalization", async () => {
     const start = Date.now();
     logger.profile("processJustificationAndFinalization");
-    processJustificationAndFinalization(epochCtx, process, state);
+    processJustificationAndFinalization(cachedState, process);
     logger.profile("processJustificationAndFinalization");
-    expect(Date.now() - start).lte(2);
+    expect(Date.now() - start).lte(2, "processing justification and finalization takes longer than expected");
   });
 
   it("processRewardsAndPenalties", async () => {
     const start = Date.now();
     logger.profile("processRewardsAndPenalties");
-    processRewardsAndPenalties(epochCtx, process, state);
+    processRewardsAndPenalties(cachedState, process);
     logger.profile("processRewardsAndPenalties");
-    expect(Date.now() - start).lt(700);
+    expect(Date.now() - start).lt(500, "processing rewards and penalties takes longer than expected");
   });
 
   it("processRegistryUpdates", async () => {
     const start = Date.now();
     logger.profile("processRegistryUpdates");
-    processRegistryUpdates(epochCtx, process, state);
+    processRegistryUpdates(cachedState, process);
     logger.profile("processRegistryUpdates");
-    expect(Date.now() - start).lte(2);
+    expect(Date.now() - start).lte(2, "processing registry updates takes longer than expected");
   });
 
   it("processSlashings", async () => {
     const start = Date.now();
     logger.profile("processSlashings");
-    processSlashings(epochCtx, process, state);
+    processSlashings(cachedState, process);
     logger.profile("processSlashings");
-    expect(Date.now() - start).lte(25);
+    expect(Date.now() - start).lte(25, "processing slashings takes longer than expected");
   });
 
   it("processFinalUpdates", async () => {
     const start = Date.now();
     logger.profile("processFinalUpdates");
-    processFinalUpdates(epochCtx, process, state);
+    processFinalUpdates(cachedState, process);
     logger.profile("processFinalUpdates");
-    expect(Date.now() - start).lte(30);
+    expect(Date.now() - start).lte(30, "processing final update takes longer than expected");
   });
 
   it("processForkChanged", async () => {
     const start = Date.now();
     logger.profile("processForkChanged");
-    processForkChanged(epochCtx, process, state);
+    processForkChanged(cachedState, process);
     logger.profile("processForkChanged");
-    expect(Date.now() - start).lte(2);
+    expect(Date.now() - start).lte(2, "processing fork change takes longer than expected");
   });
 });

@@ -2,9 +2,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db/api";
 import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {BlockError, BlockErrorCode} from "../errors";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export async function validateGossipBlock(
   config: IBeaconConfig,
@@ -52,10 +53,10 @@ export async function validateGossipBlock(
     });
   }
 
-  let blockContext;
+  let blockState;
   try {
     // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.  as a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).  this is something we should change this in the future to make the code airtight to the spec.
-    blockContext = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
+    blockState = await chain.regen.getBlockSlotState(block.message.parentRoot, block.message.slot);
   } catch (e) {
     throw new BlockError({
       code: BlockErrorCode.PARENT_UNKNOWN,
@@ -64,7 +65,7 @@ export async function validateGossipBlock(
     });
   }
 
-  if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
+  if (!verifyBlockSignature(blockState, block)) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
@@ -72,7 +73,7 @@ export async function validateGossipBlock(
   }
 
   try {
-    const validProposer = isExpectedProposer(blockContext.epochCtx, block.message);
+    const validProposer = isExpectedProposer(blockState, block.message);
     if (!validProposer) {
       throw new BlockError({
         code: BlockErrorCode.INCORRECT_PROPOSER,
@@ -98,7 +99,7 @@ export async function hasProposerAlreadyProposed(
   return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
-export function isExpectedProposer(epochCtx: EpochContext, block: BeaconBlock): boolean {
-  const supposedProposerIndex = epochCtx.getBeaconProposer(block.slot);
+export function isExpectedProposer(state: CachedBeaconState, block: BeaconBlock): boolean {
+  const supposedProposerIndex = state.getBeaconProposer(block.slot);
   return supposedProposerIndex === block.proposerIndex;
 }

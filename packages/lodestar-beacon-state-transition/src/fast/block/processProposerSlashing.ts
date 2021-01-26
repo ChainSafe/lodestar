@@ -1,17 +1,16 @@
-import {BeaconState, ProposerSlashing} from "@chainsafe/lodestar-types";
+import {ProposerSlashing} from "@chainsafe/lodestar-types";
 import {DomainType} from "../../constants";
 import {computeEpochAtSlot, computeSigningRoot, getDomain, isSlashableValidator} from "../../util";
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
 import {slashValidator} from "./slashValidator";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
 export function processProposerSlashing(
-  epochCtx: EpochContext,
-  state: CachedValidatorsBeaconState,
+  cachedState: CachedBeaconState,
   proposerSlashing: ProposerSlashing,
   verifySignatures = true
 ): void {
-  const config = epochCtx.config;
+  const config = cachedState.config;
   const {BeaconBlockHeader} = config.types;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
@@ -32,38 +31,37 @@ export function processProposerSlashing(
     throw new Error("ProposerSlashing headers are equal");
   }
   // verify the proposer is slashable
-  const proposer = state.validators[header1.proposerIndex];
-  if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {
+  const proposer = cachedState.validators[header1.proposerIndex];
+  if (!isSlashableValidator(proposer, cachedState.currentShuffling.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
 
   // verify signatures
   if (verifySignatures) {
-    getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing).forEach((signatureSet, i) => {
+    getProposerSlashingSignatureSets(cachedState, proposerSlashing).forEach((signatureSet, i) => {
       if (!verifySignatureSet(signatureSet)) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     });
   }
 
-  slashValidator(epochCtx, state, header1.proposerIndex);
+  slashValidator(cachedState, header1.proposerIndex);
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getProposerSlashingSignatureSets(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   proposerSlashing: ProposerSlashing
 ): ISignatureSet[] {
-  const config = epochCtx.config;
-  const pubkey = epochCtx.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
+  const config = cachedState.config;
+  const pubkey = cachedState.index2pubkey[proposerSlashing.signedHeader1.message.proposerIndex];
 
   return [proposerSlashing.signedHeader1, proposerSlashing.signedHeader2].map(
     (signedHeader): ISignatureSet => {
       const epoch = computeEpochAtSlot(config, signedHeader.message.slot);
-      const domain = getDomain(config, state, DomainType.BEACON_PROPOSER, epoch);
+      const domain = getDomain(config, cachedState, DomainType.BEACON_PROPOSER, epoch);
 
       return {
         type: SignatureSetType.single,

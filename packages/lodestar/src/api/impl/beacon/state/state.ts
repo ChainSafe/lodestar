@@ -55,93 +55,84 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.db, this.forkChoice, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     //TODO: implement filters
-    return readOnlyMap(state.state.validators, (v, index) =>
-      toValidatorResponse(index, v, state.state.balances[index])
-    );
+    return readOnlyMap(state.validators, (v, index) => toValidatorResponse(index, v, state.balances[index]));
   }
 
   public async getStateValidator(
     stateId: StateId,
     validatorId: ValidatorIndex | Root
   ): Promise<ValidatorResponse | null> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.db, this.forkChoice, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     let validatorIndex: ValidatorIndex | undefined;
     if (typeof validatorId === "number") {
-      if (state.state.validators.length > validatorId) {
+      if (state.validators.length > validatorId) {
         validatorIndex = validatorId;
       }
     } else {
-      validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
+      validatorIndex = (await this.chain.getHeadStateContext()).pubkey2index.get(validatorId) ?? undefined;
       // validator added later than given stateId
-      if (validatorIndex && validatorIndex >= state.state.validators.length) {
+      if (validatorIndex && validatorIndex >= state.validators.length) {
         validatorIndex = undefined;
       }
     }
     if (!validatorIndex) {
       throw new ApiError(404, "Validator not found");
     }
-    return toValidatorResponse(
-      validatorIndex,
-      state.state.validators[validatorIndex],
-      state.state.balances[validatorIndex]
-    );
+    return toValidatorResponse(validatorIndex, state.validators[validatorIndex], state.balances[validatorIndex]);
   }
 
   public async getStateValidatorBalances(
     stateId: StateId,
     indices?: (ValidatorIndex | Root)[]
   ): Promise<ValidatorBalance[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.db, this.forkChoice, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     if (indices) {
-      const epochCtx = await this.chain.getHeadEpochContext();
+      const cachedState = await this.chain.getHeadStateContext();
       return indices
         .map((id) => {
           if (typeof id === "number") {
-            if (state.state.validators.length <= id) {
+            if (state.validators.length <= id) {
               return null;
             }
             return {
               index: id,
-              balance: state.state.balances[id],
+              balance: state.balances[id],
             };
           } else {
-            const index = epochCtx.pubkey2index.get(id) ?? undefined;
-            return index && index <= state.state.validators.length
-              ? {index, balance: state.state.balances[index]}
-              : null;
+            const index = cachedState.pubkey2index.get(id) ?? undefined;
+            return index && index <= state.validators.length ? {index, balance: state.balances[index]} : null;
           }
         })
         .filter(notNullish);
     }
-    return readOnlyMap(state.state.validators, (v, index) => {
+    return readOnlyMap(state.validators, (v, index) => {
       return {
         index,
-        balance: state.state.balances[index],
+        balance: state.balances[index],
       };
     });
   }
 
   public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
-    const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const stateContext = await resolveStateId(this.db, this.forkChoice, stateId);
     if (!stateContext) {
       throw new StateNotFound();
     }
     const committes: ValidatorIndex[][][] = getEpochBeaconCommittees(
       this.config,
-      this.chain,
       stateContext,
-      filters?.epoch ?? computeEpochAtSlot(this.config, stateContext.state.slot)
+      filters?.epoch ?? computeEpochAtSlot(this.config, stateContext.slot)
     );
     return committes.flatMap((slotCommittees, committeeIndex) => {
       if (filters?.index && filters.index !== committeeIndex) {
@@ -163,7 +154,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
-    return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
+    return resolveStateId(this.db, this.forkChoice, stateId);
   }
 
   public async getFork(stateId: StateId): Promise<Fork | null> {

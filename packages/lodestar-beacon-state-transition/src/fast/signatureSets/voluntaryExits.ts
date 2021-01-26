@@ -1,15 +1,14 @@
 import {readOnlyMap} from "@chainsafe/ssz";
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "./types";
-import {EpochContext} from "../index";
 import {getVoluntaryExitSignatureSet} from "../block/processVoluntaryExit";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
 export function getVoluntaryExitsSignatureSets(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return readOnlyMap(signedBlock.message.body.voluntaryExits, (voluntaryExit) =>
-    getVoluntaryExitSignatureSet(epochCtx, state, voluntaryExit)
+    getVoluntaryExitSignatureSet(cachedState, voluntaryExit)
   );
 }

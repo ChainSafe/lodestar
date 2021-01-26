@@ -1,24 +1,21 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
   "slot sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {
     const state = config.types.BeaconState.tree.createValue(testcase.pre);
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = createCachedValidatorsBeaconState(state);
-    processSlots(epochCtx, wrappedState, state.slot + Number(testcase.slots));
-    return state;
+    const cachedState = createCachedBeaconState(config, state);
+    processSlots(cachedState, state.slot + Number(testcase.slots));
+    return cachedState.getOriginalState();
   },
   {
     // @ts-ignore

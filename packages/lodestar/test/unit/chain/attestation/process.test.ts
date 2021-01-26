@@ -3,7 +3,6 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {IndexedAttestation} from "@chainsafe/lodestar-types";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as attestationUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
 import {processAttestation} from "../../../../src/chain/attestation/process";
@@ -48,9 +47,8 @@ describe("processAttestation", function () {
   it("should throw on errored getIndexedAttestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.getIndexedAttestation.throws();
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
+    // TODO: throw error
+    regen.getCheckpointState.resolves(state);
     try {
       await processAttestation({
         emitter,
@@ -67,9 +65,8 @@ describe("processAttestation", function () {
   it("should throw on invalid indexed attestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
+    state.getIndexedAttestation = () => ({} as IndexedAttestation);
+    regen.getCheckpointState.resolves(state);
     isValidIndexedAttestationStub.returns(false);
     try {
       await processAttestation({
@@ -87,9 +84,8 @@ describe("processAttestation", function () {
   it("should emit 'attestation' event on processed attestation", async function () {
     const attestation = generateAttestation();
     const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.getIndexedAttestation.returns({} as IndexedAttestation);
-    regen.getCheckpointState.resolves({state, epochCtx: (epochCtx as unknown) as EpochContext});
+    state.getIndexedAttestation = () => ({} as IndexedAttestation);
+    regen.getCheckpointState.resolves(state);
     isValidIndexedAttestationStub.returns(true);
     forkChoice.onAttestation.returns();
 

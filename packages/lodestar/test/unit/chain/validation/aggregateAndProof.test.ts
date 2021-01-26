@@ -6,7 +6,7 @@ import bls from "@chainsafe/bls";
 import {bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import * as validatorUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validator";
-import {EpochContext, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import * as blockUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 
 import {BeaconChain, IAttestationJob, IBeaconChain} from "../../../../src/chain";
@@ -196,24 +196,21 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([]);
+    const cachedState = generateCachedState();
+    regen.getBlockSlotState.resolves(cachedState);
+    const getBeaconCommitteeStub = sinon.stub(cachedState, "getBeaconCommittee");
+    getBeaconCommitteeStub.returns([]);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
         attestation: item.message.aggregate,
         validSignature: false,
       } as IAttestationJob);
+      expect.fail("Expect error here");
     } catch (error) {
       expect(error.type).to.have.property("code", AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE);
     }
     expect(
-      epochCtx.getBeaconCommittee.withArgs(item.message.aggregate.data.slot, item.message.aggregate.data.index)
-        .calledOnce
+      getBeaconCommitteeStub.withArgs(item.message.aggregate.data.slot, item.message.aggregate.data.index).calledOnce
     ).to.be.true;
   });
 
@@ -226,13 +223,9 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    const cachedState = generateCachedState();
+    regen.getBlockSlotState.resolves(cachedState);
+    cachedState.getBeaconCommittee = () => [item.message.aggregatorIndex];
     isAggregatorStub.returns(false);
     try {
       await validateGossipAggregateAndProof(config, chain, db, item, {
@@ -254,16 +247,12 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.index2pubkey = [];
+    const cachedState = generateCachedState();
+    cachedState.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    cachedState.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    regen.getBlockSlotState.resolves(cachedState);
+    cachedState.getBeaconCommittee = () => [item.message.aggregatorIndex];
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(false);
     try {
@@ -286,16 +275,12 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.index2pubkey = [];
+    const cachedState = generateCachedState();
+    cachedState.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    cachedState.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    regen.getBlockSlotState.resolves(cachedState);
+    cachedState.getBeaconCommittee = () => [item.message.aggregatorIndex];
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(false);
@@ -310,9 +295,9 @@ describe("gossip aggregate and proof test", function () {
     expect(
       isValidSignatureStub.withArgs(
         config,
-        state,
+        cachedState,
         0,
-        epochCtx.index2pubkey[item.message.aggregatorIndex],
+        cachedState.index2pubkey[item.message.aggregatorIndex],
         sinon.match.any
       ).calledOnce
     ).to.be.true;
@@ -327,16 +312,12 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.index2pubkey = [];
+    const cachedState = generateCachedState();
+    cachedState.index2pubkey = [];
     const privateKey = bls.SecretKey.fromBytes(bigIntToBytes(BigInt(1), 32));
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    cachedState.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    regen.getBlockSlotState.resolves(cachedState);
+    cachedState.getBeaconCommittee = () => [item.message.aggregatorIndex];
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(true);
@@ -361,16 +342,12 @@ describe("gossip aggregate and proof test", function () {
         },
       },
     });
-    const state = generateCachedState();
-    const epochCtx = sinon.createStubInstance(EpochContext);
-    epochCtx.index2pubkey = [];
+    const cachedState = generateCachedState();
+    cachedState.index2pubkey = [];
     const privateKey = bls.SecretKey.fromKeygen();
-    epochCtx.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
-    regen.getBlockSlotState.resolves({
-      state,
-      epochCtx: (epochCtx as unknown) as EpochContext,
-    });
-    epochCtx.getBeaconCommittee.returns([item.message.aggregatorIndex]);
+    cachedState.index2pubkey[item.message.aggregatorIndex] = privateKey.toPublicKey();
+    regen.getBlockSlotState.resolves(cachedState);
+    cachedState.getBeaconCommittee = () => [item.message.aggregatorIndex];
     isAggregatorStub.returns(true);
     isValidSelectionProofStub.returns(true);
     isValidSignatureStub.returns(true);

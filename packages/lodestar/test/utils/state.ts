@@ -4,9 +4,12 @@ import {generateEmptyBlock} from "./block";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {TreeBacked, List} from "@chainsafe/ssz";
 import {
-  CachedValidatorsBeaconState,
-  createCachedValidatorsBeaconState,
+  CachedBeaconState,
+  createCachedBeaconState,
+  createIFlatValidator,
+  IFlatValidator,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {Vector} from "@chainsafe/persistent-ts";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -80,6 +83,23 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
   return resultState;
 }
 
-export function generateCachedState(opts: TestBeaconState = {}): CachedValidatorsBeaconState {
-  return createCachedValidatorsBeaconState(generateState(opts));
+interface IGenerateTestBeaconState extends TestBeaconState {
+  loadState?: boolean;
+}
+
+export function generateCachedState(opts: IGenerateTestBeaconState = {loadState: false}): CachedBeaconState {
+  if (opts.loadState) {
+    delete opts.loadState;
+    return createCachedBeaconState(config, generateState(opts));
+  } else {
+    delete opts.loadState;
+    // same to createCachedBeaconState without loading state
+    const state = generateState(opts);
+    let flatValidators: IFlatValidator[] = [];
+    if (opts.validators) {
+      flatValidators = (opts.validators as Validator[]).map((validator) => createIFlatValidator(validator));
+    }
+    const cachedState = new CachedBeaconState(config, state, Vector.of(...flatValidators));
+    return cachedState.createProxy();
+  }
 }

@@ -1,20 +1,19 @@
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {DomainType, FAR_FUTURE_EPOCH} from "../../constants";
 import {computeSigningRoot, getDomain, isActiveValidator} from "../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../signatureSets";
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function processVoluntaryExit(
-  epochCtx: EpochContext,
-  state: CachedValidatorsBeaconState,
+  cachedState: CachedBeaconState,
   signedVoluntaryExit: SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  const config = epochCtx.config;
+  const config = cachedState.config;
   const voluntaryExit = signedVoluntaryExit.message;
-  const validator = state.validators[voluntaryExit.validatorIndex];
-  const currentEpoch = epochCtx.currentShuffling.epoch;
+  const validator = cachedState.validators[voluntaryExit.validatorIndex];
+  const currentEpoch = cachedState.currentShuffling.epoch;
   // verify the validator is active
   if (!isActiveValidator(validator, currentEpoch)) {
     throw new Error("VoluntaryExit validator is not active");
@@ -36,30 +35,29 @@ export function processVoluntaryExit(
 
   // verify signature
   if (verifySignature) {
-    const signatureSet = getVoluntaryExitSignatureSet(epochCtx, state, signedVoluntaryExit);
+    const signatureSet = getVoluntaryExitSignatureSet(cachedState, signedVoluntaryExit);
     if (!verifySignatureSet(signatureSet)) {
       throw new Error("VoluntaryExit has an invalid signature");
     }
   }
 
   // initiate exit
-  initiateValidatorExit(epochCtx, state, voluntaryExit.validatorIndex);
+  initiateValidatorExit(cachedState, voluntaryExit.validatorIndex);
 }
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getVoluntaryExitSignatureSet(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   signedVoluntaryExit: SignedVoluntaryExit
 ): ISignatureSet {
-  const config = epochCtx.config;
-  const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
+  const config = cachedState.config;
+  const domain = getDomain(config, cachedState, DomainType.VOLUNTARY_EXIT, signedVoluntaryExit.message.epoch);
 
   return {
     type: SignatureSetType.single,
-    pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
+    pubkey: cachedState.index2pubkey[signedVoluntaryExit.message.validatorIndex],
     signingRoot: computeSigningRoot(config, config.types.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };

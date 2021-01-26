@@ -38,7 +38,7 @@ export async function processAttestation({
 
   let indexedAttestation;
   try {
-    indexedAttestation = targetState.epochCtx.getIndexedAttestation(attestation);
+    indexedAttestation = targetState.getIndexedAttestation(attestation);
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX,
@@ -50,7 +50,7 @@ export async function processAttestation({
 
   //TODO: we could signal to skip this in case it came from validated from gossip or from block
   // we need to check this again, because gossip validation might put it in pool before it validated signature
-  if (!isValidIndexedAttestation(targetState.epochCtx, targetState.state, indexedAttestation, true)) {
+  if (!isValidIndexedAttestation(targetState, indexedAttestation, true)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job,

@@ -4,11 +4,11 @@ import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chains
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 interface IEventMap<Events, Event extends keyof Events = keyof Events, Callback extends Events[Event] = Events[Event]>
   extends Map<Event, Callback> {
@@ -142,32 +142,32 @@ export async function onForkVersion(this: BeaconChain, version: Version): Promis
   this.logger.verbose("New fork version", this.config.types.Version.toJson(version));
 }
 
-export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
+export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, cachedState: CachedBeaconState): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
-  await this.db.checkpointStateCache.add(cp, stateContext);
+  await this.db.checkpointStateCache.add(cp, cachedState);
 
-  this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
-  const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
+  this.metrics.currentValidators.set({status: "active"}, cachedState.currentShuffling.activeIndices.length);
+  const parentBlockSummary = await this.forkChoice.getBlock(cachedState.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
-    const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
+    const justifiedCheckpoint = cachedState.currentJustifiedCheckpoint;
     const justifiedEpoch = justifiedCheckpoint.epoch;
     const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
     if (justifiedEpoch > preJustifiedEpoch) {
-      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, cachedState);
     }
-    const finalizedCheckpoint = stateContext.state.finalizedCheckpoint;
+    const finalizedCheckpoint = cachedState.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
     if (finalizedEpoch > preFinalizedEpoch) {
-      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, stateContext);
+      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, cachedState);
     }
   }
 }
 
-export async function onJustified(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
+export async function onJustified(this: BeaconChain, cp: Checkpoint, cachedState: CachedBeaconState): Promise<void> {
   this.logger.important("Checkpoint justified", this.config.types.Checkpoint.toJson(cp));
-  this.metrics.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
+  this.metrics.previousJustifiedEpoch.set(cachedState.previousJustifiedCheckpoint.epoch);
   this.metrics.currentJustifiedEpoch.set(cp.epoch);
 }
 
@@ -215,7 +215,7 @@ export async function onAttestation(this: BeaconChain, attestation: Attestation)
 export async function onBlock(
   this: BeaconChain,
   block: SignedBeaconBlock,
-  postStateContext: ITreeStateContext,
+  postState: CachedBeaconState,
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
@@ -224,7 +224,7 @@ export async function onBlock(
     root: toHexString(blockRoot),
   });
 
-  await this.db.stateCache.add(postStateContext);
+  await this.db.stateCache.add(postState);
   if (!job.reprocess) {
     await this.db.block.add(block);
   }

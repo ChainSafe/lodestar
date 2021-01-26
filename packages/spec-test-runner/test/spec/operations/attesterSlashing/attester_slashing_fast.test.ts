@@ -2,23 +2,20 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processAttesterSlashing} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessAttesterSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describeDirectorySpecTest<IProcessAttesterSlashingTestCase, BeaconState>(
   "process attester slashing mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attester_slashing/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    const wrappedState = createCachedValidatorsBeaconState(state);
-    processAttesterSlashing(epochCtx, wrappedState, testcase.attester_slashing, verify);
+    const cachedState = createCachedBeaconState(config, state);
+    processAttesterSlashing(cachedState, testcase.attester_slashing, verify);
     return state;
   },
   {

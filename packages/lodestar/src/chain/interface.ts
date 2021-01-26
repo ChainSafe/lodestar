@@ -10,15 +10,14 @@ import {
   Slot,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 interface IProcessBlock {
   /**
@@ -82,14 +81,13 @@ export interface IBeaconChain {
    */
   getENRForkID(): Promise<ENRForkID>;
   getGenesisTime(): Number64;
-  getHeadStateContext(): Promise<ITreeStateContext>;
-  getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
-  getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
+  getHeadStateContext(): Promise<CachedBeaconState>;
+  getHeadStateContextAtCurrentEpoch(): Promise<CachedBeaconState>;
+  getHeadStateContextAtCurrentSlot(): Promise<CachedBeaconState>;
   getHeadState(): Promise<TreeBacked<BeaconState>>;
-  getHeadEpochContext(): Promise<EpochContext>;
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
-  getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
+  getStateContextByBlockRoot(blockRoot: Root): Promise<CachedBeaconState | null>;
 
   getFinalizedCheckpoint(): Promise<Checkpoint>;
 

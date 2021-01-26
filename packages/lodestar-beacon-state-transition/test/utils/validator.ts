@@ -1,8 +1,10 @@
 import {List} from "@chainsafe/ssz";
 import {Validator} from "@chainsafe/lodestar-types";
 import {FAR_FUTURE_EPOCH} from "../../src/constants";
+import {interopSecretKey} from "@chainsafe/lodestar-utils";
 
 export interface IValidatorGeneratorOpts {
+  index?: number;
   activation?: number;
   exit?: number;
   slashed?: boolean;
@@ -20,7 +22,12 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): Validator
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
   const activationEpoch = opts.activation || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
-    pubkey: Buffer.alloc(48),
+    pubkey:
+      opts.index === undefined
+        ? Buffer.alloc(48)
+        : interopSecretKey(opts.index ?? 0)
+            .toPublicKey()
+            .toBytes(),
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
@@ -37,5 +44,5 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): Validator
  * @returns {Validator[]}
  */
 export function generateValidators(n: number, opts?: IValidatorGeneratorOpts): List<Validator> {
-  return Array.from({length: n}, () => generateValidator(opts)) as List<Validator>;
+  return Array.from({length: n}, (_, index) => generateValidator({...opts, index: index})) as List<Validator>;
 }

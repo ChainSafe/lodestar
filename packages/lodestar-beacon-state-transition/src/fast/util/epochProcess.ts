@@ -19,8 +19,7 @@ import {
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
 import {isActiveIFlatValidator} from "./flatValidator";
-import {CachedValidatorsBeaconState} from "./interface";
-import {EpochContext} from "./epochContext";
+import {CachedBeaconState} from "./cachedBeaconState";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and
@@ -71,10 +70,10 @@ export function createIEpochProcess(): IEpochProcess {
   };
 }
 
-export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedValidatorsBeaconState): IEpochProcess {
+export function prepareEpochProcessState(cachedState: CachedBeaconState): IEpochProcess {
   const out = createIEpochProcess();
 
-  const config = epochCtx.config;
+  const config = cachedState.config;
   const rootType = config.types.Root;
   const {
     EPOCHS_PER_SLASHINGS_VECTOR,
@@ -82,8 +81,8 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
     EFFECTIVE_BALANCE_INCREMENT,
     EJECTION_BALANCE,
   } = config.params;
-  const currentEpoch = epochCtx.currentShuffling.epoch;
-  const prevEpoch = epochCtx.previousShuffling.epoch;
+  const currentEpoch = cachedState.currentShuffling.epoch;
+  const prevEpoch = cachedState.previousShuffling.epoch;
   out.currentEpoch = currentEpoch;
   out.prevEpoch = prevEpoch;
 
@@ -91,7 +90,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
   let exitQueueEnd = computeActivationExitEpoch(config, currentEpoch);
 
   let activeCount = 0;
-  state.flatValidators().readOnlyForEach((v, i) => {
+  cachedState.flatValidators().readOnlyForEach((v, i) => {
     const status = createIAttesterStatus(v);
 
     if (v.slashed) {
@@ -168,7 +167,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
     targetFlag: number,
     headFlag: number
   ): void => {
-    const actualTargetBlockRoot = getBlockRootAtSlot(config, state, computeStartSlotAtEpoch(config, epoch));
+    const actualTargetBlockRoot = getBlockRootAtSlot(config, cachedState, computeStartSlotAtEpoch(config, epoch));
     readOnlyForEach(attestations, (att) => {
       // Load all the attestation details from the state tree once, do not reload for each participant
       const aggregationBits = att.aggregationBits;
@@ -182,10 +181,10 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
 
       const attBits = readOnlyMap(aggregationBits, (b) => b);
       const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
-      const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, state, attSlot));
+      const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(config, cachedState, attSlot));
 
       // attestation-target is already known to be this epoch, get it from the pre-computed shuffling directly.
-      const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
+      const committee = cachedState.getBeaconCommittee(attSlot, committeeIndex);
 
       const participants: ValidatorIndex[] = [];
       committee.forEach((index, i) => {
@@ -226,7 +225,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
   };
   statusProcessEpoch(
     out.statuses,
-    state.previousEpochAttestations,
+    cachedState.previousEpochAttestations,
     prevEpoch,
     FLAG_PREV_SOURCE_ATTESTER,
     FLAG_PREV_TARGET_ATTESTER,
@@ -234,7 +233,7 @@ export function prepareEpochProcessState(epochCtx: EpochContext, state: CachedVa
   );
   statusProcessEpoch(
     out.statuses,
-    state.currentEpochAttestations,
+    cachedState.currentEpochAttestations,
     currentEpoch,
     FLAG_CURR_SOURCE_ATTESTER,
     FLAG_CURR_TARGET_ATTESTER,

@@ -1,3 +1,4 @@
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {
   BeaconState,
   BLSPubkey,
@@ -11,7 +12,6 @@ import {
   BeaconCommitteeResponse,
   Fork,
 } from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
@@ -39,7 +39,5 @@ export interface ICommitteesFilters {
   slot?: Slot;
 }
 
-export type ApiStateContext = {
-  state: BeaconState;
-  epochCtx?: EpochContext;
-};
+// some flows need CachedBeaconState, some only need BeaconState
+export type ApiState = BeaconState | CachedBeaconState;

@@ -4,11 +4,10 @@ import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export async function validateGossipAttestation(
   config: IBeaconConfig,
@@ -77,9 +76,9 @@ export async function validateGossipAttestation(
     });
   }
 
-  let attestationPreStateContext;
+  let attestationPreState;
   try {
-    attestationPreStateContext = await chain.regen.getCheckpointState(attestation.data.target);
+    attestationPreState = await chain.regen.getCheckpointState(attestation.data.target);
   } catch (e) {
     throw new AttestationError({
       code: AttestationErrorCode.MISSING_ATTESTATION_PRESTATE,
@@ -87,7 +86,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = computeSubnetForAttestation(config, attestationPreStateContext.epochCtx, attestation);
+  const expectedSubnet = computeSubnetForAttestation(config, attestationPreState, attestation);
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -97,14 +96,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (
-    !isValidIndexedAttestation(
-      attestationPreStateContext.epochCtx,
-      attestationPreStateContext.state,
-      attestationPreStateContext.epochCtx.getIndexedAttestation(attestation),
-      true
-    )
-  ) {
+  if (!isValidIndexedAttestation(attestationPreState, attestationPreState.getIndexedAttestation(attestation), true)) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,
@@ -119,7 +111,7 @@ export async function validateGossipAttestation(
   }
 
   try {
-    if (!isCommitteeIndexWithinRange(attestationPreStateContext.epochCtx, attestation.data)) {
+    if (!isCommitteeIndexWithinRange(attestationPreState, attestation.data)) {
       throw new AttestationError({
         code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
         index: attestation.data.index,
@@ -134,7 +126,7 @@ export async function validateGossipAttestation(
     });
   }
 
-  if (!doAggregationBitsMatchCommitteeSize(attestationPreStateContext, attestation)) {
+  if (!doAggregationBitsMatchCommitteeSize(attestationPreState, attestation)) {
     throw new AttestationError({
       code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
       job: attestationJob,
@@ -167,16 +159,16 @@ export function getAttestationAttesterCount(attestation: Attestation): number {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length;
 }
 
-export function isCommitteeIndexWithinRange(epochCtx: EpochContext, attestationData: AttestationData): boolean {
-  return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
+export function isCommitteeIndexWithinRange(state: CachedBeaconState, attestationData: AttestationData): boolean {
+  return attestationData.index < state.getCommitteeCountAtSlot(attestationData.slot);
 }
 
 export function doAggregationBitsMatchCommitteeSize(
-  attestationPreStateContext: ITreeStateContext,
+  attestationPreState: CachedBeaconState,
   attestation: Attestation
 ): boolean {
   return (
     attestation.aggregationBits.length ===
-    attestationPreStateContext.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
+    attestationPreState.getBeaconCommittee(attestation.data.slot, attestation.data.index).length
   );
 }

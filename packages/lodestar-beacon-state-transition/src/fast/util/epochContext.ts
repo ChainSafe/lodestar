@@ -25,7 +25,7 @@ import {
   isAggregatorFromCommitteeLength,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {CachedValidatorsBeaconState} from "./interface";
+import {CachedBeaconState} from "./cachedBeaconState";
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {
@@ -43,7 +43,7 @@ export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
  * the next epoch into the current epoch. This includes shuffling, but also proposer information is
  * available.
  **/
-export class EpochContext {
+export abstract class EpochContext {
   // TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
   // or handle non finalized data differently, or use an immutable.js structure for cheap copies
   // Warning: may contain pubkeys that do not yet exist in the current state, but do in a later processed state.
@@ -91,10 +91,10 @@ export class EpochContext {
   }
 
   /**
-   * Copies a given EpochContext while avoiding copying its immutable parts.
+   * Clone a given EpochContext while avoiding cloning its immutable parts.
    */
-  public copy(): EpochContext {
-    const ctx = new EpochContext(this.config);
+  public copy(ctx: EpochContext): EpochContext {
+    // const ctx = new EpochContext(this.config);
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     ctx.pubkey2index = this.pubkey2index;
     ctx.index2pubkey = this.index2pubkey;
@@ -104,44 +104,6 @@ export class EpochContext {
     ctx.currentShuffling = this.currentShuffling;
     ctx.nextShuffling = this.nextShuffling;
     return ctx;
-  }
-
-  /**
-   * Checks the precomputed data (from loadState) against a state, and then adds missing pubkeys (strictly append-only
-   * however, not meant to fork this information).
-   */
-  public syncPubkeys(state: BeaconState): void {
-    if (!this.pubkey2index) {
-      this.pubkey2index = new PubkeyIndexMap();
-    }
-    if (!this.index2pubkey) {
-      this.index2pubkey = [];
-    }
-    const currentCount = this.pubkey2index.size;
-    if (currentCount !== this.index2pubkey.length) {
-      throw new Error("Pubkey indices have fallen out of sync");
-    }
-    const newCount = state.validators.length;
-    for (let i = currentCount; i < newCount; i++) {
-      const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
-      this.pubkey2index.set(pubkey, i);
-      this.index2pubkey.push(bls.PublicKey.fromBytes(pubkey));
-    }
-  }
-
-  /**
-   * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
-   * new epoch.
-   */
-  public rotateEpochs(state: CachedValidatorsBeaconState): void {
-    this.previousShuffling = this.currentShuffling;
-    this.currentShuffling = this.nextShuffling;
-    const nextEpoch = this.currentShuffling.epoch + 1;
-    const indicesBounded = state
-      .flatValidators()
-      .readOnlyMap<[number, Epoch, Epoch]>((v, i) => [i, v.activationEpoch, v.exitEpoch]);
-    this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
-    this._resetProposers(state);
   }
 
   /**
@@ -228,6 +190,44 @@ export class EpochContext {
   public isAggregator(slot: Slot, index: CommitteeIndex, slotSignature: BLSSignature): boolean {
     const committee = this.getBeaconCommittee(slot, index);
     return isAggregatorFromCommitteeLength(this.config, committee.length, slotSignature);
+  }
+
+  /**
+   * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
+   * new epoch.
+   */
+  protected rotateEpochs(state: CachedBeaconState): void {
+    this.previousShuffling = this.currentShuffling;
+    this.currentShuffling = this.nextShuffling;
+    const nextEpoch = this.currentShuffling.epoch + 1;
+    const indicesBounded = state
+      .flatValidators()
+      .readOnlyMap<[number, Epoch, Epoch]>((v, i) => [i, v.activationEpoch, v.exitEpoch]);
+    this.nextShuffling = computeEpochShuffling(this.config, state, indicesBounded, nextEpoch);
+    this._resetProposers(state);
+  }
+
+  /**
+   * Checks the precomputed data (from loadState) against a state, and then adds missing pubkeys (strictly append-only
+   * however, not meant to fork this information).
+   */
+  protected syncPubkeys(state: BeaconState): void {
+    if (!this.pubkey2index) {
+      this.pubkey2index = new PubkeyIndexMap();
+    }
+    if (!this.index2pubkey) {
+      this.index2pubkey = [];
+    }
+    const currentCount = this.pubkey2index.size;
+    if (currentCount !== this.index2pubkey.length) {
+      throw new Error("Pubkey indices have fallen out of sync");
+    }
+    const newCount = state.validators.length;
+    for (let i = currentCount; i < newCount; i++) {
+      const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
+      this.pubkey2index.set(pubkey, i);
+      this.index2pubkey.push(bls.PublicKey.fromBytes(pubkey));
+    }
   }
 
   private _resetProposers(state: BeaconState): void {

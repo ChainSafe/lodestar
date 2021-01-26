@@ -1,19 +1,17 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
-import {EpochContext} from "../util";
-
-export function processSlot(epochCtx: EpochContext, state: BeaconState): void {
-  const config = epochCtx.config;
+export function processSlot(cachedState: CachedBeaconState): void {
+  const config = cachedState.config;
   const {SLOTS_PER_HISTORICAL_ROOT} = config.params;
   // cache state root
-  const prevStateRoot = config.types.BeaconState.hashTreeRoot(state);
-  state.stateRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = prevStateRoot;
+  const prevStateRoot = config.types.BeaconState.hashTreeRoot(cachedState.getOriginalState());
+  cachedState.stateRoots[cachedState.slot % SLOTS_PER_HISTORICAL_ROOT] = prevStateRoot;
   // cache latest block header state root
-  if (config.types.Root.equals(state.latestBlockHeader.stateRoot, new Uint8Array(32))) {
-    state.latestBlockHeader.stateRoot = prevStateRoot;
+  if (config.types.Root.equals(cachedState.latestBlockHeader.stateRoot, new Uint8Array(32))) {
+    cachedState.latestBlockHeader.stateRoot = prevStateRoot;
   }
   // cache block root
-  state.blockRoots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = config.types.BeaconBlockHeader.hashTreeRoot(
-    state.latestBlockHeader
+  cachedState.blockRoots[cachedState.slot % SLOTS_PER_HISTORICAL_ROOT] = config.types.BeaconBlockHeader.hashTreeRoot(
+    cachedState.latestBlockHeader
   );
 }

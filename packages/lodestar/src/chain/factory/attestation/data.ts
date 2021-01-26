@@ -1,27 +1,21 @@
-import {AttestationData, BeaconState, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-  getCurrentEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {TreeBacked} from "@chainsafe/ssz";
+import {AttestationData, CommitteeIndex, Slot, Root} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export async function assembleAttestationData(
-  config: IBeaconConfig,
-  headState: TreeBacked<BeaconState>,
+  headState: CachedBeaconState,
   headBlockRoot: Uint8Array,
   slot: Slot,
   index: CommitteeIndex
 ): Promise<AttestationData> {
-  const currentEpoch = getCurrentEpoch(config, headState);
-  const epochStartSlot = computeStartSlotAtEpoch(config, currentEpoch);
+  const currentEpoch = headState.currentShuffling.epoch;
+  const epochStartSlot = computeStartSlotAtEpoch(headState.config, currentEpoch);
 
   let epochBoundaryBlockRoot: Root;
   if (epochStartSlot === headState.slot) {
     epochBoundaryBlockRoot = headBlockRoot;
   } else {
-    epochBoundaryBlockRoot = getBlockRootAtSlot(config, headState, epochStartSlot);
+    epochBoundaryBlockRoot = getBlockRootAtSlot(headState.config, headState, epochStartSlot);
   }
 
   if (!epochBoundaryBlockRoot) {

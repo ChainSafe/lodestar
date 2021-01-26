@@ -1,12 +1,12 @@
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {getRandaoRevealSignatureSet} from "../block/processRandao";
 import {getBlockSignatureSet} from "../util/block";
-import {EpochContext} from "../index";
 import {ISignatureSet} from "./types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
 import {getAttestationsSignatureSets} from "./attestations";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
 export * from "./types";
 export * from "./verify";
@@ -16,13 +16,12 @@ export * from "./verify";
  * Deposits are not included because they can legally have invalid signatures.
  */
 export function getAllBlockSignatureSets(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return [
-    getBlockSignatureSet(epochCtx, state, signedBlock),
-    ...getAllBlockSignatureSetsExceptProposer(epochCtx, state, signedBlock),
+    getBlockSignatureSet(cachedState, signedBlock),
+    ...getAllBlockSignatureSetsExceptProposer(cachedState, signedBlock),
   ];
 }
 
@@ -31,15 +30,14 @@ export function getAllBlockSignatureSets(
  * Useful since block proposer signature is verified beforehand on gossip validation
  */
 export function getAllBlockSignatureSetsExceptProposer(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return [
-    getRandaoRevealSignatureSet(epochCtx, state, signedBlock.message),
-    ...getProposerSlashingsSignatureSets(epochCtx, state, signedBlock),
-    ...getAttesterSlashingsSignatureSets(epochCtx, state, signedBlock),
-    ...getAttestationsSignatureSets(epochCtx, state, signedBlock),
-    ...getVoluntaryExitsSignatureSets(epochCtx, state, signedBlock),
+    getRandaoRevealSignatureSet(cachedState, signedBlock.message),
+    ...getProposerSlashingsSignatureSets(cachedState, signedBlock),
+    ...getAttesterSlashingsSignatureSets(cachedState, signedBlock),
+    ...getAttestationsSignatureSets(cachedState, signedBlock),
+    ...getVoluntaryExitsSignatureSets(cachedState, signedBlock),
   ];
 }

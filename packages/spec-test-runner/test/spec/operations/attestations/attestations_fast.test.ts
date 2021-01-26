@@ -2,21 +2,20 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessAttestationTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describeDirectorySpecTest<IProcessAttestationTestCase, BeaconState>(
   "process attestation mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/attestation/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    processAttestation(epochCtx, state, testcase.attestation);
-    return state;
+    const cachedState = createCachedBeaconState(config, state);
+    processAttestation(cachedState, testcase.attestation);
+    return cachedState.getOriginalState();
   },
   {
     inputTypes: {

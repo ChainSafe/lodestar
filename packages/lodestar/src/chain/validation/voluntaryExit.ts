@@ -17,12 +17,12 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const {state} = await chain.regen.getCheckpointState({
+  const cachedState = await chain.regen.getCheckpointState({
     root: chain.forkChoice.getHeadRoot(),
     epoch: voluntaryExit.message.epoch,
   });
 
-  if (!isValidVoluntaryExit(config, state, voluntaryExit)) {
+  if (!isValidVoluntaryExit(config, cachedState, voluntaryExit)) {
     throw new VoluntaryExitError({
       code: VoluntaryExitErrorCode.INVALID_EXIT,
     });

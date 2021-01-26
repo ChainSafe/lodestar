@@ -1,20 +1,19 @@
-import {Attestation, BeaconState} from "@chainsafe/lodestar-types";
+import {Attestation} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 
 export function processAttestation(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   attestation: Attestation,
   verifySignature = true
 ): void {
-  const config = epochCtx.config;
+  const config = cachedState.config;
   const {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} = config.params;
-  const slot = state.slot;
+  const slot = cachedState.slot;
   const data = attestation.data;
-  const committeeCount = epochCtx.getCommitteeCountAtSlot(data.slot);
+  const committeeCount = cachedState.getCommitteeCountAtSlot(data.slot);
   if (!(data.index < committeeCount)) {
     throw new Error(
       "Attestation committee index not within current committee count: " +
@@ -22,11 +21,14 @@ export function processAttestation(
     );
   }
   if (
-    !(data.target.epoch === epochCtx.previousShuffling.epoch || data.target.epoch === epochCtx.currentShuffling.epoch)
+    !(
+      data.target.epoch === cachedState.previousShuffling.epoch ||
+      data.target.epoch === cachedState.currentShuffling.epoch
+    )
   ) {
     throw new Error(
       "Attestation target epoch not in previous or current epoch: " +
-        `targetEpoch=${data.target.epoch} currentEpoch=${epochCtx.currentShuffling.epoch}`
+        `targetEpoch=${data.target.epoch} currentEpoch=${cachedState.currentShuffling.epoch}`
     );
   }
   const computedEpoch = computeEpochAtSlot(config, data.slot);
@@ -43,7 +45,7 @@ export function processAttestation(
     );
   }
 
-  const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
+  const committee = cachedState.getBeaconCommittee(data.slot, data.index);
   if (attestation.aggregationBits.length !== committee.length) {
     throw new Error(
       "Attestation aggregation bits length does not match committee length: " +
@@ -55,30 +57,30 @@ export function processAttestation(
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: slot - data.slot,
-    proposerIndex: epochCtx.getBeaconProposer(slot),
+    proposerIndex: cachedState.getBeaconProposer(slot),
   };
 
-  if (data.target.epoch === epochCtx.currentShuffling.epoch) {
-    if (!config.types.Checkpoint.equals(data.source, state.currentJustifiedCheckpoint)) {
+  if (data.target.epoch === cachedState.currentShuffling.epoch) {
+    if (!config.types.Checkpoint.equals(data.source, cachedState.currentJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal current justified checkpoint: " +
           `source=${config.types.Checkpoint.toJson(data.source)} ` +
-          `currentJustifiedCheckpoint=${config.types.Checkpoint.toJson(state.currentJustifiedCheckpoint)}`
+          `currentJustifiedCheckpoint=${config.types.Checkpoint.toJson(cachedState.currentJustifiedCheckpoint)}`
       );
     }
-    state.currentEpochAttestations.push(pendingAttestation);
+    cachedState.currentEpochAttestations.push(pendingAttestation);
   } else {
-    if (!config.types.Checkpoint.equals(data.source, state.previousJustifiedCheckpoint)) {
+    if (!config.types.Checkpoint.equals(data.source, cachedState.previousJustifiedCheckpoint)) {
       throw new Error(
         "Attestation source does not equal previous justified checkpoint: " +
           `source=${config.types.Checkpoint.toJson(data.source)} ` +
-          `previousJustifiedCheckpoint=${config.types.Checkpoint.toJson(state.previousJustifiedCheckpoint)}`
+          `previousJustifiedCheckpoint=${config.types.Checkpoint.toJson(cachedState.previousJustifiedCheckpoint)}`
       );
     }
-    state.previousEpochAttestations.push(pendingAttestation);
+    cachedState.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
+  if (!isValidIndexedAttestation(cachedState, cachedState.getIndexedAttestation(attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }

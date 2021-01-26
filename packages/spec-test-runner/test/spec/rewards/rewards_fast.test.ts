@@ -1,6 +1,5 @@
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {
-  createCachedValidatorsBeaconState,
+  createCachedBeaconState,
   prepareEpochProcessState,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {getAttestationDeltas} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
@@ -17,11 +16,9 @@ for (const testSuite of ["basic", "leak", "random"]) {
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
     (testcase) => {
       const state = testcase.pre;
-      const epochCtx = new EpochContext(config);
-      epochCtx.loadState(state);
-      const wrappedState = createCachedValidatorsBeaconState(state);
-      const process = prepareEpochProcessState(epochCtx, wrappedState);
-      const [rewards, penalties] = getAttestationDeltas(epochCtx, process, state);
+      const cachedState = createCachedBeaconState(config, state);
+      const process = prepareEpochProcessState(cachedState);
+      const [rewards, penalties] = getAttestationDeltas(cachedState, process);
       return {
         rewards,
         penalties,

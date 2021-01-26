@@ -3,9 +3,9 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 import {Attestation, Checkpoint, Epoch, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -106,13 +106,13 @@ export enum ChainEvent {
 
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: Attestation) => void;
-  [ChainEvent.block]: (signedBlock: SignedBeaconBlock, postStateContext: ITreeStateContext, job: IBlockJob) => void;
+  [ChainEvent.block]: (signedBlock: SignedBeaconBlock, postStateContext: CachedBeaconState, job: IBlockJob) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
 
-  [ChainEvent.checkpoint]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.justified]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
-  [ChainEvent.finalized]: (checkpoint: Checkpoint, stateContext: ITreeStateContext) => void;
+  [ChainEvent.checkpoint]: (checkpoint: Checkpoint, stateContext: CachedBeaconState) => void;
+  [ChainEvent.justified]: (checkpoint: Checkpoint, stateContext: CachedBeaconState) => void;
+  [ChainEvent.finalized]: (checkpoint: Checkpoint, stateContext: CachedBeaconState) => void;
   [ChainEvent.forkVersion]: (version: Version) => void;
 
   [ChainEvent.clockSlot]: (slot: Slot) => void;

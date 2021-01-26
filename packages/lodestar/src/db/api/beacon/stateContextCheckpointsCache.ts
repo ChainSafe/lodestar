@@ -1,17 +1,17 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ITreeStateContext} from "./stateContextCache";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
- * In memory cache of BeaconState and connected EpochContext
+ * In memory cache of CachedBeaconState
  * belonging to checkpoint
  *
  * Similar API to Repository
  */
 export class CheckpointStateCache {
   private readonly config: IBeaconConfig;
-  private cache: Record<string, ITreeStateContext>;
+  private cache: Record<string, CachedBeaconState>;
   /**
    * Epoch -> Set<blockRoot>
    */
@@ -23,20 +23,20 @@ export class CheckpointStateCache {
     this.epochIndex = {};
   }
 
-  public async get(cp: Checkpoint): Promise<ITreeStateContext | null> {
+  public async get(cp: Checkpoint): Promise<CachedBeaconState | null> {
     const item = this.cache[toHexString(this.config.types.Checkpoint.hashTreeRoot(cp))];
     if (!item) {
       return null;
     }
-    return this.clone(item);
+    return item.clone();
   }
 
-  public async add(cp: Checkpoint, item: ITreeStateContext): Promise<void> {
+  public async add(cp: Checkpoint, item: CachedBeaconState): Promise<void> {
     const key = toHexString(this.config.types.Checkpoint.hashTreeRoot(cp));
     if (this.cache[key]) {
       return;
     }
-    this.cache[key] = this.clone(item);
+    this.cache[key] = item.clone();
     const epochKey = toHexString(cp.root);
     if (this.epochIndex[cp.epoch]) {
       this.epochIndex[cp.epoch].add(epochKey);
@@ -48,7 +48,7 @@ export class CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  public async getLatest({root, epoch}: Checkpoint): Promise<ITreeStateContext | null> {
+  public async getLatest({root, epoch}: Checkpoint): Promise<CachedBeaconState | null> {
     const hexRoot = toHexString(root);
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Object.keys(this.epochIndex)
@@ -104,12 +104,5 @@ export class CheckpointStateCache {
   public clear(): void {
     this.cache = {};
     this.epochIndex = {};
-  }
-
-  private clone(item: ITreeStateContext): ITreeStateContext {
-    return {
-      state: item.state.clone(),
-      epochCtx: item.epochCtx.copy(),
-    };
   }
 }

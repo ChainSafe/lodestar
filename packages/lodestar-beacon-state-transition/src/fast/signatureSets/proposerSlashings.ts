@@ -1,15 +1,14 @@
 import {readOnlyMap} from "@chainsafe/ssz";
-import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "./types";
-import {EpochContext} from "../index";
 import {getProposerSlashingSignatureSets} from "../block/processProposerSlashing";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
 export function getProposerSlashingsSignatureSets(
-  epochCtx: EpochContext,
-  state: BeaconState,
+  cachedState: CachedBeaconState,
   signedBlock: SignedBeaconBlock
 ): ISignatureSet[] {
   return readOnlyMap(signedBlock.message.body.proposerSlashings, (proposerSlashing) =>
-    getProposerSlashingSignatureSets(epochCtx, state, proposerSlashing)
+    getProposerSlashingSignatureSets(cachedState, proposerSlashing)
   ).flat(1);
 }

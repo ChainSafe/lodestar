@@ -2,23 +2,20 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {processDeposit} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/interface";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessDepositTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describeDirectorySpecTest<IProcessDepositTestCase, BeaconState>(
   "process deposit mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/deposit/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    const wrappedState = createCachedValidatorsBeaconState(state);
-    processDeposit(epochCtx, wrappedState, testcase.deposit);
-    return state;
+    const cachedState = createCachedBeaconState(config, state);
+    processDeposit(cachedState, testcase.deposit);
+    return cachedState.getOriginalState();
   },
   {
     sszTypes: {

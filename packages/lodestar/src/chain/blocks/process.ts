@@ -37,13 +37,12 @@ export async function processBlock({
   }
 
   try {
-    const preStateContext = await regen.getPreState(job.signedBlock.message);
+    const preState = await regen.getPreState(job.signedBlock.message);
 
     if (!job.validSignatures) {
-      const {epochCtx, state} = preStateContext;
       const signatureSets = job.validProposerSignature
-        ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-        : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
+        ? getAllBlockSignatureSetsExceptProposer(preState, job.signedBlock)
+        : getAllBlockSignatureSets(preState, job.signedBlock);
 
       if (!verifySignatureSetsBatch(signatureSets)) {
         throw new BlockError({
@@ -56,7 +55,7 @@ export async function processBlock({
       job.validSignatures = true;
     }
 
-    await runStateTransition(emitter, forkChoice, db, preStateContext, job);
+    await runStateTransition(emitter, forkChoice, db, preState, job);
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
@@ -121,17 +120,16 @@ export async function processChainSegment({
     }
 
     try {
-      let preStateContext = await regen.getPreState(firstBlock.message);
+      let preState = await regen.getPreState(firstBlock.message);
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
       if (!job.validSignatures) {
         const signatureSets: ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
-          const {epochCtx, state} = preStateContext;
           signatureSets.push(
             ...(job.validProposerSignature
-              ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, block)
-              : getAllBlockSignatureSets(epochCtx, state, block))
+              ? getAllBlockSignatureSetsExceptProposer(preState, block)
+              : getAllBlockSignatureSets(preState, block))
           );
         }
 
@@ -145,7 +143,7 @@ export async function processChainSegment({
       }
 
       for (const block of blocksInEpoch) {
-        preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, {
+        preState = await runStateTransition(emitter, forkChoice, db, preState, {
           reprocess: job.reprocess,
           prefinalized: job.prefinalized,
           signedBlock: block,

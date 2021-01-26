@@ -29,9 +29,7 @@ describe("beacon api impl - state - get fork", function () {
   });
 
   it("should get fork by state id", async function () {
-    resolveStateIdStub.resolves({
-      state: generateState(),
-    });
+    resolveStateIdStub.resolves(generateState());
     const fork = await api.getFork("something");
     expect(fork).to.not.be.null;
   });

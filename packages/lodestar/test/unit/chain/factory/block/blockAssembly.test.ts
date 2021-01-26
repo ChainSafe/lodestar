@@ -2,7 +2,6 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -45,12 +44,9 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
     forkChoiceStub.getHead.returns(generateBlockSummary());
-    const epochCtx = new EpochContext(config);
-    sinon.stub(epochCtx).getBeaconProposer.returns(2);
-    regenStub.getBlockSlotState.resolves({
-      state: generateCachedState({slot: 1}),
-      epochCtx: epochCtx,
-    });
+    const cachedState = generateCachedState();
+    cachedState.getBeaconProposer = () => 2;
+    regenStub.getBlockSlotState.resolves(cachedState);
     beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
     assembleBodyStub.resolves(generateEmptyBlock().body);
     const state = generateState();

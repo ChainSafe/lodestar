@@ -3,12 +3,12 @@ import {BeaconBlock, Root, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {JobQueue} from "../../util/queue";
 import {IStateRegenerator} from "./interface";
 import {StateRegenerator} from "./regen";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -38,19 +38,19 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.jobQueue = new JobQueue({queueSize, signal});
   }
 
-  async getPreState(block: BeaconBlock): Promise<ITreeStateContext> {
+  async getPreState(block: BeaconBlock): Promise<CachedBeaconState> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getPreState(block));
   }
 
-  async getCheckpointState(cp: Checkpoint): Promise<ITreeStateContext> {
+  async getCheckpointState(cp: Checkpoint): Promise<CachedBeaconState> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getCheckpointState(cp));
   }
 
-  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<ITreeStateContext> {
+  async getBlockSlotState(blockRoot: Root, slot: Slot): Promise<CachedBeaconState> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getBlockSlotState(blockRoot, slot));
   }
 
-  async getState(stateRoot: Root): Promise<ITreeStateContext> {
+  async getState(stateRoot: Root): Promise<CachedBeaconState> {
     return await this.jobQueue.enqueueJob(async () => await this.regen.getState(stateRoot));
   }
 }

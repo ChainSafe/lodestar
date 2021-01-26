@@ -1,21 +1,20 @@
-import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "..";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IEpochProcess} from "../util";
+import {IEpochProcess} from "../util/epochProcess";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
-export function processForkChanged(epochCtx: EpochContext, process: IEpochProcess, state: BeaconState): void {
-  const config = epochCtx.config;
+export function processForkChanged(cachedState: CachedBeaconState, process: IEpochProcess): void {
+  const config = cachedState.config;
   const currentEpoch = process.currentEpoch;
   const nextEpoch = currentEpoch + 1;
-  const currentForkVersion = state.fork.currentVersion;
+  const currentForkVersion = cachedState.fork.currentVersion;
   const nextFork =
     config.params.ALL_FORKS &&
     config.params.ALL_FORKS.find((fork) =>
       config.types.Version.equals(currentForkVersion, intToBytes(fork.previousVersion, 4))
     );
   if (nextFork && nextFork.epoch === nextEpoch) {
-    state.fork = {
-      previousVersion: state.fork.currentVersion,
+    cachedState.fork = {
+      previousVersion: cachedState.fork.currentVersion,
       currentVersion: intToBytes(nextFork.currentVersion, 4),
       epoch: nextFork.epoch,
     };

@@ -1,15 +1,15 @@
 import {readOnlyMap} from "@chainsafe/ssz";
 import {BeaconBlockBody, BeaconState, Eth1Data} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {EpochContext} from "../util";
+import {CachedBeaconState} from "../util/cachedBeaconState";
 
-export function processEth1Data(epochCtx: EpochContext, state: BeaconState, body: BeaconBlockBody): void {
-  const newEth1Data = getNewEth1Data(epochCtx.config, state, body.eth1Data);
+export function processEth1Data(cachedState: CachedBeaconState, body: BeaconBlockBody): void {
+  const newEth1Data = getNewEth1Data(cachedState.config, cachedState, body.eth1Data);
   if (newEth1Data) {
-    state.eth1Data = body.eth1Data;
+    cachedState.eth1Data = body.eth1Data;
   }
 
-  state.eth1DataVotes.push(body.eth1Data);
+  cachedState.eth1DataVotes.push(body.eth1Data);
 }
 
 /**
