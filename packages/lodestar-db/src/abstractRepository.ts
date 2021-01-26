@@ -1,9 +1,8 @@
-import {ArrayLike, Type} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ArrayLike, Type} from "@chainsafe/ssz";
+import {BUCKET_LENGTH} from ".";
 import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
-import {Version} from "@chainsafe/lodestar-types";
-import {BUCKET_LENGTH} from ".";
 
 export type Id = Uint8Array | string | number | bigint;
 
@@ -24,20 +23,11 @@ export abstract class Repository<I extends Id, T> {
 
   protected type: Type<T>;
 
-  protected forkVersion: Version;
-
-  protected constructor(
-    config: IBeaconConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-    bucket: Bucket,
-    type: Type<T>,
-    forkVersion?: Version
-  ) {
+  protected constructor(config: IBeaconConfig, db: IDatabaseController<Buffer, Buffer>, bucket: Bucket, type: Type<T>) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
     this.type = type;
-    this.forkVersion = forkVersion ?? this.config.params.GENESIS_FORK_VERSION;
   }
 
   public encodeValue(value: T): Buffer {
