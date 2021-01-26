@@ -64,6 +64,13 @@ graph TD
     click lodestar-validator "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar-validator"
     lodestar-validator-->|proposes block|api
 
+    api:::nodemodule
+    chain:::nodemodule
+    db:::nodemodule
+    eth1:::nodemodule
+    network:::nodemodule
+    sync:::nodemodule
+
     api-->|block data|db
     api-->|block data|lodestar-validator
     api-->|proposed block|network
@@ -99,10 +106,12 @@ graph TD
     click eth1 "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/eth1"
     click network "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/network"
     click sync "https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar/src/sync"
+
+    classDef nodemodule fill:grey,stroke-width:2px,stroke:black,color:white;
+    linkStyle default stroke:grey, fill:none,stroke-width:1.5px;
     
-    style peers color: black, fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5
-    style lodestar-fork-choice color:black, fill:#FFF566;
-    style lodestar-validator color:black, fill:#FFF566;
-    style lodestar-db color:black, fill:#FFF566;
+    classDef lodestarpkg color:black, fill:#FFF566,stroke:black, stroke-width: 1.5px;
+    class lodestar-fork-choice,lodestar-validator,lodestar-db lodestarpkg;
+    style peers color: black, fill:#bbf, stroke-width:2px, color:#fff, stroke-dasharray: 5 5;
     
 ```

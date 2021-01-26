@@ -4,17 +4,16 @@ import {params} from "@chainsafe/lodestar-params/mainnet";
 import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
 
-export const medalla = {
+/** Generic testnet data taken from the Medalla testnet  */
+export const testnet = {
   providerUrl: goerliRpcUrl,
   depositBlock: 3085928,
-  // Medalla optimized blocks for quick testing
+  // Optimized blocks for quick testing
   blockWithDepositActivity: 3124889,
 };
 
-/**
- * Medalla specs
- */
-export function getMedallaConfig(): IBeaconConfig {
+/** Testnet specs for the Medalla testnet */
+export function getTestnetConfig(): IBeaconConfig {
   const config = createIBeaconConfig(params);
   config.params.DEPOSIT_NETWORK_ID = 5;
   config.params.DEPOSIT_CONTRACT_ADDRESS = Buffer.from("07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC", "hex");
@@ -24,7 +23,8 @@ export function getMedallaConfig(): IBeaconConfig {
   return config;
 }
 
-export const goerliMedallaLogs = [
+/** Goerli deposit log for the Medalla testnet */
+export const goerliTestnetLogs = [
   {
     // Raw unparsed log index 6833
     blockNumber: 3124930,
@@ -35,7 +35,8 @@ export const goerliMedallaLogs = [
   },
 ];
 
-export const goerliMedallaDepositEvents: DepositEvent[] = [
+/** Goerli parsed deposit event for the Medalla testnet */
+export const goerliTestnetDepositEvents: DepositEvent[] = [
   {
     blockNumber: 3124930,
     index: 6833,
