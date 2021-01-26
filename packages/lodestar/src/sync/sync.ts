@@ -147,15 +147,6 @@ export class BeaconSync implements IBeaconSync {
   }
 
   private processChainSegment: ProcessChainSegment = async (blocks) => {
-    // MUST ignore already known blocks
-    // TODO: Is there a way to ignore specifically the BLOCK_IS_ALREADY_KNOWN error on a segment?
-    blocks = blocks.filter(
-      (block) => !this.chain.forkChoice.hasBlock(this.config.types.BeaconBlock.hashTreeRoot(block.message))
-    );
-
-    // Don't send empty ranges to processChainSegment, it throws
-    if (blocks.length === 0) return;
-
     const trusted = true; // TODO: Verify signatures
     await this.chain.processChainSegment(blocks, trusted);
   };

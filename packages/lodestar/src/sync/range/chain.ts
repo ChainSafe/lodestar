@@ -3,6 +3,7 @@ import {AbortSignal} from "abort-controller";
 import {BeaconBlocksByRangeRequest, Epoch, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
 import {prettyTimeDiff} from "../../util/time";
 import {TimeSeries} from "../stats/timeSeries";
@@ -17,11 +18,6 @@ import {
 } from "./batches";
 
 export type SyncChainOpts = BatchOpts & {maybeStuckTimeoutMs: number};
-
-// TODO: Add this error to chain / blockProcessor
-export class BlockProcessorError extends Error {
-  importedBlocks: SignedBeaconBlock[] = [];
-}
 
 /**
  * Should return if ALL blocks are processed successfully
@@ -276,7 +272,7 @@ export class SyncChain {
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
-      if (e instanceof BlockProcessorError && e.importedBlocks.length > 0) {
+      if (e instanceof ChainSegmentError && e.importedBlocks > 0) {
         this.advanceChain(batch.startEpoch, targetEpoch);
       }
 
