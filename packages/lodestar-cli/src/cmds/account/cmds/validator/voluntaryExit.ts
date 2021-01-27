@@ -73,7 +73,7 @@ like to choose for the voluntary exit.",
     const config = getBeaconConfigFromArgs(args);
     const api = new ApiClientOverRest(config, server, logger);
 
-    const validator = await api.beacon.state.getStateValidator("head", secretKey.toPublicKey().toBytes());
+    const validator = await api.beacon.state.getStateValidator("head", config.types.BLSPubkey.fromJson(publicKey));
     if (!validator) throw new YargsError("No validator found in validator store.");
 
     const voluntaryExit = {
