@@ -4,7 +4,7 @@ export function processSlot(cachedState: CachedBeaconState): void {
   const config = cachedState.config;
   const {SLOTS_PER_HISTORICAL_ROOT} = config.params;
   // cache state root
-  const prevStateRoot = config.types.BeaconState.hashTreeRoot(cachedState.getOriginalState());
+  const prevStateRoot = cachedState.hashTreeRoot();
   cachedState.stateRoots[cachedState.slot % SLOTS_PER_HISTORICAL_ROOT] = prevStateRoot;
   // cache latest block header state root
   if (config.types.Root.equals(cachedState.latestBlockHeader.stateRoot, new Uint8Array(32))) {

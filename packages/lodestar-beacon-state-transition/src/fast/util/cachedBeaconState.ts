@@ -1,4 +1,4 @@
-import {ValidatorIndex, BeaconState, Validator} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, BeaconState, Validator, Root} from "@chainsafe/lodestar-types";
 import {isTreeBacked, readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
 import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
@@ -80,7 +80,7 @@ export class CachedBeaconState extends EpochContext {
   public clone(): CachedBeaconState {
     const cloned = new CachedBeaconState(
       this.config,
-      config.types.BeaconState.clone(this._state),
+      this.config.types.BeaconState.clone(this._state),
       this._cachedValidators.clone()
     );
     // clone EpochContext
@@ -118,7 +118,14 @@ export class CachedBeaconState extends EpochContext {
     if (isTreeBacked(this._state)) {
       return this._state;
     }
-    return config.types.BeaconState.tree.createValue(this._state);
+    return this.config.types.BeaconState.tree.createValue(this._state);
+  }
+
+  /**
+   * Calculate hash tree root.
+   */
+  public hashTreeRoot(): Root {
+    return this.config.types.BeaconState.hashTreeRoot(this._state);
   }
 }
 
