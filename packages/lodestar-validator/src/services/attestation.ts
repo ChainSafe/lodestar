@@ -1,7 +1,6 @@
 /**
  * @module validator/attestation
  */
-import {SecretKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -24,6 +23,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {intDiv} from "@chainsafe/lodestar-utils";
 import {toHexString, List, fromHexString} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
@@ -33,7 +33,6 @@ import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty, PublicKeyHex, ValidatorAndSecret} from "../types";
 import {isValidatorAggregator} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
-import {getAggregationBits, getAggregatorModulo} from "./utils";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -41,7 +40,7 @@ import {getAggregationBits, getAggregatorModulo} from "./utils";
 export class AttestationService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  private readonly validators: Map<PublicKeyHex, ValidatorAndSecret> = new Map();
+  private readonly validators: Map<PublicKeyHex, ValidatorAndSecret>;
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
 
@@ -50,16 +49,14 @@ export class AttestationService {
 
   public constructor(
     config: IBeaconConfig,
-    secretKeys: SecretKey[],
+    validators: Map<PublicKeyHex, ValidatorAndSecret>,
     rpcClient: IApiClient,
     slashingProtection: ISlashingProtection,
     logger: ILogger
   ) {
     this.config = config;
     this.provider = rpcClient;
-    for (const secretKey of secretKeys) {
-      this.validators.set(secretKey.toPublicKey().toHex(), {validator: null, secretKey});
-    }
+    this.validators = validators;
     this.slashingProtection = slashingProtection;
     this.logger = logger;
   }
@@ -143,7 +140,7 @@ export class AttestationService {
       const validator = this.validators.get(toHexString(duty.pubkey));
       if (!validator) continue;
       const slotSignature = this.getSlotSignature(validator, duty.slot, fork, this.provider.genesisValidatorsRoot);
-      const modulo = getAggregatorModulo(this.config, duty);
+      const modulo = this.getAggregatorModulo(this.config, duty);
       const isAggregator = isValidatorAggregator(slotSignature, modulo);
       this.logger.debug("new attester duty", {
         slot: duty.slot,
@@ -385,7 +382,7 @@ export class AttestationService {
     });
 
     const attestation: Attestation = {
-      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      aggregationBits: this.getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
       signature: validator.secretKey.sign(signingRoot).toBytes(),
     };
@@ -411,5 +408,13 @@ export class AttestationService {
         }
       }
     }
+  }
+
+  private getAggregatorModulo(config: IBeaconConfig, duty: AttesterDuty): number {
+    return Math.max(1, intDiv(duty.committeeLength, config.params.TARGET_COMMITTEE_SIZE));
+  }
+
+  private getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
+    return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);
   }
 }

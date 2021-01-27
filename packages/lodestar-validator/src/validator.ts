@@ -21,6 +21,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {ISlashingProtection} from "./slashingProtection";
+import {mapSecretKeysToValidators} from "./services/utils";
 
 /**
  * Main class for the Validator client.
@@ -88,10 +89,11 @@ export class Validator {
   private async setup(): Promise<void> {
     this.logger.info("Setting up validator client...");
     await this.setupAPI();
+    const validators = mapSecretKeysToValidators(this.opts.secretKeys);
 
     this.blockService = new BlockProposingService(
       this.config,
-      this.opts.secretKeys,
+      validators,
       this.apiClient,
       this.slashingProtection,
       this.logger,
@@ -100,7 +102,7 @@ export class Validator {
 
     this.attestationService = new AttestationService(
       this.config,
-      this.opts.secretKeys,
+      validators,
       this.apiClient,
       this.slashingProtection,
       this.logger

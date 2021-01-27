@@ -15,6 +15,7 @@ import {InvalidAttestationError, InvalidAttestationErrorCode, SlashingProtection
 import {BeaconEventType} from "../../../src/api/interface/events";
 import {LocalClock} from "../../../src/api/LocalClock";
 import {AttestationService} from "../../../src/services/attestation";
+import {mapSecretKeysToValidators} from "../../../src/services/utils";
 import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
 import {silentLogger} from "../../utils/logger";
@@ -50,16 +51,28 @@ describe("validator attestation service", function () {
   });
 
   it("on new epoch - no duty", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockEpoch({epoch: 1});
     expect(rpcClientStub.validator.getAttesterDuties.withArgs(2, [0]).calledOnce).to.be.true;
   });
 
   it("on new epoch - with duty", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     const duty: AttesterDuty = {
       slot: 1,
       committeeIndex: 1,
@@ -67,7 +80,7 @@ describe("validator attestation service", function () {
       committeesAtSlot: 120,
       validatorCommitteeIndex: 1,
       validatorIndex: 0,
-      pubkey: secretKey.toPublicKey().toBytes(),
+      pubkey: secretKeys[0].toPublicKey().toBytes(),
     };
     rpcClientStub.validator.getAttesterDuties.resolves([duty]);
     await service.onClockEpoch({epoch: 1});
@@ -76,19 +89,31 @@ describe("validator attestation service", function () {
   });
 
   it("on  new slot - without duty", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     await service.onClockSlot({slot: 0});
   });
 
   it("on new slot - with duty - not aggregator", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
-    const pubkey = secretKey.toPublicKey().toBytes();
+    const pubkey = secretKeys[0].toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 1,
       committeeIndex: 2,
@@ -112,12 +137,18 @@ describe("validator attestation service", function () {
   });
 
   it("on new slot - with duty - conflicting attestation", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
-    const pubkey = secretKey.toPublicKey().toBytes();
+    const pubkey = secretKeys[0].toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 1,
       committeeIndex: 3,
@@ -146,12 +177,18 @@ describe("validator attestation service", function () {
   });
 
   it("on new slot - with duty - SSE message comes before 1/3 slot time", async function () {
-    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
-    const service = new AttestationService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
+    const service = new AttestationService(
+      config,
+      mapSecretKeysToValidators(secretKeys),
+      rpcClientStub,
+      slashingProtectionStub,
+      logger
+    );
     rpcClientStub.validator.getAttesterDuties.resolves([]);
     sandbox.stub(rpcClientStub.clock, "currentEpoch").get(() => 1);
     await service.start();
-    const pubkey = secretKey.toPublicKey().toBytes();
+    const pubkey = secretKeys[0].toPublicKey().toBytes();
     const duty: AttesterDuty = {
       slot: 10,
       committeeIndex: 1,

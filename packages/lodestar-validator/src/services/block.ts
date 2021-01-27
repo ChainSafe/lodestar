@@ -17,7 +17,7 @@ import {IApiClient} from "../api";
 import {BeaconEventType} from "../api/interface/events";
 import {ClockEventType} from "../api/interface/clock";
 import {ISlashingProtection} from "../slashingProtection";
-import {getPubKeyIndex} from "./utils";
+import {PublicKeyHex, ValidatorAndSecret} from "../types";
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -25,7 +25,7 @@ import {getPubKeyIndex} from "./utils";
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
   private readonly provider: IApiClient;
-  private readonly validatorKeys: {publicKey: BLSPubkey; secretKey: SecretKey}[] = [];
+  private readonly validators: Map<PublicKeyHex, ValidatorAndSecret>;
   private readonly slashingProtection: ISlashingProtection;
   private readonly logger: ILogger;
   private readonly graffiti?: string;
@@ -34,16 +34,14 @@ export default class BlockProposingService {
 
   public constructor(
     config: IBeaconConfig,
-    secretKeys: SecretKey[],
+    validators: Map<PublicKeyHex, ValidatorAndSecret>,
     provider: IApiClient,
     slashingProtection: ISlashingProtection,
     logger: ILogger,
     graffiti?: string
   ) {
     this.config = config;
-    for (const secretKey of secretKeys) {
-      this.validatorKeys.push({publicKey: secretKey.toPublicKey().toBytes(), secretKey});
-    }
+    this.validators = validators;
     this.provider = provider;
     this.slashingProtection = slashingProtection;
     this.logger = logger;
@@ -94,12 +92,11 @@ export default class BlockProposingService {
       if (!fork) {
         return;
       }
-      await this.createAndPublishBlock(
-        getPubKeyIndex(this.config, proposerPubKey, this.validatorKeys),
-        slot,
-        fork,
-        this.provider.genesisValidatorsRoot
-      );
+      const validatorAndSecret = this.validators.get(toHexString(proposerPubKey));
+      if (!validatorAndSecret)
+        throw new Error("onClockSlot: Validator chosen for proposal not found in validator list!");
+      const validatorKeys = {publicKey: proposerPubKey, secretKey: validatorAndSecret.secretKey};
+      await this.createAndPublishBlock(validatorKeys, slot, fork, this.provider.genesisValidatorsRoot);
     }
   };
 
@@ -117,7 +114,7 @@ export default class BlockProposingService {
    * Fetch validator block proposal duties from the validator api and update local list of block duties accordingly.
    */
   public updateDuties = async (epoch: Epoch): Promise<void> => {
-    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.validatorKeys[0].publicKey)});
+    this.logger.info("on new block epoch", {epoch, validator: toHexString(this.validators.keys().next().value)});
     const proposerDuties = await this.provider.validator.getProposerDuties(epoch, []).catch((e) => {
       this.logger.error("Failed to obtain proposer duties", e);
       return null;
@@ -126,7 +123,7 @@ export default class BlockProposingService {
       return;
     }
     for (const duty of proposerDuties) {
-      if (!this.nextProposals.has(duty.slot) && getPubKeyIndex(this.config, duty.pubkey, this.validatorKeys) !== -1) {
+      if (!this.nextProposals.has(duty.slot) && this.validators.get(toHexString(duty.pubkey))) {
         this.logger.debug("Next proposer duty", {slot: duty.slot, validator: toHexString(duty.pubkey)});
         this.nextProposals.set(duty.slot, duty.pubkey);
       }
@@ -137,7 +134,7 @@ export default class BlockProposingService {
    * IFF a validator is selected, construct a block to propose.
    */
   public async createAndPublishBlock(
-    proposerIndex: number,
+    validatorKeys: {publicKey: BLSPubkey; secretKey: SecretKey},
     slot: Slot,
     fork: Fork,
     genesisValidatorsRoot: Root
@@ -149,7 +146,7 @@ export default class BlockProposingService {
     try {
       block = await this.provider.validator.produceBlock(
         slot,
-        this.validatorKeys[proposerIndex].secretKey.sign(randaoSigningRoot).toBytes(),
+        validatorKeys.secretKey.sign(randaoSigningRoot).toBytes(),
         this.graffiti || ""
       );
     } catch (e) {
@@ -166,14 +163,14 @@ export default class BlockProposingService {
     );
     const signingRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
 
-    await this.slashingProtection.checkAndInsertBlockProposal(this.validatorKeys[proposerIndex].publicKey, {
+    await this.slashingProtection.checkAndInsertBlockProposal(validatorKeys.publicKey, {
       slot: block.slot,
       signingRoot,
     });
 
     const signedBlock: SignedBeaconBlock = {
       message: block,
-      signature: this.validatorKeys[proposerIndex].secretKey.sign(signingRoot).toBytes(),
+      signature: validatorKeys.secretKey.sign(signingRoot).toBytes(),
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
