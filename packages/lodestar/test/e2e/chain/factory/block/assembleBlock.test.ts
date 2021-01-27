@@ -22,6 +22,7 @@ import {BeaconChain} from "../../../../../src/chain";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
+import {mapSecretKeysToValidators} from "@chainsafe/lodestar-validator/lib/services/utils";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
@@ -87,12 +88,18 @@ describe("produce block", function () {
     });
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
-    const blockProposingService = getBlockProposingService(secretKeys[validatorIndex]);
+    const secretKey = secretKeys[validatorIndex];
+    const blockProposingService = getBlockProposingService(secretKey);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
+    const block = await blockProposingService.createAndPublishBlock(
+      {publicKey: secretKey.toPublicKey().toBytes(), secretKey},
+      1,
+      state.fork,
+      ZERO_HASH
+    );
     const wrappedState = createCachedValidatorsBeaconState(state);
     expect(() => fastStateTransition({state: wrappedState, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
   });
@@ -101,6 +108,7 @@ describe("produce block", function () {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);
-    return new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtection, silentLogger);
+    const validators = mapSecretKeysToValidators([secretKey]);
+    return new BlockProposingService(config, validators, rpcClientStub, slashingProtection, silentLogger);
   }
 });
