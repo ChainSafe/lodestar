@@ -1,16 +1,19 @@
 import {ICliCommandOptions} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
+import {beaconOptions} from "../beacon/options";
 
 export type IValidatorCliArgs = IAccountValidatorArgs & {
   validatorsDbDir?: string;
   server: string;
   force: boolean;
   graffiti: string;
+  logFile: string;
 };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
+  logFile: beaconOptions.logFile,
 
   validatorsDbDir: {
     description: "Data directory for validator databases.",
