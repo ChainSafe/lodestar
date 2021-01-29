@@ -12,6 +12,7 @@ import {
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
+import {BeaconBlockType} from "@chainsafe/lodestar-utils";
 
 export interface IValidatorApi {
   getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;
@@ -23,7 +24,7 @@ export interface IValidatorApi {
    * which can then be signed by a ValidatorClient.
    * @returns {Promise<BeaconBlock>} A proposed BeaconBlock object
    */
-  produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<BeaconBlock>;
+  produceBlock(slot: Slot, randaoReveal: Uint8Array, graffiti: string): Promise<BeaconBlockType>;
 
   produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData>;
 

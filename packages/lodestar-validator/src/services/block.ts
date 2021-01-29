@@ -2,21 +2,16 @@
  * @module validator
  */
 
-import {BeaconState, BLSPubkey, Epoch, Fork, Root, SignedBeaconBlock, Slot} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {SecretKey} from "@chainsafe/bls";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {toHexString} from "@chainsafe/ssz";
-import {
-  computeEpochAtSlot,
-  computeSigningRoot,
-  DomainType,
-  getDomain,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IApiClient} from "../api";
-import {BeaconEventType} from "../api/interface/events";
-import {ClockEventType} from "../api/interface/clock";
-import {ISlashingProtection} from "../slashingProtection";
+import { SecretKey } from "@chainsafe/bls";
+import { computeEpochAtSlot, computeSigningRoot, DomainType, getDomain } from "@chainsafe/lodestar-beacon-state-transition";
+import { IBeaconConfig } from "@chainsafe/lodestar-config";
+import { BeaconState, BLSPubkey, Epoch, Fork, Root, Slot } from "@chainsafe/lodestar-types";
+import { getBeaconBlockSSZType, ILogger, SignedBeaconBlockType } from "@chainsafe/lodestar-utils";
+import { toHexString } from "@chainsafe/ssz";
+import { IApiClient } from "../api";
+import { ClockEventType } from "../api/interface/clock";
+import { BeaconEventType } from "../api/interface/events";
+import { ISlashingProtection } from "../slashingProtection";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
@@ -121,7 +116,7 @@ export default class BlockProposingService {
     slot: Slot,
     fork: Fork,
     genesisValidatorsRoot: Root
-  ): Promise<SignedBeaconBlock | null> {
+  ): Promise<SignedBeaconBlockType | null> {
     const epoch = computeEpochAtSlot(this.config, slot);
     const randaoDomain = getDomain(this.config, {fork, genesisValidatorsRoot} as BeaconState, DomainType.RANDAO, epoch);
     const randaoSigningRoot = computeSigningRoot(this.config, this.config.types.Epoch, epoch, randaoDomain);
@@ -144,20 +139,28 @@ export default class BlockProposingService {
       DomainType.BEACON_PROPOSER,
       computeEpochAtSlot(this.config, slot)
     );
-    const signingRoot = computeSigningRoot(this.config, this.config.types.BeaconBlock, block, proposerDomain);
+    const signingRoot = computeSigningRoot(
+      this.config,
+      getBeaconBlockSSZType(this.config, block),
+      block,
+      proposerDomain
+    );
 
     await this.slashingProtection.checkAndInsertBlockProposal(this.publicKeys[proposerIndex], {
       slot: block.slot,
       signingRoot,
     });
 
-    const signedBlock: SignedBeaconBlock = {
+    const signedBlock: SignedBeaconBlockType = {
       message: block,
       signature: this.secretKeys[proposerIndex].sign(signingRoot).toBytes(),
     };
     try {
       await this.provider.beacon.blocks.publishBlock(signedBlock);
-      this.logger.info("Proposed block", {hash: toHexString(this.config.types.BeaconBlock.hashTreeRoot(block)), slot});
+      this.logger.info("Proposed block", {
+        hash: toHexString(getBeaconBlockSSZType(this.config, block).hashTreeRoot(block)),
+        slot,
+      });
     } catch (e) {
       this.logger.error("Failed to publish block", {slot}, e);
     }

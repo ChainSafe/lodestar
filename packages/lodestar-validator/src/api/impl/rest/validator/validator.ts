@@ -13,7 +13,7 @@ import {
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, getSignedBeaconBlockSSZTypeBySlot} from "@chainsafe/lodestar-utils";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
 import {IValidatorApi} from "../../../interface/validators";
@@ -49,7 +49,9 @@ export class RestValidatorApi implements IValidatorApi {
       graffiti: graffiti,
     };
     const responseData = await this.clientV2.get<{data: Json}>(`/blocks/${slot}`, query);
-    return this.config.types.BeaconBlock.fromJson(responseData.data, {case: "snake"});
+    return getSignedBeaconBlockSSZTypeBySlot(this.config, slot).fields.message.fromJson(responseData.data, {
+      case: "snake",
+    });
   }
 
   public async produceAttestationData(index: CommitteeIndex, slot: Slot): Promise<AttestationData> {
