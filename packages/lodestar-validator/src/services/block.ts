@@ -2,16 +2,21 @@
  * @module validator
  */
 
-import { SecretKey } from "@chainsafe/bls";
-import { computeEpochAtSlot, computeSigningRoot, DomainType, getDomain } from "@chainsafe/lodestar-beacon-state-transition";
-import { IBeaconConfig } from "@chainsafe/lodestar-config";
-import { BeaconState, BLSPubkey, Epoch, Fork, Root, Slot } from "@chainsafe/lodestar-types";
-import { getBeaconBlockSSZType, ILogger, SignedBeaconBlockType } from "@chainsafe/lodestar-utils";
-import { toHexString } from "@chainsafe/ssz";
-import { IApiClient } from "../api";
-import { ClockEventType } from "../api/interface/clock";
-import { BeaconEventType } from "../api/interface/events";
-import { ISlashingProtection } from "../slashingProtection";
+import {SecretKey} from "@chainsafe/bls";
+import {
+  computeEpochAtSlot,
+  computeSigningRoot,
+  DomainType,
+  getDomain,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState, BLSPubkey, Epoch, Fork, Root, Slot} from "@chainsafe/lodestar-types";
+import {getBeaconBlockSSZType, ILogger, SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
+import {IApiClient} from "../api";
+import {ClockEventType} from "../api/interface/clock";
+import {BeaconEventType} from "../api/interface/events";
+import {ISlashingProtection} from "../slashingProtection";
 
 export default class BlockProposingService {
   private readonly config: IBeaconConfig;
