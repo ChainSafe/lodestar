@@ -10,9 +10,6 @@ export * from "./upgrade";
 export * from "./epoch";
 export * as fast from "./fast";
 
-export const LIGHTCLIENT_PATCH_FORK_VERSION = Buffer.from("0x01000000", "hex");
-export const LIGHTCLIENT_PATCH_FORK_SLOT = 0;
-
 /**
  * The ETH2.0 Beacon Chain state transition function
  * @param config Beacon Chain configuration

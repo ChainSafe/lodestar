@@ -5,7 +5,6 @@ import {Lightclient, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar
 import {toHex} from "@chainsafe/lodestar-utils";
 import {InitialBlockRepository} from "./initial";
 import {LightClientBlockRepository} from "./ligthclient";
-import {LIGHTCLIENT_PATCH_FORK_VERSION} from "@chainsafe/lodestar-beacon-state-transition/lib/lightclient";
 
 type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
 
@@ -31,7 +30,7 @@ export class BlockRepository {
     this.db = db;
     this.blockRepositories = new Map([
       [toHex(config.params.GENESIS_FORK_VERSION), new InitialBlockRepository(config, db)],
-      [toHex(LIGHTCLIENT_PATCH_FORK_VERSION), new LightClientBlockRepository(config, db)],
+      [toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION), new LightClientBlockRepository(config, db)],
       ...forkVersionBlockRepositories.entries(),
     ]);
   }

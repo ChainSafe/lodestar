@@ -101,7 +101,7 @@ function executeStateTransition(
         );
       }
       break;
-    case toHex(lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
+    case toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
       {
         result = fastStateTransition(stateCtx, job.signedBlock, {
           verifyStateRoot: true,

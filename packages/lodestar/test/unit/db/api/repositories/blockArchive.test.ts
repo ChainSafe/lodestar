@@ -111,11 +111,11 @@ describe("block archive repository", function () {
 
   it("should store indexes when adding single block", async function () {
     const spy = sinon.spy(controller, "put");
-    const block = generateEmptyLightclientSignedBlock();
+    const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     expect(
       spy.withArgs(
-        encodeKey(Bucket.blockArchiveRootIndex, config.types.lightclient.BeaconBlock.hashTreeRoot(block.message)),
+        encodeKey(Bucket.blockArchiveRootIndex, config.types.BeaconBlock.hashTreeRoot(block.message)),
         intToBytes(block.message.slot, 64, "be")
       ).calledOnce
     ).to.be.true;
@@ -149,20 +149,20 @@ describe("block archive repository", function () {
   });
 
   it("should get slot by root", async function () {
-    const block = generateEmptyLightclientSignedBlock();
+    const block = generateEmptySignedBlock();
     await blockArchive.add(block);
-    const slot = await blockArchive.getSlotByRoot(config.types.lightclient.BeaconBlock.hashTreeRoot(block.message));
+    const slot = await blockArchive.getSlotByRoot(config.types.BeaconBlock.hashTreeRoot(block.message));
     expect(slot).to.equal(block.message.slot);
   });
 
   it("should get block by root", async function () {
-    const block = generateEmptyLightclientSignedBlock();
+    const block = generateEmptySignedBlock();
     await blockArchive.add(block);
     const retrieved = (await blockArchive.getByRoot(
-      config.types.lightclient.BeaconBlock.hashTreeRoot(block.message)
+      config.types.BeaconBlock.hashTreeRoot(block.message)
     )) as Lightclient.SignedBeaconBlock | null;
     if (!retrieved) throw Error("getByRoot returned null");
-    expect(config.types.lightclient.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
+    expect(config.types.SignedBeaconBlock.equals(retrieved, block)).to.be.true;
   });
 
   it("should get slot by parent root", async function () {

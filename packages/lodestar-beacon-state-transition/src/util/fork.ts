@@ -1,6 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ForkData, ForkDigest, Root, Slot, Version} from "@chainsafe/lodestar-types";
-import {LIGHTCLIENT_PATCH_FORK_SLOT, LIGHTCLIENT_PATCH_FORK_VERSION} from "../lightclient";
 
 /**
  * Used primarily in signature domains to avoid collisions across forks/chains.
@@ -24,8 +23,8 @@ export function computeForkDigest(
 
 export function epochToCurrentForkVersion(config: IBeaconConfig, slot: Slot): Version | null {
   let fork = config.params.GENESIS_FORK_VERSION;
-  if (slot >= LIGHTCLIENT_PATCH_FORK_SLOT) {
-    fork = LIGHTCLIENT_PATCH_FORK_VERSION;
+  if (slot >= config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT) {
+    fork = config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION;
   }
   return fork;
 }

@@ -24,7 +24,7 @@ export function processSlots<TState extends BeaconState = BeaconState>(
       processEpoch(config, state);
     }
     state.slot++;
-    if (!ignoreFork && state.slot >= lightclient.LIGHTCLIENT_PATCH_FORK_SLOT) {
+    if (!ignoreFork && state.slot >= config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT) {
       state = (lightclient.upgrade(config, state) as unknown) as TState;
     }
   }

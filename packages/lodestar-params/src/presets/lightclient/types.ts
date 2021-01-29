@@ -10,6 +10,8 @@ export type LightclientParams = {
   SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE: number;
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: number;
   DOMAIN_SYNC_COMMITTEE: Buffer;
+  LIGHTCLIENT_PATCH_FORK_VERSION: Buffer;
+  LIGHTCLIENT_PATCH_FORK_SLOT: number;
 };
 
 export const LightclientParamsSSZ = new ContainerType<LightclientParams>({
@@ -18,5 +20,7 @@ export const LightclientParamsSSZ = new ContainerType<LightclientParams>({
     SYNC_COMMITTEE_PUBKEY_AGGREGATES_SIZE: Number64,
     EPOCHS_PER_SYNC_COMMITTEE_PERIOD: Number64,
     DOMAIN_SYNC_COMMITTEE: ByteVector4,
+    LIGHTCLIENT_PATCH_FORK_VERSION: ByteVector4,
+    LIGHTCLIENT_PATCH_FORK_SLOT: Number64,
   },
 });
