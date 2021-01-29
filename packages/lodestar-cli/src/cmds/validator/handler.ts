@@ -1,5 +1,5 @@
 import fs from "fs";
-import {consoleTransport, fileTransport, WinstonLogger} from "@chainsafe/lodestar-utils";
+import {consoleTransport, fileTransport, LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
@@ -27,7 +27,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const config = getBeaconConfigFromArgs(args);
   const logFilePath = getBeaconPaths(args).logFile;
 
-  const logger = new WinstonLogger({}, [consoleTransport, ...(logFilePath ? [fileTransport(logFilePath)] : [])]);
+  const logger = new WinstonLogger({level: args.logLevel as LogLevel}, [
+    consoleTransport,
+    ...(logFilePath ? [fileTransport(logFilePath)] : []),
+  ]);
 
   const validatorDirManager = new ValidatorDirManager(accountPaths);
   const secretKeys = await validatorDirManager.decryptAllValidators({force});
