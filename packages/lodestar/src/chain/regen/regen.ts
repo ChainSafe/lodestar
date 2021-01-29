@@ -9,6 +9,7 @@ import {IBeaconDb} from "../../db";
 import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTransition";
 import {IStateRegenerator} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -177,6 +178,8 @@ export class StateRegenerator implements IStateRegenerator {
           validSignatures: true,
           validProposerSignature: true,
         });
+        // we'll likely lose peers without this
+        await sleep(0);
       } catch (e) {
         throw new RegenError({
           code: RegenErrorCode.STATE_TRANSITION_ERROR,

@@ -14,6 +14,7 @@ import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {IBeaconDb} from "../../db";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 export async function processBlock({
   forkChoice,
@@ -153,6 +154,8 @@ export async function processChainSegment({
           validSignatures: true,
         });
         importedBlocks++;
+        // we'll likely lose peers without this
+        await sleep(0);
       }
     } catch (e) {
       if (e instanceof RegenError) {

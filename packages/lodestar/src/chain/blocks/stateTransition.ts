@@ -14,6 +14,7 @@ import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
 import {isActiveIFlatValidator} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
@@ -72,6 +73,8 @@ export async function processSlotsToNearestCheckpoint(
   ) {
     processSlots(postCtx.epochCtx, postCtx.state, nextEpochSlot);
     emitCheckpointEvent(emitter, cloneStateCtx(postCtx));
+    // we'll likely lose peers without this
+    await sleep(0);
   }
   return postCtx;
 }
