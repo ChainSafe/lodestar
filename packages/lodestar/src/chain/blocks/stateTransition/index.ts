@@ -90,6 +90,15 @@ function executeStateTransition(
   switch (toHex(fork)) {
     case toHex(config.params.GENESIS_FORK_VERSION):
       {
+        result = fastStateTransition(stateCtx, job.signedBlock, {
+          verifyStateRoot: true,
+          verifyProposer: !job.validSignatures && !job.validProposerSignature,
+          verifySignatures: !job.validSignatures,
+        });
+      }
+      break;
+    case toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
+      {
         result = lightclient.fast.stateTransition(
           stateCtx as ITreeStateContext<Lightclient.BeaconState>,
           job.signedBlock as Lightclient.SignedBeaconBlock,
@@ -99,15 +108,6 @@ function executeStateTransition(
             verifySignatures: !job.validSignatures,
           }
         );
-      }
-      break;
-    case toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
-      {
-        result = fastStateTransition(stateCtx, job.signedBlock, {
-          verifyStateRoot: true,
-          verifyProposer: !job.validSignatures && !job.validProposerSignature,
-          verifySignatures: !job.validSignatures,
-        });
       }
       break;
     default:
