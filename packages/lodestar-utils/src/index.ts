@@ -8,6 +8,7 @@ export * from "./math";
 export * from "./misc";
 export * from "./objects";
 export * from "./sleep";
+export * from "./fork";
 export * from "./sort";
 export * from "./verifyMerkleBranch";
 export * from "./json";

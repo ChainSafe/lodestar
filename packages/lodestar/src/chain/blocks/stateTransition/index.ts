@@ -1,30 +1,28 @@
-import {ChainEventEmitter, IBlockJob} from "../..";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
-import {IBeaconDb} from "../../../db";
-import {processSlotsToNearestCheckpoint} from "./utils";
 import {
-  getAllBlockSignatureSetsExceptProposer,
+  computeEpochAtSlot,
+  epochToCurrentForkVersion,
+  fastStateTransition,
+  IStateContext,
+  lightclient,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {
   getAllBlockSignatureSets,
+  getAllBlockSignatureSetsExceptProposer,
 } from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {BeaconState, Lightclient} from "@chainsafe/lodestar-types";
+import {SignedBeaconBlockType, sleep, toHex} from "@chainsafe/lodestar-utils";
+import {ChainEventEmitter, IBlockJob} from "../..";
+import {IBeaconDb} from "../../../db";
+import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
 import {verifySignatureSetsBatch} from "../../bls";
 import {BlockError} from "../../errors";
 import {BlockErrorCode} from "../../errors/blockError";
-import {
-  fastStateTransition,
-  IStateContext,
-  epochToCurrentForkVersion,
-  computeEpochAtSlot,
-  lightclient,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./events";
-import {sleep, toHex} from "@chainsafe/lodestar-utils";
-import {toTreeStateContext} from "./utils";
-import {BeaconState, Lightclient, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import { SignedBeaconBlockType } from "../../../util/types";
+import {emitBlockEvent, emitCheckpointEvent, emitForkChoiceHeadEvents} from "./events";
+import {processSlotsToNearestCheckpoint, toTreeStateContext} from "./utils";
 
-export * from "./utils";
 export * from "./events";
+export * from "./utils";
 
 export async function runStateTransition(
   emitter: ChainEventEmitter,

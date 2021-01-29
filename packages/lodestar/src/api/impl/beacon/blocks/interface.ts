@@ -1,5 +1,5 @@
 import {Root, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlockType} from "../../../../util/types";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
 
 export interface IBeaconBlocksApi {
   getBlockHeaders(filters: Partial<{slot: Slot; parentRoot: Root}>): Promise<SignedBeaconHeaderResponse[]>;

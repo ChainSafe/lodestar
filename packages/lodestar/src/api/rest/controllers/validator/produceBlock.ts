@@ -1,6 +1,6 @@
 import {ApiController} from "../types";
 import {fromHex} from "@chainsafe/lodestar-utils";
-import {getBeaconBlockSSZType} from "../../../../util/types";
+import {getBeaconBlockSSZType} from "@chainsafe/lodestar-utils";
 
 type Params = {
   slot: number;
