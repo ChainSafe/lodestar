@@ -16,7 +16,7 @@ export class RestEventsApi implements IEventsApi {
 
   public getEventStream(topics: BeaconEventType[]): IStoppableEventIterable<BeaconEvent> {
     const eventSource = new EventSource(
-      urlJoin(this.baseUrl, "/eth/v1/events?" + topics.map((topic) => `topics=${topic}`).join("&"))
+      urlJoin(this.baseUrl, "/v1/events?" + topics.map((topic) => `topics=${topic}`).join("&"))
     );
     return new LodestarEventIterator(({push}) => {
       eventSource.onmessage = (event) => {
