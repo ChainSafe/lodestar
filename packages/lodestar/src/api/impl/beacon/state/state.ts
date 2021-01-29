@@ -20,6 +20,7 @@ import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from ".
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
+
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
@@ -85,7 +86,7 @@ export class BeaconStateApi implements IBeaconStateApi {
         validatorIndex = undefined;
       }
     }
-    if (!validatorIndex) {
+    if (!validatorIndex && validatorIndex !== 0) {
       throw new ApiError(404, "Validator not found");
     }
     return toValidatorResponse(
