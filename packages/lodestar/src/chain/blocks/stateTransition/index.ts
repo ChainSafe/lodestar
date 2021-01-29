@@ -21,6 +21,7 @@ import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./e
 import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {toTreeStateContext} from "./utils";
 import {BeaconState, Lightclient, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import { SignedBeaconBlockType } from "../../../util/types";
 
 export * from "./utils";
 export * from "./events";
@@ -78,7 +79,7 @@ export async function runStateTransition(
 
 function executeStateTransition(
   stateCtx: ITreeStateContext<BeaconState | Lightclient.BeaconState>,
-  job: IBlockJob<SignedBeaconBlock | Lightclient.SignedBeaconBlock>
+  job: IBlockJob<SignedBeaconBlockType>
 ): ITreeStateContext {
   let result: IStateContext;
   const config = stateCtx.epochCtx.config;

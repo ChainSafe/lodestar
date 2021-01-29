@@ -38,6 +38,7 @@ import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
+import {SignedBeaconBlockType} from "../util/types";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
@@ -167,7 +168,7 @@ export class BeaconChain implements IBeaconChain {
     return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
   }
 
-  public async getHeadBlock(): Promise<SignedBeaconBlock | null> {
+  public async getHeadBlock(): Promise<SignedBeaconBlockType | null> {
     const headSummary = this.forkChoice.getHead();
     const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
     if (unfinalizedBlock) {
@@ -176,7 +177,7 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.blockArchive.get(headSummary.slot);
   }
 
-  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null> {
+  public async getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlockType | null> {
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
     if (finalizedCheckpoint.epoch > computeEpochAtSlot(this.config, slot)) {
       return this.db.blockArchive.get(slot);

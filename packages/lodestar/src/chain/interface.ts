@@ -19,6 +19,7 @@ import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import { SignedBeaconBlockType } from "../util/types";
 
 export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock> {
   signedBlock: TBlock;
@@ -80,7 +81,7 @@ export interface IBeaconChain {
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
   getHeadState(): Promise<TreeBacked<BeaconState>>;
   getHeadEpochContext(): Promise<EpochContext>;
-  getHeadBlock(): Promise<SignedBeaconBlock | null>;
+  getHeadBlock(): Promise<SignedBeaconBlockType | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
@@ -92,9 +93,9 @@ export interface IBeaconChain {
    * forkchoice. Works for finalized slots as well
    * @param slot
    */
-  getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
+  getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlockType | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlockType[] | null>;
 
   /**
    * Add attestation to the fork-choice rule

@@ -1,12 +1,11 @@
 import {computeEpochAtSlot, epochToCurrentForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository} from "@chainsafe/lodestar-db";
-import {Lightclient, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
+import {Slot, Version} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "../../../../../util/types";
 import {InitialBlockRepository} from "./initial";
 import {LightClientBlockRepository} from "./ligthclient";
-
-type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
 
 type ForkHex = string;
 
@@ -19,12 +18,12 @@ export class BlockRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected blockRepositories: Map<ForkHex, Repository<Uint8Array, BlockType>>;
+  protected blockRepositories: Map<ForkHex, Repository<Uint8Array, SignedBeaconBlockType>>;
 
   public constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
-    forkVersionBlockRepositories: Map<ForkHex, Repository<Uint8Array, BlockType>> = new Map()
+    forkVersionBlockRepositories: Map<ForkHex, Repository<Uint8Array, SignedBeaconBlockType>> = new Map()
   ) {
     this.config = config;
     this.db = db;
@@ -35,7 +34,7 @@ export class BlockRepository {
     ]);
   }
 
-  public async get(id: Uint8Array, fork?: Version): Promise<BlockType | null> {
+  public async get(id: Uint8Array, fork?: Version): Promise<SignedBeaconBlockType | null> {
     if (fork) {
       return (await this.blockRepositories.get(toHex(fork))?.get(id)) ?? null;
     } else {
@@ -51,11 +50,11 @@ export class BlockRepository {
     }
   }
 
-  public async add(value: BlockType): Promise<void> {
+  public async add(value: SignedBeaconBlockType): Promise<void> {
     return this.getBlockRepository(value.message.slot).add(value);
   }
 
-  public async remove(value: BlockType): Promise<void> {
+  public async remove(value: SignedBeaconBlockType): Promise<void> {
     return this.getBlockRepository(value.message.slot).remove(value);
   }
 
@@ -67,10 +66,10 @@ export class BlockRepository {
     }
   }
 
-  private async tryAllRepositories<TMethod extends keyof Repository<Uint8Array, BlockType>>(
+  private async tryAllRepositories<TMethod extends keyof Repository<Uint8Array, SignedBeaconBlockType>>(
     method: TMethod,
-    ...args: Parameters<Repository<Uint8Array, BlockType>[TMethod]>
-  ): Promise<ReturnType<Repository<Uint8Array, BlockType>[TMethod]> | null> {
+    ...args: Parameters<Repository<Uint8Array, SignedBeaconBlockType>[TMethod]>
+  ): Promise<ReturnType<Repository<Uint8Array, SignedBeaconBlockType>[TMethod]> | null> {
     for (const repo of this.blockRepositories.values()) {
       try {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -84,7 +83,7 @@ export class BlockRepository {
     return null;
   }
 
-  private getBlockRepository(slot: Slot): Repository<Uint8Array, BlockType> {
+  private getBlockRepository(slot: Slot): Repository<Uint8Array, SignedBeaconBlockType> {
     const fork = epochToCurrentForkVersion(this.config, computeEpochAtSlot(this.config, slot));
     if (!fork) {
       throw new Error("Not supported fork. " + JSON.stringify({currentFork: fork, slot}));

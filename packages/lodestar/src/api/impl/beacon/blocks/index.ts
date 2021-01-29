@@ -1,4 +1,4 @@
-import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
+import {Root, SignedBeaconBlock, SignedBeaconHeaderResponse, Slot, Lightclient} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IBeaconChain} from "../../../../chain";
@@ -10,6 +10,7 @@ import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {IBeaconSync} from "../../../../sync";
 import {checkSyncStatus} from "../../utils";
 import {INetwork} from "../../../../network/interface";
+import { SignedBeaconBlockType } from "../../../../util/types";
 
 export * from "./interface";
 
@@ -110,11 +111,11 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     return toBeaconHeaderResponse(this.config, block, true);
   }
 
-  public async getBlock(blockId: BlockId): Promise<SignedBeaconBlock | null> {
+  public async getBlock(blockId: BlockId): Promise<SignedBeaconBlockType | null> {
     return await resolveBlockId(this.config, this.chain.forkChoice, this.db, blockId);
   }
 
-  public async publishBlock(signedBlock: SignedBeaconBlock): Promise<void> {
+  public async publishBlock(signedBlock: SignedBeaconBlockType): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
     await Promise.all([this.chain.receiveBlock(signedBlock), this.network.gossip.publishBlock(signedBlock)]);
   }

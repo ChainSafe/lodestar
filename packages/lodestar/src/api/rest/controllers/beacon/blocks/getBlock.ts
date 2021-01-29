@@ -1,6 +1,6 @@
+import {DefaultQuery, FastifyError} from "fastify";
+import {getSignedBeaconBlockSSZType} from "../../../../../util/types";
 import {ApiController} from "../../types";
-import {DefaultQuery} from "fastify";
-import {FastifyError} from "fastify";
 
 export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
   url: "/blocks/:blockId",
@@ -12,7 +12,7 @@ export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {
         return resp.status(404).send();
       }
       return resp.status(200).send({
-        data: this.config.types.SignedBeaconBlock.toJson(data, {case: "snake"}),
+        data: getSignedBeaconBlockSSZType(this.config, data).toJson(data, {case: "snake"}),
       });
     } catch (e) {
       if (e.message === "Invalid block id") {

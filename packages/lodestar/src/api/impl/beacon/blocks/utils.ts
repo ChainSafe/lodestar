@@ -6,6 +6,7 @@ import {BlockId} from "./interface";
 import {IBeaconDb} from "../../../../db/api";
 import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
+import { SignedBeaconBlockType } from "../../../../util/types";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,
@@ -27,7 +28,7 @@ export async function resolveBlockId(
   forkChoice: IForkChoice,
   db: IBeaconDb,
   blockId: BlockId
-): Promise<SignedBeaconBlock | null> {
+): Promise<SignedBeaconBlockType | null> {
   blockId = blockId.toLowerCase();
   if (blockId === "head") {
     return db.block.get(forkChoice.getHeadRoot());

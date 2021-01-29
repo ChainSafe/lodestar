@@ -1,14 +1,22 @@
-import {ApiController} from "../../types";
+import {DefaultParams, DefaultQuery} from "fastify";
 import {SignedBeaconBlock} from "../../../../../../../lodestar-types/lib/types/block";
+import {getSignedBeaconBlockSSZTypeBySlot} from "../../../../../util/types";
 import {ValidationError} from "../../../../impl/errors/validation";
+import {ApiController} from "../../types";
 
-export const publishBlock: ApiController = {
+type Body = {
+  message: {
+    slot: number;
+  };
+};
+
+export const publishBlock: ApiController<DefaultQuery, DefaultParams, Body> = {
   url: "/blocks",
 
   handler: async function (req, resp) {
     let block: SignedBeaconBlock;
     try {
-      block = this.config.types.SignedBeaconBlock.fromJson(req.body, {case: "snake"});
+      block = getSignedBeaconBlockSSZTypeBySlot(this.config, req.body.message.slot).fromJson(req.body, {case: "snake"});
     } catch (e) {
       throw new ValidationError("Failed to deserialize block");
     }
@@ -20,6 +28,18 @@ export const publishBlock: ApiController = {
     schema: {
       body: {
         type: "object",
+        additionalProperties: true,
+        properties: {
+          message: {
+            type: "object",
+            additionalProperties: true,
+            properties: {
+              slot: {
+                type: "number",
+              },
+            },
+          },
+        },
       },
     },
   },

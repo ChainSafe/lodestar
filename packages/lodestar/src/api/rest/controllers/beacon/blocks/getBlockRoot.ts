@@ -1,6 +1,6 @@
+import {DefaultQuery, FastifyError} from "fastify";
+import {getBeaconBlockSSZType} from "../../../../../util/types";
 import {ApiController} from "../../types";
-import {DefaultQuery} from "fastify";
-import {FastifyError} from "fastify";
 
 export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
   url: "/blocks/:blockId/root",
@@ -13,7 +13,9 @@ export const getBlockRoot: ApiController<DefaultQuery, {blockId: string}> = {
       }
       return resp.status(200).send({
         data: {
-          root: this.config.types.Root.toJson(this.config.types.BeaconBlock.hashTreeRoot(data.message)),
+          root: this.config.types.Root.toJson(
+            getBeaconBlockSSZType(this.config, data.message).hashTreeRoot(data.message)
+          ),
         },
       });
     } catch (e) {

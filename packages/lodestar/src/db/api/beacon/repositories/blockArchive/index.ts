@@ -1,16 +1,15 @@
 import {computeEpochAtSlot, epochToCurrentForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Repository, IKeyValue, IFilterOptions} from "@chainsafe/lodestar-db";
+import {IDatabaseController, IFilterOptions, IKeyValue, Repository} from "@chainsafe/lodestar-db";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {Lightclient, SignedBeaconBlock, Slot, Version, Root} from "@chainsafe/lodestar-types";
-import {IKeyValueSummary, IBlockFilterOptions} from "./abstract";
-import {InitialBlockArchiveRepository} from "./initial";
-import {LightclientBlockArchiveRepository} from "./lightclient";
-import {getRootIndexKey, getParentRootIndexKey} from "./db-index";
+import {Root, Slot, Version} from "@chainsafe/lodestar-types";
 import {bytesToInt, toHex} from "@chainsafe/lodestar-utils";
 import all from "it-all";
-
-type BlockType = SignedBeaconBlock | Lightclient.SignedBeaconBlock;
+import {IBlockFilterOptions, IKeyValueSummary} from "./abstract";
+import {getParentRootIndexKey, getRootIndexKey} from "./db-index";
+import {InitialBlockArchiveRepository} from "./initial";
+import {LightclientBlockArchiveRepository} from "./lightclient";
+import { SignedBeaconBlockType } from "../../../../../util/types";
 
 type ForkHex = string;
 
@@ -21,12 +20,12 @@ export class BlockArchiveRepository {
   protected config: IBeaconConfig;
   protected db: IDatabaseController<Buffer, Buffer>;
 
-  protected blockArchiveRepositories: Map<ForkHex, Repository<Slot, BlockType>>;
+  protected blockArchiveRepositories: Map<ForkHex, Repository<Slot, SignedBeaconBlockType>>;
 
   public constructor(
     config: IBeaconConfig,
     db: IDatabaseController<Buffer, Buffer>,
-    forkVersionBlockRepositories: Map<ForkHex, Repository<Slot, BlockType>> = new Map()
+    forkVersionBlockRepositories: Map<ForkHex, Repository<Slot, SignedBeaconBlockType>> = new Map()
   ) {
     this.config = config;
     this.db = db;
@@ -40,11 +39,11 @@ export class BlockArchiveRepository {
     ]);
   }
 
-  public async get(id: Slot): Promise<BlockType | null> {
+  public async get(id: Slot): Promise<SignedBeaconBlockType | null> {
     return (await this.getBlockArchiveRepository(id)?.get(id)) ?? null;
   }
 
-  public async getByRoot(root: Root): Promise<BlockType | null> {
+  public async getByRoot(root: Root): Promise<SignedBeaconBlockType | null> {
     const slot = await this.getSlotByRoot(root);
     if (slot !== null && Number.isInteger(slot)) {
       return (await this.getBlockArchiveRepository(slot)?.get(slot)) ?? null;
@@ -52,7 +51,7 @@ export class BlockArchiveRepository {
     return null;
   }
 
-  public async getByParentRoot(root: Root): Promise<BlockType | null> {
+  public async getByParentRoot(root: Root): Promise<SignedBeaconBlockType | null> {
     const slot = await this.getSlotByParentRoot(root);
     if (slot !== null && Number.isInteger(slot)) {
       return (await this.getBlockArchiveRepository(slot)?.get(slot)) ?? null;
@@ -76,11 +75,11 @@ export class BlockArchiveRepository {
     return null;
   }
 
-  public async add(value: BlockType): Promise<void> {
+  public async add(value: SignedBeaconBlockType): Promise<void> {
     await this.getBlockArchiveRepository(value.message.slot).add(value);
   }
 
-  public async batchPut(items: Array<IKeyValue<Slot, BlockType>>, fork: Version): Promise<void> {
+  public async batchPut(items: Array<IKeyValue<Slot, SignedBeaconBlockType>>, fork: Version): Promise<void> {
     const repo = this.blockArchiveRepositories.get(toHex(fork));
     if (!repo) {
       throw new Error("No supported block archive repositories for fork. " + JSON.stringify({currentFork: fork}));
@@ -106,18 +105,18 @@ export class BlockArchiveRepository {
     }
   }
 
-  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<BlockType> {
+  public async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<SignedBeaconBlockType> {
     const repos = this.blockArchiveRepositories.values();
     for (const repo of repos) {
       yield* repo.valuesStream(opts);
     }
   }
 
-  public async values(opts?: IBlockFilterOptions): Promise<BlockType[]> {
+  public async values(opts?: IBlockFilterOptions): Promise<SignedBeaconBlockType[]> {
     return all(this.valuesStream(opts));
   }
 
-  private getBlockArchiveRepository(slot: Slot): Repository<Slot, BlockType> {
+  private getBlockArchiveRepository(slot: Slot): Repository<Slot, SignedBeaconBlockType> {
     const fork = epochToCurrentForkVersion(this.config, computeEpochAtSlot(this.config, slot));
     if (!fork) {
       throw new Error("Not supported fork. " + JSON.stringify({currentFork: fork, slot}));
