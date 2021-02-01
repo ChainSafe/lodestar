@@ -1,5 +1,5 @@
 import {assert, expect} from "chai";
-import {intToBytes, bytesToInt} from "../../src";
+import {intToBytes, bytesToInt, fromHex, toHex} from "../../src";
 
 describe("intToBytes", () => {
   const zeroedArray = (length: number): number[] => Array.from({length}, () => 0);
@@ -45,4 +45,35 @@ describe("bytesToInt", () => {
       expect(bytesToInt(input)).to.be.equal(output);
     });
   }
+});
+
+describe("fromHex", function () {
+  it("should work with 0x prefix", function () {
+    const buf = Buffer.alloc(32, 354);
+    expect(fromHex("0x" + buf.toString("hex"))).to.be.deep.equal(buf);
+  });
+  it("should work without 0x prefix", function () {
+    const buf = Buffer.alloc(32, 354);
+    expect(fromHex(buf.toString("hex"))).to.be.deep.equal(buf);
+  });
+});
+
+describe("toHex", function () {
+  it("should work from buffer", function () {
+    const buf = Buffer.alloc(32, 354);
+    expect(toHex(buf).length).to.be.equal(66);
+  });
+  it("should work from uint8Array", function () {
+    const buf = Buffer.alloc(32, 354);
+    const array = new Uint8Array(buf.buffer, buf.byteOffset, buf.length);
+    expect(toHex(array).length).to.be.equal(66);
+  });
+  it("should work from array", function () {
+    const arr = [0, 0, 1];
+    expect(toHex(arr)).to.be.equal("0x000001");
+  });
+  it("should work round trip", function () {
+    const hex = "0x2a3b";
+    expect(toHex(fromHex(hex))).to.be.equal(hex);
+  });
 });

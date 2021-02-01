@@ -93,7 +93,9 @@ export class BlockArchiveRepository {
   ): Promise<void> {
     const repo = this.blockArchiveRepositories.get(toHex(fork));
     if (!repo) {
-      throw new Error("No supported block archive repositories for fork. " + JSON.stringify({currentFork: fork}));
+      throw new Error(
+        "No supported block archive repositories for fork. " + JSON.stringify({currentFork: toHex(fork)})
+      );
     }
     await repo.batchPutBinary(items);
   }
