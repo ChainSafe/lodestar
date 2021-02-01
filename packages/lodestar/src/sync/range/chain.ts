@@ -331,7 +331,7 @@ export class SyncChain {
 startEpoch: ${this.startEpoch}
 batches: ${this.batches.size}
 \t${"epoch"} \t${"status"}
-\t${"_____"} \t${"______"}
+\t${"-----"} \t${"------"}
 ${batchesMetadata.map(({startEpoch, status}) => `\t${startEpoch} \t${status}`).join("\n")}
 `;
   }
