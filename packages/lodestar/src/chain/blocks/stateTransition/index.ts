@@ -11,7 +11,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconState, Lightclient} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlockType, sleep, toHex} from "@chainsafe/lodestar-utils";
+import {sleep, toHex} from "@chainsafe/lodestar-utils";
 import {ChainEventEmitter, IBlockJob} from "../..";
 import {IBeaconDb} from "../../../db";
 import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
@@ -20,6 +20,7 @@ import {BlockError} from "../../errors";
 import {BlockErrorCode} from "../../errors/blockError";
 import {emitBlockEvent, emitCheckpointEvent, emitForkChoiceHeadEvents} from "./events";
 import {processSlotsToNearestCheckpoint, toTreeStateContext} from "./utils";
+import { SignedBeaconBlockType } from "@chainsafe/lodestar-core";
 
 export * from "./events";
 export * from "./utils";

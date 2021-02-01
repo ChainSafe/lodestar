@@ -1,5 +1,5 @@
 import {Attestation, BLSPubkey, Fork, Genesis, ValidatorIndex, ValidatorResponse} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 export interface IBeaconApi {
   state: IBeaconStateApi;

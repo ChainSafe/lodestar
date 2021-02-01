@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, SignedBeaconHeaderResponse, Slot} from "@chainsafe/lodestar-types";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 import {IBeaconChain} from "../../../../chain";
 import {IBeaconDb} from "../../../../db/api";
 import {INetwork} from "../../../../network/interface";

@@ -1,6 +1,6 @@
 import {DefaultParams, DefaultQuery} from "fastify";
 import {SignedBeaconBlock} from "../../../../../../../lodestar-types/lib/types/block";
-import {getSignedBeaconBlockSSZTypeBySlot} from "@chainsafe/lodestar-utils";
+import {getSignedBeaconBlockSSZTypeBySlot} from "@chainsafe/lodestar-core";
 import {ValidationError} from "../../../../impl/errors/validation";
 import {ApiController} from "../../types";
 

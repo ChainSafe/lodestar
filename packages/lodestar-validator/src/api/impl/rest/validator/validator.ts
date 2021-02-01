@@ -13,10 +13,11 @@ import {
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {ILogger, getSignedBeaconBlockSSZTypeBySlot} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
 import {IValidatorApi} from "../../../interface/validators";
+import { getSignedBeaconBlockSSZTypeBySlot } from "@chainsafe/lodestar-core";
 
 export class RestValidatorApi implements IValidatorApi {
   private readonly clientV2: HttpClient;

@@ -9,7 +9,7 @@ import {IBlockFilterOptions, IKeyValueSummary} from "./abstract";
 import {getParentRootIndexKey, getRootIndexKey} from "./db-index";
 import {InitialBlockArchiveRepository} from "./initial";
 import {LightclientBlockArchiveRepository} from "./lightclient";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 type ForkHex = string;
 

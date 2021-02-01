@@ -1,7 +1,7 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {IBeaconBlocksApi} from "../../../interface/beacon";
 import {RestApi} from "./abstract";
-import {getSignedBeaconBlockSSZType} from "@chainsafe/lodestar-utils";
+import {getSignedBeaconBlockSSZType} from "@chainsafe/lodestar-core";
 
 export class RestBeaconBlocksApi extends RestApi implements IBeaconBlocksApi {
   public async publishBlock(block: SignedBeaconBlock): Promise<void> {

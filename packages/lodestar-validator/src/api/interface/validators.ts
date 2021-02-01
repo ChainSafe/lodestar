@@ -1,3 +1,4 @@
+import {BeaconBlockType} from "@chainsafe/lodestar-core";
 import {
   Attestation,
   AttestationData,
@@ -12,7 +13,6 @@ import {
   Slot,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {BeaconBlockType} from "@chainsafe/lodestar-utils";
 
 export interface IValidatorApi {
   getProposerDuties(epoch: Epoch, validatorPubKeys: BLSPubkey[]): Promise<ProposerDuty[]>;

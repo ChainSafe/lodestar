@@ -19,7 +19,7 @@ import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock> {
   signedBlock: TBlock;

@@ -1,5 +1,5 @@
 import {DefaultQuery, FastifyError} from "fastify";
-import {getSignedBeaconBlockSSZType} from "@chainsafe/lodestar-utils";
+import {getSignedBeaconBlockSSZType} from "@chainsafe/lodestar-core";
 import {ApiController} from "../../types";
 
 export const getBlock: ApiController<DefaultQuery, {blockId: string}> = {

@@ -38,7 +38,7 @@ import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;

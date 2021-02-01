@@ -6,7 +6,7 @@ import {BlockId} from "./interface";
 import {IBeaconDb} from "../../../../db/api";
 import {GENESIS_SLOT} from "../../../../constants";
 import {fromHexString} from "@chainsafe/ssz";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 export function toBeaconHeaderResponse(
   config: IBeaconConfig,

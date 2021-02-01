@@ -3,7 +3,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository} from "@chainsafe/lodestar-db";
 import {Slot, Version} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
-import {SignedBeaconBlockType} from "@chainsafe/lodestar-utils";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 import {InitialBlockRepository} from "./initial";
 import {LightClientBlockRepository} from "./ligthclient";
 
