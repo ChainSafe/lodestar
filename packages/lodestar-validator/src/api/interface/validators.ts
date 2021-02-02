@@ -3,7 +3,6 @@ import {
   Attestation,
   AttestationData,
   AttesterDuty,
-  BeaconBlock,
   BLSPubkey,
   CommitteeIndex,
   Epoch,

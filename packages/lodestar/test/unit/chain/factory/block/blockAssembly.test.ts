@@ -1,4 +1,4 @@
-import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
+import sinon, {SinonStub, SinonStubbedInstance, SinonStubbedMember} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
@@ -19,7 +19,7 @@ import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 describe("block assembly", function () {
   const sandbox = sinon.createSandbox();
 
-  let assembleBodyStub: any,
+  let assembleBodyStub: SinonStubbedMember<typeof blockBodyAssembly["assembleBody"]>,
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     regenStub: SinonStubbedInstance<StateRegenerator>,
@@ -27,6 +27,7 @@ describe("block assembly", function () {
     beaconDB: StubbedBeaconDb;
 
   beforeEach(() => {
+    config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT = 10;
     assembleBodyStub = sandbox.stub(blockBodyAssembly, "assembleBody");
     processBlockStub = sandbox.stub(processBlock, "processBlock");
 
@@ -42,7 +43,7 @@ describe("block assembly", function () {
     sandbox.restore();
   });
 
-  it("should assemble block", async function () {
+  it("should assemble phase 0 block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
     forkChoiceStub.getHead.returns(generateBlockSummary());
     const epochCtx = new EpochContext(config);
@@ -67,5 +68,33 @@ describe("block assembly", function () {
     expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
     expect(processBlockStub.calledOnce).to.be.true;
     expect(assembleBodyStub.calledOnce).to.be.true;
+  });
+
+  it("should assemble lightclient block", async function () {
+    sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
+    forkChoiceStub.getHead.returns(generateBlockSummary());
+    const epochCtx = new EpochContext(config);
+    sinon.stub(epochCtx).getBeaconProposer.returns(2);
+    regenStub.getBlockSlotState.resolves({
+      state: generateState({slot: 1}),
+      epochCtx: epochCtx,
+    });
+    beaconDB.depositDataRoot.getTreeBacked.resolves(config.types.DepositDataRootList.tree.defaultValue());
+    assembleBodyStub.resolves(generateEmptyBlock().body);
+    const state = generateState();
+
+    const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
+    eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
+
+    const result = await assembleBlock(config, chainStub, beaconDB, eth1, 11, Buffer.alloc(96, 0));
+    expect(result).to.not.be.null;
+    expect(result.slot).to.equal(11);
+    expect(result.proposerIndex).to.equal(2);
+    expect(result.stateRoot).to.not.be.null;
+    expect(result.parentRoot).to.not.be.null;
+    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
+    expect(processBlockStub.calledOnce).to.be.true;
+    expect(assembleBodyStub.calledOnce).to.be.true;
+    config.types.lightclient.BeaconBlock.assertValidValue(result);
   });
 });

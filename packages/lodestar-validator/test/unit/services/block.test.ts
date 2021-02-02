@@ -10,6 +10,7 @@ import BlockProposingService from "../../../src/services/block";
 import {SinonStubbedApi} from "../../utils/apiStub";
 import {generateFork} from "../../utils/fork";
 import {silentLogger} from "../../utils/logger";
+import {generateEmptyLightclientBlock} from "../../../../lodestar/test/utils/block";
 
 describe("block proposing service", function () {
   const sandbox = sinon.createSandbox();
@@ -70,6 +71,21 @@ describe("block proposing service", function () {
 
     const service = new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
     const result = await service.createAndPublishBlock(0, slot, generateFork(), ZERO_HASH);
+    expect(result).to.not.be.null;
+    expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
+  });
+
+  it("should produce lightclient block", async function () {
+    const secretKey = bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32));
+    config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT = 0;
+    rpcClientStub.validator.produceBlock = sandbox.stub();
+    rpcClientStub.beacon.blocks.publishBlock = sandbox.stub();
+    rpcClientStub.validator.produceBlock.resolves(generateEmptyLightclientBlock());
+
+    slashingProtectionStub.checkAndInsertBlockProposal.resolves();
+
+    const service = new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtectionStub, logger);
+    const result = await service.createAndPublishBlock(0, 0, generateFork(), ZERO_HASH);
     expect(result).to.not.be.null;
     expect(rpcClientStub.beacon.blocks.publishBlock.calledOnce).to.be.true;
   });

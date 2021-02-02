@@ -3,7 +3,7 @@ import {expect} from "chai";
 import supertest from "supertest";
 import {ApiNamespace, RestApi} from "../../../../../../src/api";
 import {publishBlock} from "../../../../../../src/api/rest/controllers/beacon/blocks/publishBlock";
-import {generateEmptySignedBlock} from "../../../../../utils/block";
+import {generateEmptySignedBlock, generateEmptyLightclientSignedBlock} from "../../../../../utils/block";
 import {silentLogger} from "../../../../../utils/logger";
 import {StubbedApi} from "../../../../../utils/stub/api";
 import {urlJoin} from "../../utils";
@@ -35,12 +35,22 @@ describe("rest - beacon - publishBlock", function () {
     await restApi.close();
   });
 
-  it("should succeed", async function () {
+  it("should succeed with phase0 block", async function () {
     const block = generateEmptySignedBlock();
     api.beacon.blocks.publishBlock.resolves();
     await supertest(restApi.server.server)
       .post(urlJoin(BEACON_PREFIX, publishBlock.url))
       .send(config.types.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
+      .expect(200)
+      .expect("Content-Type", "application/json");
+  });
+
+  it("should succeed with lightclient block", async function () {
+    const block = generateEmptyLightclientSignedBlock();
+    api.beacon.blocks.publishBlock.resolves();
+    await supertest(restApi.server.server)
+      .post(urlJoin(BEACON_PREFIX, publishBlock.url))
+      .send(config.types.lightclient.SignedBeaconBlock.toJson(block, {case: "snake"}) as Record<string, unknown>)
       .expect(200)
       .expect("Content-Type", "application/json");
   });

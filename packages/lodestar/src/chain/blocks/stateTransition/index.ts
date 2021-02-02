@@ -20,7 +20,7 @@ import {BlockError} from "../../errors";
 import {BlockErrorCode} from "../../errors/blockError";
 import {emitBlockEvent, emitCheckpointEvent, emitForkChoiceHeadEvents} from "./events";
 import {processSlotsToNearestCheckpoint, toTreeStateContext} from "./utils";
-import { SignedBeaconBlockType } from "@chainsafe/lodestar-core";
+import {SignedBeaconBlockType} from "@chainsafe/lodestar-core";
 
 export * from "./events";
 export * from "./utils";
