@@ -85,7 +85,7 @@ export class BeaconStateApi implements IBeaconStateApi {
         validatorIndex = undefined;
       }
     }
-    if (!validatorIndex) {
+    if (validatorIndex == null) {
       throw new ApiError(404, "Validator not found");
     }
     return toValidatorResponse(

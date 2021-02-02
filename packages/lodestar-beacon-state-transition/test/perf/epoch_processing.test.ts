@@ -9,7 +9,6 @@ import {
   processRegistryUpdates,
   processRewardsAndPenalties,
   processSlashings,
-  processForkChanged,
 } from "../../src/fast/epoch";
 import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
@@ -77,13 +76,5 @@ describe("Epoch Processing Performance Tests", function () {
     processFinalUpdates(epochCtx, process, state);
     logger.profile("processFinalUpdates");
     expect(Date.now() - start).lt(250);
-  });
-
-  it("processForkChanged", async () => {
-    const start = Date.now();
-    logger.profile("processForkChanged");
-    processForkChanged(epochCtx, process, state);
-    logger.profile("processForkChanged");
-    expect(Date.now() - start).lte(2);
   });
 });

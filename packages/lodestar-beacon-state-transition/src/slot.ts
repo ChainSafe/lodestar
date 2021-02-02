@@ -2,15 +2,19 @@
  * @module chain/stateTransition/slot
  */
 
-import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
-
 import {ZERO_HASH} from "./constants";
-
 import {processEpoch} from "./epoch";
+import {lightclient} from ".";
 
-export function processSlots(config: IBeaconConfig, state: BeaconState, slot: Slot): void {
+export function processSlots<TState extends BeaconState = BeaconState>(
+  config: IBeaconConfig,
+  state: TState,
+  slot: Slot,
+  ignoreFork = false
+): TState {
   assert.lt(state.slot, slot, `Too old slot ${slot}, current=${state.slot}`);
 
   while (state.slot < slot) {
@@ -20,7 +24,11 @@ export function processSlots(config: IBeaconConfig, state: BeaconState, slot: Sl
       processEpoch(config, state);
     }
     state.slot++;
+    if (!ignoreFork && state.slot >= config.params.lightclient.LIGHTCLIENT_PATCH_FORK_SLOT) {
+      state = (lightclient.upgrade(config, state) as unknown) as TState;
+    }
   }
+  return state;
 }
 
 function processSlot(config: IBeaconConfig, state: BeaconState): void {

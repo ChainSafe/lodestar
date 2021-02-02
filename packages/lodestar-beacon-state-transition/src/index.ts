@@ -18,6 +18,8 @@ export * from "./slot";
 
 export * from "./fast";
 
+export * as lightclient from "./lightclient";
+
 /**
  * The ETH2.0 Beacon Chain state transition function
  * @param config Beacon Chain configuration
@@ -36,9 +38,9 @@ export function stateTransition(
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
 
   // Clone state because process slots and block are not pure
-  const postState = config.types.BeaconState.clone(state);
+  let postState = config.types.BeaconState.clone(state);
   // Process slots (including those with no blocks) since block
-  processSlots(config, postState, signedBlock.message.slot);
+  postState = processSlots(config, postState, signedBlock.message.slot);
   // Verify block signature
   if (verifyProposer) {
     verifyBlockSignature(config, state, signedBlock);

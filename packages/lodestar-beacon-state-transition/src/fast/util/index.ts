@@ -14,8 +14,8 @@ export * from "./interface";
 /**
  * Exchange Interface of StateContext
  */
-export interface IStateContext {
-  state: BeaconState;
+export interface IStateContext<TState extends BeaconState = BeaconState> {
+  state: TState;
   epochCtx: EpochContext;
   epochProcess?: IEpochProcess;
 }

@@ -37,6 +37,7 @@ describe("LodestarForkChoice", function () {
       const finalizedRoot = config.types.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
+      //
       const targetState = runStateTransition(anchorState, targetBlock);
       targetBlock.message.stateRoot = config.types.BeaconState.hashTreeRoot(targetState);
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
@@ -172,7 +173,9 @@ function runStateTransition(preState: BeaconState, signedBlock: SignedBeaconBloc
   // Clone state because process slots and block are not pure
   const postState = config.types.BeaconState.clone(preState);
   // Process slots (including those with no blocks) since block
-  processSlots(config, postState, signedBlock.message.slot);
+  // TODO: ugly hack to avoid fork upgrade which changes hashes and breaks tests.
+  // Improve once fork slot if configurable
+  processSlots(config, postState, signedBlock.message.slot, true);
   // processBlock
   postState.latestBlockHeader = getTemporaryBlockHeader(config, signedBlock.message);
   return config.types.BeaconState.clone(postState);

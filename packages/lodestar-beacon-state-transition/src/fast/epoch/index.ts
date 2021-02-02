@@ -7,7 +7,6 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";
 import {processSlashings} from "./processSlashings";
 import {processFinalUpdates} from "./processFinalUpdates";
-import {processForkChanged} from "./processFork";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
 export {
@@ -16,7 +15,6 @@ export {
   processRegistryUpdates,
   processSlashings,
   processFinalUpdates,
-  processForkChanged,
   getAttestationDeltas,
 };
 
@@ -28,5 +26,4 @@ export function processEpoch(epochCtx: StateTransitionEpochContext, state: Beaco
   processRegistryUpdates(epochCtx, process, state);
   processSlashings(epochCtx, process, state);
   processFinalUpdates(epochCtx, process, state);
-  processForkChanged(epochCtx, process, state);
 }
