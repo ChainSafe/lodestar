@@ -5,7 +5,8 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-A suite of various utility functions/classes that are used across the various `lodestar-*` monorepo packages.
+A suite of various utility functions/classes that don't depend on
+lodestar packages and are used across the various `lodestar-*` monorepo packages.
 
 ## License
 
