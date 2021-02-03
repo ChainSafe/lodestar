@@ -96,11 +96,11 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
   public async stop(): Promise<void> {
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerConnect, this.emitPeerConnect);
     this.libp2p.connectionManager.removeListener(NetworkEvent.peerDisconnect, this.emitPeerDisconnect);
+    await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
     await this.metadata.stop();
     await this.gossip.stop();
     await this.reqResp.stop();
     await this.libp2p.stop();
-    await Promise.all([this.diversifyPeersTask.stop(), this.checkPeerAliveTask.stop()]);
   }
 
   public async handleSyncCompleted(): Promise<void> {
