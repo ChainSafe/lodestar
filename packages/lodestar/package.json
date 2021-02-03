@@ -80,7 +80,7 @@
     "libp2p-mdns": "^0.15.0",
     "libp2p-mplex": "^0.10.1",
     "libp2p-noise": "^2.0.1",
-    "libp2p-tcp": "^0.15.1",
+    "libp2p-tcp": "^0.15.3",
     "multiaddr": "^8.1.2",
     "peer-id": "^0.14.3",
     "prom-client": "^11.5.3",

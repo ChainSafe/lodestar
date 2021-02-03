@@ -8249,10 +8249,24 @@ libp2p-noise@^2.0.1:
     protobufjs "^6.10.1"
     uint8arrays "^1.1.0"
 
-libp2p-tcp@^0.15.0, libp2p-tcp@^0.15.1:
+libp2p-tcp@^0.15.0:
   version "0.15.1"
   resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.15.1.tgz#644b83abf46f213ee9476d2db4135636f0a17d17"
   integrity sha512-alvgZ3lSNUyiz4vJOqvm6RpMQN9d17gSJa+VT+2pYLGf82o8pX3QvyhltMkBG7u9I+qZAkD6L27s8o0h38dpOg==
+  dependencies:
+    abortable-iterator "^3.0.0"
+    class-is "^1.1.0"
+    debug "^4.1.1"
+    err-code "^2.0.0"
+    libp2p-utils "^0.2.0"
+    mafmt "^8.0.0"
+    multiaddr "^8.0.0"
+    stream-to-it "^0.2.2"
+
+libp2p-tcp@^0.15.3:
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/libp2p-tcp/-/libp2p-tcp-0.15.3.tgz#dbcca2be5ff22ef5f7ebd1a403081d0360834c8c"
+  integrity sha512-j9efQ0aAbcCmVnnF0UqWH1r+qjNc0TpC3bV+QJDxBIe6v92a8l3kZ04G/QkP3vmzDT5Z4ayzMGjrOAas8hJIBA==
   dependencies:
     abortable-iterator "^3.0.0"
     class-is "^1.1.0"
