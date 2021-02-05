@@ -75,7 +75,9 @@ like to choose for the voluntary exit.",
       },
     ]);
 
-    if (confirmation.choice === "no") return;
+    if (confirmation.choice === "NO") return;
+
+    logger.info(`Initiating voluntary exit for validator ${publicKey}`);
 
     const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
     if (!secretKey) throw new YargsError("No validator keystores found");
@@ -110,11 +112,11 @@ like to choose for the voluntary exit.",
 
     try {
       await api.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
-      console.log(`Waiting for validator ${publicKey} to be exited...`);
+      logger.info(`Waiting for validator ${publicKey} to be exited...`);
     } catch (error) {
       throw new YargsError(error);
     }
-    console.log(`Successfully exited validator ${publicKey}`);
+    logger.info(`Successfully exited validator ${publicKey}`);
     await api.disconnect();
   },
 };
