@@ -1,5 +1,5 @@
 import {BeaconBlock, Checkpoint, Root, Slot} from "@chainsafe/lodestar-types";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../stateContextCache";
 
 /**
  * Regenerates states that have already been processed by the fork choice

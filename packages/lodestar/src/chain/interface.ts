@@ -14,11 +14,12 @@ import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import {ITreeStateContext, StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 
 interface IProcessBlock {
   /**
@@ -64,6 +65,8 @@ export interface IBeaconChain {
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;

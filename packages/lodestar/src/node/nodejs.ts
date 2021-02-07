@@ -13,7 +13,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../db";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics, restoreStateCaches} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
@@ -124,7 +124,6 @@ export class BeaconNode {
     const controller = new AbortController();
     // start db if not already started
     await db.start();
-    await restoreStateCaches(config, db, anchorState);
 
     const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
     initBeaconMetrics(metrics, anchorState);

@@ -1,7 +1,6 @@
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Validator} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
@@ -14,6 +13,7 @@ import {IBeaconClock} from "../../../../../../src/chain/clock/interface";
 import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
+import {StubbedBeaconChain} from "../../../../../utils/stub/chain";
 import {generateValidator} from "../../../../../utils/validator";
 
 use(chaiAsPromised);
@@ -21,92 +21,92 @@ use(chaiAsPromised);
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
     let dbStub: StubbedBeaconDb;
-    let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
+    let chainStub: StubbedBeaconChain;
 
     beforeEach(function () {
       dbStub = new StubbedBeaconDb(sinon, config);
-      forkChoiceStub = sinon.createStubInstance(ForkChoice);
+      chainStub = new StubbedBeaconChain(sinon, config);
     });
 
     it("resolve head state id - success", async function () {
-      forkChoiceStub.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "head");
+      chainStub.forkChoice.getHead.returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, "head");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getHead.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getHead.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve genesis state id - success", async function () {
       dbStub.stateArchive.get.withArgs(0).resolves(generateState());
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "genesis");
+      const state = await resolveStateId(chainStub, dbStub, "genesis");
       expect(state).to.not.be.null;
       expect(dbStub.stateArchive.get.withArgs(0).calledOnce).to.be.true;
     });
 
     it("resolve finalized state id - success", async function () {
-      forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
+      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve finalized state id - missing state", async function () {
-      forkChoiceStub.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves(null);
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "finalized");
+      chainStub.forkChoice.getFinalizedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.resolves(null);
+      const state = await resolveStateId(chainStub, dbStub, "finalized");
       expect(state).to.be.null;
-      expect(forkChoiceStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getFinalizedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve justified state id - success", async function () {
-      forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
+      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve justified state id - missing state", async function () {
-      forkChoiceStub.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
-      dbStub.stateCache.get.resolves(null);
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "justified");
+      chainStub.forkChoice.getJustifiedCheckpoint.returns({root: Buffer.alloc(32, 1), epoch: 1});
+      chainStub.stateCache.get.resolves(null);
+      const state = await resolveStateId(chainStub, dbStub, "justified");
       expect(state).to.be.null;
-      expect(forkChoiceStub.getJustifiedCheckpoint.calledOnce).to.be.true;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getJustifiedCheckpoint.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("resolve state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.not.be.null;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it.skip("resolve finalized state by root", async function () {
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, toHexString(Buffer.alloc(32, 1)));
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, toHexString(Buffer.alloc(32, 1)));
       expect(state).to.be.null;
-      expect(dbStub.stateCache.get.calledOnce).to.be.true;
+      expect(chainStub.stateCache.get.calledOnce).to.be.true;
     });
 
     it("state id is invalid root", async function () {
-      await expect(resolveStateId(config, dbStub, forkChoiceStub, "adcas")).to.be.eventually.rejected;
-      expect(dbStub.stateCache.get.notCalled).to.be.true;
+      await expect(resolveStateId(chainStub, dbStub, "adcas")).to.be.eventually.rejected;
+      expect(chainStub.stateCache.get.notCalled).to.be.true;
     });
 
     it("resolve state by slot", async function () {
-      forkChoiceStub.getCanonicalBlockSummaryAtSlot
+      chainStub.forkChoice.getCanonicalBlockSummaryAtSlot
         .withArgs(123)
         .returns(generateBlockSummary({stateRoot: Buffer.alloc(32, 1)}));
-      dbStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
-      const state = await resolveStateId(config, dbStub, forkChoiceStub, "123");
+      chainStub.stateCache.get.resolves({state: generateCachedState(), epochCtx: null!});
+      const state = await resolveStateId(chainStub, dbStub, "123");
       expect(state).to.not.be.null;
-      expect(forkChoiceStub.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
+      expect(chainStub.forkChoice.getCanonicalBlockSummaryAtSlot.withArgs(123).calledOnce).to.be.true;
     });
   });
 

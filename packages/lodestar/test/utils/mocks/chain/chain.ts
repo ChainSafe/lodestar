@@ -20,7 +20,8 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
-import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
+import {ITreeStateContext, StateContextCache} from "../../../../src/chain/stateContextCache";
+import {CheckpointStateCache} from "../../../../src/chain/stateContextCheckpointsCache";
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
@@ -38,6 +39,8 @@ export interface IMockChainParams {
 
 export class MockBeaconChain implements IBeaconChain {
   public forkChoice!: IForkChoice;
+  public stateCache: StateContextCache;
+  public checkpointStateCache: CheckpointStateCache;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
@@ -63,6 +66,8 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.stateCache = new StateContextCache();
+    this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool({
       config: this.config,
     });
@@ -73,6 +78,8 @@ export class MockBeaconChain implements IBeaconChain {
       config: this.config,
       emitter: this.emitter,
       forkChoice: this.forkChoice,
+      stateCache: this.stateCache,
+      checkpointStateCache: this.checkpointStateCache,
       db: new StubbedBeaconDb(sinon),
     });
   }

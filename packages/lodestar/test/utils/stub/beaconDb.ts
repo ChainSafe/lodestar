@@ -17,9 +17,7 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "../../../src/db/api/beacon/repositories";
-import {StateContextCache} from "../../../src/db/api/beacon/stateContextCache";
 import {SeenAttestationCache} from "../../../src/db/api/beacon/seenAttestationCache";
-import {CheckpointStateCache} from "../../../src/db/api/beacon/stateContextCheckpointsCache";
 import {minimalConfig} from "@chainsafe/lodestar-config/minimal";
 import {PendingBlockRepository} from "../../../src/db/api/beacon/repositories/pendingBlock";
 
@@ -29,7 +27,6 @@ export class StubbedBeaconDb extends BeaconDb {
   public badBlock: SinonStubbedInstance<BadBlockRepository> & BadBlockRepository;
   public block: SinonStubbedInstance<BlockRepository> & BlockRepository;
   public pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
-  public stateCache: SinonStubbedInstance<StateContextCache> & StateContextCache;
   public blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   public stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -43,7 +40,6 @@ export class StubbedBeaconDb extends BeaconDb {
   public depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   public eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  public checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   public seenAttestationCache: SinonStubbedInstance<SeenAttestationCache> & SeenAttestationCache;
 
   public processBlockOperations: SinonStubbedInstance<(signedBlock: SignedBeaconBlock) => Promise<void>> &
@@ -55,7 +51,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.badBlock = sinon.createStubInstance(BadBlockRepository) as any;
     this.block = sinon.createStubInstance(BlockRepository) as any;
     this.pendingBlock = sinon.createStubInstance(PendingBlockRepository) as any;
-    this.stateCache = sinon.createStubInstance(StateContextCache) as any;
     this.blockArchive = sinon.createStubInstance(BlockArchiveRepository) as any;
     this.stateArchive = sinon.createStubInstance(StateArchiveRepository) as any;
 
@@ -69,7 +64,6 @@ export class StubbedBeaconDb extends BeaconDb {
     this.depositDataRoot = sinon.createStubInstance(DepositDataRootRepository) as any;
     this.eth1Data = sinon.createStubInstance(Eth1DataRepository) as any;
     this.seenAttestationCache = sinon.createStubInstance(SeenAttestationCache) as any;
-    this.checkpointStateCache = sinon.createStubInstance(CheckpointStateCache) as any;
     this.processBlockOperations = sinon.stub(this, "processBlockOperations") as any;
   }
 }

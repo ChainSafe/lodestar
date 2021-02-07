@@ -26,7 +26,8 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "abort-controller";
 import {FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {ITreeStateContext, StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {IBeaconMetrics} from "../metrics";
 import {notNullish} from "../util/notNullish";
 import {AttestationPool, AttestationProcessor} from "./attestation";
@@ -38,6 +39,7 @@ import {IBeaconChain} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
+import {restoreStateCaches} from "./initState";
 
 export interface IBeaconChainModules {
   opts: IChainOptions;
@@ -45,13 +47,15 @@ export interface IBeaconChainModules {
   db: IBeaconDb;
   logger: ILogger;
   metrics: IBeaconMetrics;
-  anchorState: BeaconState;
+  anchorState: TreeBacked<BeaconState>;
 }
 
 export class BeaconChain implements IBeaconChain {
   public forkChoice: IForkChoice;
   public clock: IBeaconClock;
   public emitter: ChainEventEmitter;
+  public stateCache: StateContextCache;
+  public checkpointStateCache: CheckpointStateCache;
   public regen: IStateRegenerator;
   public pendingAttestations: AttestationPool;
   public pendingBlocks: BlockPool;
@@ -96,10 +100,15 @@ export class BeaconChain implements IBeaconChain {
       currentSlot: this.clock.currentSlot,
       anchorState,
     });
+    this.stateCache = new StateContextCache();
+    this.checkpointStateCache = new CheckpointStateCache(this.config);
+    void restoreStateCaches(config, this.stateCache, this.checkpointStateCache, anchorState);
     this.regen = new QueuedStateRegenerator({
       config: this.config,
       emitter: this.internalEmitter,
       forkChoice: this.forkChoice,
+      stateCache: this.stateCache,
+      checkpointStateCache: this.checkpointStateCache,
       db: this.db,
       signal: this.abortController.signal,
     });
@@ -122,7 +131,7 @@ export class BeaconChain implements IBeaconChain {
       clock: this.clock,
       regen: this.regen,
       emitter: this.internalEmitter,
-      db: this.db,
+      checkpointStateCache: this.checkpointStateCache,
       signal: this.abortController.signal,
     });
     handleChainEvents.bind(this)(this.abortController.signal);
@@ -130,6 +139,8 @@ export class BeaconChain implements IBeaconChain {
 
   public async close(): Promise<void> {
     this.abortController.abort();
+    this.stateCache.clear();
+    this.checkpointStateCache.clear();
   }
 
   public getGenesisTime(): Number64 {
@@ -140,10 +151,10 @@ export class BeaconChain implements IBeaconChain {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
-      (await this.db.checkpointStateCache.getLatest({
+      (await this.checkpointStateCache.getLatest({
         root: head.blockRoot,
         epoch: Infinity,
-      })) || (await this.db.stateCache.get(head.stateRoot));
+      })) || (await this.stateCache.get(head.stateRoot));
     if (!headState) throw Error("headState does not exist");
     return headState;
   }
@@ -193,7 +204,7 @@ export class BeaconChain implements IBeaconChain {
     if (!blockSummary) {
       return null;
     }
-    const stateContext = await this.db.stateCache.get(blockSummary.stateRoot);
+    const stateContext = await this.stateCache.get(blockSummary.stateRoot);
     if (!stateContext) {
       return null;
     }

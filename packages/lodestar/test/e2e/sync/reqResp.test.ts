@@ -92,7 +92,7 @@ describe("[sync] rpc", function () {
     await Promise.all([netA.start(), netB.start()]);
 
     const db = new StubbedBeaconDb(sandbox, config);
-    db.stateCache.get.resolves(state as any);
+    chain.stateCache.get = sinon.stub().resolves(state as any);
     db.block.get.resolves(block);
     db.blockArchive.get.resolves(block);
     db.blockArchive.valuesStream.returns(

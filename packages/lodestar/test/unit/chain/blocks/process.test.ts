@@ -6,20 +6,20 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockErrorCode} from "../../../../src/chain/errors";
+import {CheckpointStateCache} from "../../../../src/chain/stateContextCheckpointsCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
-import {StubbedBeaconDb} from "../../../utils/stub";
 import {getNewBlockJob} from "../../../utils/block";
 
 describe("processBlock", function () {
   const emitter = new ChainEventEmitter();
   let forkChoice: SinonStubbedInstance<ForkChoice>;
-  let dbStub: StubbedBeaconDb;
+  let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache>;
   let regen: SinonStubbedInstance<StateRegenerator>;
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
-    dbStub = new StubbedBeaconDb(sinon);
+    checkpointStateCache = sinon.createStubInstance(CheckpointStateCache);
     regen = sinon.createStubInstance(StateRegenerator);
   });
 
@@ -33,7 +33,13 @@ describe("processBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     try {
-      await processBlock({forkChoice, db: dbStub, regen, emitter, job});
+      await processBlock({
+        forkChoice,
+        checkpointStateCache: (checkpointStateCache as unknown) as CheckpointStateCache,
+        regen,
+        emitter,
+        job,
+      });
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
@@ -49,7 +55,7 @@ describe("processBlock", function () {
     try {
       await processBlock({
         forkChoice,
-        db: dbStub,
+        checkpointStateCache: (checkpointStateCache as unknown) as CheckpointStateCache,
         regen,
         emitter,
         job,

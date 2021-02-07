@@ -56,7 +56,7 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
@@ -70,7 +70,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     validatorId: ValidatorIndex | Root
   ): Promise<ValidatorResponse | null> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
@@ -100,7 +100,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     indices?: (ValidatorIndex | Root)[]
   ): Promise<ValidatorBalance[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
@@ -134,7 +134,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
-    const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const stateContext = await resolveStateId(this.chain, this.db, stateId);
     if (!stateContext) {
       throw new StateNotFound();
     }
@@ -164,7 +164,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
-    return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
+    return (await resolveStateId(this.chain, this.db, stateId))?.state ?? null;
   }
 
   public async getFork(stateId: StateId): Promise<Fork | null> {

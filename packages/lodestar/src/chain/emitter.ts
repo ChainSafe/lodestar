@@ -3,7 +3,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 import {Attestation, Checkpoint, Epoch, SignedBeaconBlock, Slot, Version} from "@chainsafe/lodestar-types";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "./stateContextCache";
 import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
 

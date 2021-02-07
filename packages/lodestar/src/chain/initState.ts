@@ -17,6 +17,8 @@ import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
 import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {StateContextCache} from "./stateContextCache";
+import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
@@ -131,7 +133,8 @@ export async function initStateFromAnchorState(
  */
 export async function restoreStateCaches(
   config: IBeaconConfig,
-  db: IBeaconDb,
+  stateCache: StateContextCache,
+  checkpointStateCache: CheckpointStateCache,
   state: TreeBacked<BeaconState>
 ): Promise<void> {
   // store state in state caches
@@ -140,7 +143,7 @@ export async function restoreStateCaches(
   epochCtx.loadState(state);
 
   const stateCtx = {state: createCachedValidatorsBeaconState(state), epochCtx};
-  await Promise.all([db.stateCache.add(stateCtx), db.checkpointStateCache.add(checkpoint, stateCtx)]);
+  await Promise.all([stateCache.add(stateCtx), checkpointStateCache.add(checkpoint, stateCtx)]);
 }
 
 export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<BeaconState>): void {
