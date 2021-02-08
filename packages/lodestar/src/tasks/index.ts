@@ -73,7 +73,7 @@ export class TasksService implements IService {
     // Archive latest finalized state
     await new ArchiveStatesTask(
       this.config,
-      {db: this.db, logger: this.logger},
+      {chain: this.chain, db: this.db, logger: this.logger},
       await this.chain.getFinalizedCheckpoint()
     ).run();
   }
@@ -97,10 +97,14 @@ export class TasksService implements IService {
       const lastStoredSlot = (await this.db.stateArchive.lastKey()) as number;
       const lastStoredEpoch = computeEpochAtSlot(this.config, lastStoredSlot);
       if (finalized.epoch - lastStoredEpoch > MIN_EPOCHS_PER_DB_STATE) {
-        await new ArchiveStatesTask(this.config, {db: this.db, logger: this.logger}, finalized).run();
+        await new ArchiveStatesTask(
+          this.config,
+          {chain: this.chain, db: this.db, logger: this.logger},
+          finalized
+        ).run();
       }
       await Promise.all([
-        this.db.checkpointStateCache.pruneFinalized(finalized.epoch),
+        this.chain.checkpointStateCache.pruneFinalized(finalized.epoch),
         this.db.attestation.pruneFinalized(finalized.epoch),
         this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
       ]);
@@ -115,11 +119,11 @@ export class TasksService implements IService {
   private onCheckpoint = async (): Promise<void> => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
     await Promise.all([
-      this.db.checkpointStateCache.prune(
+      this.chain.checkpointStateCache.prune(
         this.chain.forkChoice.getFinalizedCheckpoint().epoch,
         this.chain.forkChoice.getJustifiedCheckpoint().epoch
       ),
-      this.db.stateCache.prune(headStateRoot),
+      this.chain.stateCache.prune(headStateRoot),
     ]);
   };
 }

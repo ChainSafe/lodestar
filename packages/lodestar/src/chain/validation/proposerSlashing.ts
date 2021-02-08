@@ -17,7 +17,7 @@ export async function validateGossipProposerSlashing(
     });
   }
 
-  const state = await chain.getHeadState();
+  const state = chain.getHeadState();
   if (!isValidProposerSlashing(config, state, proposerSlashing)) {
     throw new ProposerSlashingError({
       code: ProposerSlashingErrorCode.INVALID_SLASHING,

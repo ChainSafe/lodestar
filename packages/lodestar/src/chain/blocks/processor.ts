@@ -8,7 +8,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
-import {IBeaconDb} from "../../db";
+import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 
 import {processBlock, processChainSegment} from "./process";
@@ -20,7 +20,7 @@ type BlockProcessorModules = {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
-  db: IBeaconDb;
+  checkpointStateCache: CheckpointStateCache;
 };
 
 /**

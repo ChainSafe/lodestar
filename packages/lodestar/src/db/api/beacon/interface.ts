@@ -18,8 +18,6 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "./repositories";
-import {StateContextCache} from "./stateContextCache";
-import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 
@@ -37,10 +35,6 @@ export interface IBeaconDb {
 
   // pending block
   pendingBlock: PendingBlockRepository;
-
-  // unfinalized states
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
 
   // cache for attestations that have already been seen via gossip or other sources
   seenAttestationCache: SeenAttestationCache;

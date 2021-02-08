@@ -17,10 +17,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {ChainEventEmitter, IBeaconChain, ITreeStateContext} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
-import {ITreeStateContext} from "../../../../src/db/api/beacon/stateContextCache";
+import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache";
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
@@ -38,6 +38,8 @@ export interface IMockChainParams {
 
 export class MockBeaconChain implements IBeaconChain {
   public forkChoice!: IForkChoice;
+  public stateCache: StateContextCache;
+  public checkpointStateCache: CheckpointStateCache;
   public chainId: Uint16;
   public networkId: Uint64;
   public clock!: IBeaconClock;
@@ -63,6 +65,8 @@ export class MockBeaconChain implements IBeaconChain {
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
+    this.stateCache = new StateContextCache();
+    this.checkpointStateCache = new CheckpointStateCache(this.config);
     this.pendingBlocks = new BlockPool({
       config: this.config,
     });
@@ -73,6 +77,8 @@ export class MockBeaconChain implements IBeaconChain {
       config: this.config,
       emitter: this.emitter,
       forkChoice: this.forkChoice,
+      stateCache: this.stateCache,
+      checkpointStateCache: this.checkpointStateCache,
       db: new StubbedBeaconDb(sinon),
     });
   }
@@ -81,7 +87,7 @@ export class MockBeaconChain implements IBeaconChain {
     return null;
   }
 
-  public async getHeadStateContext(): Promise<ITreeStateContext> {
+  public getHeadStateContext(): ITreeStateContext {
     return {
       state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new EpochContext(this.config),
@@ -108,12 +114,12 @@ export class MockBeaconChain implements IBeaconChain {
     return block;
   }
 
-  public async getHeadEpochContext(): Promise<EpochContext> {
-    return (await this.getHeadStateContext()).epochCtx;
+  public getHeadEpochContext(): EpochContext {
+    return this.getHeadStateContext().epochCtx;
   }
 
-  public async getHeadState(): Promise<TreeBacked<BeaconState>> {
-    return (await this.getHeadStateContext()).state.getOriginalState() as TreeBacked<BeaconState>;
+  public getHeadState(): TreeBacked<BeaconState> {
+    return this.getHeadStateContext().state.getOriginalState() as TreeBacked<BeaconState>;
   }
 
   public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {
@@ -123,15 +129,15 @@ export class MockBeaconChain implements IBeaconChain {
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 
-  public async getFinalizedCheckpoint(): Promise<Checkpoint> {
+  public getFinalizedCheckpoint(): Checkpoint {
     return this.state!.finalizedCheckpoint;
   }
 
-  public async getForkDigest(): Promise<ForkDigest> {
+  public getForkDigest(): ForkDigest {
     return computeForkDigest(this.config, this.state!.fork.currentVersion, this.state!.genesisValidatorsRoot);
   }
 
-  public async getENRForkID(): Promise<ENRForkID> {
+  public getENRForkID(): ENRForkID {
     return {
       forkDigest: Buffer.alloc(4),
       nextForkEpoch: 100,

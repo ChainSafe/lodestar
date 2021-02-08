@@ -3,7 +3,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../interface";
+import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {processSlotsByCheckpoint, runStateTransition} from "../blocks/stateTransition";
@@ -17,22 +18,30 @@ export class StateRegenerator implements IStateRegenerator {
   private config: IBeaconConfig;
   private emitter: ChainEventEmitter;
   private forkChoice: IForkChoice;
+  private stateCache: StateContextCache;
+  private checkpointStateCache: CheckpointStateCache;
   private db: IBeaconDb;
 
   constructor({
     config,
     emitter,
     forkChoice,
+    stateCache,
+    checkpointStateCache,
     db,
   }: {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     forkChoice: IForkChoice;
+    stateCache: StateContextCache;
+    checkpointStateCache: CheckpointStateCache;
     db: IBeaconDb;
   }) {
     this.config = config;
     this.emitter = emitter;
     this.forkChoice = forkChoice;
+    this.stateCache = stateCache;
+    this.checkpointStateCache = checkpointStateCache;
     this.db = db;
   }
 
@@ -87,7 +96,7 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    const latestCheckpointStateCtx = await this.db.checkpointStateCache.getLatest({
+    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, slot),
     });
@@ -107,7 +116,7 @@ export class StateRegenerator implements IStateRegenerator {
 
   async getState(stateRoot: Root): Promise<ITreeStateContext> {
     // Trivial case, stateCtx at stateRoot is already cached
-    const cachedStateCtx = await this.db.stateCache.get(stateRoot);
+    const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -132,11 +141,11 @@ export class StateRegenerator implements IStateRegenerator {
     const blocksToReplay = [block];
     let stateCtx: ITreeStateContext | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
-      stateCtx = await this.db.stateCache.get(b.stateRoot);
+      stateCtx = this.stateCache.get(b.stateRoot);
       if (stateCtx) {
         break;
       }
-      stateCtx = await this.db.checkpointStateCache.getLatest({
+      stateCtx = this.checkpointStateCache.getLatest({
         root: b.blockRoot,
         epoch: computeEpochAtSlot(this.config, blocksToReplay[blocksToReplay.length - 1].slot - 1),
       });
@@ -170,7 +179,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
 
       try {
-        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.db, stateCtx, {
+        stateCtx = await runStateTransition(this.emitter, this.forkChoice, this.checkpointStateCache, stateCtx, {
           signedBlock: block,
           reprocess: true,
           prefinalized: true,
@@ -185,6 +194,6 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return stateCtx;
+    return stateCtx as ITreeStateContext;
   }
 }

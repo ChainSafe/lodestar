@@ -15,7 +15,7 @@ export async function validateGossipBlock(
   const block = blockJob.signedBlock;
   const blockSlot = block.message.slot;
   const blockRoot = config.types.BeaconBlock.hashTreeRoot(block.message);
-  const finalizedCheckpoint = await chain.getFinalizedCheckpoint();
+  const finalizedCheckpoint = chain.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(config, finalizedCheckpoint.epoch);
   // block is too old
   if (blockSlot <= finalizedSlot) {

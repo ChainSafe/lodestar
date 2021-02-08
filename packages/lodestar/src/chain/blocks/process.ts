@@ -11,21 +11,21 @@ import {IBlockJob, IChainSegmentJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
 import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-import {IBeaconDb} from "../../db";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
+import {CheckpointStateCache} from "../stateCache";
 
 export async function processBlock({
   forkChoice,
   regen,
   emitter,
-  db,
+  checkpointStateCache,
   job,
 }: {
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  db: IBeaconDb;
+  checkpointStateCache: CheckpointStateCache;
   job: IBlockJob;
 }): Promise<void> {
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
@@ -56,7 +56,7 @@ export async function processBlock({
       job.validSignatures = true;
     }
 
-    await runStateTransition(emitter, forkChoice, db, preStateContext, job);
+    await runStateTransition(emitter, forkChoice, checkpointStateCache, preStateContext, job);
   } catch (e) {
     if (e instanceof RegenError) {
       throw new BlockError({
@@ -82,14 +82,14 @@ export async function processChainSegment({
   forkChoice,
   regen,
   emitter,
-  db,
+  checkpointStateCache,
   job,
 }: {
   config: IBeaconConfig;
   forkChoice: IForkChoice;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  db: IBeaconDb;
+  checkpointStateCache: CheckpointStateCache;
   job: IChainSegmentJob;
 }): Promise<void> {
   let importedBlocks = 0;
@@ -145,7 +145,7 @@ export async function processChainSegment({
       }
 
       for (const block of blocksInEpoch) {
-        preStateContext = await runStateTransition(emitter, forkChoice, db, preStateContext, {
+        preStateContext = await runStateTransition(emitter, forkChoice, checkpointStateCache, preStateContext, {
           reprocess: job.reprocess,
           prefinalized: job.prefinalized,
           signedBlock: block,

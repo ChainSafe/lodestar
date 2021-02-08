@@ -63,7 +63,7 @@ describe("Network Gossip", function () {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
 
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
 
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       gossip.subscribeToAttestationSubnet(forkDigest, "1", anotherSpy);
@@ -88,7 +88,7 @@ describe("Network Gossip", function () {
 
     it("should unsubscribe to single subnet correctly", async () => {
       const spy = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
 
       // should not unsubscribe wrong subnet
@@ -117,7 +117,7 @@ describe("Network Gossip", function () {
       const spy = sandbox.spy();
       const spy2 = sandbox.spy();
 
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
 
       gossip.subscribeToAttestationSubnet(forkDigest, "1", spy);
       gossip.subscribeToAttestationSubnet(forkDigest, "2", spy2);
@@ -143,7 +143,7 @@ describe("Network Gossip", function () {
     it("should subscribe/unsubscribe to block correctly", async () => {
       const spy = sandbox.spy();
       const anotherSpy = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToBlock(forkDigest, spy);
       gossip.subscribeToBlock(forkDigest, anotherSpy);
       const block = generateEmptySignedBlock();
@@ -166,7 +166,7 @@ describe("Network Gossip", function () {
     it("should ignore unsubscribing strange listener", async () => {
       const spy = sandbox.spy();
       const strangeListener = sandbox.spy();
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       gossip.subscribeToBlock(forkDigest, spy);
       const block = generateEmptySignedBlock();
       pubsub.emit(getGossipTopic(GossipEvent.BLOCK, forkDigest), block);
@@ -182,9 +182,9 @@ describe("Network Gossip", function () {
 
     it("should handle fork version changed", async () => {
       // fork digest is changed after gossip started
-      const oldForkDigest = await chain.getForkDigest();
+      const oldForkDigest = chain.getForkDigest();
       state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-      const forkDigest = await chain.getForkDigest();
+      const forkDigest = chain.getForkDigest();
       expect(config.types.ForkDigest.equals(forkDigest, oldForkDigest)).to.be.false;
       const received = new Promise((resolve) => {
         gossip.subscribeToBlock(forkDigest, resolve);

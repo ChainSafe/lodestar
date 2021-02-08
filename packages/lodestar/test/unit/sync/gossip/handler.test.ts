@@ -92,13 +92,13 @@ describe("gossip handler", function () {
       state: state as TreeBacked<BeaconState>,
       config,
     });
-    const oldForkDigest = await chain.getForkDigest();
+    const oldForkDigest = chain.getForkDigest();
     const handler = new BeaconGossipHandler(chain, networkStub, dbStub, logger);
     await handler.start();
     expect(gossipStub.subscribeToBlock.callCount).to.be.equal(1);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-    expect(config.types.ForkDigest.equals(oldForkDigest, await chain.getForkDigest())).to.be.false;
+    expect(config.types.ForkDigest.equals(oldForkDigest, chain.getForkDigest())).to.be.false;
     chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
     // allow event to be handled
     await sleep(1);

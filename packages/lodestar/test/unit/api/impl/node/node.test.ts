@@ -78,7 +78,7 @@ describe("node api implementation", function () {
 
   describe("getNodeStatus", function () {
     it("syncing", async function () {
-      syncStub.isSynced.resolves(false);
+      syncStub.isSynced.returns(false);
       const status = await api.getNodeStatus();
       expect(status).to.equal("syncing");
     });

@@ -4,7 +4,7 @@ import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
 import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
 import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../interface";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
