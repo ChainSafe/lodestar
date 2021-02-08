@@ -19,8 +19,7 @@ import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
-import {StateContextCache} from "./stateContextCache";
-import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {StateContextCache, CheckpointStateCache} from "./stateCache";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {

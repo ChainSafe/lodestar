@@ -13,7 +13,7 @@ import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {generateValidators} from "../../utils/validator";
 import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {StateContextCache} from "../../../src/chain/stateContextCache";
+import {StateContextCache} from "../../../src/chain/stateCache";
 
 describe("BeaconChain", function () {
   const sandbox = sinon.createSandbox();

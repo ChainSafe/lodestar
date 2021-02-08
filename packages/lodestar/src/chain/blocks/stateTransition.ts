@@ -11,7 +11,7 @@ import {
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {CheckpointStateCache} from "../stateContextCheckpointsCache";
+import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob, ITreeStateContext} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";

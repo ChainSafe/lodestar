@@ -15,7 +15,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {fromHexString, readOnlyMap, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
-import {StateContextCache} from "../../../../chain/stateContextCache";
+import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db/api";
 import {ApiStateContext, StateId} from "./interface";
 

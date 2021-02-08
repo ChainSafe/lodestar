@@ -8,7 +8,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBeaconClock} from "../clock";
 import {IStateRegenerator} from "../regen";
 import {JobQueue} from "../../util/queue";
-import {CheckpointStateCache} from "../stateContextCheckpointsCache";
+import {CheckpointStateCache} from "../stateCache";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 
 import {processBlock, processChainSegment} from "./process";

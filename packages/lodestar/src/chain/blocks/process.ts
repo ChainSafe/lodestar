@@ -13,7 +13,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
-import {CheckpointStateCache} from "../stateContextCheckpointsCache";
+import {CheckpointStateCache} from "../stateCache";
 
 export async function processBlock({
   forkChoice,

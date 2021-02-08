@@ -6,7 +6,7 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter} from "../../../../src/chain";
 import {BlockErrorCode} from "../../../../src/chain/errors";
-import {CheckpointStateCache} from "../../../../src/chain/stateContextCheckpointsCache";
+import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
 import {RegenError, RegenErrorCode, StateRegenerator} from "../../../../src/chain/regen";
 import {getNewBlockJob} from "../../../utils/block";

@@ -1,6 +1,6 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {ITreeStateContext} from "./interface";
+import {ITreeStateContext} from "../interface";
 
 /**
  * In memory cache of BeaconState and connected EpochContext

@@ -4,8 +4,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ITreeStateContext} from "../interface";
-import {StateContextCache} from "../stateContextCache";
-import {CheckpointStateCache} from "../stateContextCheckpointsCache";
+import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {JobQueue} from "../../util/queue";

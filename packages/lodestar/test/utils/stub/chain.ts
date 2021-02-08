@@ -4,8 +4,7 @@ import {BeaconChain, ForkChoice} from "../../../src/chain";
 import {BeaconMetrics} from "../../../src/metrics";
 import {LocalClock} from "../../../src/chain/clock";
 import {StateRegenerator} from "../../../src/chain/regen";
-import {StateContextCache} from "../../../src/chain/stateContextCache";
-import {CheckpointStateCache} from "../../../src/chain/stateContextCheckpointsCache";
+import {CheckpointStateCache, StateContextCache} from "../../../src/chain/stateCache";
 import {silentLogger} from "../logger";
 import {StubbedBeaconDb} from "./beaconDb";
 

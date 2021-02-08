@@ -17,8 +17,7 @@ import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
 import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {StateContextCache} from "./stateContextCache";
-import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+import {CheckpointStateCache, StateContextCache} from "./stateCache";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
