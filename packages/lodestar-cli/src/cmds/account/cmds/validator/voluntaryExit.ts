@@ -1,17 +1,16 @@
 import {ICliCommand, initBLS, YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {ApiClientOverRest} from "@chainsafe/lodestar-validator/lib/api/impl/rest/apiClient";
+import {Validator} from "@chainsafe/lodestar-validator";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
-import {computeSigningRoot, DomainType, getDomain} from "@chainsafe/lodestar-beacon-state-transition";
 import {getBeaconConfigFromArgs} from "../../../../config";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
 import inquirer from "inquirer";
 import {readdirSync} from "fs";
+import {getSlashingProtection} from "./slashingProtection/utils";
 
-export type IValidatorVoluntaryExitArgs = Pick<IValidatorCliArgs, "server" | "force"> & {
+export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {
   publicKey: string;
 };
 
@@ -33,9 +32,7 @@ like to choose for the voluntary exit.",
   ],
 
   options: {
-    server: validatorOptions.server,
-    force: validatorOptions.force,
-
+    ...validatorOptions,
     publicKey: {
       description: "The public key of the validator to voluntarily exit",
       type: "string",
@@ -46,7 +43,6 @@ like to choose for the voluntary exit.",
     await initBLS();
 
     const force = args.force;
-    const server = args.server;
     let publicKey = args.publicKey;
     const logger = new WinstonLogger();
     const accountPaths = getAccountPaths(args);
@@ -79,44 +75,31 @@ like to choose for the voluntary exit.",
 
     logger.info(`Initiating voluntary exit for validator ${publicKey}`);
 
-    const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    let secretKey;
+
+    try {
+      secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    } catch (error) {
+      throw new YargsError(error);
+    }
     if (!secretKey) throw new YargsError("No validator keystores found");
     logger.info(`Decrypted keystore for validator ${publicKey}`);
 
     const config = getBeaconConfigFromArgs(args);
-    const api = new ApiClientOverRest(config, server, logger);
-    await api.connect();
 
-    const validator = await api.beacon.state.getStateValidator("head", config.types.BLSPubkey.fromJson(publicKey));
-    if (!validator) throw new YargsError("No validator found in validator store.");
-
-    const epoch = api.clock.currentEpoch;
-
-    const voluntaryExit = {
-      // Minimum epoch for processing exit
-      epoch,
-      validatorIndex: validator.index,
-    };
-
-    const state: BeaconState = config.types.BeaconState.tree.defaultValue();
-    state.fork = (await api.beacon.state.getFork("head")) || state.fork;
-    state.genesisValidatorsRoot = (await api.beacon.getGenesis())?.genesisValidatorsRoot || state.genesisValidatorsRoot;
-
-    const domain = getDomain(config, state, DomainType.VOLUNTARY_EXIT, epoch);
-    const signingRoot = computeSigningRoot(config, config.types.VoluntaryExit, voluntaryExit, domain);
-
-    const signedVoluntaryExit: SignedVoluntaryExit = {
-      message: voluntaryExit,
-      signature: secretKey.sign(signingRoot).toBytes(),
-    };
+    const validatorClient = new Validator({
+      slashingProtection: getSlashingProtection(args),
+      config,
+      api: args.server,
+      secretKeys: [secretKey],
+      logger,
+      graffiti: args.graffiti,
+    });
 
     try {
-      await api.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
-      logger.info(`Waiting for validator ${publicKey} to be exited...`);
+      await validatorClient.voluntaryExit(publicKey, true);
     } catch (error) {
-      throw new YargsError(error);
+      throw new Error(error);
     }
-    logger.info(`Successfully exited validator ${publicKey}`);
-    await api.disconnect();
   },
 };

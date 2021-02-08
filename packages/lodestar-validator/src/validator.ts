@@ -22,6 +22,8 @@ import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {ISlashingProtection} from "./slashingProtection";
 import {mapSecretKeysToValidators} from "./services/utils";
+import {getDomain, DomainType, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 
 /**
  * Main class for the Validator client.
@@ -71,6 +73,55 @@ export class Validator {
     await this.apiClient.disconnect();
     if (this.attestationService) await this.attestationService.stop();
     if (this.blockService) await this.blockService.stop();
+  }
+
+  /**
+   * Perform a voluntary exit for the given validator.
+   * @param publicKey the public key of the validator
+   * @param oneTimeConnection whether or not to setup an api connection just for this exit and close it upon completion
+   */
+  public async voluntaryExit(publicKey: string, oneTimeConnection: boolean): Promise<void> {
+    if (oneTimeConnection) await this.apiClient.connect();
+
+    const stateValidator = await this.apiClient.beacon.state.getStateValidator(
+      "head",
+      this.config.types.BLSPubkey.fromJson(publicKey)
+    );
+    if (!stateValidator) throw new Error("No validator found in validator store.");
+
+    const epoch = this.apiClient.clock.currentEpoch;
+
+    const voluntaryExit = {
+      epoch,
+      validatorIndex: stateValidator.index,
+    };
+
+    const state: BeaconState = this.config.types.BeaconState.tree.defaultValue();
+    state.fork = (await this.apiClient.beacon.state.getFork("head")) || state.fork;
+    state.genesisValidatorsRoot =
+      (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot || state.genesisValidatorsRoot;
+    const domain = getDomain(this.config, state, DomainType.VOLUNTARY_EXIT, epoch);
+    const signingRoot = computeSigningRoot(this.config, this.config.types.VoluntaryExit, voluntaryExit, domain);
+
+    let secretKey;
+    for (const sk of this.opts.secretKeys) {
+      if (sk.toPublicKey().toHex() === publicKey) secretKey = sk;
+    }
+    if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
+
+    const signedVoluntaryExit: SignedVoluntaryExit = {
+      message: voluntaryExit,
+      signature: secretKey.sign(signingRoot).toBytes(),
+    };
+
+    try {
+      this.logger.info(`Waiting for validator ${publicKey} to be exited...`);
+      await this.apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
+      this.logger.info(`Successfully exited validator ${publicKey}`);
+    } catch (error) {
+      this.logger.error(error);
+    }
+    if (oneTimeConnection) await this.apiClient.disconnect();
   }
 
   /**
