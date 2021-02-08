@@ -8,9 +8,8 @@ import {BeaconBlock, BeaconState, Bytes96, Root, Slot} from "@chainsafe/lodestar
 import {TreeBacked} from "@chainsafe/ssz";
 import {ZERO_HASH} from "../../../constants";
 import {IBeaconDb} from "../../../db/api";
-import {ITreeStateContext} from "../../../chain/stateContextCache";
 import {IEth1ForBlockProduction} from "../../../eth1";
-import {IBeaconChain} from "../../interface";
+import {IBeaconChain, ITreeStateContext} from "../../interface";
 import {assembleBody} from "./body";
 
 export async function assembleBlock(

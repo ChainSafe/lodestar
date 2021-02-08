@@ -4,9 +4,8 @@ import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chains
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "./stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
-import {IBlockJob} from "./interface";
+import {IBlockJob, ITreeStateContext} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 

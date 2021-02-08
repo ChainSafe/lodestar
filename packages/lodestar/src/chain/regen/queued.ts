@@ -3,7 +3,8 @@ import {BeaconBlock, Root, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext, StateContextCache} from "../stateContextCache";
+import {ITreeStateContext} from "../interface";
+import {StateContextCache} from "../stateContextCache";
 import {CheckpointStateCache} from "../stateContextCheckpointsCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";

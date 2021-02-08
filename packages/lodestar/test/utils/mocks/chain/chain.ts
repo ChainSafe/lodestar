@@ -17,10 +17,10 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
+import {ChainEventEmitter, IBeaconChain, ITreeStateContext} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
-import {ITreeStateContext, StateContextCache} from "../../../../src/chain/stateContextCache";
+import {StateContextCache} from "../../../../src/chain/stateContextCache";
 import {CheckpointStateCache} from "../../../../src/chain/stateContextCheckpointsCache";
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";

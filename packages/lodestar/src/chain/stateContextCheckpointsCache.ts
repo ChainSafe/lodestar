@@ -1,7 +1,7 @@
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {Checkpoint, Epoch} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ITreeStateContext} from "./stateContextCache";
+import {ITreeStateContext} from "./interface";
 
 /**
  * In memory cache of BeaconState and connected EpochContext

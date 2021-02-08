@@ -12,14 +12,21 @@ import {
 import {TreeBacked} from "@chainsafe/ssz";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
-import {ITreeStateContext, StateContextCache} from "./stateContextCache";
+import {StateContextCache} from "./stateContextCache";
 import {CheckpointStateCache} from "./stateContextCheckpointsCache";
+
+// Lodestar specifc state context
+export interface ITreeStateContext {
+  state: CachedValidatorsBeaconState;
+  epochCtx: EpochContext;
+}
 
 interface IProcessBlock {
   /**
