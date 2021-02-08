@@ -66,7 +66,15 @@ like to choose for the voluntary exit.",
       {
         name: "choice",
         type: "list",
-        message: `Are you sure you want to permantently exit validator ${publicKey} from the ${args.network} network?  WARNING: THIS CANNOT BE UNDONE.`,
+        message: `Are you sure you want to permantently exit validator ${publicKey} from the ${args.network} network?
+
+WARNING: THIS CANNOT BE UNDONE.
+
+ONCE YOU VOLUNTARILY EXIT, YOU WILL NOT BE ABLE TO WITHDRAW 
+YOUR DEPOSIT UNTIL PHASE 2 IS LAUNCHED WHICH MAY NOT 
+BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
+
+`,
         choices: ["NO", "YES"],
       },
     ]);
