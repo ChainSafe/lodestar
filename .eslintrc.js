@@ -41,6 +41,7 @@ module.exports = {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
+    "@typescript-eslint/await-thenable": "warn",
     "@typescript-eslint/naming-convention": ["error", 
     {selector: "default", format: ['camelCase']},
     {selector: ["classProperty", "objectLiteralProperty", "classMethod", "parameter"], format: ['camelCase'], leadingUnderscore: "allow"},
