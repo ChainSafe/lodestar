@@ -76,7 +76,7 @@ export class Validator {
   }
 
   /**
-   * Perform a voluntary exit for the given validator.
+   * Perform a voluntary exit for the given validator by its public key.
    */
   public async voluntaryExit(publicKey: string): Promise<void> {
     await this.apiClient.connect();
