@@ -97,7 +97,7 @@ like to choose for the voluntary exit.",
     });
 
     try {
-      await validatorClient.voluntaryExit(publicKey, true);
+      await validatorClient.voluntaryExit(publicKey);
     } catch (error) {
       throw new Error(error);
     }

@@ -77,11 +77,9 @@ export class Validator {
 
   /**
    * Perform a voluntary exit for the given validator.
-   * @param publicKey the public key of the validator
-   * @param oneTimeConnection whether or not to setup an api connection just for this exit and close it upon completion
    */
-  public async voluntaryExit(publicKey: string, oneTimeConnection: boolean): Promise<void> {
-    if (oneTimeConnection) await this.apiClient.connect();
+  public async voluntaryExit(publicKey: string): Promise<void> {
+    await this.apiClient.connect();
 
     const stateValidator = await this.apiClient.beacon.state.getStateValidator(
       "head",
@@ -118,10 +116,11 @@ export class Validator {
       this.logger.info(`Waiting for validator ${publicKey} to be exited...`);
       await this.apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
       this.logger.info(`Successfully exited validator ${publicKey}`);
+      await this.apiClient.disconnect();
     } catch (error) {
       this.logger.error(error);
+      await this.apiClient.disconnect();
     }
-    if (oneTimeConnection) await this.apiClient.disconnect();
   }
 
   /**
