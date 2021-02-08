@@ -106,7 +106,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      chain.getHeadEpochContext.resolves({
+      chain.getHeadEpochContext.returns({
         pubkey2index: {
           get: () => undefined,
         } as any,
@@ -118,7 +118,7 @@ describe("beacon api impl - state - validators", function () {
       resolveStateIdStub.resolves({
         state: generateState({validators: generateValidators(10)}),
       });
-      chain.getHeadEpochContext.resolves({
+      chain.getHeadEpochContext.returns({
         pubkey2index: {
           get: () => 2,
         } as any,
@@ -145,7 +145,7 @@ describe("beacon api impl - state - validators", function () {
       const pubkey2IndexStub = sinon.createStubInstance(PubkeyIndexMap);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 1)).returns(3);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
-      chain.getHeadEpochContext.resolves({
+      chain.getHeadEpochContext.returns({
         pubkey2index: (pubkey2IndexStub as unknown) as PubkeyIndexMap,
       } as EpochContext);
       const api = new BeaconStateApi({}, {config, db, chain});

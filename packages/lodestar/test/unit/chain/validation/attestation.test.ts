@@ -571,7 +571,7 @@ describe("gossip attestation validation", function () {
     regen.getCheckpointState.resolves(attestationPreState);
     computeAttestationSubnetStub.returns(0);
     isValidIndexedAttestationStub.returns(true);
-    chain.getFinalizedCheckpoint.resolves({epoch: 0, root: Buffer.alloc(32)});
+    chain.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     chain.forkChoice = forkChoiceStub;
     forkChoiceStub.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     forkChoiceStub.getAncestor.returns(Buffer.alloc(32));

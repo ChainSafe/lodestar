@@ -46,7 +46,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
-    this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
+    this.network.gossip.subscribeToBlock(this.chain.getForkDigest(), this.onGossipBlock);
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     const head = this.chain.forkChoice.getHead();
     this.setLastProcessedBlock({slot: head.slot, root: head.blockRoot});
@@ -59,7 +59,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
-    this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
+    this.network.gossip.unsubscribe(this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 

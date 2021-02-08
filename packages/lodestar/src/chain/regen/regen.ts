@@ -96,7 +96,7 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    const latestCheckpointStateCtx = await this.checkpointStateCache.getLatest({
+    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
       root: blockRoot,
       epoch: computeEpochAtSlot(this.config, slot),
     });
@@ -116,7 +116,7 @@ export class StateRegenerator implements IStateRegenerator {
 
   async getState(stateRoot: Root): Promise<ITreeStateContext> {
     // Trivial case, stateCtx at stateRoot is already cached
-    const cachedStateCtx = await this.stateCache.get(stateRoot);
+    const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
       return cachedStateCtx;
     }
@@ -141,11 +141,11 @@ export class StateRegenerator implements IStateRegenerator {
     const blocksToReplay = [block];
     let stateCtx: ITreeStateContext | null = null;
     for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
-      stateCtx = await this.stateCache.get(b.stateRoot);
+      stateCtx = this.stateCache.get(b.stateRoot);
       if (stateCtx) {
         break;
       }
-      stateCtx = await this.checkpointStateCache.getLatest({
+      stateCtx = this.checkpointStateCache.getLatest({
         root: b.blockRoot,
         epoch: computeEpochAtSlot(this.config, blocksToReplay[blocksToReplay.length - 1].slot - 1),
       });

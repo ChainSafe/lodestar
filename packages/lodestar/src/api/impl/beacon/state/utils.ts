@@ -92,14 +92,14 @@ async function stateByName(
   let state: TreeBacked<BeaconState> | null = null;
   switch (stateId) {
     case "head":
-      return (await stateCache.get(forkChoice.getHead().stateRoot)) ?? null;
+      return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
     case "genesis":
       state = await db.stateArchive.get(GENESIS_SLOT);
       return state ? {state} : null;
     case "finalized":
-      return (await stateCache.get(forkChoice.getFinalizedCheckpoint().root)) ?? null;
+      return stateCache.get(forkChoice.getFinalizedCheckpoint().root) ?? null;
     case "justified":
-      return (await stateCache.get(forkChoice.getJustifiedCheckpoint().root)) ?? null;
+      return stateCache.get(forkChoice.getJustifiedCheckpoint().root) ?? null;
     default:
       throw new Error("not a named state id");
   }
@@ -112,7 +112,7 @@ async function stateByRoot(
 ): Promise<ApiStateContext | null> {
   if (stateId.startsWith("0x")) {
     const stateRoot = fromHexString(stateId);
-    const cachedStateCtx = await stateCache.get(stateRoot);
+    const cachedStateCtx = stateCache.get(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
     const finalizedState = await db.stateArchive.getByRoot(stateRoot);
     return finalizedState ? {state: finalizedState} : null;
@@ -129,7 +129,7 @@ async function stateBySlot(
 ): Promise<ApiStateContext | null> {
   const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
   if (blockSummary) {
-    return (await stateCache.get(blockSummary.stateRoot)) ?? null;
+    return stateCache.get(blockSummary.stateRoot) ?? null;
   } else {
     const finalizedState = await db.stateArchive.get(slot);
     return finalizedState ? {state: finalizedState} : null;

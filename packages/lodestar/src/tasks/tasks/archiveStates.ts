@@ -41,7 +41,7 @@ export class ArchiveStatesTask implements ITask {
     this.logger.info("Archive states started", {finalizedEpoch: this.finalized.epoch});
     this.logger.profile("Archive States epoch #" + this.finalized.epoch);
     // store the state of finalized checkpoint
-    const stateCache = await this.chain.checkpointStateCache.get(this.finalized);
+    const stateCache = this.chain.checkpointStateCache.get(this.finalized);
     if (!stateCache) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + this.finalized.epoch);
     }

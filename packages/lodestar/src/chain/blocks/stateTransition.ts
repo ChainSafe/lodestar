@@ -145,7 +145,7 @@ export async function runStateTransition(
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances: Gwei[] = [];
   if (postStateContext.state.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedStateContext = await checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
+    const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
     const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
     justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
       justifiedBalances.push(isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));

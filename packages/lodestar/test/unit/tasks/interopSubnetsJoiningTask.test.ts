@@ -68,11 +68,11 @@ describe("interopSubnetsJoiningTask", () => {
   });
 
   it("should handle fork digest change", async () => {
-    const oldForkDigest = await chain.getForkDigest();
+    const oldForkDigest = chain.getForkDigest();
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(config.params.RANDOM_SUBNETS_PER_VALIDATOR);
     // fork digest changed due to current version changed
     state.fork.currentVersion = Buffer.from([100, 0, 0, 0]);
-    expect(config.types.ForkDigest.equals(oldForkDigest, await chain.getForkDigest())).to.be.false;
+    expect(config.types.ForkDigest.equals(oldForkDigest, chain.getForkDigest())).to.be.false;
     // not subscribe, just unsubscribe at that time
     const unSubscribePromise = new Promise((resolve) => gossipStub.unsubscribeFromAttestationSubnet.callsFake(resolve));
     chain.emitter.emit(ChainEvent.forkVersion, state.fork.currentVersion);
@@ -102,7 +102,7 @@ describe("interopSubnetsJoiningTask", () => {
 
   it("should prepare for a hard fork", async function () {
     // scheduleNextForkSubscription already get called after start
-    const state = await chain.getHeadState();
+    const state = chain.getHeadState();
     const nextForkDigest = computeForkDigest(
       config,
       intToBytes(ALL_FORKS[0].currentVersion, 4),

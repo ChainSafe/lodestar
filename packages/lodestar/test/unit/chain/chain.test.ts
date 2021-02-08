@@ -29,7 +29,7 @@ describe("BeaconChain", function () {
     dbStub.stateArchive.lastValue.resolves(state as any);
     chain = new BeaconChain({opts: defaultChainOptions, config, db: dbStub, logger, metrics, anchorState: state});
     chain.stateCache = (sandbox.createStubInstance(StateContextCache) as unknown) as StateContextCache;
-    (chain.stateCache as SinonStubbedInstance<StateContextCache> & StateContextCache).get.resolves({
+    (chain.stateCache as SinonStubbedInstance<StateContextCache> & StateContextCache).get.returns({
       state: createCachedValidatorsBeaconState(state),
       epochCtx: new EpochContext(config),
     });
@@ -43,7 +43,7 @@ describe("BeaconChain", function () {
   describe("getENRForkID", () => {
     it("should get enr fork id if not found next fork", async () => {
       chain.forkChoice.getHead = () => generateBlockSummary();
-      const enrForkID = await chain.getENRForkID();
+      const enrForkID = chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([255, 255, 255, 255])));
       expect(enrForkID.nextForkEpoch === Number.MAX_SAFE_INTEGER);
       // it's possible to serialize enr fork id
@@ -59,7 +59,7 @@ describe("BeaconChain", function () {
         },
       ];
       chain.forkChoice.getHead = () => generateBlockSummary();
-      const enrForkID = await chain.getENRForkID();
+      const enrForkID = chain.getENRForkID();
       expect(config.types.Version.equals(enrForkID.nextForkVersion, Buffer.from([2, 0, 0, 0])));
       expect(enrForkID.nextForkEpoch === 100);
       // it's possible to serialize enr fork id

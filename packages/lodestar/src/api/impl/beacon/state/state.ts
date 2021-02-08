@@ -80,7 +80,7 @@ export class BeaconStateApi implements IBeaconStateApi {
         validatorIndex = validatorId;
       }
     } else {
-      validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
+      validatorIndex = this.chain.getHeadEpochContext().pubkey2index.get(validatorId) ?? undefined;
       // validator added later than given stateId
       if (validatorIndex && validatorIndex >= state.state.validators.length) {
         validatorIndex = undefined;
@@ -105,7 +105,7 @@ export class BeaconStateApi implements IBeaconStateApi {
       throw new StateNotFound();
     }
     if (indices) {
-      const epochCtx = await this.chain.getHeadEpochContext();
+      const epochCtx = this.chain.getHeadEpochContext();
       return indices
         .map((id) => {
           if (typeof id === "number") {

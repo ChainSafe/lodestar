@@ -38,7 +38,7 @@ export class MetadataController {
     this.enr = enr;
     if (this.enr) {
       this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
@@ -68,10 +68,10 @@ export class MetadataController {
   }
 
   private async handleForkVersion(): Promise<void> {
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
     }
   }
 }

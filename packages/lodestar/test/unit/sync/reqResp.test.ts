@@ -37,10 +37,10 @@ describe("sync req resp", function () {
     chainStub = new StubbedBeaconChain(sandbox, config);
     chainStub.forkChoice.getHead.returns(getBlockSummary({}));
     chainStub.forkChoice.getFinalizedCheckpoint.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
-    chainStub.getHeadState = sandbox.stub().resolves(generateState());
+    chainStub.getHeadState = sandbox.stub().returns(generateState());
     // @ts-ignore
     chainStub.config = config;
-    chainStub.getForkDigest = sandbox.stub().resolves(Buffer.alloc(4));
+    chainStub.getForkDigest = sandbox.stub().returns(Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub as ReqResp & SinonStubbedInstance<ReqResp>;
@@ -78,7 +78,7 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    chainStub.stateCache.get.resolves(generateState() as any);
+    chainStub.stateCache.get.returns(generateState() as any);
 
     const res = await all(syncRpc.onRequest(Method.Status, body, peerId));
     expect(res).have.length(1, "Wrong number of chunks responded");
@@ -94,7 +94,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    chainStub.getForkDigest = sandbox.stub().resolves(Buffer.alloc(4).fill(1));
+    chainStub.getForkDigest = sandbox.stub().returns(Buffer.alloc(4).fill(1));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
@@ -107,8 +107,8 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    chainStub.getForkDigest = sandbox.stub().resolves(body.forkDigest);
-    chainStub.getHeadState = sandbox.stub().resolves(
+    chainStub.getForkDigest = sandbox.stub().returns(body.forkDigest);
+    chainStub.getHeadState = sandbox.stub().returns(
       generateState({
         slot: computeStartSlotAtEpoch(
           config,
@@ -144,7 +144,7 @@ describe("sync req resp", function () {
     const state: BeaconState = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
-    chainStub.stateCache.get.resolves(state as any);
+    chainStub.stateCache.get.returns(state as any);
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });

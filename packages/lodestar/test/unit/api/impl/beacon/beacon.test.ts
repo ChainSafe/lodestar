@@ -32,13 +32,13 @@ describe("beacon api implementation", function () {
 
   describe("getGenesis", function () {
     it("genesis has not yet occured", async function () {
-      chainStub.getHeadState.resolves(undefined);
+      chainStub.getHeadState.returns(undefined as any);
       const genesis = await api.getGenesis();
       expect(genesis).to.be.null;
     });
 
     it("success", async function () {
-      chainStub.getHeadState.resolves(generateState());
+      chainStub.getHeadState.returns(generateState());
       const genesis = await api.getGenesis();
       if (!genesis) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;

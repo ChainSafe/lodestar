@@ -130,19 +130,21 @@ export async function initStateFromAnchorState(
 /**
  * Restore a beacon state to the state cache.
  */
-export async function restoreStateCaches(
+export function restoreStateCaches(
   config: IBeaconConfig,
   stateCache: StateContextCache,
   checkpointStateCache: CheckpointStateCache,
   state: TreeBacked<BeaconState>
-): Promise<void> {
-  // store state in state caches
+): void {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
   const epochCtx = new EpochContext(config);
   epochCtx.loadState(state);
 
   const stateCtx = {state: createCachedValidatorsBeaconState(state), epochCtx};
-  await Promise.all([stateCache.add(stateCtx), checkpointStateCache.add(checkpoint, stateCtx)]);
+
+  // store state in state caches
+  stateCache.add(stateCtx);
+  checkpointStateCache.add(checkpoint, stateCtx);
 }
 
 export function initBeaconMetrics(metrics: IBeaconMetrics, state: TreeBacked<BeaconState>): void {

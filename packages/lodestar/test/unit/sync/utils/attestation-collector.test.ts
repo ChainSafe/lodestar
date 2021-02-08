@@ -38,8 +38,8 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => Promise.resolve(generateState()),
-        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
+        getHeadState: () => generateState(),
+        getForkDigest: () => Buffer.alloc(4),
         emitter,
       },
       // @ts-ignore
@@ -51,12 +51,13 @@ describe("Attestation collector", function () {
     });
     await collector.start();
     computeSubnetStub.returns(10);
+    const subscribed = new Promise((resolve) => {
+      fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
+    });
     await collector.subscribeToCommitteeAttestations(1, 1);
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10).calledOnce).to.be.true;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
-    await new Promise((resolve) => {
-      fakeGossip.subscribeToAttestationSubnet.callsFake(resolve);
-    });
+    await subscribed;
     expect(fakeGossip.subscribeToAttestationSubnet.withArgs(sinon.match.any, 10, sinon.match.func).calledOnce).to.be
       .true;
     sandbox.clock.tick(config.params.SECONDS_PER_SLOT * 1000);
@@ -80,8 +81,8 @@ describe("Attestation collector", function () {
       // @ts-ignore
       chain: {
         clock: realClock,
-        getHeadState: () => Promise.resolve(generateState()),
-        getForkDigest: () => Promise.resolve(Buffer.alloc(4)),
+        getHeadState: () => generateState(),
+        getForkDigest: () => Buffer.alloc(4),
         emitter,
       },
       // @ts-ignore

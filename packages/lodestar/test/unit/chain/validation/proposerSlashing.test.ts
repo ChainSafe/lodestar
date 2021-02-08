@@ -41,7 +41,7 @@ describe("validate proposer slashing", () => {
     const slashing = generateEmptyProposerSlashing();
     dbStub.proposerSlashing.has.resolves(false);
     const state = generateState();
-    chainStub.getHeadState.resolves(state);
+    chainStub.getHeadState.returns(state);
     isValidIncomingProposerSlashingStub.returns(false);
     try {
       await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
@@ -54,7 +54,7 @@ describe("validate proposer slashing", () => {
     const slashing = generateEmptyProposerSlashing();
     dbStub.proposerSlashing.has.resolves(false);
     const state = generateState();
-    chainStub.getHeadState.resolves(state);
+    chainStub.getHeadState.returns(state);
     isValidIncomingProposerSlashingStub.returns(true);
     const validationTest = await validateGossipProposerSlashing(config, chainStub, dbStub, slashing);
     expect(validationTest).to.not.throw;

@@ -26,7 +26,7 @@ describe("validateBlock", function () {
     const signedBlock = config.types.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
@@ -39,7 +39,7 @@ describe("validateBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(true);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
@@ -53,7 +53,7 @@ describe("validateBlock", function () {
     forkChoice.hasBlock.returns(false);
     forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32)});
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
@@ -68,7 +68,7 @@ describe("validateBlock", function () {
     forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
     sinon.stub(clock, "currentSlot").get(() => 0);
     try {
-      await validateBlock({config, forkChoice, clock, job});
+      validateBlock({config, forkChoice, clock, job});
       expect.fail("block should throw");
     } catch (e) {
       expect(e.type.code).to.equal(BlockErrorCode.FUTURE_SLOT);

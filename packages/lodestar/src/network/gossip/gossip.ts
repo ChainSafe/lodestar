@@ -66,7 +66,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   public async start(): Promise<void> {
     await this.pubsub.start();
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.registerHandlers(forkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
@@ -172,7 +172,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   }
 
   public async getForkDigestByEpoch(epoch: Epoch): Promise<ForkDigest> {
-    const state = await this.chain.getHeadState();
+    const state = this.chain.getHeadState();
     const forkVersion = epoch < state.fork.epoch ? state.fork.previousVersion : state.fork.currentVersion;
     return computeForkDigest(this.config, forkVersion, state.genesisValidatorsRoot);
   }
@@ -194,7 +194,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
   }
 
   private handleForkVersion = async (): Promise<void> => {
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.unregisterHandlers();

@@ -82,25 +82,26 @@ export interface IBeaconChain {
    */
   close(): Promise<void>;
 
+  getHeadStateContext(): ITreeStateContext;
+  getHeadState(): TreeBacked<BeaconState>;
+  getHeadEpochContext(): EpochContext;
   /**
    * Get ForkDigest from the head state
    */
-  getForkDigest(): Promise<ForkDigest>;
+  getForkDigest(): ForkDigest;
   /**
    * Get ENRForkID from the head state
    */
-  getENRForkID(): Promise<ENRForkID>;
+  getENRForkID(): ENRForkID;
   getGenesisTime(): Number64;
-  getHeadStateContext(): Promise<ITreeStateContext>;
+
   getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
-  getHeadState(): Promise<TreeBacked<BeaconState>>;
-  getHeadEpochContext(): Promise<EpochContext>;
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
-  getFinalizedCheckpoint(): Promise<Checkpoint>;
+  getFinalizedCheckpoint(): Checkpoint;
 
   /**
    * Since we can have multiple parallel chains,
