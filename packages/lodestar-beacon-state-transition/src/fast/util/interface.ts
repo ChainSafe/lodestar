@@ -106,7 +106,7 @@ export function createCachedValidatorsBeaconState(state: BeaconState): CachedVal
   readOnlyForEach(state.validators, (validator) => {
     tmpValidators.push(createIFlatValidator(validator));
   });
-  return new CachedValidatorsBeaconState(state, Vector.of(...tmpValidators)).createProxy();
+  return new CachedValidatorsBeaconState(state, Vector.of(tmpValidators)).createProxy();
 }
 
 class CachedValidatorsBeaconStateProxyHandler implements ProxyHandler<CachedValidatorsBeaconState> {

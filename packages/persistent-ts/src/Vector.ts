@@ -65,7 +65,7 @@ export class Vector<T> implements Iterable<T> {
    *
    * @param values the values that this vector will contain
    */
-  public static of<T>(...values: T[]): Vector<T> {
+  public static of<T>(values: T[]): Vector<T> {
     let acc = Vector.empty<T>();
     for (const v of values) acc = acc.append(v);
     return acc;
