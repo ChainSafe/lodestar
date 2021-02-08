@@ -62,11 +62,11 @@ Vector.empty<number>();
 Vector.empty().append(1);
 
 // []
-Vector.of([1]).pop();
+Vector.from([1]).pop();
 
 // 3
-Vector.of([1, 2, 3]).get(2);
+Vector.from([1, 2, 3]).get(2);
 
 // [1, 2, 100]
-Vector.of([1, 2, 3]).set(2, 100);
+Vector.from([1, 2, 3]).set(2, 100);
 ```

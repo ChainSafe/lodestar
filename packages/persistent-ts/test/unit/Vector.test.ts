@@ -34,7 +34,7 @@ it("Vector.append works with many elements", () => {
 it("Vector iterator should work fine", () => {
   const times = 1025;
   const originalArr = Array.from({length: times}, (_, i) => 2 * i);
-  const acc = Vector.of(originalArr);
+  const acc = Vector.from(originalArr);
   expect(acc.length).to.be.equal(times);
   let i = 0;
   for (const item of acc) {
@@ -65,7 +65,7 @@ it("Vector readOnlyMap should work fine", () => {
   const times = 1025;
   const originalArr = Array.from({length: times}, (_, i) => i);
   const newArr = originalArr.map((v) => v * 2);
-  const acc = Vector.of(originalArr);
+  const acc = Vector.from(originalArr);
   expect(acc.length).to.be.equal(times);
   const newArr2 = acc.readOnlyMap<number>((v) => v * 2);
   expect(newArr2).to.be.deep.equal(newArr);
@@ -74,7 +74,7 @@ it("Vector readOnlyMap should work fine", () => {
 it("Vector toTS should convert to regular javascript array", () => {
   const times = 1025;
   const originalArr = Array.from({length: times}, (_, i) => i);
-  const acc = Vector.of(originalArr);
+  const acc = Vector.from(originalArr);
   expect(acc.toTS()).to.be.deep.equal(originalArr);
 });
 
@@ -99,7 +99,7 @@ it("Vector.set works", () => {
 it("Vector.set should not effect original vector", () => {
   const times = 1025;
   const originalArr = Array.from({length: times}, (_, i) => 2 * i);
-  const originalVector = Vector.of(originalArr);
+  const originalVector = Vector.from(originalArr);
   let newVector: Vector<number> = originalVector;
   for (let i = 0; i < times; i++) {
     newVector = newVector.set(i, i * 4);
