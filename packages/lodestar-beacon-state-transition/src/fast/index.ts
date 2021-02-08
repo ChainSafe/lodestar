@@ -34,7 +34,7 @@ export function fastStateTransition(
   processBlock(epochCtx, postState, block, verifySignatures);
   // verify state root
   if (verifyStateRoot) {
-    if (!types.Root.equals(block.stateRoot, types.BeaconState.hashTreeRoot(postState))) {
+    if (!types.Root.equals(block.stateRoot, types.BeaconState.hashTreeRoot(postState.getOriginalState()))) {
       throw new Error("Invalid state root");
     }
   }
