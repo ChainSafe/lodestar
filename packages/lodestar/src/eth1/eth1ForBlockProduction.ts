@@ -1,7 +1,7 @@
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconState, Eth1Data, Deposit} from "@chainsafe/lodestar-types";
-import {getNewEth1Data} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/processEth1Data";
+import {getNewEth1Data} from "../../../lodestar-beacon-state-transition/lib/phase0/fast/block/processEth1Data";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "abort-controller";
 import {IBeaconDb} from "../db";

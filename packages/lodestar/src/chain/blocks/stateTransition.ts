@@ -8,14 +8,15 @@ import {
   fastStateTransition,
   IStateContext,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {processSlots} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob, ITreeStateContext} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {isActiveIFlatValidator} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {IBeaconDb} from "../../db";
+import {isActiveIFlatValidator} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/util";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context

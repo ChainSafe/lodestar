@@ -1,15 +1,15 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {
-  CachedValidatorsBeaconState,
-  createCachedValidatorsBeaconState,
+  CachedValidatorsBeaconState,../phase0/fast/util
+  createCachedValidatorsBeaconState,../phase0/fast/util/epochContext
   IEpochProcess,
   prepareEpochProcessState,
 } from "../../src/fast/util";
 import {EpochContext} from "../../src/fast/util/epochContext";
 import {
   processFinalUpdates,
-  processJustificationAndFinalization,
+  proces../phase0/fast/epochalization,
   processRegistryUpdates,
   processRewardsAndPenalties,
   processSlashings,

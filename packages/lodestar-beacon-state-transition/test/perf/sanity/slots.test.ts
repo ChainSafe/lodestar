@@ -2,9 +2,9 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {EpochContext} from "../../../src/fast";
-import {processSlots} from "../../../src/fast/slot";
-import {CachedValidatorsBeaconState, createCachedValidatorsBeaconState} from "../../../src/fast/util";
-import {generatePerformanceState, initBLS} from "../util";
+import {processSlots} from "../../phase0/fast/slot";
+import {CachedValidatorsBeac../../phase0/fast/slotalidatorsBeaconState} from "../../../src/fast/util";
+import {generatePerformanceState, initBLS} ../../phase0/fast/util/epochContext
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);

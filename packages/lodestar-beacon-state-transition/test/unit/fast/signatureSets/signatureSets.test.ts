@@ -19,8 +19,8 @@ import {
 import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
-import {getAllBlockSignatureSets} from "../../../../src/fast/signatureSets";
-import {EpochContext} from "../../../../src/fast";
+import {getAllBlockSignatureSets} from "../../../phase0/fast/signatureSets";
+import {EpochContext} from "../../../phase0/fast";
 import {expect} from "chai";
 
 describe("signatureSets", () => {

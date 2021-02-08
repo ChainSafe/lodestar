@@ -2,7 +2,7 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState, Validator} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {createCachedValidatorsBeaconState, CachedValidatorsBeaconState} from "../../../../src/fast/util";
+import {createCachedValidatorsBeaconState, CachedValidatorsBeaconState} from "../../../phase0/fast/util";
 import {generateState} from "../../../utils/state";
 
 const NUM_VALIDATORS = 100000;
