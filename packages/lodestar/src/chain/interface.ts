@@ -12,13 +12,20 @@ import {
 import {TreeBacked} from "@chainsafe/ssz";
 import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 import {IBeaconClock} from "./clock/interface";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import {StateContextCache, CheckpointStateCache} from "./stateCache";
+
+// Lodestar specifc state context
+export interface ITreeStateContext {
+  state: CachedValidatorsBeaconState;
+  epochCtx: EpochContext;
+}
 
 interface IProcessBlock {
   /**
@@ -64,6 +71,8 @@ export interface IBeaconChain {
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
@@ -73,25 +82,26 @@ export interface IBeaconChain {
    */
   close(): Promise<void>;
 
+  getHeadStateContext(): ITreeStateContext;
+  getHeadState(): TreeBacked<BeaconState>;
+  getHeadEpochContext(): EpochContext;
   /**
    * Get ForkDigest from the head state
    */
-  getForkDigest(): Promise<ForkDigest>;
+  getForkDigest(): ForkDigest;
   /**
    * Get ENRForkID from the head state
    */
-  getENRForkID(): Promise<ENRForkID>;
+  getENRForkID(): ENRForkID;
   getGenesisTime(): Number64;
-  getHeadStateContext(): Promise<ITreeStateContext>;
+
   getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
-  getHeadState(): Promise<TreeBacked<BeaconState>>;
-  getHeadEpochContext(): Promise<EpochContext>;
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
-  getFinalizedCheckpoint(): Promise<Checkpoint>;
+  getFinalizedCheckpoint(): Checkpoint;
 
   /**
    * Since we can have multiple parallel chains,

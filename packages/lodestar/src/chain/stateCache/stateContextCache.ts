@@ -1,13 +1,6 @@
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-
-// Lodestar specifc state context
-export interface ITreeStateContext {
-  state: CachedValidatorsBeaconState;
-  epochCtx: EpochContext;
-}
+import {ITreeStateContext} from "../interface";
 
 /**
  * In memory cache of BeaconState and connected EpochContext
@@ -20,7 +13,7 @@ export class StateContextCache {
     this.cache = {};
   }
 
-  public async get(root: ByteVector): Promise<ITreeStateContext | null> {
+  public get(root: ByteVector): ITreeStateContext | null {
     const item = this.cache[toHexString(root)];
     if (!item) {
       return null;
@@ -28,18 +21,18 @@ export class StateContextCache {
     return this.clone(item);
   }
 
-  public async add(item: ITreeStateContext): Promise<void> {
+  public add(item: ITreeStateContext): void {
     this.cache[toHexString((item.state.getOriginalState() as TreeBacked<BeaconState>).hashTreeRoot())] = this.clone(
       item
     );
   }
 
-  public async delete(root: ByteVector): Promise<void> {
+  public delete(root: ByteVector): void {
     delete this.cache[toHexString(root)];
   }
 
-  public async batchDelete(roots: ByteVector[]): Promise<void> {
-    await Promise.all(roots.map((root) => this.delete(root)));
+  public batchDelete(roots: ByteVector[]): void {
+    roots.map((root) => this.delete(root));
   }
 
   public clear(): void {
@@ -72,7 +65,7 @@ export class StateContextCache {
    * Should only use this with care as this is expensive.
    * @param epoch
    */
-  public async valuesUnsafe(): Promise<ITreeStateContext[]> {
+  public valuesUnsafe(): ITreeStateContext[] {
     return Object.values(this.cache).map((item) => this.clone(item));
   }
 

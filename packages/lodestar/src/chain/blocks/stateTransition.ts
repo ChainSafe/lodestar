@@ -11,11 +11,10 @@ import {
 import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {IBlockJob} from "../interface";
+import {IBlockJob, ITreeStateContext} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db";
 import {isActiveIFlatValidator} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
@@ -125,7 +124,7 @@ export function emitBlockEvent(emitter: ChainEventEmitter, job: IBlockJob, postC
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
-  db: IBeaconDb,
+  checkpointStateCache: CheckpointStateCache,
   stateContext: ITreeStateContext,
   job: IBlockJob
 ): Promise<ITreeStateContext> {
@@ -146,7 +145,7 @@ export async function runStateTransition(
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedBalances: Gwei[] = [];
   if (postStateContext.state.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedStateContext = await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
+    const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
     const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
     justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
       justifiedBalances.push(isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));

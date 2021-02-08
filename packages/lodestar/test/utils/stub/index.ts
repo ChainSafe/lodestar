@@ -12,4 +12,5 @@ interface IStubbedChain extends IBeaconChain {
 
 export type StubbedChain = IStubbedChain & SinonStubbedInstance<IBeaconChain>;
 
+export * from "./chain";
 export * from "./beaconDb";

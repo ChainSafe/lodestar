@@ -37,7 +37,7 @@ describe("syncing", function () {
     const bn2 = await getDevBeaconNode({
       params: beaconParams,
       validatorCount,
-      genesisTime: (await bn.chain.getHeadState()).genesisTime,
+      genesisTime: bn.chain.getHeadState().genesisTime,
     });
     const head = await bn.chain.getHeadBlock()!;
     const waitForSynced = waitForEvent<SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>

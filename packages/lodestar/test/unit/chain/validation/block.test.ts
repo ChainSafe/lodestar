@@ -38,7 +38,7 @@ describe("gossip block validation", function () {
   it("should throw error - block slot is finalized", async function () {
     const signedBlock = generateSignedBlock();
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 1,
       root: Buffer.alloc(32),
     });
@@ -55,7 +55,7 @@ describe("gossip block validation", function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -74,7 +74,7 @@ describe("gossip block validation", function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -94,7 +94,7 @@ describe("gossip block validation", function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -115,7 +115,7 @@ describe("gossip block validation", function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });
@@ -142,7 +142,7 @@ describe("gossip block validation", function () {
     sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
     const signedBlock = generateSignedBlock({message: {slot: 1}});
     const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
+    chainStub.getFinalizedCheckpoint.returns({
       epoch: 0,
       root: Buffer.alloc(32),
     });

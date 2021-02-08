@@ -128,7 +128,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
 
   // Must be public for testing
   async shouldDisconnectOnStatus(request: Status): Promise<boolean> {
-    const currentForkDigest = await this.chain.getForkDigest();
+    const currentForkDigest = this.chain.getForkDigest();
     if (!this.config.types.ForkDigest.equals(currentForkDigest, request.forkDigest)) {
       this.logger.verbose("Fork digest mismatch", {
         expected: toHexString(currentForkDigest),
@@ -162,7 +162,7 @@ export class BeaconReqRespHandler implements IReqRespHandler {
       } else if (request.finalizedEpoch < finalizedCheckpoint.epoch) {
         // If it is within recent history, we can directly check against the block roots in the state
         if (headSummary.slot - requestFinalizedSlot < this.config.params.SLOTS_PER_HISTORICAL_ROOT) {
-          const headState = await this.chain.getHeadState();
+          const headState = this.chain.getHeadState();
           // This will get the latest known block at the start of the epoch.
           const expected = getBlockRootAtSlot(this.config, headState, requestFinalizedSlot);
           if (!this.config.types.Root.equals(request.finalizedRoot, expected)) {

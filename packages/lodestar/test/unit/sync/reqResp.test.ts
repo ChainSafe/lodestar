@@ -2,12 +2,10 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {BeaconBlocksByRangeRequest, BeaconState, Goodbye, SignedBeaconBlock, Status} from "@chainsafe/lodestar-types";
 import all from "it-all";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BeaconChain} from "../../../src/chain";
 import {GENESIS_EPOCH, Method, ZERO_HASH} from "../../../src/constants";
 import {IBeaconDb} from "../../../src/db/api";
 import {Libp2pNetwork} from "../../../src/network";
@@ -20,7 +18,7 @@ import {getBlockSummary} from "../../utils/headBlockInfo";
 import {silentLogger} from "../../utils/logger";
 import {generatePeer} from "../../utils/peer";
 import {generateState} from "../../utils/state";
-import {StubbedBeaconDb} from "../../utils/stub";
+import {StubbedBeaconChain, StubbedBeaconDb} from "../../utils/stub";
 
 chai.use(chaiAsPromised);
 
@@ -29,23 +27,20 @@ describe("sync req resp", function () {
   const logger = silentLogger;
   const sandbox = sinon.createSandbox();
   let syncRpc: BeaconReqRespHandler;
-  let chainStub: SinonStubbedInstance<BeaconChain>,
+  let chainStub: StubbedBeaconChain,
     networkStub: SinonStubbedInstance<Libp2pNetwork>,
     metaStub: SinonStubbedInstance<IPeerMetadataStore>,
-    forkChoiceStub: SinonStubbedInstance<ForkChoice>,
     reqRespStub: SinonStubbedInstance<ReqResp>;
   let dbStub: StubbedBeaconDb;
 
   beforeEach(() => {
-    chainStub = sandbox.createStubInstance(BeaconChain);
-    forkChoiceStub = sandbox.createStubInstance(ForkChoice);
-    chainStub.forkChoice = forkChoiceStub;
-    forkChoiceStub.getHead.returns(getBlockSummary({}));
-    forkChoiceStub.getFinalizedCheckpoint.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
-    chainStub.getHeadState.resolves(generateState());
+    chainStub = new StubbedBeaconChain(sandbox, config);
+    chainStub.forkChoice.getHead.returns(getBlockSummary({}));
+    chainStub.forkChoice.getFinalizedCheckpoint.returns({epoch: GENESIS_EPOCH, root: ZERO_HASH});
+    chainStub.getHeadState = sandbox.stub().returns(generateState());
     // @ts-ignore
     chainStub.config = config;
-    chainStub.getForkDigest.resolves(Buffer.alloc(4));
+    chainStub.getForkDigest = sandbox.stub().returns(Buffer.alloc(4));
     reqRespStub = sandbox.createStubInstance(ReqResp);
     networkStub = sandbox.createStubInstance(Libp2pNetwork);
     networkStub.reqResp = reqRespStub as ReqResp & SinonStubbedInstance<ReqResp>;
@@ -83,7 +78,7 @@ describe("sync req resp", function () {
       headRoot: Buffer.alloc(32),
       headSlot: 1,
     };
-    dbStub.stateCache.get.resolves(generateState() as any);
+    chainStub.stateCache.get.returns(generateState() as any);
 
     const res = await all(syncRpc.onRequest(Method.Status, body, peerId));
     expect(res).have.length(1, "Wrong number of chunks responded");
@@ -99,7 +94,7 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    chainStub.getForkDigest.resolves(Buffer.alloc(4).fill(1));
+    chainStub.getForkDigest = sandbox.stub().returns(Buffer.alloc(4).fill(1));
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.true;
   });
 
@@ -112,8 +107,8 @@ describe("sync req resp", function () {
       headSlot: 1,
     };
 
-    chainStub.getForkDigest.resolves(body.forkDigest);
-    chainStub.getHeadState.resolves(
+    chainStub.getForkDigest = sandbox.stub().returns(body.forkDigest);
+    chainStub.getHeadState = sandbox.stub().returns(
       generateState({
         slot: computeStartSlotAtEpoch(
           config,
@@ -121,7 +116,7 @@ describe("sync req resp", function () {
         ),
       })
     );
-    forkChoiceStub.getHead.returns({
+    chainStub.forkChoice.getHead.returns({
       finalizedEpoch: config.params.SLOTS_PER_HISTORICAL_ROOT / config.params.SLOTS_PER_EPOCH + 2,
       justifiedEpoch: 0,
       blockRoot: Buffer.alloc(32),
@@ -149,7 +144,7 @@ describe("sync req resp", function () {
     const state: BeaconState = generateState();
     state.fork.currentVersion = Buffer.alloc(4);
     state.finalizedCheckpoint.epoch = 1;
-    dbStub.stateCache.get.resolves(state as any);
+    chainStub.stateCache.get.returns(state as any);
 
     expect(await syncRpc.shouldDisconnectOnStatus(body)).to.be.false;
   });
@@ -195,7 +190,7 @@ describe("sync req resp", function () {
     const block8 = generateEmptySignedBlock();
     block8.message.slot = 8;
     // block 6 does not exist
-    chainStub.getUnfinalizedBlocksAtSlots.resolves([null!, block8]);
+    chainStub.getUnfinalizedBlocksAtSlots = sandbox.stub().resolves([null!, block8]);
 
     const slots: number[] = [];
     try {

@@ -4,9 +4,8 @@ import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chains
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
-import {IBlockJob} from "./interface";
+import {IBlockJob, ITreeStateContext} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
@@ -144,10 +143,10 @@ export async function onForkVersion(this: BeaconChain, version: Version): Promis
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
-  await this.db.checkpointStateCache.add(cp, stateContext);
+  this.checkpointStateCache.add(cp, stateContext);
 
   this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
-  const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
+  const parentBlockSummary = this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
     const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
@@ -224,7 +223,7 @@ export async function onBlock(
     root: toHexString(blockRoot),
   });
 
-  await this.db.stateCache.add(postStateContext);
+  this.stateCache.add(postStateContext);
   if (!job.reprocess) {
     await this.db.block.add(block);
   }

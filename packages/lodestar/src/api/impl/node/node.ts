@@ -40,7 +40,7 @@ export class NodeApi implements INodeApi {
   }
 
   public async getNodeStatus(): Promise<"ready" | "syncing" | "error"> {
-    return (await this.sync.isSynced()) ? "ready" : "syncing";
+    return this.sync.isSynced() ? "ready" : "syncing";
   }
 
   public async getPeer(peerId: string): Promise<NodePeer | null> {
