@@ -12,7 +12,6 @@ import {
 import {TreeBacked} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
@@ -23,8 +22,8 @@ import {StateContextCache, CheckpointStateCache} from "./stateCache";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {
-  state: CachedValidatorsBeaconState;
-  epochCtx: EpochContext;
+  state: phase0.fast.CachedValidatorsBeaconState;
+  epochCtx: phase0.EpochContext;
 }
 
 interface IProcessBlock {
@@ -84,7 +83,7 @@ export interface IBeaconChain {
 
   getHeadStateContext(): ITreeStateContext;
   getHeadState(): TreeBacked<BeaconState>;
-  getHeadEpochContext(): EpochContext;
+  getHeadEpochContext(): phase0.EpochContext;
   /**
    * Get ForkDigest from the head state
    */

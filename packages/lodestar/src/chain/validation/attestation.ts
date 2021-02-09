@@ -1,8 +1,7 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
-import {IAttestationJob, IBeaconChain} from "..";
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {IAttestationJob, IBeaconChain, ITreeStateContext} from "..";
 import {computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";

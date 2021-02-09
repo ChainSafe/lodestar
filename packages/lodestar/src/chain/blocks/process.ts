@@ -8,6 +8,7 @@ import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {CheckpointStateCache} from "../stateCache";
 
 export async function processBlock({
   forkChoice,

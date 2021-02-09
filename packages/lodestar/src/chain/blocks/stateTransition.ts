@@ -14,8 +14,6 @@ import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob, ITreeStateContext} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db";
-import {isActiveIFlatValidator} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/util";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -148,7 +146,7 @@ export async function runStateTransition(
     const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
     const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
     justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
-      justifiedBalances.push(isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+      justifiedBalances.push(phase0.fast.isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
     });
   }
   forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
