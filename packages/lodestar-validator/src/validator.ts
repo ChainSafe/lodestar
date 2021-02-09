@@ -85,7 +85,7 @@ export class Validator {
       "head",
       this.config.types.BLSPubkey.fromJson(publicKey)
     );
-    if (!stateValidator) throw new Error("No validator found in validator store.");
+    if (!stateValidator) throw new Error("Validator not found in beacon chain.");
 
     const epoch = this.apiClient.clock.currentEpoch;
 
