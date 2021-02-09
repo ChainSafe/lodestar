@@ -2,9 +2,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IAttestationJob, IBeaconChain} from "..";
 import {IBeaconDb} from "../../db/api";
 import {Attestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, isAggregatorFromCommitteeLength, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {isAttestingToInValidBlock} from "./attestation";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
 import {isValidAggregateAndProofSignature, isValidSelectionProofSignature} from "./utils";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
@@ -148,7 +147,7 @@ export async function validateAggregateAttestation(
 
   // TODO: once we have pool, check if aggregate block is seen and has target as ancestor
 
-  if (!isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
+  if (!phase0.fast.isValidIndexedAttestation(epochCtx, state, epochCtx.getIndexedAttestation(attestation))) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SIGNATURE,
       job: attestationJob,

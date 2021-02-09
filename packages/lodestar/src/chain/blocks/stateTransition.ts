@@ -5,8 +5,7 @@ import {
   ZERO_HASH,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  fastStateTransition,
-  IStateContext,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {processSlots} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -59,7 +58,7 @@ export async function processSlotsToNearestCheckpoint(
   emitter: ChainEventEmitter,
   stateCtx: ITreeStateContext,
   slot: Slot
-): Promise<IStateContext> {
+): Promise<phase0.fast.IStateContext> {
   const config = stateCtx.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = stateCtx.state.slot;
@@ -134,7 +133,7 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
+  const postStateContext = phase0.fast.fastStateTransition(stateContext, job.signedBlock, {
     verifyStateRoot: true,
     verifyProposer: !job.validSignatures && !job.validProposerSignature,
     verifySignatures: !job.validSignatures,

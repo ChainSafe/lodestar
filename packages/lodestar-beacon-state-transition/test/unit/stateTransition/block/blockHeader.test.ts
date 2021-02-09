@@ -2,7 +2,7 @@ import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
-import {processBlockHeader} from "../../../../src/block";
+import {processBlockHeader} from "../../../../src/phase0/naive/block";
 
 import {generateState} from "../../../utils/state";
 import {generateEmptyBlock} from "../../../utils/block";

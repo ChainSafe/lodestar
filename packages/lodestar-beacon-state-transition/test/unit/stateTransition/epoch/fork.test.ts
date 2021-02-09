@@ -1,7 +1,7 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {generateState} from "../../../utils/state";
-import {processForkChanged} from "../../../../src/epoch/fork";
+import {processForkChanged} from "../../../../src/phase0/naive/epoch/fork";
 import {expect} from "chai";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 

@@ -4,8 +4,8 @@ import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
 import {GENESIS_EPOCH} from "../../../../../src/constants";
-import {processRewardsAndPenalties} from "../../../../../src/epoch/balanceUpdates";
-import * as attestationDeltas from "../../../../../src/epoch/balanceUpdates/attestation";
+import {processRewardsAndPenalties} from "../../../../../src/phase0/naive/epoch/balanceUpdates";
+import * as attestationDeltas from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateValidator} from "../../../../utils/validator";
 import {generateState} from "../../../../utils/state";
 

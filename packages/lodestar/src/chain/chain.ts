@@ -6,7 +6,7 @@ import {
   computeEpochAtSlot,
   computeForkDigest,
   computeStartSlotAtEpoch,
-  EpochContext,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -161,7 +161,7 @@ export class BeaconChain implements IBeaconChain {
     //head state should always have epoch ctx
     return this.getHeadStateContext().state.getOriginalState() as TreeBacked<BeaconState>;
   }
-  public getHeadEpochContext(): EpochContext {
+  public getHeadEpochContext(): phase0.EpochContext {
     // head should always have epoch ctx
     return this.getHeadStateContext().epochCtx;
   }

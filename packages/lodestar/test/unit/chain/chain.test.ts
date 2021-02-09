@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {defaultChainOptions} from "../../../src/chain/options";
@@ -12,7 +12,6 @@ import {generateBlockSummary} from "../../utils/block";
 import {generateState} from "../../utils/state";
 import {StubbedBeaconDb} from "../../utils/stub";
 import {generateValidators} from "../../utils/validator";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 import {StateContextCache} from "../../../src/chain/stateCache";
 
 describe("BeaconChain", function () {
@@ -30,8 +29,8 @@ describe("BeaconChain", function () {
     chain = new BeaconChain({opts: defaultChainOptions, config, db: dbStub, logger, metrics, anchorState: state});
     chain.stateCache = (sandbox.createStubInstance(StateContextCache) as unknown) as StateContextCache;
     (chain.stateCache as SinonStubbedInstance<StateContextCache> & StateContextCache).get.returns({
-      state: createCachedValidatorsBeaconState(state),
-      epochCtx: new EpochContext(config),
+      state: phase0.fast.createCachedValidatorsBeaconState(state),
+      epochCtx: new phase0.fast.EpochContext(config),
     });
   });
 

@@ -2,14 +2,14 @@ import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {BeaconState, Validator} from "@chainsafe/lodestar-types";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {createCachedValidatorsBeaconState, CachedValidatorsBeaconState} from "../../../phase0/fast/util";
 import {generateState} from "../../../utils/state";
+import {phase0} from "../../../../src";
 
 const NUM_VALIDATORS = 100000;
 
 describe("StateTransitionBeaconState", function () {
   let state: TreeBacked<BeaconState>;
-  let wrappedState: CachedValidatorsBeaconState;
+  let wrappedState: phase0.fast.CachedValidatorsBeaconState;
 
   before(function () {
     this.timeout(0);
@@ -32,7 +32,7 @@ describe("StateTransitionBeaconState", function () {
 
   beforeEach(() => {
     state = state.clone();
-    wrappedState = createCachedValidatorsBeaconState(state);
+    wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
   });
 
   it("should read the same value of TreeBacked<BeaconState>", () => {

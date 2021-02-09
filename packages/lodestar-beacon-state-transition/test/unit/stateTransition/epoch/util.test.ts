@@ -10,7 +10,7 @@ import {
   getMatchingSourceAttestations,
   getMatchingTargetAttestations,
   getUnslashedAttestingIndices,
-} from "../../../../src/epoch/util";
+} from "../../../../src/phase0/naive/epoch/util";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateEmptyAttestation} from "../../../utils/attestation";

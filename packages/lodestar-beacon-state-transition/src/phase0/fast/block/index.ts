@@ -11,6 +11,8 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 
+export * from "./isValidIndexedAttestation";
+
 export {
   processBlockHeader,
   processRandao,

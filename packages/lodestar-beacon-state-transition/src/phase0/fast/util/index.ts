@@ -2,6 +2,7 @@ import {EpochContext} from "./epochContext";
 import {CachedValidatorsBeaconState} from "./interface";
 
 export * from "./block";
+export * from "./attestation";
 export * from "./attesterStatus";
 export {EpochContext} from "./epochContext";
 export * from "./epochProcess";

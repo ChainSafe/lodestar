@@ -22,11 +22,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {EMPTY_SIGNATURE, GENESIS_SLOT, ZERO_HASH} from "../../constants";
-import {
-  computeEpochAtSlot,
-  getActiveValidatorIndices,
-  processDeposit,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, getActiveValidatorIndices, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 /**
@@ -87,7 +83,7 @@ export function applyDeposits(
     }
 
     state.eth1Data.depositCount += 1;
-    processDeposit(config, state, deposit);
+    phase0.processDeposit(config, state, deposit);
   });
 
   // Process activations

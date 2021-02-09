@@ -2,8 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
 import {IBeaconDb} from "../../db/api";
 import {BeaconBlock, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {computeStartSlotAtEpoch, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {verifyBlockSignature} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockError, BlockErrorCode} from "../errors";
 
 export async function validateGossipBlock(
@@ -64,7 +63,7 @@ export async function validateGossipBlock(
     });
   }
 
-  if (!verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
+  if (!phase0.fast.verifyBlockSignature(blockContext.epochCtx, blockContext.state, block)) {
     throw new BlockError({
       code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
       job: blockJob,
@@ -98,7 +97,7 @@ export async function hasProposerAlreadyProposed(
   return existingBlock?.message.proposerIndex === proposerIndex;
 }
 
-export function isExpectedProposer(epochCtx: EpochContext, block: BeaconBlock): boolean {
+export function isExpectedProposer(epochCtx: phase0.EpochContext, block: BeaconBlock): boolean {
   const supposedProposerIndex = epochCtx.getBeaconProposer(block.slot);
   return supposedProposerIndex === block.proposerIndex;
 }

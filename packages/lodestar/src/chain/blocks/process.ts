@@ -1,11 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {
-  getAllBlockSignatureSets,
-  getAllBlockSignatureSetsExceptProposer,
-  ISignatureSet,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
-
 import {ChainEventEmitter} from "../emitter";
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {runStateTransition} from "./stateTransition";
@@ -13,7 +7,7 @@ import {IStateRegenerator, RegenError} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifySignatureSetsBatch} from "../bls";
 import {groupBlocksByEpoch} from "./util";
-import {CheckpointStateCache} from "../stateCache";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function processBlock({
   forkChoice,
@@ -42,8 +36,8 @@ export async function processBlock({
     if (!job.validSignatures) {
       const {epochCtx, state} = preStateContext;
       const signatureSets = job.validProposerSignature
-        ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-        : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
+        ? phase0.fast.getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
+        : phase0.fast.getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
 
       if (!verifySignatureSetsBatch(signatureSets)) {
         throw new BlockError({
@@ -125,13 +119,13 @@ export async function processChainSegment({
 
       // Verify the signature of the blocks, returning early if the signature is invalid.
       if (!job.validSignatures) {
-        const signatureSets: ISignatureSet[] = [];
+        const signatureSets: phase0.fast.ISignatureSet[] = [];
         for (const block of blocksInEpoch) {
           const {epochCtx, state} = preStateContext;
           signatureSets.push(
             ...(job.validProposerSignature
-              ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, block)
-              : getAllBlockSignatureSets(epochCtx, state, block))
+              ? phase0.fast.getAllBlockSignatureSetsExceptProposer(epochCtx, state, block)
+              : phase0.fast.getAllBlockSignatureSets(epochCtx, state, block))
           );
         }
 

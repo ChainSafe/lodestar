@@ -10,7 +10,7 @@ import {
   Slot,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 

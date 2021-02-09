@@ -2,11 +2,8 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Attestation, AttestationData} from "@chainsafe/lodestar-types";
 import {IBeaconDb} from "../../db/api";
 import {IAttestationJob, IBeaconChain} from "..";
-import {computeSubnetForAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/attestation";
-import {isValidIndexedAttestation} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block/isValidIndexedAttestation";
-import {ITreeStateContext} from "../interface";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, AttestationErrorCode} from "../errors";
 import {ATTESTATION_PROPAGATION_SLOT_RANGE} from "../../constants";
 
@@ -87,7 +84,11 @@ export async function validateGossipAttestation(
     });
   }
 
-  const expectedSubnet = computeSubnetForAttestation(config, attestationPreStateContext.epochCtx, attestation);
+  const expectedSubnet = phase0.fast.computeSubnetForAttestation(
+    config,
+    attestationPreStateContext.epochCtx,
+    attestation
+  );
   if (subnet !== expectedSubnet) {
     throw new AttestationError({
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -98,7 +99,7 @@ export async function validateGossipAttestation(
   }
 
   if (
-    !isValidIndexedAttestation(
+    !phase0.fast.isValidIndexedAttestation(
       attestationPreStateContext.epochCtx,
       attestationPreStateContext.state,
       attestationPreStateContext.epochCtx.getIndexedAttestation(attestation),
@@ -167,7 +168,7 @@ export function getAttestationAttesterCount(attestation: Attestation): number {
   return Array.from(attestation.aggregationBits).filter((bit) => !!bit).length;
 }
 
-export function isCommitteeIndexWithinRange(epochCtx: EpochContext, attestationData: AttestationData): boolean {
+export function isCommitteeIndexWithinRange(epochCtx: phase0.EpochContext, attestationData: AttestationData): boolean {
   return attestationData.index < epochCtx.getCommitteeCountAtSlot(attestationData.slot);
 }
 

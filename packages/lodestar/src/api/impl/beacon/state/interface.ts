@@ -11,7 +11,7 @@ import {
   BeaconCommitteeResponse,
   Fork,
 } from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
@@ -41,5 +41,5 @@ export interface ICommitteesFilters {
 
 export type ApiStateContext = {
   state: BeaconState;
-  epochCtx?: EpochContext;
+  epochCtx?: phase0.EpochContext;
 };

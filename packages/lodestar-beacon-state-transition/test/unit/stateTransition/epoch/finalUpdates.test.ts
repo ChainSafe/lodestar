@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
-import {processFinalUpdates} from "../../../../src/epoch/finalUpdates";
+import {processFinalUpdates} from "../../../../src/phase0/naive/epoch/finalUpdates";
 
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";

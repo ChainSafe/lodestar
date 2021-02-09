@@ -4,7 +4,7 @@
 
 import {AbortSignal} from "abort-controller";
 
-import {blockToHeader, computeEpochAtSlot, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlockHeader, BeaconState, Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -16,8 +16,6 @@ import {Eth1Provider} from "../eth1";
 import {IBeaconMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
-import {CheckpointStateCache, StateContextCache} from "./stateCache";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
@@ -132,15 +130,15 @@ export async function initStateFromAnchorState(
  */
 export function restoreStateCaches(
   config: IBeaconConfig,
-  stateCache: StateContextCache,
-  checkpointStateCache: CheckpointStateCache,
+  stateCache: phase0.fast.StateContextCache,
+  checkpointStateCache: phase0.fast.CheckpointStateCache,
   state: TreeBacked<BeaconState>
 ): void {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
-  const epochCtx = new EpochContext(config);
+  const epochCtx = new phase0.EpochContext(config);
   epochCtx.loadState(state);
 
-  const stateCtx = {state: createCachedValidatorsBeaconState(state), epochCtx};
+  const stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx};
 
   // store state in state caches
   stateCache.add(stateCtx);
