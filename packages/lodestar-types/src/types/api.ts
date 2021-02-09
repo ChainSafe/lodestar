@@ -129,3 +129,8 @@ export interface ValidatorResponse {
   status: ValidatorStatus;
   validator: Validator;
 }
+
+export interface Contract {
+  chainId: Number64;
+  address: Buffer;
+}

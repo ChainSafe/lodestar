@@ -18,6 +18,7 @@ export interface IBeaconSSZTypes {
   Boolean: BooleanType;
   Bytes4: ByteVectorType;
   Bytes8: ByteVectorType;
+  Bytes20: ByteVectorType;
   Bytes32: ByteVectorType;
   Bytes48: ByteVectorType;
   Bytes96: ByteVectorType;
@@ -109,6 +110,7 @@ export interface IBeaconSSZTypes {
   ValidatorBalance: ContainerType<t.ValidatorBalance>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
   BeaconCommitteeResponse: ContainerType<t.BeaconCommitteeResponse>;
+  Contract: ContainerType<t.Contract>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -201,4 +203,5 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "ValidatorBalance",
   "ValidatorResponse",
   "BeaconCommitteeResponse",
+  "Contract",
 ];
