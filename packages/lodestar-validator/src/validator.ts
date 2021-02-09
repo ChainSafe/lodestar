@@ -17,13 +17,13 @@ import BlockProposingService from "./services/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IApiClient} from "./api";
 import {AttestationService} from "./services/attestation";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {IValidatorOptions} from "./options";
 import {ApiClientOverRest} from "./api/impl/rest/apiClient";
 import {ISlashingProtection} from "./slashingProtection";
 import {mapSecretKeysToValidators} from "./services/utils";
-import {getDomain, DomainType, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
-import {BeaconState, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
+import {DomainType, computeSigningRoot, computeDomain} from "@chainsafe/lodestar-beacon-state-transition";
+import {SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 
 /**
  * Main class for the Validator client.
@@ -78,7 +78,7 @@ export class Validator {
   /**
    * Perform a voluntary exit for the given validator by its public key.
    */
-  public async voluntaryExit(publicKey: string): Promise<void> {
+  public async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
     await this.apiClient.connect();
 
     const stateValidator = await this.apiClient.beacon.state.getStateValidator(
@@ -87,23 +87,22 @@ export class Validator {
     );
     if (!stateValidator) throw new Error("No validator found in validator store.");
 
-    const epoch = this.apiClient.clock.currentEpoch;
+    const epoch = exitEpoch || this.apiClient.clock.currentEpoch;
 
     const voluntaryExit = {
       epoch,
       validatorIndex: stateValidator.index,
     };
 
-    const state: BeaconState = this.config.types.BeaconState.tree.defaultValue();
-    state.fork = (await this.apiClient.beacon.state.getFork("head")) || state.fork;
-    state.genesisValidatorsRoot =
-      (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot || state.genesisValidatorsRoot;
-    const domain = getDomain(this.config, state, DomainType.VOLUNTARY_EXIT, epoch);
+    const fork = await this.apiClient.beacon.state.getFork("head");
+    if (!fork) throw new Error("VoluntaryExit: Fork not found");
+    const genesisValidatorsRoot = (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot;
+    const domain = computeDomain(this.config, DomainType.VOLUNTARY_EXIT, fork.currentVersion, genesisValidatorsRoot);
     const signingRoot = computeSigningRoot(this.config, this.config.types.VoluntaryExit, voluntaryExit, domain);
 
     let secretKey;
     for (const sk of this.opts.secretKeys) {
-      if (sk.toPublicKey().toHex() === publicKey) secretKey = sk;
+      if (this.config.types.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))) secretKey = sk;
     }
     if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
 
@@ -113,12 +112,10 @@ export class Validator {
     };
 
     try {
-      this.logger.info(`Waiting for validator ${publicKey} to be exited...`);
+      this.logger.info(`Waiting for voluntary exit request for validator ${publicKey} to be submitted...`);
       await this.apiClient.beacon.pool.submitVoluntaryExit(signedVoluntaryExit);
-      this.logger.info(`Successfully exited validator ${publicKey}`);
-      await this.apiClient.disconnect();
-    } catch (error) {
-      this.logger.error(error);
+      this.logger.info("Submitted voluntary exit to the network.");
+    } finally {
       await this.apiClient.disconnect();
     }
   }

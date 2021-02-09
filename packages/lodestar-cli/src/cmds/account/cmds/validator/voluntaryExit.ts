@@ -12,6 +12,7 @@ import {getSlashingProtection} from "./slashingProtection/utils";
 
 export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {
   publicKey: string;
+  exitEpoch: number;
 };
 
 export type ReturnType = string[];
@@ -36,6 +37,11 @@ like to choose for the voluntary exit.",
     publicKey: {
       description: "The public key of the validator to voluntarily exit",
       type: "string",
+    },
+    exitEpoch: {
+      description:
+        "The epoch upon which to submit the voluntary exit.  If no value is provided, then we default to the currentEpoch.",
+      type: "number",
     },
   },
 
@@ -105,7 +111,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
     });
 
     try {
-      await validatorClient.voluntaryExit(publicKey);
+      await validatorClient.voluntaryExit(publicKey, args.exitEpoch);
     } catch (error) {
       throw new Error(error);
     }
