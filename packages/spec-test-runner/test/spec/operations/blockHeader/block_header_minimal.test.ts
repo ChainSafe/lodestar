@@ -4,7 +4,7 @@ import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessBlockHeader} from "./type";
-import {processBlockHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<IProcessBlockHeader, BeaconState>(
@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessBlockHeader, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processBlockHeader(config, state, testcase.block);
+    phase0.processBlockHeader(config, state, testcase.block);
     return state;
   },
   {
