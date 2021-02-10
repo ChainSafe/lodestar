@@ -1,4 +1,5 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Fork, Contract} from "@chainsafe/lodestar-types";
 import {IApiModules} from "..";
 import {IApiOptions} from "../../options";
@@ -21,5 +22,9 @@ export class ConfigApi implements IConfigApi {
       chainId: this.config.params.DEPOSIT_CHAIN_ID,
       address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,
     };
+  }
+
+  public getSpec(): IBeaconParams {
+    return this.config.params;
   }
 }
