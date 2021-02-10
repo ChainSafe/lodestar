@@ -23,16 +23,16 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {intDiv} from "@chainsafe/lodestar-utils";
-import {toHexString, List, fromHexString} from "@chainsafe/ssz";
+import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {AbortController, AbortSignal} from "abort-controller";
 import {IApiClient} from "../api";
 import {ClockEventType} from "../api/interface/clock";
 import {BeaconEventType} from "../api/interface/events";
 import {ISlashingProtection} from "../slashingProtection";
 import {IAttesterDuty, PublicKeyHex, ValidatorAndSecret} from "../types";
-import {isValidatorAggregator} from "../util/aggregator";
+import {isValidatorAggregator, getAggregatorModulo} from "../util/aggregator";
 import {abortableTimeout} from "../util/misc";
+import {getAggregationBits} from "./utils";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -140,7 +140,7 @@ export class AttestationService {
       const validator = this.validators.get(toHexString(duty.pubkey));
       if (!validator) continue;
       const slotSignature = this.getSlotSignature(validator, duty.slot, fork, this.provider.genesisValidatorsRoot);
-      const modulo = this.getAggregatorModulo(this.config, duty);
+      const modulo = getAggregatorModulo(this.config, duty);
       const isAggregator = isValidatorAggregator(slotSignature, modulo);
       this.logger.debug("new attester duty", {
         slot: duty.slot,
@@ -382,7 +382,7 @@ export class AttestationService {
     });
 
     const attestation: Attestation = {
-      aggregationBits: this.getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
       signature: validator.secretKey.sign(signingRoot).toBytes(),
     };
@@ -408,13 +408,5 @@ export class AttestationService {
         }
       }
     }
-  }
-
-  private getAggregatorModulo(config: IBeaconConfig, duty: AttesterDuty): number {
-    return Math.max(1, intDiv(duty.committeeLength, config.params.TARGET_COMMITTEE_SIZE));
-  }
-
-  private getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
-    return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);
   }
 }
