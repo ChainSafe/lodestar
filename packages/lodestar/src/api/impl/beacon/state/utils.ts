@@ -43,7 +43,7 @@ export async function resolveStateId(
  * Get the status of the validator
  * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
  */
-function getValidatorStatus(validator: Validator, currentEpoch: Epoch): ValidatorStatus {
+export function getValidatorStatus(validator: Validator, currentEpoch: Epoch): ValidatorStatus {
   // pending
   if (validator.activationEpoch > currentEpoch) {
     if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
