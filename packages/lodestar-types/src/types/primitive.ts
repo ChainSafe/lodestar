@@ -37,3 +37,4 @@ export type BLSSignature = Bytes96;
 export type Domain = Bytes8;
 export type BlockRootHex = string;
 export type AttestationRootHex = string;
+export type ValidatorFlag = Uint8;

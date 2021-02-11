@@ -1,5 +1,6 @@
 import * as phase0 from "../..";
-import {BitVector, Vector} from "@chainsafe/ssz";
+import {BitVector, Vector, List} from "@chainsafe/ssz";
+import {ValidatorFlag} from "../..";
 
 export * from "./sync";
 
@@ -25,6 +26,9 @@ export interface BeaconBlockHeader extends phase0.BeaconBlockHeader {
 }
 
 export interface BeaconState extends phase0.BeaconState {
+  // Participation
+  previousEpochParticipation: List<ValidatorFlag>;
+  currentEpochParticipation: List<ValidatorFlag>;
   // Sync committees
   currentSyncCommittee: SyncCommittee;
   nextSyncCommittee: SyncCommittee;

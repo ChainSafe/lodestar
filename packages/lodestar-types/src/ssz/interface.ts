@@ -44,6 +44,7 @@ export interface IBeaconSSZTypes {
   BLSPubkey: ByteVectorType;
   BLSSignature: ByteVectorType;
   Domain: ByteVectorType;
+  ValidatorFlag: NumberUintType;
   // misc
   Fork: ContainerType<t.Fork>;
   ForkData: ContainerType<t.ForkData>;

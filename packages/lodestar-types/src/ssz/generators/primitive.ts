@@ -30,3 +30,4 @@ export const ForkDigest = Bytes4;
 export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
+export const ValidatorFlag = Uint8;

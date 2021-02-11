@@ -13,14 +13,18 @@ import {
   Slot,
   ValidatorIndex,
   CommitteeIndex,
+  ValidatorFlag,
 } from "@chainsafe/lodestar-types";
-import {isSorted} from "@chainsafe/lodestar-utils";
+import {isSorted, assert} from "@chainsafe/lodestar-utils";
 import {BitList, List} from "@chainsafe/ssz";
 import {DomainType} from "../constants";
 import {getBeaconCommittee, getCommitteeCountAtSlot} from "./committee";
 import {getDomain} from "./domain";
 import {computeSigningRoot} from "./signingRoot";
 import {computeSlotsSinceEpochStart} from "./slot";
+import {getCurrentEpoch} from "..";
+import {getPreviousEpoch} from "./epoch";
+import { Epoch } from '@chainsafe/lodestar-types';
 
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.

@@ -4,6 +4,7 @@ import {Lightclient} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {processBlock} from "./block";
 
+export * from "./constants";
 export * from "./sync_committee";
 export * from "./block";
 export * from "./upgrade";
