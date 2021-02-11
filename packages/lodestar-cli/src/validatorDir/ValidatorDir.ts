@@ -63,7 +63,7 @@ export class ValidatorDir {
     this.dir = path.join(baseDir, add0xPrefix(pubkey));
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
 
-    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exists`);
+    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
 
     try {
       lockFile.lockSync(this.lockfilePath);

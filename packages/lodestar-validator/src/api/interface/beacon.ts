@@ -6,6 +6,7 @@ import {
   ValidatorIndex,
   SignedBeaconBlock,
   Attestation,
+  SignedVoluntaryExit,
 } from "@chainsafe/lodestar-types";
 
 export interface IBeaconApi {
@@ -27,4 +28,5 @@ export interface IBeaconBlocksApi {
 
 export interface IBeaconPoolApi {
   submitAttestation(attestation: Attestation): Promise<void>;
+  submitVoluntaryExit(signedVoluntaryExit: SignedVoluntaryExit): Promise<void>;
 }

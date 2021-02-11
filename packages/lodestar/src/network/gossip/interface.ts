@@ -61,6 +61,7 @@ export interface IGossipSub extends EventEmitter {
   /** Unsubscribe from a gossipub topic */
   unsubscribe(topics: string[] | string): void;
   registerLibp2pTopicValidators(forkDigest: ForkDigest): void;
+  getTopicPeerIds(topic: string): Set<string> | undefined;
 }
 
 export interface IGossip extends IService, GossipEventEmitter {

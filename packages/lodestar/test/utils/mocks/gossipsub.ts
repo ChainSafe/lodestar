@@ -33,4 +33,8 @@ export class MockGossipSub extends EventEmitter implements IGossipSub {
   public registerLibp2pTopicValidators(): void {
     //
   }
+
+  public getTopicPeerIds(): Set<string> | undefined {
+    return new Set();
+  }
 }
