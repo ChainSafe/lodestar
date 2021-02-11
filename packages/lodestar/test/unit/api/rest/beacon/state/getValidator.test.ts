@@ -43,7 +43,7 @@ describe("rest - beacon - getStateValidator", function () {
     api.beacon.state.getStateValidator.withArgs("head", config.types.BLSPubkey.fromJson(pubkey)).resolves({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE,
+      status: ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)
@@ -58,7 +58,7 @@ describe("rest - beacon - getStateValidator", function () {
     api.beacon.state.getStateValidator.withArgs("head", 1).resolves({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE,
+      status: ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
     const response = await supertest(restApi.server.server)
