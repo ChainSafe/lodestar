@@ -8,6 +8,7 @@ import {EventsApi} from "../../../src/api/impl/events";
 import {DebugApi} from "../../../src/api/impl/debug";
 import {DebugBeaconApi} from "../../../src/api/impl/debug/beacon";
 import {ConfigApi} from "../../../src/api/impl/config";
+import {StubbedConfigApi} from "./configApi";
 
 export class StubbedApi implements SinonStubbedInstance<IApi> {
   beacon: StubbedBeaconApi;
@@ -24,6 +25,6 @@ export class StubbedApi implements SinonStubbedInstance<IApi> {
     this.events = sandbox.createStubInstance(EventsApi);
     const debugBeacon = sandbox.createStubInstance(DebugBeaconApi);
     this.debug = {beacon: debugBeacon} as SinonStubbedInstance<DebugApi>;
-    this.config = sandbox.createStubInstance(ConfigApi);
+    this.config = new StubbedConfigApi(sandbox);
   }
 }

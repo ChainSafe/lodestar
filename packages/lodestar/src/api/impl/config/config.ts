@@ -12,19 +12,19 @@ export class ConfigApi implements IConfigApi {
     this.config = modules.config;
   }
 
-  public getForkSchedule(): Fork[] {
+  public async getForkSchedule(): Promise<Fork[]> {
     // @TODO: implement the actual fork schedule data get from config params once marin's lightclient PRs have been merged
     return [];
   }
 
-  public getDepositContract(): Contract {
+  public async getDepositContract(): Promise<Contract> {
     return {
       chainId: this.config.params.DEPOSIT_CHAIN_ID,
       address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,
     };
   }
 
-  public getSpec(): IBeaconParams {
+  public async getSpec(): Promise<IBeaconParams> {
     return this.config.params;
   }
 }

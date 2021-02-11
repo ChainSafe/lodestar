@@ -141,6 +141,6 @@ export const Contract = (ssz: IBeaconSSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       chainId: ssz.Number64,
-      address: ssz.Bytes20,
+      address: ssz.Bytes32,
     },
   });
