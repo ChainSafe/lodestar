@@ -7,7 +7,7 @@ export const getDepositContract: ApiController = {
     const depositContract = this.api.config.getDepositContract();
     this.config.params.DEPOSIT_CONTRACT_ADDRESS.toJSON();
     return resp.status(200).send({
-      data: depositContract,
+      data: config.types.Contract.toJson(depositContract, {case: "snake"}),
     });
   },
 
