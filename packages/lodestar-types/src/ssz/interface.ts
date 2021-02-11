@@ -18,7 +18,6 @@ export interface IBeaconSSZTypes {
   Boolean: BooleanType;
   Bytes4: ByteVectorType;
   Bytes8: ByteVectorType;
-  Bytes20: ByteVectorType;
   Bytes32: ByteVectorType;
   Bytes48: ByteVectorType;
   Bytes96: ByteVectorType;

@@ -10,7 +10,6 @@ import {ByteVector} from "@chainsafe/ssz";
 
 export type Bytes4 = ByteVector;
 export type Bytes8 = ByteVector;
-export type Bytes20 = ByteVector;
 export type Bytes32 = ByteVector;
 export type Bytes48 = ByteVector;
 export type Bytes96 = ByteVector;
