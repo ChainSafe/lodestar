@@ -6,6 +6,7 @@ import {EventEmitter} from "events";
 import {INodeApi} from "./interface/node";
 import {BeaconBlockEvent, BeaconChainReorgEvent, BeaconEventType, HeadEvent, IEventsApi} from "./interface/events";
 import {ClockEpochEvent, ClockEventType, ClockSlotEvent} from "./interface/clock";
+import {IConfigApi} from "./interface/config";
 
 export interface IApiClientEvents {
   beaconChainStarted: () => void;
@@ -25,6 +26,7 @@ export interface IBeaconClock {
 
 export interface IApiClient extends ApiClientEventEmitter {
   beacon: IBeaconApi;
+  configApi: IConfigApi;
   node: INodeApi;
   events: IEventsApi;
   validator: IValidatorApi;
