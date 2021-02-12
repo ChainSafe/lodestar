@@ -109,6 +109,7 @@ export interface IBeaconSSZTypes {
   ValidatorBalance: ContainerType<t.ValidatorBalance>;
   ValidatorResponse: ContainerType<t.ValidatorResponse>;
   BeaconCommitteeResponse: ContainerType<t.BeaconCommitteeResponse>;
+  Contract: ContainerType<t.Contract>;
 }
 
 export const typeNames: (keyof IBeaconSSZTypes)[] = [
@@ -201,4 +202,5 @@ export const typeNames: (keyof IBeaconSSZTypes)[] = [
   "ValidatorBalance",
   "ValidatorResponse",
   "BeaconCommitteeResponse",
+  "Contract",
 ];

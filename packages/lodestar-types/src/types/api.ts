@@ -2,6 +2,7 @@ import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
+  Bytes20,
   CommitteeIndex,
   Epoch,
   Gwei,
@@ -124,4 +125,9 @@ export interface ValidatorResponse {
   balance: Gwei;
   status: ValidatorStatus;
   validator: Validator;
+}
+
+export interface Contract {
+  chainId: Number64;
+  address: Bytes20;
 }
