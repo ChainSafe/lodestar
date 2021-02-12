@@ -1,7 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconParams} from "@chainsafe/lodestar-params";
 import {Contract, Fork} from "@chainsafe/lodestar-types";
-import {fromHex} from "@chainsafe/lodestar-utils";
 import {IConfigApi} from "../../../src/api/interface/config";
 
 export interface IMockConfigApiOpts {
@@ -21,8 +20,8 @@ export class MockConfigApi implements IConfigApi {
 
   public async getDepositContract(): Promise<Contract> {
     return {
-      chainId: 0,
-      address: fromHex("0x1234567890123456789012345678901234567890"),
+      chainId: this.config.params.DEPOSIT_CHAIN_ID,
+      address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,
     } as Contract;
   }
 
