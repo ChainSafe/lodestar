@@ -22,7 +22,7 @@ export class MockConfigApi implements IConfigApi {
     return {
       chainId: this.config.params.DEPOSIT_CHAIN_ID,
       address: this.config.params.DEPOSIT_CONTRACT_ADDRESS,
-    } as Contract;
+    };
   }
 
   public async getSpec(): Promise<IBeaconParams> {
