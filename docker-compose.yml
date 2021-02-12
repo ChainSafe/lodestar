@@ -6,6 +6,12 @@ services:
     volumes:
       - lodestar:/root/.local/share/lodestar
     command: beacon --network ${NETWORK:-pyrmont}
+  validator:
+    build: .
+    restart: always
+    volumes:
+      - lodestar:/root/.local/share/lodestar
+    command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here"
 
   prometheus:
     build: docker/prometheus
