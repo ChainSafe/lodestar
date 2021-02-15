@@ -40,7 +40,7 @@ describe("Attestation collector", function () {
       chain: {
         clock: realClock,
         getHeadState: () => generateState(),
-        getHeadEpochContext: () => (new EpochContext(config)),
+        getHeadEpochContext: () => new EpochContext(config),
         getForkDigest: () => Buffer.alloc(4),
         emitter,
       },
