@@ -6,7 +6,6 @@ import {
 import {BitVectorType, ContainerType, VectorType, ListType} from "@chainsafe/ssz";
 import * as t from "../../../types/lightclient/types";
 import {LightClientTypesGenerator} from "./interface";
-import {ValidatorFlag} from "../primitive";
 
 export const SyncCommittee: LightClientTypesGenerator<ContainerType<t.SyncCommittee>> = (params, phase0Types) => {
   return new ContainerType({
