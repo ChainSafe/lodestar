@@ -6,6 +6,7 @@ import {EventEmitter} from "events";
 import {pipeToEmitter} from "./impl/rest/events/util";
 import {ApiClientEventEmitter, IApiClient, IBeaconClock} from "./interface";
 import {IBeaconApi} from "./interface/beacon";
+import {IConfigApi} from "./interface/config";
 import {BeaconEvent, BeaconEventType, IEventsApi} from "./interface/events";
 import {INodeApi} from "./interface/node";
 import {IValidatorApi} from "./interface/validators";
@@ -32,6 +33,7 @@ export abstract class AbstractApiClient extends (EventEmitter as {new (): ApiCli
   abstract node: INodeApi;
   abstract events: IEventsApi;
   abstract validator: IValidatorApi;
+  abstract configApi: IConfigApi;
 
   protected constructor(config: IBeaconConfig, logger: ILogger) {
     super();

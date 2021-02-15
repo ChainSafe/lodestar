@@ -5,6 +5,7 @@ import {IBeaconApi} from "../interface/beacon";
 import {INodeApi} from "../interface/node";
 import {WinstonLogger, ILogger} from "@chainsafe/lodestar-utils";
 import {IEventsApi} from "../interface/events";
+import {IConfigApi} from "../interface/config";
 
 export interface IApiClientOverInstanceOpts {
   config: IBeaconConfig;
@@ -13,6 +14,7 @@ export interface IApiClientOverInstanceOpts {
   events: IEventsApi;
   validator: IValidatorApi;
   logger?: ILogger;
+  configApi: IConfigApi;
 }
 
 export class ApiClientOverInstance extends AbstractApiClient {
@@ -26,12 +28,15 @@ export class ApiClientOverInstance extends AbstractApiClient {
 
   public validator: IValidatorApi;
 
+  public configApi: IConfigApi;
+
   public constructor(opts: IApiClientOverInstanceOpts) {
     super(opts.config, opts.logger || new WinstonLogger());
     this.beacon = opts.beacon;
     this.validator = opts.validator;
     this.events = opts.events;
     this.node = opts.node;
+    this.configApi = opts.configApi;
   }
 
   public async connect(): Promise<void> {

@@ -94,7 +94,8 @@ export class Validator {
       validatorIndex: stateValidator.index,
     };
 
-    const fork = await this.apiClient.beacon.state.getFork("head");
+    const forkSchedule = await this.apiClient.configApi.getForkSchedule();
+    const fork = forkSchedule[0] || (await this.apiClient.beacon.state.getFork("head"));
     if (!fork) throw new Error("VoluntaryExit: Fork not found");
     const genesisValidatorsRoot = (await this.apiClient.beacon.getGenesis())?.genesisValidatorsRoot;
     const domain = computeDomain(this.config, DomainType.VOLUNTARY_EXIT, fork.currentVersion, genesisValidatorsRoot);

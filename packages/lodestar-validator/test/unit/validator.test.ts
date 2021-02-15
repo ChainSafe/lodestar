@@ -9,6 +9,7 @@ import {IValidatorOptions, SlashingProtection, Validator} from "../../src";
 import {MockNodeApi} from "../utils/mocks/node";
 import {silentLogger} from "../utils/logger";
 import {RestEventsApi} from "../../src/api/impl/rest/events/events";
+import {MockConfigApi} from "../utils/mocks/config";
 
 describe("Validator", () => {
   it.skip("Should be able to connect with the beacon chain", async () => {
@@ -20,6 +21,7 @@ describe("Validator", () => {
       node: new MockNodeApi(),
       events: sinon.createStubInstance(RestEventsApi),
       validator: new MockValidatorApi(),
+      configApi: new MockConfigApi({config}),
     });
 
     const secretKey = bls.SecretKey.fromKeygen();

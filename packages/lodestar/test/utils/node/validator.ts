@@ -10,6 +10,7 @@ import {NodeApi} from "../../../src/api/impl/node/node";
 import {ValidatorApi} from "../../../src/api/impl/validator";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
 import {BeaconNode} from "../../../src/node";
+import {ConfigApi} from "../../../src/api/impl/config";
 
 export function getDevValidators(
   node: BeaconNode,
@@ -93,5 +94,6 @@ export function getDevValidatorInstanceApiClient(node: BeaconNode, logger: ILogg
     node: new NodeApi({}, {...node}),
     events: new EventsApi({}, {...node}) as IEventsApi,
     beacon: new BeaconApi({}, {...node}),
+    configApi: new ConfigApi({}, {config: node.config}),
   });
 }
