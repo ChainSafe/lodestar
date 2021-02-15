@@ -7,6 +7,7 @@ import {ChainEvent, IBeaconChain} from "../../../src/chain";
 import {Gossip} from "../../../src/network/gossip/gossip";
 import {InteropSubnetsJoiningTask} from "../../../src/tasks/tasks/interopSubnetsJoiningTask";
 import {WinstonLogger, bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import {expect} from "chai";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
@@ -16,6 +17,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeForkDigest} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {StubbedBeaconDb} from "../../utils/stub";
+import {ATTESTATION_SUBNET_COUNT} from "../../../src/constants/network";
 
 describe("interopSubnetsJoiningTask", () => {
   const sandbox = sinon.createSandbox();
@@ -23,6 +25,7 @@ describe("interopSubnetsJoiningTask", () => {
   let networkStub: SinonStubbedInstance<INetwork>;
   let gossipStub: SinonStubbedInstance<IGossip>;
   let dbStub: StubbedBeaconDb;
+  const randomStub = sandbox.stub(mathUtils, "randBetween");
 
   let chain: IBeaconChain;
   const logger = new WinstonLogger();
@@ -64,12 +67,17 @@ describe("interopSubnetsJoiningTask", () => {
       db: dbStub,
       logger,
     });
+    randomStub.withArgs(0, ATTESTATION_SUBNET_COUNT).onFirstCall().returns(1);
+    randomStub.withArgs(0, ATTESTATION_SUBNET_COUNT).onSecondCall().returns(2);
+    randomStub.withArgs(0, ATTESTATION_SUBNET_COUNT).onThirdCall().returns(3);
+    randomStub.withArgs(0, ATTESTATION_SUBNET_COUNT).returns(4);
     await task.start();
   });
 
   afterEach(async () => {
     await task.stop();
     sandbox.reset();
+    randomStub.reset();
     clock.restore();
   });
 
@@ -80,11 +88,14 @@ describe("interopSubnetsJoiningTask", () => {
   });
 
   it("should handle fork digest change", async () => {
+    const subscribePromise1 = new Promise((resolve) =>
+      gossipStub.subscribeToAttestationSubnet.onFirstCall().callsFake(resolve)
+    );
+    const subscribePromise2 = new Promise((resolve) =>
+      gossipStub.subscribeToAttestationSubnet.onSecondCall().callsFake(resolve)
+    );
     chain.emitter.emit(ChainEvent.clockEpoch, 1);
-    await Promise.all([
-      new Promise((resolve) => gossipStub.subscribeToAttestationSubnet.onFirstCall().callsFake(resolve)),
-      new Promise((resolve) => gossipStub.subscribeToAttestationSubnet.onSecondCall().callsFake(resolve)),
-    ]);
+    await Promise.all([subscribePromise1, subscribePromise2]);
     const oldForkDigest = chain.getForkDigest();
     // 2 active validators
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(2);
@@ -105,11 +116,14 @@ describe("interopSubnetsJoiningTask", () => {
   });
 
   it("should change subnet subscription after 2*EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION", async () => {
+    const subscribePromise1 = new Promise((resolve) =>
+      gossipStub.subscribeToAttestationSubnet.onFirstCall().callsFake(resolve)
+    );
+    const subscribePromise2 = new Promise((resolve) =>
+      gossipStub.subscribeToAttestationSubnet.onSecondCall().callsFake(resolve)
+    );
     chain.emitter.emit(ChainEvent.clockEpoch, 1);
-    await Promise.all([
-      new Promise((resolve) => gossipStub.subscribeToAttestationSubnet.onFirstCall().callsFake(resolve)),
-      new Promise((resolve) => gossipStub.subscribeToAttestationSubnet.onSecondCall().callsFake(resolve)),
-    ]);
+    await Promise.all([subscribePromise1, subscribePromise2]);
     const seqNumber = networkStub.metadata.seqNumber;
     expect(Number(seqNumber)).to.be.gt(0);
     expect(gossipStub.subscribeToAttestationSubnet.callCount).to.be.equal(2);
