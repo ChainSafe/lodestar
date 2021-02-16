@@ -31,7 +31,7 @@ describe("beacon api impl - state - validators", function () {
     toValidatorResponseStub.returns({
       index: 1,
       balance: BigInt(3200000),
-      status: ValidatorStatus.ACTIVE,
+      status: ValidatorStatus.ACTIVE_ONGOING,
       validator: generateValidator(),
     });
   });
@@ -63,11 +63,11 @@ describe("beacon api impl - state - validators", function () {
       toValidatorResponseStub.onFirstCall().returns({
         index: 1,
         balance: BigInt(3200000),
-        status: ValidatorStatus.WITHDRAWABLE_SLASHED,
+        status: ValidatorStatus.EXITED_SLASHED,
         validator: generateValidator(),
       });
       const api = new BeaconStateApi({}, {config, db, chain});
-      const validators = api.getStateValidators("someState", {statuses: [ValidatorStatus.ACTIVE]});
+      const validators = api.getStateValidators("someState", {statuses: [ValidatorStatus.ACTIVE_ONGOING]});
       expect((await validators).length).to.equal(9);
     });
 

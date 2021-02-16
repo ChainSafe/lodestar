@@ -2,6 +2,7 @@ import {Checkpoint, SignedBeaconBlockHeader, Validator} from "./misc";
 import {
   BLSPubkey,
   BLSSignature,
+  Bytes20,
   CommitteeIndex,
   Epoch,
   Gwei,
@@ -108,19 +109,15 @@ export interface BeaconCommitteeResponse {
 }
 
 export enum ValidatorStatus {
-  WAITING_FOR_ELIGIBILITY = "waiting_for_eligibility",
-  WAITING_FOR_FINALITY = "waiting_for_finality",
-  WAITING_IN_QUEUE = "waiting_in_queue",
-  STANDBY_FOR_ACTIVE = "standby_for_active",
-  ACTIVE = "active",
-  ACTIVE_AWAITING_VOLUNTARY_EXIT = "active_awaiting_voluntary_exit",
-  ACTIVE_AWAITING_SLASHED_EXIT = "active_awaiting_slashed_exit",
-  EXITED_VOLUNTARILY = "exited_voluntarily",
+  PENDING_INITIALIZED = "pending_initialized",
+  PENDING_QUEUED = "pending_queued",
+  ACTIVE_ONGOING = "active_ongoing",
+  ACTIVE_EXITING = "active_exiting",
+  ACTIVE_SLASHED = "active_slashed",
+  EXITED_UNSLASHED = "exited_unslashed",
   EXITED_SLASHED = "exited_slashed",
-  WITHDRAWABLE_VOLUNTARILY = "withdrawable_voluntarily",
-  WITHDRAWABLE_SLASHED = "withdrawable_slashed",
-  WITHDRAWN_VOLUNTARILY = "withdrawn_voluntarily",
-  WITHDRAWN_SLASHED = "withdrawn_slashed",
+  WITHDRAWAL_POSSIBLE = "withdrawal_possible",
+  WITHDRAWAL_DONE = "withdrawal_done",
 }
 
 export interface ValidatorResponse {
@@ -128,4 +125,9 @@ export interface ValidatorResponse {
   balance: Gwei;
   status: ValidatorStatus;
   validator: Validator;
+}
+
+export interface Contract {
+  chainId: Number64;
+  address: Bytes20;
 }

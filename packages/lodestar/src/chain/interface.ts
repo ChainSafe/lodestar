@@ -110,7 +110,7 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]>;
 
   /**
    * Add attestation to the fork-choice rule

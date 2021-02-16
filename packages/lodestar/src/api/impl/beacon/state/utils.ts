@@ -1,5 +1,5 @@
 // this will need async once we wan't to resolve archive slot
-import {GENESIS_SLOT, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {GENESIS_SLOT, phase0, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
@@ -38,10 +38,49 @@ export async function resolveStateId(
   }
 }
 
-export function toValidatorResponse(index: ValidatorIndex, validator: Validator, balance: Gwei): ValidatorResponse {
+/**
+ * Get the status of the validator
+ * based on conditions outlined in https://hackmd.io/ofFJ5gOmQpu1jjHilHbdQQ
+ */
+export function getValidatorStatus(validator: Validator, currentEpoch: Epoch): ValidatorStatus {
+  // pending
+  if (validator.activationEpoch > currentEpoch) {
+    if (validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH) {
+      return ValidatorStatus.PENDING_INITIALIZED;
+    } else if (validator.activationEligibilityEpoch < FAR_FUTURE_EPOCH) {
+      return ValidatorStatus.PENDING_QUEUED;
+    }
+  }
+  // active
+  if (validator.activationEpoch <= currentEpoch && currentEpoch < validator.exitEpoch) {
+    if (validator.exitEpoch === FAR_FUTURE_EPOCH) {
+      return ValidatorStatus.ACTIVE_ONGOING;
+    } else if (validator.exitEpoch < FAR_FUTURE_EPOCH) {
+      return validator.slashed ? ValidatorStatus.ACTIVE_SLASHED : ValidatorStatus.ACTIVE_EXITING;
+    }
+  }
+  // exited
+  if (validator.exitEpoch <= currentEpoch && currentEpoch < validator.withdrawableEpoch) {
+    return validator.slashed ? ValidatorStatus.EXITED_SLASHED : ValidatorStatus.EXITED_UNSLASHED;
+  }
+  // withdrawal
+  if (validator.withdrawableEpoch <= currentEpoch) {
+    return validator.effectiveBalance !== BigInt(0)
+      ? ValidatorStatus.WITHDRAWAL_POSSIBLE
+      : ValidatorStatus.WITHDRAWAL_DONE;
+  }
+  throw new Error("ValidatorStatus unknown");
+}
+
+export function toValidatorResponse(
+  index: ValidatorIndex,
+  validator: Validator,
+  balance: Gwei,
+  currentEpoch: Epoch
+): ValidatorResponse {
   return {
     index,
-    status: ValidatorStatus.ACTIVE,
+    status: getValidatorStatus(validator, currentEpoch),
     balance,
     validator,
   };

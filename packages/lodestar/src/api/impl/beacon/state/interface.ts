@@ -27,7 +27,17 @@ export interface IBeaconStateApi {
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";
 
-export type ValidatorStatus = "active";
+export type ValidatorStatus =
+  | "active"
+  | "pending_initialized"
+  | "pending_queued"
+  | "active_ongoing"
+  | "active_exiting"
+  | "active_slashed"
+  | "exited_unslashed"
+  | "exited_slashed"
+  | "withdrawal_possible"
+  | "withdrawal_done";
 
 export interface IValidatorFilters {
   indices?: (BLSPubkey | ValidatorIndex)[];

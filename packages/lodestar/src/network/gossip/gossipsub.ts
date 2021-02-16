@@ -60,6 +60,10 @@ export class LodestarGossipsub extends Gossipsub {
     await super.start();
   }
 
+  public getTopicPeerIds(topic: string): Set<string> | undefined {
+    return this.topics.get(topic);
+  }
+
   public async stop(): Promise<void> {
     if (this.interval) {
       clearInterval(this.interval);

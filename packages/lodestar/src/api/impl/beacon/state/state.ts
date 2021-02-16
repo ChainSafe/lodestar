@@ -18,7 +18,7 @@ import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export class BeaconStateApi implements IBeaconStateApi {
@@ -62,7 +62,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     }
     //TODO: implement filters
     return readOnlyMap(state.state.validators, (v, index) =>
-      toValidatorResponse(index, v, state.state.balances[index])
+      toValidatorResponse(index, v, state.state.balances[index], getCurrentEpoch(this.config, state.state))
     );
   }
 
@@ -92,7 +92,8 @@ export class BeaconStateApi implements IBeaconStateApi {
     return toValidatorResponse(
       validatorIndex,
       state.state.validators[validatorIndex],
-      state.state.balances[validatorIndex]
+      state.state.balances[validatorIndex],
+      getCurrentEpoch(this.config, state.state)
     );
   }
 

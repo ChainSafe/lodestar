@@ -105,7 +105,7 @@ describe("cmds / account", function () {
         prefixed: true,
       });
       const keystorePath = path.join(validatorDir, VOTING_KEYSTORE_FILE);
-      expect(fs.existsSync(keystorePath), `Validator keystore ${keystorePath} does not exists`).to.be.true;
+      expect(fs.existsSync(keystorePath), `Validator keystore ${keystorePath} does not exist`).to.be.true;
     }
   });
 

@@ -8,3 +8,7 @@ export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PublicKe
   }
   return validators;
 }
+
+export function getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
+  return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);
+}
