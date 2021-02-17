@@ -36,14 +36,14 @@ export class InteropSubnetsJoiningTask {
   }
 
   public async start(): Promise<void> {
-    this.currentForkDigest = await this.chain.getForkDigest();
+    this.currentForkDigest = this.chain.getForkDigest();
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
     await this.run(this.currentForkDigest);
     await this.scheduleNextForkSubscription();
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
     if (this.nextForkSubsTimer) {
       clearTimeout(this.nextForkSubsTimer);
     }
@@ -65,7 +65,7 @@ export class InteropSubnetsJoiningTask {
    * Prepare for EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION epochs in advance of the fork
    */
   private scheduleNextForkSubscription = async (): Promise<void> => {
-    const state = await this.chain.getHeadState();
+    const state = this.chain.getHeadState();
     const currentForkVersion = state.fork.currentVersion;
     const nextFork =
       this.config.params.ALL_FORKS &&
@@ -96,7 +96,7 @@ export class InteropSubnetsJoiningTask {
    * Transition from current fork to next fork.
    */
   private handleForkVersion = async (): Promise<void> => {
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`InteropSubnetsJoiningTask: received new fork digest ${toHexString(forkDigest)}`);
     // at this time current fork digest and next fork digest subnets are subscribed in parallel
     // this cleans up current fork digest subnets subscription and keep subscribed to next fork digest subnets
@@ -179,6 +179,6 @@ export class InteropSubnetsJoiningTask {
   };
 
   private handleWireAttestation = (): void => {
-    //ignore random committee attestations
+    // ignore random committee attestations
   };
 }

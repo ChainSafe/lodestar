@@ -13,7 +13,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../db";
 import {INetwork, Libp2pNetwork} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics, restoreStateCaches} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {BeaconMetrics, HttpMetricsServer, IBeaconMetrics} from "../metrics";
 import {Api, IApi, RestApi} from "../api";
 import {TasksService} from "../tasks";
@@ -60,7 +60,8 @@ export enum BeaconNodeStatus {
 }
 
 /**
- * Beacon Node
+ * The main Beacon Node class.  Contains various components for getting and processing data from the
+ * eth2 ecosystem as well as systems for getting beacon node metadata.
  */
 export class BeaconNode {
   public opts: IBeaconNodeOptions;
@@ -108,6 +109,10 @@ export class BeaconNode {
     this.status = BeaconNodeStatus.started;
   }
 
+  /**
+   * Initialize a beacon node.  Initializes and `start`s the varied sub-component services of the
+   * beacon node
+   */
   public static async init<T extends BeaconNode = BeaconNode>({
     opts,
     config,
@@ -119,7 +124,6 @@ export class BeaconNode {
     const controller = new AbortController();
     // start db if not already started
     await db.start();
-    await restoreStateCaches(config, db, anchorState);
 
     const metrics = new BeaconMetrics(opts.metrics, {logger: logger.child(opts.logger.metrics)});
     initBeaconMetrics(metrics, anchorState);
@@ -216,6 +220,9 @@ export class BeaconNode {
     }) as T;
   }
 
+  /**
+   * Stop beacon node and its sub-components.
+   */
   public async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;

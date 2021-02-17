@@ -2,13 +2,13 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as utilsEpoch from "../../../../../src/epoch/util";
+import * as utilsEpoch from "../../../../../src/phase0/naive/epoch/util";
 import * as utils from "../../../../../src/util";
-import * as baseReward from "../../../../../src/epoch/balanceUpdates/util";
+import * as baseReward from "../../../../../src/phase0/naive/epoch/balanceUpdates/util";
 
 import {generateState} from "../../../../utils/state";
 import {generateValidators} from "../../../../utils/validator";
-import {getAttestationDeltas} from "../../../../../src/epoch/balanceUpdates/attestation";
+import {getAttestationDeltas} from "../../../../../src/phase0/naive/epoch/balanceUpdates/attestation";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
 describe("process epoch - balance updates", function () {

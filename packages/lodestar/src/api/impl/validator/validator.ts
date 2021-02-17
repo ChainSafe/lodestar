@@ -10,6 +10,7 @@ import {
   AttestationData,
   AttesterDuty,
   BeaconBlock,
+  BeaconState,
   Bytes96,
   CommitteeIndex,
   Epoch,
@@ -20,7 +21,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {assert, ILogger} from "@chainsafe/lodestar-utils";
-import {readOnlyForEach} from "@chainsafe/ssz";
+import {readOnlyForEach, TreeBacked} from "@chainsafe/ssz";
 import {IAttestationJob, IBeaconChain} from "../../../chain";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
@@ -38,6 +39,10 @@ import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
 import {IValidatorApi} from "./interface";
 
+/**
+ * Server implementation for handling validator duties.
+ * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
+ */
 export class ValidatorApi implements IValidatorApi {
   public namespace: ApiNamespace;
 
@@ -81,7 +86,13 @@ export class ValidatorApi implements IValidatorApi {
       await checkSyncStatus(this.config, this.sync);
       const headRoot = this.chain.forkChoice.getHeadRoot();
       const {state, epochCtx} = await this.chain.regen.getBlockSlotState(headRoot, slot);
-      return await assembleAttestationData(epochCtx.config, state, headRoot, slot, committeeIndex);
+      return await assembleAttestationData(
+        epochCtx.config,
+        state.getOriginalState() as TreeBacked<BeaconState>,
+        headRoot,
+        slot,
+        committeeIndex
+      );
     } catch (e) {
       this.logger.warn("Failed to produce attestation data", e);
       throw e;
@@ -195,6 +206,6 @@ export class ValidatorApi implements IValidatorApi {
       await this.sync.collectAttestations(slot, committeeIndex);
     }
     const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
-    await this.network.searchSubnetPeers(String(subnet));
+    await this.network.searchSubnetPeers([String(subnet)]);
   }
 }

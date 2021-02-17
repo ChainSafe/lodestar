@@ -19,3 +19,8 @@ export interface ApiController<
   handler: ApiHandler<Query, Params, Body, Headers>;
   url: string;
 }
+
+export enum HttpHeader {
+  ACCEPT = "accept",
+  CONTENT_TYPE = "Content-Type",
+}

@@ -2,9 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {processRegistryUpdates} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/epoch";
-import {prepareEpochProcessState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
@@ -15,10 +13,11 @@ describeDirectorySpecTest<IStateTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/epoch_processing/registry_updates/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    const process = prepareEpochProcessState(epochCtx, state);
-    processRegistryUpdates(epochCtx, process, state);
+    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
+    phase0.fast.processRegistryUpdates(epochCtx, process, wrappedState);
     return state;
   },
   {

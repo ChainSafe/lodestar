@@ -5,8 +5,8 @@ import {Json} from "@chainsafe/ssz";
  */
 export class LodestarError<T extends {code: string}> extends Error {
   type: T;
-  constructor(type: T) {
-    super(type.code);
+  constructor(type: T, message?: string) {
+    super(message || type.code);
     this.type = type;
   }
 
@@ -32,5 +32,14 @@ export class LodestarError<T extends {code: string}> extends Error {
 export class ErrorAborted extends Error {
   constructor(message?: string) {
     super(`Aborted ${message || ""}`);
+  }
+}
+
+/**
+ * Throw this error when wrapped timeout expires
+ */
+export class TimeoutError extends Error {
+  constructor(message?: string) {
+    super(`Timeout ${message || ""}`);
   }
 }

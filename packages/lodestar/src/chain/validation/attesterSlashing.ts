@@ -24,7 +24,7 @@ export async function validateGossipAttesterSlashing(
     });
   }
 
-  const state = await chain.getHeadState();
+  const state = chain.getHeadState();
   if (!isValidAttesterSlashing(config, state, attesterSlashing)) {
     throw new AttesterSlashingError({
       code: AttesterSlashingErrorCode.INVALID_SLASHING,

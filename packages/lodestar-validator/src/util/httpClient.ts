@@ -58,7 +58,8 @@ export class HttpClient {
         error.message = error.response.data.message || "Request failed with response status " + error.response.status;
       }
     } else if (error.request) {
-      error.message = error.syscall + " " + error.errno + " " + error.request._currentUrl;
+      if (error.syscall && error.errno)
+        error.message = error.syscall + " " + error.errno + " " + error.request._currentUrl;
     }
     error.stack = "";
     return error;

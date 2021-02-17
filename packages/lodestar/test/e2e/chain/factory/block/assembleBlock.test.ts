@@ -9,12 +9,7 @@ import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {
-  getBeaconProposerIndex,
-  signedBlockToSignedHeader,
-  EpochContext,
-  fastStateTransition,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {getBeaconProposerIndex, signedBlockToSignedHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -22,6 +17,7 @@ import {BeaconChain} from "../../../../../src/chain";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 
 import BlockProposingService from "@chainsafe/lodestar-validator/lib/services/block";
+import {mapSecretKeysToValidators} from "@chainsafe/lodestar-validator/lib/services/utils";
 import {ApiClientOverInstance} from "@chainsafe/lodestar-validator/lib";
 import {ValidatorApi} from "../../../../../src/api/impl/validator";
 import {StubbedBeaconDb} from "../../../../utils/stub";
@@ -66,12 +62,14 @@ describe("produce block", function () {
     const depositDataRootList = config.types.DepositDataRootList.tree.defaultValue();
     const tree = depositDataRootList.tree();
     depositDataRootList.push(config.types.DepositData.hashTreeRoot(generateDeposit().data));
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.EpochContext(config);
     epochCtx.loadState(state);
     sinon.stub(epochCtx, "getBeaconProposer").returns(20);
     const slotState = state.clone();
     slotState.slot = 1;
-    regenStub.getBlockSlotState.withArgs(sinon.match.any, 1).resolves({state: slotState, epochCtx});
+    regenStub.getBlockSlotState
+      .withArgs(sinon.match.any, 1)
+      .resolves({state: phase0.fast.createCachedValidatorsBeaconState(slotState), epochCtx});
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
@@ -84,19 +82,29 @@ describe("produce block", function () {
     });
     const validatorIndex = getBeaconProposerIndex(config, {...state, slot: 1});
 
-    const blockProposingService = getBlockProposingService(secretKeys[validatorIndex]);
+    const secretKey = secretKeys[validatorIndex];
+    const blockProposingService = getBlockProposingService(secretKey);
     // @ts-ignore
     blockProposingService.getRpcClient().validator.produceBlock.callsFake(async (slot, randao) => {
       return await assembleBlock(config, chainStub, dbStub, eth1, slot, randao);
     });
-    const block = await blockProposingService.createAndPublishBlock(0, 1, state.fork, ZERO_HASH);
-    expect(() => fastStateTransition({state, epochCtx}, block!, {verifyStateRoot: false})).to.not.throw();
+    const block = await blockProposingService.createAndPublishBlock(
+      {publicKey: secretKey.toPublicKey().toBytes(), secretKey},
+      1,
+      state.fork,
+      ZERO_HASH
+    );
+    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    expect(() =>
+      phase0.fast.fastStateTransition({state: wrappedState, epochCtx}, block!, {verifyStateRoot: false})
+    ).to.not.throw();
   });
 
   function getBlockProposingService(secretKey: SecretKey): BlockProposingService {
     const rpcClientStub = sinon.createStubInstance(ApiClientOverInstance);
     rpcClientStub.validator = sinon.createStubInstance(ValidatorApi);
     const slashingProtection = sinon.createStubInstance(SlashingProtection);
-    return new BlockProposingService(config, [secretKey], rpcClientStub, slashingProtection, silentLogger);
+    const validators = mapSecretKeysToValidators([secretKey]);
+    return new BlockProposingService(config, validators, rpcClientStub, slashingProtection, silentLogger);
   }
 });

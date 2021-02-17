@@ -1,7 +1,7 @@
 import Gossipsub from "libp2p-gossipsub";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT, ERR_TOPIC_VALIDATOR_IGNORE} from "libp2p-gossipsub/src/constants";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
+import Libp2p from "libp2p";
 import {CompositeType} from "@chainsafe/ssz";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -44,7 +44,7 @@ export class LodestarGossipsub extends Gossipsub {
     options = {}
   ) {
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign", D: 8, Dlow: 6}));
+    super(libp2p, Object.assign(options, {globalSignaturePolicy: "StrictNoSign" as const, D: 8, Dlow: 6}));
     this.transformedObjects = new Map();
     this.config = config;
     this.validator = validator;
@@ -58,6 +58,10 @@ export class LodestarGossipsub extends Gossipsub {
       this.interval = setInterval(this.cleanUp.bind(this), this.timeToLive);
     }
     await super.start();
+  }
+
+  public getTopicPeerIds(topic: string): Set<string> | undefined {
+    return this.topics.get(topic);
   }
 
   public async stop(): Promise<void> {

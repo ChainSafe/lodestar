@@ -3,7 +3,8 @@ import {BeaconBlock, Root, Checkpoint, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../../db/api/beacon/stateContextCache";
+import {ITreeStateContext} from "../interface";
+import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IBeaconDb} from "../../db";
 import {JobQueue} from "../../util/queue";
@@ -23,6 +24,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     config,
     emitter,
     forkChoice,
+    stateCache,
+    checkpointStateCache,
     db,
     signal,
     queueSize = 256,
@@ -30,11 +33,13 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     config: IBeaconConfig;
     emitter: ChainEventEmitter;
     forkChoice: IForkChoice;
+    stateCache: StateContextCache;
+    checkpointStateCache: CheckpointStateCache;
     db: IBeaconDb;
     signal: AbortSignal;
     queueSize?: number;
   }) {
-    this.regen = new StateRegenerator({config, emitter, forkChoice, db});
+    this.regen = new StateRegenerator({config, emitter, forkChoice, stateCache, checkpointStateCache, db});
     this.jobQueue = new JobQueue({queueSize, signal});
   }
 

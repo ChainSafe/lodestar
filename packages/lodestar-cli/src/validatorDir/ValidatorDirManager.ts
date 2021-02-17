@@ -60,6 +60,14 @@ export class ValidatorDirManager {
   }
 
   /**
+   * Opens the given validator and decrypts its secretKeys.
+   */
+  async decryptValidator(pubkey: string, options?: IValidatorDirOptions): Promise<SecretKey> {
+    const validator = this.openValidator(pubkey, options);
+    return await validator.votingKeypair(this.secretsDir);
+  }
+
+  /**
    * Opens all the validator directories in `this` and decrypts the validator secretKeys.
    */
   async decryptAllValidators(options?: IValidatorDirOptions): Promise<SecretKey[]> {

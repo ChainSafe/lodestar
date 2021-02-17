@@ -12,8 +12,7 @@ import {INetwork} from "../../../network";
 import {GossipEvent} from "../../../network/gossip/constants";
 import {checkBestPeer, getBestPeer, getBestPeerCandidates} from "../../utils";
 import {BlockRangeFetcher} from "./fetcher";
-import {BlockRangeProcessor} from "./processor";
-import {IBlockRangeFetcher, IBlockRangeProcessor, ORARegularSyncModules} from "./interface";
+import {IBlockRangeFetcher, ORARegularSyncModules} from "./interface";
 
 /**
  * One Range Ahead regular sync: fetch one range in advance and buffer blocks.
@@ -28,7 +27,6 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
   private readonly logger: ILogger;
   private bestPeer: PeerId | undefined;
   private fetcher: IBlockRangeFetcher;
-  private processor: IBlockRangeProcessor;
   private controller!: AbortController;
   private blockBuffer: SignedBeaconBlock[];
 
@@ -39,7 +37,6 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.chain = modules.chain;
     this.logger = modules.logger;
     this.fetcher = modules.fetcher || new BlockRangeFetcher(options, modules, this.getSyncPeers.bind(this));
-    this.processor = modules.processor || new BlockRangeProcessor(modules);
     this.blockBuffer = [];
   }
 
@@ -49,8 +46,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     this.logger.info("Started regular syncing", {currentSlot, headSlot});
     this.logger.verbose("Regular Sync: Current slot at start", {currentSlot});
     this.controller = new AbortController();
-    await this.processor.start();
-    this.network.gossip.subscribeToBlock(await this.chain.getForkDigest(), this.onGossipBlock);
+    this.network.gossip.subscribeToBlock(this.chain.getForkDigest(), this.onGossipBlock);
     this.chain.emitter.on(ChainEvent.block, this.onProcessedBlock);
     const head = this.chain.forkChoice.getHead();
     this.setLastProcessedBlock({slot: head.slot, root: head.blockRoot});
@@ -63,8 +59,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
     if (this.controller && !this.controller.signal.aborted) {
       this.controller.abort();
     }
-    await this.processor.stop();
-    this.network.gossip.unsubscribe(await this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
+    this.network.gossip.unsubscribe(this.chain.getForkDigest(), GossipEvent.BLOCK, this.onGossipBlock);
     this.chain.emitter.off(ChainEvent.block, this.onProcessedBlock);
   }
 
@@ -101,7 +96,7 @@ export class ORARegularSync extends (EventEmitter as {new (): RegularSyncEventEm
       const lastSlot = this.blockBuffer[this.blockBuffer.length - 1].message.slot;
       const result = await Promise.all([
         this.fetcher.getNextBlockRange(),
-        this.processor.processUntilComplete([...this.blockBuffer], this.controller.signal),
+        this.chain.processChainSegment(this.blockBuffer),
       ]);
       if (!result[0] || !result[0].length) {
         // node is stopped

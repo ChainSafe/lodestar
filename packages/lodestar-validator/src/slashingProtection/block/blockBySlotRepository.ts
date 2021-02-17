@@ -7,13 +7,20 @@ import {
   DB_PREFIX_LENGTH,
 } from "@chainsafe/lodestar-db";
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
-import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
+import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
-import {blsPubkeyLen, uniqueVectorArr} from "../utils";
+import {uniqueVectorArr, blsPubkeyLen} from "../utils";
+import {LodestarValidatorDatabaseController} from "../../types";
 
+/**
+ * Manages validator db storage of blocks.
+ * Entries in the db are indexed by an encoded key which combines the validator's public key and the
+ * block's slot.
+ */
 export class BlockBySlotRepository {
   protected type: Type<SlashingProtectionBlock>;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionBlockBySlot;
 
   constructor(opts: IDatabaseApiOptions) {

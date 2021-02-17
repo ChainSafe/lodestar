@@ -9,7 +9,7 @@ import {
 } from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";
-import {fetchBootnodes} from "../../testnets";
+import {fetchBootnodes} from "../../networks";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -31,16 +31,16 @@ export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<Retu
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({
-    testnet: args.testnet || "mainnet",
+    network: args.network || "mainnet",
     configFile: beaconPaths.configFile,
     beaconNodeOptionsCli: parseBeaconNodeArgs(args),
   });
 
-  // Auto-setup testnet
+  // Auto-setup network
   // Only download files if params file does not exist
-  if (args.testnet && !fs.existsSync(beaconPaths.paramsFile)) {
+  if (args.network && !fs.existsSync(beaconPaths.paramsFile)) {
     try {
-      const bootEnrs = await fetchBootnodes(args.testnet);
+      const bootEnrs = await fetchBootnodes(args.network);
       beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
     } catch (e) {
       // eslint-disable-next-line no-console

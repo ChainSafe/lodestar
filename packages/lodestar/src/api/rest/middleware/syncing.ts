@@ -9,7 +9,7 @@ export const applySyncingMiddleware = (fastify: FastifyInstance, route: string, 
     response: ServerResponse,
     next: () => void
   ): Promise<void> => {
-    if (!(await modules.sync.isSynced())) {
+    if (!modules.sync.isSynced()) {
       response.statusCode = 503;
       response.end("Beacon node is currently syncing, try again later.");
       return;

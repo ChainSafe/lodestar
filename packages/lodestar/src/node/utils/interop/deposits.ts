@@ -5,6 +5,9 @@ import {interopSecretKeys} from "@chainsafe/lodestar-utils";
 import {computeDomain, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DomainType} from "../../../constants";
 
+/**
+ * Compute and return deposit data from other validators.
+ */
 export function interopDeposits(
   config: IBeaconConfig,
   depositDataRootList: TreeBacked<List<Root>>,

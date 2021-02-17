@@ -11,7 +11,7 @@ import {
   BeaconCommitteeResponse,
   Fork,
 } from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
 
 export interface IBeaconStateApi {
@@ -27,7 +27,17 @@ export interface IBeaconStateApi {
 
 export type StateId = string | "head" | "genesis" | "finalized" | "justified";
 
-export type ValidatorStatus = "active";
+export type ValidatorStatus =
+  | "active"
+  | "pending_initialized"
+  | "pending_queued"
+  | "active_ongoing"
+  | "active_exiting"
+  | "active_slashed"
+  | "exited_unslashed"
+  | "exited_slashed"
+  | "withdrawal_possible"
+  | "withdrawal_done";
 
 export interface IValidatorFilters {
   indices?: (BLSPubkey | ValidatorIndex)[];
@@ -41,5 +51,5 @@ export interface ICommitteesFilters {
 
 export type ApiStateContext = {
   state: BeaconState;
-  epochCtx?: EpochContext;
+  epochCtx?: phase0.EpochContext;
 };

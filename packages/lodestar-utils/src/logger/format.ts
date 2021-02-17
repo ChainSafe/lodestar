@@ -1,3 +1,4 @@
+import {Json} from "@chainsafe/ssz";
 import {format} from "winston";
 import {toJson, toString} from "../json";
 import {Context, ILoggerOptions} from "./interface";
@@ -77,17 +78,39 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
 /**
  * Extract stack property from context to allow appending at the end of the log
  */
-function printStackTraceLast(context?: Context | Error): string {
+export function printStackTraceLast(context?: Context | Error): string {
   if (!context) {
     return "";
   }
 
   const json = toJson(context);
+  const stackTraces = extractStackTraceFromJson(json);
 
-  if (typeof json === "object" && json !== null && !Array.isArray(json) && json.stack) {
-    const {stack, ...errJsonData} = json;
-    return `${toString(errJsonData)} \n${toString(stack)}`;
+  if (stackTraces.length > 0) {
+    return [toString(json), ...stackTraces].join("\n");
   } else {
     return toString(json);
   }
+}
+
+/**
+ * Extract 'stack' from Json-ified error recursively.
+ * Mutates the `json` argument deleting all 'stack' properties.
+ * `json` argument must not contain circular properties, which should be guaranteed by `toJson()`
+ */
+export function extractStackTraceFromJson(json: Json, stackTraces: string[] = []): string[] {
+  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
+    let stack: string | null = null;
+    for (const [key, value] of Object.entries(json)) {
+      if (key === "stack" && typeof value === "string") {
+        stack = value;
+        delete ((json as unknown) as Error)[key];
+      } else {
+        extractStackTraceFromJson(value as Json, stackTraces);
+      }
+    }
+    // Push stack trace last so nested errors come first
+    if (stack) stackTraces.push(stack);
+  }
+  return stackTraces;
 }

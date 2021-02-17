@@ -79,7 +79,7 @@ describe("network peer utils", function () {
   describe("findMissingSubnets", function () {
     it("should return all subnets, no peer", function () {
       networkStub.getPeers.returns([]);
-      const missingSubnets = findMissingSubnets(networkStub);
+      const missingSubnets = findMissingSubnets([], networkStub);
       for (let i = 0; i < 64; i++) {
         expect(missingSubnets[i]).to.be.equal(i);
       }
@@ -96,8 +96,7 @@ describe("network peer utils", function () {
         attnets: Array(64).fill(false),
       });
 
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-      const missingSubnets = findMissingSubnets(networkStub);
+      const missingSubnets = findMissingSubnets(peers, networkStub);
       for (let i = 0; i < 64; i++) {
         expect(missingSubnets[i]).to.be.equal(i);
       }
@@ -113,8 +112,7 @@ describe("network peer utils", function () {
         seqNumber: BigInt(1),
         attnets: Array(64).fill(true),
       });
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-      const missingSubnets = findMissingSubnets(networkStub);
+      const missingSubnets = findMissingSubnets(peers, networkStub);
 
       expect(missingSubnets).to.be.deep.equal([]);
     });
@@ -140,8 +138,7 @@ describe("network peer utils", function () {
         attnets: attnets1,
       });
 
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-      const missingSubnets = findMissingSubnets(networkStub);
+      const missingSubnets = findMissingSubnets(peers, networkStub);
       const expected: number[] = [];
       for (let i = 4; i < 64; i++) {
         expected.push(i);
@@ -167,70 +164,50 @@ describe("network peer utils", function () {
     });
 
     it("should return all non sync peers", async () => {
-      networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
 
-      // non of peers are sync peers
-      networkStub.getPeers
-        .withArgs({
-          connected: true,
-          supportsProtocols: getSyncProtocols(),
-        })
-        .returns([]);
-
-      // so non of them are good score sync peers
+      // so none of them are good score sync peers
       getSyncPeersStub.returns([]);
-
-      expect(syncPeersToDisconnect(networkStub)).to.be.deep.equal(peers);
+      const connectedPeers = peers.map((peerId) => ({id: peerId} as LibP2p.Peer));
+      expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal(peers);
     });
 
     it("should return half of bad score sync peers", async () => {
-      networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-      // all peers are sync peers
-      networkStub.getPeers
-        .withArgs({
-          connected: true,
-          supportsProtocols: getSyncProtocols(),
-        })
-        .returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-
-      // non of them are good score sync peers
+      // none of them are good score sync peers
       getSyncPeersStub.returns([]);
       scoreTrackerStub.getScore.withArgs(peers[0]).returns(10);
       scoreTrackerStub.getScore.withArgs(peers[1]).returns(20);
       scoreTrackerStub.getScore.withArgs(peers[2]).returns(30);
-      expect(syncPeersToDisconnect(networkStub)).to.be.deep.equal([peer1, peer2]);
+      const connectedPeers = peers.map((peerId) => ({id: peerId, protocols: getSyncProtocols()} as LibP2p.Peer));
+      expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal([peer1, peer2]);
     });
 
     it("should return non sync peers and half of bad score sync peers", async () => {
-      networkStub.getPeers.withArgs({connected: true}).returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
-
-      // peer 2 and peer3 are sync peers
-      networkStub.getPeers
-        .withArgs({
-          connected: true,
-          supportsProtocols: getSyncProtocols(),
-        })
-        .returns([peer2, peer3].map((peerId) => ({id: peerId} as LibP2p.Peer)));
-
       // non of them are good score sync peers
       getSyncPeersStub.returns([]);
       scoreTrackerStub.getScore.withArgs(peers[1]).returns(20);
       scoreTrackerStub.getScore.withArgs(peers[2]).returns(30);
 
       // peer1 is not sync peer, peer2 is half of bad score sync peers
-      expect(syncPeersToDisconnect(networkStub)).to.be.deep.equal([peer1, peer2]);
+      const connectedPeers = [
+        {id: peers[0]} as LibP2p.Peer,
+        {id: peers[1], protocols: getSyncProtocols()} as LibP2p.Peer,
+        {id: peers[2], protocols: getSyncProtocols()} as LibP2p.Peer,
+      ];
+      expect(syncPeersToDisconnect(connectedPeers, networkStub)).to.be.deep.equal([peer1, peer2]);
     });
   });
 
   describe("gossipPeersToDisconnect", function () {
     let peer1: PeerId, peer2: PeerId;
     let peers: PeerId[];
+    let connectedPeers: LibP2p.Peer[];
 
     beforeEach(async () => {
       peer1 = await PeerId.create();
       peer2 = await PeerId.create();
       peers = [peer1, peer2];
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
+      connectedPeers = peers.map((peerId) => ({id: peerId} as LibP2p.Peer));
     });
 
     afterEach(() => {
@@ -259,12 +236,12 @@ describe("network peer utils", function () {
 
     it("should return empty array, not enough peers to disconnect", async () => {
       // peers are not at 90%
-      expect(gossipPeersToDisconnect(networkStub, 5, 3)).to.be.deep.equal([]);
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 5, 3)).to.be.deep.equal([]);
     });
 
     it("should return empty array, no need to disconnect", async () => {
       // still have 3 empty slots for 3 subnets
-      expect(gossipPeersToDisconnect(networkStub, 3, 5, 0)).to.be.deep.equal([]);
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 3, 5, 0)).to.be.deep.equal([]);
     });
 
     it("should disconnect unimportant peers", async () => {
@@ -286,13 +263,13 @@ describe("network peer utils", function () {
       });
 
       // need to disconnect 1 peer and it's peer2
-      expect(gossipPeersToDisconnect(networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
     });
 
     it("should disconnect peers with less supported protocols", async () => {
       networkStub.getPeers.onSecondCall().returns([{id: peer1} as LibP2p.Peer]);
       // need to disconnect 1 peer and it's peer2
-      expect(gossipPeersToDisconnect(networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
     });
 
     it("should disconnect peers without metadata", async () => {
@@ -303,13 +280,12 @@ describe("network peer utils", function () {
       });
 
       // peer2 has no metadata
-      expect(gossipPeersToDisconnect(networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 1, 2, 0)).to.be.deep.equal([peer2]);
     });
 
     it("should disconnect peers that have less subnets", async () => {
       const peer3 = await PeerId.create();
       peers.push(peer3);
-      networkStub.getPeers.returns(peers.map((peerId) => ({id: peerId} as LibP2p.Peer)));
       const attnets3 = Array(64).fill(true);
       peerMetadataStoreStub.getMetadata.withArgs(peer3).returns({
         seqNumber: BigInt(1),
@@ -333,7 +309,12 @@ describe("network peer utils", function () {
 
       // peer1 and peer2 are all not important but peer1 is connected to more subnets
       // if we have to choose 1 peer to disconnect, it's peer2
-      expect(gossipPeersToDisconnect(networkStub, 1, 3, 0)).to.be.deep.equal([peer2]);
+      connectedPeers = [
+        {id: peers[0], protocols: getSyncProtocols()} as LibP2p.Peer,
+        {id: peers[1], protocols: getSyncProtocols()} as LibP2p.Peer,
+        {id: peers[2], protocols: getSyncProtocols()} as LibP2p.Peer,
+      ];
+      expect(gossipPeersToDisconnect(connectedPeers, networkStub, 1, 3, 0)).to.be.deep.equal([peer2]);
     });
   });
 });

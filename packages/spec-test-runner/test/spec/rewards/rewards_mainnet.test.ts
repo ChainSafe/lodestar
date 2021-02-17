@@ -1,10 +1,4 @@
-import {
-  getSourceDeltas,
-  getTargetDeltas,
-  getHeadDeltas,
-  getInclusionDelayDeltas,
-  getInactivityPenaltyDeltas,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {expect} from "chai";
@@ -18,11 +12,11 @@ for (const testSuite of ["basic", "leak", "random"]) {
     join(SPEC_TEST_LOCATION, `/tests/mainnet/phase0/rewards/${testSuite}/pyspec_tests`),
     (testcase) => {
       const state = testcase.pre;
-      const sourceDeltas = getSourceDeltas(config, state);
-      const targetDeltas = getTargetDeltas(config, state);
-      const headDeltas = getHeadDeltas(config, state);
-      const inclusionDelayDeltas = getInclusionDelayDeltas(config, state);
-      const inactivityPenaltyDeltas = getInactivityPenaltyDeltas(config, state);
+      const sourceDeltas = phase0.getSourceDeltas(config, state);
+      const targetDeltas = phase0.getTargetDeltas(config, state);
+      const headDeltas = phase0.getHeadDeltas(config, state);
+      const inclusionDelayDeltas = phase0.getInclusionDelayDeltas(config, state);
+      const inactivityPenaltyDeltas = phase0.getInactivityPenaltyDeltas(config, state);
       return {
         sourceDeltas: {rewards: sourceDeltas[0], penalties: sourceDeltas[1]},
         targetDeltas: {rewards: targetDeltas[0], penalties: targetDeltas[1]},

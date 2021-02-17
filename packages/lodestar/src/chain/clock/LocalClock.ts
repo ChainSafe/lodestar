@@ -2,11 +2,12 @@ import {AbortSignal} from "abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 
 import {IBeaconClock} from "./interface";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 
 /**
  * A local clock, the clock time is assumed to be trusted
@@ -43,6 +44,16 @@ export class LocalClock implements IBeaconClock {
     return getCurrentSlot(this.config, this.genesisTime);
   }
 
+  /**
+   * If it's too close to next slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY, return currentSlot + 1.
+   * Otherwise return currentSlot
+   */
+  public get currentSlotWithGossipDisparity(): Slot {
+    const currentSlot = this.currentSlot;
+    const nextSlotTime = computeTimeAtSlot(this.config, currentSlot + 1, this.genesisTime) * 1000;
+    return nextSlotTime - Date.now() < MAXIMUM_GOSSIP_CLOCK_DISPARITY ? currentSlot + 1 : currentSlot;
+  }
+
   public get currentEpoch(): Epoch {
     return computeEpochAtSlot(this.config, this.currentSlot);
   }
@@ -64,13 +75,13 @@ export class LocalClock implements IBeaconClock {
       };
 
       const onDone = (): void => {
-        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
+        this.emitter.off(ChainEvent.clockSlot, onSlot);
         this.signal.removeEventListener("abort", onAbort);
         resolve();
       };
 
       const onAbort = (): void => {
-        this.emitter.removeListener(ChainEvent.clockSlot, onSlot);
+        this.emitter.off(ChainEvent.clockSlot, onSlot);
         reject(new ErrorAborted());
       };
 

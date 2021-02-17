@@ -4,7 +4,7 @@ import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {Eth1Data} from "@chainsafe/lodestar-types";
-import {processEth1Data} from "../../../../src/block/eth1Data";
+import {processEth1Data} from "../../../../src/phase0/naive/block/eth1Data";
 
 import {generateEmptyBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";

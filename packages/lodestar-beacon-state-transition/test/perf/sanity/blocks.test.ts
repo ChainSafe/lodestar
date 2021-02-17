@@ -3,31 +3,31 @@ import {SignedBeaconBlock, SignedVoluntaryExit} from "@chainsafe/lodestar-types"
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {EpochContext, fastStateTransition, IStateContext} from "../../../src/fast";
 import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../util";
+import {phase0} from "../../../src";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
-  let stateCtx: IStateContext;
+  let stateCtx: phase0.fast.IStateContext;
   const logger = new WinstonLogger();
   before(async () => {
     await initBLS();
-    const state = await generatePerformanceState();
-    const epochCtx = new EpochContext(config);
-    epochCtx.loadState(state);
-    stateCtx = {state, epochCtx};
+    const origState = await generatePerformanceState();
+    const epochCtx = new phase0.fast.EpochContext(config);
+    epochCtx.loadState(origState);
+    stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(origState), epochCtx};
   });
 
   it("should process block", async () => {
     const signedBlock = await generatePerformanceBlock();
     logger.profile(`Process block ${signedBlock.message.slot}`);
     const start = Date.now();
-    fastStateTransition(stateCtx, signedBlock, {
+    phase0.fast.fastStateTransition(stateCtx, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    expect(Date.now() - start).lt(25);
+    expect(Date.now() - start).lte(25);
     logger.profile(`Process block ${signedBlock.message.slot}`);
   });
 
@@ -45,13 +45,12 @@ describe("Process Blocks Performance Test", function () {
     signedBlock.message.body.voluntaryExits = (voluntaryExits as unknown) as List<SignedVoluntaryExit>;
     const start = Date.now();
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
-    fastStateTransition(stateCtx, signedBlock, {
+    phase0.fast.fastStateTransition(stateCtx, signedBlock, {
       verifyProposer: false,
       verifySignatures: false,
       verifyStateRoot: false,
     });
-    // could be up to 7000
-    expect(Date.now() - start).lt(6000);
+    expect(Date.now() - start).lt(200);
     logger.profile(`Process block ${signedBlock.message.slot} with ${numValidatorExits} validator exits`);
   });
 });

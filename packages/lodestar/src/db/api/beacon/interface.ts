@@ -18,8 +18,6 @@ import {
   StateArchiveRepository,
   VoluntaryExitRepository,
 } from "./repositories";
-import {StateContextCache} from "./stateContextCache";
-import {CheckpointStateCache} from "./stateContextCheckpointsCache";
 import {SeenAttestationCache} from "./seenAttestationCache";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 
@@ -38,11 +36,7 @@ export interface IBeaconDb {
   // pending block
   pendingBlock: PendingBlockRepository;
 
-  // unfinalized states
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-
-  //cache
+  // cache for attestations that have already been seen via gossip or other sources
   seenAttestationCache: SeenAttestationCache;
 
   // finalized blocks
@@ -67,6 +61,13 @@ export interface IBeaconDb {
 
   processBlockOperations(signedBlock: SignedBeaconBlock): Promise<void>;
 
+  /**
+   * Start the connection to the db instance and open the db store.
+   */
   start(): Promise<void>;
+
+  /**
+   *  Stop the connection to the db instance and close the db store.
+   */
   stop(): Promise<void>;
 }

@@ -10,7 +10,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {generateSignedBlock} from "../../../utils/block";
-import {computeEpochAtSlot, getTemporaryBlockHeader, processSlots} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, getTemporaryBlockHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 import {List} from "@chainsafe/ssz";
 
@@ -173,9 +173,7 @@ function runStateTransition(preState: BeaconState, signedBlock: SignedBeaconBloc
   // Clone state because process slots and block are not pure
   const postState = config.types.BeaconState.clone(preState);
   // Process slots (including those with no blocks) since block
-  // TODO: ugly hack to avoid fork upgrade which changes hashes and breaks tests.
-  // Improve once fork slot if configurable
-  processSlots(config, postState, signedBlock.message.slot, true);
+  phase0.processSlots(config, postState, signedBlock.message.slot);
   // processBlock
   postState.latestBlockHeader = getTemporaryBlockHeader(config, signedBlock.message);
   return config.types.BeaconState.clone(postState);

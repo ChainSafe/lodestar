@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {processDeposit} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessDepositTestCase} from "./type";
@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessDepositTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/operations/deposit/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processDeposit(config, state, testcase.deposit);
+    phase0.processDeposit(config, state, testcase.deposit);
     return state;
   },
   {

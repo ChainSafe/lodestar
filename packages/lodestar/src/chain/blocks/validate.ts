@@ -6,7 +6,7 @@ import {IBlockJob} from "../interface";
 import {IBeaconClock} from "../clock";
 import {BlockError, BlockErrorCode} from "../errors";
 
-export async function validateBlock({
+export function validateBlock({
   config,
   forkChoice,
   clock,
@@ -16,7 +16,7 @@ export async function validateBlock({
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   job: IBlockJob;
-}): Promise<void> {
+}): void {
   try {
     const blockHash = config.types.BeaconBlock.hashTreeRoot(job.signedBlock.message);
     const blockSlot = job.signedBlock.message.slot;
@@ -51,14 +51,6 @@ export async function validateBlock({
         code: BlockErrorCode.FUTURE_SLOT,
         blockSlot,
         currentSlot,
-        job,
-      });
-    }
-
-    if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
-      throw new BlockError({
-        code: BlockErrorCode.PARENT_UNKNOWN,
-        parentRoot: job.signedBlock.message.parentRoot.valueOf() as Uint8Array,
         job,
       });
     }

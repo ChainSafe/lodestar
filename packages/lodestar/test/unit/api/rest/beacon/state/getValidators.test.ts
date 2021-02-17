@@ -42,7 +42,7 @@ describe("rest - beacon - getStateValidators", function () {
       {
         index: 1,
         balance: BigInt(3200000),
-        status: ValidatorStatus.ACTIVE,
+        status: ValidatorStatus.ACTIVE_ONGOING,
         validator: generateValidator(),
       },
     ]);

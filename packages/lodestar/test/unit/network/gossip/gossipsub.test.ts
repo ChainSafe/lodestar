@@ -8,7 +8,7 @@ import sinon from "sinon";
 import {LodestarGossipsub} from "../../../../src/network/gossip/gossipsub";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect, assert} from "chai";
-import {Libp2p} from "libp2p-gossipsub/src/interfaces";
+import Libp2p from "libp2p";
 import {createNode} from "../../../utils/network";
 import {GossipEncoding} from "../../../../src/network/gossip/encoding";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";

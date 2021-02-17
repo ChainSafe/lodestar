@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {EpochContext, fastStateTransition, IStateContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IFinalityTestCase} from "./type";
@@ -13,18 +13,19 @@ describeDirectorySpecTest<IFinalityTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/finality/finality/pyspec_tests"),
   (testcase) => {
     const state = config.types.BeaconState.tree.createValue(testcase.pre);
-    const epochCtx = new EpochContext(config);
+    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    let stateContext: IStateContext = {epochCtx, state};
+    let stateContext: phase0.fast.IStateContext = {epochCtx, state: wrappedState};
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      stateContext = fastStateTransition(stateContext, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+      stateContext = phase0.fast.fastStateTransition(stateContext, testcase[`blocks_${i}`] as SignedBeaconBlock, {
         verifyStateRoot: verify,
         verifyProposer: verify,
         verifySignatures: verify,
       });
     }
-    return stateContext.state;
+    return stateContext.state.getOriginalState();
   },
   {
     inputTypes: {

@@ -3,11 +3,11 @@ import {expect} from "chai";
 import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as processEth1Data from "../../../../src/block/eth1Data";
-import * as processBlockHeader from "../../../../src/block/blockHeader";
-import * as processRandao from "../../../../src/block/randao";
-import * as processOperations from "../../../../src/block/operations";
-import {processBlock} from "../../../../src";
+import * as processEth1Data from "../../../../src/phase0/naive/block/eth1Data";
+import * as processBlockHeader from "../../../../src/phase0/naive/block/blockHeader";
+import * as processRandao from "../../../../src/phase0/naive/block/randao";
+import * as processOperations from "../../../../src/phase0/naive/block/operations";
+import {processBlock} from "../../../../src/phase0/naive";
 import {generateEmptyBlock} from "../../../utils/block";
 
 describe("process block", function () {

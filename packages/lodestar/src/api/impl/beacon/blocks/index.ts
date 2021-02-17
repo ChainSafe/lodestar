@@ -62,7 +62,7 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
       );
       return result.filter(
         (item) =>
-          //skip if no slot filter
+          // skip if no slot filter
           !(filters.slot && filters.slot !== 0) || item.header.message.slot === filters.slot
       );
     }
@@ -73,20 +73,20 @@ export class BeaconBlockApi implements IBeaconBlocksApi {
     }
 
     if (filters.slot !== undefined) {
-      //future slot
+      // future slot
       if (filters.slot > headSlot) {
         return [];
       }
 
       const canonicalBlock = await this.chain.getCanonicalBlockAtSlot(filters.slot);
-      //skip slot
+      // skip slot
       if (!canonicalBlock) {
         return [];
       }
       const canonicalRoot = this.config.types.BeaconBlock.hashTreeRoot(canonicalBlock.message);
       result.push(toBeaconHeaderResponse(this.config, canonicalBlock, true));
 
-      //fork blocks
+      // fork blocks
       await Promise.all(
         this.chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
           if (!this.config.types.Root.equals(summary.blockRoot, canonicalRoot)) {

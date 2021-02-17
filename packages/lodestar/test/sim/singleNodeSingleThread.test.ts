@@ -6,6 +6,7 @@ import {getDevValidators} from "../utils/node/validator";
 import {expect} from "chai";
 import {ChainEvent} from "../../src/chain";
 import {IRestApiOptions} from "../../src/api/rest/options";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const timeout = 120 * 1000;
@@ -39,6 +40,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         params: testCase.params,
         options: {sync: {minPeers: 0}, api: {rest: {enabled: true} as IRestApiOptions}},
         validatorCount: testCase.vc * testCase.validators,
+        logger: new WinstonLogger(),
       });
       const justificationEventListener = waitForEvent<Checkpoint>(
         bn.chain.emitter,

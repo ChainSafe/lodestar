@@ -12,7 +12,6 @@ export function getSyncPeers(
   return (
     network
       .getPeers({
-        connected: true,
         supportsProtocols: getSyncProtocols(),
       })
       .map((peer) => peer.id)
@@ -22,7 +21,7 @@ export function getSyncPeers(
       .sort((p1, p2) => {
         return network.peerRpcScores.getScore(p2) - network.peerRpcScores.getScore(p1);
       })
-      //take 10 best peers for sync
+      // take 10 best peers for sync
       .slice(0, maxPeers)
   );
 }

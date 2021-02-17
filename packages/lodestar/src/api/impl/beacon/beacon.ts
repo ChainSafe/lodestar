@@ -42,7 +42,7 @@ export class BeaconApi implements IBeaconApi {
   }
 
   public async getGenesis(): Promise<Genesis | null> {
-    const state = await this.chain.getHeadState();
+    const state = this.chain.getHeadState();
     if (state) {
       return {
         genesisForkVersion: this.config.params.GENESIS_FORK_VERSION,

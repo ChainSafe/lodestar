@@ -20,6 +20,7 @@ import {IService} from "../../node";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {ForkDigest} from "@chainsafe/lodestar-types";
+import {NetworkEvent} from "../interface";
 
 export interface IGossipEvents {
   // attestation subnet event is dynamic following this signature
@@ -29,9 +30,9 @@ export interface IGossipEvents {
   [GossipEvent.VOLUNTARY_EXIT]: (voluntaryExit: SignedVoluntaryExit) => void;
   [GossipEvent.PROPOSER_SLASHING]: (proposerSlashing: ProposerSlashing) => void;
   [GossipEvent.ATTESTER_SLASHING]: (attesterSlashing: AttesterSlashing) => void;
-  ["gossipsub:heartbeat"]: () => void;
-  ["gossip:start"]: () => void;
-  ["gossip:stop"]: () => void;
+  [NetworkEvent.gossipHeartbeat]: () => void;
+  [NetworkEvent.gossipStart]: () => void;
+  [NetworkEvent.gossipStop]: () => void;
 }
 export type GossipEventEmitter = StrictEventEmitter<EventEmitter, IGossipEvents>;
 
@@ -44,14 +45,23 @@ export interface IGossipModules {
   pubsub?: IGossipSub;
 }
 
+/**
+ * Implementation of eth2 p2p gossipsub.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
+ */
 export interface IGossipSub extends EventEmitter {
   subscriptions: Set<string>;
+  /** Publish a gossipsub topic */
   publish(topic: string, data: Buffer): Promise<void>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  /** Subscribe to a gossipub topic */
   subscribe(topics: string[] | string): void;
+  /** Unsubscribe from a gossipub topic */
   unsubscribe(topics: string[] | string): void;
   registerLibp2pTopicValidators(forkDigest: ForkDigest): void;
+  getTopicPeerIds(topic: string): Set<string> | undefined;
 }
 
 export interface IGossip extends IService, GossipEventEmitter {
@@ -84,6 +94,11 @@ export interface IGossip extends IService, GossipEventEmitter {
   ): void;
 }
 
+/**
+ * Contains various methods for validation of incoming gossip topic data.
+ * The conditions for valid gossip topics and how they are handled are specified here:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#global-topics
+ */
 export interface IGossipMessageValidator {
   isValidIncomingBlock(signedBlock: SignedBeaconBlock): Promise<ExtendedValidatorResult>;
   isValidIncomingCommitteeAttestation(attestation: Attestation, subnet: number): Promise<ExtendedValidatorResult>;

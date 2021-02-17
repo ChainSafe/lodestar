@@ -4,9 +4,8 @@ import {Attestation, Checkpoint, SignedBeaconBlock, Slot, Version} from "@chains
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {AttestationError, AttestationErrorCode, BlockError, BlockErrorCode} from "./errors";
-import {IBlockJob} from "./interface";
+import {IBlockJob, ITreeStateContext} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 
@@ -95,7 +94,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     "abort",
     () => {
       handlers.forEach((handler, event) => {
-        this.internalEmitter.removeListener(event, handler);
+        this.internalEmitter.off(event, handler);
       });
     },
     {once: true}
@@ -144,10 +143,10 @@ export async function onForkVersion(this: BeaconChain, version: Version): Promis
 
 export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
   this.logger.verbose("Checkpoint processed", this.config.types.Checkpoint.toJson(cp));
-  await this.db.checkpointStateCache.add(cp, stateContext);
+  this.checkpointStateCache.add(cp, stateContext);
 
   this.metrics.currentValidators.set({status: "active"}, stateContext.epochCtx.currentShuffling.activeIndices.length);
-  const parentBlockSummary = await this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
+  const parentBlockSummary = this.forkChoice.getBlock(stateContext.state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
     const justifiedCheckpoint = stateContext.state.currentJustifiedCheckpoint;
@@ -219,12 +218,12 @@ export async function onBlock(
   job: IBlockJob
 ): Promise<void> {
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(block.message);
-  this.logger.debug("Block processed", {
+  this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
 
-  await this.db.stateCache.add(postStateContext);
+  this.stateCache.add(postStateContext);
   if (!job.reprocess) {
     await this.db.block.add(block);
   }
@@ -309,7 +308,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     return;
   }
 
-  this.logger.debug("Block error", {}, err);
+  this.logger.error("Block error", {slot: err.job.signedBlock.message.slot}, err);
   const blockRoot = this.config.types.BeaconBlock.hashTreeRoot(err.job.signedBlock.message);
 
   switch (err.type.code) {
@@ -318,8 +317,8 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
         reason: err.type.code,
         blockRoot: toHexString(blockRoot),
       });
-      await this.db.pendingBlock.add(err.job.signedBlock);
       this.pendingBlocks.addBySlot(err.job.signedBlock);
+      await this.db.pendingBlock.add(err.job.signedBlock);
       break;
 
     case BlockErrorCode.PARENT_UNKNOWN:

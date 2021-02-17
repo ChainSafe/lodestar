@@ -1,11 +1,13 @@
 import PeerId from "peer-id";
 
 export enum RpcScoreEvent {
-  //on successful block range fetch
+  // void event that wont affect score, useful to simplify fooToScoreEvent fns
+  NONE,
+  // on successful block range fetch
   SUCCESS_BLOCK_RANGE,
-  //on successful block by root fetch
+  // on successful block by root fetch
   SUCCESS_BLOCK_ROOT,
-  //peer returned block by range response but was missing blocks
+  // peer returned block by range response but was missing blocks
   MISSING_BLOCKS,
   RESPONSE_TIMEOUT,
   UNSUPPORTED_PROTOCOL,

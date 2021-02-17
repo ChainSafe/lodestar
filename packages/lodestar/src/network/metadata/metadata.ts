@@ -15,6 +15,11 @@ export interface IMetadataModules {
   logger: ILogger;
 }
 
+/**
+ * Implementation of eth2 p2p MetaData.
+ * For the spec that this code is based on, see:
+ * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#metadata
+ */
 export class MetadataController {
   private enr?: ENR;
   private config: IBeaconConfig;
@@ -33,13 +38,13 @@ export class MetadataController {
     this.enr = enr;
     if (this.enr) {
       this.enr.set("attnets", Buffer.from(this.config.types.AttestationSubnets.serialize(this._metadata.attnets)));
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
     }
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   get seqNumber(): bigint {
@@ -58,15 +63,15 @@ export class MetadataController {
     this._metadata.attnets = attnets;
   }
 
-  get metadata(): Metadata {
+  get all(): Metadata {
     return this._metadata;
   }
 
   private async handleForkVersion(): Promise<void> {
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(await this.chain.getENRForkID())));
+      this.enr.set("eth2", Buffer.from(this.config.types.ENRForkID.serialize(this.chain.getENRForkID())));
     }
   }
 }

@@ -1,7 +1,7 @@
 import {bls, PublicKey, Signature} from "@chainsafe/bls";
-import {ISignatureSet, SignatureSetType} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
-export function verifySignatureSetsBatch(signatureSets: ISignatureSet[]): boolean {
+export function verifySignatureSetsBatch(signatureSets: phase0.fast.ISignatureSet[]): boolean {
   const publicKeys: PublicKey[] = [];
   const messages: Uint8Array[] = [];
   const signatures: Signature[] = [];
@@ -15,12 +15,12 @@ export function verifySignatureSetsBatch(signatureSets: ISignatureSet[]): boolea
   return bls.Signature.verifyMultipleSignatures(publicKeys, messages, signatures);
 }
 
-function getAggregatedPubkey(signatureSet: ISignatureSet): PublicKey {
+function getAggregatedPubkey(signatureSet: phase0.fast.ISignatureSet): PublicKey {
   switch (signatureSet.type) {
-    case SignatureSetType.single:
+    case phase0.fast.SignatureSetType.single:
       return signatureSet.pubkey;
 
-    case SignatureSetType.aggregate:
+    case phase0.fast.SignatureSetType.aggregate:
       return bls.PublicKey.aggregate(signatureSet.pubkeys);
 
     default:

@@ -18,7 +18,7 @@ describe("GossipMessageValidator", () => {
 
   beforeEach(() => {
     isValidIncomingAttesterSlashingStub = sandbox.stub(validatorStatusUtils, "isValidAttesterSlashing");
-    chainStub = (sandbox.createStubInstance(BeaconChain) as unknown) as StubbedChain;
+    chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     dbStub = new StubbedBeaconDb(sandbox);
   });
@@ -42,7 +42,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadState.returns(state);
       isValidIncomingAttesterSlashingStub.returns(false);
       try {
         await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
@@ -55,7 +55,7 @@ describe("GossipMessageValidator", () => {
       const slashing = generateEmptyAttesterSlashing();
       dbStub.attesterSlashing.hasAll.resolves(false);
       const state = generateState();
-      chainStub.getHeadState.resolves(state);
+      chainStub.getHeadState.returns(state);
       isValidIncomingAttesterSlashingStub.returns(true);
       const validationTest = await validateGossipAttesterSlashing(config, chainStub, dbStub, slashing);
       expect(validationTest).to.not.throw;

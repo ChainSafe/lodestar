@@ -29,14 +29,14 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   public async start(): Promise<void> {
-    this.currentForkDigest = await this.chain.getForkDigest();
+    this.currentForkDigest = this.chain.getForkDigest();
     this.subscribeBlockAndAttestation(this.currentForkDigest);
     this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public async stop(): Promise<void> {
     this.unsubscribe(this.currentForkDigest);
-    this.chain.emitter.removeListener(ChainEvent.forkVersion, this.handleForkVersion);
+    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   public handleSyncCompleted(): void {
@@ -44,7 +44,7 @@ export class BeaconGossipHandler implements IGossipHandler {
   }
 
   private handleForkVersion = async (): Promise<void> => {
-    const forkDigest = await this.chain.getForkDigest();
+    const forkDigest = this.chain.getForkDigest();
     this.logger.important(`Gossip handler: received new fork digest ${toHexString(forkDigest)}`);
     this.unsubscribe(this.currentForkDigest);
     this.currentForkDigest = forkDigest;

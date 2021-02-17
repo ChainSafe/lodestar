@@ -7,13 +7,20 @@ import {
   DB_PREFIX_LENGTH,
 } from "@chainsafe/lodestar-db";
 import {BLSPubkey, Epoch, SlashingProtectionAttestation} from "@chainsafe/lodestar-types";
-import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
+import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
+import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
-import {blsPubkeyLen, uniqueVectorArr} from "../utils";
+import {uniqueVectorArr, blsPubkeyLen} from "../utils";
+import {LodestarValidatorDatabaseController} from "../../types";
 
+/**
+ * Manages validator db storage of attestations.
+ * Entries in the db are indexed by an encoded key which combines the validator's public key and the
+ * attestation's target epoch.
+ */
 export class AttestationByTargetRepository {
   protected type: Type<SlashingProtectionAttestation>;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: LodestarValidatorDatabaseController;
   protected bucket = Bucket.slashingProtectionAttestationByTarget;
 
   constructor(opts: IDatabaseApiOptions) {

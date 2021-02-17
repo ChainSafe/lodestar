@@ -18,8 +18,9 @@ import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";
 import {IBeaconStateApi, ICommitteesFilters, IValidatorFilters, StateId} from "./interface";
 import {getEpochBeaconCommittees, resolveStateId, toValidatorResponse} from "./utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ValidatorResponse} from "@chainsafe/lodestar-types";
+
 export class BeaconStateApi implements IBeaconStateApi {
   private readonly config: IBeaconConfig;
   private readonly db: IBeaconDb;
@@ -55,13 +56,13 @@ export class BeaconStateApi implements IBeaconStateApi {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async getStateValidators(stateId: StateId, filters?: IValidatorFilters): Promise<ValidatorResponse[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     //TODO: implement filters
     return readOnlyMap(state.state.validators, (v, index) =>
-      toValidatorResponse(index, v, state.state.balances[index])
+      toValidatorResponse(index, v, state.state.balances[index], getCurrentEpoch(this.config, state.state))
     );
   }
 
@@ -69,7 +70,7 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     validatorId: ValidatorIndex | Root
   ): Promise<ValidatorResponse | null> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
@@ -79,8 +80,8 @@ export class BeaconStateApi implements IBeaconStateApi {
         validatorIndex = validatorId;
       }
     } else {
-      validatorIndex = (await this.chain.getHeadEpochContext()).pubkey2index.get(validatorId) ?? undefined;
-      //validator added later than given stateId
+      validatorIndex = this.chain.getHeadEpochContext().pubkey2index.get(validatorId) ?? undefined;
+      // validator added later than given stateId
       if (validatorIndex && validatorIndex >= state.state.validators.length) {
         validatorIndex = undefined;
       }
@@ -91,7 +92,8 @@ export class BeaconStateApi implements IBeaconStateApi {
     return toValidatorResponse(
       validatorIndex,
       state.state.validators[validatorIndex],
-      state.state.balances[validatorIndex]
+      state.state.balances[validatorIndex],
+      getCurrentEpoch(this.config, state.state)
     );
   }
 
@@ -99,12 +101,12 @@ export class BeaconStateApi implements IBeaconStateApi {
     stateId: StateId,
     indices?: (ValidatorIndex | Root)[]
   ): Promise<ValidatorBalance[]> {
-    const state = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const state = await resolveStateId(this.chain, this.db, stateId);
     if (!state) {
       throw new StateNotFound();
     }
     if (indices) {
-      const epochCtx = await this.chain.getHeadEpochContext();
+      const epochCtx = this.chain.getHeadEpochContext();
       return indices
         .map((id) => {
           if (typeof id === "number") {
@@ -133,7 +135,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   public async getStateCommittees(stateId: StateId, filters?: ICommitteesFilters): Promise<BeaconCommitteeResponse[]> {
-    const stateContext = await resolveStateId(this.config, this.db, this.forkChoice, stateId);
+    const stateContext = await resolveStateId(this.chain, this.db, stateId);
     if (!stateContext) {
       throw new StateNotFound();
     }
@@ -163,7 +165,7 @@ export class BeaconStateApi implements IBeaconStateApi {
   }
 
   public async getState(stateId: StateId): Promise<BeaconState | null> {
-    return (await resolveStateId(this.config, this.db, this.forkChoice, stateId))?.state ?? null;
+    return (await resolveStateId(this.chain, this.db, stateId))?.state ?? null;
   }
 
   public async getFork(stateId: StateId): Promise<Fork | null> {

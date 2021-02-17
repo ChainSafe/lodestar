@@ -1,11 +1,11 @@
 import {defaultGlobalPaths} from "../paths/global";
 import {paramsOptions, IParamsArgs} from "./paramsOptions";
-import {TestnetName, testnetNames} from "../testnets";
+import {NetworkName, networkNames} from "../networks";
 import {ICliCommandOptions} from "../util";
 
 interface IGlobalSingleArgs {
   rootDir: string;
-  testnet?: TestnetName;
+  network?: NetworkName;
   preset: string;
   paramsFile: string;
 }
@@ -17,10 +17,10 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
     type: "string",
   },
 
-  testnet: {
-    description: "Use a testnet configuration",
+  network: {
+    description: "Name of the Eth2 chain network to join",
     type: "string",
-    choices: testnetNames,
+    choices: networkNames,
   },
 
   preset: {

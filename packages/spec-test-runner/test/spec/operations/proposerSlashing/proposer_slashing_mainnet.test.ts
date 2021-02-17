@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {processProposerSlashing} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
   (testcase) => {
     const state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    processProposerSlashing(config, state, testcase.proposer_slashing, verify);
+    phase0.processProposerSlashing(config, state, testcase.proposer_slashing, verify);
     return state;
   },
   {

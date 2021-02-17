@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IFinalityTestCase} from "./type";
@@ -15,7 +15,7 @@ describeDirectorySpecTest<IFinalityTestCase, BeaconState>(
     let state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      state = stateTransition(config, state, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+      state = phase0.stateTransition(config, state, testcase[`blocks_${i}`] as SignedBeaconBlock, {
         verifyStateRoot: verify,
         verifyProposer: verify,
         verifySignatures: verify,

@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {processRewardsAndPenalties} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IStateTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/epoch_processing/rewards_and_penalties/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processRewardsAndPenalties(config, state);
+    phase0.processRewardsAndPenalties(config, state);
     return state;
   },
   {

@@ -10,18 +10,23 @@ import {
   Slot,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
-import {ITreeStateContext} from "../db/api/beacon/stateContextCache";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {AttestationPool} from "./attestation";
+import {StateContextCache, CheckpointStateCache} from "./stateCache";
 
-export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock> {
-  signedBlock: TBlock;
+// Lodestar specifc state context
+export interface ITreeStateContext {
+  state: phase0.fast.CachedValidatorsBeaconState;
+  epochCtx: phase0.EpochContext;
+}
+
+interface IProcessBlock {
   /**
    * Metadata: lets a block thats already been processed to be processed again.
    * After processing, the block will not be stored in the database
@@ -41,6 +46,14 @@ export interface IBlockJob<TBlock extends SignedBeaconBlock = SignedBeaconBlock>
   validSignatures: boolean;
 }
 
+export interface IChainSegmentJob extends IProcessBlock {
+  signedBlocks: SignedBeaconBlock[];
+}
+
+export interface IBlockJob extends IProcessBlock {
+  signedBlock: SignedBeaconBlock;
+}
+
 export interface IAttestationJob {
   attestation: Attestation;
   /**
@@ -57,6 +70,8 @@ export interface IBeaconChain {
   emitter: ChainEventEmitter;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
+  stateCache: StateContextCache;
+  checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   pendingAttestations: AttestationPool;
@@ -66,25 +81,26 @@ export interface IBeaconChain {
    */
   close(): Promise<void>;
 
+  getHeadStateContext(): ITreeStateContext;
+  getHeadState(): TreeBacked<BeaconState>;
+  getHeadEpochContext(): phase0.EpochContext;
   /**
    * Get ForkDigest from the head state
    */
-  getForkDigest(): Promise<ForkDigest>;
+  getForkDigest(): ForkDigest;
   /**
    * Get ENRForkID from the head state
    */
-  getENRForkID(): Promise<ENRForkID>;
+  getENRForkID(): ENRForkID;
   getGenesisTime(): Number64;
-  getHeadStateContext(): Promise<ITreeStateContext>;
+
   getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext>;
   getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext>;
-  getHeadState(): Promise<TreeBacked<BeaconState>>;
-  getHeadEpochContext(): Promise<EpochContext>;
   getHeadBlock(): Promise<SignedBeaconBlock | null>;
 
   getStateContextByBlockRoot(blockRoot: Root): Promise<ITreeStateContext | null>;
 
-  getFinalizedCheckpoint(): Promise<Checkpoint>;
+  getFinalizedCheckpoint(): Checkpoint;
 
   /**
    * Since we can have multiple parallel chains,
@@ -94,7 +110,7 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<SignedBeaconBlock | null>;
 
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]>;
 
   /**
    * Add attestation to the fork-choice rule
@@ -105,4 +121,8 @@ export interface IBeaconChain {
    * Pre-process and run the per slot state transition function
    */
   receiveBlock(signedBlock: SignedBeaconBlock, trusted?: boolean): Promise<void>;
+  /**
+   * Process a chain of blocks until complete.
+   */
+  processChainSegment(signedBlocks: SignedBeaconBlock[], trusted?: boolean): Promise<void>;
 }
