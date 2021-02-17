@@ -102,6 +102,7 @@ export class TasksService {
       }
       await Promise.all([
         this.chain.checkpointStateCache.pruneFinalized(finalized.epoch),
+        this.chain.stateCache.pruneFinalized(finalized.epoch),
         this.db.attestation.pruneFinalized(finalized.epoch),
         this.db.aggregateAndProof.pruneFinalized(finalized.epoch),
       ]);
