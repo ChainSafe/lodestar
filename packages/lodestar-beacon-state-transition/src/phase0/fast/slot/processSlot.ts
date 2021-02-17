@@ -1,4 +1,5 @@
-import {CachedValidatorsBeaconState, EpochContext} from "../util";
+import {EpochContext} from "../util";
+import {CachedValidatorsBeaconState} from "../../..";
 
 export function processSlot(epochCtx: EpochContext, state: CachedValidatorsBeaconState): void {
   const config = epochCtx.config;

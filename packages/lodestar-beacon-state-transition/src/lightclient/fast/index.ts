@@ -1,27 +1,23 @@
 import {Lightclient} from "@chainsafe/lodestar-types";
-import {IStateContext, toIStateContext} from "../..";
-import {StateTransitionEpochContext} from "../../fast/util/epochContext";
-import {processSlots} from "../../fast/slot";
-import {verifyBlockSignature} from "../../fast/util";
+import {IStateContext, phase0} from "../..";
 import {processBlock} from "../block";
 
 export function stateTransition(
-  {state, epochCtx: eiEpochCtx}: IStateContext<Lightclient.BeaconState>,
+  {state, epochCtx}: IStateContext<Lightclient.BeaconState>,
   signedBlock: Lightclient.SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean}
 ): IStateContext {
-  const epochCtx = new StateTransitionEpochContext(undefined, eiEpochCtx);
   const {verifyStateRoot = true, verifyProposer = true, verifySignatures = true} = options || {};
   const types = epochCtx.config.types;
 
   const block = signedBlock.message;
   const postState = types.lightclient.BeaconState.clone(state);
   // process slots (including those with no blocks) since block
-  processSlots(epochCtx, postState, block.slot);
+  phase0.fast.processSlots(epochCtx, postState, block.slot);
 
   // verify signature
   if (verifyProposer) {
-    if (!verifyBlockSignature(epochCtx, postState, signedBlock)) {
+    if (!phase0.fast.verifyBlockSignature(epochCtx, postState, signedBlock)) {
       throw new Error("Invalid block signature");
     }
   }

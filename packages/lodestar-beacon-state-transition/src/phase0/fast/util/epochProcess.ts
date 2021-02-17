@@ -18,9 +18,9 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {isActiveIFlatValidator} from "./flatValidator";
+import {isActiveIFlatValidator} from "../../../util/fast/flatValidator";
 import {CachedValidatorsBeaconState} from "./interface";
-import {EpochContext} from "./epochContext";
+import {EpochContext} from "../../../util/fast/epochContext";
 
 /**
  * The AttesterStatus (and FlatValidator under status.validator) objects and

@@ -2,5 +2,5 @@ export * as fast from "./fast";
 export * from "./naive";
 
 //types
-export * from "./fast/util/epochContext";
+export * from "../util/fast/epochContext";
 export * from "./fast/util/interface";

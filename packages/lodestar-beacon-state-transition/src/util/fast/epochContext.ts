@@ -15,7 +15,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {intToBytes, assert} from "@chainsafe/lodestar-utils";
 
-import {DomainType, GENESIS_EPOCH} from "../../../constants";
+import {DomainType, GENESIS_EPOCH} from "../../constants";
 import {
   computeEpochAtSlot,
   computeProposerIndex,
@@ -23,9 +23,9 @@ import {
   getAttestingIndicesFromCommittee,
   getSeed,
   isAggregatorFromCommitteeLength,
-} from "../../../util";
-import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {CachedValidatorsBeaconState} from "./interface";
+} from "..";
+import {computeEpochShuffling, IEpochShuffling} from "../../phase0/fast/util/epochShuffling";
+import { CachedValidatorsBeaconState } from "./cachedValidatorBeaconState";
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {

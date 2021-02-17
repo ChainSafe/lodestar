@@ -1,9 +1,8 @@
-import {IReadonlyEpochShuffling} from ".";
 import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-types";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
-import {createIFlatValidator, IFlatValidator} from "./flatValidator";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Vector} from "@chainsafe/persistent-ts";
+import {IReadonlyEpochShuffling, IFlatValidator, createIFlatValidator} from "../../phase0/fast";
 
 /**
  * Readonly interface for EpochContext.

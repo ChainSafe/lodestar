@@ -1,5 +1,5 @@
 import {CachedValidatorsBeaconState, prepareEpochProcessState} from "../util";
-import {EpochContext} from "../util/epochContext";
+import {EpochContext} from "../../../util/fast/epochContext";
 import {processJustificationAndFinalization} from "./processJustificationAndFinalization";
 import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processRegistryUpdates} from "./processRegistryUpdates";

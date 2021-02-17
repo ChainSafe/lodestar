@@ -1,4 +1,4 @@
-import {IFlatValidator} from "./flatValidator";
+import {IFlatValidator} from "../../../util/fast/flatValidator";
 
 export const FLAG_PREV_SOURCE_ATTESTER = 1 << 0;
 export const FLAG_PREV_TARGET_ATTESTER = 1 << 1;
