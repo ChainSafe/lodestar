@@ -3,12 +3,12 @@ import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
 import {ProposerSlashing, AttesterSlashing, Attestation, Deposit, SignedVoluntaryExit} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import * as processProposerSlashing from "../../../../../src/block/operations/proposerSlashing";
-import * as processAttesterSlashing from "../../../../../src/block/operations/attesterSlashing";
-import * as processAttestation from "../../../../../src/block/operations/attestation";
-import * as processDeposit from "../../../../../src/block/operations/deposit";
-import * as processVoluntaryExit from "../../../../../src/block/operations/voluntaryExit";
-import {processOperations} from "../../../../../src/block/operations";
+import * as processProposerSlashing from "../../../../../src/phase0/naive/block/operations/proposerSlashing";
+import * as processAttesterSlashing from "../../../../../src/phase0/naive/block/operations/attesterSlashing";
+import * as processAttestation from "../../../../../src/phase0/naive/block/operations/attestation";
+import * as processDeposit from "../../../../../src/phase0/naive/block/operations/deposit";
+import * as processVoluntaryExit from "../../../../../src/phase0/naive/block/operations/voluntaryExit";
+import {processOperations} from "../../../../../src/phase0/naive/block/operations";
 
 import {generateState} from "../../../../utils/state";
 import {generateEmptyBlock} from "../../../../utils/block";

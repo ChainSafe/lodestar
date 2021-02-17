@@ -2,18 +2,18 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {processFinalUpdates} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 describeDirectorySpecTest<IStateTestCase, BeaconState>(
   "epoch final updates mainnet",
   join(SPEC_TEST_LOCATION, "tests/mainnet/phase0/epoch_processing/final_updates/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processFinalUpdates(config, state);
+    phase0.processFinalUpdates(config, state);
     return state;
   },
   {

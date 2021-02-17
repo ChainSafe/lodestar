@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Gwei, ValidatorStatus} from "@chainsafe/lodestar-types";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -12,7 +12,6 @@ import {IBeaconChain} from "../../../../../../src/chain/interface";
 import {generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub/beaconDb";
 import {generateValidator, generateValidators} from "../../../../../utils/validator";
-import {PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochContext";
 
 use(chaiAsPromised);
 
@@ -110,7 +109,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: {
           get: () => undefined,
         } as any,
-      } as EpochContext);
+      } as phase0.EpochContext);
       const api = new BeaconStateApi({}, {config, db, chain});
       await expect(api.getStateValidator("someState", Buffer.alloc(32, 1))).to.be.rejectedWith("Validator not found");
     });
@@ -122,7 +121,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: {
           get: () => 2,
         } as any,
-      } as EpochContext);
+      } as phase0.EpochContext);
       const api = new BeaconStateApi({}, {config, db, chain});
       expect(await api.getStateValidator("someState", Buffer.alloc(32, 1))).to.not.be.null;
     });
@@ -142,12 +141,12 @@ describe("beacon api impl - state - validators", function () {
           balances: Array.from({length: 10}, () => BigInt(10)) as List<Gwei>,
         }),
       });
-      const pubkey2IndexStub = sinon.createStubInstance(PubkeyIndexMap);
+      const pubkey2IndexStub = sinon.createStubInstance(phase0.PubkeyIndexMap);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 1)).returns(3);
       pubkey2IndexStub.get.withArgs(Buffer.alloc(32, 2)).returns(25);
       chain.getHeadEpochContext.returns({
-        pubkey2index: (pubkey2IndexStub as unknown) as PubkeyIndexMap,
-      } as EpochContext);
+        pubkey2index: (pubkey2IndexStub as unknown) as phase0.PubkeyIndexMap,
+      } as phase0.EpochContext);
       const api = new BeaconStateApi({}, {config, db, chain});
       const balances = await api.getStateValidatorBalances("somestate", [
         1,

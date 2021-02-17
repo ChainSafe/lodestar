@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon from "sinon";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {ZERO_HASH} from "../../../../../src/constants";
-import {processAttestation} from "../../../../../src/block/operations";
 import * as utils from "../../../../../src/util";
+import {phase0} from "../../../../../src";
 import {generateState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
 
@@ -32,19 +32,19 @@ describe("process block - attestation", function () {
   it("fail to process attestation - exceeds inclusion delay", function () {
     const state = generateState({slot: config.params.MIN_ATTESTATION_INCLUSION_DELAY + 1});
     const attestation = generateEmptyAttestation();
-    expect(() => processAttestation(config, state, attestation)).to.throw;
+    expect(() => phase0.processAttestation(config, state, attestation)).to.throw;
   });
 
   it("fail to process attestation - future epoch", function () {
     const state = generateState({slot: 0});
     const attestation = generateEmptyAttestation();
-    expect(() => processAttestation(config, state, attestation)).to.throw;
+    expect(() => phase0.processAttestation(config, state, attestation)).to.throw;
   });
 
   it("fail to process attestation - crosslink not zerohash", function () {
     const state = generateState({slot: 0});
     const attestation = generateEmptyAttestation();
-    expect(() => processAttestation(config, state, attestation)).to.throw;
+    expect(() => phase0.processAttestation(config, state, attestation)).to.throw;
   });
 
   it("should process attestation - currentEpoch === data.targetEpoch", function () {
@@ -62,7 +62,7 @@ describe("process block - attestation", function () {
     attestation.data.source.epoch = 1;
     attestation.data.source.root = state.currentJustifiedCheckpoint.root;
     getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
-    expect(processAttestation(config, state, attestation)).to.not.throw;
+    expect(phase0.processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(1);
     expect(state.previousEpochAttestations.length).to.be.equal(0);
   });
@@ -81,7 +81,7 @@ describe("process block - attestation", function () {
     attestation.data.source.epoch = 0;
     attestation.data.source.root = state.previousJustifiedCheckpoint.root;
     getBeaconComitteeStub.returns(Array.from({length: attestation.aggregationBits.length}));
-    expect(processAttestation(config, state, attestation)).to.not.throw;
+    expect(phase0.processAttestation(config, state, attestation)).to.not.throw;
     expect(state.currentEpochAttestations.length).to.be.equal(0);
     expect(state.previousEpochAttestations.length).to.be.equal(1);
   });

@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {processVoluntaryExit} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessVoluntaryExitTestCase} from "./type";
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IProcessVoluntaryExitTestCase, BeaconState>(
   (testcase) => {
     const state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    processVoluntaryExit(config, state, testcase.voluntary_exit, verify);
+    phase0.processVoluntaryExit(config, state, testcase.voluntary_exit, verify);
     return state;
   },
   {

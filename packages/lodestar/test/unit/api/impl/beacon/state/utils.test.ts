@@ -1,5 +1,4 @@
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/epochShuffling";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {Validator, ValidatorStatus} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
@@ -279,7 +278,7 @@ describe("beacon state api utils", function () {
                 [8, 12, 22],
               ],
             ],
-          } as IEpochShuffling,
+          } as phase0.fast.IEpochShuffling,
           previousShuffling: {
             committees: [
               [
@@ -291,8 +290,8 @@ describe("beacon state api utils", function () {
                 [8, 12, 22],
               ],
             ],
-          } as IEpochShuffling,
-        } as EpochContext,
+          } as phase0.fast.IEpochShuffling,
+        } as phase0.EpochContext,
       };
     }
   });

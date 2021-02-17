@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
-import {processSlashings} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
 
 describeDirectorySpecTest<IStateTestCase, BeaconState>(
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IStateTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/epoch_processing/slashings/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processSlashings(config, state);
+    phase0.processSlashings(config, state);
     return state;
   },
   {

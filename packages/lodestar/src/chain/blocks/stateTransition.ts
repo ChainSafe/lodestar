@@ -5,17 +5,15 @@ import {
   ZERO_HASH,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  fastStateTransition,
-  IStateContext,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/slot";
+import {processSlots} from "../../../../lodestar-beacon-state-transition/lib/phase0/fast/slot";
 import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob, ITreeStateContext} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {isActiveIFlatValidator} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context
@@ -58,7 +56,7 @@ export async function processSlotsToNearestCheckpoint(
   emitter: ChainEventEmitter,
   stateCtx: ITreeStateContext,
   slot: Slot
-): Promise<IStateContext> {
+): Promise<phase0.fast.IStateContext> {
   const config = stateCtx.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const preSlot = stateCtx.state.slot;
@@ -133,7 +131,7 @@ export async function runStateTransition(
   const postSlot = job.signedBlock.message.slot;
 
   // if block is trusted don't verify proposer or op signature
-  const postStateContext = fastStateTransition(stateContext, job.signedBlock, {
+  const postStateContext = phase0.fast.fastStateTransition(stateContext, job.signedBlock, {
     verifyStateRoot: true,
     verifyProposer: !job.validSignatures && !job.validProposerSignature,
     verifySignatures: !job.validSignatures,
@@ -148,7 +146,7 @@ export async function runStateTransition(
     const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
     const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
     justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
-      justifiedBalances.push(isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+      justifiedBalances.push(phase0.fast.isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
     });
   }
   forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);

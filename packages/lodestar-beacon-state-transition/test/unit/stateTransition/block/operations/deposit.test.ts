@@ -33,7 +33,7 @@ describe("process block - deposits", function () {
     getBeaconProposeIndexStub = sandbox.stub(utils, "getBeaconProposerIndex");
     blsStub.resetHistory();
     verifyMerkleBranchStub.resetHistory();
-    processDeposit = (await import("../../../../../src/block/operations")).processDeposit;
+    processDeposit = (await import("../../../../../src/phase0/naive/block/operations")).processDeposit;
   });
 
   afterEach(() => {

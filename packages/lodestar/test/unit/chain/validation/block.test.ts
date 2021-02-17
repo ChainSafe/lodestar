@@ -2,8 +2,8 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util/block";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import * as specUtils from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/util/block";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -123,7 +123,7 @@ describe("gossip block validation", function () {
     dbStub.block.get.resolves(null);
     regenStub.getBlockSlotState.resolves({
       state: generateCachedState(),
-      epochCtx: new EpochContext(config),
+      epochCtx: new phase0.fast.EpochContext(config),
     });
     verifySignatureStub.returns(false);
     try {
@@ -148,10 +148,10 @@ describe("gossip block validation", function () {
     });
     dbStub.badBlock.has.resolves(false);
     dbStub.block.get.resolves(null);
-    const epochCtxStub = sinon.createStubInstance(EpochContext);
+    const epochCtxStub = sinon.createStubInstance(phase0.fast.EpochContext);
     regenStub.getBlockSlotState.resolves({
       state: generateCachedState(),
-      epochCtx: (epochCtxStub as unknown) as EpochContext,
+      epochCtx: (epochCtxStub as unknown) as phase0.fast.EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(signedBlock.message.proposerIndex + 1);
@@ -179,10 +179,10 @@ describe("gossip block validation", function () {
     dbStub.badBlock.has.resolves(false);
     chainStub.getCanonicalBlockAtSlot.resolves(null);
     forkChoiceStub.isDescendantOfFinalized.returns(true);
-    const epochCtxStub = sinon.createStubInstance(EpochContext);
+    const epochCtxStub = sinon.createStubInstance(phase0.fast.EpochContext);
     regenStub.getBlockSlotState.resolves({
       state: generateCachedState(),
-      epochCtx: (epochCtxStub as unknown) as EpochContext,
+      epochCtx: (epochCtxStub as unknown) as phase0.fast.EpochContext,
     });
     verifySignatureStub.returns(true);
     epochCtxStub.getBeaconProposer.returns(signedBlock.message.proposerIndex);

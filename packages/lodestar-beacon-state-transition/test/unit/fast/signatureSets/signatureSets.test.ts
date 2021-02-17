@@ -19,9 +19,8 @@ import {
 import {ZERO_HASH, FAR_FUTURE_EPOCH} from "../../../../src/constants";
 import {generateState} from "../../../utils/state";
 import {generateValidators} from "../../../utils/validator";
-import {getAllBlockSignatureSets} from "../../../../src/fast/signatureSets";
-import {EpochContext} from "../../../../src/fast";
 import {expect} from "chai";
+import {phase0} from "../../../../src";
 
 describe("signatureSets", () => {
   before("Init BLS", async () => {
@@ -82,11 +81,11 @@ describe("signatureSets", () => {
     }
 
     // Create EpochContext with generated validators
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.fast.EpochContext(config);
     const state = generateState({validators});
     epochCtx.loadState(state);
 
-    const signatureSets = getAllBlockSignatureSets(epochCtx, state, signedBlock);
+    const signatureSets = phase0.fast.getAllBlockSignatureSets(epochCtx, state, signedBlock);
     expect(signatureSets.length).to.equal(
       // block signature
       1 +

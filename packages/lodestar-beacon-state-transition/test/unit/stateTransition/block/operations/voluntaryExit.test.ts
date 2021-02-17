@@ -4,7 +4,7 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {FAR_FUTURE_EPOCH} from "../../../../../src/constants";
 import * as utils from "../../../../../src/util";
 import * as validatorUtils from "../../../../../src/util/validator";
-import {processVoluntaryExit} from "../../../../../src/block/operations";
+import {processVoluntaryExit} from "../../../../../src/phase0/naive/block/operations";
 
 import {generateValidator} from "../../../../utils/validator";
 import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";

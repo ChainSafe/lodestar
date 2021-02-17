@@ -2,8 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import {processBlockHeader} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessBlockHeader} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -13,9 +12,9 @@ describeDirectorySpecTest<IProcessBlockHeader, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/operations/block_header/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    processBlockHeader(epochCtx, state, testcase.block);
+    phase0.fast.processBlockHeader(epochCtx, state, testcase.block);
     return state;
   },
   {
