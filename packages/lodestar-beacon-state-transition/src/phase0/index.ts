@@ -3,4 +3,3 @@ export * from "./naive";
 
 //types
 export * from "../util/fast/epochContext";
-export * from "./fast/util/interface";

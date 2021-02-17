@@ -1,4 +1,4 @@
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {EpochContext} from "../util";
 import {BeaconBlock} from "@chainsafe/lodestar-types";
 
 import {processBlockHeader} from "./processBlockHeader";
@@ -10,6 +10,7 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
+import {CachedValidatorsBeaconState} from "../../..";
 
 export * from "./isValidIndexedAttestation";
 

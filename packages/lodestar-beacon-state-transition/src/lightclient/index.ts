@@ -1,4 +1,4 @@
-import {processSlots, verifyBlockSignature} from "..";
+import {phase0, verifyBlockSignature} from "..";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Lightclient} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
@@ -30,7 +30,7 @@ export function stateTransition(
   // Clone state because process slots and block are not pure
   let postState = config.types.lightclient.BeaconState.clone(state);
   // Process slots (including those with no blocks) since block
-  postState = processSlots(config, postState, signedBlock.message.slot);
+  postState = phase0.processSlots(config, postState, signedBlock.message.slot);
   // Verify block signature
   if (verifyProposer) {
     verifyBlockSignature(config, state, signedBlock);

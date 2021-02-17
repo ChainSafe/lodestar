@@ -1,4 +1,4 @@
-import {ValidatorIndex, Slot, BeaconState, Validator} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, Slot, BeaconState, Validator, Lightclient} from "@chainsafe/lodestar-types";
 import {ByteVector, readOnlyForEach} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/lib/presets/mainnet";
 import {Vector} from "@chainsafe/persistent-ts";
@@ -15,6 +15,8 @@ export type ReadonlyEpochContext = {
   getBeaconProposer: (slot: Slot) => ValidatorIndex;
 };
 
+export type BeaconStateType = BeaconState & Lightclient.BeaconState;
+
 /**
  * Cache validators of state using a persistent vector to improve the loop performance.
  * Instead of accessing `validators` array directly inside BeaconState, use:
@@ -24,7 +26,7 @@ export type ReadonlyEpochContext = {
  * that'd update both the cached validators and the one in the original state.
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export interface CachedValidatorsBeaconState extends BeaconState {
+export interface CachedValidatorsBeaconState extends BeaconStateType {
   flatValidators(): Vector<IFlatValidator>;
   updateValidator(i: ValidatorIndex, value: Partial<IFlatValidator>): void;
   addValidator(validator: Validator): void;

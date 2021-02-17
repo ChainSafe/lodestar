@@ -7,8 +7,8 @@ import {
   ProposerSlashing,
   VoluntaryExit,
 } from "@chainsafe/lodestar-types";
-
-import {EpochContext, CachedValidatorsBeaconState} from "../util";
+import {CachedValidatorsBeaconState} from "../../..";
+import {EpochContext} from "../util";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";

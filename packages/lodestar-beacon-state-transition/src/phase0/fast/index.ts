@@ -1,7 +1,8 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {processBlock} from "./block";
 import {processSlots} from "./slot";
-import {IStateContext, verifyBlockSignature} from "./util";
+import {verifyBlockSignature} from "./util";
+import {IStateContext} from "../..";
 
 export * from "./block";
 export * from "./epoch";

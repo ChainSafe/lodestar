@@ -11,10 +11,10 @@ import {
   getCurrentEpoch,
   getDomain,
   getBeaconProposerIndex,
+  increaseBalance,
 } from "../util";
 import {computeShuffledIndex, getSeed} from "../util/seed";
-import {getBaseReward} from "../epoch/balanceUpdates/util";
-import {increaseBalance} from "../util/balance";
+import {phase0} from "../";
 
 const MAX_RANDOM_BYTE = BigInt(2 ** 8 - 1);
 
@@ -53,7 +53,7 @@ export function processSyncCommittee(
   let participantRewards = BigInt(0);
   const activeValidatorCount = BigInt(getActiveValidatorIndices(state, currentEpoch).length);
   participantIndices.forEach((participantIndex) => {
-    const baseReward = getBaseReward(config, state, participantIndex);
+    const baseReward = phase0.getBaseReward(config, state, participantIndex);
     const reward =
       (baseReward * activeValidatorCount) / BigInt(committeeIndices.length) / BigInt(config.params.SLOTS_PER_EPOCH);
     increaseBalance(state, participantIndex, reward);

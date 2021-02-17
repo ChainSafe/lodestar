@@ -1,9 +1,9 @@
 import {Eth1Data, PendingAttestation} from "@chainsafe/lodestar-types";
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {bigIntMin, intDiv} from "@chainsafe/lodestar-utils";
-
+import {CachedValidatorsBeaconState} from "../../..";
 import {getRandaoMix} from "../../../util";
-import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
+import {EpochContext, IEpochProcess} from "../util";
 
 export function processFinalUpdates(
   epochCtx: EpochContext,

@@ -1,5 +1,6 @@
 import {computeActivationExitEpoch} from "../../../util";
-import {EpochContext, IEpochProcess, CachedValidatorsBeaconState} from "../util";
+import {EpochContext, IEpochProcess} from "../util";
+import {CachedValidatorsBeaconState} from "../../..";
 
 export function processRegistryUpdates(
   epochCtx: EpochContext,

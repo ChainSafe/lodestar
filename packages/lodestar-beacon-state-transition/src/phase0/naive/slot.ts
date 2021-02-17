@@ -7,7 +7,7 @@ import {BeaconState, Slot} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {ZERO_HASH} from "../../constants";
 import {processEpoch} from "./epoch";
-import {lightclient} from ".";
+import { lightclient } from "../..";
 
 export function processSlots<TState extends BeaconState = BeaconState>(
   config: IBeaconConfig,
