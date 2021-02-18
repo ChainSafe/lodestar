@@ -5,8 +5,6 @@ import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ChainSegmentError} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
-import {prettyTimeDiff} from "../../util/time";
-import {TimeSeries} from "../stats/timeSeries";
 import {ChainPeersBalancer} from "./peerBalancer";
 import {Batch, BatchOpts, BatchMetadata, BatchStatus} from "./batch";
 import {
@@ -70,8 +68,6 @@ export class SyncChain {
   /** Sorted map of batches undergoing some kind of processing. */
   private batches: Map<Epoch, Batch> = new Map();
 
-  /** Dynamic targetEpoch with associated peers. May be `null`ed if no suitable peer set exists */
-  private timeSeries = new TimeSeries({maxPoints: 1000});
   private logger: ILogger;
   private config: IBeaconConfig;
   private signal: AbortSignal;
@@ -137,7 +133,7 @@ export class SyncChain {
 
         // Processes the next batch if ready
         const batch = getNextBatchToProcess(toArr(this.batches));
-        if (batch) await this.processBatch(batch, targetEpoch);
+        if (batch) await this.processBatch(batch);
       }
 
       this.maybeStuckTimeout = setTimeout(this.syncMaybeStuck, this.opts.maybeStuckTimeoutMs);
@@ -254,7 +250,7 @@ export class SyncChain {
   /**
    * Sends `batch` to the processor. Note: batch may be empty
    */
-  private async processBatch(batch: Batch, targetEpoch: Epoch): Promise<void> {
+  private async processBatch(batch: Batch): Promise<void> {
     try {
       const blocks = batch.startProcessing();
       await this.processChainSegment(blocks);
@@ -262,7 +258,7 @@ export class SyncChain {
 
       // If the processed batch was not empty, we can validate previous unvalidated blocks.
       if (blocks.length > 0) {
-        this.advanceChain(batch.startEpoch, targetEpoch);
+        this.advanceChain(batch.startEpoch);
       }
 
       // Potentially process next AwaitingProcessing batch
@@ -273,7 +269,7 @@ export class SyncChain {
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
       if (e instanceof ChainSegmentError && e.importedBlocks > 0) {
-        this.advanceChain(batch.startEpoch, targetEpoch);
+        this.advanceChain(batch.startEpoch);
       }
 
       // The current batch could not be processed, so either this or previous batches are invalid.
@@ -293,7 +289,7 @@ export class SyncChain {
   /**
    * Drops any batches previous to `newStartEpoch` and updates the chain boundaries
    */
-  private advanceChain(newStartEpoch: Epoch, targetEpoch: Epoch): void {
+  private advanceChain(newStartEpoch: Epoch): void {
     // make sure this epoch produces an advancement
     if (newStartEpoch <= this.startEpoch) {
       return;
@@ -306,20 +302,6 @@ export class SyncChain {
     }
 
     this.startEpoch = newStartEpoch;
-    this.logSyncProgress(this.startEpoch, targetEpoch);
-  }
-
-  /**
-   * Register sync progress in TimeSeries instance and log current speed and time left
-   */
-  private logSyncProgress(epoch: Epoch, targetEpoch: Epoch): void {
-    this.timeSeries.addPoint(epoch);
-
-    const epochsPerSecond = this.timeSeries.computeLinearSpeed();
-    const secondsLeft = (targetEpoch - epoch) / epochsPerSecond;
-    const slotsPerSecond = (epochsPerSecond * this.config.params.SLOTS_PER_EPOCH).toPrecision(3);
-    const timeLeft = isFinite(secondsLeft) ? prettyTimeDiff(1000 * secondsLeft) : "unknown";
-    this.logger.info(`Sync progress ${epoch}/${targetEpoch} - ${timeLeft} left - ${slotsPerSecond} slots/s`);
   }
 
   /**

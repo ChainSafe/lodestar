@@ -90,7 +90,7 @@ export class Libp2pNetwork extends (EventEmitter as {new (): NetworkEventEmitter
     await this.gossip.start();
     await this.diversifyPeersTask.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
-    this.logger.important(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
+    this.logger.info(`PeerId ${this.libp2p.peerId.toB58String()}, Multiaddrs ${multiaddresses}`);
   }
 
   public async stop(): Promise<void> {

@@ -195,7 +195,7 @@ export class Gossip extends (EventEmitter as {new (): GossipEventEmitter}) imple
 
   private handleForkVersion = async (): Promise<void> => {
     const forkDigest = this.chain.getForkDigest();
-    this.logger.important(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
+    this.logger.verbose(`Gossip: received new fork digest ${toHexString(forkDigest)}`);
     this.pubsub.registerLibp2pTopicValidators(forkDigest);
     this.unregisterHandlers();
     this.registerHandlers(forkDigest);
