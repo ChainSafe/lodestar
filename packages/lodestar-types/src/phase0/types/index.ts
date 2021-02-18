@@ -2,7 +2,7 @@
  * @module types
  */
 
-export * from "./primitive";
+export * from "../../primitive/types";
 export * from "./misc";
 export * from "./operations";
 export * from "./block";

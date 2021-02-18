@@ -1,9 +1,9 @@
 import {ContainerType} from "@chainsafe/ssz";
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 import {StringType} from "../utils";
-import {ValidatorStatus} from "../..";
+import {ValidatorStatus} from "../../types";
 
-export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SignedBeaconHeaderResponse = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       root: ssz.Root,
@@ -12,7 +12,7 @@ export const SignedBeaconHeaderResponse = (ssz: IBeaconSSZTypes): ContainerType 
     },
   });
 
-export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SubscribeToCommitteeSubnetPayload = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -22,7 +22,7 @@ export const SubscribeToCommitteeSubnetPayload = (ssz: IBeaconSSZTypes): Contain
     },
   });
 
-export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType =>
+export const AttesterDuty = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       pubkey: ssz.BLSPubkey,
@@ -35,7 +35,7 @@ export const AttesterDuty = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ProposerDuty = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -44,7 +44,7 @@ export const ProposerDuty = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SyncingStatus = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       headSlot: ssz.Uint64,
@@ -52,7 +52,7 @@ export const SyncingStatus = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Genesis = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Genesis = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       genesisValidatorsRoot: ssz.Root,
@@ -61,7 +61,7 @@ export const Genesis = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ChainHead = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ChainHead = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -71,7 +71,7 @@ export const ChainHead = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const BlockEventPayload = (ssz: IBeaconSSZTypes): ContainerType =>
+export const BlockEventPayload = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -79,7 +79,7 @@ export const BlockEventPayload = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const FinalizedCheckpoint = (ssz: IBeaconSSZTypes): ContainerType =>
+export const FinalizedCheckpoint = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       block: ssz.Root,
@@ -88,7 +88,7 @@ export const FinalizedCheckpoint = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ChainReorg = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ChainReorg = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -101,7 +101,7 @@ export const ChainReorg = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const FinalityCheckpoints = (ssz: IBeaconSSZTypes): ContainerType =>
+export const FinalityCheckpoints = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       previousJustified: ssz.Checkpoint,
@@ -110,7 +110,7 @@ export const FinalityCheckpoints = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const BeaconCommitteeResponse = (ssz: IBeaconSSZTypes): ContainerType =>
+export const BeaconCommitteeResponse = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       index: ssz.CommitteeIndex,
@@ -119,7 +119,7 @@ export const BeaconCommitteeResponse = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ValidatorResponse = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       index: ssz.ValidatorIndex,
@@ -129,7 +129,7 @@ export const ValidatorResponse = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ValidatorBalance = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ValidatorBalance = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       index: ssz.ValidatorIndex,
@@ -137,7 +137,7 @@ export const ValidatorBalance = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Contract = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Contract = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       chainId: ssz.Number64,

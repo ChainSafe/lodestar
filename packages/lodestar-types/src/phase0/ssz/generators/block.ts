@@ -2,12 +2,12 @@
  * @module sszTypes/generators
  */
 
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IPhase0Params} from "@chainsafe/lodestar-params";
 import {ContainerType, ListType, RootType} from "@chainsafe/ssz";
 
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 
-export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): ContainerType =>
+export const BeaconBlockBody = (ssz: IPhase0SSZTypes, params: IPhase0Params): ContainerType =>
   new ContainerType({
     fields: {
       randaoReveal: ssz.BLSSignature,
@@ -36,7 +36,7 @@ export const BeaconBlockBody = (ssz: IBeaconSSZTypes, params: IBeaconParams): Co
     },
   });
 
-export const BeaconBlock = (ssz: IBeaconSSZTypes): ContainerType =>
+export const BeaconBlock = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -51,7 +51,7 @@ export const BeaconBlock = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SignedBeaconBlock = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SignedBeaconBlock = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       message: ssz.BeaconBlock,

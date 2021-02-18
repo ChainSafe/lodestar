@@ -4,10 +4,10 @@
 
 import {ContainerType, BigIntUintType, ListType} from "@chainsafe/ssz";
 
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 import {MAX_REQUEST_BLOCKS, P2P_ERROR_MESSAGE_MAX_LENGTH} from "..";
 
-export const Status = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Status = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       forkDigest: ssz.ForkDigest,
@@ -18,11 +18,11 @@ export const Status = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Goodbye = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
+export const Goodbye = (ssz: IPhase0SSZTypes): BigIntUintType => ssz.Uint64;
 
-export const Ping = (ssz: IBeaconSSZTypes): BigIntUintType => ssz.Uint64;
+export const Ping = (ssz: IPhase0SSZTypes): BigIntUintType => ssz.Uint64;
 
-export const Metadata = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Metadata = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       seqNumber: ssz.Uint64,
@@ -30,7 +30,7 @@ export const Metadata = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType =>
+export const BeaconBlocksByRangeRequest = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       startSlot: ssz.Slot,
@@ -39,13 +39,13 @@ export const BeaconBlocksByRangeRequest = (ssz: IBeaconSSZTypes): ContainerType 
     },
   });
 
-export const BeaconBlocksByRootRequest = (ssz: IBeaconSSZTypes): ListType =>
+export const BeaconBlocksByRootRequest = (ssz: IPhase0SSZTypes): ListType =>
   new ListType({
     elementType: ssz.Root,
     limit: MAX_REQUEST_BLOCKS,
   });
 
-export const P2pErrorMessage = (ssz: IBeaconSSZTypes): ListType =>
+export const P2pErrorMessage = (ssz: IPhase0SSZTypes): ListType =>
   new ListType({
     elementType: ssz.Uint8,
     limit: P2P_ERROR_MESSAGE_MAX_LENGTH,

@@ -2,13 +2,13 @@
  * @module sszTypes/generators
  */
 
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IPhase0Params} from "@chainsafe/lodestar-params";
 import {ContainerType, ListType, BitListType, VectorType, RootType, BitVectorType} from "@chainsafe/ssz";
 
 import {DEPOSIT_CONTRACT_TREE_DEPTH, ATTESTATION_SUBNET_COUNT} from "../constants";
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 
-export const Fork = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Fork = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       previousVersion: ssz.Version,
@@ -17,7 +17,7 @@ export const Fork = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ForkData = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ForkData = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       currentVersion: ssz.Version,
@@ -25,7 +25,7 @@ export const ForkData = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const ENRForkID = (ssz: IBeaconSSZTypes): ContainerType =>
+export const ENRForkID = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       forkDigest: ssz.ForkDigest,
@@ -34,7 +34,7 @@ export const ENRForkID = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Checkpoint = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       epoch: ssz.Epoch,
@@ -42,7 +42,7 @@ export const Checkpoint = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SlotRoot = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SlotRoot = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -50,7 +50,7 @@ export const SlotRoot = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Validator = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Validator = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       pubkey: ssz.BLSPubkey,
@@ -64,7 +64,7 @@ export const Validator = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const AttestationData = (ssz: IBeaconSSZTypes): ContainerType =>
+export const AttestationData = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -75,13 +75,13 @@ export const AttestationData = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const CommitteeIndices = (ssz: IBeaconSSZTypes, params: IBeaconParams): ListType =>
+export const CommitteeIndices = (ssz: IPhase0SSZTypes, params: IPhase0Params): ListType =>
   new ListType({
     elementType: ssz.ValidatorIndex,
     limit: params.MAX_VALIDATORS_PER_COMMITTEE,
   });
 
-export const IndexedAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
+export const IndexedAttestation = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       attestingIndices: ssz.CommitteeIndices,
@@ -90,12 +90,12 @@ export const IndexedAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const CommitteeBits = (ssz: IBeaconSSZTypes, params: IBeaconParams): BitListType =>
+export const CommitteeBits = (ssz: IPhase0SSZTypes, params: IPhase0Params): BitListType =>
   new BitListType({
     limit: params.MAX_VALIDATORS_PER_COMMITTEE,
   });
 
-export const PendingAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
+export const PendingAttestation = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       aggregationBits: ssz.CommitteeBits,
@@ -105,7 +105,7 @@ export const PendingAttestation = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Eth1Data = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Eth1Data = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       depositRoot: ssz.Root,
@@ -114,7 +114,7 @@ export const Eth1Data = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const Eth1DataOrdered = (ssz: IBeaconSSZTypes): ContainerType =>
+export const Eth1DataOrdered = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       depositRoot: ssz.Root,
@@ -124,19 +124,19 @@ export const Eth1DataOrdered = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const HistoricalBlockRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType =>
+export const HistoricalBlockRoots = (ssz: IPhase0SSZTypes, params: IPhase0Params): VectorType =>
   new VectorType({
     elementType: new RootType({expandedType: () => ssz.BeaconBlock}),
     length: params.SLOTS_PER_HISTORICAL_ROOT,
   });
 
-export const HistoricalStateRoots = (ssz: IBeaconSSZTypes, params: IBeaconParams): VectorType =>
+export const HistoricalStateRoots = (ssz: IPhase0SSZTypes, params: IPhase0Params): VectorType =>
   new VectorType({
     elementType: new RootType({expandedType: () => ssz.BeaconState}),
     length: params.SLOTS_PER_HISTORICAL_ROOT,
   });
 
-export const HistoricalBatch = (ssz: IBeaconSSZTypes): ContainerType =>
+export const HistoricalBatch = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       blockRoots: ssz.HistoricalBlockRoots,
@@ -144,7 +144,7 @@ export const HistoricalBatch = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const DepositMessage = (ssz: IBeaconSSZTypes): ContainerType =>
+export const DepositMessage = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       pubkey: ssz.BLSPubkey,
@@ -153,7 +153,7 @@ export const DepositMessage = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const DepositData = (ssz: IBeaconSSZTypes): ContainerType =>
+export const DepositData = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       pubkey: ssz.BLSPubkey,
@@ -163,7 +163,7 @@ export const DepositData = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const DepositEvent = (ssz: IBeaconSSZTypes): ContainerType =>
+export const DepositEvent = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       depositData: ssz.DepositData,
@@ -172,7 +172,7 @@ export const DepositEvent = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType =>
+export const BeaconBlockHeader = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       slot: ssz.Slot,
@@ -183,7 +183,7 @@ export const BeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SignedBeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SignedBeaconBlockHeader = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       message: ssz.BeaconBlockHeader,
@@ -191,7 +191,7 @@ export const SignedBeaconBlockHeader = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const SigningData = (ssz: IBeaconSSZTypes): ContainerType =>
+export const SigningData = (ssz: IPhase0SSZTypes): ContainerType =>
   new ContainerType({
     fields: {
       objectRoot: ssz.Root,
@@ -199,7 +199,7 @@ export const SigningData = (ssz: IBeaconSSZTypes): ContainerType =>
     },
   });
 
-export const DepositDataRootList = (ssz: IBeaconSSZTypes): ListType =>
+export const DepositDataRootList = (ssz: IPhase0SSZTypes): ListType =>
   new ListType({
     elementType: new RootType({
       expandedType: ssz.DepositData,

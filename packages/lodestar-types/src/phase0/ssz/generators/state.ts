@@ -2,19 +2,19 @@
  * @module sszTypes/generators
  */
 
-import {IBeaconParams} from "@chainsafe/lodestar-params";
+import {IPhase0Params} from "@chainsafe/lodestar-params";
 import {BitVectorType, ContainerType, ListType, RootType, VectorType} from "@chainsafe/ssz";
 
 import {JUSTIFICATION_BITS_LENGTH} from "../constants";
-import {IBeaconSSZTypes} from "../interface";
+import {IPhase0SSZTypes} from "../interface";
 
-export const EpochAttestations = (ssz: IBeaconSSZTypes, params: IBeaconParams): ListType =>
+export const EpochAttestations = (ssz: IPhase0SSZTypes, params: IPhase0Params): ListType =>
   new ListType({
     elementType: ssz.PendingAttestation,
     limit: params.MAX_ATTESTATIONS * params.SLOTS_PER_EPOCH,
   });
 
-export const BeaconState = (ssz: IBeaconSSZTypes, params: IBeaconParams): ContainerType =>
+export const BeaconState = (ssz: IPhase0SSZTypes, params: IPhase0Params): ContainerType =>
   new ContainerType({
     fields: {
       // Misc

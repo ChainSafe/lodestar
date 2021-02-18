@@ -1,16 +1,19 @@
 import {assert} from "chai";
 import fs from "fs";
 import path from "path";
-import {types as sszTypes} from "../../src/ssz/presets/mainnet";
+import {types as sszTypes} from "../../src/presets/mainnet";
+import * as primitiveTypes from "../../src/primitive/ssz";
 
-describe("@chainsafe/lodestar-types", () => {
+const phase0Types = sszTypes.phase0;
+
+describe("@chainsafe/lodestar-types phase0", () => {
   // interfaces are not available at run time, so we must parse our interface
   // files ourselves in order to retrieve their information
 
   // put interfaces and types into objects
   const interfaces = {};
   const types = {};
-  const typesDir = path.join(__dirname, "/../../src/types/");
+  const typesDir = path.join(__dirname, "/../../src/phase0/types/");
   // Get all ts files in our types directory
   const typeFiles = fs.readdirSync(typesDir).filter((s) => s.endsWith(".ts"));
   typeFiles.map((file) => {
@@ -81,10 +84,10 @@ describe("@chainsafe/lodestar-types", () => {
     DepositDataRootList: true,
     EpochAttestations: true,
   };
-  for (const name in sszTypes) {
-    if (!blackList[name]) {
+  for (const name in phase0Types) {
+    if (!blackList[name] && !(primitiveTypes as any)[name]) {
       // @ts-ignore
-      vars[name] = sszTypes[name];
+      vars[name] = phase0Types[name];
     }
   }
   // Now that we have an object of interfaces and and object of runtime type variables, we can perform our tests
@@ -122,7 +125,7 @@ describe("@chainsafe/lodestar-types", () => {
         while (ifaceInferredFieldType) {
           // if their is a variable whose name is the interface field type and it is the same object thats passed in
           // @ts-ignore
-          if (sszTypes[ifaceInferredFieldType] === rtFieldType) {
+          if (phase0Types[ifaceInferredFieldType] === rtFieldType) {
             return;
           }
           // @ts-ignore

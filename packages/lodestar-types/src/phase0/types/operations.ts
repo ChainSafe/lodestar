@@ -4,7 +4,7 @@
 
 import {BitList, Vector} from "@chainsafe/ssz";
 
-import {BLSSignature, Bytes32, Epoch, ValidatorIndex} from "./primitive";
+import {BLSSignature, Bytes32, Epoch, ValidatorIndex} from "../../primitive/types";
 
 import {AttestationData, SignedBeaconBlockHeader, DepositData, IndexedAttestation} from "./misc";
 

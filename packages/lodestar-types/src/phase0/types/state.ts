@@ -4,7 +4,7 @@
 
 import {BitVector, List, Vector} from "@chainsafe/ssz";
 
-import {Bytes32, Gwei, Root, Number64, Slot} from "./primitive";
+import {Bytes32, Gwei, Root, Number64, Slot} from "../../primitive/types";
 
 import {BeaconBlockHeader, Checkpoint, Eth1Data, Fork, PendingAttestation, Validator} from "./misc";
 
