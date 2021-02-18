@@ -160,13 +160,15 @@ export class AttestationService {
       }
       attesterDuties.set(toHexString(duty.pubkey), nextDuty);
       try {
-        await this.provider.validator.prepareBeaconCommitteeSubnet(
-          nextDuty.validatorIndex,
-          nextDuty.committeeIndex,
-          nextDuty.committeesAtSlot,
-          nextDuty.slot,
-          isAggregator
-        );
+        await this.provider.validator.prepareBeaconCommitteeSubnet([
+          {
+            validatorIndex: nextDuty.validatorIndex,
+            committeeIndex: nextDuty.committeeIndex,
+            committeesAtSlot: nextDuty.committeesAtSlot,
+            slot: nextDuty.slot,
+            isAggregator,
+          },
+        ]);
       } catch (e) {
         this.logger.error("Failed to subscribe to committee subnet", e);
       }
