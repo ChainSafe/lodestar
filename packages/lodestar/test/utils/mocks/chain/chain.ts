@@ -14,7 +14,7 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeForkDigest, EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeForkDigest, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain, ITreeStateContext} from "../../../../src/chain";
@@ -26,7 +26,6 @@ import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {AttestationPool} from "../../../../src/chain/attestation";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 export interface IMockChainParams {
   genesisTime: Number64;
@@ -89,22 +88,22 @@ export class MockBeaconChain implements IBeaconChain {
 
   public getHeadStateContext(): ITreeStateContext {
     return {
-      state: createCachedValidatorsBeaconState(this.state!),
-      epochCtx: new EpochContext(this.config),
+      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
     return {
-      state: createCachedValidatorsBeaconState(this.state!),
-      epochCtx: new EpochContext(this.config),
+      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
     return {
-      state: createCachedValidatorsBeaconState(this.state!),
-      epochCtx: new EpochContext(this.config),
+      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }
 
@@ -114,7 +113,7 @@ export class MockBeaconChain implements IBeaconChain {
     return block;
   }
 
-  public getHeadEpochContext(): EpochContext {
+  public getHeadEpochContext(): phase0.fast.EpochContext {
     return this.getHeadStateContext().epochCtx;
   }
 
@@ -122,7 +121,7 @@ export class MockBeaconChain implements IBeaconChain {
     return this.getHeadStateContext().state.getOriginalState() as TreeBacked<BeaconState>;
   }
 
-  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]> {
     if (!slots) {
       return [];
     }

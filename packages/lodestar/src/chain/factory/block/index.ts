@@ -2,7 +2,6 @@
  * @module chain/blockAssembly
  */
 
-import {processBlock} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlock, BeaconState, Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -11,6 +10,7 @@ import {IBeaconDb} from "../../../db/api";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IBeaconChain, ITreeStateContext} from "../../interface";
 import {assembleBody} from "./body";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 export async function assembleBlock(
   config: IBeaconConfig,
@@ -53,7 +53,7 @@ function computeNewStateRoot(config: IBeaconConfig, stateContext: ITreeStateCont
     state: stateContext.state.clone(),
     epochCtx: stateContext.epochCtx.copy(),
   };
-  processBlock(postState.epochCtx, postState.state, block, true);
+  phase0.fast.processBlock(postState.epochCtx, postState.state, block, true);
 
   return config.types.BeaconState.hashTreeRoot(postState.state);
 }

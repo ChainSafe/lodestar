@@ -37,7 +37,7 @@ import {IApiOptions} from "../../options";
 import {ApiError} from "../errors/api";
 import {ApiNamespace, IApiModules} from "../interface";
 import {checkSyncStatus} from "../utils";
-import {IValidatorApi} from "./interface";
+import {BeaconCommitteeSubscription, IValidatorApi} from "./interface";
 
 /**
  * Server implementation for handling validator duties.
@@ -194,18 +194,15 @@ export class ValidatorApi implements IValidatorApi {
     );
   }
 
-  public async prepareBeaconCommitteeSubnet(
-    validatorIndex: ValidatorIndex,
-    committeeIndex: CommitteeIndex,
-    committeesAtSlot: number,
-    slot: Slot,
-    isAggregator: boolean
-  ): Promise<void> {
+  public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
     await checkSyncStatus(this.config, this.sync);
-    if (isAggregator) {
-      await this.sync.collectAttestations(slot, committeeIndex);
+
+    for (const {isAggregator, slot, committeeIndex, committeesAtSlot} of subscriptions) {
+      if (isAggregator) {
+        await this.sync.collectAttestations(slot, committeeIndex);
+      }
+      const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
+      await this.network.searchSubnetPeers([String(subnet)]);
     }
-    const subnet = computeSubnetForCommitteesAtSlot(this.config, slot, committeesAtSlot, committeeIndex);
-    await this.network.searchSubnetPeers([String(subnet)]);
   }
 }

@@ -15,7 +15,7 @@ import {
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {generateEmptyBlock} from "@chainsafe/lodestar/test/utils/block";
-import {IValidatorApi} from "../../../src/api/interface/validators";
+import {BeaconCommitteeSubscription, IValidatorApi} from "../../../src/api/interface/validators";
 
 export interface IMockValidatorAPIOpts {
   head?: SignedBeaconBlock;
@@ -51,13 +51,7 @@ export class MockValidatorApi implements IValidatorApi {
   publishAggregateAndProofs(signedAggregateAndProofs: SignedAggregateAndProof[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
-  prepareBeaconCommitteeSubnet(
-    validatorIndex: number,
-    committeeIndex: number,
-    committeesAtSlot: number,
-    slot: number,
-    isAggregator: boolean
-  ): Promise<void> {
+  prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
     throw new Error("Method not implemented.");
   }
 

@@ -1,16 +1,14 @@
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {EpochContext} from "../../../src/fast";
-import {processSlots} from "../../../src/fast/slot";
-import {CachedValidatorsBeaconState, createCachedValidatorsBeaconState} from "../../../src/fast/util";
-import {generatePerformanceState, initBLS} from "../util";
+import {phase0} from "../../../src";
+import {initBLS, generatePerformanceState} from "../util";
 
 describe("Process Slots Performance Test", function () {
   this.timeout(0);
   const logger = new WinstonLogger();
-  let state: CachedValidatorsBeaconState;
-  let epochCtx: EpochContext;
+  let state: phase0.fast.CachedValidatorsBeaconState;
+  let epochCtx: phase0.fast.EpochContext;
 
   before(async () => {
     await initBLS();
@@ -18,16 +16,16 @@ describe("Process Slots Performance Test", function () {
 
   beforeEach(async () => {
     const origState = await generatePerformanceState();
-    epochCtx = new EpochContext(config);
+    epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(origState);
-    state = createCachedValidatorsBeaconState(origState);
+    state = phase0.fast.createCachedValidatorsBeaconState(origState);
   });
 
   it("process 1 empty epoch", async () => {
     const numSlot = 32;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(1100);
   });
@@ -36,7 +34,7 @@ describe("Process Slots Performance Test", function () {
     const numSlot = 64;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(2200);
   });
@@ -45,7 +43,7 @@ describe("Process Slots Performance Test", function () {
     const numSlot = 128;
     logger.profile(`Process ${numSlot} slots`);
     const start = Date.now();
-    processSlots(epochCtx, state, state.slot + numSlot);
+    phase0.fast.processSlots(epochCtx, state, state.slot + numSlot);
     logger.profile(`Process ${numSlot} slots`);
     expect(Date.now() - start).lt(4300);
   });

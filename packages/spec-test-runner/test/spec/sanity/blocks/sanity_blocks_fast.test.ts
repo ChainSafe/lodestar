@@ -1,26 +1,25 @@
 import {join} from "path";
 import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {EpochContext, fastStateTransition} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IBlockSanityTestCase} from "./type";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
   "block sanity mainnet",
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     const state = config.types.BeaconState.tree.createValue(testcase.pre);
-    const wrappedState = createCachedValidatorsBeaconState(state);
-    const epochCtx = new EpochContext(config);
+    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(wrappedState);
     let stateContext = {epochCtx, state: wrappedState};
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
     for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-      stateContext = fastStateTransition(stateContext, testcase[`blocks_${i}`] as SignedBeaconBlock, {
+      stateContext = phase0.fast.fastStateTransition(stateContext, testcase[`blocks_${i}`] as SignedBeaconBlock, {
         verifyStateRoot: verify,
         verifyProposer: verify,
         verifySignatures: verify,

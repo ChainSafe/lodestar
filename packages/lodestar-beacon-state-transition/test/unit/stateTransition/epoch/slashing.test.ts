@@ -5,7 +5,7 @@ import {Validator} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../src/util";
 import {FAR_FUTURE_EPOCH} from "../../../../src/constants";
-import {processSlashings} from "../../../../src/epoch/slashings";
+import {processSlashings} from "../../../../src/phase0/naive/epoch/slashings";
 import {generateState} from "../../../utils/state";
 import {generateValidator} from "../../../utils/validator";
 import {intDiv} from "@chainsafe/lodestar-utils";

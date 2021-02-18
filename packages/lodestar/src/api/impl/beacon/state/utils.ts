@@ -1,6 +1,5 @@
 // this will need async once we wan't to resolve archive slot
-import {FAR_FUTURE_EPOCH, GENESIS_SLOT} from "@chainsafe/lodestar-beacon-state-transition";
-import {computeEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
+import {GENESIS_SLOT, phase0, FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {
@@ -116,7 +115,7 @@ export function getEpochBeaconCommittees(
       v.exitEpoch,
     ]);
 
-    const shuffling = computeEpochShuffling(config, stateContext.state, indicesBounded, epoch);
+    const shuffling = phase0.fast.computeEpochShuffling(config, stateContext.state, indicesBounded, epoch);
     committees = shuffling.committees;
   }
   return committees;

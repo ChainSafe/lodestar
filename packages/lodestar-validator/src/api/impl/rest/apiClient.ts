@@ -9,12 +9,15 @@ import {RestNodeApi} from "./node/node";
 import {INodeApi} from "../../interface/node";
 import {RestEventsApi} from "./events/events";
 import {IEventsApi} from "../../interface/events";
+import {RestConfigApi} from "./config/config";
+import {IConfigApi} from "../../interface/config";
 
 export class ApiClientOverRest extends AbstractApiClient {
   public beacon: IBeaconApi;
   public node: INodeApi;
   public events: IEventsApi;
   public validator: IValidatorApi;
+  public configApi: IConfigApi;
 
   public url: string;
 
@@ -25,5 +28,6 @@ export class ApiClientOverRest extends AbstractApiClient {
     this.beacon = new RestBeaconApi(config, restUrl, logger);
     this.events = new RestEventsApi(config, restUrl);
     this.node = new RestNodeApi(config, restUrl, logger);
+    this.configApi = new RestConfigApi(config, restUrl, logger);
   }
 }

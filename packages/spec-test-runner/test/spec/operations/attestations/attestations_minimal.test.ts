@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {processAttestation} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessAttestationTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IProcessAttestationTestCase, BeaconState>(
   (testcase) => {
     const state = testcase.pre;
     const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
-    processAttestation(config, state, testcase.attestation, verify);
+    phase0.processAttestation(config, state, testcase.attestation, verify);
     return state;
   },
   {

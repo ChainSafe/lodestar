@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {BeaconState} from "@chainsafe/lodestar-types";
-import {processSlots} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessSlotsTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -12,7 +12,7 @@ describeDirectorySpecTest<IProcessSlotsTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/minimal/phase0/sanity/slots/pyspec_tests"),
   (testcase) => {
     const state = testcase.pre;
-    processSlots(config, state, state.slot + Number(testcase.slots));
+    phase0.processSlots(config, state, state.slot + Number(testcase.slots));
     return state;
   },
   {

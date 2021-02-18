@@ -2,8 +2,8 @@ import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
-import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/fast/block";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import * as processBlock from "@chainsafe/lodestar-beacon-state-transition/lib/phase0/fast/block";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {BeaconChain} from "../../../../../src/chain";
@@ -45,7 +45,7 @@ describe("block assembly", function () {
   it("should assemble block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
     forkChoiceStub.getHead.returns(generateBlockSummary());
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.fast.EpochContext(config);
     sinon.stub(epochCtx).getBeaconProposer.returns(2);
     regenStub.getBlockSlotState.resolves({
       state: generateCachedState({slot: 1}),

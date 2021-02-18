@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {EpochContext} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
@@ -13,7 +13,6 @@ import {generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {BeaconSync, IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
-import {createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/util";
 
 describe("get proposers api impl", function () {
   const sandbox = sinon.createSandbox();
@@ -77,10 +76,10 @@ describe("get proposers api impl", function () {
       }),
       balances: generateInitialMaxBalances(config, 25),
     });
-    const epochCtx = new EpochContext(config);
+    const epochCtx = new phase0.EpochContext(config);
     epochCtx.loadState(state);
     chainStub.getHeadStateContextAtCurrentEpoch.resolves({
-      state: createCachedValidatorsBeaconState(state),
+      state: phase0.fast.createCachedValidatorsBeaconState(state),
       epochCtx,
     });
     sinon.stub(epochCtx, "getBeaconProposer").returns(1);

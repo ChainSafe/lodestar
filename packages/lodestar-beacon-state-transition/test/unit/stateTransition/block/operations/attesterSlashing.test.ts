@@ -4,8 +4,8 @@ import sinon from "sinon";
 import {List} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import * as utils from "../../../../../src/util";
-import {processAttesterSlashing} from "../../../../../src/block/operations";
 import {generateEmptyAttesterSlashing} from "../../../../utils/slashings";
+import {phase0} from "../../../../../src";
 
 describe("process block - attester slashings", function () {
   const sandbox = sinon.createSandbox();
@@ -30,7 +30,7 @@ describe("process block - attester slashings", function () {
     const state = generateState();
     const attesterSlashing = generateEmptyAttesterSlashing();
     isSlashableAttestationStub.returns(false);
-    expect(() => processAttesterSlashing(config, state, attesterSlashing)).to.throw;
+    expect(() => phase0.processAttesterSlashing(config, state, attesterSlashing)).to.throw;
   });
 
   it("should fail to process slashings - data incorrect", function () {
@@ -41,7 +41,7 @@ describe("process block - attester slashings", function () {
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(false);
     try {
-      processAttesterSlashing(config, state, attesterSlashing, true);
+      phase0.processAttesterSlashing(config, state, attesterSlashing, true);
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.callCount).equals(1);
@@ -60,7 +60,7 @@ describe("process block - attester slashings", function () {
     validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation1).returns(true);
     validateIndexedAttestationStub.withArgs(state, attesterSlashing.attestation2).returns(false);
     try {
-      processAttesterSlashing(config, state, attesterSlashing);
+      phase0.processAttesterSlashing(config, state, attesterSlashing);
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.calledOnce).to.be.true;
@@ -75,7 +75,7 @@ describe("process block - attester slashings", function () {
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(true);
     try {
-      processAttesterSlashing(config, state, attesterSlashing);
+      phase0.processAttesterSlashing(config, state, attesterSlashing);
       expect.fail();
     } catch (e) {
       expect(validateIndexedAttestationStub.calledTwice).to.be.true;
@@ -90,7 +90,7 @@ describe("process block - attester slashings", function () {
     isSlashableAttestationStub.returns(true);
     validateIndexedAttestationStub.returns(true);
     isSlashableValidatorStub.returns(true);
-    processAttesterSlashing(config, state, attesterSlashing);
+    phase0.processAttesterSlashing(config, state, attesterSlashing);
     expect(slashValidatorStub.calledTwice).to.be.true;
   });
 });

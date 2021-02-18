@@ -6,7 +6,7 @@ import {
   computeEpochAtSlot,
   computeForkDigest,
   computeStartSlotAtEpoch,
-  EpochContext,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -161,7 +161,7 @@ export class BeaconChain implements IBeaconChain {
     //head state should always have epoch ctx
     return this.getHeadStateContext().state.getOriginalState() as TreeBacked<BeaconState>;
   }
-  public getHeadEpochContext(): EpochContext {
+  public getHeadEpochContext(): phase0.EpochContext {
     // head should always have epoch ctx
     return this.getHeadStateContext().epochCtx;
   }
@@ -210,16 +210,23 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[] | null> {
-    if (!slots) {
-      return null;
+  /** Returned blocks have the same ordering as `slots` */
+  public async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<SignedBeaconBlock[]> {
+    if (slots.length === 0) {
+      return [];
     }
-    const blockRoots = this.forkChoice
-      .iterateBlockSummaries(this.forkChoice.getHeadRoot())
-      .filter((summary) => slots.includes(summary.slot))
-      .map((summary) => summary.blockRoot);
+
+    const slotsSet = new Set(slots);
+    const blockRootsPerSlot = new Map<Slot, Promise<SignedBeaconBlock | null>>();
+
     // these blocks are on the same chain to head
-    const unfinalizedBlocks = await Promise.all(blockRoots.map((blockRoot) => this.db.block.get(blockRoot)));
+    for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
+      if (slotsSet.has(summary.slot)) {
+        blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
+      }
+    }
+
+    const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
     return unfinalizedBlocks.filter(notNullish);
   }
 

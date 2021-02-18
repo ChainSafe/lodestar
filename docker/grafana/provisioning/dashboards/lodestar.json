@@ -46,107 +46,11 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
-      },
-      "hiddenSeries": false,
-      "id": 14,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "nodejs_heap_space_size_used_bytes",
-          "interval": "",
-          "legendFormat": "",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Heap Space Used",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
         "y": 1
       },
       "hiddenSeries": false,
@@ -167,7 +71,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -179,7 +83,7 @@
         {
           "expr": "nodejs_active_handles",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "{{type}}",
           "refId": "A"
         }
       ],
@@ -238,7 +142,103 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "hiddenSeries": false,
+      "id": 14,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.1",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "nodejs_heap_space_size_used_bytes",
+          "interval": "",
+          "legendFormat": "{{space}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Heap Space Used",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 3,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -263,7 +263,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -275,7 +275,7 @@
         {
           "expr": "nodejs_eventloop_lag_seconds",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "nodejs_eventloop_lag_seconds",
           "refId": "A"
         }
       ],
@@ -334,7 +334,7 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -359,7 +359,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -371,7 +371,7 @@
         {
           "expr": "nodejs_external_memory_bytes",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "nodejs_external_memory_bytes",
           "refId": "A"
         }
       ],
@@ -395,7 +395,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -427,7 +427,7 @@
       },
       "id": 10,
       "panels": [],
-      "title": "Chain Stats",
+      "title": "Node summary",
       "type": "row"
     },
     {
@@ -444,15 +444,15 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
-        "h": 11,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 18
       },
       "hiddenSeries": false,
-      "id": 21,
+      "id": 2,
       "legend": {
         "avg": false,
         "current": false,
@@ -469,7 +469,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -479,18 +479,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libp2p_peers",
-          "hide": false,
+          "expr": "beacon_head_slot",
           "interval": "",
           "legendFormat": "",
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Peer count",
+      "title": "Head Slot",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -564,7 +563,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "targets": [
         {
           "expr": "libp2p_peers",
@@ -576,6 +575,7 @@
       "timeFrom": null,
       "timeShift": null,
       "title": "Peer Count",
+      "transformations": [],
       "type": "stat"
     },
     {
@@ -615,7 +615,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -666,7 +666,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -717,7 +717,7 @@
         },
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "targets": [
         {
           "expr": "rate(beacon_head_slot[2m])",
@@ -745,15 +745,15 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 2,
       "gridPos": {
-        "h": 8,
+        "h": 11,
         "w": 12,
         "x": 12,
         "y": 21
       },
       "hiddenSeries": false,
-      "id": 2,
+      "id": 21,
       "legend": {
         "avg": false,
         "current": false,
@@ -770,7 +770,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -780,17 +780,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "beacon_head_slot",
+          "expr": "lodestar_peers",
+          "hide": false,
           "interval": "",
-          "legendFormat": "",
-          "refId": "A"
+          "legendFormat": "{{direction}}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Head Slot",
+      "title": "Peer count",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -841,23 +842,23 @@
         "overrides": []
       },
       "fill": 1,
-      "fillGradient": 0,
+      "fillGradient": 3,
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 29
+        "x": 0,
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 23,
       "legend": {
-        "avg": false,
+        "avg": true,
         "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -866,7 +867,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.7",
+      "pluginVersion": "7.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -876,7 +877,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(beacon_head_slot[2m])",
+          "expr": "rate(beacon_head_slot[1m])",
+          "instant": false,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -941,5 +943,5 @@
   "timezone": "",
   "title": "Simple Lodestar",
   "uid": "bikvONDGz",
-  "version": 2
+  "version": 4
 }

@@ -13,7 +13,7 @@ interface IGenesisValidityTestCase {
 }
 
 describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
-  "genesis initialization",
+  "genesis validity",
   join(SPEC_TEST_LOCATION, "tests/minimal/phase0/genesis/validity/pyspec_tests"),
   (testcase) => {
     return isValidGenesisState(config, testcase.genesis);
