@@ -11,14 +11,6 @@ import {ENR} from "@chainsafe/discv5";
 
 // req/resp
 
-function randomNibble(): string {
-  return Math.floor(Math.random() * 16).toString(16);
-}
-
-export function randomRequestId(): RequestId {
-  return Array.from({length: 16}, () => randomNibble()).join("");
-}
-
 export function createResponseEvent(id: RequestId): string {
   return `response ${id}`;
 }
