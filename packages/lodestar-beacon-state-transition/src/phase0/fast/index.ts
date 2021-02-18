@@ -1,14 +1,14 @@
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {IStateContext} from "../..";
 import {processBlock} from "./block";
 import {processSlots} from "./slot";
 import {verifyBlockSignature} from "./util";
-import {IStateContext} from "../..";
 
 export * from "./block";
 export * from "./epoch";
+export * from "./signatureSets";
 export * from "./slot";
 export * from "./util";
-export * from "./signatureSets";
 
 /**
  * Implementation of protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)

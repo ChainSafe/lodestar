@@ -1,7 +1,7 @@
 import {join} from "path";
 import {expect} from "chai";
 import {BeaconState, SignedBeaconBlock} from "@chainsafe/lodestar-types";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/mainnet";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IBlockSanityTestCase} from "./type";
@@ -13,7 +13,7 @@ describeDirectorySpecTest<IBlockSanityTestCase, BeaconState>(
   join(SPEC_TEST_LOCATION, "/tests/mainnet/phase0/sanity/blocks/pyspec_tests"),
   (testcase) => {
     const state = config.types.BeaconState.tree.createValue(testcase.pre);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const wrappedState = createCachedValidatorsBeaconState(state);
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(wrappedState);
     let stateContext = {epochCtx, state: wrappedState};

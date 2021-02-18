@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IStateTestCase} from "../../../utils/specTestTypes/stateTestCase";
@@ -15,7 +15,7 @@ describeDirectorySpecTest<IStateTestCase, BeaconState>(
     const state = testcase.pre;
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const wrappedState = createCachedValidatorsBeaconState(state);
     const process = phase0.fast.prepareEpochProcessState(epochCtx, wrappedState);
     phase0.fast.processRewardsAndPenalties(epochCtx, process, wrappedState);
     return state;

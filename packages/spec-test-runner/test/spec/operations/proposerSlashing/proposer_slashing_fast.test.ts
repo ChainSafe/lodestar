@@ -2,7 +2,7 @@ import {join} from "path";
 import {expect} from "chai";
 import {BeaconState} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/mainnet";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util/lib/single";
 import {IProcessProposerSlashingTestCase} from "./type";
 import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
@@ -14,7 +14,7 @@ describeDirectorySpecTest<IProcessProposerSlashingTestCase, BeaconState>(
     const state = testcase.pre;
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const wrappedState = createCachedValidatorsBeaconState(state);
     phase0.fast.processProposerSlashing(epochCtx, wrappedState, testcase.proposer_slashing);
     return state;
   },
