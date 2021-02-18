@@ -1,0 +1,35 @@
+version: "3.4"
+
+# Configuration to work with a local non-dockerized Lodestar node
+# For local testing and quick debugging
+#
+# HOW TO USE: Start a Lodestar node, then run
+#
+# docker-compose -f docker/docker-compose-local.yml up -d
+
+services:
+  prometheus:
+    build: 
+    build:
+      context: prometheus
+      args:
+        config_file: prometheus.local.yml
+    restart: always
+    volumes:
+      - "prometheus:/prometheus"
+    network_mode: host
+
+  grafana:
+    build:
+      context: grafana
+      args:
+        datasource_file: datasource.local.yml
+    restart: always
+    volumes:
+      - "grafana:/var/lib/grafana"
+    depends_on: [prometheus]
+    network_mode: host
+
+volumes:
+  prometheus:
+  grafana:
