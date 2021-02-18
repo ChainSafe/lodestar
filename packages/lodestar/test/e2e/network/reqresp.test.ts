@@ -91,7 +91,7 @@ describe("[network] network", function () {
     });
 
     const pingRes = await netA.reqResp.ping(netB.peerId, pingBody);
-    expect(pingRes?.toString()).to.deep.equal(pingBody.toString(), "Wrong response body");
+    expect(pingRes.toString()).to.deep.equal(pingBody.toString(), "Wrong response body");
   });
 
   it("should send/receive a metadata message", async function () {

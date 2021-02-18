@@ -195,7 +195,6 @@ describe("[sync] rpc", function () {
     const request = [Buffer.alloc(32)] as BeaconBlocksByRootRequest;
     await netA.connect(netB.peerId, netB.localMultiaddrs);
     const response = await netA.reqResp.beaconBlocksByRoot(netB.peerId, request);
-    if (!response) throw Error("beaconBlocksByRoot returned null");
     expect(response.length).to.equal(1);
     const block = response[0];
     expect(block.message.slot).to.equal(BLOCK_SLOT);

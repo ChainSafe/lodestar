@@ -47,14 +47,6 @@ describe("CheckPeerAliveTask", function () {
     expect(reqRespStub.metadata.called).to.be.false;
   });
 
-  it("ping returns null, should disconnect", async () => {
-    reqRespStub.ping.resolves(null);
-    await task.run();
-
-    // expect(networkStub.disconnect.calledOnce).to.be.true;
-    expect(reqRespStub.metadata.called).to.be.false;
-  });
-
   it("ping successfully, return same sequence number", async () => {
     reqRespStub.ping.resolves(BigInt(1));
     peerMetadataStub.getMetadata.withArgs(peerId).returns({

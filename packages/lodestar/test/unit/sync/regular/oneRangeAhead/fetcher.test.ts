@@ -113,27 +113,6 @@ describe("BlockRangeFetcher", function () {
     expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
   });
 
-  it("should handle getBlockRange returning null", async () => {
-    // should switch peer
-    const firstPeerId = await PeerId.create();
-    getPeers.onFirstCall().resolves([firstPeerId]);
-    fetcher.setLastProcessedBlock({root: ZERO_HASH, slot: 1000});
-    getCurrentSlotStub.returns(2000);
-    getBlockRangeStub.onFirstCall().resolves(null);
-    const firstBlock = generateEmptySignedBlock();
-    firstBlock.message.slot = 1010;
-    const secondBlock = generateEmptySignedBlock();
-    secondBlock.message.slot = 1020;
-    secondBlock.message.parentRoot = config.types.BeaconBlock.hashTreeRoot(firstBlock.message);
-    getBlockRangeStub.onSecondCall().resolves([firstBlock, secondBlock]);
-    const result = await fetcher.getNextBlockRange();
-    expect(getBlockRangeStub.calledWith(logger, sinon.match.any, sinon.match.any, {start: 1000, end: 1065})).to.be.true;
-    expect(getBlockRangeStub.calledTwice).to.be.true;
-    // second block is ignored since we can't validate if it's orphaned block or not
-    expect(result).to.be.deep.equal([firstBlock]);
-    expect(getPeers.calledWithExactly([firstPeerId.toB58String()])).to.be.true;
-  });
-
   it("should handle getBlockRange returning no block or single block", async () => {
     // expect 2 things
     // switch peer since some weird peers keep returning 0 block or 1 block

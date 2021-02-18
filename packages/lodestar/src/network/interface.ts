@@ -23,12 +23,12 @@ import {IRpcScoreTracker} from "./peers/score";
 import {ReqRespHandler} from "./reqresp";
 
 export interface IReqResp {
-  status(peerId: PeerId, request: Status): Promise<Status | null>;
+  status(peerId: PeerId, request: Status): Promise<Status>;
   goodbye(peerId: PeerId, request: Goodbye): Promise<void>;
-  ping(peerId: PeerId, request: Ping): Promise<Ping | null>;
-  metadata(peerId: PeerId): Promise<Metadata | null>;
-  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[] | null>;
-  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[] | null>;
+  ping(peerId: PeerId, request: Ping): Promise<Ping>;
+  metadata(peerId: PeerId): Promise<Metadata>;
+  beaconBlocksByRange(peerId: PeerId, request: BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
+  beaconBlocksByRoot(peerId: PeerId, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
   registerHandler(handler: ReqRespHandler): void;
   unregisterHandler(): ReqRespHandler | null;
 }

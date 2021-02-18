@@ -43,7 +43,7 @@ describe("sync - block utils", function () {
       const peer1 = await PeerId.create();
       const peer2 = await PeerId.create();
       const peers = [peer1, peer2];
-      rpcStub.beaconBlocksByRange.onFirstCall().resolves(null);
+      rpcStub.beaconBlocksByRange.onFirstCall().rejects(Error("TEST_ERROR"));
       rpcStub.beaconBlocksByRange.onSecondCall().resolves([generateEmptySignedBlock(), generateEmptySignedBlock()]);
       const blockPromise = getBlockRange(logger, rpcStub, peers, {start: 0, end: 4}, 2);
       await sandbox.clock.tickAsync(1000);
