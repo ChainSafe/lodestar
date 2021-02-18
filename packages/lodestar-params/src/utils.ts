@@ -28,11 +28,3 @@ export const schema = new Schema({
     }),
   ],
 });
-
-export function mapValuesNumToString<T extends {[key: string]: number | string}>(obj: T): {[K in keyof T]: string} {
-  const objAsStrings = {} as {[K in keyof T]: string};
-  for (const key in obj) {
-    objAsStrings[key] = String(obj[key]);
-  }
-  return objAsStrings;
-}
