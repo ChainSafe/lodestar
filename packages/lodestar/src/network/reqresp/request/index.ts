@@ -43,7 +43,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   maxResponses?: number,
   signal?: AbortSignal,
   options?: Partial<typeof timeoutOptions>
-): Promise<T | null> {
+): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = peerId.toB58String();
   const logCtx = {method, encoding, peer, requestId: randomRequestId()};

@@ -153,8 +153,8 @@ export class BeaconSync implements IBeaconSync {
 
   private downloadBeaconBlocksByRange: DownloadBeaconBlocksByRange = async (peerId, request) => {
     const blocks = await this.network.reqResp.beaconBlocksByRange(peerId, request);
-    assertSequentialBlocksInRange(blocks || [], request);
-    return blocks || [];
+    assertSequentialBlocksInRange(blocks, request);
+    return blocks;
   };
 
   private getPeersAndTargetEpoch: GetPeersAndTargetEpoch = () => {
@@ -252,7 +252,7 @@ export class BeaconSync implements IBeaconSync {
       }
       try {
         const blocks = await this.network.reqResp.beaconBlocksByRoot(peer, [unknownAncestorRoot] as List<Root>);
-        if (blocks && blocks[0]) {
+        if (blocks[0]) {
           this.logger.verbose("Found block for root", {slot: blocks[0].message.slot, blockRoot: missingRootHex});
           found = true;
           await this.chain.receiveBlock(blocks[0]);
