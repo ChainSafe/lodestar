@@ -16,17 +16,16 @@ export const prepareCommitteeSubnet: ApiController<DefaultQuery, DefaultParams, 
   url: "/beacon_committee_subscriptions",
 
   handler: async function (req, resp) {
-    await Promise.all(
-      req.body.map(async (committeeSubnetRequest) => {
-        return this.api.validator.prepareBeaconCommitteeSubnet(
-          committeeSubnetRequest.validator_index,
-          committeeSubnetRequest.committee_index,
-          committeeSubnetRequest.committees_at_slot,
-          committeeSubnetRequest.slot,
-          committeeSubnetRequest.is_aggregator
-        );
-      })
+    await this.api.validator.prepareBeaconCommitteeSubnet(
+      req.body.map((item) => ({
+        validatorIndex: item.validator_index,
+        committeeIndex: item.committee_index,
+        committeesAtSlot: item.committees_at_slot,
+        slot: item.slot,
+        isAggregator: item.is_aggregator,
+      }))
     );
+
     resp.status(200).send();
   },
 

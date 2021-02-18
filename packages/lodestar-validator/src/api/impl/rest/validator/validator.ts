@@ -16,7 +16,7 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {HttpClient, urlJoin} from "../../../../util";
-import {IValidatorApi} from "../../../interface/validators";
+import {BeaconCommitteeSubscription, IValidatorApi} from "../../../interface/validators";
 
 /**
  * Rest API class for fetching and performing validator duties
@@ -75,21 +75,7 @@ export class RestValidatorApi implements IValidatorApi {
     );
   }
 
-  public async prepareBeaconCommitteeSubnet(
-    validatorIndex: ValidatorIndex,
-    committeeIndex: CommitteeIndex,
-    committeesAtSlot: number,
-    slot: Slot,
-    isAggregator: boolean
-  ): Promise<void> {
-    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", [
-      {
-        validator_index: validatorIndex,
-        committee_index: committeeIndex,
-        committees_at_slot: committeesAtSlot,
-        slot,
-        is_aggregator: isAggregator,
-      },
-    ]);
+  public async prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void> {
+    return await this.clientV2.post<Json[], void>("/beacon_committee_subscriptions", [subscriptions]);
   }
 }
