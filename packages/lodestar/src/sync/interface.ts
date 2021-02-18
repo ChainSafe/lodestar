@@ -10,7 +10,16 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IBeaconDb} from "../db/api";
 import {AttestationCollector} from "./utils";
 
+export enum SyncMode {
+  WAITING_PEERS,
+  INITIAL_SYNCING,
+  REGULAR_SYNCING,
+  SYNCED,
+  STOPPED,
+}
+
 export interface IBeaconSync extends IService {
+  state: SyncMode;
   getSyncStatus(): Promise<SyncingStatus>;
   isSynced(): boolean;
   collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void>;

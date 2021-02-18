@@ -165,13 +165,13 @@ export async function onCheckpoint(this: BeaconChain, cp: Checkpoint, stateConte
 }
 
 export async function onJustified(this: BeaconChain, cp: Checkpoint, stateContext: ITreeStateContext): Promise<void> {
-  this.logger.important("Checkpoint justified", this.config.types.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint justified", this.config.types.Checkpoint.toJson(cp));
   this.metrics.previousJustifiedEpoch.set(stateContext.state.previousJustifiedCheckpoint.epoch);
   this.metrics.currentJustifiedEpoch.set(cp.epoch);
 }
 
 export async function onFinalized(this: BeaconChain, cp: Checkpoint): Promise<void> {
-  this.logger.important("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint finalized", this.config.types.Checkpoint.toJson(cp));
   this.metrics.finalizedEpoch.set(cp.epoch);
 }
 

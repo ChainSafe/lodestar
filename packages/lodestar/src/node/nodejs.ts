@@ -20,6 +20,7 @@ import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {GossipMessageValidator} from "../network/gossip/validator";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
+import {runNodeNotifier} from "./notifier";
 
 export * from "./options";
 
@@ -122,6 +123,8 @@ export class BeaconNode {
     anchorState,
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
+    const signal = controller.signal;
+
     // start db if not already started
     await db.start();
 
@@ -177,7 +180,7 @@ export class BeaconNode {
             eth1Provider: new Eth1Provider(config, opts.eth1),
             logger: logger.child(opts.logger.eth1),
             opts: opts.eth1,
-            signal: controller.signal,
+            signal,
           })
         : new Eth1ForBlockProductionDisabled(),
       sync,
@@ -203,6 +206,8 @@ export class BeaconNode {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sync.start();
     await chores.start();
+
+    void runNodeNotifier({network, chain, sync, config, logger, signal});
 
     return new this({
       opts,

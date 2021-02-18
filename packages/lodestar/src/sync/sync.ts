@@ -1,6 +1,6 @@
 import PeerId from "peer-id";
 import {AbortController} from "abort-controller";
-import {IBeaconSync, ISyncModules} from "./interface";
+import {IBeaconSync, ISyncModules, SyncMode} from "./interface";
 import {defaultSyncOptions, ISyncOptions} from "./options";
 import {getSyncProtocols, getUnknownRootProtocols, INetwork} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -22,14 +22,6 @@ import {
   RoundRobinArray,
   syncPeersStatus,
 } from "./utils";
-
-export enum SyncMode {
-  WAITING_PEERS,
-  INITIAL_SYNCING,
-  REGULAR_SYNCING,
-  SYNCED,
-  STOPPED,
-}
 
 export class BeaconSync implements IBeaconSync {
   private readonly opts: ISyncOptions;
@@ -137,6 +129,10 @@ export class BeaconSync implements IBeaconSync {
 
   public isSynced(): boolean {
     return this.mode === SyncMode.SYNCED;
+  }
+
+  get state(): SyncMode {
+    return this.mode;
   }
 
   public async collectAttestations(slot: Slot, committeeIndex: CommitteeIndex): Promise<void> {
