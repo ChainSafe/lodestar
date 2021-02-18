@@ -6,7 +6,7 @@ import {RequestBody, ResponseBody} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, timeoutOptions} from "../../../constants";
-import {createRpcProtocol, randomRequestId} from "../../util";
+import {createRpcProtocol} from "../../util";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
@@ -42,18 +42,19 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
   requestBody: RequestBody,
   maxResponses?: number,
   signal?: AbortSignal,
-  options?: Partial<typeof timeoutOptions>
+  options?: Partial<typeof timeoutOptions>,
+  requestId = 0
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = peerId.toB58String();
-  const logCtx = {method, encoding, peer, requestId: randomRequestId()};
+  const logCtx = {method, encoding, peer, requestId};
   const protocol = createRpcProtocol(method, encoding);
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");
   }
 
-  logger.verbose("Req dialing peer", logCtx);
+  logger.debug("Req  dialing peer", logCtx);
 
   try {
     // As of October 2020 we can't rely on libp2p.dialProtocol timeout to work so
@@ -83,7 +84,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       }
     });
 
-    logger.verbose("Req sending request", {...logCtx, requestBody} as Context);
+    logger.debug("Req  sending request", {...logCtx, requestBody} as Context);
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink should be closed automatically by js-libp2p-mplex when piped source returns
@@ -108,7 +109,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       }
     });
 
-    logger.verbose("Req request sent", logCtx);
+    logger.debug("Req  request sent", logCtx);
 
     const responses = await pipe(
       abortSource(stream.source, signal),
@@ -116,15 +117,17 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       collectResponses(method, maxResponses)
     );
 
-    // TODO: Should log the response? Logs get extremely cluttered
-    logger.verbose("Req received response", logCtx);
+    // NOTE: Only log once per request to verbose, intermediate steps to debug
+    // NOTE: Do not log the response, logs get extremely cluttered
+    // NOTE: add double space after "Req  " to match "Resp "
+    logger.verbose("Req  done", logCtx);
 
     return responses as T;
 
     // No need to call `stream.close()` here on finally {} to handle stream.source,
     // libp2p-mplex will .end() the source (it-pushable instance) for errors and returns
   } catch (e) {
-    logger.verbose("Req error", logCtx, e);
+    logger.verbose("Req  error", logCtx, e);
 
     const metadata: IRequestErrorMetadata = {method, encoding, peer};
 

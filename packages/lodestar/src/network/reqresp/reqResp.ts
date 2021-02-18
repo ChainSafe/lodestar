@@ -42,6 +42,8 @@ export class ReqResp implements IReqResp {
   private blockProviderScores: IRpcScoreTracker;
   private controller: AbortController | undefined;
   private options?: IReqRespOptions;
+  private reqCount = 0;
+  private respCount = 0;
 
   /**
    * @see this.registerHandler
@@ -87,7 +89,8 @@ export class ReqResp implements IReqResp {
               stream as ILibP2pStream,
               peerId,
               method,
-              encoding
+              encoding,
+              this.respCount++
             );
             // TODO: Do success peer scoring here
           } catch (e) {
@@ -166,7 +169,8 @@ export class ReqResp implements IReqResp {
         body,
         maxResponses,
         this.controller?.signal,
-        this.options
+        this.options,
+        this.reqCount++
       );
 
       this.blockProviderScores.update(peerId, successToScoreEvent(method));

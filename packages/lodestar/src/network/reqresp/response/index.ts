@@ -3,7 +3,6 @@ import pipe from "it-pipe";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {Method, ReqRespEncoding, RpcResponseStatus} from "../../../constants";
-import {randomRequestId} from "../../util";
 import {onChunk} from "../utils/onChunk";
 import {ILibP2pStream, ReqRespHandler} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
@@ -28,9 +27,10 @@ export async function handleRequest(
   stream: ILibP2pStream,
   peerId: PeerId,
   method: Method,
-  encoding: ReqRespEncoding
+  encoding: ReqRespEncoding,
+  requestId = 0
 ): Promise<void> {
-  const logCtx = {method, encoding, peer: peerId.toB58String(), requestId: randomRequestId()};
+  const logCtx = {method, encoding, peer: peerId.toB58String(), requestId};
 
   let responseError: Error | null = null;
   await pipe(
@@ -43,12 +43,12 @@ export async function handleRequest(
           throw new ResponseError(RpcResponseStatus.INVALID_REQUEST, e.message);
         });
 
-        logger.verbose("Resp received request", {...logCtx, requestBody} as Context);
+        logger.debug("Resp received request", {...logCtx, requestBody} as Context);
 
         yield* pipe(
           performRequestHandler(method, requestBody, peerId),
-          // TODO: Should log the resp chunk? Logs get extremely cluttered
-          onChunk(() => logger.verbose("Resp sending chunk", logCtx)),
+          // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
+          onChunk(() => logger.debug("Resp sending chunk", logCtx)),
           responseEncodeSuccess(config, method, encoding)
         );
       } catch (e) {
@@ -62,6 +62,12 @@ export async function handleRequest(
     })(),
     stream.sink
   );
+
+  // TODO: It may happen that stream.sink returns before returning stream.source first,
+  // so you never see "Resp received request" in the logs and the response ends without
+  // sending any chunk, triggering EMPTY_RESPONSE error on the requesting side
+  // It has only happened when doing a request too fast upon immediate connection on inbound peer
+  // investigate a potential race condition there
 
   if (responseError) {
     logger.verbose("Resp error", logCtx, responseError);
