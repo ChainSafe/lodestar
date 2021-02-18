@@ -1,9 +1,12 @@
-import {BeaconState, PendingAttestation, Eth1Data, Validator, Gwei, Root} from "@chainsafe/lodestar-types";
+import {
+  CachedValidatorsBeaconState,
+  createCachedValidatorsBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {config} from "@chainsafe/lodestar-config/minimal";
+import {BeaconState, Eth1Data, Gwei, PendingAttestation, Root, Validator} from "@chainsafe/lodestar-types";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
-import {config} from "@chainsafe/lodestar-config/minimal";
-import {TreeBacked, List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -77,6 +80,6 @@ export function generateState(opts: TestBeaconState = {}): TreeBacked<BeaconStat
   return resultState;
 }
 
-export function generateCachedState(opts: TestBeaconState = {}): phase0.fast.CachedValidatorsBeaconState {
-  return phase0.fast.createCachedValidatorsBeaconState(generateState(opts));
+export function generateCachedState(opts: TestBeaconState = {}): CachedValidatorsBeaconState {
+  return createCachedValidatorsBeaconState(generateState(opts));
 }

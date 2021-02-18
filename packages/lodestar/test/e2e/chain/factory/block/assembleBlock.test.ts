@@ -9,7 +9,12 @@ import {FAR_FUTURE_EPOCH, ZERO_HASH} from "../../../../../src/constants";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../../utils/block";
 import {generateState} from "../../../../utils/state";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
-import {getBeaconProposerIndex, signedBlockToSignedHeader, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  getBeaconProposerIndex,
+  signedBlockToSignedHeader,
+  phase0,
+  createCachedValidatorsBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateValidator} from "../../../../utils/validator";
 import {generateDeposit} from "../../../../utils/deposit";
@@ -69,7 +74,7 @@ describe("produce block", function () {
     slotState.slot = 1;
     regenStub.getBlockSlotState
       .withArgs(sinon.match.any, 1)
-      .resolves({state: phase0.fast.createCachedValidatorsBeaconState(slotState), epochCtx});
+      .resolves({state: createCachedValidatorsBeaconState(slotState), epochCtx});
     forkChoiceStub.getHead.returns(parentBlockSummary);
     dbStub.depositDataRoot.getTreeBacked.resolves(depositDataRootList);
     dbStub.proposerSlashing.values.resolves([]);
@@ -94,7 +99,7 @@ describe("produce block", function () {
       state.fork,
       ZERO_HASH
     );
-    const wrappedState = phase0.fast.createCachedValidatorsBeaconState(state);
+    const wrappedState = createCachedValidatorsBeaconState(state);
     expect(() =>
       phase0.fast.fastStateTransition({state: wrappedState, epochCtx}, block!, {verifyStateRoot: false})
     ).to.not.throw();

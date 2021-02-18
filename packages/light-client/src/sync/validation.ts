@@ -1,13 +1,12 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Lightclient} from "@chainsafe/lodestar-types";
-import {assert, intDiv, verifyMerkleBranch} from "@chainsafe/lodestar-utils";
+import {assert, intDiv, verifyMerkleBranch, notNullish} from "@chainsafe/lodestar-utils";
 import {
   FINALIZED_ROOT_INDEX,
   NEXT_SYNC_COMMITTEE_INDEX,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
 } from "@chainsafe/lodestar-params";
 import {verifyAggregate} from "@chainsafe/bls";
-import {notNullish} from "@chainsafe/lodestar-utils";
 import {
   computeEpochAtSlot,
   ZERO_HASH,

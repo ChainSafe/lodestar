@@ -6,6 +6,7 @@ import * as assert from "assert";
 import {getDevValidators} from "../../utils/node/validator";
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {ChainEvent} from "../../../src/chain";
+import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
 
 describe("syncing", function () {
   const validatorCount = 8;
@@ -23,6 +24,7 @@ describe("syncing", function () {
       params: beaconParams,
       options: {sync: {minPeers: 0}},
       validatorCount,
+      logger: new WinstonLogger({level: LogLevel.debug, module: "BN"}),
     });
     const finalizationEventListener = waitForEvent<Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     const validators = getDevValidators(bn, 8);

@@ -1,9 +1,8 @@
-import {ChainEvent, ChainEventEmitter, IBlockJob} from "../..";
-import {byteArrayEquals} from "@chainsafe/ssz";
-import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {computeEpochAtSlot, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
+import {ChainEventEmitter, ITreeStateContext, ChainEvent, IBlockJob} from "../..";
+import {ZERO_HASH, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {assert} from "@chainsafe/lodestar-utils";
+import {IForkChoice, IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {byteArrayEquals} from "@chainsafe/ssz";
 
 /**
  * Emits a properly formed "checkpoint" event, given a checkpoint state context

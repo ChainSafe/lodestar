@@ -1,68 +1,47 @@
-import {ChainEventEmitter, IBlockJob} from "../..";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ITreeStateContext} from "../../../db/api/beacon/stateContextCache";
-import {IBeaconDb} from "../../../db";
-import {processSlotsToNearestCheckpoint} from "./utils";
 import {
-  getAllBlockSignatureSetsExceptProposer,
-  getAllBlockSignatureSets,
-} from "@chainsafe/lodestar-beacon-state-transition/lib/fast/signatureSets";
-import {verifySignatureSetsBatch} from "../../bls";
-import {BlockError} from "../../errors";
-import {BlockErrorCode} from "../../errors/blockError";
-import {
-  fastStateTransition,
-  IStateContext,
-  epochToCurrentForkVersion,
   computeEpochAtSlot,
+  epochToCurrentForkVersion,
+  IStateContext,
   lightclient,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {emitCheckpointEvent, emitBlockEvent, emitForkChoiceHeadEvents} from "./events";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {Gwei, Lightclient} from "@chainsafe/lodestar-types";
 import {sleep, toHex} from "@chainsafe/lodestar-utils";
-import {toTreeStateContext} from "./utils";
-import {BeaconState, Lightclient, SignedBeaconBlock} from "@chainsafe/lodestar-types";
+import {ChainEventEmitter, IBlockJob, ITreeStateContext} from "../..";
+import {CheckpointStateCache} from "../../stateCache";
+import {emitBlockEvent, emitCheckpointEvent, emitForkChoiceHeadEvents} from "./events";
 
-export * from "./utils";
 export * from "./events";
+export * from "./utils";
 
 export async function runStateTransition(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
-  db: IBeaconDb,
+  checkpointStateCache: CheckpointStateCache,
   stateContext: ITreeStateContext,
   job: IBlockJob
 ): Promise<ITreeStateContext> {
   const config = stateContext.epochCtx.config;
   const {SLOTS_PER_EPOCH} = config.params;
   const postSlot = job.signedBlock.message.slot;
-  const checkpointStateContext = await processSlotsToNearestCheckpoint(emitter, stateContext, postSlot - 1);
 
-  if (!job.validSignatures) {
-    const {epochCtx, state} = checkpointStateContext;
-    const signatureSets = job.validProposerSignature
-      ? getAllBlockSignatureSetsExceptProposer(epochCtx, state, job.signedBlock)
-      : getAllBlockSignatureSets(epochCtx, state, job.signedBlock);
-
-    if (!verifySignatureSetsBatch(signatureSets)) {
-      throw new BlockError({
-        code: BlockErrorCode.INVALID_SIGNATURE,
-        job,
-      });
-    }
-
-    job.validProposerSignature = true;
-    job.validSignatures = true;
-  }
-
-  const postStateContext = executeStateTransition(checkpointStateContext, job);
+  // if block is trusted don't verify proposer or op signature
+  const postStateContext = executeStateTransition(stateContext, job);
 
   const oldHead = forkChoice.getHead();
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  const justifiedBalances = (await db.checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint))
-    ?.epochCtx.epochBalances;
-  forkChoice.onBlock(job.signedBlock.message, postStateContext.state, justifiedBalances);
+  const justifiedBalances: Gwei[] = [];
+  if (postStateContext.state.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
+    const justifiedStateContext = checkpointStateCache.get(postStateContext.state.currentJustifiedCheckpoint);
+    const justifiedEpoch = justifiedStateContext?.epochCtx.currentShuffling.epoch;
+    justifiedStateContext?.state.flatValidators().readOnlyForEach((v) => {
+      justifiedBalances.push(phase0.fast.isActiveIFlatValidator(v, justifiedEpoch!) ? v.effectiveBalance : BigInt(0));
+    });
+  }
+  forkChoice.onBlock(job.signedBlock.message, postStateContext.state.getOriginalState(), justifiedBalances);
 
   if (postSlot % SLOTS_PER_EPOCH === 0) {
     emitCheckpointEvent(emitter, postStateContext);
@@ -76,10 +55,7 @@ export async function runStateTransition(
   return postStateContext;
 }
 
-function executeStateTransition(
-  stateCtx: ITreeStateContext<BeaconState | Lightclient.BeaconState>,
-  job: IBlockJob<SignedBeaconBlock | Lightclient.SignedBeaconBlock>
-): ITreeStateContext {
+function executeStateTransition(stateCtx: ITreeStateContext, job: IBlockJob): ITreeStateContext {
   let result: IStateContext;
   const config = stateCtx.epochCtx.config;
   const slot = job.signedBlock.message.slot;
@@ -90,7 +66,7 @@ function executeStateTransition(
   switch (toHex(fork)) {
     case toHex(config.params.GENESIS_FORK_VERSION):
       {
-        result = fastStateTransition(stateCtx, job.signedBlock, {
+        result = phase0.fast.fastStateTransition(stateCtx, job.signedBlock, {
           verifyStateRoot: true,
           verifyProposer: !job.validSignatures && !job.validProposerSignature,
           verifySignatures: !job.validSignatures,
@@ -99,19 +75,15 @@ function executeStateTransition(
       break;
     case toHex(config.params.lightclient.LIGHTCLIENT_PATCH_FORK_VERSION):
       {
-        result = lightclient.fast.stateTransition(
-          stateCtx as ITreeStateContext<Lightclient.BeaconState>,
-          job.signedBlock as Lightclient.SignedBeaconBlock,
-          {
-            verifyStateRoot: true,
-            verifyProposer: !job.validSignatures && !job.validProposerSignature,
-            verifySignatures: !job.validSignatures,
-          }
-        );
+        result = lightclient.fast.stateTransition(stateCtx, job.signedBlock as Lightclient.SignedBeaconBlock, {
+          verifyStateRoot: true,
+          verifyProposer: !job.validSignatures && !job.validProposerSignature,
+          verifySignatures: !job.validSignatures,
+        });
       }
       break;
     default:
       throw new Error("State transition doesn't support fork");
   }
-  return toTreeStateContext(result);
+  return result;
 }

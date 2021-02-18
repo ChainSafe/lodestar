@@ -2,7 +2,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
@@ -79,7 +79,7 @@ describe("get proposers api impl", function () {
     const epochCtx = new phase0.EpochContext(config);
     epochCtx.loadState(state);
     chainStub.getHeadStateContextAtCurrentEpoch.resolves({
-      state: phase0.fast.createCachedValidatorsBeaconState(state),
+      state: createCachedValidatorsBeaconState(state),
       epochCtx,
     });
     sinon.stub(epochCtx, "getBeaconProposer").returns(1);

@@ -10,7 +10,7 @@ import {
   Slot,
 } from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, EpochContext, CachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconClock} from "./clock/interface";
@@ -22,8 +22,8 @@ import {StateContextCache, CheckpointStateCache} from "./stateCache";
 
 // Lodestar specifc state context
 export interface ITreeStateContext {
-  state: phase0.fast.CachedValidatorsBeaconState;
-  epochCtx: phase0.EpochContext;
+  state: CachedValidatorsBeaconState;
+  epochCtx: EpochContext;
 }
 
 interface IProcessBlock {

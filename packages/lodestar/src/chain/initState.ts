@@ -2,14 +2,17 @@
  * @module chain
  */
 
-import {AbortSignal} from "abort-controller";
-
-import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  blockToHeader,
+  computeEpochAtSlot,
+  createCachedValidatorsBeaconState,
+  phase0,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconBlockHeader, BeaconState, Checkpoint, SignedBeaconBlock} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-
+import {AbortSignal} from "abort-controller";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "../eth1";
@@ -139,7 +142,7 @@ export function restoreStateCaches(
   const epochCtx = new phase0.EpochContext(config);
   epochCtx.loadState(state);
 
-  const stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx};
+  const stateCtx = {state: createCachedValidatorsBeaconState(state), epochCtx};
 
   // store state in state caches
   void stateCache.add(stateCtx);

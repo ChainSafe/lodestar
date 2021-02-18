@@ -12,7 +12,7 @@ import {
 import {List, readOnlyMap} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain/interface";
 import {IBeaconDb} from "../../../../db/api";
-import {notNullish} from "../../../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
 import {IApiOptions} from "../../../options";
 import {ApiError, StateNotFound} from "../../errors/api";
 import {IApiModules} from "../../interface";

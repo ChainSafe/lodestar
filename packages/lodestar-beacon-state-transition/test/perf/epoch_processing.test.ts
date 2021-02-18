@@ -2,10 +2,10 @@ import {config} from "@chainsafe/lodestar-config/mainnet";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {generatePerformanceState, initBLS} from "./util";
 import {expect} from "chai";
-import {phase0} from "../../src";
+import {phase0, CachedValidatorsBeaconState, createCachedValidatorsBeaconState} from "../../src";
 
 describe("Epoch Processing Performance Tests", function () {
-  let state: phase0.fast.CachedValidatorsBeaconState;
+  let state: CachedValidatorsBeaconState;
   let epochCtx: phase0.EpochContext;
   let process: phase0.fast.IEpochProcess;
   const logger = new WinstonLogger();
@@ -18,7 +18,7 @@ describe("Epoch Processing Performance Tests", function () {
     origState.slot -= 1;
     epochCtx = new phase0.EpochContext(config);
     epochCtx.loadState(origState);
-    state = phase0.fast.createCachedValidatorsBeaconState(origState);
+    state = createCachedValidatorsBeaconState(origState);
   });
 
   it("prepareEpochProcessState", async () => {
@@ -68,13 +68,5 @@ describe("Epoch Processing Performance Tests", function () {
     phase0.fast.processFinalUpdates(epochCtx, process, state);
     logger.profile("processFinalUpdates");
     expect(Date.now() - start).lte(30);
-  });
-
-  it("processForkChanged", async () => {
-    const start = Date.now();
-    logger.profile("processForkChanged");
-    phase0.fast.processForkChanged(epochCtx, process, state);
-    logger.profile("processForkChanged");
-    expect(Date.now() - start).lte(2);
   });
 });

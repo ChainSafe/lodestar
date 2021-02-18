@@ -1,23 +1,23 @@
-import {
-  BeaconBlock,
-  SignedBeaconBlock,
-  ProposerSlashing,
-  AttesterSlashing,
-  Attestation,
-  Deposit,
-  SignedVoluntaryExit,
-  SignedBeaconBlockHeader,
-} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-cli/src/util";
-
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
-import deepmerge from "deepmerge";
-import {IBlockJob} from "../../src/chain";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/minimal";
+import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {
+  Attestation,
+  AttesterSlashing,
+  BeaconBlock,
+  Deposit,
+  Lightclient,
+  ProposerSlashing,
+  SignedBeaconBlock,
+  SignedBeaconBlockHeader,
+  SignedVoluntaryExit,
+} from "@chainsafe/lodestar-types";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
+import {List} from "@chainsafe/ssz";
+import deepmerge from "deepmerge";
+import {IBlockJob} from "../../src/chain";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 export function generateEmptyBlock(): BeaconBlock {
   return {

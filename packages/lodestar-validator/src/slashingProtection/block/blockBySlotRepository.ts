@@ -1,17 +1,9 @@
-import {
-  Bucket,
-  encodeKey,
-  IDatabaseApiOptions,
-  IDatabaseController,
-  uintLen,
-  DB_PREFIX_LENGTH,
-} from "@chainsafe/lodestar-db";
+import {Bucket, DB_PREFIX_LENGTH, encodeKey, IDatabaseApiOptions, uintLen} from "@chainsafe/lodestar-db";
 import {BLSPubkey, SlashingProtectionBlock, Slot} from "@chainsafe/lodestar-types";
-import {intToBytes, bytesToInt} from "@chainsafe/lodestar-utils";
-import {Bucket, encodeKey, IDatabaseApiOptions, bucketLen, uintLen} from "@chainsafe/lodestar-db";
+import {bytesToInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {Type} from "@chainsafe/ssz";
-import {uniqueVectorArr, blsPubkeyLen} from "../utils";
 import {LodestarValidatorDatabaseController} from "../../types";
+import {blsPubkeyLen, uniqueVectorArr} from "../utils";
 
 /**
  * Manages validator db storage of blocks.

@@ -14,7 +14,11 @@ import {
   Uint64,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeForkDigest, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeForkDigest,
+  phase0,
+  createCachedValidatorsBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain, ITreeStateContext} from "../../../../src/chain";
@@ -88,21 +92,21 @@ export class MockBeaconChain implements IBeaconChain {
 
   public getHeadStateContext(): ITreeStateContext {
     return {
-      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentEpoch(): Promise<ITreeStateContext> {
     return {
-      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }
 
   public async getHeadStateContextAtCurrentSlot(): Promise<ITreeStateContext> {
     return {
-      state: phase0.fast.createCachedValidatorsBeaconState(this.state!),
+      state: createCachedValidatorsBeaconState(this.state!),
       epochCtx: new phase0.fast.EpochContext(this.config),
     };
   }

@@ -32,7 +32,7 @@ import {IEth1ForBlockProduction} from "../../../eth1";
 import {INetwork} from "../../../network";
 import {IBeaconSync} from "../../../sync";
 import {toGraffitiBuffer} from "../../../util/graffiti";
-import {notNullish} from "../../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
 import {IApiOptions} from "../../options";
 import {ApiError} from "../errors/api";
 import {ApiNamespace, IApiModules} from "../interface";

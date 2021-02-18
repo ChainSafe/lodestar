@@ -28,7 +28,7 @@ import {FAR_FUTURE_EPOCH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IBeaconMetrics} from "../metrics";
-import {notNullish} from "../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
 import {AttestationPool, AttestationProcessor} from "./attestation";
 import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";

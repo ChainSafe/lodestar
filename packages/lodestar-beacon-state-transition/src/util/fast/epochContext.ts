@@ -25,7 +25,7 @@ import {
   isAggregatorFromCommitteeLength,
 } from "..";
 import {computeEpochShuffling, IEpochShuffling} from "../../phase0/fast/util/epochShuffling";
-import { CachedValidatorsBeaconState } from "./cachedValidatorBeaconState";
+import {CachedValidatorsBeaconState} from "./cachedValidatorBeaconState";
 
 export class PubkeyIndexMap extends Map<ByteVector, ValidatorIndex> {
   get(key: ByteVector): ValidatorIndex | undefined {

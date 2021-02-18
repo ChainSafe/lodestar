@@ -4,18 +4,18 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {generatePerformanceBlock, generatePerformanceState, initBLS} from "../util";
-import {phase0} from "../../../src";
+import {phase0, IStateContext, createCachedValidatorsBeaconState} from "../../../src";
 
 describe("Process Blocks Performance Test", function () {
   this.timeout(0);
-  let stateCtx: phase0.fast.IStateContext;
+  let stateCtx: IStateContext;
   const logger = new WinstonLogger();
   before(async () => {
     await initBLS();
     const origState = await generatePerformanceState();
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(origState);
-    stateCtx = {state: phase0.fast.createCachedValidatorsBeaconState(origState), epochCtx};
+    stateCtx = {state: createCachedValidatorsBeaconState(origState), epochCtx};
   });
 
   it("should process block", async () => {

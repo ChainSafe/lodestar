@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
 import {bytesToInt, WinstonLogger} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {BeaconChain, IBeaconChain} from "../../../src/chain";
 import {defaultChainOptions} from "../../../src/chain/options";
@@ -29,7 +29,7 @@ describe("BeaconChain", function () {
     chain = new BeaconChain({opts: defaultChainOptions, config, db: dbStub, logger, metrics, anchorState: state});
     chain.stateCache = (sandbox.createStubInstance(StateContextCache) as unknown) as StateContextCache;
     (chain.stateCache as SinonStubbedInstance<StateContextCache> & StateContextCache).get.returns({
-      state: phase0.fast.createCachedValidatorsBeaconState(state),
+      state: createCachedValidatorsBeaconState(state),
       epochCtx: new phase0.fast.EpochContext(config),
     });
   });

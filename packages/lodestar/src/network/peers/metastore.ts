@@ -5,7 +5,7 @@ import PeerId from "peer-id";
 import {Metadata, Status} from "@chainsafe/lodestar-types";
 import {BasicType, ContainerType} from "@chainsafe/ssz";
 import {StringType} from "./sszTypes";
-import {notNullish} from "../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
 
 enum MetadataKey {
   ENCODING = "encoding",

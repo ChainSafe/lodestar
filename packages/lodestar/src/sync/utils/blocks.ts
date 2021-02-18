@@ -4,7 +4,7 @@ import {RoundRobinArray} from "./robin";
 import {IReqResp} from "../../network";
 import {ISlotRange} from "../interface";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {notNullish} from "../../util/notNullish";
+import {notNullish} from "@chainsafe/lodestar-utils/src/notNullish";
 
 /**
  * Creates slot chunks returned chunks represents (inclusive) start and (inclusive) end slot

@@ -22,12 +22,12 @@ import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GENESIS_EPOCH, Method, ReqRespEncoding, RpcResponseStatus, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
-import {IBlockFilterOptions} from "../../db/api/beacon/repositories";
 import {createRpcProtocol, INetwork, NetworkEvent} from "../../network";
 import {ResponseError} from "../../network/reqresp/response";
 import {handlePeerMetadataSequence} from "../../network/peers/utils";
 import {createStatus, syncPeersStatus} from "../utils/sync";
 import {IReqRespHandler} from "./interface";
+import {IBlockFilterOptions} from "../../db/api/beacon/repositories/blockArchive/abstract";
 
 export interface IReqRespHandlerModules {
   config: IBeaconConfig;

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/minimal";
-import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, createCachedValidatorsBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import * as validatorStatusUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/validatorStatus";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
@@ -48,7 +48,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     } catch (error) {
@@ -69,7 +69,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     isValidIncomingVoluntaryExitStub.returns(false);
     try {
       await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
@@ -91,7 +91,7 @@ describe("validate voluntary exit", () => {
     });
     const epochCtx = new phase0.fast.EpochContext(config);
     epochCtx.loadState(state);
-    regenStub.getCheckpointState.resolves({state: phase0.fast.createCachedValidatorsBeaconState(state), epochCtx});
+    regenStub.getCheckpointState.resolves({state: createCachedValidatorsBeaconState(state), epochCtx});
     isValidIncomingVoluntaryExitStub.returns(true);
     const validationTest = await validateGossipVoluntaryExit(config, chainStub, dbStub, voluntaryExit);
     expect(validationTest).to.not.throw;
