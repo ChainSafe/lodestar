@@ -7,9 +7,10 @@ services:
       - lodestar:/root/.local/share/lodestar
       - /root/.local/share/lodestar/pyrmont:/root/.local/share/lodestar/pyrmont
     command: beacon --network ${NETWORK:-pyrmont}
-    ports:
-      - "9000:9000/udp"
-      - "9596:9596"
+    expose:
+      - "9596"
+    network_mode: host
+
   validator:
     build: .
     restart: always
@@ -20,9 +21,7 @@ services:
     command: validator --network ${NETWORK:-pyrmont} --graffiti "lodestar wuz here"
     depends_on:
       - lodestar
-    links:
-      - lodestar
-    
+    network_mode: host
 
   prometheus:
     build: docker/prometheus
@@ -45,6 +44,7 @@ services:
       - "grafana:/var/lib/grafana"
     depends_on:
       - prometheus
+    network_mode: host
 
 volumes:
   lodestar:

@@ -5,7 +5,7 @@ datasources:
     type: prometheus
     access: proxy
     orgId: 1
-    url: http://prometheus:9090
+    url: http://127.0.0.1:9090
     basicAuth: false
     isDefault: true
     editable: true
